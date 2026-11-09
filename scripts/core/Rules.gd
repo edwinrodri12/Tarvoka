@@ -14,11 +14,13 @@ static func movement_cost(terrain: String) -> int:
 
 static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i]) -> Dictionary:
     var distances := {}
-    if not inside(origin) or points < 0 or terrain.size() != HEIGHT:
+    if not inside(origin) or points < 0 or terrain.size() != HEIGHT or origin in blocked:
         return distances
     for row in terrain:
         if not (row is Array) or row.size() != WIDTH:
             return {}
+    if movement_cost(str(terrain[origin.y][origin.x])) < 0:
+        return distances
     distances[origin] = 0
     var frontier: Array[Vector2i] = [origin]
     while not frontier.is_empty():
