@@ -12,3 +12,5 @@
 - [ ] Verify new turn tests in Godot CI; integrate turns with combat and scene input after green results.
 
 - [ ] Validate BattleActions.gd on Godot CI, then integrate scene input and movement into battle state.
+
+- [ ] Validate duplicate-ID battle guard in Godot CI; review before merging stacked PRs.
