@@ -10,3 +10,5 @@
 - Combat calculations are deterministic, bounded by remaining HP, with minimum 1 damage for positive attacks; invalid dead-unit attacks are rejected. This is an initial ruleset, not final balancing.
 
 - Turn state is a pure data transformation; faction owns actions, dead units cannot act, and victory requires exactly one surviving faction.
+
+- Initial attack integration permits only orthogonally adjacent enemy units and consumes the attacker's action; damage is deterministic. Ranged attacks and counterattacks are future work.
