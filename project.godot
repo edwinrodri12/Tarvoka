@@ -1,0 +1,10 @@
+; Engine configuration for TARVOKA
+config_version=5
+
+[application]
+config/name="TARVOKA"
+run/main_scene="res://scenes/Main.tscn"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
