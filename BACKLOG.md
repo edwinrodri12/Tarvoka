@@ -31,3 +31,5 @@
 - [ ] Validate touch/mouse dedup regression on Godot CI and real Android device; verify tap selects exactly once and desktop mouse still selects. Do not merge without green checks.
 
 - [ ] Validate decisive-attack victory UI regression in Godot headless CI; then review stacked PRs for integration.
+
+- [ ] Confirm CI on typed-blocked-array test fix, inspect any next failing test and fix before integration. Previous PR #17 run 42699713939 was CANCELLED after Godot script type error; do not count as passing.
