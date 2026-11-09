@@ -6,6 +6,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    assert(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch") == false) # Avoid double tap via synthetic mouse event
     var board = Board.new()
     board.size = Vector2(800, 640)
     root.add_child(board)
@@ -28,5 +29,5 @@ func _run() -> void:
     board._tap(Vector2(200,200))
     assert(board.selected_id == "")
     board.queue_free()
-    print("PASS touch board: selection, movement, consumed action, deselect, turn ownership")
+    print("PASS touch board: touch/mouse dedup setting, selection, movement, consumed action, deselect, turn ownership")
     quit(0)
