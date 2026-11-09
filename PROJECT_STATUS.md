@@ -13,3 +13,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Proposed pure adjacent attack integration (BattleActions.gd) using Combat and Turns, with immutable unit state and victory result. Awaiting CI verification. No Android build.
 
 2026-11-09: Proposed duplicate/invalid unit ID guard for BattleActions; draft PR pending Godot CI validation. No APK.
+
+2026-11-09: Proposed board-boundary validation for adjacent attacks on 10x8 map. Four regression cases added; awaiting CI evidence. No APK.
