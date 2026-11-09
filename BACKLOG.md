@@ -6,3 +6,5 @@
 
 - [x] Confirm Godot headless CI on PR #5: run 42584227883 succeeded (2026-11-09).
 - [ ] Re-run CI after merging/reconciling movement PRs; the current success applies only to PR #5.
+
+- [ ] Integrate standalone combat resolution with unit state and turn controller after CI validation.
