@@ -7,6 +7,15 @@ const Combat = preload("res://scripts/core/Combat.gd")
 # Pure adjacent attack action; never mutates the supplied unit array.
 static func attack(units: Array, attacker_id: String, defender_id: String, faction: int) -> Dictionary:
     var result: Array = units.duplicate(true)
+    # Reject ambiguous identifiers before resolving any combat action.
+    var seen_ids := {}
+    for unit in result:
+        if not (unit is Dictionary):
+            return {"valid": false, "units": units.duplicate(true)}
+        var uid = unit.get("id", null)
+        if not (uid is String) or uid.is_empty() or seen_ids.has(uid):
+            return {"valid": false, "units": units.duplicate(true)}
+        seen_ids[uid] = true
     var attacker_index := -1
     var defender_index := -1
     for i in range(result.size()):
