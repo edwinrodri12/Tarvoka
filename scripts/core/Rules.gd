@@ -19,6 +19,9 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
     for row in terrain:
         if not (row is Array) or row.size() != WIDTH:
             return {}
+        for tile in row:
+            if not (tile is String) or not TERRAIN_COST.has(tile):
+                return {}
     distances[origin] = 0
     var frontier: Array[Vector2i] = [origin]
     while not frontier.is_empty():
