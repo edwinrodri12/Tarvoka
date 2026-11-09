@@ -11,6 +11,7 @@ func _initialize() -> void:
     terrain[0][1] = "water"
     terrain[1][0] = "forest"
     var blocked: Array[Vector2i] = [Vector2i(2, 0)]
+    var no_blocked: Array[Vector2i] = []
     var reachable: Dictionary = rules.reachable(Vector2i(0, 0), 2, terrain, blocked)
     assert(reachable.has(Vector2i(0, 0)))
     assert(not reachable.has(Vector2i(1, 0)))
@@ -20,13 +21,13 @@ func _initialize() -> void:
     assert(rules.reachable(Vector2i(-1, 0), 3, terrain, blocked).is_empty())
     var invalid: Array = terrain.duplicate(true)
     invalid[7][9] = "lava"
-    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, no_blocked).is_empty())
     invalid[7][9] = 1
-    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, no_blocked).is_empty())
     invalid[7].pop_back()
-    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, no_blocked).is_empty())
     invalid = terrain.duplicate(true)
     invalid[0][0] = "water"
-    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, no_blocked).is_empty())
     print("PASS: movement rules and terrain integrity")
     quit()
