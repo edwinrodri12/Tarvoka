@@ -15,3 +15,5 @@
 
 - GitHub Actions run 42606343996: SUCCESS for PR #7 head 29865b0 (turn and prior suites); scoped to that commit.
 - Battle action integration test: tests/test_battle_actions.gd — NO EJECUTADO pending new CI run.
+
+- New duplicate-ID and missing-ID battle regressions: NO EJECUTADO; await GitHub Actions on new branch.
