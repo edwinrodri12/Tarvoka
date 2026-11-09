@@ -8,3 +8,5 @@
 - PASÓ (GitHub Actions, 2026-11-09): run 42584227883, job 129050054138, Godot 4.3 binary download and `tests/test_rules.gd` headless step both concluded SUCCESS on PR #5 head a01a1d8.
 - NO EJECUTADO: full v1.1 game tests, Android APK build, physical-device testing.
 - Local Godot binary remains unavailable; CI success is remote and limited to existing scaffold tests.
+
+- Combat test: tests/test_combat.gd covers damage, terrain cover, defeat, survival, and invalid attacker. Status: NO EJECUTADO until GitHub Actions reports result on combat PR.
