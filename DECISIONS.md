@@ -31,3 +31,5 @@
 2026-11-09: Show a victory message immediately after a decisive attack; preserve immutable BattleSession as the winner authority and block further turn changes.
 
 2026-11-09: Preserve Rules.reachable typed Array[Vector2i] contract. Regression tests must supply explicitly typed empty blocked-cell arrays rather than untyped [] literals. Keep this fix isolated and do not merge stacked PRs without green CI.
+
+2026-11-09: Invalid first_faction on BattleSession.start normalizes to faction 0 rather than creating a permanently inactive match. Keep faction 0/1 invariant for offline two-player prototype; add headless regression.
