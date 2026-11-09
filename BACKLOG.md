@@ -29,3 +29,5 @@
 - [ ] Verify spent-unit selection and tap-to-deselect regressions in Godot CI on new branch.
 
 - [ ] Validate touch/mouse dedup regression on Godot CI and real Android device; verify tap selects exactly once and desktop mouse still selects. Do not merge without green checks.
+
+- [ ] Validate decisive-attack victory UI regression in Godot headless CI; then review stacked PRs for integration.
