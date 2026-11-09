@@ -15,3 +15,5 @@
 
 - Reject battle actions when unit identifiers are duplicated, empty or missing to avoid targeting an ambiguous combatant.
 - Reject attacks with either combatant outside the 10x8 battlefield, even when adjacent.
+
+2026-11-09: Moving consumes the unit's single action for its turn in the initial playable prototype. No move-and-attack in one turn until explicitly redesigned. Living units cannot share cells.

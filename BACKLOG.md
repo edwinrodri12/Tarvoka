@@ -15,3 +15,5 @@
 
 - [ ] Validate duplicate-ID battle guard in Godot CI; review before merging stacked PRs.
 - [ ] Confirm CI for off-board attack rejection; integrate board input after validation.
+
+2026-11-09: Verify movement action CI; connect movement and attack to a 10x8 Godot board/controller; add touch selection; then Android export and device tests.
