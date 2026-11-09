@@ -24,3 +24,6 @@
 
 - [ ] Verify touch board GDScript test and fix CI failures; verify on-screen input in Godot and physical Android.
 - [ ] Add AI turn, win/lose overlay and persistence after interactive prototype passes.
+
+- [ ] Diagnose failed Godot workflow run 42671606319 on PR #14; verify all headless suites before merging stacked PRs.
+- [ ] Verify spent-unit selection and tap-to-deselect regressions in Godot CI on new branch.
