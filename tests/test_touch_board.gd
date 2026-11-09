@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Board = preload("res://scripts/ui/TouchBoard.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -28,6 +29,25 @@ func _run() -> void:
     assert(board.state["faction"] == 1)
     board._tap(Vector2(200,200))
     assert(board.selected_id == "")
+    # Regression: the final enemy's defeat must be visible immediately.
+    var duel = Board.new()
+    duel.size = Vector2(800, 640)
+    root.add_child(duel)
+    var units: Array = duel.state["units"].duplicate(true)
+    units[0]["pos"] = Vector2i(1, 2)
+    units[0]["attack"] = 10
+    units[1]["hp"] = 0
+    units[2]["pos"] = Vector2i(2, 2)
+    units[2]["hp"] = 1
+    units[3]["hp"] = 0
+    duel.state = Session.start(units, duel.state["terrain"])
+    duel._tap(Vector2(120, 200))
+    duel._tap(Vector2(200, 200))
+    assert(duel.state["winner"] == 0)
+    assert(duel.message == "Victoria de faccion 1.")
+    duel.finish_turn()
+    assert(duel.state["winner"] == 0)
+    duel.queue_free()
     board.queue_free()
     print("PASS touch board: touch/mouse dedup setting, selection, movement, consumed action, deselect, turn ownership")
     quit(0)
