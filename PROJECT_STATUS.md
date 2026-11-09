@@ -31,3 +31,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Draft stacked UI change: show immediate winner message when the last enemy falls; pending Godot CI. No APK verified.
 
 2026-11-09 CI diagnosis: PR #17 run 42699713939 log confirms Godot 4.3 SCRIPT ERROR in tests/test_rules.gd:23: untyped [] supplied to Rules.reachable fourth parameter Array[Vector2i]. Created isolated follow-up branch fixing test arguments. Await CI validation; main untouched; APK not built.
+
+2026-11-09 18:02 EST: Verified PR #18 commit 5e60d2e GitHub Actions run 42709626139 SUCCESS: all seven Godot 4.3 headless suites, including touch board, passed (job 129475405608). This validates the stacked branch at that SHA, not main or Android. Added separate defensive initial-faction fallback in BattleSession and a regression test in subsequent commits; those newer commits await CI. main unchanged; no verified APK/device.
