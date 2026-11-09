@@ -14,3 +14,4 @@
 - [ ] Validate BattleActions.gd on Godot CI, then integrate scene input and movement into battle state.
 
 - [ ] Validate duplicate-ID battle guard in Godot CI; review before merging stacked PRs.
+- [ ] Confirm CI for off-board attack rejection; integrate board input after validation.

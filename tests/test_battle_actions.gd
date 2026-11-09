@@ -29,5 +29,12 @@ func _initialize() -> void:
     var missing_id: Array = units.duplicate(true)
     missing_id.append({"faction": 1, "hp": 10})
     assert(not Battle.attack(missing_id, "a", "b", 0)["valid"])
+    for positions in [[Vector2i(-1, 1), Vector2i(0, 1)], [Vector2i(9, 7), Vector2i(10, 7)], [Vector2i(1, -1), Vector2i(1, 0)], [Vector2i(1, 7), Vector2i(1, 8)]]:
+        var off_board: Array = units.duplicate(true)
+        off_board[0]["pos"] = positions[0]
+        off_board[1]["pos"] = positions[1]
+        var invalid: Dictionary = Battle.attack(off_board, "a", "b", 0)
+        assert(not invalid["valid"])
+        assert(invalid["units"] == off_board)
     print("PASS: battle attack integration")
     quit(0)

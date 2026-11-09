@@ -17,3 +17,4 @@
 - Battle action integration test: tests/test_battle_actions.gd — NO EJECUTADO pending new CI run.
 
 - New duplicate-ID and missing-ID battle regressions: NO EJECUTADO; await GitHub Actions on new branch.
+- Off-board attack regressions (left/right/top/bottom): NO EJECUTADO pending Godot CI on proposed branch.
