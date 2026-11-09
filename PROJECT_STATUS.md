@@ -17,3 +17,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Proposed board-boundary validation for adjacent attacks on 10x8 map. Four regression cases added; awaiting CI evidence. No APK.
 
 2026-11-09: Added MoveActions.gd pure movement integration (terrain cost, occupancy, faction/turn guards, immutable state), tests/test_move_actions.gd and CI step. New test execution pending; no APK verified.
+
+2026-11-09: On stacked terrain-grid-integrity branch, Rules.reachable now rejects malformed terrain values anywhere on the 10x8 board and impassable origins. Added four regression assertions. Godot execution NOT VERIFIED; no APK.

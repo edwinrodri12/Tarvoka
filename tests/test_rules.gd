@@ -18,5 +18,15 @@ func _initialize() -> void:
     assert(reachable[Vector2i(0, 1)] == 2)
     assert(not reachable.has(Vector2i(0, 2)))
     assert(rules.reachable(Vector2i(-1, 0), 3, terrain, blocked).is_empty())
-    print("PASS: movement rules")
+    var invalid: Array = terrain.duplicate(true)
+    invalid[7][9] = "lava"
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    invalid[7][9] = 1
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    invalid[7].pop_back()
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    invalid = terrain.duplicate(true)
+    invalid[0][0] = "water"
+    assert(rules.reachable(Vector2i(0, 0), 3, invalid, []).is_empty())
+    print("PASS: movement rules and terrain integrity")
     quit()

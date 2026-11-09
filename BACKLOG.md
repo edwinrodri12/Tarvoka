@@ -17,3 +17,5 @@
 - [ ] Confirm CI for off-board attack rejection; integrate board input after validation.
 
 2026-11-09: Verify movement action CI; connect movement and attack to a 10x8 Godot board/controller; add touch selection; then Android export and device tests.
+
+- [ ] Run terrain-integrity regressions in Godot CI on the new stacked PR; then connect movement/attack to board input.
