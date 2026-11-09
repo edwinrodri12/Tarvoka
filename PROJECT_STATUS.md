@@ -27,3 +27,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Draft touch selection guard: tapping the selected friendly unit deselects it; already-acted friendly units cannot be selected. Branch-only, headless CI not yet verified. Previous PR #14 workflow run 42671606319 concluded FAILURE; root cause not established because job list returned empty. No APK/device verification.
 
 2026-11-09: Proposed Android touch event deduplication via project.godot input_devices/pointing/emulate_mouse_from_touch=false. Godot touch events remain supported, desktop mouse events remain supported; prevents synthetic mouse press from deselecting a unit immediately after touch selection. Awaiting CI; not device-verified. PR #15 run 42679543043 cancelled, not a test pass.
+
+2026-11-09: Draft stacked UI change: show immediate winner message when the last enemy falls; pending Godot CI. No APK verified.
