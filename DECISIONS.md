@@ -4,3 +4,4 @@
 - Terrain movement uses explicit costs and blocks impassable cells.
 - Keep all TARVOKA assets original and separate from other projects.
 - TARVOKA is a provisional name; trademark clearance required before release.
+- Reject malformed map dimensions before pathfinding; a zero movement budget should retain only the origin.
