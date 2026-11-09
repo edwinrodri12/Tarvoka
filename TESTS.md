@@ -18,3 +18,5 @@
 
 - New duplicate-ID and missing-ID battle regressions: NO EJECUTADO; await GitHub Actions on new branch.
 - Off-board attack regressions (left/right/top/bottom): NO EJECUTADO pending Godot CI on proposed branch.
+
+2026-11-09: Prior PR #10 head 4a2d0de GitHub Actions run 42632584537 PASÓ (success). New tests/test_move_actions.gd added to workflow; NO EJECUTADO/awaiting CI on new branch. Android APK/device NO EJECUTADO.
