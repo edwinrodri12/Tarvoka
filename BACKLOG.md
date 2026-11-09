@@ -1,5 +1,6 @@
 # Backlog
-- [ ] Import and reconcile the existing v1.1 source archive into TARVOKA without overwriting work.
-- [ ] Execute headless GDScript tests using Godot 4.
-- [ ] Integrate rules with board, selection, turns, combat, AI, and persistence.
-- [ ] Verify complete battle loop, then build and test Android APK.
+- [ ] Confirm Godot headless CI run succeeds on the new PR; fix any actual errors reported.
+- [ ] Review and reconcile open movement PRs without overlapping changes.
+- [ ] Import/reconcile the local v1.1 source archive (23 entries), preferably after repository is made private.
+- [ ] Validate full battle loop: selection, movement, combat, turns, victory, AI and save/restore.
+- [ ] Build Android APK and test on a physical mid-range device.
