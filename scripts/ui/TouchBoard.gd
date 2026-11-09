@@ -94,7 +94,8 @@ func _tap(point: Vector2) -> void:
             action = Session.move(state, selected_id, cell)
         if action.get("valid",false):
             state = action["state"]
-            message = "Accion realizada."
+            var winner := int(state.get("winner", -1))
+            message = "Victoria de faccion %d." % (winner + 1) if winner != -1 else "Accion realizada."
             selected_id = ""
         else:
             message = "Accion no permitida."
