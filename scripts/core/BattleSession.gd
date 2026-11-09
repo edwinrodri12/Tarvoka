@@ -7,7 +7,9 @@ const Turns = preload("res://scripts/core/Turns.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
 static func start(units: Array, terrain: Array, first_faction: int = 0) -> Dictionary:
-    return {"units": Turns.begin_turn(units, first_faction), "terrain": terrain.duplicate(true), "faction": first_faction, "winner": Turns.winner(units)}
+    # A malformed faction must never create an unplayable session.
+    var faction: int = first_faction if first_faction in [0, 1] else 0
+    return {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
 
 static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> Dictionary:
     if not _active(state):
