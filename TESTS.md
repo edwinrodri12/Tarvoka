@@ -4,3 +4,7 @@
 - Android compilation and device test: NO EJECUTADO (SDK/device unavailable).
 - Structural inspection of prior v1.1 ZIP: archive contains 23 entries.
 Run with: godot --headless --path . --script res://tests/test_rules.gd
+
+2026-11-08: Four negative movement assertions added. NO EJECUTADO: Godot unavailable.
+
+2026-11-09: Added four weighted path cost assertions. NOT EXECUTED in Godot (binary unavailable). GitHub commits verified; no APK built.

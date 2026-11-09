@@ -4,3 +4,7 @@ This repository is separate from EKANVORA and centro-operativo-atlanta.
 Source archive TARVOKA_autonomous_v1_1.zip exists in the conversation runtime, but has NOT been imported into this repository. This scaffold is not a replacement for that archive.
 No verified playable build, Android APK, or Godot runtime tests.
 GitHub repository visibility reported PUBLIC, despite earlier recommendation to use private. Change visibility manually if desired.
+
+2026-11-08: Branch validates blocked/impassable movement origin. GDScript not executed (Godot unavailable). Repository PUBLIC; archive not imported.
+
+2026-11-09: Separate draft branch adds indexed weighted movement queue and regression assertions; Godot runtime not verified. Repository remains PUBLIC. Prior v1.1 archive not imported.
