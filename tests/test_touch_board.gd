@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Board = preload("res://scripts/ui/TouchBoard.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -39,7 +40,7 @@ func _run() -> void:
     units[2]["pos"] = Vector2i(2, 2)
     units[2]["hp"] = 1
     units[3]["hp"] = 0
-    duel.state = Board.Session.start(units, duel.state["terrain"])
+    duel.state = Session.start(units, duel.state["terrain"])
     duel._tap(Vector2(120, 200))
     duel._tap(Vector2(200, 200))
     assert(duel.state["winner"] == 0)
