@@ -27,3 +27,5 @@
 - UI selection is restricted to living, active-faction units with unused actions; tapping an already selected unit cancels selection. Keep rule enforcement in BattleSession as the source of truth.
 
 2026-11-09: Disable Godot's touch-to-mouse emulation for TARVOKA because TouchBoard.gd handles InputEventScreenTouch and InputEventMouseButton independently; processing both can turn one physical tap into two board actions. Preserve direct mouse input for desktop debugging.
+
+2026-11-09: Show a victory message immediately after a decisive attack; preserve immutable BattleSession as the winner authority and block further turn changes.
