@@ -29,3 +29,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Proposed Android touch event deduplication via project.godot input_devices/pointing/emulate_mouse_from_touch=false. Godot touch events remain supported, desktop mouse events remain supported; prevents synthetic mouse press from deselecting a unit immediately after touch selection. Awaiting CI; not device-verified. PR #15 run 42679543043 cancelled, not a test pass.
 
 2026-11-09: Draft stacked UI change: show immediate winner message when the last enemy falls; pending Godot CI. No APK verified.
+
+2026-11-09 CI diagnosis: PR #17 run 42699713939 log confirms Godot 4.3 SCRIPT ERROR in tests/test_rules.gd:23: untyped [] supplied to Rules.reachable fourth parameter Array[Vector2i]. Created isolated follow-up branch fixing test arguments. Await CI validation; main untouched; APK not built.
