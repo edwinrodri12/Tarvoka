@@ -27,3 +27,5 @@
 
 - [ ] Diagnose failed Godot workflow run 42671606319 on PR #14; verify all headless suites before merging stacked PRs.
 - [ ] Verify spent-unit selection and tap-to-deselect regressions in Godot CI on new branch.
+
+- [ ] Validate touch/mouse dedup regression on Godot CI and real Android device; verify tap selects exactly once and desktop mouse still selects. Do not merge without green checks.
