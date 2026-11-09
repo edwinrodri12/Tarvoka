@@ -21,3 +21,5 @@
 - Reject the entire movement query if any terrain cell has an unknown or non-string type, or if the origin is impassable; avoid silently interpreting corrupted maps.
 
 2026-11-09: BattleSession is a pure RefCounted rules coordinator for two factions (0/1), independent of scene nodes and offline-capable. Each unit has one action per turn; movement consumes that action. No post-victory actions.
+
+2026-11-09: Use lightweight Control._draw() board and _gui_input() for initial Android touch prototype, no art assets or external dependencies. Each successful move/attack consumes the unit action according to BattleSession. Defer animations and gestures until core behavior is verified.

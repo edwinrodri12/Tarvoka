@@ -21,3 +21,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: On stacked terrain-grid-integrity branch, Rules.reachable now rejects malformed terrain values anywhere on the 10x8 board and impassable origins. Added four regression assertions. Godot execution NOT VERIFIED; no APK.
 
 2026-11-09: Proposed BattleSession.gd two-faction coordinator on stacked branch automation/battle-session-20261109. Connects move, attack, end turn, victory with immutable state; GDScript tests added but not yet verified. No Android build.
+
+2026-11-09: Proposed first interactive 10x8 touch board (scripts/ui/TouchBoard.gd) connected to BattleSession via scripts/ui/Main.gd. Includes tap selection, movement, attack, end-turn, faction colors and win indicator. Draft branch only; CI/Android NOT VERIFIED. Two-player local prototype, not AI.
