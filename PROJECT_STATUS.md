@@ -23,3 +23,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Proposed BattleSession.gd two-faction coordinator on stacked branch automation/battle-session-20261109. Connects move, attack, end turn, victory with immutable state; GDScript tests added but not yet verified. No Android build.
 
 2026-11-09: Proposed first interactive 10x8 touch board (scripts/ui/TouchBoard.gd) connected to BattleSession via scripts/ui/Main.gd. Includes tap selection, movement, attack, end-turn, faction colors and win indicator. Draft branch only; CI/Android NOT VERIFIED. Two-player local prototype, not AI.
+
+2026-11-09: Draft touch selection guard: tapping the selected friendly unit deselects it; already-acted friendly units cannot be selected. Branch-only, headless CI not yet verified. Previous PR #14 workflow run 42671606319 concluded FAILURE; root cause not established because job list returned empty. No APK/device verification.
