@@ -76,8 +76,16 @@ func _tap(point: Vector2) -> void:
             target = unit
             break
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
-        selected_id = str(target["id"])
-        message = "Unidad " + selected_id + " seleccionada."
+        var tapped_id := str(target["id"])
+        if tapped_id == selected_id:
+            selected_id = ""
+            message = "Seleccion cancelada."
+        elif bool(target.get("acted", false)):
+            selected_id = ""
+            message = "Esta unidad ya actuo durante este turno."
+        else:
+            selected_id = tapped_id
+            message = "Unidad " + selected_id + " seleccionada."
     elif not selected_id.is_empty():
         var action: Dictionary
         if not target.is_empty():
