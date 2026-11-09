@@ -10,3 +10,5 @@
 - [ ] Integrate standalone combat resolution with unit state and turn controller after CI validation.
 
 - [ ] Verify new turn tests in Godot CI; integrate turns with combat and scene input after green results.
+
+- [ ] Validate BattleActions.gd on Godot CI, then integrate scene input and movement into battle state.
