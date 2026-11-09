@@ -23,8 +23,12 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
         return distances
     distances[origin] = 0
     var frontier: Array[Vector2i] = [origin]
-    while not frontier.is_empty():
-        var current: Vector2i = frontier.pop_front()
+    # Index queue avoids shifting the array on each expansion.
+    # Cheaper paths still re-enqueue cells for weighted terrain.
+    var cursor := 0
+    while cursor < frontier.size():
+        var current: Vector2i = frontier[cursor]
+        cursor += 1
         for direction in DIRECTIONS:
             var next: Vector2i = current + direction
             if not inside(next) or next in blocked:
