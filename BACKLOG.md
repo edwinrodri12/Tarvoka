@@ -33,3 +33,6 @@
 - [ ] Validate decisive-attack victory UI regression in Godot headless CI; then review stacked PRs for integration.
 
 - [ ] Confirm CI on typed-blocked-array test fix, inspect any next failing test and fix before integration. Previous PR #17 run 42699713939 was CANCELLED after Godot script type error; do not count as passing.
+
+- [x] Confirm PR #18 typed-array fix via Godot 4.3 CI: run 42709626139 SUCCESS on commit 5e60d2e, all seven suites.
+- [ ] Verify newer BattleSession invalid-start-faction regression via GitHub Actions; review and consolidate stacked PRs into main only after latest green checks.
