@@ -6,3 +6,5 @@
 - TARVOKA is a provisional name; trademark clearance required before release.
 
 - Blocked or impassable movement origins yield no reachable cells.
+
+- Weighted movement uses an indexed work queue; improved paths are re-enqueued. Keep movement rules UI-independent.
