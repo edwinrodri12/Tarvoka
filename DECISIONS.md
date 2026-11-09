@@ -8,3 +8,5 @@
 - Treat successful CI on a draft PR as evidence for that exact head commit only; never infer other PRs or Android work passed. Keep PR #5 draft until integration review.
 
 - Combat calculations are deterministic, bounded by remaining HP, with minimum 1 damage for positive attacks; invalid dead-unit attacks are rejected. This is an initial ruleset, not final balancing.
+
+- Turn state is a pure data transformation; faction owns actions, dead units cannot act, and victory requires exactly one surviving faction.

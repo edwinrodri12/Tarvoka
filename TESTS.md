@@ -10,3 +10,5 @@
 - Local Godot binary remains unavailable; CI success is remote and limited to existing scaffold tests.
 
 - Combat test: tests/test_combat.gd covers damage, terrain cover, defeat, survival, and invalid attacker. Status: NO EJECUTADO until GitHub Actions reports result on combat PR.
+
+- Turn tests: tests/test_turns.gd checks faction reset, action ownership, duplicate action, dead units, immutability and winner. NO EJECUTADO pending CI evidence.
