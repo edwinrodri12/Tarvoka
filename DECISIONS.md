@@ -12,3 +12,5 @@
 - Turn state is a pure data transformation; faction owns actions, dead units cannot act, and victory requires exactly one surviving faction.
 
 - Initial attack integration permits only orthogonally adjacent enemy units and consumes the attacker's action; damage is deterministic. Ranged attacks and counterattacks are future work.
+
+- Reject battle actions when unit identifiers are duplicated, empty or missing to avoid targeting an ambiguous combatant.
