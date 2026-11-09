@@ -21,3 +21,6 @@
 - [ ] Run terrain-integrity regressions in Godot CI on the new stacked PR; then connect movement/attack to board input.
 
 - [ ] Verify BattleSession headless CI and fix any failures; then connect touch board UI to BattleSession. No APK until verified export.
+
+- [ ] Verify touch board GDScript test and fix CI failures; verify on-screen input in Godot and physical Android.
+- [ ] Add AI turn, win/lose overlay and persistence after interactive prototype passes.
