@@ -5,3 +5,5 @@ The local TARVOKA_autonomous_v1_1.zip archive is accessible (23 entries), but ha
 No verified Android APK or device test. No edits to EKANVORA or centro-operativo-atlanta.
 
 2026-11-09 verification: GitHub Actions run 42584227883 completed SUCCESS on PR #5 head a01a1d812b187967babb4745a8b2a7d1ee9d8afd. Both Godot 4.3 download and GDScript rules-test steps completed successfully. This verifies only the minimal scaffold's movement test, not the full v1.1 game or Android. Repository remains PUBLIC; PR #5 is draft, main unchanged.
+
+2026-11-09: Proposed standalone deterministic combat core (scripts/core/Combat.gd) and test suite. CI execution pending; no integration into battle UI yet. No APK verified.
