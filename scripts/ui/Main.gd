@@ -74,7 +74,7 @@ func _ready() -> void:
     new_game_dialog = ConfirmationDialog.new()
     new_game_dialog.title = "Comenzar nueva partida"
     new_game_dialog.dialog_text = "Se reemplazara el progreso guardado automaticamente. El guardado manual no se borrara. Continuar?"
-    new_game_dialog.ok_button_text = "Nueva partida"
+    new_game_dialog.ok_button_text = "Confirmar"
     new_game_dialog.confirmed.connect(_confirm_new_game)
     add_child(new_game_dialog)
     set_process(true)
