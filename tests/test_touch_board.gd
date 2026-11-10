@@ -62,6 +62,19 @@ func _run() -> void:
             ai_acted += 1
     assert(ai_acted > 0)
     assert(vs_ai.message == "Tu turno: faccion 1.")
+    # Save and restore through board integration, including selection reset.
+    var save_path := "user://tarvoka_touch_test.json"
+    assert(board.save_game(save_path))
+    var snapshot: Dictionary = board.state.duplicate(true)
+    board.state["faction"] = 0
+    board.selected_id = "A"
+    assert(board.load_game(save_path))
+    assert(board.state["faction"] == snapshot["faction"])
+    assert(board.state["units"][0]["pos"] == snapshot["units"][0]["pos"])
+    assert(board.selected_id == "")
+    assert(not board.load_game("user://tarvoka_touch_missing_123456.json"))
+    assert(board.state["faction"] == snapshot["faction"])
+    DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
     vs_ai.queue_free()
     duel.queue_free()
     board.queue_free()

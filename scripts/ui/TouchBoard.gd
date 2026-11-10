@@ -3,6 +3,7 @@ class_name TarvokaTouchBoard
 
 const Session = preload("res://scripts/core/BattleSession.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
+const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -134,3 +135,19 @@ func _play_ai_turn() -> void:
     if next.get("valid", false):
         state = next["state"]
         message = "Tu turno: faccion 1."
+
+func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
+    var ok := SaveStore.save(state, path)
+    message = "Partida guardada." if ok else "No se pudo guardar la partida."
+    return ok
+
+func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
+    var restored: Dictionary = SaveStore.load(path)
+    if restored.is_empty():
+        message = "No se pudo cargar la partida."
+        return false
+    state = restored
+    selected_id = ""
+    message = "Partida cargada."
+    queue_redraw()
+    return true

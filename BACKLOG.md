@@ -49,3 +49,5 @@
 - [ ] Verify SaveCodec JSON round-trip CI and integrate file persistence via user:// after green tests.
 
 - [ ] Verify SaveStore Godot CI; inspect failure logs and correct issues before merging. Then wire save/load buttons into touch board.
+
+- [ ] Verify save/load UI integration on Godot CI and physical Android; diagnose recurrent cancelled CI before merging stacked PRs.
