@@ -6,6 +6,7 @@ const HEIGHT := 8
 const VERSION := 1
 const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -19,13 +20,23 @@ static func encode(state: Dictionary) -> String:
         var pos: Vector2i = unit["pos"]
         copy["pos"] = [pos.x, pos.y]
         units.append(copy)
-    return JSON.stringify({
+    var snapshot: Dictionary = {
         "version": VERSION,
         "faction": state["faction"],
         "winner": state["winner"],
         "terrain": state["terrain"],
         "units": units
-    })
+    }
+    if Visibility.enabled(state):
+        snapshot["fog_enabled"] = true
+        var explored: Dictionary = {}
+        for faction in [0, 1]:
+            var cells: Array = []
+            for cell in state["explored"][str(faction)]:
+                cells.append([cell.x, cell.y])
+            explored[str(faction)] = cells
+        snapshot["explored"] = explored
+    return JSON.stringify(snapshot)
 
 static func decode(raw: String) -> Dictionary:
     var data = JSON.parse_string(raw)
@@ -46,10 +57,34 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(unit.get(key)):
                 return {}
             unit[key] = int(unit[key])
+        if unit.has("vision"):
+            if not _whole(unit["vision"]):
+                return {}
+            unit["vision"] = int(unit["vision"])
     if not _whole(state.get("faction")) or not _whole(state.get("winner")):
         return {}
     state["faction"] = int(state["faction"])
     state["winner"] = int(state["winner"])
+    if state.has("fog_enabled"):
+        if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
+            return {}
+        var result_explored: Dictionary = {}
+        for faction in [0, 1]:
+            var cells = state["explored"].get(str(faction), null)
+            if not cells is Array or cells.size() > WIDTH * HEIGHT:
+                return {}
+            var restored: Array[Vector2i] = []
+            var unique: Dictionary = {}
+            for point in cells:
+                if not point is Array or point.size() != 2 or not _whole(point[0]) or not _whole(point[1]):
+                    return {}
+                var cell := Vector2i(int(point[0]), int(point[1]))
+                if not Rules.inside(cell) or unique.has(cell):
+                    return {}
+                unique[cell] = true
+                restored.append(cell)
+            result_explored[str(faction)] = restored
+        state["explored"] = result_explored
     if not _valid_state(state):
         return {}
     return state
@@ -91,10 +126,30 @@ static func _valid_state(state: Dictionary) -> bool:
         for key in ["move_points", "attack", "defense", "cover"]:
             if not unit.get(key) is int or unit[key] < 0 or unit[key] > MAX_STAT:
                 return false
+        if unit.has("vision") and (not unit["vision"] is int or unit["vision"] < 1 or unit["vision"] > Visibility.MAX_VISION):
+            return false
         if unit["hp"] > 0:
             if positions.has(pos):
                 return false
             positions[pos] = true
+    # Fog saves must include coherent, bounded exploration for both factions.
+    if state.has("fog_enabled"):
+        if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
+            return false
+        for faction in [0, 1]:
+            var cells = state["explored"].get(str(faction), null)
+            if not cells is Array or cells.size() > WIDTH * HEIGHT:
+                return false
+            var unique: Dictionary = {}
+            for cell in cells:
+                if not cell is Vector2i or not Rules.inside(cell) or unique.has(cell):
+                    return false
+                unique[cell] = true
+            for currently_visible in Visibility.visible_cells(state, faction):
+                if not unique.has(currently_visible):
+                    return false
+    elif state.has("explored"):
+        return false
     # A save cannot declare victory when both armies are still alive.
     if state["winner"] != Turns.winner(state["units"]):
         return false
