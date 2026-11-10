@@ -102,6 +102,18 @@ func _run() -> void:
     assert(SaveStore.save(ai_turn["state"], ai_save_path))
     assert(vs_ai.load_game(ai_save_path))
     assert(int(vs_ai.state["faction"]) == 0 or int(vs_ai.state.get("winner", -1)) != -1)
+    # A completed battle must display the victor and never start another AI turn.
+    var finished_path := "user://tarvoka_finished_load_test.json"
+    var finished: Dictionary = ai_turn["state"].duplicate(true)
+    for unit in finished["units"]:
+        if int(unit["faction"]) == 1:
+            unit["hp"] = 0
+    finished["winner"] = 0
+    assert(SaveStore.save(finished, finished_path))
+    assert(vs_ai.load_game(finished_path))
+    assert(vs_ai.state["winner"] == 0)
+    assert(vs_ai.message == "Victoria de faccion 1.")
+    DirAccess.remove_absolute(ProjectSettings.globalize_path(finished_path))
     DirAccess.remove_absolute(ProjectSettings.globalize_path(ai_save_path))
     DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
     vs_ai.queue_free()

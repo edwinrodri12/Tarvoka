@@ -55,3 +55,5 @@
 2026-11-10: Preserve manual two-player selection of faction 1 while denying all board taps during computer-controlled turns; test both sides of this mode boundary.
 
 2026-11-10: A loaded save on computer faction 1 automatically executes the bounded offline AI turn, rather than leaving the input lock permanent. Terminal victory states remain untouched. Pending CI.
+
+2026-11-10: Restored completed games display their victor; no AI continuation on terminal state.

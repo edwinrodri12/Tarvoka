@@ -150,7 +150,8 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         return false
     state = restored
     selected_id = ""
-    message = "Partida cargada."
+    var loaded_winner := int(state.get("winner", -1))
+    message = "Victoria de faccion %d." % (loaded_winner + 1) if loaded_winner != -1 else "Partida cargada."
     # A saved computer turn must resume immediately; human input is locked during it.
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()

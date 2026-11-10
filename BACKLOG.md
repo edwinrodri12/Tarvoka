@@ -61,3 +61,5 @@
 - [ ] Run expanded input-ownership tests in Godot CI and confirm manual two-player faction 1 remains selectable before merging PR stack.
 
 2026-11-10: Verify saved-AI-turn resume regression in Godot CI; consolidate stacked PRs after verification. First Android export and device testing remain outstanding.
+
+- [ ] Verify completed-battle load feedback regression in Godot CI before merging stacked PRs.
