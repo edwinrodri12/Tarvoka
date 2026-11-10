@@ -216,7 +216,7 @@ func _ready() -> void:
     panel.add_child(fog_picker)
 
     var fog_help := Label.new()
-    fog_help.text = "En niebla: soldados ven 3 casillas; exploradores S/Z ven 5. Solo puedes atacar o mover a casillas visibles."
+    fog_help.text = "Niebla: soldados ven 3 casillas; exploradores S/Z ven 5. Las montanas bloquean la vista detras de ellas; solo puedes mover o atacar objetivos visibles."
     fog_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     fog_help.add_theme_font_size_override("font_size", 14)
     panel.add_child(fog_help)
