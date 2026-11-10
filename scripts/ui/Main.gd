@@ -6,6 +6,7 @@ var status_label: Label
 var unit_label: Label
 var end_button: Button
 var cancel_button: Button
+var new_game_dialog: ConfirmationDialog
 
 func _ready() -> void:
     var layout := VBoxContainer.new()
@@ -70,6 +71,12 @@ func _ready() -> void:
     restart_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     restart_button.pressed.connect(_new_game)
     actions.add_child(restart_button)
+    new_game_dialog = ConfirmationDialog.new()
+    new_game_dialog.title = "Comenzar nueva partida"
+    new_game_dialog.dialog_text = "Se reemplazara el progreso guardado automaticamente. El guardado manual no se borrara. Continuar?"
+    new_game_dialog.ok_button_text = "Nueva partida"
+    new_game_dialog.confirmed.connect(_confirm_new_game)
+    add_child(new_game_dialog)
     set_process(true)
 
 func _process(_delta: float) -> void:
@@ -94,6 +101,9 @@ func _load_game() -> void:
     board.load_game()
 
 func _new_game() -> void:
+    new_game_dialog.popup_centered()
+
+func _confirm_new_game() -> void:
     board.new_game()
 
 func _cancel_selection() -> void:
