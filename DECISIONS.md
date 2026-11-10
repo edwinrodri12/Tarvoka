@@ -84,3 +84,5 @@ Aprobado por el usuario: incorporar un análisis integral de críticas históric
 4. Multijugador local guardable planeado; online, editor y clasificaciones solo después de una versión offline estable y con autorización para cualquier coste.
 5. Evitar confundir prueba CI o botón operativo con funcionamiento de flujo completo en móvil; marcar estado con evidencias.
 6. Mantener sin microtransacciones pay-to-win; cualquier monetización o lanzamiento exige decisiones posteriores, autorización y revisión legal de marca TARVOKA USPTO/WIPO/PI.
+
+2026-11-10 P0-02 — Problema: cierre de app pierde avances posteriores al guardado manual. Solución incremental: archivo de autoguardado separado del manual, guardado tras acción y turno (después de IA), restauración al abrir; botón Nueva partida sobrescribe solo autosave. Se conserva SaveStore/SaveCodec v1. Tradeoff: acciones se guardan tras ejecutarse, no existe todavía confirmación previa ni rollback de corrupción por copia de respaldo persistente. Casos: reabrir y comparar turno/unidades; autosave corrupto no altera batalla fresca ni guardado manual. No afirmar prueba en teléfono hasta validación real.
