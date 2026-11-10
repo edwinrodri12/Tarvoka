@@ -28,6 +28,15 @@ func _initialize() -> void:
     assert(moved["state"]["units"][0]["acted"])
     assert(not AI.step(moved["state"])["valid"]) # No action remains.
     assert(state["units"][0]["pos"] == Vector2i(1,1))
+    # Impassable water wall: AI must never propose an illegal shortcut.
+    var divided: Array = terrain.duplicate(true)
+    for y in range(8):
+        divided[y][5] = "water"
+    var unreachable: Dictionary = Session.start(units, divided)
+    var legal: Dictionary = AI.step(unreachable)
+    assert(legal["valid"] and legal["action"] == "move")
+    assert(legal["destination"].x < 5)
+    assert(unreachable["units"][0]["pos"] == Vector2i(1,1))
     var invalid: Dictionary = AI.step({})
     assert(not invalid["valid"] and invalid["action"] == "none")
     print("PASS basic AI: adjacent attack, win, deterministic move, spent unit, immutability")
