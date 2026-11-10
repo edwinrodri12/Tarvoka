@@ -52,8 +52,10 @@ func _run() -> void:
     f.store_string("{corrupt")
     f.close()
     var fresh: Dictionary = resumed.state.duplicate(true)
-    assert(not resumed.resume_autosave())
-    assert(resumed.state == fresh)
+    assert(resumed.resume_autosave())
+    assert(resumed.state == next_turn)
+    assert(resumed.state != fresh)
+    # Recovery must never mutate the independent manual save.
     assert(Store.load(manual) == original)
     resumed.queue_free()
     for suffix in ["", ".bak", ".tmp"]:
