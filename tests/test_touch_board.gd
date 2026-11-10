@@ -2,6 +2,7 @@ extends SceneTree
 
 const Board = preload("res://scripts/ui/TouchBoard.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
+const SaveStore = preload("res://scripts/core/SaveStore.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -94,6 +95,14 @@ func _run() -> void:
     assert(board.selected_id == "")
     assert(not board.load_game("user://tarvoka_touch_missing_123456.json"))
     assert(board.state["faction"] == snapshot["faction"])
+    # Loading an AI turn must not leave the player permanently locked out.
+    var ai_save_path := "user://tarvoka_ai_resume_test.json"
+    var ai_turn: Dictionary = Session.end_turn(vs_ai.state)
+    assert(ai_turn.get("valid", false))
+    assert(SaveStore.save(ai_turn["state"], ai_save_path))
+    assert(vs_ai.load_game(ai_save_path))
+    assert(int(vs_ai.state["faction"]) == 0 or int(vs_ai.state.get("winner", -1)) != -1)
+    DirAccess.remove_absolute(ProjectSettings.globalize_path(ai_save_path))
     DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
     vs_ai.queue_free()
     duel.queue_free()
