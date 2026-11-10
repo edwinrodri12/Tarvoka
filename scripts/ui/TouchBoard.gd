@@ -83,6 +83,21 @@ func _draw() -> void:
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * 0.42, 0, TAU, 32, Color.YELLOW, 3.0)
         draw_string(font, center + Vector2(-tile*0.11,tile*0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12,tile*0.30)), Color.WHITE)
+    # Put expected damage above the enemy tile, after units are drawn so it stays readable.
+    for destination in hints["attacks"]:
+        if tile >= 33.0:
+            var target_pos: Vector2 = origin + Vector2(destination) * tile
+            var dmg: int = int(hints["attacks"][destination]["damage"])
+            draw_string(font, target_pos + Vector2(tile * 0.52, tile * 0.89),
+                "-%d" % dmg, HORIZONTAL_ALIGNMENT_LEFT, -1,
+                int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
+
+func cancel_selection() -> void:
+    if selected_id.is_empty():
+        return
+    selected_id = ""
+    message = "Seleccion cancelada."
+    queue_redraw()
 
 func selected_unit_summary() -> String:
     return TacticalHints.unit_summary(state, selected_id)
