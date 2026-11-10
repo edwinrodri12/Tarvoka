@@ -69,3 +69,5 @@
 2026-11-10: Once a touch exceeds the tactical tap threshold, do not restore tap eligibility by moving back to the origin.
 
 2026-11-10: Keep touch-board hit testing half-open at board boundaries: taps on or beyond the right/bottom edge and before the left/top edge must not mutate battle state.
+
+2026-11-10: After all 10 Godot headless suites passed, squash-merge consolidated PR #37 to main as 04c22883. Keep historical PRs for traceability until redundancy is checked; no destructive branch deletion. Prioritize post-merge CI, desktop smoke test, Android export configuration and device validation over new features.
