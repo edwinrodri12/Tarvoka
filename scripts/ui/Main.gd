@@ -14,6 +14,7 @@ var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
 var balance_picker: OptionButton
+var fog_picker: OptionButton
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
 
@@ -202,6 +203,24 @@ func _ready() -> void:
     balance_picker.select(1 if board.symmetric_setup else 0)
     panel.add_child(balance_picker)
 
+    var fog_heading := Label.new()
+    fog_heading.text = "VISIBILIDAD DEL CAMPO"
+    fog_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(fog_heading)
+    fog_picker = OptionButton.new()
+    fog_picker.custom_minimum_size.y = 54
+    fog_picker.add_theme_font_size_override("font_size", 16)
+    fog_picker.add_item("Mapa visible (clasico)", 0)
+    fog_picker.add_item("Niebla y reconocimiento", 1)
+    fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
+    panel.add_child(fog_picker)
+
+    var fog_help := Label.new()
+    fog_help.text = "En niebla: soldados ven 3 casillas; exploradores S/Z ven 5. Solo puedes atacar o mover a casillas visibles."
+    fog_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    fog_help.add_theme_font_size_override("font_size", 14)
+    panel.add_child(fog_help)
+
     var restart_button := Button.new()
     restart_button.text = "Nueva partida"
     restart_button.custom_minimum_size.y = 52
@@ -303,16 +322,18 @@ func _load_game() -> void:
     if board.load_game():
         scenario_picker.select(board.current_scenario_id)
         balance_picker.select(1 if board.symmetric_setup else 0)
+        fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s? Esto reemplazara el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name]
+    var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s? Esto reemplazara el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, fog_name]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
