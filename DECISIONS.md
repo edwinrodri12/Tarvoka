@@ -67,3 +67,5 @@
 2026-11-10: Touch gestures belong to the first active finger until that same index releases. Ignore other finger press/release events to prevent unintended tactical actions; maintain existing 18px movement threshold.
 
 2026-11-10: Once a touch exceeds the tactical tap threshold, do not restore tap eligibility by moving back to the origin.
+
+2026-11-10: Keep touch-board hit testing half-open at board boundaries: taps on or beyond the right/bottom edge and before the left/top edge must not mutate battle state.
