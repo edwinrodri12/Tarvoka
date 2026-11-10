@@ -37,3 +37,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09 19:xx EST: Proposed pure deterministic BasicAI.step(state) on isolated branch. Prioritizes adjacent legal attacks, otherwise chooses a legal move minimizing Manhattan distance to an enemy; returns immutable state and no-op when exhausted. Tests and CI step added. NOT verified in Godot yet; not connected to UI. Latest predecessor commit 42add271 GitHub Actions run 42717331241 SUCCESS (all existing suites), but does not validate new AI. No APK.
 
 2026-11-09 20:xx EST: Draft AI opponent integration in TouchBoard.finish_turn: faction 1 executes at most unit-count deterministic BasicAI steps then returns to human faction 0, unless victory occurs. UI remains lightweight/offline. CI pending on new branch; Android APK/device NOT verified.
+
+2026-11-09 21:xx EST: PR #20 CI run 42733717633 cancelled during touch board suite after preceding suites passed; new AI movement performance optimization proposed in dedicated stacked branch. Godot validation pending; no APK.
