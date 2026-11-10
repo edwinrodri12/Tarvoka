@@ -57,3 +57,5 @@
 2026-11-10: Verify CI fast-fail branch, inspect any timed-out suite logs, fix root cause, then validate full test set before Android export.
 
 - [ ] Validate AI-turn human-input guard and regression in Godot 4.3 CI; check resumed saves during computer turn. Do not merge stacked changes without green tests.
+
+- [ ] Run expanded input-ownership tests in Godot CI and confirm manual two-player faction 1 remains selectable before merging PR stack.
