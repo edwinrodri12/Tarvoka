@@ -47,3 +47,5 @@
 - [ ] Verify optimized AI and water-wall regression in Godot CI; diagnose remaining touch-board timeouts from job logs if still present.
 
 - [ ] Verify SaveCodec JSON round-trip CI and integrate file persistence via user:// after green tests.
+
+- [ ] Verify SaveStore Godot CI; inspect failure logs and correct issues before merging. Then wire save/load buttons into touch board.

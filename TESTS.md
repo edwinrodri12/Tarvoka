@@ -44,3 +44,5 @@
 2026-11-09: PR #20 GitHub Actions run 42733717633 CANCELLED; rules/combat/turns/battle actions/movement/battle session PASÓ, touch board CANCELADO, AI tests SKIPPED. New water-wall AI regression and pathfinding optimization: NO EJECUTADO pending CI. Android: NO EJECUTADO.
 
 2026-11-09: Added tests/test_save_codec.gd for JSON round-trip, independent state, invalid payload/version/coordinates/duplicate IDs. NO EJECUTADO pending GitHub Actions. No Android build/device verification.
+
+2026-11-09 SaveStore: regression script tests file roundtrip, invalid state/path, corrupt and missing files. Status NO EJECUTADO at commit creation; PR #22 prior run 42741291627 CANCELLED. Android device test NO EJECUTADO.
