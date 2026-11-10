@@ -69,3 +69,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: PR #35 proposes permanent cancellation when the primary finger drags beyond 18px then returns. CI/device not verified; no APK.
 
 2026-11-10: Added touch-board boundary regression for taps at the exclusive right edge and outside the left edge. CI pending; Android device and APK not verified.
+
+2026-11-10 CONSOLIDATION COMPLETE: PR #37 merged with squash into main, commit 04c22883860d431f703a12967ac29f91187303d6. Main now contains tactical board, movement/combat/turns, deterministic basic AI, save/load, and 10-suite Godot headless CI workflow. PR #37 head ff21ca270b241217a13c8b1d88ab08118b4d6b5e passed all 10 Godot 4.3 suites: workflow 42855097479. The merged main SHA itself still requires a post-merge CI check. Historical 'main unchanged' statements above are historical, not current. Original draft PRs #1-#36 remain open pending equivalence audit and safe closure; no need to remerge duplicate code. APK and physical Android validation remain NOT EXECUTED. Repo remains PUBLIC.
