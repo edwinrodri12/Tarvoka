@@ -121,6 +121,9 @@ func finish_turn() -> void:
     queue_redraw()
 
 func _play_ai_turn() -> void:
+    # Never advance the computer from a human or terminal state.
+    if not ai_enabled or int(state.get("faction", -1)) != 1 or int(state.get("winner", -1)) != -1:
+        return
     # Hard bound: each valid AI action consumes one unit's action.
     var max_actions: int = (state.get("units", []) as Array).size()
     for i in range(max_actions):

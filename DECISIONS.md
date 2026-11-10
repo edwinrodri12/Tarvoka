@@ -59,3 +59,5 @@
 2026-11-10: Restored completed games display their victor; no AI continuation on terminal state.
 
 2026-11-10: Treat terminal saved games symmetrically for both factions; never resume AI or accept player actions after a winner is recorded.
+
+2026-11-10: AI step orchestration must be a no-op unless computer mode is enabled, faction 2 owns the turn, and battle has no winner.
