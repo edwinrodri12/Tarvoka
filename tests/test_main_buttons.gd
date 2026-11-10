@@ -16,7 +16,8 @@ func _run() -> void:
     for child in main.find_children("*", "Button", true, false):
         var button: Button = child as Button
         controls[button.text] = button
-    assert(controls.size() == 4)
+    assert(controls.size() == 5)
+    assert(controls.has("Cancelar seleccion"))
     assert(controls.has("Nueva partida"))
     assert(controls.has("Terminar turno"))
     assert(controls.has("Guardar partida"))
@@ -25,6 +26,15 @@ func _run() -> void:
     var board = main.get("board")
     assert(board != null)
     var original: Dictionary = board.state.duplicate(true)
+    main._process(0.0)
+    assert(not controls["Terminar turno"].disabled)
+    assert(controls["Cancelar seleccion"].disabled)
+    board.selected_id = "A"
+    main._process(0.0)
+    assert(not controls["Cancelar seleccion"].disabled)
+    controls["Cancelar seleccion"].pressed.emit()
+    assert(board.selected_id == "")
+    assert(board.state == original)
     controls["Terminar turno"].pressed.emit()
     # The human end-turn button advances the enemy AI and returns control.
     assert(board.state.get("faction", -1) == 0)
@@ -49,6 +59,12 @@ func _run() -> void:
     assert(board.state["units"][0]["pos"] == Vector2i(1, 2))
     assert(board.state["faction"] == 0)
     assert(board.state["winner"] == -1)
+    board.state["winner"] = 0
+    main._process(0.0)
+    assert(controls["Terminar turno"].disabled)
+    controls["Nueva partida"].pressed.emit()
+    main._process(0.0)
+    assert(not controls["Terminar turno"].disabled)
     var auto_path := "user://tarvoka_autosave_v1.json"
     assert(FileAccess.file_exists(auto_path))
     assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(auto_path)) == OK)
