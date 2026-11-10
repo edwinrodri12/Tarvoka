@@ -43,3 +43,5 @@
 
 - [ ] Verify bounded AI-turn UI regression on Godot CI, then manually exercise a full human-vs-AI battle.
 - [ ] Add save/load state and first Android export after CI is green; physical-device touch verification remains required.
+
+- [ ] Verify optimized AI and water-wall regression in Godot CI; diagnose remaining touch-board timeouts from job logs if still present.
