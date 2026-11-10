@@ -120,7 +120,7 @@ func finish_turn() -> void:
 
 func _play_ai_turn() -> void:
     # Hard bound: each valid AI action consumes one unit's action.
-    var max_actions := state.get("units", []).size()
+    var max_actions: int = (state.get("units", []) as Array).size()
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break

@@ -45,3 +45,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09: Proposed SaveStore.gd for bounded offline user:// JSON file persistence with temp write and rollback; draft branch, no verified Godot execution or Android APK. PR #22 CI was cancelled; this change is unverified until CI succeeds.
 
 2026-11-09 23:xx EST: Added save/load buttons and TouchBoard methods on stacked draft branch; keeps state unchanged on failed load, clears selection after successful load. Godot CI and Android unverified; PR #23 run 42746918719 CANCELLED.
+
+2026-11-10: Diagnosed PR #24 run 42753784281: Godot 4.3 parse error at TouchBoard.gd:123 (`var max_actions := state.get(...).size()` cannot infer type). The test script then fails to instantiate the board and hangs until 10-minute cancellation. Explicitly typed AI action bound in dedicated stacked branch; awaiting CI on fix. Six earlier suites passed in that run; Android APK/device unverified.

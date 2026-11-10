@@ -45,3 +45,5 @@
 2026-11-09: Store saves in user://tarvoka_battle_v1.json, limit 256 KiB, reject non-user paths and invalid codec states; use temporary write and rollback of previous file on rename failure. No encryption or cloud dependency.
 
 2026-11-09: Expose offline save/load via explicit UI buttons; delegate serialization and filesystem validation to SaveStore, clear stale selection after restore, preserve live state when loading fails.
+
+2026-11-10: Explicitly annotate the bounded AI action count as `int` after casting units to `Array` to satisfy Godot 4.3 static inference. Keep original unit-count action cap and gameplay semantics unchanged.
