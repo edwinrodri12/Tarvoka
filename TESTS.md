@@ -68,3 +68,5 @@
 2026-11-10: Added touch-event regression: press alone does not select, release selects, drag release cannot move, second tap deselects. PASÓ: GitHub writes. NO EJECUTADO: Godot 4 runtime/CI for new branch; Android APK/device not available.
 
 2026-11-10: Added multi-touch regression to tests/test_touch_board.gd: secondary finger press/release does not complete primary tap; primary release selects and subsequent tap deselects. PASÓ source commit; NO EJECUTADO Godot runtime and Android/device.
+
+2026-11-10 PR #35: Added synthetic drag-out-and-return regression to tests/test_touch_board.gd. NO EJECUTADO in Godot CI or Android device at commit time; APK NO EJECUTADO.
