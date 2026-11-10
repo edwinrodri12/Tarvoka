@@ -11,7 +11,7 @@
 - PR #56: siluetas aliadas circulares y enemigas cuadradas, HP numérico y bajas/supervivientes.
 - PR #57: bloqueo de guardados malformados y victorias incoherentes.
 - PR #58–#59: 12 batallas simuladas IA×IA, modo Entrenamiento vs Simétrico, elección de fuerza inicial transparente.
-- PR #52: trabajo separado de seguridad de compilación por automatización, verificar estado antes de incluirlo.
+- PR #52: integrado en main, comprueba biblioteca nativa ARM64 y registra huella pública de certificado en pipeline. La firma de depuración sigue siendo efímera.
 
 ## Verificaciones automáticas
 Cada PR integrado tuvo su Godot 4.3 headless SUCCESS y Android debug APK export SUCCESS. TESTS.md contiene IDs y alcance. Las 12 simulaciones terminan sin deadlocks; Entrenamiento azul 6–0, Simétrico 3–3. Esto no demuestra funcionamiento del nuevo conjunto en hardware Android, ni balance competitivo general.
