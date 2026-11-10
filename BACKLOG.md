@@ -123,3 +123,5 @@
 - [ ] Editor, compartir mapas, repeticiones, clasificaciones y expansiones sustanciales.
 - [ ] Verificación legal de marcas TARVOKA y originalidad de PI antes de publicación.
 **Criterio de entrada a desarrollo:** problema de jugador + reglas puras + prueba positiva/adversarial + UX móvil + decisión documentada. Evitar agregar todos los puntos de golpe.
+
+2026-11-10 P0-02 autosave/reanudación: [ ] PR propuesto con `tests/test_autosave.gd`; gate de CI Godot y export Android, luego instalación física y cierre forzoso/reapertura. [ ] Diseñar recuperación desde `.bak` cuando archivo principal corrupto y política de retención de backup, con tests adversariales. [ ] Confirmación antes de Nueva partida (puede sobrescribir progreso automático). P0-03/04/05: PR #41 fusionado, overlay y HUD requieren validación de legibilidad en Android.
