@@ -205,3 +205,10 @@
 - [ ] P1 posteriores: objetivos y captura territorial, IA de defensa y retirada, dificultades por planificación justa y balance con muestreo más amplio, no por trampas.
 - [ ] Faltan clave de firma persistente y actualización de APK sin borrar progreso; no almacenar claves privadas en repositorio.
 - [ ] Mantener APK agrupadas; no generar una entrega al usuario tras cada PR.
+
+## P1 checkpoint adicional — montaña y cobertura de niebla (#66–#67)
+- [x] Montaña bloquea visión detrás, casilla propia visible; scouts pueden revelar rodeando; reglas simétricas y guardado v1 correcto (#66, CI PASS).
+- [x] Niebla no explorada 100% opaca para no filtrar colores; terreno conocido fuera de visión atenuado (#67, CI PASS).
+- [ ] Validar en teléfono reconocimiento alrededor de montañas y que enemigos queden verdaderamente ocultos, no solo en simulación.
+- [ ] Revisar visibilidad diagonal entre esquinas y oclusión de bosques/estructuras con reglas claras, pruebas de simetría y balance, no asumir completado.
+- [ ] Mantener entregas APK agrupadas; no entregar una APK por cada PR.
