@@ -55,7 +55,12 @@ func _run() -> void:
     assert(board.state == snapshot)
     assert(board.message == "Partida cargada.")
     assert(DirAccess.remove_absolute(path_abs) == OK)
+    var before_restart: Dictionary = board.state.duplicate(true)
     controls["Nueva partida"].pressed.emit()
+    assert(board.state == before_restart) # Merely opening the dialog must not erase progress.
+    var dialog: ConfirmationDialog = main.get("new_game_dialog")
+    assert(dialog != null)
+    dialog.confirmed.emit()
     assert(board.state["units"][0]["pos"] == Vector2i(1, 2))
     assert(board.state["faction"] == 0)
     assert(board.state["winner"] == -1)
@@ -63,6 +68,9 @@ func _run() -> void:
     main._process(0.0)
     assert(controls["Terminar turno"].disabled)
     controls["Nueva partida"].pressed.emit()
+    main._process(0.0)
+    assert(controls["Terminar turno"].disabled) # Battle stays terminal until confirmed.
+    dialog.confirmed.emit()
     main._process(0.0)
     assert(not controls["Terminar turno"].disabled)
     var auto_path := "user://tarvoka_autosave_v1.json"
