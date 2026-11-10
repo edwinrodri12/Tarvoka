@@ -146,6 +146,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_ai_self_play.gd
 
+      - name: Run mountain vision obstruction and flank revelation tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_mountain_los.gd
+
       - name: Run visibility, fair observation and fog save compatibility tests
         shell: bash
         run: |
