@@ -10,6 +10,7 @@ const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
 var current_scenario_id := 0
+var symmetric_setup := false
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
@@ -29,14 +30,17 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false) -> void:
+    symmetric_setup = symmetric
+    var enemy_hp: int = 10 if symmetric else 8
+    var enemy_attack: int = 5 if symmetric else 4
     current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
     var terrain: Array = Scenarios.terrain(current_scenario_id)
     state = Session.start([
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
-        {"id":"X","faction":1,"hp":8,"pos":Vector2i(8,2),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false},
-        {"id":"Y","faction":1,"hp":8,"pos":Vector2i(8,5),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false}
+        {"id":"X","faction":1,"hp":enemy_hp,"pos":Vector2i(8,2),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false},
+        {"id":"Y","faction":1,"hp":enemy_hp,"pos":Vector2i(8,5),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false}
     ], terrain)
     selected_id = ""
     pending_order.clear()
@@ -343,6 +347,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         return false
     state = restored
     current_scenario_id = Scenarios.identify(state["terrain"])
+    symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
@@ -359,12 +364,22 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
 
 # Autosave is a separate file; manual "Guardar partida" always remains untouched.
 # The main scene chooses when to restore so unit tests can create fresh boards.
+func _infer_symmetric_setup() -> bool:
+    # Existing v1 saved games contain per-unit attack values but no setup flag.
+    # Those values do not decrease when units lose HP, so the mode is recoverable.
+    for unit in state.get("units", []):
+        if int(unit.get("faction", -1)) == 1:
+            return int(unit.get("attack", 0)) == 5
+    return false
+
 func resume_autosave() -> bool:
     var report: Dictionary = SaveStore.load_report(autosave_path)
     var restored: Dictionary = report["state"]
     if restored.is_empty():
         return false
     state = restored
+    current_scenario_id = Scenarios.identify(state["terrain"])
+    symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
