@@ -53,3 +53,5 @@
 2026-11-10: In AI-enabled games, human board taps are accepted only on faction 0 turns; manual two-player mode retains faction 1 input. This also protects restored AI-turn saves.
 
 2026-11-10: Preserve manual two-player selection of faction 1 while denying all board taps during computer-controlled turns; test both sides of this mode boundary.
+
+2026-11-10: A loaded save on computer faction 1 automatically executes the bounded offline AI turn, rather than leaving the input lock permanent. Terminal victory states remain untouched. Pending CI.

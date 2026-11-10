@@ -56,3 +56,5 @@
 2026-11-10: Added regression in tests/test_touch_board.gd for ignored human taps while AI faction 1 owns the turn. PASÓ: GitHub code/test writes. NO EJECUTADO: Godot CI on this commit, APK build, physical Android device.
 
 2026-11-10: Extended touch board assertions for AI-turn taps on both factions and manual faction 1 selection. PASÓ: test source committed; NO EJECUTADO: Godot runtime, CI, Android APK/device.
+
+2026-11-10: PR #28 SHA 6d2ea08d: GitHub Actions 42780308893 PASÓ. New saved-AI-turn resume test: NO EJECUTADO until new branch CI. Android APK/device: NO EJECUTADO.
