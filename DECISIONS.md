@@ -61,3 +61,5 @@
 2026-11-10: Treat terminal saved games symmetrically for both factions; never resume AI or accept player actions after a winner is recorded.
 
 2026-11-10: AI step orchestration must be a no-op unless computer mode is enabled, faction 2 owns the turn, and battle has no winner.
+
+2026-11-10: Treat touchscreen gestures as taps only on release within an 18-pixel movement tolerance; do not interpret swipes as tactical actions. Keep mouse click handling for desktop debugging.
