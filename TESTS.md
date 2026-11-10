@@ -70,3 +70,5 @@
 2026-11-10: Added multi-touch regression to tests/test_touch_board.gd: secondary finger press/release does not complete primary tap; primary release selects and subsequent tap deselects. PASÓ source commit; NO EJECUTADO Godot runtime and Android/device.
 
 2026-11-10 PR #35: Added synthetic drag-out-and-return regression to tests/test_touch_board.gd. NO EJECUTADO in Godot CI or Android device at commit time; APK NO EJECUTADO.
+
+2026-11-10: Added two synthetic off-board touch regressions (x=800 exclusive right edge and x=-1 left exterior on 800x640 board). PASÓ: source write if committed; Godot CI NO EJECUTADO pending new branch workflow; APK/device NO EJECUTADO.

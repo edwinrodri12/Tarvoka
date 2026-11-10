@@ -73,3 +73,5 @@
 2026-11-10: Verify primary-finger multi-touch regression in Godot 4 CI; then validate Android device gestures and prepare first APK. Consolidate stacked PRs before export.
 
 2026-11-10: Verify drag-out-and-return cancellation in Godot CI and Android; then consolidate PR stack and export APK.
+
+- [ ] Verify off-board touch boundary regression in Godot CI and on Android before consolidating stacked PRs.
