@@ -77,8 +77,14 @@ func _run() -> void:
     assert(board.load_game(path))
     assert(board.state == moved)
     assert(Vision.enabled(board.state))
-    screen._load_game() # Reloads the default manual slot; not this custom test file.
-    # Explicit state restoration still retains scenario and symmetry.
+    assert(board.save_game()) # Save to the actual UI manual slot.
+    mode.select(0)
+    scenario.select(0)
+    balance.select(0)
+    screen._load_game()
+    assert(mode.get_selected_id() == 1)
+    assert(scenario.get_selected_id() == 2)
+    assert(balance.get_selected_id() == 1)
     assert(board.current_scenario_id == 2)
     assert(board.symmetric_setup)
 
@@ -88,7 +94,7 @@ func _run() -> void:
     screen._confirm_new_game()
     assert(not Vision.enabled(board.state))
     assert(board.state["units"].size() == 4)
-    for p in [path, board.autosave_path]:
+    for p in [path, board.autosave_path, SaveStore.DEFAULT_PATH]:
         for suffix in ["", ".bak", ".tmp"]:
             DirAccess.remove_absolute(ProjectSettings.globalize_path(p + suffix))
     screen.queue_free()
