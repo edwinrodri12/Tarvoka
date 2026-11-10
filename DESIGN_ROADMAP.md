@@ -94,3 +94,6 @@ Las prioridades no son promesas de fecha ni de versión. El objetivo es evolucio
 
 ## Revisión periódica
 Al completar cada hito: actualizar BACKLOG.md, PROJECT_STATUS.md, TESTS.md y DECISIONS.md. La automatización deberá priorizar P0 hasta pasar Gate P0 y no anunciar una funcionalidad como terminada sin evidencia.
+
+## Checkpoint 2026-11-10 — P0/P1 incremental
+PR #53–#59 han integrado las primeras mejoras de persecución táctica por terreno, priorización de objetivos letales, mapas originales comparables, caché de HUD, identificación de facciones por formas, estadísticas de resultados, guardado validado y modo simétrico. Todos pasaron CI Godot 4.3 y exportación Android; los ensayos reales de la nueva versión siguen pendientes. En 12 partidas de IA contra IA la configuración asimétrica de entrenamiento produjo 6–0 para azul, mientras que la simétrica produjo 3–3. **No marcar P0 como cerrado** hasta probar en dispositivo guardado/cierre/reapertura, escenario/modo confirmado, interacción táctil, resultado visual y rendimiento; no marcar P1 completo porque aún faltan IA por objetivos de misión, visibilidad/fog justa y balance estadístico amplio. Mantener entregas APK agrupadas y sin costes externos.
