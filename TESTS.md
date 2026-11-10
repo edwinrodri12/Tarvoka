@@ -111,3 +111,13 @@ Los documentos GAME_DESIGN.md / DESIGN_ROADMAP.md / DESIGN_QA.md convierten 30 r
 2026-11-10: PR #52 CI Android hardening, cabeza `6d504779a37190304f6e49ad8137ba8efe0853ee`, Godot run 42892753979 SUCCESS y Android debug run 42892754084 SUCCESS; check ARM64 native .so y huella SHA-256 pública de firmante, sin claves privadas. Fusionado `main` SHA `204cd07899bfb2ede0e1f97de610d25aac2a1497`. No prueba de instalabilidad sobre APK firmada con otra clave efímera.
 
 2026-11-10 — Regresión propuesta `tests/test_basic_ai.gd`: dos blancos adyacentes, `a_healthy` (HP10) y `z_wounded` (HP3), ataque 5. Esperado: eliminar `z_wounded`, conservar HP de `a_healthy`, entrada original inmutable y misma salida en dos llamadas. Código añadido en rama de PR; **NO EJECUTADO** hasta CI Godot. Exportación Android y prueba física **NO EJECUTADAS** para esta rama al escribir.
+
+## 2026-11-10 — QA de niebla y exploración, cinco PR validados
+| PR | Verificación | Godot CI | Android ARM64 |
+|---|---|---|---|
+| #61 | Visión por facción, exploración, observación limpia, v1 save/legacy | 42915400561 SUCCESS | 42915400554 SUCCESS |
+| #62 | IA no sigue enemigos invisibles, explora solo información legal | 42916085450 SUCCESS | 42916085399 SUCCESS |
+| #63 | Niebla visible/oculta, scouts, UI Nueva partida, movimiento, guardado/reinicio | 42916908716 SUCCESS | 42916908658 SUCCESS |
+| #64 | 12 partidas fog AI×AI, sin ataques invisibles, destinos ocultos, bloqueos | 42917319561 SUCCESS | 42917319443 SUCCESS |
+| #65 | Topología sin explorar no influye decisiones de IA, regresión ocultación | 42917859860 SUCCESS | 42917859845 SUCCESS |
+Resultados de logs de run 42917319561: 12 combates terminados; Entrenamiento fog azul5 / rojo1; Simétrico fog azul3 / rojo3; se probaron mapas abiertos, bosque y puentes con ambos primeros jugadores. Un número tan pequeño **NO** valida balance competitivo ni IA humana. Los tests nuevos incluyen test_visibility.gd, test_fog_ai.gd, test_fog_ui.gd, test_fog_self_play.gd. Godot headless no ofrece cobertura visual completa en Android. **PENDIENTE:** instalación real, UX táctil y niebla, guardar-reabrir, FPS/temperatura, verificar estado renderizado en móviles con distintas relaciones de aspecto y claves APK persistentes.
