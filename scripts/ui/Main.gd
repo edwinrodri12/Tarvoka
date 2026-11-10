@@ -4,6 +4,8 @@ const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 var board: Control
 var status_label: Label
 var unit_label: Label
+var end_button: Button
+var cancel_button: Button
 
 func _ready() -> void:
     var layout := VBoxContainer.new()
@@ -33,11 +35,20 @@ func _ready() -> void:
     legend.add_theme_font_size_override("font_size", 11)
     legend.text = "Verde: mover (numero = coste)  |  Rojo: atacar"
     layout.add_child(legend)
-    var end_button := Button.new()
+    var commands := HBoxContainer.new()
+    layout.add_child(commands)
+    end_button = Button.new()
     end_button.text = "Terminar turno"
     end_button.custom_minimum_size.y = 54
+    end_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     end_button.pressed.connect(_end_turn)
-    layout.add_child(end_button)
+    commands.add_child(end_button)
+    cancel_button = Button.new()
+    cancel_button.text = "Cancelar seleccion"
+    cancel_button.custom_minimum_size.y = 54
+    cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    cancel_button.pressed.connect(_cancel_selection)
+    commands.add_child(cancel_button)
     # Keep controls accessible without reducing the playable board height.
     var actions := HBoxContainer.new()
     layout.add_child(actions)
@@ -66,6 +77,8 @@ func _process(_delta: float) -> void:
         return
     unit_label.text = board.selected_unit_summary()
     var winner := int(board.state.get("winner",-1))
+    end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
+    cancel_button.disabled = board.selected_id.is_empty()
     if winner != -1:
         status_label.text = "Victoria de faccion %d" % (winner + 1)
     else:
@@ -82,3 +95,6 @@ func _load_game() -> void:
 
 func _new_game() -> void:
     board.new_game()
+
+func _cancel_selection() -> void:
+    board.cancel_selection()
