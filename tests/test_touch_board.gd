@@ -71,10 +71,17 @@ func _run() -> void:
     locked.state = computer_turn["state"]
     locked.selected_id = ""
     var before_tap: Dictionary = locked.state.duplicate(true)
-    locked._tap(Vector2(680, 200))
+    locked._tap(Vector2(120, 200)) # Human faction unit must also be blocked.
+    assert(locked.selected_id == "")
+    locked._tap(Vector2(680, 200)) # Computer faction unit cannot be selected by human.
     assert(locked.selected_id == "")
     assert(locked.state == before_tap)
     locked.queue_free()
+    # Local two-player mode must still allow selecting faction 1 on its turn.
+    board._tap(Vector2(680, 200))
+    assert(board.selected_id == "X")
+    board._tap(Vector2(680, 200))
+    assert(board.selected_id == "")
     # Save and restore through board integration, including selection reset.
     var save_path := "user://tarvoka_touch_test.json"
     assert(board.save_game(save_path))
