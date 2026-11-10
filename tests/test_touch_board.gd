@@ -8,7 +8,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    assert(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch") == false) # Avoid double tap via synthetic mouse event
+    assert(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch") == true) # Enables Android UI buttons; board filters synthetic mouse
     var board = Board.new()
     board.size = Vector2(800, 640)
     board.ai_enabled = false
@@ -44,6 +44,26 @@ func _run() -> void:
     var touch_up := InputEventScreenTouch.new()
     touch_up.pressed = false
     touch_up.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "A")
+    # Godot synthesizes this mouse event after a touchscreen tap. It must not
+    # deselect the unit or execute a second action on the board.
+    var synthetic_click := InputEventMouseButton.new()
+    synthetic_click.pressed = true
+    synthetic_click.button_index = MOUSE_BUTTON_LEFT
+    synthetic_click.device = InputEvent.DEVICE_ID_EMULATION
+    synthetic_click.position = Vector2(120, 200)
+    gesture_board._gui_input(synthetic_click)
+    assert(gesture_board.selected_id == "A")
+    # A genuine mouse click must remain supported for desktop play.
+    var desktop_click := InputEventMouseButton.new()
+    desktop_click.pressed = true
+    desktop_click.button_index = MOUSE_BUTTON_LEFT
+    desktop_click.device = InputEvent.DEVICE_ID_MOUSE
+    desktop_click.position = Vector2(120, 200)
+    gesture_board._gui_input(desktop_click)
+    assert(gesture_board.selected_id == "")
+    gesture_board._gui_input(touch_down)
     gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "A")
     gesture_board._gui_input(touch_down)
