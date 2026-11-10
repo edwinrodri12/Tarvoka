@@ -63,6 +63,10 @@ func _run() -> void:
             ai_acted += 1
     assert(ai_acted > 0)
     assert(vs_ai.message == "Tu turno: faccion 1.")
+    # Defensive AI entry: accidental calls on a human turn must be no-ops.
+    var human_snapshot: Dictionary = vs_ai.state.duplicate(true)
+    vs_ai._play_ai_turn()
+    assert(vs_ai.state == human_snapshot)
     # Input ownership: a loaded computer turn must not accept human taps.
     var locked = Board.new()
     locked.size = Vector2(800, 640)
