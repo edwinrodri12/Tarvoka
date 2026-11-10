@@ -60,3 +60,5 @@
 2026-11-10: PR #28 SHA 6d2ea08d: GitHub Actions 42780308893 PASÓ. New saved-AI-turn resume test: NO EJECUTADO until new branch CI. Android APK/device: NO EJECUTADO.
 
 2026-11-10: Added terminal-save load UI regression. NOT EXECUTED in Godot or Android as of commit creation.
+
+2026-11-10: PASÓ GitHub Actions run 42796752187 for PR #30 commit 0e824fb8 (Godot 4 headless). Added faction-2 victory-load and terminal-action regression on successor branch: NO EJECUTADO pending CI. Android APK/device: NO EJECUTADO.

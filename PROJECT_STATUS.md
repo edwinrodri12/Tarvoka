@@ -57,3 +57,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: PR #28 head 6d2ea08d CI run 42780308893 SUCCESS (Godot 4 headless). New stacked branch resumes computer turn automatically when loading a save; regression added, awaiting CI. Android APK/device unverified.
 
 2026-11-10: Added winner feedback when loading completed battles; Godot CI and Android verification pending.
+
+2026-11-10: PR #30 head 0e824fb8 GitHub Actions run 42796752187 SUCCESS. Added follow-up regression for loading faction-2 victory and ensuring terminal battles reject input; awaiting CI. Android APK/device still unverified.

@@ -113,6 +113,20 @@ func _run() -> void:
     assert(vs_ai.load_game(finished_path))
     assert(vs_ai.state["winner"] == 0)
     assert(vs_ai.message == "Victoria de faccion 1.")
+    # Symmetry: restoring a completed victory for faction 2 must not trigger AI.
+    var enemy_victory: Dictionary = ai_turn["state"].duplicate(true)
+    for unit in enemy_victory["units"]:
+        if int(unit["faction"]) == 0:
+            unit["hp"] = 0
+    enemy_victory["winner"] = 1
+    assert(SaveStore.save(enemy_victory, finished_path))
+    assert(vs_ai.load_game(finished_path))
+    assert(int(vs_ai.state["winner"]) == 1)
+    assert(vs_ai.message == "Victoria de faccion 2.")
+    var terminal_snapshot: Dictionary = vs_ai.state.duplicate(true)
+    vs_ai._tap(Vector2(680, 200))
+    vs_ai.finish_turn()
+    assert(vs_ai.state == terminal_snapshot)
     DirAccess.remove_absolute(ProjectSettings.globalize_path(finished_path))
     DirAccess.remove_absolute(ProjectSettings.globalize_path(ai_save_path))
     DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))

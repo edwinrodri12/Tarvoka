@@ -63,3 +63,5 @@
 2026-11-10: Verify saved-AI-turn resume regression in Godot CI; consolidate stacked PRs after verification. First Android export and device testing remain outstanding.
 
 - [ ] Verify completed-battle load feedback regression in Godot CI before merging stacked PRs.
+
+- [ ] Verify faction-2 completed-save restoration and terminal input lock in Godot CI; then consolidate stacked PRs before Android export.
