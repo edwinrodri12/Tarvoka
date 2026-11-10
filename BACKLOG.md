@@ -162,3 +162,13 @@
 - [ ] Verify warning, its disappearance after a successful retry and persistence restoration on a physical Android device; CI only models invalid save path.
 - [ ] Review PR #46 backup recovery separately; it is NOT integrated until verified and merged, and potential stale backup after intentional New Game must be evaluated.
 - [ ] Add stable debug signing through GitHub secrets for update-in-place installation without deleting saves; current builds are signed with new ephemeral keys every time.
+
+## 2026-11-10 — Avances P0 lote sin APK individual
+- [x] Respaldo anterior **validado** y recuperación en corrupción/ausencia del archivo principal, aviso al recuperar, borrado de respaldo viejo tras nueva partida (PR #48; Godot/Android CI PASS). PR #46 redundante cerrado sin merge.
+- [x] Acciones tácticas de dos pasos en Main: movimiento y ataque con previsualización, confirmación por segundo toque o botón, revalidación de objetivo, cancelar sin consumir acción; sigue pendiente test físico (PR #49; CI PASS).
+- [x] Resumen rápido del último turno enemigo: movimientos y ataques, limpieza al iniciar/cargar; sin cambiar IA (PR #50; CI PASS).
+- [x] Prueba Godot de victoria causada por ataque confirmado y derrota causada por IA, persistencia de resultados finales y bloqueo de botones (PR #51; CI PASS).
+- [ ] Validar en teléfono esta **actualización agrupada**: confirmación de órdenes, lista de movimientos, resumen IA, batalla completa, derrotas, y cierre/reapertura después de guardar.
+- [ ] Mantener guardados entre instalaciones mediante firma debug persistente protegida en secrets (no comprometer claves privadas); por ahora no prometer actualización sobre la APK antigua.
+- [ ] Una vez confirmado en Android: mejoras de tiempos de IA, legibilidad y terreno, mediciones de memoria/FPS; P1 IA basada en objetivos y niebla justa posteriormente.
+- [ ] Continuar desarrollando sin enviar APK por cada PR; entregar una versión agrupada cuando tenga sentido para revisión de campo.
