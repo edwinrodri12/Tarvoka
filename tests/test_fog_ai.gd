@@ -37,6 +37,21 @@ func _initialize() -> void:
     assert(scouting["destination"] == scouting2["destination"])
     assert(changed_hidden["units"][1]["hp"] == 2)
 
+    # A hidden forest, mountain, road or water tile must have no influence on
+    # the AI's choice until explored. Unknown terrain is masked for the planner.
+    var altered_map: Array = map.duplicate(true)
+    altered_map[7][9] = "mountain"
+    altered_map[7][8] = "water"
+    var secret_topology: Dictionary = Session.start(units, altered_map, 0, true)
+    assert(not Vision.explored_cells(secret_topology, 0).has(Vector2i(9,7)))
+    assert(Vision.observed_state(secret_topology, 0)["terrain"][7][9] == "water")
+    assert(Vision.observed_state(secret_topology, 0)["terrain"][7][8] == "water")
+    var with_secret: Dictionary = AI.step(secret_topology)
+    assert(with_secret["valid"] and with_secret["action"] == "move")
+    assert(with_secret["unit_id"] == scouting["unit_id"])
+    assert(with_secret["destination"] == scouting["destination"])
+    assert(secret_topology["terrain"][7][9] == "mountain")
+
     # Scout may reveal enemy by moving, but never attacks until it is visible
     # and a legal adjacent action is available on a later turn.
     var after_recon: Dictionary = scouting["state"]
