@@ -13,6 +13,8 @@ var autosave_enabled := false # Enabled by Main after board initializes; tests o
 var autosave_path := "user://tarvoka_autosave_v1.json"
 var autosave_warning := ""
 var selected_id := ""
+var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
+var pending_order: Dictionary = {}
 var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
 var touch_active := false
@@ -38,6 +40,7 @@ func new_game() -> void:
         {"id":"Y","faction":1,"hp":8,"pos":Vector2i(8,5),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false}
     ], terrain)
     selected_id = ""
+    pending_order.clear()
     message = "Selecciona una unidad."
     _write_autosave(false)
     queue_redraw()
@@ -84,6 +87,10 @@ func _draw() -> void:
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * 0.42, 0, TAU, 32, Color.YELLOW, 3.0)
         draw_string(font, center + Vector2(-tile*0.11,tile*0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12,tile*0.30)), Color.WHITE)
+    if pending_order.has("cell"):
+        var preview_cell: Vector2i = pending_order["cell"]
+        var preview_pos: Vector2 = origin + Vector2(preview_cell) * tile
+        draw_rect(Rect2(preview_pos, Vector2.ONE * tile), Color(1.0, 0.86, 0.20), false, 4.0)
     # Put expected damage above the enemy tile, after units are drawn so it stays readable.
     for destination in hints["attacks"]:
         if tile >= 33.0:
@@ -94,11 +101,78 @@ func _draw() -> void:
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
 
 func cancel_selection() -> void:
-    if selected_id.is_empty():
+    if selected_id.is_empty() and pending_order.is_empty():
         return
     selected_id = ""
+    pending_order.clear()
     message = "Seleccion cancelada."
     queue_redraw()
+
+func confirm_pending_order() -> bool:
+    if pending_order.is_empty():
+        return false
+    var order: Dictionary = pending_order.duplicate(true)
+    var committed := _commit_order(order)
+    queue_redraw()
+    return committed
+
+func _request_order(cell: Vector2i, target: Dictionary) -> void:
+    var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
+    var enemy_id := str(target.get("id", ""))
+    var kind := "attack" if not target.is_empty() else "move"
+    var legal := hints["attacks"].has(cell) if kind == "attack" else hints["moves"].has(cell)
+    if not legal:
+        pending_order.clear()
+        message = "Accion no permitida."
+        return
+    var order: Dictionary = {"unit_id": selected_id, "cell": cell, "kind": kind, "target_id": enemy_id}
+    if require_order_confirmation and pending_order != order:
+        pending_order = order
+        if kind == "attack":
+            var damage := int(hints["attacks"][cell]["damage"])
+            message = "Atacar %s (-%d). Toca el objetivo otra vez o Confirmar orden." % [enemy_id, damage]
+        else:
+            message = "Mover a (%d,%d). Toca otra vez o Confirmar orden." % [cell.x + 1, cell.y + 1]
+        return
+    _commit_order(order)
+
+func _commit_order(order: Dictionary) -> bool:
+    # State can change between preview and confirmation; never trust a stale hint.
+    var unit_id := str(order.get("unit_id", ""))
+    var cell = order.get("cell", null)
+    var kind := str(order.get("kind", ""))
+    var enemy_id := str(order.get("target_id", ""))
+    pending_order.clear()
+    if unit_id.is_empty() or unit_id != selected_id or not (cell is Vector2i):
+        message = "Orden cancelada."
+        return false
+    if int(state.get("winner", -1)) != -1 or (ai_enabled and int(state.get("faction", -1)) != 0):
+        message = "Orden cancelada."
+        return false
+    var hints: Dictionary = TacticalHints.for_unit(state, unit_id)
+    var result: Dictionary = {}
+    if kind == "attack":
+        if not hints["attacks"].has(cell) or str(hints["attacks"][cell]["id"]) != enemy_id:
+            message = "Objetivo ya no disponible."
+            return false
+        result = Session.attack(state, unit_id, enemy_id)
+    elif kind == "move":
+        if not hints["moves"].has(cell):
+            message = "Destino ya no disponible."
+            return false
+        result = Session.move(state, unit_id, cell)
+    else:
+        message = "Orden no valida."
+        return false
+    if not result.get("valid", false):
+        message = "Accion no permitida."
+        return false
+    state = result["state"]
+    _write_autosave()
+    var winner := int(state.get("winner", -1))
+    message = "Victoria de faccion %d." % (winner + 1) if winner != -1 else "Accion realizada."
+    selected_id = ""
+    return true
 
 func selected_unit_summary() -> String:
     return TacticalHints.unit_summary(state, selected_id)
@@ -149,6 +223,7 @@ func _tap(point: Vector2) -> void:
             target = unit
             break
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
+        pending_order.clear()
         var tapped_id := str(target["id"])
         if tapped_id == selected_id:
             selected_id = ""
@@ -160,19 +235,7 @@ func _tap(point: Vector2) -> void:
             selected_id = tapped_id
             message = "Unidad " + selected_id + " seleccionada."
     elif not selected_id.is_empty():
-        var action: Dictionary
-        if not target.is_empty():
-            action = Session.attack(state, selected_id, str(target["id"]))
-        else:
-            action = Session.move(state, selected_id, cell)
-        if action.get("valid",false):
-            state = action["state"]
-            _write_autosave()
-            var winner := int(state.get("winner", -1))
-            message = "Victoria de faccion %d." % (winner + 1) if winner != -1 else "Accion realizada."
-            selected_id = ""
-        else:
-            message = "Accion no permitida."
+        _request_order(cell, target)
     queue_redraw()
 
 func finish_turn() -> void:
@@ -184,6 +247,7 @@ func finish_turn() -> void:
         return
     state = result["state"]
     selected_id = ""
+    pending_order.clear()
     message = "Turno de faccion " + str(state["faction"] + 1)
     if ai_enabled and int(state["faction"]) == 1:
         _play_ai_turn()
@@ -224,6 +288,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         return false
     state = restored
     selected_id = ""
+    pending_order.clear()
     var loaded_winner := int(state.get("winner", -1))
     message = "Victoria de faccion %d." % (loaded_winner + 1) if loaded_winner != -1 else "Partida cargada."
     if bool(report["recovered"]):
@@ -244,6 +309,7 @@ func resume_autosave() -> bool:
         return false
     state = restored
     selected_id = ""
+    pending_order.clear()
     message = "Se recupero una copia anterior de la partida." if bool(report["recovered"]) else "Partida recuperada automaticamente."
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
