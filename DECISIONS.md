@@ -49,3 +49,5 @@
 2026-11-10: Explicitly annotate the bounded AI action count as `int` after casting units to `Array` to satisfy Godot 4.3 static inference. Keep original unit-count action cap and gameplay semantics unchanged.
 
 2026-11-10: CI runs each Godot headless test with GNU timeout (TERM at 90s, KILL 5s later), preserving nonzero exit status to expose hangs rather than waiting for the 10-minute job deadline.
+
+2026-11-10: In AI-enabled games, human board taps are accepted only on faction 0 turns; manual two-player mode retains faction 1 input. This also protects restored AI-turn saves.

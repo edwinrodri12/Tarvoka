@@ -49,3 +49,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Diagnosed PR #24 run 42753784281: Godot 4.3 parse error at TouchBoard.gd:123 (`var max_actions := state.get(...).size()` cannot infer type). The test script then fails to instantiate the board and hangs until 10-minute cancellation. Explicitly typed AI action bound in dedicated stacked branch; awaiting CI on fix. Six earlier suites passed in that run; Android APK/device unverified.
 
 2026-11-10: Added 90-second per-suite timeout to Godot CI on dedicated branch, so parse failures cannot silently stall an entire job. Execution pending; APK/device unverified.
+
+2026-11-10: Input ownership guard proposed on stacked branch: TouchBoard ignores human taps while AI faction 1 is active. Not Godot-verified; APK/device not tested.

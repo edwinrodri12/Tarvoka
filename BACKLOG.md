@@ -55,3 +55,5 @@
 - [ ] Verify Godot CI on 2026-11-10 AI action-count type fix; inspect touch-board test and downstream AI/save tests before merging stacked PRs.
 
 2026-11-10: Verify CI fast-fail branch, inspect any timed-out suite logs, fix root cause, then validate full test set before Android export.
+
+- [ ] Validate AI-turn human-input guard and regression in Godot 4.3 CI; check resumed saves during computer turn. Do not merge stacked changes without green tests.

@@ -62,6 +62,19 @@ func _run() -> void:
             ai_acted += 1
     assert(ai_acted > 0)
     assert(vs_ai.message == "Tu turno: faccion 1.")
+    # Input ownership: a loaded computer turn must not accept human taps.
+    var locked = Board.new()
+    locked.size = Vector2(800, 640)
+    root.add_child(locked)
+    var computer_turn: Dictionary = Session.end_turn(locked.state)
+    assert(computer_turn.get("valid", false))
+    locked.state = computer_turn["state"]
+    locked.selected_id = ""
+    var before_tap: Dictionary = locked.state.duplicate(true)
+    locked._tap(Vector2(680, 200))
+    assert(locked.selected_id == "")
+    assert(locked.state == before_tap)
+    locked.queue_free()
     # Save and restore through board integration, including selection reset.
     var save_path := "user://tarvoka_touch_test.json"
     assert(board.save_game(save_path))

@@ -52,3 +52,5 @@
 2026-11-10: PR #24 run 42753784281 CANCELLED after 10-minute timeout. Logs show six suites PASÓ; touch-board FAILED TO COMPILE due to TouchBoard.gd:123 `max_actions` type inference error; remaining AI and save tests SKIPPED. Dedicated fix uses explicit int type; validation NO EJECUTADO until new CI. Android APK/device NO EJECUTADO.
 
 2026-11-10: CI test-suite timeout guard added (90s + 5s kill grace); PASÓ: workflow file updated in GitHub. NO EJECUTADO: GitHub Actions execution for this change, Godot locally, Android APK/device. Timeout is a diagnostic safeguard, not proof that gameplay passes.
+
+2026-11-10: Added regression in tests/test_touch_board.gd for ignored human taps while AI faction 1 owns the turn. PASÓ: GitHub code/test writes. NO EJECUTADO: Godot CI on this commit, APK build, physical Android device.

@@ -64,6 +64,8 @@ func _gui_input(event: InputEvent) -> void:
         accept_event()
 
 func _tap(point: Vector2) -> void:
+    if ai_enabled and int(state.get("faction", -1)) != 0:
+        return
     if int(state.get("winner",-1)) != -1:
         return
     var tile := _cell_size()
