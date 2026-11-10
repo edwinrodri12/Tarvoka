@@ -13,6 +13,8 @@ var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var _unit_summary_cache_key := -1
+var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
 
 # Named controls are exposed for headless layout and victory-state regressions.
 var main_layout: BoxContainer
@@ -226,10 +228,18 @@ func _on_viewport_resized() -> void:
 func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
         return
-    unit_label.text = board.selected_unit_summary()
-    enemy_turn_label.text = board.last_enemy_turn_report
+    # The previous implementation recalculated Dijkstra movement ranges on
+    # every rendered frame (~60 times/second), even with no player input.
+    # A battle-state snapshot hash updates the tactical summary only on change.
+    var summary_key: int = hash([board.state, board.selected_id])
+    if summary_key != _unit_summary_cache_key:
+        _unit_summary_cache_key = summary_key
+        unit_summary_refresh_count += 1
+        _update_text(unit_label, board.selected_unit_summary())
+
+    _update_text(enemy_turn_label, board.last_enemy_turn_report)
     enemy_turn_label.visible = not board.last_enemy_turn_report.is_empty()
-    autosave_alert.text = board.autosave_warning
+    _update_text(autosave_alert, board.autosave_warning)
     autosave_alert.visible = not board.autosave_warning.is_empty()
     var winner := int(board.state.get("winner", -1))
     end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
@@ -237,15 +247,19 @@ func _process(_delta: float) -> void:
     confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
     if winner == 0:
-        result_title.text = "VICTORIA"
-        result_detail.text = "Objetivo cumplido. Enemigos derrotados. Puedes comenzar otra partida."
-        status_label.text = "Batalla terminada"
+        _update_text(result_title, "VICTORIA")
+        _update_text(result_detail, "Objetivo cumplido. Enemigos derrotados. Puedes comenzar otra partida.")
+        _update_text(status_label, "Batalla terminada")
     elif winner == 1:
-        result_title.text = "DERROTA"
-        result_detail.text = "Tu ejercito fue derrotado. Puedes intentar una nueva estrategia."
-        status_label.text = "Batalla terminada"
+        _update_text(result_title, "DERROTA")
+        _update_text(result_detail, "Tu ejercito fue derrotado. Puedes intentar una nueva estrategia.")
+        _update_text(status_label, "Batalla terminada")
     else:
-        status_label.text = "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message]
+        _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
+
+func _update_text(label: Label, content: String) -> void:
+    if label.text != content:
+        label.text = content
 
 func _end_turn() -> void:
     board.finish_turn()
