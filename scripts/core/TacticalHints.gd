@@ -4,6 +4,7 @@ class_name TarvokaTacticalHints
 const Rules = preload("res://scripts/core/Rules.gd")
 const Combat = preload("res://scripts/core/Combat.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -17,6 +18,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
         return empty
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if Visibility.enabled(state) else {}
     var unit: Dictionary = {}
     var occupied: Array[Vector2i] = []
     var ids := {}
@@ -34,7 +36,8 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             return empty
         if location in occupied:
             return empty
-        occupied.append(location)
+        if not Visibility.enabled(state) or int(candidate.get("faction", -1)) == faction or visible.has(location):
+            occupied.append(location)
         if candidate_id == unit_id:
             unit = candidate
     if unit.is_empty() or not Turns.can_act(unit, faction):
@@ -44,11 +47,17 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     blockers.erase(origin)
     var moves: Dictionary = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers)
     moves.erase(origin)
+    if Visibility.enabled(state):
+        for cell in moves.keys():
+            if not visible.has(cell):
+                moves.erase(cell)
     var attacks: Dictionary = {}
     for enemy in units:
         if int(enemy.get("hp", 0)) <= 0 or int(enemy.get("faction", -1)) == faction:
             continue
         var enemy_pos: Vector2i = enemy["pos"]
+        if Visibility.enabled(state) and not visible.has(enemy_pos):
+            continue
         if absi(origin.x - enemy_pos.x) + absi(origin.y - enemy_pos.y) != 1:
             continue
         var result: Dictionary = Combat.resolve(
@@ -73,6 +82,8 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             int(unit.get("defense", 0)), int(unit.get("move_points", 0)),
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
+        if Visibility.enabled(state):
+            text += " | Vision %d" % int(unit.get("vision", Visibility.DEFAULT_VISION))
         if not hints["attacks"].is_empty():
             var damages: PackedStringArray = []
             for target in hints["attacks"].values():
