@@ -38,7 +38,7 @@ static func step(state: Dictionary) -> Dictionary:
         return idle
     if enemies.is_empty():
         # Search only previously unseen terrain: never home in on hidden units.
-        return _reconnoiter(state, friends, occupied) if Visibility.enabled(state) else idle
+        return _reconnoiter(state, knowledge, friends, occupied) if Visibility.enabled(state) else idle
     friends.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
     enemies.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
 
@@ -82,9 +82,9 @@ static func step(state: Dictionary) -> Dictionary:
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
         var reachable: Dictionary = Rules.reachable(
-            unit["pos"], int(unit.get("move_points", 0)), state["terrain"], blocked
+            unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked
         )
-        var route: Dictionary = _approach_costs(state["terrain"], enemies, blocked)
+        var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked)
         var from_route := int(route.get(unit["pos"], 999999))
         var from_direct := _closest_enemy_distance(unit["pos"], enemies)
         for y in range(Rules.HEIGHT):
@@ -126,7 +126,7 @@ static func step(state: Dictionary) -> Dictionary:
 # Reconnaissance without omniscience: rank legal *currently visible* cells by
 # how much never-explored terrain a unit would reveal from there. We use the
 # same movement validation as the player and never inspect hidden opponents.
-static func _reconnoiter(state: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     var faction := int(state.get("faction", -1))
     var visible: Dictionary = Visibility.visible_cells(state, faction)
@@ -137,7 +137,7 @@ static func _reconnoiter(state: Dictionary, friends: Array, occupied: Array[Vect
     for unit in friends:
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
-        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), state["terrain"], blocked)
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)
         var radius: int = clampi(int(unit.get("vision", Visibility.DEFAULT_VISION)), 1, Visibility.MAX_VISION)
         for y in range(Rules.HEIGHT):
             for x in range(Rules.WIDTH):
