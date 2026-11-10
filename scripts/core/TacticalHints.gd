@@ -67,10 +67,16 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         if not (unit is Dictionary) or str(unit.get("id", "")) != unit_id:
             continue
         var hints: Dictionary = for_unit(state, unit_id)
-        var cost: String = "Actuo" if bool(unit.get("acted", false)) else "Disponible"
-        return "%s  |  Vida %d  Ataque %d  Defensa %d  Movimiento %d  |  %s  |  %d destinos / %d objetivos" % [
+        var availability: String = "Actuo" if bool(unit.get("acted", false)) else "Disponible"
+        var text: String = "%s | Vida %d | Ataque %d | Defensa %d | Movimiento %d | %s | %d destinos / %d objetivos" % [
             unit_id, int(unit.get("hp", 0)), int(unit.get("attack", 0)),
             int(unit.get("defense", 0)), int(unit.get("move_points", 0)),
-            cost, hints["moves"].size(), hints["attacks"].size()
+            availability, hints["moves"].size(), hints["attacks"].size()
         ]
+        if not hints["attacks"].is_empty():
+            var damages: PackedStringArray = []
+            for target in hints["attacks"].values():
+                damages.append("%s: -%d" % [str(target["id"]), int(target["damage"])])
+            text += " | Danio estimado " + ", ".join(damages)
+        return text
     return "Unidad no disponible."
