@@ -59,7 +59,7 @@ func _run() -> void:
     var desktop_click := InputEventMouseButton.new()
     desktop_click.pressed = true
     desktop_click.button_index = MOUSE_BUTTON_LEFT
-    desktop_click.device = InputEvent.DEVICE_ID_MOUSE
+    desktop_click.device = 0 # Physical mouse input is not emulated
     desktop_click.position = Vector2(120, 200)
     gesture_board._gui_input(desktop_click)
     assert(gesture_board.selected_id == "")
