@@ -83,3 +83,8 @@
 - [ ] Configure Godot 4 Android export + secure signing workflow for a debug APK; build and test on actual midrange Android device.
 - [ ] Audit PR #1-#36 for redundancy; close obsolete drafts with explanations, preserving branches/history; do NOT blindly merge duplicates.
 - [ ] Review ownership/visibility: repository currently PUBLIC.
+
+- [x] Produce first signed TARVOKA ARM64 debug APK (Actions run 42857252711, downloaded/tested as archive, hash recorded).
+- [ ] Install and smoke-test debug APK on physical Android ARM64 phone; test movement, attacks, AI turn, victory, save/load, orientations and touch gestures.
+- [ ] Establish persistent securely stored signing identity for update-in-place debug builds; never commit keystores/passwords.
+- [ ] Improve game UI for mobile and ensure quality before release.
