@@ -93,6 +93,10 @@ jobs:
           set -euo pipefail
           "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose build/TARVOKA-debug.apk
           unzip -tq build/TARVOKA-debug.apk > /dev/null
+          # Fail closed if export silently changes to a non-ARM64 package.
+          unzip -Z1 build/TARVOKA-debug.apk | grep -Eq "^lib/arm64-v8a/[^/]+\\.so$"
+          # Record public certificate fingerprint only; never upload keystore/private key.
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --print-certs build/TARVOKA-debug.apk | grep -E "Signer #1 certificate SHA-256 digest:"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
