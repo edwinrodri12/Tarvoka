@@ -71,3 +71,5 @@
 2026-11-10: Keep touch-board hit testing half-open at board boundaries: taps on or beyond the right/bottom edge and before the left/top edge must not mutate battle state.
 
 2026-11-10: After all 10 Godot headless suites passed, squash-merge consolidated PR #37 to main as 04c22883. Keep historical PRs for traceability until redundancy is checked; no destructive branch deletion. Prioritize post-merge CI, desktop smoke test, Android export configuration and device validation over new features.
+
+2026-11-10: Ship first ARM64-only debug APK from official Godot 4.3 export templates via GitHub Actions, ephemeral per-run signing key, no secrets committed. For test builds, app updates across differently signed runs might require uninstall/reinstall (local save data could be lost). Reuse a stable signing identity securely before recurring field tests/release. Do not commercialize without trademark clearance.
