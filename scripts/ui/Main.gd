@@ -6,6 +6,7 @@ var board: Control
 var status_label: Label
 var unit_label: Label
 var autosave_alert: Label
+var enemy_turn_label: Label
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
@@ -82,6 +83,12 @@ func _ready() -> void:
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     status_label.add_theme_font_size_override("font_size", 20)
     panel.add_child(status_label)
+    enemy_turn_label = Label.new()
+    enemy_turn_label.visible = false
+    enemy_turn_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    enemy_turn_label.add_theme_font_size_override("font_size", 17)
+    enemy_turn_label.add_theme_color_override("font_color", Color(0.70, 0.84, 0.97))
+    panel.add_child(enemy_turn_label)
     autosave_alert = Label.new()
     autosave_alert.visible = false
     autosave_alert.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -206,6 +213,8 @@ func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
         return
     unit_label.text = board.selected_unit_summary()
+    enemy_turn_label.text = board.last_enemy_turn_report
+    enemy_turn_label.visible = not board.last_enemy_turn_report.is_empty()
     autosave_alert.text = board.autosave_warning
     autosave_alert.visible = not board.autosave_warning.is_empty()
     var winner := int(board.state.get("winner", -1))
