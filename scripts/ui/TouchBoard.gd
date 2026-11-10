@@ -11,6 +11,8 @@ var ai_enabled := true # Faction 1 is computer-controlled; disable for local two
 var selected_id := ""
 var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
+var touch_active := false
+const TAP_DRAG_LIMIT := 18.0
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -56,8 +58,17 @@ func _draw() -> void:
         draw_string(font, center + Vector2(-tile*0.11,tile*0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12,tile*0.30)), Color.WHITE)
 
 func _gui_input(event: InputEvent) -> void:
-    if event is InputEventScreenTouch and event.pressed:
-        _tap(event.position)
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            touch_origin = event.position
+            touch_active = true
+        elif touch_active:
+            touch_active = false
+            if touch_origin.distance_to(event.position) <= TAP_DRAG_LIMIT:
+                _tap(event.position)
+        accept_event()
+    elif event is InputEventScreenDrag:
+        # Dragging the board must not accidentally move or attack a unit.
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
         _tap(event.position)

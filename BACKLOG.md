@@ -67,3 +67,5 @@
 - [ ] Verify faction-2 completed-save restoration and terminal input lock in Godot CI; then consolidate stacked PRs before Android export.
 
 - [ ] Verify defensive AI entry guard in Godot CI, then consolidate stacked PRs and prepare Android export.
+
+- [ ] Verify release-only tap/drag guard in Godot CI and on Android touchscreen; assess swipe/pinch interactions before adding camera navigation. Consolidate stacked PRs after green checks.

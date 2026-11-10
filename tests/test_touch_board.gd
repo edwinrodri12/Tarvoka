@@ -31,6 +31,31 @@ func _run() -> void:
     assert(board.state["faction"] == 1)
     board._tap(Vector2(200,200))
     assert(board.selected_id == "")
+    # A touchscreen tap acts on release; a swipe must not select or move units.
+    var gesture_board = Board.new()
+    gesture_board.size = Vector2(800, 640)
+    gesture_board.ai_enabled = false
+    root.add_child(gesture_board)
+    var touch_down := InputEventScreenTouch.new()
+    touch_down.pressed = true
+    touch_down.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_down)
+    assert(gesture_board.selected_id == "")
+    var touch_up := InputEventScreenTouch.new()
+    touch_up.pressed = false
+    touch_up.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "A")
+    gesture_board._gui_input(touch_down)
+    touch_up.position = Vector2(200, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "A")
+    assert(gesture_board.state["units"][0]["pos"] == Vector2i(1, 2))
+    gesture_board._gui_input(touch_down)
+    touch_up.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "")
+    gesture_board.queue_free()
     # Regression: the final enemy's defeat must be visible immediately.
     var duel = Board.new()
     duel.size = Vector2(800, 640)
