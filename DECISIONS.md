@@ -63,3 +63,5 @@
 2026-11-10: AI step orchestration must be a no-op unless computer mode is enabled, faction 2 owns the turn, and battle has no winner.
 
 2026-11-10: Treat touchscreen gestures as taps only on release within an 18-pixel movement tolerance; do not interpret swipes as tactical actions. Keep mouse click handling for desktop debugging.
+
+2026-11-10: Touch gestures belong to the first active finger until that same index releases. Ignore other finger press/release events to prevent unintended tactical actions; maintain existing 18px movement threshold.
