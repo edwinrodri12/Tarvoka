@@ -4,6 +4,10 @@ class_name TarvokaSaveCodec
 const WIDTH := 10
 const HEIGHT := 8
 const VERSION := 1
+const Rules = preload("res://scripts/core/Rules.gd")
+const Turns = preload("res://scripts/core/Turns.gd")
+const MAX_UNITS := 256
+const MAX_STAT := 10000
 
 # Portable JSON snapshot; never serialize Godot-specific Vector2i directly.
 static func encode(state: Dictionary) -> String:
@@ -57,9 +61,9 @@ static func _valid_state(state: Dictionary) -> bool:
         if not row is Array or row.size() != WIDTH:
             return false
         for tile in row:
-            if not tile is String:
+            if not tile is String or not Rules.TERRAIN_COST.has(tile):
                 return false
-    if not state.get("units") is Array:
+    if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
         return false
     if not state.get("faction") is int or state["faction"] not in [0, 1]:
         return false
@@ -70,7 +74,7 @@ static func _valid_state(state: Dictionary) -> bool:
     for unit in state["units"]:
         if not unit is Dictionary:
             return false
-        if not unit.get("id") is String or unit["id"].is_empty() or ids.has(unit["id"]):
+        if not unit.get("id") is String or unit["id"].is_empty() or unit["id"].length() > 64 or ids.has(unit["id"]):
             return false
         ids[unit["id"]] = true
         if not unit.get("pos") is Vector2i:
@@ -80,17 +84,20 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         if not unit.get("faction") is int or unit["faction"] not in [0, 1]:
             return false
-        if not unit.get("hp") is int or unit["hp"] < 0:
+        if not unit.get("hp") is int or unit["hp"] < 0 or unit["hp"] > MAX_STAT:
             return false
         if not unit.get("acted") is bool:
             return false
         for key in ["move_points", "attack", "defense", "cover"]:
-            if not unit.get(key) is int:
+            if not unit.get(key) is int or unit[key] < 0 or unit[key] > MAX_STAT:
                 return false
         if unit["hp"] > 0:
             if positions.has(pos):
                 return false
             positions[pos] = true
+    # A save cannot declare victory when both armies are still alive.
+    if state["winner"] != Turns.winner(state["units"]):
+        return false
     return true
 
 # Godot JSON parser can represent integral JSON numbers as float.
