@@ -187,3 +187,5 @@
 - [ ] IA por objetivos estratégicos, niebla de guerra compartida y juego adversarial justo (P1), evitando que el jugador/IA vean información no legal.
 - [ ] Mejorar control de cámara/zoom y opciones de accesibilidad en múltiples tamaños de pantalla Android; medir tiempos de IA y uso de memoria.
 - [ ] Mantener arte original, no adelantar economía/campaña/online hasta un gate P0 probado físicamente.
+
+- [x] PR #52 integrado: verificación ABI ARM64 real y huella pública del certificado en CI de exportación. **La firma debug persistente sigue pendiente**, requiere secretos seguros sin commit de llave privada.
