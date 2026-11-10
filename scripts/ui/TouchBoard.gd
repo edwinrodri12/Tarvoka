@@ -62,6 +62,11 @@ func _board_origin() -> Vector2:
     var tile := _cell_size()
     return (size - Vector2(WIDTH * tile, HEIGHT * tile)) * 0.5
 
+# Completely opaque unknown cells prevent even subtle color-based terrain
+# leaks; previously explored cells retain a dim, recognizable map surface.
+static func fog_cover_color(has_explored: bool) -> Color:
+    return Color(0.025, 0.035, 0.05, 0.73) if has_explored else Color(0.015, 0.025, 0.04, 1.0)
+
 func _draw() -> void:
     var tile := _cell_size()
     var origin := _board_origin()
@@ -105,7 +110,7 @@ func _draw() -> void:
                 var spot := Vector2i(x, y)
                 if not visible.has(spot):
                     # Previously seen terrain remains dim; unknown areas are dark.
-                    var shade := Color(0.015, 0.025, 0.04, 0.98) if not explored.has(spot) else Color(0.025, 0.035, 0.05, 0.73)
+                    var shade: Color = fog_cover_color(explored.has(spot))
                     draw_rect(Rect2(pos, Vector2.ONE * tile), shade)
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
