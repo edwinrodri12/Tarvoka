@@ -55,6 +55,28 @@ func _run() -> void:
     touch_up.position = Vector2(120, 200)
     gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "")
+    # Secondary fingers must not steal or release the primary tap.
+    var other_down := InputEventScreenTouch.new()
+    other_down.index = 1
+    other_down.pressed = true
+    other_down.position = Vector2(200, 200)
+    var other_up := InputEventScreenTouch.new()
+    other_up.index = 1
+    other_up.pressed = false
+    other_up.position = Vector2(200, 200)
+    gesture_board._gui_input(touch_down)
+    gesture_board._gui_input(other_down)
+    gesture_board._gui_input(other_up)
+    assert(gesture_board.touch_active)
+    assert(gesture_board.selected_id == "")
+    touch_up.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "A")
+    gesture_board._gui_input(other_up)
+    assert(gesture_board.selected_id == "A")
+    gesture_board._gui_input(touch_down)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "")
     gesture_board.queue_free()
     # Regression: the final enemy's defeat must be visible immediately.
     var duel = Board.new()

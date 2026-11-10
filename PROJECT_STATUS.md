@@ -63,3 +63,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Added defensive AI-turn entry guard on a stacked branch; CI pending. PR #31 head c7880700 passed Godot workflow run 42804643073. Android APK unverified.
 
 2026-11-10: Proposed touchscreen drag rejection: process ScreenTouch on release only and ignore releases farther than 18 logical pixels from press; desktop mouse path unchanged. New headless regression added. Godot CI and physical Android NOT VERIFIED. Stacked on PR #32; main unchanged.
+
+2026-11-10: Added primary-finger ownership for touchscreen gestures: a second finger cannot replace the press origin or complete a different finger's tap. Draft branch only; Godot CI and Android device unverified. No APK claimed.

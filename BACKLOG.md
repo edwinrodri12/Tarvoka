@@ -69,3 +69,5 @@
 - [ ] Verify defensive AI entry guard in Godot CI, then consolidate stacked PRs and prepare Android export.
 
 - [ ] Verify release-only tap/drag guard in Godot CI and on Android touchscreen; assess swipe/pinch interactions before adding camera navigation. Consolidate stacked PRs after green checks.
+
+2026-11-10: Verify primary-finger multi-touch regression in Godot 4 CI; then validate Android device gestures and prepare first APK. Consolidate stacked PRs before export.
