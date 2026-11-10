@@ -16,7 +16,7 @@ func _run() -> void:
     for child in main.find_children("*", "Button", true, false):
         var button: Button = child as Button
         controls[button.text] = button
-    assert(controls.size() == 5)
+    assert(controls.size() >= 5) # Includes ConfirmationDialog internal buttons
     assert(controls.has("Cancelar seleccion"))
     assert(controls.has("Nueva partida"))
     assert(controls.has("Terminar turno"))
