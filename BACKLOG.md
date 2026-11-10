@@ -45,3 +45,5 @@
 - [ ] Add save/load state and first Android export after CI is green; physical-device touch verification remains required.
 
 - [ ] Verify optimized AI and water-wall regression in Godot CI; diagnose remaining touch-board timeouts from job logs if still present.
+
+- [ ] Verify SaveCodec JSON round-trip CI and integrate file persistence via user:// after green tests.
