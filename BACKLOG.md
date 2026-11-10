@@ -65,3 +65,5 @@
 - [ ] Verify completed-battle load feedback regression in Godot CI before merging stacked PRs.
 
 - [ ] Verify faction-2 completed-save restoration and terminal input lock in Godot CI; then consolidate stacked PRs before Android export.
+
+- [ ] Verify defensive AI entry guard in Godot CI, then consolidate stacked PRs and prepare Android export.
