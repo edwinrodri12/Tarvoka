@@ -12,3 +12,6 @@ renderer/rendering_method.mobile="gl_compatibility"
 [input_devices]
 
 pointing/emulate_mouse_from_touch=false
+
+; Required by Godot Android export for ETC2/ASTC mobile texture import.
+rendering/textures/vram_compression/import_etc2_astc=true
