@@ -67,3 +67,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Added primary-finger ownership for touchscreen gestures: a second finger cannot replace the press origin or complete a different finger's tap. Draft branch only; Godot CI and Android device unverified. No APK claimed.
 
 2026-11-10: PR #35 proposes permanent cancellation when the primary finger drags beyond 18px then returns. CI/device not verified; no APK.
+
+2026-11-10: Added touch-board boundary regression for taps at the exclusive right edge and outside the left edge. CI pending; Android device and APK not verified.
