@@ -36,3 +36,5 @@
 2026-11-09 PR #17 run 42699713939: FALLÓ (GDScript runtime error at tests/test_rules.gd:23: untyped [] does not match Array[Vector2i]); run ended CANCELLED after 10-minute job timeout. Fixed four invalid-terrain assertions to use `var no_blocked: Array[Vector2i] = []` in isolated branch. New Godot CI: NO EJECUTADO/awaiting result. APK/device: NO EJECUTADO.
 
 2026-11-09 18:02 EST: PASÓ — GitHub Actions run 42709626139 on PR #18 commit 5e60d2e; job 129475405608 completed SUCCESS. All seven steps passed: rules, combat, turns, battle actions, movement actions, battle session, touch board. Subsequent initial-faction fallback test is NOT YET VERIFIED by this run. Android APK/device: NO EJECUTADO.
+
+2026-11-09: Existing predecessor PR #18 commit 42add271 run 42717331241 PASÓ (SUCCESS); scope: pre-AI suites only. New tests/test_basic_ai.gd covers attack priority, victory, deterministic movement, action exhaustion, immutability, invalid state. New CI step added; NO EJECUTADO pending GitHub Actions on new PR. Android APK/device: NO EJECUTADO.
