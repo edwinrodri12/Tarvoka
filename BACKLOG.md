@@ -53,3 +53,5 @@
 - [ ] Verify save/load UI integration on Godot CI and physical Android; diagnose recurrent cancelled CI before merging stacked PRs.
 
 - [ ] Verify Godot CI on 2026-11-10 AI action-count type fix; inspect touch-board test and downstream AI/save tests before merging stacked PRs.
+
+2026-11-10: Verify CI fast-fail branch, inspect any timed-out suite logs, fix root cause, then validate full test set before Android export.
