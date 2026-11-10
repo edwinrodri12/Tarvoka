@@ -120,7 +120,7 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     var enemy_id := str(target.get("id", ""))
     var kind := "attack" if not target.is_empty() else "move"
-    var legal := hints["attacks"].has(cell) if kind == "attack" else hints["moves"].has(cell)
+    var legal: bool = bool(hints["attacks"].has(cell)) if kind == "attack" else bool(hints["moves"].has(cell))
     if not legal:
         pending_order.clear()
         message = "Accion no permitida."
