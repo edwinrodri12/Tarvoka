@@ -13,6 +13,7 @@ var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
+var touch_cancelled := false
 const TAP_DRAG_LIMIT := 18.0
 
 func _ready() -> void:
@@ -62,16 +63,19 @@ func _gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
         if event.pressed and not touch_active:
             touch_origin = event.position
+            touch_cancelled = false
             touch_finger_index = event.index
             touch_active = true
         elif not event.pressed and touch_active and event.index == touch_finger_index:
             touch_active = false
             touch_finger_index = -1
-            if touch_origin.distance_to(event.position) <= TAP_DRAG_LIMIT:
+            if not touch_cancelled and touch_origin.distance_to(event.position) <= TAP_DRAG_LIMIT:
                 _tap(event.position)
         accept_event()
     elif event is InputEventScreenDrag:
-        # Dragging the board must not accidentally move or attack a unit.
+        # Cancel the gesture permanently if its primary finger ever leaves the tap radius.
+        if touch_active and event.index == touch_finger_index and touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
+            touch_cancelled = true
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
         _tap(event.position)
