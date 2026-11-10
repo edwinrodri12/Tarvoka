@@ -5,6 +5,7 @@ const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 var board: Control
 var status_label: Label
 var unit_label: Label
+var autosave_alert: Label
 var end_button: Button
 var cancel_button: Button
 var new_game_dialog: ConfirmationDialog
@@ -79,6 +80,12 @@ func _ready() -> void:
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     status_label.add_theme_font_size_override("font_size", 20)
     panel.add_child(status_label)
+    autosave_alert = Label.new()
+    autosave_alert.visible = false
+    autosave_alert.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    autosave_alert.add_theme_font_size_override("font_size", 17)
+    autosave_alert.add_theme_color_override("font_color", Color(1.0, 0.75, 0.35))
+    panel.add_child(autosave_alert)
 
     # Always visible after a terminal result, without blocking the final board.
     result_banner = PanelContainer.new()
@@ -190,6 +197,8 @@ func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
         return
     unit_label.text = board.selected_unit_summary()
+    autosave_alert.text = board.autosave_warning
+    autosave_alert.visible = not board.autosave_warning.is_empty()
     var winner := int(board.state.get("winner", -1))
     end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
     cancel_button.disabled = board.selected_id.is_empty()
