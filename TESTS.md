@@ -72,3 +72,5 @@
 2026-11-10 PR #35: Added synthetic drag-out-and-return regression to tests/test_touch_board.gd. NO EJECUTADO in Godot CI or Android device at commit time; APK NO EJECUTADO.
 
 2026-11-10: Added two synthetic off-board touch regressions (x=800 exclusive right edge and x=-1 left exterior on 800x640 board). PASÓ: source write if committed; Godot CI NO EJECUTADO pending new branch workflow; APK/device NO EJECUTADO.
+
+2026-11-10 consolidation: PR #37 head ff21ca270b241217a13c8b1d88ab08118b4d6b5e, workflow run 42855097479, job 'rules' completed SUCCESS. All ten Godot 4.3 headless suites SUCCESS (rules, combat, turns, battle actions, movement actions, battle session, touch board, basic AI, save codec, save store). PASS: connector confirmed merged PR #37 at main squash SHA 04c22883860d431f703a12967ac29f91187303d6 and main contains UI files. NO EJECUTADO at documentation update: separate post-merge main CI verification, manual graphical playtest, Android APK export, physical Android testing.
