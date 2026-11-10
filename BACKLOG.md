@@ -94,3 +94,32 @@
 - [ ] Physically verify all three Buttons on user's Android phone, plus board tap/deselect/swipe and game state persistence.
 - [ ] Implement a stable debug-signing arrangement via secure GitHub Actions secrets so future APK updates install without uninstalling and erasing saved games; no secret/private key in Git.
 - [ ] Improve release UX after input/device verification.
+
+## Nueva hoja de ruta de producto aprobada 2026-11-10 — críticas históricas
+**Documento rector:** GAME_DESIGN.md · **Orden de ejecución:** DESIGN_ROADMAP.md · **QA:** DESIGN_QA.md. Las casillas siguientes son diseño/planificación, NO código implementado.
+### P0 — MVP táctico y Android (NO saltar a P1 antes del gate)
+- [x] Guardar en main los 3 documentos rectores de diseño, hoja de ruta y QA con 30 riesgos históricos.
+- [x] Confirmar por reporte de usuario funcionamiento de selección/movimiento, botones inferiores y ejecución de turno IA en Android.
+- [ ] Smoke test físico de una batalla completa hasta victoria/derrota, incluyendo carga tras reiniciar la aplicación.
+- [ ] Mostrar alcance legal de movimiento/ataque, coste y estimación de daño sin información oculta.
+- [ ] Panel de unidad legible: HP, acciones restantes, rol y efectos de terreno.
+- [ ] Diseñar confirmación/cancelación y deshacer seguro sin abusos de niebla/RNG.
+- [ ] Autoguardado por turno con recuperación; migraciones/compatibilidad de guardado.
+- [ ] Ritmo de IA ajustable, resumen de turno y animaciones saltables.
+- [ ] Android: pruebas de orientación, escalado de UI, accesibilidad y rendimiento offline.
+- [ ] Firma de depuración persistente y segura para actualizar sin desinstalar.
+### P1 — Estrategia y justicia
+- [ ] IA centrada en objetivos, defensa, captura, retirada, economía/posición, sin omnisciencia.
+- [ ] Niebla de guerra con información compartida, reconocimiento y últimas posiciones conocidas.
+- [ ] Dificultades mediante mejor razonamiento, no beneficios secretos.
+- [ ] Equilibrio por rol/counter, primer jugador, recursos, IA y condiciones de estancamiento; pruebas reproducibles.
+### P2 — Identidad y contenido original
+- [ ] Prototipos experimentales de captura/control territorial y suministros ligeros; medir valor vs micromanejo.
+- [ ] Facciones, unidades terrestres/aéreas/navales y habilidades con roles originales y contramedidas.
+- [ ] Variedad de misiones, varias soluciones, tutorial contextual y campaña coherente.
+- [ ] Arte/UI/animación/audio originales y accesibles; modos independientes.
+### P3 — Solo tras juego offline estable
+- [ ] Guardado multijugador local y posterior online asíncrono, invitaciones y matchmaking.
+- [ ] Editor, compartir mapas, repeticiones, clasificaciones y expansiones sustanciales.
+- [ ] Verificación legal de marcas TARVOKA y originalidad de PI antes de publicación.
+**Criterio de entrada a desarrollo:** problema de jugador + reglas puras + prueba positiva/adversarial + UX móvil + decisión documentada. Evitar agregar todos los puntos de golpe.
