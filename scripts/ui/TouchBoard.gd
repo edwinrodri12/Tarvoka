@@ -16,6 +16,7 @@ var selected_id := ""
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var message := "Selecciona una unidad."
+var last_enemy_turn_report := ""
 var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
@@ -42,6 +43,7 @@ func new_game() -> void:
     selected_id = ""
     pending_order.clear()
     message = "Selecciona una unidad."
+    last_enemy_turn_report = ""
     _write_autosave(false)
     queue_redraw()
 
@@ -248,6 +250,7 @@ func finish_turn() -> void:
     state = result["state"]
     selected_id = ""
     pending_order.clear()
+    last_enemy_turn_report = ""
     message = "Turno de faccion " + str(state["faction"] + 1)
     if ai_enabled and int(state["faction"]) == 1:
         _play_ai_turn()
@@ -260,6 +263,8 @@ func _play_ai_turn() -> void:
         return
     # Hard bound: each valid AI action consumes one unit's action.
     var max_actions: int = (state.get("units", []) as Array).size()
+    var movements := 0
+    var attacks := 0
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break
@@ -267,6 +272,14 @@ func _play_ai_turn() -> void:
         if not result.get("valid", false):
             break
         state = result["state"]
+        match str(result.get("action", "")):
+            "move":
+                movements += 1
+            "attack":
+                attacks += 1
+    last_enemy_turn_report = "Turno enemigo: %d movimientos, %d ataques." % [movements, attacks]
+    if movements + attacks == 0:
+        last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if int(state.get("winner", -1)) != -1:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
         return
@@ -289,6 +302,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     state = restored
     selected_id = ""
     pending_order.clear()
+    last_enemy_turn_report = ""
     var loaded_winner := int(state.get("winner", -1))
     message = "Victoria de faccion %d." % (loaded_winner + 1) if loaded_winner != -1 else "Partida cargada."
     if bool(report["recovered"]):
@@ -310,6 +324,7 @@ func resume_autosave() -> bool:
     state = restored
     selected_id = ""
     pending_order.clear()
+    last_enemy_turn_report = ""
     message = "Se recupero una copia anterior de la partida." if bool(report["recovered"]) else "Partida recuperada automaticamente."
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
