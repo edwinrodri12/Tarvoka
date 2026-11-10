@@ -50,3 +50,5 @@
 2026-11-09: Added board save/load regression (round-trip, cleared selection, missing file preserves live state). NO EJECUTADO: new Godot CI. PR #23 head a7557e8 run 42746918719 CANCELLED, not a pass. Android APK/device NO EJECUTADO.
 
 2026-11-10: PR #24 run 42753784281 CANCELLED after 10-minute timeout. Logs show six suites PASÓ; touch-board FAILED TO COMPILE due to TouchBoard.gd:123 `max_actions` type inference error; remaining AI and save tests SKIPPED. Dedicated fix uses explicit int type; validation NO EJECUTADO until new CI. Android APK/device NO EJECUTADO.
+
+2026-11-10: CI test-suite timeout guard added (90s + 5s kill grace); PASÓ: workflow file updated in GitHub. NO EJECUTADO: GitHub Actions execution for this change, Godot locally, Android APK/device. Timeout is a diagnostic safeguard, not proof that gameplay passes.

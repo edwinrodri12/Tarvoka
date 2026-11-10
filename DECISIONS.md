@@ -47,3 +47,5 @@
 2026-11-09: Expose offline save/load via explicit UI buttons; delegate serialization and filesystem validation to SaveStore, clear stale selection after restore, preserve live state when loading fails.
 
 2026-11-10: Explicitly annotate the bounded AI action count as `int` after casting units to `Array` to satisfy Godot 4.3 static inference. Keep original unit-count action cap and gameplay semantics unchanged.
+
+2026-11-10: CI runs each Godot headless test with GNU timeout (TERM at 90s, KILL 5s later), preserving nonzero exit status to expose hangs rather than waiting for the 10-minute job deadline.
