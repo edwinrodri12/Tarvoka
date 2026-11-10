@@ -6,6 +6,7 @@ const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -30,18 +31,23 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false) -> void:
     symmetric_setup = symmetric
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
     current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
     var terrain: Array = Scenarios.terrain(current_scenario_id)
-    state = Session.start([
+    var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"X","faction":1,"hp":enemy_hp,"pos":Vector2i(8,2),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false},
         {"id":"Y","faction":1,"hp":enemy_hp,"pos":Vector2i(8,5),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false}
-    ], terrain)
+    ]
+    if fog_mode:
+        # Recon scouts are mirrored: mobility 4, sight 5, weaker attack 2.
+        units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
+        units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
+    state = Session.start(units, terrain, 0, fog_mode)
     selected_id = ""
     pending_order.clear()
     message = "Selecciona una unidad."
@@ -60,6 +66,9 @@ func _draw() -> void:
     var tile := _cell_size()
     var origin := _board_origin()
     var font := ThemeDB.fallback_font
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
+    var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     for y in range(HEIGHT):
         for x in range(WIDTH):
             var pos := origin + Vector2(x, y) * tile
@@ -92,6 +101,12 @@ func _draw() -> void:
             elif terrain_type == "water":
                 draw_line(pos + tile * Vector2(0.19, 0.40), pos + tile * Vector2(0.79, 0.40), Color(0.38, 0.66, 0.86, 0.80), maxf(1.0, tile * 0.025))
                 draw_line(pos + tile * Vector2(0.12, 0.62), pos + tile * Vector2(0.72, 0.62), Color(0.38, 0.66, 0.86, 0.65), maxf(1.0, tile * 0.025))
+            if fog:
+                var spot := Vector2i(x, y)
+                if not visible.has(spot):
+                    # Previously seen terrain remains dim; unknown areas are dark.
+                    var shade := Color(0.015, 0.025, 0.04, 0.98) if not explored.has(spot) else Color(0.025, 0.035, 0.05, 0.73)
+                    draw_rect(Rect2(pos, Vector2.ONE * tile), shade)
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
@@ -112,6 +127,8 @@ func _draw() -> void:
         if int(unit.get("hp",0)) <= 0:
             continue
         var cell: Vector2i = unit["pos"]
+        if fog and int(unit.get("faction", -1)) != 0 and not visible.has(cell):
+            continue
         var center := origin + (Vector2(cell) + Vector2(0.5,0.5)) * tile
         var is_player := int(unit["faction"]) == 0
         var color := Color(0.35, 0.65, 1.0) if is_player else Color(1.0, 0.4, 0.3)
@@ -122,8 +139,10 @@ func _draw() -> void:
         else:
             var half := tile * 0.32
             draw_rect(Rect2(center - Vector2.ONE * half, Vector2.ONE * (half * 2.0)), face)
+        if str(unit["id"]) in ["S", "Z"]:
+            draw_arc(center, tile * 0.40, 0, TAU, 24, Color(0.60, 0.94, 0.88), 2.0)
         if str(unit["id"]) == selected_id:
-            draw_arc(center, tile * 0.42, 0, TAU, 32, Color.YELLOW, 3.0)
+            draw_arc(center, tile * 0.44, 0, TAU, 32, Color.YELLOW, 3.0)
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12.0, tile * 0.30)), Color.WHITE)
         # Numeric health avoids a misleading percentage: this prototype has no
         # persistent per-unit maximum-HP field yet. Hide on very small tiles.
@@ -266,8 +285,11 @@ func _tap(point: Vector2) -> void:
         return
     var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
+    var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
     for unit in state["units"]:
         if int(unit.get("hp",0)) > 0 and unit["pos"] == cell:
+            if Visibility.enabled(state) and int(unit.get("faction", -1)) != 0 and not visible.has(cell):
+                continue
             target = unit
             break
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
