@@ -40,3 +40,5 @@
 2026-11-09: Existing predecessor PR #18 commit 42add271 run 42717331241 PASÓ (SUCCESS); scope: pre-AI suites only. New tests/test_basic_ai.gd covers attack priority, victory, deterministic movement, action exhaustion, immutability, invalid state. New CI step added; NO EJECUTADO pending GitHub Actions on new PR. Android APK/device: NO EJECUTADO.
 
 2026-11-09 AI UI integration: added test_touch_board regression for automatic AI movement and return to human faction. Status: NO EJECUTADO until CI on new PR. Predecessor PR #19 run 42726224295: SUCCESS (Godot 4.3 headless, reported by GitHub Actions), scoped to predecessor commit bcec1a31. Android APK/device: NO EJECUTADO.
+
+2026-11-09: PR #20 GitHub Actions run 42733717633 CANCELLED; rules/combat/turns/battle actions/movement/battle session PASÓ, touch board CANCELADO, AI tests SKIPPED. New water-wall AI regression and pathfinding optimization: NO EJECUTADO pending CI. Android: NO EJECUTADO.
