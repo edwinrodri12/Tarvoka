@@ -39,7 +39,7 @@ func new_game() -> void:
     ], terrain)
     selected_id = ""
     message = "Selecciona una unidad."
-    _write_autosave()
+    _write_autosave(false)
     queue_redraw()
 
 func _cell_size() -> float:
@@ -217,7 +217,8 @@ func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     return ok
 
 func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
-    var restored: Dictionary = SaveStore.load(path)
+    var report: Dictionary = SaveStore.load_report(path)
+    var restored: Dictionary = report["state"]
     if restored.is_empty():
         message = "No se pudo cargar la partida."
         return false
@@ -225,6 +226,8 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     selected_id = ""
     var loaded_winner := int(state.get("winner", -1))
     message = "Victoria de faccion %d." % (loaded_winner + 1) if loaded_winner != -1 else "Partida cargada."
+    if bool(report["recovered"]):
+        message = "Se recupero una copia anterior de la partida."
     # A saved computer turn must resume immediately; human input is locked during it.
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
@@ -235,22 +238,23 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
 # Autosave is a separate file; manual "Guardar partida" always remains untouched.
 # The main scene chooses when to restore so unit tests can create fresh boards.
 func resume_autosave() -> bool:
-    var restored: Dictionary = SaveStore.load(autosave_path)
+    var report: Dictionary = SaveStore.load_report(autosave_path)
+    var restored: Dictionary = report["state"]
     if restored.is_empty():
         return false
     state = restored
     selected_id = ""
-    message = "Partida recuperada automaticamente."
+    message = "Se recupero una copia anterior de la partida." if bool(report["recovered"]) else "Partida recuperada automaticamente."
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
         _write_autosave()
     queue_redraw()
     return true
 
-func _write_autosave() -> bool:
+func _write_autosave(retain_previous: bool = true) -> bool:
     if not autosave_enabled:
         return false
-    var ok: bool = SaveStore.save(state, autosave_path)
+    var ok: bool = SaveStore.save(state, autosave_path, retain_previous)
     # An interrupted or unwritable save must not silently imply progress is safe.
     autosave_warning = "" if ok else "Atencion: no se pudo guardar automaticamente. Guarda la partida manualmente."
     return ok
