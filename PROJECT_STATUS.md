@@ -65,3 +65,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Proposed touchscreen drag rejection: process ScreenTouch on release only and ignore releases farther than 18 logical pixels from press; desktop mouse path unchanged. New headless regression added. Godot CI and physical Android NOT VERIFIED. Stacked on PR #32; main unchanged.
 
 2026-11-10: Added primary-finger ownership for touchscreen gestures: a second finger cannot replace the press origin or complete a different finger's tap. Draft branch only; Godot CI and Android device unverified. No APK claimed.
+
+2026-11-10: PR #35 proposes permanent cancellation when the primary finger drags beyond 18px then returns. CI/device not verified; no APK.
