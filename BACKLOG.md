@@ -40,3 +40,6 @@
 - [ ] Verify BasicAI.gd headless regression tests on its own PR and resolve any Godot 4.3 errors.
 - [ ] Connect BasicAI step loop to the enemy turn with a bounded action count, then test full human-vs-AI battle.
 - [ ] Consolidate stacked draft PRs #5-#18 after reviewing their green checks; do not treat branch code as integrated into main.
+
+- [ ] Verify bounded AI-turn UI regression on Godot CI, then manually exercise a full human-vs-AI battle.
+- [ ] Add save/load state and first Android export after CI is green; physical-device touch verification remains required.
