@@ -94,3 +94,7 @@
 - [ ] Physically verify all three Buttons on user's Android phone, plus board tap/deselect/swipe and game state persistence.
 - [ ] Implement a stable debug-signing arrangement via secure GitHub Actions secrets so future APK updates install without uninstalling and erasing saved games; no secret/private key in Git.
 - [ ] Improve release UX after input/device verification.
+
+- [x] Physical Android confirmation from user: bottom buttons respond after PR #39 APK (2026-11-10). Do not extrapolate to save/load data integrity or AI gameplay.
+- [ ] Physically verify full match, AI end-turn behavior, save/load persistence, gesture cancellation, attack, victory and orientation on Android.
+- [ ] Physically verify End Turn disabled after victory and reenabled on loading an active game (PR #40 pending).
