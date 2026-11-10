@@ -8,6 +8,7 @@ var unit_label: Label
 var autosave_alert: Label
 var end_button: Button
 var cancel_button: Button
+var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 
 # Named controls are exposed for headless layout and victory-state regressions.
@@ -43,6 +44,7 @@ func _ready() -> void:
     board.size_flags_vertical = Control.SIZE_EXPAND_FILL
     board.custom_minimum_size = Vector2(240, 220)
     board_holder.add_child(board)
+    board.require_order_confirmation = true
     # Only the real scene restores saved progress. Detached board tests start fresh.
     board.autosave_enabled = true
     board.resume_autosave()
@@ -139,6 +141,13 @@ func _ready() -> void:
     cancel_button.pressed.connect(_cancel_selection)
     panel.add_child(cancel_button)
 
+    confirm_button = Button.new()
+    confirm_button.text = "Confirmar orden"
+    confirm_button.custom_minimum_size.y = 56
+    confirm_button.add_theme_font_size_override("font_size", 20)
+    confirm_button.pressed.connect(_confirm_order)
+    panel.add_child(confirm_button)
+
     var saves := HBoxContainer.new()
     saves.add_theme_constant_override("separation", 6)
     panel.add_child(saves)
@@ -202,6 +211,7 @@ func _process(_delta: float) -> void:
     var winner := int(board.state.get("winner", -1))
     end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
     cancel_button.disabled = board.selected_id.is_empty()
+    confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
     if winner == 0:
         result_title.text = "VICTORIA"
@@ -233,3 +243,6 @@ func _confirm_new_game() -> void:
 
 func _cancel_selection() -> void:
     board.cancel_selection()
+
+func _confirm_order() -> void:
+    board.confirm_pending_order()
