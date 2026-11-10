@@ -106,6 +106,16 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
         if int(unit.get("faction", -1)) == faction or (int(unit.get("hp", 0)) > 0 and visible.has(unit.get("pos", null))):
             units.append(unit.duplicate(true))
     observed["units"] = units
+    # Unexplored topology is not public knowledge in fog mode. Present it to
+    # the planner as unknown/impassable, never as its actual forest/road/water.
+    # The authoritative state still owns true movement validation.
+    var known: Dictionary = explored_cells(state, faction)
+    var terrain: Array = observed["terrain"].duplicate(true)
+    for y in range(Rules.HEIGHT):
+        for x in range(Rules.WIDTH):
+            if not known.has(Vector2i(x, y)):
+                terrain[y][x] = "water"
+    observed["terrain"] = terrain
     # Never send opponent's explored cells to the planner.
     observed.erase("explored")
     return observed
