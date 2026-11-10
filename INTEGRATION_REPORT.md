@@ -33,3 +33,10 @@ El objetivo es consolidar, no agregar nuevas caracteristicas, y conservar todos 
 - El repositorio GitHub sigue **PUBLICO** a fecha de auditoria; cambiar visibilidad desde Settings si se desea privado.
 - No se modificaron `EKANVORA` ni `centro-operativo-atlanta`.
 - Marca TARVOKA: aprobacion comercial condicionada a busqueda juridica de marcas.
+
+## Conciliación adicional de movimiento (#1-#4)
+- Comparados los archivos `Rules.gd` de los PR #2, #4 y la rama de integración.
+- Incorporado rechazo de origen bloqueado (#1/#2) y cola con cursor para reducir el costo de `pop_front` en rutas ponderadas (#2), manteniendo la validación estricta de terrenos de la cadena posterior.
+- Añadidas regresiones de origen bloqueado, cero/negativo presupuesto, mapa corto y rutas con costos ponderados. Los tests usan `Array[Vector2i]` para evitar el fallo de tipado detectado anteriormente.
+- No se cerraron los PR #1-#4; la equivalencia y la nueva ejecución CI se deben confirmar antes de hacerlo.
+- Commits de conciliación: `05848915`, `39c6cbc1`. **Aún sin ejecución CI confirmada** para estos cambios.
