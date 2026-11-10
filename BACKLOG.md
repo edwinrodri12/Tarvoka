@@ -172,3 +172,18 @@
 - [ ] Mantener guardados entre instalaciones mediante firma debug persistente protegida en secrets (no comprometer claves privadas); por ahora no prometer actualización sobre la APK antigua.
 - [ ] Una vez confirmado en Android: mejoras de tiempos de IA, legibilidad y terreno, mediciones de memoria/FPS; P1 IA basada en objetivos y niebla justa posteriormente.
 - [ ] Continuar desarrollando sin enviar APK por cada PR; entregar una versión agrupada cuando tenga sentido para revisión de campo.
+
+## 2026-11-10 — Checkpoint PR #53–#59 (nueva fase sin APK individual)
+- [x] IA prioriza eliminaciones y rodea obstáculos mediante caminos válidos con costos de terreno (#53); **P1 IA estratégica de defensa/captura y niebla aún pendiente**.
+- [x] 3 mapas originales transitables, render de terreno y selector de nuevo escenario confirmable (#54).
+- [x] Evitar pathfinding de movimiento en 180 frames ociosos de HUD, cachear por estado y selección (#55); **FPS, calor y memoria Android real pendientes**.
+- [x] Siluetas distintas por facción, HP numérico, resumen de bajas al terminar (#56); **legibilidad física pendiente**.
+- [x] Validación de estados guardados contra datos imposibles/terrenos no definidos (#57).
+- [x] Suite de simulación completa IA×IA para 3 escenarios y 2 iniciativas (#58), ampliada a 2 configuraciones (#59), 12 partidas terminadas.
+- [x] Configuración de ejércitos iniciales explícita: Entrenamiento y Simétrico (#59). En seis simulaciones cada uno: 6–0 azul (asimétrico) y 3–3 (simétrico).
+- [ ] **Próxima APK agrupada**: verificar controles de confirmación, selector de mapa/modo, siluetas HP, resultados, guardados y reinicio físico antes de publicar más contenido.
+- [ ] Firmas Android debug persistentes mediante secretos protegidos, sin registrar claves privadas en Git; actuales efímeras y pueden exigir desinstalar/perder saves.
+- [ ] Ampliar pruebas de balance a más despliegues, rivales, mapas y decisiones humanas; detectar dominancias y primer turno, no asumir balance por 6 partidas.
+- [ ] IA por objetivos estratégicos, niebla de guerra compartida y juego adversarial justo (P1), evitando que el jugador/IA vean información no legal.
+- [ ] Mejorar control de cámara/zoom y opciones de accesibilidad en múltiples tamaños de pantalla Android; medir tiempos de IA y uso de memoria.
+- [ ] Mantener arte original, no adelantar economía/campaña/online hasta un gate P0 probado físicamente.
