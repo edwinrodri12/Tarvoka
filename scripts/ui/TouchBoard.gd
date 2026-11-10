@@ -78,7 +78,10 @@ func _gui_input(event: InputEvent) -> void:
             touch_cancelled = true
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-        _tap(event.position)
+        # Native Buttons need touch-to-mouse emulation on Android, but the board
+        # already handles ScreenTouch release. Ignore only duplicated mouse events.
+        if event.device != InputEvent.DEVICE_ID_EMULATION:
+            _tap(event.position)
         accept_event()
 
 func _tap(point: Vector2) -> void:
