@@ -3,6 +3,7 @@ extends Control
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 var board: Control
 var status_label: Label
+var unit_label: Label
 
 func _ready() -> void:
     var layout := VBoxContainer.new()
@@ -19,6 +20,16 @@ func _ready() -> void:
     status_label = Label.new()
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     layout.add_child(status_label)
+    unit_label = Label.new()
+    unit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    unit_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    unit_label.add_theme_font_size_override("font_size", 13)
+    layout.add_child(unit_label)
+    var legend := Label.new()
+    legend.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    legend.add_theme_font_size_override("font_size", 11)
+    legend.text = "Verde: mover (numero = coste)  |  Rojo: atacar"
+    layout.add_child(legend)
     var end_button := Button.new()
     end_button.text = "Terminar turno"
     end_button.custom_minimum_size.y = 54
@@ -37,8 +48,9 @@ func _ready() -> void:
     set_process(true)
 
 func _process(_delta: float) -> void:
-    if board == null or status_label == null:
+    if board == null or status_label == null or unit_label == null:
         return
+    unit_label.text = board.selected_unit_summary()
     var winner := int(board.state.get("winner",-1))
     if winner != -1:
         status_label.text = "Victoria de faccion %d" % (winner + 1)
