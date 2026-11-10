@@ -39,3 +39,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-09 20:xx EST: Draft AI opponent integration in TouchBoard.finish_turn: faction 1 executes at most unit-count deterministic BasicAI steps then returns to human faction 0, unless victory occurs. UI remains lightweight/offline. CI pending on new branch; Android APK/device NOT verified.
 
 2026-11-09 21:xx EST: PR #20 CI run 42733717633 cancelled during touch board suite after preceding suites passed; new AI movement performance optimization proposed in dedicated stacked branch. Godot validation pending; no APK.
+
+2026-11-09 21:xx EST: Added versioned JSON battle state codec in isolated stacked branch; handles Vector2i positions, validation and round-trip. No disk I/O or Android APK yet. New CI pending.
