@@ -16,7 +16,8 @@ func _run() -> void:
     for child in main.find_children("*", "Button", true, false):
         var button: Button = child as Button
         controls[button.text] = button
-    assert(controls.size() == 3)
+    assert(controls.size() == 4)
+    assert(controls.has("Nueva partida"))
     assert(controls.has("Terminar turno"))
     assert(controls.has("Guardar partida"))
     assert(controls.has("Cargar partida"))
@@ -44,7 +45,14 @@ func _run() -> void:
     assert(board.state == snapshot)
     assert(board.message == "Partida cargada.")
     assert(DirAccess.remove_absolute(path_abs) == OK)
+    controls["Nueva partida"].pressed.emit()
+    assert(board.state["units"][0]["pos"] == Vector2i(1, 2))
+    assert(board.state["faction"] == 0)
+    assert(board.state["winner"] == -1)
+    var auto_path := "user://tarvoka_autosave_v1.json"
+    assert(FileAccess.file_exists(auto_path))
+    assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(auto_path)) == OK)
 
     main.queue_free()
-    print("PASS main UI: end turn, save and load buttons wired to battle state")
+    print("PASS main UI: end turn, save, load, new game and autosave wired to battle state")
     quit(0)
