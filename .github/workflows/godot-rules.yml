@@ -67,3 +67,9 @@ jobs:
         run: |
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_basic_ai.gd
+
+      - name: Run portable save codec regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_codec.gd
