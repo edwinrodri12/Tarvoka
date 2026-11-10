@@ -125,3 +125,15 @@
 **Criterio de entrada a desarrollo:** problema de jugador + reglas puras + prueba positiva/adversarial + UX móvil + decisión documentada. Evitar agregar todos los puntos de golpe.
 
 2026-11-10 P0-02 autosave/reanudación: [ ] PR propuesto con `tests/test_autosave.gd`; gate de CI Godot y export Android, luego instalación física y cierre forzoso/reapertura. [ ] Diseñar recuperación desde `.bak` cuando archivo principal corrupto y política de retención de backup, con tests adversariales. [ ] Confirmación antes de Nueva partida (puede sobrescribir progreso automático). P0-03/04/05: PR #41 fusionado, overlay y HUD requieren validación de legibilidad en Android.
+
+## P0 checkpoint after 2026-11-10 implementation
+- [x] P0-03 Green legal movement highlights and movement-cost labels; parity test with BattleSession rules (PR #41).
+- [x] P0-04 Adjacent attack target overlay and deterministic damage estimate, without revealing hidden information (no fog mechanic in current prototype) (PR #41 + #43). Full predictive risk beyond simple deterministic damage is not yet implemented.
+- [x] P0-05 Basic unit HUD: HP, attack, defense, movement/action status (PR #41). Role/terrain-effect panel pending.
+- [x] P0-02 Separate automatic save after actions/turns, resume on launch, New Game, retain manual save (PR #42); CI tests PASS. Physical reopen/restore still not tested.
+- [x] P0-06 Explicit Cancel Selection without changing state, and deliberate New Game confirmation (PR #43 + #44). Movement/attack commit confirmation and secure undo are still pending.
+- [x] End Turn UI disabled after victory; obsolete PR #40 closed in favor of merged #43.
+- [ ] Device test: latest APK overlay readability, selection, touch input, damages, autosave after closing/reopening, New Game confirm/cancel, victory/defeat, normal old functions.
+- [ ] Persistent debug signing via secure GitHub Actions secrets before repeated install-in-place; current ephemeral signatures may require uninstall and erase saves.
+- [ ] Movement/attack optional preview-and-confirm flow, robust auto-save write error feedback, explicit victory/defeat playthrough, timing/performance benchmarks on midrange Android.
+- [ ] P1/P2 features including strategic AI objectives, fog of war, economy, factions, campaign, and multiplayer remain out of scope until P0 quality gate.
