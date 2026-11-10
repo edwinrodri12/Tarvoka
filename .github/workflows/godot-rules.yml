@@ -98,6 +98,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_ai_turn_summary.gd
 
+      - name: Run terrain-aware tactical AI decision tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_ai_decisions.gd
+
       - name: Run portable save codec regression tests
         shell: bash
         run: |
