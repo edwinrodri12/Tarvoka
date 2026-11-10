@@ -51,3 +51,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Added 90-second per-suite timeout to Godot CI on dedicated branch, so parse failures cannot silently stall an entire job. Execution pending; APK/device unverified.
 
 2026-11-10: Input ownership guard proposed on stacked branch: TouchBoard ignores human taps while AI faction 1 is active. Not Godot-verified; APK/device not tested.
+
+2026-11-10: Expanded headless input-ownership regression to test both human and computer unit taps during an AI turn, plus faction 1 selection in local two-player mode. GitHub commit written; Godot/Android execution pending.
