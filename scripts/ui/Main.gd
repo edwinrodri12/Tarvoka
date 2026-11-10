@@ -1,6 +1,7 @@
 extends Control
 
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 
 var board: Control
 var status_label: Label
@@ -11,6 +12,7 @@ var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
+var scenario_picker: OptionButton
 
 # Named controls are exposed for headless layout and victory-state regressions.
 var main_layout: BoxContainer
@@ -129,7 +131,7 @@ func _ready() -> void:
     panel.add_child(unit_label)
 
     var legend := Label.new()
-    legend.text = "VERDE: movimiento y costo\nROJO: objetivo y dano estimado"
+    legend.text = "VERDE: movimiento y costo\nROJO: objetivo y dano estimado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
     legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
@@ -172,6 +174,18 @@ func _ready() -> void:
     load_button.add_theme_font_size_override("font_size", 15)
     load_button.pressed.connect(_load_game)
     saves.add_child(load_button)
+
+    var scenario_heading := Label.new()
+    scenario_heading.text = "ESCENARIO PARA NUEVA PARTIDA"
+    scenario_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(scenario_heading)
+    scenario_picker = OptionButton.new()
+    scenario_picker.custom_minimum_size.y = 54
+    scenario_picker.add_theme_font_size_override("font_size", 17)
+    for id in range(Scenarios.LABELS.size()):
+        scenario_picker.add_item(Scenarios.label(id), id)
+    scenario_picker.select(board.current_scenario_id)
+    panel.add_child(scenario_picker)
 
     var restart_button := Button.new()
     restart_button.text = "Nueva partida"
@@ -240,15 +254,17 @@ func _save_game() -> void:
     board.save_game()
 
 func _load_game() -> void:
-    board.load_game()
+    if board.load_game():
+        scenario_picker.select(board.current_scenario_id)
 
 func _new_game() -> void:
+    new_game_dialog.dialog_text = "Iniciar %s? Esto reemplazara el autoguardado. La partida guardada manualmente se conserva." % Scenarios.label(scenario_picker.get_selected_id())
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
-    board.new_game()
+    board.new_game(scenario_picker.get_selected_id())
 
 func _cancel_selection() -> void:
     board.cancel_selection()
