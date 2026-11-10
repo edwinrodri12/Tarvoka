@@ -2,9 +2,11 @@ extends Control
 class_name TarvokaTouchBoard
 
 const Session = preload("res://scripts/core/BattleSession.gd")
+const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
+var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var selected_id := ""
 var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
@@ -102,9 +104,33 @@ func _tap(point: Vector2) -> void:
     queue_redraw()
 
 func finish_turn() -> void:
+    # Human cannot manually skip the computer faction.
+    if ai_enabled and int(state.get("faction", -1)) != 0:
+        return
     var result: Dictionary = Session.end_turn(state)
-    if result.get("valid",false):
-        state = result["state"]
-        selected_id = ""
-        message = "Turno de faccion " + str(state["faction"] + 1)
+    if not result.get("valid", false):
+        return
+    state = result["state"]
+    selected_id = ""
+    message = "Turno de faccion " + str(state["faction"] + 1)
+    if ai_enabled and int(state["faction"]) == 1:
+        _play_ai_turn()
     queue_redraw()
+
+func _play_ai_turn() -> void:
+    # Hard bound: each valid AI action consumes one unit's action.
+    var max_actions := state.get("units", []).size()
+    for i in range(max_actions):
+        if int(state.get("winner", -1)) != -1:
+            break
+        var result: Dictionary = BasicAI.step(state)
+        if not result.get("valid", false):
+            break
+        state = result["state"]
+    if int(state.get("winner", -1)) != -1:
+        message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
+        return
+    var next: Dictionary = Session.end_turn(state)
+    if next.get("valid", false):
+        state = next["state"]
+        message = "Tu turno: faccion 1."
