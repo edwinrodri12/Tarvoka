@@ -75,3 +75,12 @@
 2026-11-10: Ship first ARM64-only debug APK from official Godot 4.3 export templates via GitHub Actions, ephemeral per-run signing key, no secrets committed. For test builds, app updates across differently signed runs might require uninstall/reinstall (local save data could be lost). Reuse a stable signing identity securely before recurring field tests/release. Do not commercialize without trademark clearance.
 
 2026-11-10 Android input policy: keep input_devices/pointing/emulate_mouse_from_touch=true so native Godot Buttons receive taps; discard only emulated mouse events (device=InputEvent.DEVICE_ID_EMULATION) in TouchBoard, while preserving native ScreenTouch gesture handling and genuine desktop mouse. PR #39 merged. CI-generated debug signing keys are ephemeral until a stable secure debug signing strategy is established; do not confuse with release signing.
+
+## 2026-11-10 — Decisión de producto y principios de originalidad
+Aprobado por el usuario: incorporar un análisis integral de críticas históricas de Advance Wars para mejorar TARVOKA, **sin replicar sus activos, personajes, mapas, UI, narrativa, nombres, música o mecánicas distintivas**. Se adoptan como marco rector `GAME_DESIGN.md`, `DESIGN_ROADMAP.md` y `DESIGN_QA.md`.
+1. Obligatorio desde diseño: IA con información honesta, transparencia de reglas, dificultad basada en decisiones, balance con contrajuego, UX táctil accesible, ritmo respetuoso, juego offline y originalidad.
+2. Política de desarrollo: P0 experiencia jugable antes de economía, campañas extensas, grandes repertorios de unidades o online. Cada función debe tener criterios y test negativo/adversarial.
+3. Aún **hipótesis sin mecánica cerrada**: economía con recuperación, suministros simplificados, control territorial avanzado, deshacer según información oculta, habilidades de comandantes, campaña ramificada, diferentes estilos de arte y multijugador asíncrono.
+4. Multijugador local guardable planeado; online, editor y clasificaciones solo después de una versión offline estable y con autorización para cualquier coste.
+5. Evitar confundir prueba CI o botón operativo con funcionamiento de flujo completo en móvil; marcar estado con evidencias.
+6. Mantener sin microtransacciones pay-to-win; cualquier monetización o lanzamiento exige decisiones posteriores, autorización y revisión legal de marca TARVOKA USPTO/WIPO/PI.
