@@ -39,3 +39,5 @@
 2026-11-09: Faction 0 is the human player by default, faction 1 runs bounded deterministic BasicAI when human ends turn. ai_enabled=false preserves two-human local testing. Stop AI on victory; no further end-turn after a win.
 
 2026-11-09: Optimize deterministic AI planning by computing Rules.reachable once per acting unit, then validating only the selected candidate with Session.move. Preserve authoritative legality and deterministic row-major tie-breaking.
+
+- Save format v1: JSON with explicit [x,y] positions, fixed 10x8 terrain and strict validation. Decode rejects malformed/version-incompatible payloads; filesystem save/load deferred.
