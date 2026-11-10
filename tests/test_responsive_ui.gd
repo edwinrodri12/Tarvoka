@@ -60,6 +60,17 @@ func _run() -> void:
     assert(not turn.disabled)
     assert(board.state["winner"] == -1)
 
+    # A completed AI turn should be summarized in the mobile tactical sidebar.
+    board.finish_turn()
+    screen._process(0.0)
+    var enemy_report: Label = screen.get("enemy_turn_label")
+    assert(enemy_report != null)
+    assert(enemy_report.visible)
+    assert(enemy_report.text.contains("Turno enemigo:"))
+    board.new_game()
+    screen._process(0.0)
+    assert(not enemy_report.visible)
+
     # Autosave must never fail silently. Simulate an invalid destination and
     # verify the status persists until a successful write clears it.
     var state_before_warning: Dictionary = board.state.duplicate(true)
