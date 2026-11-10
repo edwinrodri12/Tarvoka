@@ -24,58 +24,58 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_rules.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_rules.gd
 
       - name: Run GDScript combat tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combat.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combat.gd
 
       - name: Run GDScript turn tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_turns.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_turns.gd
 
       - name: Run battle action integration tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_actions.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_actions.gd
 
       - name: Run movement action integration tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_move_actions.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_move_actions.gd
 
       - name: Run battle session integration tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_session.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_session.gd
 
       - name: Run touch board interaction tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_touch_board.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_touch_board.gd
 
       - name: Run deterministic basic AI tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_basic_ai.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_basic_ai.gd
 
       - name: Run portable save codec regression tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_codec.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_codec.gd
 
       - name: Run user save-file regression tests
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_store.gd
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_store.gd
