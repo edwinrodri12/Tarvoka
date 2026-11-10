@@ -88,3 +88,9 @@
 - [ ] Install and smoke-test debug APK on physical Android ARM64 phone; test movement, attacks, AI turn, victory, save/load, orientations and touch gestures.
 - [ ] Establish persistent securely stored signing identity for update-in-place debug builds; never commit keystores/passwords.
 - [ ] Improve game UI for mobile and ensure quality before release.
+
+## Android input fix / next validation (2026-11-10)
+- [x] Fix nonresponsive Android bottom Buttons (End turn, Save, Load): PR #39 merged in main; 11 headless suites and Android debug APK build PASS.
+- [ ] Physically verify all three Buttons on user's Android phone, plus board tap/deselect/swipe and game state persistence.
+- [ ] Implement a stable debug-signing arrangement via secure GitHub Actions secrets so future APK updates install without uninstalling and erasing saved games; no secret/private key in Git.
+- [ ] Improve release UX after input/device verification.
