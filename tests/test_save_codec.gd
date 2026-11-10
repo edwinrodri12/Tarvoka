@@ -31,5 +31,29 @@ func _initialize() -> void:
     corrupted["units"][1]["id"] = "a"
     assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
     assert(Codec.encode({}).is_empty())
+    # Reject states that deserialize into unplayable or incoherent battles.
+    corrupted = JSON.parse_string(raw)
+    corrupted["terrain"][0][0] = "lava" # Unknown to movement rules.
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["attack"] = -4
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["move_points"] = 20001
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["winner"] = 0 # Enemy is still alive.
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["id"] = "x".repeat(70)
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    var invalid_state: Dictionary = state.duplicate(true)
+    invalid_state["units"][0]["hp"] = -1
+    assert(Codec.encode(invalid_state).is_empty())
+    # A legitimate terminal state remains fully portable in version 1.
+    var terminal: Dictionary = state.duplicate(true)
+    terminal["units"][1]["hp"] = 0
+    terminal["winner"] = 0
+    assert(Codec.decode(Codec.encode(terminal)) == terminal)
     print("PASS save codec: roundtrip, immutability, version, invalid JSON, bounds, IDs")
     quit(0)
