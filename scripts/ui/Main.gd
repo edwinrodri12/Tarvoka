@@ -17,6 +17,9 @@ func _ready() -> void:
     board.size_flags_vertical = Control.SIZE_EXPAND_FILL
     board.custom_minimum_size = Vector2(280, 240)
     layout.add_child(board)
+    # Board._ready creates fresh state first; only this actual game scene opts into autosaving.
+    board.autosave_enabled = true
+    board.resume_autosave()
     status_label = Label.new()
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     layout.add_child(status_label)
@@ -35,16 +38,27 @@ func _ready() -> void:
     end_button.custom_minimum_size.y = 54
     end_button.pressed.connect(_end_turn)
     layout.add_child(end_button)
+    # Keep controls accessible without reducing the playable board height.
+    var actions := HBoxContainer.new()
+    layout.add_child(actions)
     var save_button := Button.new()
     save_button.text = "Guardar partida"
     save_button.custom_minimum_size.y = 48
+    save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     save_button.pressed.connect(_save_game)
-    layout.add_child(save_button)
+    actions.add_child(save_button)
     var load_button := Button.new()
     load_button.text = "Cargar partida"
     load_button.custom_minimum_size.y = 48
+    load_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     load_button.pressed.connect(_load_game)
-    layout.add_child(load_button)
+    actions.add_child(load_button)
+    var restart_button := Button.new()
+    restart_button.text = "Nueva partida"
+    restart_button.custom_minimum_size.y = 48
+    restart_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    restart_button.pressed.connect(_new_game)
+    actions.add_child(restart_button)
     set_process(true)
 
 func _process(_delta: float) -> void:
@@ -65,3 +79,6 @@ func _save_game() -> void:
 
 func _load_game() -> void:
     board.load_game()
+
+func _new_game() -> void:
+    board.new_game()
