@@ -86,3 +86,5 @@ Ningún documento debe etiquetar estas pruebas como PASÓ hasta que exista ejecu
 
 ## 2026-11-10 — Responsive mobile results, CI verified / field pending
 PR #45 (`67b2574c`) adapted layout to orientation, added larger tactical side panel and conspicuous in-scene VICTORIA/DERROTA message without hiding board. **PASÓ CI:** tests/test_responsive_ui.gd through run 42882100062 and Android debug export/signature through 42882099874. **NO EJECUTADO en dispositivo**: actual look on phone, tap control widths, portrait resizing, screen rotation, victory visual clarity, persistence after force close. Require user test before marking visual/UX satisfactory. The prior video validated older UI, not this new one.
+
+2026-11-10 PR #47 save failure transparency: tests in Godot CI (42882948668) verify autosave reject/visible warning/retry clears warning; Android build and signing CI 42882948397 PASÓ. Mobile device tests are **NO EJECUTADO** for forced storage failure and actual automatic restore after app restart. Continue to separate source-level tests and actual user gameplay; avoid marking P0 fully complete before field validation.
