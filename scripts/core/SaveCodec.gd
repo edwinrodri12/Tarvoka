@@ -35,9 +35,17 @@ static func decode(raw: String) -> Dictionary:
         if not unit is Dictionary or not unit.get("pos") is Array:
             return {}
         var pos: Array = unit["pos"]
-        if pos.size() != 2 or not pos[0] is int or not pos[1] is int:
+        if pos.size() != 2 or not _whole(pos[0]) or not _whole(pos[1]):
             return {}
-        unit["pos"] = Vector2i(pos[0], pos[1])
+        unit["pos"] = Vector2i(int(pos[0]), int(pos[1]))
+        for key in ["faction", "hp", "move_points", "attack", "defense", "cover"]:
+            if not _whole(unit.get(key)):
+                return {}
+            unit[key] = int(unit[key])
+    if not _whole(state.get("faction")) or not _whole(state.get("winner")):
+        return {}
+    state["faction"] = int(state["faction"])
+    state["winner"] = int(state["winner"])
     if not _valid_state(state):
         return {}
     return state
@@ -84,3 +92,7 @@ static func _valid_state(state: Dictionary) -> bool:
                 return false
             positions[pos] = true
     return true
+
+# Godot JSON parser can represent integral JSON numbers as float.
+static func _whole(value: Variant) -> bool:
+    return (value is int or value is float) and is_finite(float(value)) and float(int(value)) == float(value)
