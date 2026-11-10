@@ -1,0 +1,103 @@
+name: TARVOKA Android debug APK
+
+on:
+  pull_request:
+    paths:
+      - "export_presets.cfg"
+      - ".github/workflows/android-debug-apk.yml"
+      - "project.godot"
+      - "scripts/**"
+      - "scenes/**"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-android-debug:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    env:
+      GODOT_VERSION: "4.3"
+      GODOT_STATUS: "stable"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure Android SDK tools are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          test -d "${ANDROID_HOME}"
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          test -f "${ANDROID_HOME}/platforms/android-34/android.jar"
+          test -x "${ANDROID_HOME}/build-tools/34.0.0/apksigner"
+
+      - name: Download official Godot 4.3 and matching export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/godot-templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p /tmp/godot-template-extract
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-template-extract
+          cp /tmp/godot-template-extract/templates/android_debug.apk "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          cp /tmp/godot-template-extract/templates/android_release.apk "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '%s\n' '4.3.stable' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+
+      - name: Generate ephemeral debug signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v -keystore /tmp/tarvoka-debug.keystore \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1000 \
+            -storepass android -keypass android \
+            -dname "CN=Android Debug,O=TARVOKA Development,C=US" >/dev/null 2>&1
+          test -s /tmp/tarvoka-debug.keystore
+
+      - name: Import and export debug APK with Godot
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/tarvoka-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug Android build/TARVOKA-debug.apk
+          test -s build/TARVOKA-debug.apk
+          file build/TARVOKA-debug.apk
+          sha256sum build/TARVOKA-debug.apk
+
+      - name: Verify APK is signed
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose build/TARVOKA-debug.apk
+          unzip -tq build/TARVOKA-debug.apk > /dev/null
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Android-debug-arm64
+          path: build/TARVOKA-debug.apk
+          if-no-files-found: error
+          retention-days: 14

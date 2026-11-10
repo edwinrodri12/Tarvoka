@@ -6,6 +6,8 @@ config/name="TARVOKA"
 run/main_scene="res://scenes/Main.tscn"
 
 [rendering]
+; Android export requires mobile ETC2/ASTC texture import.
+textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 
