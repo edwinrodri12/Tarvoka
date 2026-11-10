@@ -5,9 +5,11 @@ const Session = preload("res://scripts/core/BattleSession.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
+var current_scenario_id := 0
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
@@ -27,13 +29,9 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game() -> void:
-    var terrain: Array = []
-    for y in range(HEIGHT):
-        var row: Array = []
-        for x in range(WIDTH):
-            row.append("plain")
-        terrain.append(row)
+func new_game(scenario_id: int = 0) -> void:
+    current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
+    var terrain: Array = Scenarios.terrain(current_scenario_id)
     state = Session.start([
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -61,8 +59,35 @@ func _draw() -> void:
     for y in range(HEIGHT):
         for x in range(WIDTH):
             var pos := origin + Vector2(x, y) * tile
-            draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.18,0.27,0.22) if (x+y)%2 == 0 else Color(0.22,0.32,0.26))
-            draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.45,0.52,0.46), false, 1.0)
+            var terrain_type := str(state.get("terrain", [])[y][x])
+            var terrain_color := Color(0.18, 0.27, 0.22) if (x + y) % 2 == 0 else Color(0.22, 0.32, 0.26)
+            match terrain_type:
+                "forest":
+                    terrain_color = Color(0.09, 0.26, 0.14)
+                "road":
+                    terrain_color = Color(0.32, 0.29, 0.23)
+                "mountain":
+                    terrain_color = Color(0.32, 0.34, 0.41)
+                "water":
+                    terrain_color = Color(0.07, 0.23, 0.40)
+            draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
+            draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
+            # Simple self-contained symbols, no borrowed art or sprite assets.
+            if terrain_type == "forest":
+                draw_circle(pos + tile * Vector2(0.29, 0.31), tile * 0.09, Color(0.25, 0.53, 0.27))
+                draw_circle(pos + tile * Vector2(0.65, 0.27), tile * 0.11, Color(0.20, 0.45, 0.22))
+            elif terrain_type == "road":
+                draw_line(pos + tile * Vector2(0.12, 0.51), pos + tile * Vector2(0.88, 0.51), Color(0.71, 0.65, 0.47, 0.70), maxf(1.0, tile * 0.035))
+            elif terrain_type == "mountain":
+                var triangle := PackedVector2Array([
+                    pos + tile * Vector2(0.18, 0.77),
+                    pos + tile * Vector2(0.52, 0.23),
+                    pos + tile * Vector2(0.85, 0.77)
+                ])
+                draw_colored_polygon(triangle, Color(0.53, 0.58, 0.65, 0.70))
+            elif terrain_type == "water":
+                draw_line(pos + tile * Vector2(0.19, 0.40), pos + tile * Vector2(0.79, 0.40), Color(0.38, 0.66, 0.86, 0.80), maxf(1.0, tile * 0.025))
+                draw_line(pos + tile * Vector2(0.12, 0.62), pos + tile * Vector2(0.72, 0.62), Color(0.38, 0.66, 0.86, 0.65), maxf(1.0, tile * 0.025))
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
@@ -300,6 +325,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    current_scenario_id = Scenarios.identify(state["terrain"])
     selected_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
