@@ -33,3 +33,5 @@
 2026-11-09: Preserve Rules.reachable typed Array[Vector2i] contract. Regression tests must supply explicitly typed empty blocked-cell arrays rather than untyped [] literals. Keep this fix isolated and do not merge stacked PRs without green CI.
 
 2026-11-09: Invalid first_faction on BattleSession.start normalizes to faction 0 rather than creating a permanently inactive match. Keep faction 0/1 invariant for offline two-player prototype; add headless regression.
+
+2026-11-09: Initial offline AI is deterministic, pure, one legal action per call, prioritizes adjacent attacks, then legal moves toward nearest living enemy; caller remains responsible for ending AI turns. No randomness, network or scene dependencies. Avoid conflating a tested planner with a playable AI opponent until connected to UI.

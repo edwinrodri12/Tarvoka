@@ -36,3 +36,7 @@
 
 - [x] Confirm PR #18 typed-array fix via Godot 4.3 CI: run 42709626139 SUCCESS on commit 5e60d2e, all seven suites.
 - [ ] Verify newer BattleSession invalid-start-faction regression via GitHub Actions; review and consolidate stacked PRs into main only after latest green checks.
+
+- [ ] Verify BasicAI.gd headless regression tests on its own PR and resolve any Godot 4.3 errors.
+- [ ] Connect BasicAI step loop to the enemy turn with a bounded action count, then test full human-vs-AI battle.
+- [ ] Consolidate stacked draft PRs #5-#18 after reviewing their green checks; do not treat branch code as integrated into main.
