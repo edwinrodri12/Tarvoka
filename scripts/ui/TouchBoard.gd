@@ -109,11 +109,28 @@ func _draw() -> void:
             continue
         var cell: Vector2i = unit["pos"]
         var center := origin + (Vector2(cell) + Vector2(0.5,0.5)) * tile
-        var color := Color(0.35,0.65,1.0) if int(unit["faction"]) == 0 else Color(1.0,0.4,0.3)
-        draw_circle(center, tile * 0.35, color.darkened(0.45) if unit.get("acted",false) else color)
+        var is_player := int(unit["faction"]) == 0
+        var color := Color(0.35, 0.65, 1.0) if is_player else Color(1.0, 0.4, 0.3)
+        var face: Color = color.darkened(0.45) if unit.get("acted", false) else color
+        # Circle vs square provides faction identity without requiring color vision.
+        if is_player:
+            draw_circle(center, tile * 0.34, face)
+        else:
+            var half := tile * 0.32
+            draw_rect(Rect2(center - Vector2.ONE * half, Vector2.ONE * (half * 2.0)), face)
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * 0.42, 0, TAU, 32, Color.YELLOW, 3.0)
-        draw_string(font, center + Vector2(-tile*0.11,tile*0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12,tile*0.30)), Color.WHITE)
+        draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12.0, tile * 0.30)), Color.WHITE)
+        # Numeric health avoids a misleading percentage: this prototype has no
+        # persistent per-unit maximum-HP field yet. Hide on very small tiles.
+        if tile >= 39.0:
+            var unit_pos := origin + Vector2(cell) * tile
+            var badge_rect := Rect2(unit_pos + Vector2(tile * 0.04, tile * 0.76), Vector2(tile * 0.47, tile * 0.22))
+            draw_rect(badge_rect, Color(0.03, 0.07, 0.09, 0.89))
+            var health_tint := Color(1.0, 0.75, 0.46) if int(unit["hp"]) <= 3 else Color.WHITE
+            draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
+                "HP %d" % int(unit["hp"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+                int(max(10.0, tile * 0.16)), health_tint)
     if pending_order.has("cell"):
         var preview_cell: Vector2i = pending_order["cell"]
         var preview_pos: Vector2 = origin + Vector2(preview_cell) * tile

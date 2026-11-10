@@ -133,7 +133,7 @@ func _ready() -> void:
     panel.add_child(unit_label)
 
     var legend := Label.new()
-    legend.text = "VERDE: movimiento y costo\nROJO: objetivo y dano estimado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
+    legend.text = "VERDE: movimiento y costo\nROJO: objetivo y dano estimado\nALIADAS circulo | ENEMIGAS cuadrado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
     legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
@@ -248,14 +248,33 @@ func _process(_delta: float) -> void:
     result_banner.visible = winner != -1
     if winner == 0:
         _update_text(result_title, "VICTORIA")
-        _update_text(result_detail, "Objetivo cumplido. Enemigos derrotados. Puedes comenzar otra partida.")
+        _update_text(result_detail, "Objetivo cumplido.\n" + _battle_summary() + "\nPuedes comenzar otra partida.")
         _update_text(status_label, "Batalla terminada")
     elif winner == 1:
         _update_text(result_title, "DERROTA")
-        _update_text(result_detail, "Tu ejercito fue derrotado. Puedes intentar una nueva estrategia.")
+        _update_text(result_detail, "Tu ejercito fue derrotado.\n" + _battle_summary() + "\nIntenta una estrategia diferente.")
         _update_text(status_label, "Batalla terminada")
     else:
         _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
+
+func _battle_summary() -> String:
+    # Every defeated unit remains in the authoritative battle state with HP 0.
+    # Display unit counts without inventing a score or maximum HP.
+    var alive := [0, 0]
+    var losses := [0, 0]
+    for unit in board.state.get("units", []):
+        if not (unit is Dictionary):
+            continue
+        var faction := int(unit.get("faction", -1))
+        if faction not in [0, 1]:
+            continue
+        if int(unit.get("hp", 0)) > 0:
+            alive[faction] += 1
+        else:
+            losses[faction] += 1
+    return "Aliadas: %d activas, %d bajas. Enemigas: %d activas, %d bajas." % [
+        alive[0], losses[0], alive[1], losses[1]
+    ]
 
 func _update_text(label: Label, content: String) -> void:
     if label.text != content:
