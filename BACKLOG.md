@@ -189,3 +189,5 @@
 - [ ] Mantener arte original, no adelantar economía/campaña/online hasta un gate P0 probado físicamente.
 
 - [x] PR #52 integrado: verificación ABI ARM64 real y huella pública del certificado en CI de exportación. **La firma debug persistente sigue pendiente**, requiere secretos seguros sin commit de llave privada.
+
+- [ ] Verificar en CI la nueva regresión de prioridad letal frente a objetivo sano ordenado primero por ID; no confundir con IA estratégica P1 ni QA de dispositivo. Mantener pendientes visión legal, rendimiento y guardado en Android real.
