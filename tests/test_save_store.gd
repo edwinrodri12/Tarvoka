@@ -29,5 +29,7 @@ func _initialize() -> void:
     assert(Store.load(path).is_empty())
     DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
     assert(Store.load(path).is_empty())
+    for suffix in [".bak", ".tmp"]:
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(path + suffix))
     print("PASS save store: roundtrip, rejected invalid state/path, malformed and missing file")
     quit(0)
