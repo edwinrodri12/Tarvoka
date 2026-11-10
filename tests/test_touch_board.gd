@@ -10,6 +10,7 @@ func _run() -> void:
     assert(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch") == false) # Avoid double tap via synthetic mouse event
     var board = Board.new()
     board.size = Vector2(800, 640)
+    board.ai_enabled = false
     root.add_child(board)
     assert(board.state["units"][0]["pos"] == Vector2i(1,2))
     board._tap(Vector2(120,200))
@@ -32,6 +33,7 @@ func _run() -> void:
     # Regression: the final enemy's defeat must be visible immediately.
     var duel = Board.new()
     duel.size = Vector2(800, 640)
+    duel.ai_enabled = false
     root.add_child(duel)
     var units: Array = duel.state["units"].duplicate(true)
     units[0]["pos"] = Vector2i(1, 2)
@@ -47,6 +49,20 @@ func _run() -> void:
     assert(duel.message == "Victoria de faccion 1.")
     duel.finish_turn()
     assert(duel.state["winner"] == 0)
+    # Human vs AI: ending faction 0 turn triggers bounded AI actions and returns control.
+    var vs_ai = Board.new()
+    vs_ai.size = Vector2(800, 640)
+    root.add_child(vs_ai)
+    assert(vs_ai.ai_enabled)
+    vs_ai.finish_turn()
+    assert(vs_ai.state["faction"] == 0)
+    var ai_acted := 0
+    for unit in vs_ai.state["units"]:
+        if int(unit["faction"]) == 1 and unit["pos"] != Vector2i(8, 2) and unit["pos"] != Vector2i(8, 5):
+            ai_acted += 1
+    assert(ai_acted > 0)
+    assert(vs_ai.message == "Tu turno: faccion 1.")
+    vs_ai.queue_free()
     duel.queue_free()
     board.queue_free()
     print("PASS touch board: touch/mouse dedup setting, selection, movement, consumed action, deselect, turn ownership")
