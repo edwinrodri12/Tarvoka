@@ -4,6 +4,7 @@ class_name TarvokaBasicAI
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Combat = preload("res://scripts/core/Combat.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -17,10 +18,12 @@ static func step(state: Dictionary) -> Dictionary:
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
         return idle
+    # Decide from the currently observable units; do not inspect hidden targets.
+    var knowledge: Dictionary = Visibility.observed_state(state, faction)
     var friends: Array = []
     var enemies: Array = []
     var occupied: Array[Vector2i] = []
-    for unit in state["units"]:
+    for unit in knowledge["units"]:
         if not unit is Dictionary or not unit.get("pos") is Vector2i:
             return idle
         if int(unit.get("hp", 0)) <= 0:
@@ -31,8 +34,11 @@ static func step(state: Dictionary) -> Dictionary:
                 friends.append(unit)
         else:
             enemies.append(unit)
-    if friends.is_empty() or enemies.is_empty():
+    if friends.is_empty():
         return idle
+    if enemies.is_empty():
+        # Search only previously unseen terrain: never home in on hidden units.
+        return _reconnoiter(state, friends, occupied) if Visibility.enabled(state) else idle
     friends.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
     enemies.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
 
@@ -117,6 +123,48 @@ static func step(state: Dictionary) -> Dictionary:
 # orthogonal cell adjacent to a living enemy. Never step through units or water.
 # Edges are charged for the *destination* terrain in forward motion, hence
 # expanding backwards charges the cell from which we are expanding.
+# Reconnaissance without omniscience: rank legal *currently visible* cells by
+# how much never-explored terrain a unit would reveal from there. We use the
+# same movement validation as the player and never inspect hidden opponents.
+static func _reconnoiter(state: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
+    var faction := int(state.get("faction", -1))
+    var visible: Dictionary = Visibility.visible_cells(state, faction)
+    var explored: Dictionary = Visibility.explored_cells(state, faction)
+    var best_score := 0
+    var best_id := ""
+    var best_cell := Vector2i(-1, -1)
+    for unit in friends:
+        var blocked: Array[Vector2i] = occupied.duplicate()
+        blocked.erase(unit["pos"])
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), state["terrain"], blocked)
+        var radius: int = clampi(int(unit.get("vision", Visibility.DEFAULT_VISION)), 1, Visibility.MAX_VISION)
+        for y in range(Rules.HEIGHT):
+            for x in range(Rules.WIDTH):
+                var cell := Vector2i(x, y)
+                if cell == unit["pos"] or not reachable.has(cell) or not visible.has(cell):
+                    continue
+                var discovery := 0
+                for dy in range(maxi(0, cell.y - radius), mini(Rules.HEIGHT - 1, cell.y + radius) + 1):
+                    for dx in range(maxi(0, cell.x - radius), mini(Rules.WIDTH - 1, cell.x + radius) + 1):
+                        var unveiled := Vector2i(dx, dy)
+                        if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius and not explored.has(unveiled):
+                            discovery += 1
+                var score: int = discovery * 100 - int(reachable[cell])
+                if discovery > 0 and score > best_score:
+                    best_score = score
+                    best_id = str(unit["id"])
+                    best_cell = cell
+    if best_id.is_empty():
+        return idle
+    var moved: Dictionary = Session.move(state, best_id, best_cell)
+    if not moved.get("valid", false):
+        return idle
+    moved["action"] = "move"
+    moved["unit_id"] = best_id
+    moved["destination"] = best_cell
+    return moved
+
 static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i]) -> Dictionary:
     var distances: Dictionary = {}
     if terrain.size() != Rules.HEIGHT:
