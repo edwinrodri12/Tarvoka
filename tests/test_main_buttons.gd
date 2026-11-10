@@ -21,7 +21,8 @@ func _run() -> void:
     assert(controls.has("Guardar partida"))
     assert(controls.has("Cargar partida"))
 
-    var board = main.board
+    var board = main.get("board")
+    assert(board != null)
     var original: Dictionary = board.state.duplicate(true)
     controls["Terminar turno"].pressed.emit()
     # The human end-turn button advances the enemy AI and returns control.
