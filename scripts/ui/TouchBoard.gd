@@ -9,6 +9,8 @@ const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
+var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
+var autosave_path := "user://tarvoka_autosave_v1.json"
 var selected_id := ""
 var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
@@ -19,6 +21,9 @@ const TAP_DRAG_LIMIT := 18.0
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
+    new_game()
+
+func new_game() -> void:
     var terrain: Array = []
     for y in range(HEIGHT):
         var row: Array = []
@@ -31,6 +36,9 @@ func _ready() -> void:
         {"id":"X","faction":1,"hp":8,"pos":Vector2i(8,2),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false},
         {"id":"Y","faction":1,"hp":8,"pos":Vector2i(8,5),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false}
     ], terrain)
+    selected_id = ""
+    message = "Selecciona una unidad."
+    _write_autosave()
     queue_redraw()
 
 func _cell_size() -> float:
@@ -143,6 +151,7 @@ func _tap(point: Vector2) -> void:
             action = Session.move(state, selected_id, cell)
         if action.get("valid",false):
             state = action["state"]
+            _write_autosave()
             var winner := int(state.get("winner", -1))
             message = "Victoria de faccion %d." % (winner + 1) if winner != -1 else "Accion realizada."
             selected_id = ""
@@ -162,6 +171,7 @@ func finish_turn() -> void:
     message = "Turno de faccion " + str(state["faction"] + 1)
     if ai_enabled and int(state["faction"]) == 1:
         _play_ai_turn()
+    _write_autosave()
     queue_redraw()
 
 func _play_ai_turn() -> void:
@@ -202,5 +212,26 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     # A saved computer turn must resume immediately; human input is locked during it.
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
+    _write_autosave()
     queue_redraw()
     return true
+
+# Autosave is a separate file; manual "Guardar partida" always remains untouched.
+# The main scene chooses when to restore so unit tests can create fresh boards.
+func resume_autosave() -> bool:
+    var restored: Dictionary = SaveStore.load(autosave_path)
+    if restored.is_empty():
+        return false
+    state = restored
+    selected_id = ""
+    message = "Partida recuperada automaticamente."
+    if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
+        _play_ai_turn()
+        _write_autosave()
+    queue_redraw()
+    return true
+
+func _write_autosave() -> bool:
+    if not autosave_enabled:
+        return false
+    return SaveStore.save(state, autosave_path)
