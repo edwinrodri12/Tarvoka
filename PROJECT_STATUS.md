@@ -55,3 +55,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: Expanded headless input-ownership regression to test both human and computer unit taps during an AI turn, plus faction 1 selection in local two-player mode. GitHub commit written; Godot/Android execution pending.
 
 2026-11-10: PR #28 head 6d2ea08d CI run 42780308893 SUCCESS (Godot 4 headless). New stacked branch resumes computer turn automatically when loading a save; regression added, awaiting CI. Android APK/device unverified.
+
+2026-11-10: Added winner feedback when loading completed battles; Godot CI and Android verification pending.
