@@ -55,6 +55,15 @@ func _run() -> void:
     touch_up.position = Vector2(120, 200)
     gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "")
+    # Moving away and returning must not count as a tap.
+    gesture_board._gui_input(touch_down)
+    var drag := InputEventScreenDrag.new()
+    drag.index = 0
+    drag.position = Vector2(220, 200)
+    gesture_board._gui_input(drag)
+    touch_up.position = Vector2(120, 200)
+    gesture_board._gui_input(touch_up)
+    assert(gesture_board.selected_id == "")
     # Secondary fingers must not steal or release the primary tap.
     var other_down := InputEventScreenTouch.new()
     other_down.index = 1
