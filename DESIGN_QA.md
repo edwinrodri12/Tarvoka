@@ -73,3 +73,10 @@ Ningún documento debe etiquetar estas pruebas como PASÓ hasta que exista ejecu
 ## Registro de decisiones de QA
 - 2026-11-10: Entrevista/reporte de usuario confirmó botones y respuesta de IA en dispositivo; mantener separada la validación de guardar/cargar *operabilidad de botones* de *integridad del guardado*.
 - 2026-11-10: Prioridad inmediata: Q-06, Q-07, A-01–A-07, R-04 antes de economía/campaña/multijugador.
+
+## 2026-11-10 P0 QA update — development versus field validation
+- P0-03 legal movement overlay and P0-04 deterministic adjacent damage preview: **PASÓ CI** Godot rules/preview tests and Android export PR #41, #43; **NO EJECUTADO EN TELÉFONO** visual legibility/interaction.
+- P0-05 HUD for HP/attack/defense/movement: **PASÓ CI** source/scene compile; **NO EJECUTADO EN TELÉFONO** legibility under different screen sizes.
+- P0-02 offline autosave/resume and New Game: **PASÓ CI** test_autosave_resume.gd and manual-save isolation; **NO EJECUTADO EN TELÉFONO** background/force-close reopening and update-in-place.
+- P0-06 Cancel Selection, terminal End Turn disabled and New Game confirmation: **PASÓ CI** regression in test_main_buttons.gd; **NO EJECUTADO EN TELÉFONO** touch-dialog behavior.
+- Final build verified in GitHub Actions 42873868205, artifact 13791325778. Future user feedback must be recorded separately. Remaining priority: complete-match victory/defeat QA, secure signing continuity, full attack-confirm/undo UX, performance and orientation.
