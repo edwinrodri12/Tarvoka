@@ -4,6 +4,7 @@ class_name TarvokaTouchBoard
 const Session = preload("res://scripts/core/BattleSession.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
+const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -48,6 +49,22 @@ func _draw() -> void:
             var pos := origin + Vector2(x, y) * tile
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.18,0.27,0.22) if (x+y)%2 == 0 else Color(0.22,0.32,0.26))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.45,0.52,0.46), false, 1.0)
+    # Legal destinations in green, adjacent attack targets in red.
+    # Reuse the exact movement/combat rules instead of drawing guessed ranges.
+    var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
+    for destination in hints["moves"]:
+        var movement_cell: Vector2i = destination
+        var movement_pos: Vector2 = origin + Vector2(movement_cell) * tile
+        draw_rect(Rect2(movement_pos, Vector2.ONE * tile), Color(0.18, 0.76, 0.40, 0.34))
+        if tile >= 25.0:
+            draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
+                str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+                int(max(10.0, tile * 0.20)), Color.WHITE)
+    for destination in hints["attacks"]:
+        var attack_cell: Vector2i = destination
+        var attack_pos: Vector2 = origin + Vector2(attack_cell) * tile
+        draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(0.94, 0.20, 0.16, 0.40))
+        draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(1.0, 0.32, 0.24), false, 2.0)
     for unit in state.get("units", []):
         if int(unit.get("hp",0)) <= 0:
             continue
@@ -58,6 +75,12 @@ func _draw() -> void:
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * 0.42, 0, TAU, 32, Color.YELLOW, 3.0)
         draw_string(font, center + Vector2(-tile*0.11,tile*0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12,tile*0.30)), Color.WHITE)
+
+func selected_unit_summary() -> String:
+    return TacticalHints.unit_summary(state, selected_id)
+
+func legal_action_hints() -> Dictionary:
+    return TacticalHints.for_unit(state, selected_id)
 
 func _gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
