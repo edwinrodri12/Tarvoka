@@ -44,26 +44,35 @@ static func step(state: Dictionary) -> Dictionary:
     var best: Dictionary = {}
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
+    # Calculate reachable cells once per unit instead of pathfinding for all 80 tiles.
+    var occupied: Array[Vector2i] = []
+    for unit in state["units"]:
+        if int(unit.get("hp", 0)) > 0:
+            occupied.append(unit["pos"])
     for unit in friends:
+        var blocked: Array[Vector2i] = occupied.duplicate()
+        blocked.erase(unit["pos"])
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), state["terrain"], blocked)
         for y in range(Rules.HEIGHT):
             for x in range(Rules.WIDTH):
                 var cell := Vector2i(x, y)
-                var candidate: Dictionary = Session.move(state, str(unit["id"]), cell)
-                if not candidate.get("valid", false):
+                if cell == unit["pos"] or not reachable.has(cell):
                     continue
                 var distance := 999999
                 for enemy in enemies:
                     distance = mini(distance, _distance(cell, enemy["pos"]))
                 if distance < best_distance:
                     best_distance = distance
-                    best = candidate
                     best_id = str(unit["id"])
                     best_cell = cell
-    if not best.is_empty():
-        best["action"] = "move"
-        best["unit_id"] = best_id
-        best["destination"] = best_cell
-        return best
+    if not best_id.is_empty():
+        # Preserve all authoritative movement validation in BattleSession.
+        best = Session.move(state, best_id, best_cell)
+        if best.get("valid", false):
+            best["action"] = "move"
+            best["unit_id"] = best_id
+            best["destination"] = best_cell
+            return best
     return idle
 
 static func _distance(a: Vector2i, b: Vector2i) -> int:
