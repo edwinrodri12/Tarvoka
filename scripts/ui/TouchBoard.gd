@@ -11,6 +11,7 @@ var state: Dictionary = {}
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
+var autosave_warning := ""
 var selected_id := ""
 var message := "Selecciona una unidad."
 var touch_origin := Vector2.ZERO
@@ -249,4 +250,7 @@ func resume_autosave() -> bool:
 func _write_autosave() -> bool:
     if not autosave_enabled:
         return false
-    return SaveStore.save(state, autosave_path)
+    var ok: bool = SaveStore.save(state, autosave_path)
+    # An interrupted or unwritable save must not silently imply progress is safe.
+    autosave_warning = "" if ok else "Atencion: no se pudo guardar automaticamente. Guarda la partida manualmente."
+    return ok
