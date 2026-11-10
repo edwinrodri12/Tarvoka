@@ -20,6 +20,20 @@ func _initialize() -> void:
     assert(attacked["state"]["winner"] == 0)
     assert(state["units"][1]["hp"] == 3) # Input is immutable.
     assert(not AI.step(attacked["state"])["valid"]) # Finished game.
+    # Adversarial: the first enemy by ID is healthy; prefer the lethal hit.
+    var choice_units := [
+        {"id":"ally","faction":0,"hp":10,"pos":Vector2i(1,1),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
+        {"id":"a_healthy","faction":1,"hp":10,"pos":Vector2i(0,1),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false},
+        {"id":"z_wounded","faction":1,"hp":3,"pos":Vector2i(2,1),"move_points":3,"attack":4,"defense":0,"cover":0,"acted":false}
+    ]
+    var choice_state: Dictionary = Session.start(choice_units, terrain)
+    var choice: Dictionary = AI.step(choice_state)
+    assert(choice["valid"] and choice["action"] == "attack")
+    assert(choice["state"]["units"][2]["hp"] == 0)
+    assert(choice["state"]["units"][1]["hp"] == 10)
+    assert(choice_state["units"][2]["hp"] == 3)
+    var repeat_choice: Dictionary = AI.step(choice_state)
+    assert(repeat_choice["state"] == choice["state"]) # Deterministic on identical input.
     units[1]["pos"] = Vector2i(8, 1)
     state = Session.start(units, terrain)
     var moved: Dictionary = AI.step(state)
