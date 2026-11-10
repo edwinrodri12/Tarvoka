@@ -64,3 +64,5 @@
 2026-11-10: PASÓ GitHub Actions run 42796752187 for PR #30 commit 0e824fb8 (Godot 4 headless). Added faction-2 victory-load and terminal-action regression on successor branch: NO EJECUTADO pending CI. Android APK/device: NO EJECUTADO.
 
 2026-11-10: PR #31 commit c7880700: PASÓ workflow 42804643073. AI entry guard regression added: NO EJECUTADO until CI. Android APK/device: NO EJECUTADO.
+
+2026-11-10: Added touch-event regression: press alone does not select, release selects, drag release cannot move, second tap deselects. PASÓ: GitHub writes. NO EJECUTADO: Godot 4 runtime/CI for new branch; Android APK/device not available.
