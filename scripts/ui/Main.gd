@@ -101,7 +101,9 @@ func _load_game() -> void:
     board.load_game()
 
 func _new_game() -> void:
-    new_game_dialog.popup_centered()
+    # Headless CI verifies the confirmation signal without opening a native modal.
+    if DisplayServer.get_name() != "headless":
+        new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
     board.new_game()
