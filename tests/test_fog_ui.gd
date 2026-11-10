@@ -21,6 +21,11 @@ func _run() -> void:
     assert(not Vision.enabled(board.state))
     assert(board.state["units"].size() == 4)
     assert(not board.state.has("explored"))
+    # Unknown map cells must reveal exactly zero underlying terrain color.
+    var unknown_shade: Color = board.fog_cover_color(false)
+    var explored_shade: Color = board.fog_cover_color(true)
+    assert(is_equal_approx(unknown_shade.a, 1.0))
+    assert(explored_shade.a > 0.0 and explored_shade.a < 1.0)
 
     # The selection itself must never erase a live game.
     mode.select(1)
