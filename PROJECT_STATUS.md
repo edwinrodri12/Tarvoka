@@ -61,3 +61,5 @@ No verified Android APK or device test. No edits to EKANVORA or centro-operativo
 2026-11-10: PR #30 head 0e824fb8 GitHub Actions run 42796752187 SUCCESS. Added follow-up regression for loading faction-2 victory and ensuring terminal battles reject input; awaiting CI. Android APK/device still unverified.
 
 2026-11-10: Added defensive AI-turn entry guard on a stacked branch; CI pending. PR #31 head c7880700 passed Godot workflow run 42804643073. Android APK unverified.
+
+2026-11-10: Proposed touchscreen drag rejection: process ScreenTouch on release only and ignore releases farther than 18 logical pixels from press; desktop mouse path unchanged. New headless regression added. Godot CI and physical Android NOT VERIFIED. Stacked on PR #32; main unchanged.
