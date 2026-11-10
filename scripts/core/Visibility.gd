@@ -9,8 +9,9 @@ const MAX_VISION := 8
 static func enabled(state: Dictionary) -> bool:
     return state.get("fog_enabled", false) == true
 
-# A simple, explicit first vision rule: orthogonal/Manhattan radius.
-# Mountains and forests currently affect movement, NOT line of sight.
+# Sight first uses a Manhattan radius, then a deterministic grid ray.
+# Mountains block sight *behind* them, but their own tile is visible.
+# Forests affect movement, not occlusion yet; both factions use equal rules.
 static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
     var visible: Dictionary = {}
     if faction not in [0, 1] or not state.get("units") is Array:
@@ -20,6 +21,12 @@ static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
             for x in range(Rules.WIDTH):
                 visible[Vector2i(x, y)] = true
         return visible
+    var terrain = state.get("terrain", null)
+    if not terrain is Array or terrain.size() != Rules.HEIGHT:
+        return visible
+    for row in terrain:
+        if not row is Array or row.size() != Rules.WIDTH:
+            return visible
     for unit in state["units"]:
         if not unit is Dictionary or int(unit.get("hp", 0)) <= 0 or int(unit.get("faction", -1)) != faction:
             continue
@@ -30,9 +37,35 @@ static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
         for y in range(maxi(0, center.y - radius), mini(Rules.HEIGHT - 1, center.y + radius) + 1):
             for x in range(maxi(0, center.x - radius), mini(Rules.WIDTH - 1, center.x + radius) + 1):
                 var cell := Vector2i(x, y)
-                if absi(cell.x - center.x) + absi(cell.y - center.y) <= radius:
+                if absi(cell.x - center.x) + absi(cell.y - center.y) <= radius and _clear_los(terrain, center, cell):
                     visible[cell] = true
     return visible
+
+# Godot-grid Bresenham: a mountain on an intermediate tile blocks sight.
+# Starting or ending ON the mountain is allowed; the feature is symmetrical.
+# Diagonal corner occlusion can be refined in a later design pass.
+static func _clear_los(terrain: Array, source: Vector2i, destination: Vector2i) -> bool:
+    var x := source.x
+    var y := source.y
+    var dx := absi(destination.x - source.x)
+    var dy := absi(destination.y - source.y)
+    var step_x := 1 if source.x < destination.x else -1
+    var step_y := 1 if source.y < destination.y else -1
+    var error := dx - dy
+    while x != destination.x or y != destination.y:
+        var double_error := 2 * error
+        if double_error > -dy:
+            error -= dy
+            x += step_x
+        if double_error < dx:
+            error += dx
+            y += step_y
+        var current := Vector2i(x, y)
+        if current == destination:
+            break
+        if not Rules.inside(current) or str(terrain[y][x]) == "mountain":
+            return false
+    return true
 
 static func explored_cells(state: Dictionary, faction: int) -> Dictionary:
     var visible: Dictionary = visible_cells(state, faction)
