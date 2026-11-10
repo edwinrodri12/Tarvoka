@@ -43,6 +43,14 @@ func _run() -> void:
     controls["Cargar partida"].pressed.emit()
     assert(board.state == snapshot)
     assert(board.message == "Partida cargada.")
+    # A completed battle must not offer a turn action, but load stays usable.
+    board.state["winner"] = 0
+    main._process(0.0)
+    assert(controls["Terminar turno"].disabled)
+    assert(not controls["Cargar partida"].disabled)
+    board.state["winner"] = -1
+    main._process(0.0)
+    assert(not controls["Terminar turno"].disabled)
     assert(DirAccess.remove_absolute(path_abs) == OK)
 
     main.queue_free()
