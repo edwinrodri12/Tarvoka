@@ -148,3 +148,5 @@
 - [ ] Validar autoguardado en dispositivo tras cerrar y reabrir la aplicación; comprobar estado exacto, no solo respuesta de botones.
 - [ ] Validar derrota real, cancelación del modal sin cambiar partida, fluidez/rendimiento e interacción táctil tras cambios de UI.
 - [ ] Confirmación opcional antes de movimiento/ataque y deshacer seguro sin revelar información oculta.
+
+2026-11-10 P0 incremental: [x] retain previous valid JSON as `.bak` and fallback on corrupt/missing primary; [ ] validate actual Android force-close and recovery; [ ] make recovery visibly distinguish restored backup vs current autosave and decide stale-backup retention policy before release. Avoid claiming zero-loss durability.
