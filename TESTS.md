@@ -58,3 +58,5 @@
 2026-11-10: Extended touch board assertions for AI-turn taps on both factions and manual faction 1 selection. PASÓ: test source committed; NO EJECUTADO: Godot runtime, CI, Android APK/device.
 
 2026-11-10: PR #28 SHA 6d2ea08d: GitHub Actions 42780308893 PASÓ. New saved-AI-turn resume test: NO EJECUTADO until new branch CI. Android APK/device: NO EJECUTADO.
+
+2026-11-10: Added terminal-save load UI regression. NOT EXECUTED in Godot or Android as of commit creation.
