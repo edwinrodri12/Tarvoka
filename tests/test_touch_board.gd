@@ -86,6 +86,25 @@ func _run() -> void:
     gesture_board._gui_input(touch_down)
     gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "")
+    # A touch outside the board must not select or move any unit.
+    # With an 800x640 control, valid cells occupy [0,800) x [0,640).
+    var edge_snapshot: Dictionary = gesture_board.state.duplicate(true)
+    var edge_down := InputEventScreenTouch.new()
+    edge_down.pressed = true
+    edge_down.position = Vector2(800, 200)
+    var edge_up := InputEventScreenTouch.new()
+    edge_up.pressed = false
+    edge_up.position = edge_down.position
+    gesture_board._gui_input(edge_down)
+    gesture_board._gui_input(edge_up)
+    assert(gesture_board.selected_id == "")
+    assert(gesture_board.state == edge_snapshot)
+    edge_down.position = Vector2(-1, 200)
+    edge_up.position = edge_down.position
+    gesture_board._gui_input(edge_down)
+    gesture_board._gui_input(edge_up)
+    assert(gesture_board.selected_id == "")
+    assert(gesture_board.state == edge_snapshot)
     gesture_board.queue_free()
     # Regression: the final enemy's defeat must be visible immediately.
     var duel = Board.new()
