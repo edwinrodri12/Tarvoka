@@ -105,6 +105,9 @@ func _run() -> void:
     # A completed battle must display the victor and never start another AI turn.
     var finished_path := "user://tarvoka_finished_load_test.json"
     var finished: Dictionary = ai_turn["state"].duplicate(true)
+    for unit in finished["units"]:
+        if int(unit["faction"]) == 1:
+            unit["hp"] = 0
     finished["winner"] = 0
     assert(SaveStore.save(finished, finished_path))
     assert(vs_ai.load_game(finished_path))
