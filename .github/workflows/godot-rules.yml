@@ -1,0 +1,81 @@
+name: Godot 4 headless rules
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  rules:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3 binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Run GDScript rules tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_rules.gd
+
+      - name: Run GDScript combat tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combat.gd
+
+      - name: Run GDScript turn tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_turns.gd
+
+      - name: Run battle action integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_actions.gd
+
+      - name: Run movement action integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_move_actions.gd
+
+      - name: Run battle session integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_session.gd
+
+      - name: Run touch board interaction tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_touch_board.gd
+
+      - name: Run deterministic basic AI tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_basic_ai.gd
+
+      - name: Run portable save codec regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_codec.gd
+
+      - name: Run user save-file regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_store.gd

@@ -14,20 +14,28 @@ static func movement_cost(terrain: String) -> int:
 
 static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i]) -> Dictionary:
     var distances := {}
-    if not inside(origin) or points < 0 or terrain.size() != HEIGHT:
+    if not inside(origin) or points < 0 or terrain.size() != HEIGHT or origin in blocked:
         return distances
     for row in terrain:
         if not (row is Array) or row.size() != WIDTH:
             return {}
+        for tile in row:
+            if not (tile is String) or not TERRAIN_COST.has(tile):
+                return {}
+    if movement_cost(terrain[origin.y][origin.x]) < 0:
+        return {}
     distances[origin] = 0
     var frontier: Array[Vector2i] = [origin]
-    while not frontier.is_empty():
-        var current: Vector2i = frontier.pop_front()
+    # Indexed queue avoids O(n) pop_front shifts; revisits still handle weighted terrain.
+    var cursor := 0
+    while cursor < frontier.size():
+        var current: Vector2i = frontier[cursor]
+        cursor += 1
         for direction in DIRECTIONS:
             var next: Vector2i = current + direction
             if not inside(next) or next in blocked:
                 continue
-            var cost := movement_cost(str(terrain[next.y][next.x]))
+            var cost := movement_cost(terrain[next.y][next.x])
             if cost < 0:
                 continue
             var total: int = distances[current] + cost
