@@ -191,3 +191,17 @@
 - [x] PR #52 integrado: verificación ABI ARM64 real y huella pública del certificado en CI de exportación. **La firma debug persistente sigue pendiente**, requiere secretos seguros sin commit de llave privada.
 
 - [ ] Verificar en CI la nueva regresión de prioridad letal frente a objetivo sano ordenado primero por ID; no confundir con IA estratégica P1 ni QA de dispositivo. Mantener pendientes visión legal, rendimiento y guardado en Android real.
+
+## 2026-11-10 — Hitos P1 fog/recon integrados #61–#65
+- [x] Motor de visión con exploración individual acumulativa por facción y guardado compatible con versión 1 (#61).
+- [x] Restricción de ataque a enemigos visibles y movimiento solo a destino visible desde motor autoritativo; ayudas y taps coherentes (#61, #63).
+- [x] IA de reconocimiento basada en exploración propia, no conoce posición/HP de enemigos invisibles ni topología de casillas sin explorar (#62, #65).
+- [x] Modo fog optativo al comenzar nueva partida confirmada, exploradores idénticos S/Z y niebla oscura vs terreno visto atenuado (#63).
+- [x] Simular 12 batallas fog completas, 3 mapas × 2 iniciativas × 2 modos, sin acciones fuera de visión ni empates por bloqueo; modo simétrico 3–3 y entrenamiento 5–1 en muestra pequeña (#64).
+- [ ] **QA en dispositivo Android:** función fog, nuevo selector, scout, táctil, ocultación sin fugas de información, guardado y relanzamiento, legibilidad y rendimiento de esta versión consolidada.
+- [ ] Diferenciar terreno descubierto pero fuera de visión en accesibilidad (patrones), controles de densidad/zoom y texto del HUD más claro.
+- [ ] Evaluar oclusión geográfica/altura que limite línea de visión por bosque/montañas; hoy vision diamante sin bloqueo de vista. Necesita reglas claras y pruebas simétricas.
+- [ ] Explorar información de posición enemiga recordada (última vez vista) sin permitir ataques contra fantasmas ni almacenar memoria incorrecta.
+- [ ] P1 posteriores: objetivos y captura territorial, IA de defensa y retirada, dificultades por planificación justa y balance con muestreo más amplio, no por trampas.
+- [ ] Faltan clave de firma persistente y actualización de APK sin borrar progreso; no almacenar claves privadas en repositorio.
+- [ ] Mantener APK agrupadas; no generar una entrega al usuario tras cada PR.
