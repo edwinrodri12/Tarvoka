@@ -33,3 +33,9 @@ Cada PR integrado tuvo su Godot 4.3 headless SUCCESS y Android debug APK export 
 - Comprobación de certificado APK y arquitectura por pipeline; no confundir export exitosa con instalación real.
 - Ninguna nueva fuente de pagos, anuncios o cuenta obligatoria.
 - Reportar bugs de gameplay con commit/run y evidencia; corregirlos antes de declarar P0 cerrado.
+
+## Cambios nuevos 2026-11-10 — niebla y reconocimiento
+- PR #61–#65 integrados en main: visión por facción y exploración persistente, observación restringida de IA, modo Niebla y reconocimiento opcional, exploradores S/Z con visión5 frente a soldados3, casillas desconocidas oscuras y conocidas pero fuera de visión atenuadas, filtros de unidades ocultas para interfaz, ayudas y motor; IA tampoco conoce obstáculos de casillas no exploradas.
+- La versión inicial usa distancia Manhattan; no simula sombras visuales de montañas/bosques ni posiciones enemigas recordadas.
+- CI 42915400561/554, 42916085450/399, 42916908716/658, 42917319561/443, 42917859860/845 SUCCESS. 12 partidas fog automáticas sin bloqueos ni trampas observadas.
+**Agregar al plan de pruebas físicas agrupadas:** iniciar niebla con ambos modos de fuerza; comprobar scouts S/Z (HP6/ATQ2/MOV4/visión5), limitar destinos a celdas visibles; confirmar que enemigo fuera de visión no se dibuja ni aparece en previews; acercarse y descubrir enemigo; retirarse y ver terreno atenuado sin enemigo visible; guardar, cerrar completamente y reanudar manteniendo casillas exploradas y modo elegido; alternar a partida clásica confirmada y comprobar que no queda niebla. Registrar capturas de comportamiento y FPS/legibilidad real. No afirmar visibilidad física verificada hasta recibir evidencia de teléfono. Sin APK por cada PR.
