@@ -156,3 +156,9 @@
 - [ ] **Device test** of save, close app completely, reopen, verify same positions and faction; save manual and restart the app; compare.
 - [ ] Maintain game-state compatibility and address ephemeral APK debug signatures; secure persistent signing key through GitHub secrets before update-in-place claims.
 - [ ] Further improve tactical UX only after device feedback: attack confirmation/undo, turn summaries, accessible UI/terrain, responsive performance and portrait fidelity.
+
+## 2026-11-10 — Autosave feedback delivered
+- [x] Show a conspicuous warning in responsive UI if automatic save fails (PR #47, CI Godot + Android PASS).
+- [ ] Verify warning, its disappearance after a successful retry and persistence restoration on a physical Android device; CI only models invalid save path.
+- [ ] Review PR #46 backup recovery separately; it is NOT integrated until verified and merged, and potential stale backup after intentional New Game must be evaluated.
+- [ ] Add stable debug signing through GitHub secrets for update-in-place installation without deleting saves; current builds are signed with new ephemeral keys every time.
