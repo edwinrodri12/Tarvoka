@@ -75,3 +75,5 @@
 2026-11-10: Ship first ARM64-only debug APK from official Godot 4.3 export templates via GitHub Actions, ephemeral per-run signing key, no secrets committed. For test builds, app updates across differently signed runs might require uninstall/reinstall (local save data could be lost). Reuse a stable signing identity securely before recurring field tests/release. Do not commercialize without trademark clearance.
 
 2026-11-10 Android input policy: keep input_devices/pointing/emulate_mouse_from_touch=true so native Godot Buttons receive taps; discard only emulated mouse events (device=InputEvent.DEVICE_ID_EMULATION) in TouchBoard, while preserving native ScreenTouch gesture handling and genuine desktop mouse. PR #39 merged. CI-generated debug signing keys are ephemeral until a stable secure debug signing strategy is established; do not confuse with release signing.
+
+2026-11-10: In the UI, disable only End Turn once winner != -1, leaving Save/Load available; re-enable End Turn after loading an unfinished battle. Avoid showing an actionable control that the battle engine will reject.
