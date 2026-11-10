@@ -39,13 +39,19 @@ static func save(state: Dictionary, path: String = DEFAULT_PATH) -> bool:
             DirAccess.rename_absolute(backup_abs, path_abs)
         DirAccess.remove_absolute(tmp_abs)
         return false
-    if had_old:
-        DirAccess.remove_absolute(backup_abs)
+    # Retain last known-good snapshot for recovery if the new file is corrupted.
     return true
 
 static func load(path: String = DEFAULT_PATH) -> Dictionary:
     if not path.begins_with("user://") or not path.ends_with(".json"):
         return {}
+    var primary: Dictionary = _load_single(path)
+    if not primary.is_empty():
+        return primary
+    # Only a previously valid snapshot is eligible; decode rejects malformed saves.
+    return _load_single(path + ".bak")
+
+static func _load_single(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
         return {}
     var f := FileAccess.open(path, FileAccess.READ)
