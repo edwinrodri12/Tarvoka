@@ -54,3 +54,5 @@
 2026-11-10: CI test-suite timeout guard added (90s + 5s kill grace); PASÓ: workflow file updated in GitHub. NO EJECUTADO: GitHub Actions execution for this change, Godot locally, Android APK/device. Timeout is a diagnostic safeguard, not proof that gameplay passes.
 
 2026-11-10: Added regression in tests/test_touch_board.gd for ignored human taps while AI faction 1 owns the turn. PASÓ: GitHub code/test writes. NO EJECUTADO: Godot CI on this commit, APK build, physical Android device.
+
+2026-11-10: Extended touch board assertions for AI-turn taps on both factions and manual faction 1 selection. PASÓ: test source committed; NO EJECUTADO: Godot runtime, CI, Android APK/device.
