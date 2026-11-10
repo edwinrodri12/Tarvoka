@@ -60,6 +60,21 @@ func _run() -> void:
     assert(not turn.disabled)
     assert(board.state["winner"] == -1)
 
+    # Autosave must never fail silently. Simulate an invalid destination and
+    # verify the status persists until a successful write clears it.
+    var state_before_warning: Dictionary = board.state.duplicate(true)
+    board.autosave_path = "res://invalid-autosave.json"
+    assert(not board._write_autosave())
+    screen._process(0.0)
+    var warning: Label = screen.get("autosave_alert")
+    assert(warning != null and warning.visible)
+    assert(warning.text.contains("no se pudo guardar"))
+    assert(board.state == state_before_warning)
+    board.autosave_path = "user://tarvoka_autosave_v1.json"
+    assert(board._write_autosave())
+    screen._process(0.0)
+    assert(not warning.visible)
+
     var autosave_path := "user://tarvoka_autosave_v1.json"
     if FileAccess.file_exists(autosave_path):
         assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(autosave_path)) == OK)
