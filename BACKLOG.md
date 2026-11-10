@@ -137,3 +137,14 @@
 - [ ] Persistent debug signing via secure GitHub Actions secrets before repeated install-in-place; current ephemeral signatures may require uninstall and erase saves.
 - [ ] Movement/attack optional preview-and-confirm flow, robust auto-save write error feedback, explicit victory/defeat playthrough, timing/performance benchmarks on midrange Android.
 - [ ] P1/P2 features including strategic AI objectives, fog of war, economy, factions, campaign, and multiplayer remain out of scope until P0 quality gate.
+
+## P0 revisión por gameplay real (video de 42.2s, 2026-11-10)
+- [x] Validación en Android de la **victoria del jugador**: tras destruir las unidades enemigas, aparece «Victoria de facción 1».
+- [x] Validación visual del botón «Terminar turno» desactivado tras victoria.
+- [x] Validación visual de casillas de movimiento verdes + costes y del ataque rojo con daño estimado -5.
+- [x] Validación visual de confirmación «Nueva partida» seguida de reinicio exitoso.
+- [ ] Mejorar UI responsive: aprovechar espacios laterales, aumentar tablero/HUD legible y reorganizar botones inferiores.
+- [ ] Mostrar pantalla clara de resultado de batalla (victoria/derrota) con resumen y opciones.
+- [ ] Validar autoguardado en dispositivo tras cerrar y reabrir la aplicación; comprobar estado exacto, no solo respuesta de botones.
+- [ ] Validar derrota real, cancelación del modal sin cambiar partida, fluidez/rendimiento e interacción táctil tras cambios de UI.
+- [ ] Confirmación opcional antes de movimiento/ataque y deshacer seguro sin revelar información oculta.
