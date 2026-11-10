@@ -148,3 +148,11 @@
 - [ ] Validar autoguardado en dispositivo tras cerrar y reabrir la aplicación; comprobar estado exacto, no solo respuesta de botones.
 - [ ] Validar derrota real, cancelación del modal sin cambiar partida, fluidez/rendimiento e interacción táctil tras cambios de UI.
 - [ ] Confirmación opcional antes de movimiento/ataque y deshacer seguro sin revelar información oculta.
+
+## P0 UI update (2026-11-10, PR #45)
+- [x] Implement responsive orientation-aware Main UI: landscape board + tactical sidebar, portrait board + scrollable controls; P0 overlay text more legible. Godot CI and Android signed build passed.
+- [x] Add clearly visible in-scene VICTORIA/DERROTA banner, with nonactionable End Turn and recovery after New Game; headless regression passed.
+- [ ] **User device test** of new responsive Android layout, victory/defeat banner and buttons; reproduce screen recording at device resolution and when rotated.
+- [ ] **Device test** of save, close app completely, reopen, verify same positions and faction; save manual and restart the app; compare.
+- [ ] Maintain game-state compatibility and address ephemeral APK debug signatures; secure persistent signing key through GitHub secrets before update-in-place claims.
+- [ ] Further improve tactical UX only after device feedback: attack confirmation/undo, turn summaries, accessible UI/terrain, responsive performance and portrait fidelity.
