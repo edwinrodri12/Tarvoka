@@ -17,7 +17,7 @@ func _run() -> void:
     var result: Label = screen.get("result_detail")
     assert(field != null and preview != null and confirm != null and result != null)
     screen._process(0.0)
-    assert(field.visible and field.text.contains("AZUL: 2 unidades, 2 listas | HP 20"))
+    assert(field.visible and field.text.contains("AZUL: unidades 2 | sin actuar 2 | HP 20"))
     assert(field.text.contains("ROJO: 2 unidades activas"))
     assert(not preview.visible and confirm.disabled)
     
