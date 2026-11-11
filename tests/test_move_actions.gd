@@ -17,7 +17,7 @@ func _initialize() -> void:
     assert(moved["valid"])
     assert(moved["cost"] == 2)
     assert(moved["units"][0]["pos"] == Vector2i(2, 1))
-    assert(moved["units"][0]["acted"])
+    assert(moved["units"][0]["moved"] and not moved["units"][0]["acted"])
     assert(units[0]["pos"] == Vector2i(1, 1))
     assert(not units[0]["acted"])
     assert(not Move.move(moved["units"], "a", Vector2i(3, 1), 0, terrain)["valid"])

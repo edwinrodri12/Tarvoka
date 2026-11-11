@@ -43,7 +43,7 @@ func _run() -> void:
     screen._process(0.0)
     assert(board.state["units"][0]["pos"] == Vector2i(2, 2))
     assert(not preview.visible and confirm.disabled and not end_turn.disabled)
-    assert(field.text.contains("AZUL: unidades 2 | sin actuar 1"))
+    assert(field.text.contains("AZUL: unidades 2 | sin actuar 2"))
 
     # A pending attack displays only legal authoritative damage and its target.
     board.new_game()

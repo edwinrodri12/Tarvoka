@@ -39,8 +39,8 @@ func _initialize() -> void:
     var moved: Dictionary = AI.step(state)
     assert(moved["valid"] and moved["action"] == "move")
     assert(moved["destination"] == Vector2i(4,1))
-    assert(moved["state"]["units"][0]["acted"])
-    assert(not AI.step(moved["state"])["valid"]) # No action remains.
+    assert(moved["state"]["units"][0]["moved"] and not moved["state"]["units"][0]["acted"])
+    assert(not AI.step(moved["state"])["valid"]) # Movement spent, no attack in range.
     assert(state["units"][0]["pos"] == Vector2i(1,1))
     # Impassable water wall: AI must never propose an illegal shortcut.
     var divided: Array = terrain.duplicate(true)

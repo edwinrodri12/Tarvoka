@@ -160,7 +160,7 @@ func _draw() -> void:
         var center := origin + (Vector2(cell) + Vector2(0.5,0.5)) * tile
         var is_player := int(unit["faction"]) == 0
         var color := Color(0.35, 0.65, 1.0) if is_player else Color(1.0, 0.4, 0.3)
-        var face: Color = color.darkened(0.45) if unit.get("acted", false) else color
+        var face: Color = color.darkened(0.45) if unit.get("acted", false) else (color.darkened(0.18) if unit.get("moved", false) else color)
         # Circle vs square provides faction identity without requiring color vision.
         if is_player:
             draw_circle(center, tile * 0.34, face)
@@ -275,8 +275,22 @@ func _commit_order(order: Dictionary) -> bool:
     state = result["state"]
     _write_autosave()
     var winner := int(state.get("winner", -1))
-    message = "Victoria de faccion %d." % (winner + 1) if winner != -1 else "Accion realizada."
-    selected_id = ""
+    if winner != -1:
+        message = "Victoria de faccion %d." % (winner + 1)
+        selected_id = ""
+    elif kind == "move":
+        # Keep the mover selected if an enemy is now within its attack range.
+        # Fog observations were refreshed by Session.move, so the list is fair.
+        var follow_up: Dictionary = TacticalHints.for_unit(state, unit_id)
+        if not follow_up["attacks"].is_empty():
+            selected_id = unit_id
+            message = "Movimiento completado. Ahora selecciona un objetivo rojo para atacar."
+        else:
+            selected_id = ""
+            message = "Movimiento completado. Sin objetivos visibles en alcance."
+    else:
+        selected_id = ""
+        message = "Ataque realizado."
     return true
 
 func selected_unit_summary() -> String:
@@ -338,7 +352,7 @@ func _tap(point: Vector2) -> void:
             message = "Seleccion cancelada."
         elif bool(target.get("acted", false)):
             selected_id = ""
-            message = "Esta unidad ya actuo durante este turno."
+            message = "Esta unidad ya termino sus acciones."
         else:
             selected_id = tapped_id
             message = "Unidad " + selected_id + " seleccionada."
@@ -372,8 +386,9 @@ func _play_ai_turn() -> void:
     # Never advance the computer from a human or terminal state.
     if not ai_enabled or int(state.get("faction", -1)) != 1 or int(state.get("winner", -1)) != -1:
         return
-    # Hard bound: each valid AI action consumes one unit's action.
-    var max_actions: int = (state.get("units", []) as Array).size()
+    # A soldier can now move once AND attack once. Bound both possible
+    # actions for each unit; any extra attempt is rejected by core rules.
+    var max_actions: int = (state.get("units", []) as Array).size() * 2
     var movements := 0
     var attacks := 0
     for i in range(max_actions):

@@ -25,7 +25,12 @@ func _initialize() -> void:
     assert(moved["valid"])
     assert(moved["state"]["units"][0]["pos"] == Vector2i(2, 1))
     assert(state["units"][0]["pos"] == Vector2i(1, 1))
-    assert(not Session.attack(moved["state"], "red", "blue")["valid"]) # action consumed
+    assert(moved["state"]["units"][0]["moved"] and not moved["state"]["units"][0]["acted"])
+    assert(not Session.move(moved["state"], "red", Vector2i(2, 2))["valid"])
+    var immediate: Dictionary = Session.attack(moved["state"], "red", "blue")
+    assert(immediate["valid"] and immediate["state"]["winner"] == 0)
+    assert(immediate["state"]["units"][0]["acted"])
+    assert(not Session.attack(immediate["state"], "red", "blue")["valid"])
     var next: Dictionary = Session.end_turn(moved["state"])
     assert(next["valid"] and next["state"]["faction"] == 1)
     assert(not Session.move(next["state"], "red", Vector2i(2, 2))["valid"])

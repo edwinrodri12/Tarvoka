@@ -4,6 +4,7 @@ class_name TarvokaBasicAI
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Combat = preload("res://scripts/core/Combat.gd")
+const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -45,7 +46,7 @@ static func step(state: Dictionary) -> Dictionary:
     var hit_score := -999999
     for unit in friends:
         for enemy in enemies:
-            if _distance(unit["pos"], enemy["pos"]) != 1:
+            if not Turns.in_attack_range(unit, enemy):
                 continue
             var preview: Dictionary = Combat.resolve(
                 int(unit.get("hp", 0)), int(enemy.get("hp", 0)),
@@ -102,6 +103,8 @@ static func step(state: Dictionary) -> Dictionary:
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
     for unit in friends:
+        if bool(unit.get("moved", false)):
+            continue
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
         var reachable: Dictionary = Rules.reachable(
@@ -153,12 +156,14 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
     var best_cell := Vector2i(-1, -1)
     var best_score := -999999
     for ally in friends:
+        if bool(ally.get("moved", false)):
+            continue
         var hp: int = int(ally.get("hp", 0))
         if hp <= 0 or hp > 3:
             continue
         var threatened := false
         for enemy in enemies:
-            if _distance(ally["pos"], enemy["pos"]) != 1:
+            if not Turns.in_attack_range(enemy, ally):
                 continue
             var incoming: Dictionary = Combat.resolve(
                 int(enemy.get("hp", 0)), hp,
@@ -229,6 +234,8 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
     # feed. Never consult the current hidden enemy position or HP.
     var sightings: Dictionary = Visibility.last_known_contacts(state, faction)
     for unit in friends:
+        if bool(unit.get("moved", false)):
+            continue
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
         var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)
@@ -298,6 +305,8 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
         if not threatened:
             continue
         for ally in friends:
+            if bool(ally.get("moved", false)):
+                continue
             # Do not desert a different relay to protect this one.
             var guard_needed_elsewhere := false
             for other in knowledge["control"]["nodes"]:
@@ -340,6 +349,8 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
     for unit in friends:
+        if bool(unit.get("moved", false)):
+            continue
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
         var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)

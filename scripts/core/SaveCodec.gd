@@ -77,6 +77,11 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(unit["vision"]):
                 return {}
             unit["vision"] = int(unit["vision"])
+        for key in ["attack_range", "attack_min_range"]:
+            if unit.has(key):
+                if not _whole(unit[key]):
+                    return {}
+                unit[key] = int(unit[key])
     if not _whole(state.get("faction")) or not _whole(state.get("winner")):
         return {}
     state["faction"] = int(state["faction"])
@@ -181,6 +186,14 @@ static func _valid_state(state: Dictionary) -> bool:
         if not unit.get("hp") is int or unit["hp"] < 0 or unit["hp"] > MAX_STAT:
             return false
         if not unit.get("acted") is bool:
+            return false
+        if unit.has("moved") and not unit["moved"] is bool:
+            return false
+        # Optional fields retain compatibility with every v1 save: missing
+        # values mean infantry-style melee range 1..1 and unused movement.
+        if unit.has("attack_range") and (not unit["attack_range"] is int or unit["attack_range"] < 1 or unit["attack_range"] > 8):
+            return false
+        if unit.has("attack_min_range") and (not unit["attack_min_range"] is int or unit["attack_min_range"] < 1 or unit["attack_min_range"] > int(unit.get("attack_range", 1))):
             return false
         for key in ["move_points", "attack", "defense", "cover"]:
             if not unit.get(key) is int or unit[key] < 0 or unit[key] > MAX_STAT:

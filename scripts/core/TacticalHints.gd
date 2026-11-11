@@ -45,8 +45,10 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     var origin: Vector2i = unit["pos"]
     var blockers: Array[Vector2i] = occupied.duplicate()
     blockers.erase(origin)
-    var moves: Dictionary = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers)
-    moves.erase(origin)
+    var moves: Dictionary = {}
+    if Turns.can_move(unit, faction):
+        moves = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers)
+        moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
             if not visible.has(cell):
@@ -58,7 +60,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         var enemy_pos: Vector2i = enemy["pos"]
         if Visibility.enabled(state) and not visible.has(enemy_pos):
             continue
-        if absi(origin.x - enemy_pos.x) + absi(origin.y - enemy_pos.y) != 1:
+        if not Turns.in_attack_range(unit, enemy):
             continue
         var result: Dictionary = Combat.resolve(
             int(unit.get("hp", 0)), int(enemy.get("hp", 0)),
@@ -95,12 +97,13 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state.get("faction", -1)), unit_id):
             return "Unidad no disponible."
         var hints: Dictionary = for_unit(state, unit_id)
-        var availability: String = "Actuo" if bool(unit.get("acted", false)) else "Disponible"
+        var availability: String = "Actuo" if bool(unit.get("acted", false)) else ("Movio; puede atacar" if bool(unit.get("moved", false)) else "Disponible")
         var text: String = "%s | Vida %d | Ataque %d | Defensa %d | Movimiento %d | %s | %d destinos / %d objetivos" % [
             unit_id, int(unit.get("hp", 0)), int(unit.get("attack", 0)),
             int(unit.get("defense", 0)), int(unit.get("move_points", 0)),
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
+        text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
         if Visibility.enabled(state):
             text += " | Vision %d" % int(unit.get("vision", Visibility.DEFAULT_VISION))
         # The selected own unit is necessarily in the player's sight.

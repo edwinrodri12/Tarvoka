@@ -28,7 +28,7 @@ func _initialize() -> void:
     assert(str(escaped["unit_id"]) == "A")
     assert(int(escaped["state"]["units"][0]["hp"]) == 2)
     assert(int(escaped["state"]["units"][1]["hp"]) == 10)
-    assert(escaped["state"]["units"][0]["acted"])
+    assert(escaped["state"]["units"][0]["moved"] and not escaped["state"]["units"][0]["acted"])
     var new_cell: Vector2i = escaped["destination"]
     assert(Rules.inside(new_cell))
     assert(absi(new_cell.x - 4) + absi(new_cell.y - 3) > 1)
