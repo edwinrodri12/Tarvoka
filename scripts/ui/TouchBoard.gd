@@ -350,6 +350,7 @@ func finish_turn() -> void:
     # Human cannot manually skip the computer faction.
     if ai_enabled and int(state.get("faction", -1)) != 0:
         return
+    var previous: Dictionary = state.duplicate(true)
     var result: Dictionary = Session.end_turn(state)
     if not result.get("valid", false):
         return
@@ -358,6 +359,10 @@ func finish_turn() -> void:
     pending_order.clear()
     last_enemy_turn_report = ""
     message = "Turno de faccion " + str(state["faction"] + 1)
+    if state.has("control"):
+        message = "Reles: " + _relay_turn_report(previous, state, 0)
+    if int(state.get("winner", -1)) != -1:
+        message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
     if ai_enabled and int(state["faction"]) == 1:
         _play_ai_turn()
     _write_autosave()
@@ -389,10 +394,27 @@ func _play_ai_turn() -> void:
     if int(state.get("winner", -1)) != -1:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
         return
+    var before_score: Dictionary = state.duplicate(true)
     var next: Dictionary = Session.end_turn(state)
     if next.get("valid", false):
         state = next["state"]
-        message = "Tu turno: faccion 1."
+        if state.has("control"):
+            last_enemy_turn_report += " " + _relay_turn_report(before_score, state, 1)
+        message = "Victoria de faccion %d." % (int(state["winner"]) + 1) if int(state.get("winner", -1)) != -1 else "Tu turno: faccion 1."
+
+# Derive reports from actual post-turn state, never inferred intentions.
+# Scores are public mission information; no hidden positions are exposed.
+static func _relay_turn_report(before: Dictionary, after: Dictionary, faction: int) -> String:
+    if faction not in [0, 1] or not before.has("control") or not after.has("control"):
+        return ""
+    var nodes_before: Array = before["control"]["nodes"]
+    var nodes_after: Array = after["control"]["nodes"]
+    var captures := 0
+    for i in range(mini(nodes_before.size(), nodes_after.size())):
+        if int(nodes_before[i]["owner"]) != faction and int(nodes_after[i]["owner"]) == faction:
+            captures += 1
+    var earned: int = int(after["control"]["scores"][faction]) - int(before["control"]["scores"][faction])
+    return "%d reles capturados, +%d senal." % [captures, earned]
 
 func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     var ok := SaveStore.save(state, path)
