@@ -122,6 +122,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_fog_ai.gd
 
+      - name: Run relay objective capture and scoring rule tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_rules.gd
+
       - name: Run deterministic basic AI tests
         shell: bash
         run: |
