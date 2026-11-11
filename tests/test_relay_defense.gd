@@ -13,17 +13,17 @@ func _initialize() -> void:
         {"id":"X","faction":1,"hp":10,"pos":Vector2i(6,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false}
     ]
     # Earn real relay ownership and score before exercising a defense turn.
-    var match: Dictionary = Session.start(units, plain, 0, false, true)
-    match = Session.end_turn(match)["state"]
-    assert(match["control"]["nodes"][0]["owner"] == 0)
-    assert(match["control"]["scores"][0] == 1)
-    match = Session.end_turn(match)["state"] # Return to blue faction.
-    var vacate: Dictionary = Session.move(match, "A", Vector2i(3,1))
+    var battle: Dictionary = Session.start(units, plain, 0, false, true)
+    battle = Session.end_turn(battle)["state"]
+    assert(battle["control"]["nodes"][0]["owner"] == 0)
+    assert(battle["control"]["scores"][0] == 1)
+    battle = Session.end_turn(battle)["state"] # Return to blue faction.
+    var vacate: Dictionary = Session.move(battle, "A", Vector2i(3,1))
     assert(vacate["valid"])
-    match = vacate["state"]
-    var original: Dictionary = match.duplicate(true)
-    var defense: Dictionary = AI.step(match)
-    assert(match == original)
+    battle = vacate["state"]
+    var original: Dictionary = battle.duplicate(true)
+    var defense: Dictionary = AI.step(battle)
+    assert(battle == original)
     assert(defense["valid"] and defense["action"] == "move")
     assert(defense["reason"] == "defend_relay")
     assert(defense["unit_id"] == "B")
@@ -36,10 +36,10 @@ func _initialize() -> void:
     var guarded: Dictionary = Session.start(units, plain, 0, false, true)
     guarded["control"]["nodes"][0]["owner"] = 0
     var hold: Dictionary = AI.step(guarded)
-    assert(not hold.get("reason", "") == "defend_relay")
+    assert(hold.get("reason", "") != "defend_relay")
 
     # A *visible* lethal hit is always higher priority than garrison.
-    var kill_units: Array = match["units"].duplicate(true)
+    var kill_units: Array = battle["units"].duplicate(true)
     kill_units[1]["pos"] = Vector2i(5,1)
     kill_units[1]["attack"] = 10
     kill_units[2]["pos"] = Vector2i(5,2)
@@ -61,7 +61,7 @@ func _initialize() -> void:
     inaccessible["control"]["nodes"][0]["owner"] = 0
     inaccessible["units"][0]["pos"] = Vector2i(3,1)
     var no_threat: Dictionary = AI.step(inaccessible)
-    assert(not no_threat.get("reason", "") == "defend_relay")
+    assert(no_threat.get("reason", "") != "defend_relay")
 
     # Invisible enemy at two different hidden positions cannot trigger defense
     # or alter an AI decision through inaccessible live coordinates.
@@ -76,8 +76,8 @@ func _initialize() -> void:
     assert(not Visibility.visible_cells(changed, 0).has(changed["units"][2]["pos"]))
     var fresh: Dictionary = AI.step(fog)
     var altered: Dictionary = AI.step(changed)
-    assert(not fresh.get("reason", "") == "defend_relay")
-    assert(not altered.get("reason", "") == "defend_relay")
+    assert(fresh.get("reason", "") != "defend_relay")
+    assert(altered.get("reason", "") != "defend_relay")
     assert(fresh["valid"] == altered["valid"])
     assert(fresh.get("action", "") == altered.get("action", ""))
     assert(fresh.get("unit_id", "") == altered.get("unit_id", ""))
@@ -86,6 +86,6 @@ func _initialize() -> void:
     # Elimination mode never invokes relay defense.
     var classic: Dictionary = Session.start(units, plain)
     var legacy: Dictionary = AI.step(classic)
-    assert(not legacy.get("reason", "") == "defend_relay")
+    assert(legacy.get("reason", "") != "defend_relay")
     print("PASS relay defense: threatened owned relay, scoring, kill priority, blocked terrain, fog legality, classic")
     quit(0)
