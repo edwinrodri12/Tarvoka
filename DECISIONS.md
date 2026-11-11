@@ -119,3 +119,5 @@ Compatibilidad: el estado `control` sólo aparece opcionalmente en partidas nuev
 - **Firma Android**: claves privadas se guardan fuera del repositorio como GitHub Secrets; PR usan certificado efímero. Solo entrega manual desde main podrá firmar estable tras configuración; no confundir pipeline verde con firma activa o update-in-place comprobado.
 
 2026-11-11 — Propuesta de instrumentación de balance: desglosar victorias territoriales por bando que inicia y partidas completadas por mapa en las 24 simulaciones existentes. No modificar la IA ni aplicar un umbral de 50/50; una muestra determinista pequeña no justifica cambios de balance. Requiere CI antes de merge y QA físico pendiente.
+
+2026-11-11 — Balance diagnóstico: separar victorias por objetivo entre mapa, niebla y modo de fuerza permite detectar sesgos ocultos en el agregado de 24 partidas. No cambia heurísticas ni reglas; muestra pequeña y determinista, no acredita equilibrio competitivo. Caso adversarial: conteos estratificados deben reconciliar exactamente con el total de victorias por relés.
