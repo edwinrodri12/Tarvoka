@@ -112,3 +112,9 @@ CI validó simetría LOS diagonal (#68), memoria por facción y marcador inciert
 - #84 información de unidad/terreno: **CI PASS** en costos exactos, scouts, falta de filtraciones; legibilidad/scroll Android **NO EJECUTADO**.
 - #85 evitar descartar orden al terminar turno: **CI PASS** en tácticas de dos etapas, pruebas físicas de botones **NO EJECUTADAS**.
 - #86 opción de firma protegida: **solo fallback efímero CI PASS**; modo persistente sin secretos/no ejecutado y no se ha comprobado instalación encima de versión previa ni persistencia de guardados.
+
+## 2026-11-11 — Calidad del lote #94–#95
+- #94 IA remates y barrido de niebla: **CI PASS** tras detectar/corregir estancamiento; pruebas de regresión específicas y 12 fog, 12 clásicas, 24 relés. No confundir simulación determinista con calidad de decisión ante personas.
+- #95 HUD movimientos/ataques disponibles: **CI PASS**; legibilidad/tamaño táctil en dispositivo Android físico **NO EJECUTADOS**.
+- Nuevo diagnóstico de 24 relés (primer jugador 7 / segundo 17) indica posible sesgo y requiere experimentos controlados de balance con posiciones más diversas. No cambiar estadísticas por ese único resultado.
+- **Gate Android:** update-in-place con firma persistente, guardar/cerrar/reabrir en dispositivo real, pantalla y gestos, batería/temperatura siguen pendientes.
