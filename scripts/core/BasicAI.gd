@@ -104,8 +104,9 @@ static func step(state: Dictionary) -> Dictionary:
     if enemies.is_empty():
         return _reconnoiter(state, knowledge, friends, occupied) if Visibility.enabled(state) else idle
 
-    # Pick the destination that meaningfully reduces route cost toward a cell
-    # adjacent to an enemy. Reverse Dijkstra accounts for water and terrain
+    # Pick the destination that meaningfully reduces route cost toward a
+    # firing cell within this specific unit's attack range. Reverse Dijkstra
+    # accounts for water and terrain
     # costs, unlike Manhattan pursuit that runs into impassable walls.
     var best_score := -99999999
     var best_id := ""
@@ -118,7 +119,7 @@ static func step(state: Dictionary) -> Dictionary:
         var reachable: Dictionary = Rules.reachable(
             unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked
         )
-        var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked)
+        var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit)
         var from_route := int(route.get(unit["pos"], 999999))
         var from_direct := _closest_enemy_distance(unit["pos"], enemies)
         for y in range(Rules.HEIGHT):
@@ -257,9 +258,16 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
             var cell: Vector2i = destination
             if cell == ally["pos"] or (fog and not visible.has(cell)):
                 continue
-            var nearest: int = _closest_enemy_distance(cell, enemies)
-            if nearest <= 1:
+            var hypothetical: Dictionary = ally.duplicate(true)
+            hypothetical["pos"] = cell
+            var in_enemy_range := false
+            for enemy in enemies:
+                if Turns.in_attack_range(enemy, hypothetical):
+                    in_enemy_range = true
+                    break
+            if in_enemy_range:
                 continue
+            var nearest: int = _closest_enemy_distance(cell, enemies)
             var support_after: int = _closest_enemy_distance(cell, support)
             # Strict improvement prevents indefinite retreat oscillation.
             if support_after >= support_before or support_after > 3:
@@ -499,7 +507,7 @@ static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vec
                 queue.append(previous)
     return distances
 
-static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i]) -> Dictionary:
+static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i], attacker: Dictionary) -> Dictionary:
     var distances: Dictionary = {}
     if terrain.size() != Rules.HEIGHT:
         return distances
@@ -507,10 +515,25 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
         if not (row is Array) or row.size() != Rules.WIDTH:
             return {}
     var queue: Array[Vector2i] = []
+    var melee: bool = int(attacker.get("attack_min_range", 1)) == 1 and int(attacker.get("attack_range", 1)) == 1
     for enemy in enemies:
-        var center: Vector2i = enemy["pos"]
-        for direction in Rules.DIRECTIONS:
-            var goal: Vector2i = center + direction
+        var candidates: Array[Vector2i] = []
+        if melee:
+            # Preserve established melee tie-breaking and existing AI tests.
+            var center: Vector2i = enemy["pos"]
+            for direction in Rules.DIRECTIONS:
+                candidates.append(center + direction)
+        else:
+            # Build actual ranged firing cells instead of trying to approach
+            # an enemy until adjacent (illegal for min-range 2 artillery).
+            var shooter: Dictionary = attacker.duplicate(true)
+            for y in range(Rules.HEIGHT):
+                for x in range(Rules.WIDTH):
+                    var cell := Vector2i(x, y)
+                    shooter["pos"] = cell
+                    if Turns.in_attack_range(shooter, enemy):
+                        candidates.append(cell)
+        for goal in candidates:
             if not Rules.inside(goal) or goal in blocked:
                 continue
             if Rules.movement_cost(str(terrain[goal.y][goal.x])) < 0:
