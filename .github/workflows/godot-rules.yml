@@ -50,6 +50,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_move_actions.gd
 
+      - name: Validate movement followed by an attack in the same turn
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_move_then_attack.gd
+
       - name: Run battle session integration tests
         shell: bash
         run: |
