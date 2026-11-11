@@ -10,6 +10,10 @@ const Codec = preload("res://scripts/core/SaveCodec.gd")
 func _initialize() -> void:
     var matches := 0
     var relay_wins := 0
+    var first_player_wins := 0
+    var wins_by_faction := [0, 0]
+    var turns_total := 0
+    var longest_match := 0
     for map_id in range(3):
         for first_faction in [0, 1]:
             for fog in [false, true]:
@@ -18,6 +22,11 @@ func _initialize() -> void:
                     assert(result["winner"] in [0, 1])
                     if result["relay_win"]:
                         relay_wins += 1
+                    wins_by_faction[int(result["winner"])] += 1
+                    if int(result["winner"]) == first_faction:
+                        first_player_wins += 1
+                    turns_total += int(result["turns"])
+                    longest_match = maxi(longest_match, int(result["turns"]))
                     print("RELAY SELF PLAY map=%d first=%d fog=%s symmetric=%s winner=%d by_relay=%s turns=%d actions=%d" % [
                         map_id, first_faction, str(fog), str(symmetric),
                         int(result["winner"]), str(result["relay_win"]), int(result["turns"]), int(result["actions"])
@@ -25,6 +34,12 @@ func _initialize() -> void:
                     matches += 1
     assert(matches == 24)
     assert(relay_wins >= 1) # The new victory condition must be strategically reachable.
+    # Descriptive diagnostics only: 24 deterministic matches are not a balance verdict.
+    assert(wins_by_faction[0] + wins_by_faction[1] == matches)
+    print("RELAY BALANCE sample=%d first_player_wins=%d second_player_wins=%d blue_wins=%d red_wins=%d avg_turns=%.2f max_turns=%d" % [
+        matches, first_player_wins, matches - first_player_wins,
+        wins_by_faction[0], wins_by_faction[1], float(turns_total) / float(matches), longest_match
+    ])
     print("PASS relay AI self-play: 24 complete battles, %d objective victories" % relay_wins)
     quit(0)
 
