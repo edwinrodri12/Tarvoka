@@ -212,6 +212,10 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
     var best_score := 0
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
+    var best_reason := "scout"
+    # A remembered sighting is a search lead, NOT a live target or location
+    # feed. Never consult the current hidden enemy position or HP.
+    var sightings: Dictionary = Visibility.last_known_contacts(state, faction)
     for unit in friends:
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(unit["pos"])
@@ -228,17 +232,24 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
                         var unveiled := Vector2i(dx, dy)
                         if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius and not explored.has(unveiled):
                             discovery += 1
-                var score: int = discovery * 100 - int(reachable[cell])
-                if discovery > 0 and score > best_score:
+                var investigation := 0
+                for enemy_id in sightings:
+                    var last_seen: Vector2i = sightings[enemy_id]
+                    var improvement: int = _distance(unit["pos"], last_seen) - _distance(cell, last_seen)
+                    investigation = maxi(investigation, improvement)
+                var score: int = discovery * 100 + investigation * 130 - int(reachable[cell])
+                if (discovery > 0 or investigation > 0) and score > best_score:
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell
+                    best_reason = "investigate" if investigation * 130 >= discovery * 100 and investigation > 0 else "scout"
     if best_id.is_empty():
         return idle
     var moved: Dictionary = Session.move(state, best_id, best_cell)
     if not moved.get("valid", false):
         return idle
     moved["action"] = "move"
+    moved["reason"] = best_reason
     moved["unit_id"] = best_id
     moved["destination"] = best_cell
     return moved
