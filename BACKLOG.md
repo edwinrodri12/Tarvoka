@@ -212,3 +212,14 @@
 - [ ] Validar en teléfono reconocimiento alrededor de montañas y que enemigos queden verdaderamente ocultos, no solo en simulación.
 - [ ] Revisar visibilidad diagonal entre esquinas y oclusión de bosques/estructuras con reglas claras, pruebas de simetría y balance, no asumir completado.
 - [ ] Mantener entregas APK agrupadas; no entregar una APK por cada PR.
+
+## 2026-11-10 — Continuación cerrada PR #68–#71
+- [x] LOS diagonal montaña simétrica sin permitir visión desde una facción solamente (#68, CI PASS).
+- [x] Últimas posiciones observadas por bando, marcadores `?` no seleccionables ni atacables, invalidados al revelar casilla vacía y conservados opcionalmente en guardados v1 (#69, CI PASS).
+- [x] Retirada defensiva IA bajo amenaza letal **solo hacia apoyo aliado**; ataque letal sigue primero; sin huida infinita (#70, CI PASS). La primera versión reveló un estancamiento y se corrigió antes de fusionar.
+- [x] IA puede investigar registros históricos `contacts` del propio bando, no la posición actual oculta; pruebas adversariales de información (#71, CI PASS).
+- [ ] **Prioridad de versión agrupada:** revisión en Android físico de niebla y montaña, indicador de último avistamiento, confirmación de toques, guardar-reiniciar, resumen IA, modo simétrico, rendimiento y escalado de HUD.
+- [ ] **IA estratégica P1:** control/captura de puntos de mapa, defensa con objetivos, repliegue y apoyo coordinado; reglas y condiciones de victoria originales + pruebas antes de conectar UI.
+- [ ] Pruebas de balance más amplias con despliegues variados y humanos; las 12 partidas automatizadas no garantizan calidad general.
+- [ ] Firma de depuración estable protegida mediante secretos GitHub, sin subir keystore o contraseña al repositorio, para no borrar guardados al actualizar APK.
+- [ ] Identidad audiovisual, campaña, tutorial y pruebas de accesibilidad después de una puerta P0 verificada en dispositivo; no sobreexpandir antes.
