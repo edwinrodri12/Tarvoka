@@ -189,6 +189,13 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
         if int(unit.get("faction", -1)) == faction or (int(unit.get("hp", 0)) > 0 and visible.has(unit.get("pos", null))):
             units.append(unit.duplicate(true))
     observed["units"] = units
+    # Relay locations are public mission objectives, but the CURRENT owner
+    # of a relay outside sight is not. Mask it in the AI observation just
+    # as the visible board renders it neutral when unseen.
+    if observed.has("control"):
+        for relay in observed["control"].get("nodes", []):
+            if relay is Dictionary and not visible.has(relay.get("pos", null)):
+                relay["owner"] = -2 # Observer-only sentinel; never saved.
     # Unexplored topology is not public knowledge in fog mode. Present it to
     # the planner as unknown/impassable, never as its actual forest/road/water.
     # The authoritative state still owns true movement validation.
