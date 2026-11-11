@@ -158,6 +158,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_rules.gd
 
+      - name: Run relay ownership and opponent-turn scoring adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_ownership_guards.gd
+
       - name: Run deterministic basic AI tests
         shell: bash
         run: |
