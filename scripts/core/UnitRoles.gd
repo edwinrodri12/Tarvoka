@@ -86,11 +86,17 @@ static func is_specialized(units: Array) -> bool:
 
 # Mirrored, valid positions on all three current maps. Optional fog mode
 # relies on the existing scout role rather than spawning extra S/Z units.
-static func experimental_armies() -> Array:
+static func experimental_armies(symmetric: bool = true) -> Array:
     var units: Array = []
     var ids_blue := ["A","B","C","D","E"]
     var ids_red := ["X","Y","Z","W","V"]
     for i in range(ORDER.size()):
         units.append(make_unit(ids_blue[i], 0, Vector2i(1, i + 1), ORDER[i]))
-        units.append(make_unit(ids_red[i], 1, Vector2i(8, i + 1), ORDER[i]))
+        var enemy: Dictionary = make_unit(ids_red[i], 1, Vector2i(8, i + 1), ORDER[i])
+        if not symmetric:
+            # The explicit "Entrenamiento" setup makes the enemy weaker,
+            # exactly as the older infantry practice preset did.
+            enemy["hp"] = maxi(1, int(enemy["hp"]) - 2)
+            enemy["attack"] = maxi(1, int(enemy["attack"]) - 1)
+        units.append(enemy)
     return units
