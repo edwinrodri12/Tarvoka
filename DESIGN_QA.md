@@ -106,3 +106,9 @@ CI validó simetría LOS diagonal (#68), memoria por facción y marcador inciert
 
 ## 2026-11-10 — Gate de control territorial #72–#76
 **Aprobado mediante CI:** reglas 2 relés simétricos, capturas por fin de turno sin más acciones, puntuación hasta cinco y victoria distinta de eliminación, JSON v1 compatible y protegido contra puntuaciones/propietarios inconsistentes, UI de objetivos con información justa en niebla, IA que no ve propietario real fuera de visión, 24 partidas completas con condiciones de victoria activas. #76 informa capturas/ganancia real de señal y evita falso «tu turno» tras derrota por relés. Runs exactos en TESTS.md. **Pendiente:** QA humano en Android de la legibilidad/contraste de relés, scroll en panel, mensajes, juego completo, actualizar guardados, rendimiento, balance de control persistente y bola de nieve. No cerrar P0/P1 ni decidir definitivamente que la mecánica experimental permanece en el producto comercial a partir de simulaciones de IA únicamente.
+
+## 2026-11-11 — Gate después de #83–#86
+- #83 defender relés amenazados: **CI PASS** y 24 simulaciones existentes; pendiente evaluación humana de si provoca jugadas defensivas satisfactorias o bloqueos, con y sin niebla.
+- #84 información de unidad/terreno: **CI PASS** en costos exactos, scouts, falta de filtraciones; legibilidad/scroll Android **NO EJECUTADO**.
+- #85 evitar descartar orden al terminar turno: **CI PASS** en tácticas de dos etapas, pruebas físicas de botones **NO EJECUTADAS**.
+- #86 opción de firma protegida: **solo fallback efímero CI PASS**; modo persistente sin secretos/no ejecutado y no se ha comprobado instalación encima de versión previa ni persistencia de guardados.
