@@ -31,7 +31,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false) -> void:
     symmetric_setup = symmetric
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
@@ -47,7 +47,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         # Recon scouts are mirrored: mobility 4, sight 5, weaker attack 2.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
-    state = Session.start(units, terrain, 0, fog_mode)
+    state = Session.start(units, terrain, 0, fog_mode, relay_mode)
     selected_id = ""
     pending_order.clear()
     message = "Selecciona una unidad."
@@ -112,6 +112,28 @@ func _draw() -> void:
                     # Previously seen terrain remains dim; unknown areas are dark.
                     var shade: Color = fog_cover_color(explored.has(spot))
                     draw_rect(Rect2(pos, Vector2.ONE * tile), shade)
+    # Mission markers are objectives, not selectable enemy units. Under fog,
+    # unknown objectives are concealed, while already explored objectives
+    # remain marked without revealing their CURRENT owner until visible.
+    if state.has("control"):
+        for node in state["control"]["nodes"]:
+            var objective_cell: Vector2i = node["pos"]
+            if fog and not explored.has(objective_cell):
+                continue
+            var known_owner: int = int(node["owner"]) if not fog or visible.has(objective_cell) else -1
+            var signal_color := Color(0.95, 0.76, 0.30)
+            if known_owner == 0:
+                signal_color = Color(0.30, 0.68, 1.0)
+            elif known_owner == 1:
+                signal_color = Color(1.0, 0.45, 0.36)
+            var signal_center: Vector2 = origin + (Vector2(objective_cell) + Vector2(0.5, 0.5)) * tile
+            var marker: PackedVector2Array = PackedVector2Array([
+                signal_center + Vector2(0, -tile * 0.30),
+                signal_center + Vector2(tile * 0.30, 0),
+                signal_center + Vector2(0, tile * 0.30),
+                signal_center + Vector2(-tile * 0.30, 0)
+            ])
+            draw_polyline(marker, signal_color, maxf(2.0, tile * 0.055), true)
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
