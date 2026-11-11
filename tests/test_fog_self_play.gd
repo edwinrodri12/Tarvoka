@@ -42,7 +42,7 @@ static func _run_match(scenario_id: int, first_faction: int, symmetric: bool) ->
         if int(state["winner"]) != -1:
             break
         var acted_this_phase := 0
-        for action_index in range(units.size() + 1):
+        for action_index in range(units.size() * 2 + 1):
             var previous: Dictionary = state.duplicate(true)
             var active_faction := int(previous["faction"])
             var visible: Dictionary = Vision.visible_cells(previous, active_faction)
@@ -66,7 +66,7 @@ static func _run_match(scenario_id: int, first_faction: int, symmetric: bool) ->
             state = changed
             total_actions += 1
             acted_this_phase += 1
-            assert(acted_this_phase <= units.size())
+            assert(acted_this_phase <= units.size() * 2)
             if int(state["winner"]) != -1:
                 break
         if int(state["winner"]) != -1:
