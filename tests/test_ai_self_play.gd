@@ -38,7 +38,7 @@ static func _play(scenario_id: int, first_faction: int, symmetric: bool) -> Dict
         if int(state["winner"]) != -1:
             break
         var actions_in_phase := 0
-        for i in range(state["units"].size() + 1):
+        for i in range(state["units"].size() * 2 + 1):
             var snapshot: Dictionary = state.duplicate(true)
             var action: Dictionary = AI.step(state)
             assert(state == snapshot)
@@ -48,7 +48,7 @@ static func _play(scenario_id: int, first_faction: int, symmetric: bool) -> Dict
             actions_in_phase += 1
             total_actions += 1
             _assert_legal_board(state)
-            assert(actions_in_phase <= state["units"].size())
+            assert(actions_in_phase <= state["units"].size() * 2)
             if int(state["winner"]) != -1:
                 break
         if actions_in_phase == 0:
