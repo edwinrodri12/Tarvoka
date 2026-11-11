@@ -336,7 +336,7 @@ func _process(_delta: float) -> void:
     var winner := int(board.state.get("winner", -1))
     battlefield_status.visible = winner == -1
     order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
-    end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
+    end_button.disabled = winner != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
     cancel_button.disabled = board.selected_id.is_empty()
     confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
@@ -371,6 +371,11 @@ func _update_text(label: Label, content: String) -> void:
         label.text = content
 
 func _end_turn() -> void:
+    # Never discard an unconfirmed attack or movement with an accidental tap.
+    # Players can explicitly confirm or cancel and then finish the turn.
+    if not board.pending_order.is_empty():
+        board.message = "Confirma o cancela la orden antes de terminar turno."
+        return
     board.finish_turn()
 
 func _save_game() -> void:
