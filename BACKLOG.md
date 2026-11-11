@@ -256,3 +256,10 @@
 - [x] Godot `43100988560` PASS, Android `43100988685` PASS; test nuevo de fog, AI, móvil, guardado y límites, más simulaciones previas.
 - [ ] **QA teléfono**: probar movimiento y ataque en un mismo turno, movimiento sin enemigo visible, cambio a otra unidad, cancelación, niebla, guardado a mitad de turno y reapertura, IA en Android. No marcar probado físicamente hasta recibir evidencia.
 - [ ] Reexaminar **balance territorial**: el cambio de regla modifica fundamentalmente los resultados de simulaciones, por lo que no se deben seguir utilizando cifras anteriores para balance actual.
+
+## 2026-11-11 — Cierre técnico IA táctica y contadores (#94–#95)
+- [x] IA anticipa **movimiento hacia remate garantizado** contra enemigo ya observado, sin consumir ataque, usar terreno no descubierto o mover dos veces (#94; CI Godot/Android PASS).
+- [x] IA no queda ociosa cuando ya exploró todo el terreno pero perdió visión del último enemigo: **barrido de suelo explorado temporalmente fuera de visión** (#94, 12 simulaciones fog PASS).
+- [x] HUD informa por separado movimientos y ataques disponibles, coherente con unidad que ya se movió y conserva ataque (#95, CI PASS).
+- [ ] **Balance posterior a #94:** segundo jugador gana 17/24 partidas de relés en matriz determinista; estudiar simetría/contrajuego con más posiciones y decisiones humanas antes de alterar stats/bonos o declarar ventaja permanente.
+- [ ] QA físico Android agrupado: legibilidad de contadores, movimientos+ataques, remate IA, exploración sin enemigos, guardado/reanudación, orientaciones y rendimiento. Firma persistente necesita secretos externos no configurados.
