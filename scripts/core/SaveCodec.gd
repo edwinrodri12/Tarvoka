@@ -36,6 +36,15 @@ static func encode(state: Dictionary) -> String:
                 cells.append([cell.x, cell.y])
             explored[str(faction)] = cells
         snapshot["explored"] = explored
+        if state.has("contacts"):
+            var stored: Dictionary = {}
+            for faction in [0, 1]:
+                var side: Dictionary = {}
+                for enemy_id in state["contacts"][str(faction)]:
+                    var cell: Vector2i = state["contacts"][str(faction)][enemy_id]
+                    side[str(enemy_id)] = [cell.x, cell.y]
+                stored[str(faction)] = side
+            snapshot["contacts"] = stored
     return JSON.stringify(snapshot)
 
 static func decode(raw: String) -> Dictionary:
@@ -85,6 +94,27 @@ static func decode(raw: String) -> Dictionary:
                 restored.append(cell)
             result_explored[str(faction)] = restored
         state["explored"] = result_explored
+        if state.has("contacts"):
+            if not state["contacts"] is Dictionary:
+                return {}
+            var contacts: Dictionary = {}
+            for faction in [0, 1]:
+                var old_side = state["contacts"].get(str(faction), null)
+                if not old_side is Dictionary or old_side.size() > MAX_UNITS:
+                    return {}
+                var next_side: Dictionary = {}
+                for enemy_id in old_side:
+                    if not enemy_id is String or enemy_id.is_empty() or enemy_id.length() > 64:
+                        return {}
+                    var raw_pos = old_side[enemy_id]
+                    if not raw_pos is Array or raw_pos.size() != 2 or not _whole(raw_pos[0]) or not _whole(raw_pos[1]):
+                        return {}
+                    var position := Vector2i(int(raw_pos[0]), int(raw_pos[1]))
+                    if not Rules.inside(position):
+                        return {}
+                    next_side[enemy_id] = position
+                contacts[str(faction)] = next_side
+            state["contacts"] = contacts
     if not _valid_state(state):
         return {}
     return state
@@ -148,7 +178,30 @@ static func _valid_state(state: Dictionary) -> bool:
             for currently_visible in Visibility.visible_cells(state, faction):
                 if not unique.has(currently_visible):
                     return false
-    elif state.has("explored"):
+        if state.has("contacts"):
+            if not state["contacts"] is Dictionary:
+                return false
+            for faction in [0, 1]:
+                var side = state["contacts"].get(str(faction), null)
+                if not side is Dictionary or side.size() > MAX_UNITS:
+                    return false
+                var explored: Dictionary = Visibility.explored_cells(state, faction)
+                for enemy_id in side:
+                    if not enemy_id is String or enemy_id.is_empty() or enemy_id.length() > 64:
+                        return false
+                    var old_cell = side[enemy_id]
+                    if not old_cell is Vector2i or not Rules.inside(old_cell) or not explored.has(old_cell):
+                        return false
+                    var has_enemy := false
+                    for enemy in state["units"]:
+                        if str(enemy.get("id", "")) == enemy_id:
+                            if int(enemy.get("faction", -1)) == faction:
+                                return false
+                            has_enemy = true
+                            break
+                    if not has_enemy:
+                        return false
+    elif state.has("explored") or state.has("contacts"):
         return false
     # A save cannot declare victory when both armies are still alive.
     if state["winner"] != Turns.winner(state["units"]):
