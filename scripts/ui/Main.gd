@@ -188,6 +188,8 @@ func _ready() -> void:
     # Prevent accidental turn endings: confirm/cancel the pending order first.
     panel.move_child(confirm_button, end_button.get_index())
     panel.move_child(cancel_button, end_button.get_index())
+    # Keep action buttons on-screen before the longer legend on small devices.
+    panel.move_child(legend, end_button.get_index() + 1)
 
     var saves := HBoxContainer.new()
     saves.add_theme_constant_override("separation", 6)
