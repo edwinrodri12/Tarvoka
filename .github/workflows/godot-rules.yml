@@ -74,6 +74,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_defense.gd
 
+      - name: Validate unit role and terrain panel without fog leaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_terrain_unit_hud.gd
+
       - name: Run relay turn feedback and end-of-match message regression
         shell: bash
         run: |
