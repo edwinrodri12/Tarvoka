@@ -20,7 +20,7 @@ func _run() -> void:
     var end_turn: Button = screen.get("end_button")
     assert(confirm.get_index() < cancel.get_index() and cancel.get_index() < end_turn.get_index())
     screen._process(0.0)
-    assert(field.visible and field.text.contains("AZUL: unidades 2 | sin actuar 2 | HP 20"))
+    assert(field.visible and field.text.contains("AZUL: unidades 2 | mover 2 | atacar 2 | HP 20"))
     assert(field.text.contains("ROJO: 2 unidades activas"))
     assert(not preview.visible and confirm.disabled)
     
@@ -43,7 +43,14 @@ func _run() -> void:
     screen._process(0.0)
     assert(board.state["units"][0]["pos"] == Vector2i(2, 2))
     assert(not preview.visible and confirm.disabled and not end_turn.disabled)
-    assert(field.text.contains("AZUL: unidades 2 | sin actuar 2"))
+    assert(field.text.contains("AZUL: unidades 2 | mover 1 | atacar 2"))
+
+    # After a legal move, attack is still available but movement is spent.
+    assert(board.state["units"][0]["moved"] and not board.state["units"][0]["acted"])
+    board.state["units"][1]["acted"] = true
+    screen._process(0.0)
+    assert(field.text.contains("AZUL: unidades 2 | mover 0 | atacar 1"))
+    board.state["units"][1]["acted"] = false
 
     # A pending attack displays only legal authoritative damage and its target.
     board.new_game()
@@ -64,6 +71,7 @@ func _run() -> void:
     screen._process(0.0)
     assert(board.state["units"][2]["hp"] == 3)
     assert(not preview.visible)
+    assert(field.text.contains("AZUL: unidades 2 | mover 1 | atacar 1"))
 
     # In fog, the live HUD must not reveal unseen enemy counts or total HP.
     board.new_game(0, false, true)

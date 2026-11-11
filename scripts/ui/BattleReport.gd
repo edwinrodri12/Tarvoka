@@ -8,7 +8,8 @@ const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 # During fog, do not disclose unseen enemies or their total surviving HP.
 static func field_summary(state: Dictionary) -> String:
     var allies := 0
-    var ready := 0
+    var can_move := 0
+    var can_attack := 0
     var ally_hp := 0
     var enemies := 0
     var contacts := 0
@@ -20,13 +21,17 @@ static func field_summary(state: Dictionary) -> String:
         if int(unit.get("faction", -1)) == 0:
             allies += 1
             ally_hp += int(unit["hp"])
+            # Relocation no longer spends the attack. Count these
+            # capabilities separately instead of labeling moved units spent.
             if not bool(unit.get("acted", true)):
-                ready += 1
+                can_attack += 1
+                if not bool(unit.get("moved", false)):
+                    can_move += 1
         elif int(unit.get("faction", -1)) == 1:
             enemies += 1
             if not fog or visible.has(unit.get("pos", Vector2i(-1, -1))):
                 contacts += 1
-    var friendly := "AZUL: unidades %d | sin actuar %d | HP %d" % [allies, ready, ally_hp]
+    var friendly := "AZUL: unidades %d | mover %d | atacar %d | HP %d" % [allies, can_move, can_attack, ally_hp]
     if fog:
         return friendly + "\nContactos enemigos visibles: %d (otros pueden estar ocultos)" % contacts
     return friendly + "\nROJO: %d unidades activas" % enemies
