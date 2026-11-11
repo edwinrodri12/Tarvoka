@@ -236,3 +236,11 @@
 - [ ] Ampliar IA por misiones de defensa/rescate/escolta y condiciones de estancamiento; NO considerar IA estratégica final.
 - [ ] Firma Android persistente mediante secretos/keystore seguro para actualizar sin borrar partidas; no comprometer claves privadas.
 - [ ] Solo entregar APK consolidada al usuario cuando sea apropiado, nunca por cada PR.
+
+## 2026-11-11 — Avance agrupado #83–#86
+- [x] **P1 Defensa reactiva de relés propios**: la IA guarnece un relé vacío que un enemigo visible puede alcanzar legalmente ese turno; respeta bloqueo de terreno, niebla, prioridad letal y modo clásico (#83).
+- [x] **P0 HUD contextual**: rol Soldado/Explorador, terreno, costo exacto para entrar y cobertura real de unidad, sin revelar datos de enemigos invisibles (#84).
+- [x] **P0 órdenes pendientes**: botón Terminar turno inactivo mientras una orden espera confirmación; handler adversarial también impide perderla (#85).
+- [x] **P0 firma Android — infraestructura preparada**: workflow de compilación manual de `main` puede usar clave persistente protegida por tres secretos, mientras PR genera key efímera (#86).
+- [ ] **Firma persistente ACTIVADA / update-in-place:** aún requiere que el propietario configure y custodie los secretos, compile manualmente dos veces, compare huella SHA-256 e instale sobre otra build estable en un Android físico sin perder guardados. No considerar cerrado P0-09 hasta entonces.
+- [ ] **QA Android acumulado obligatorio**: diseño, gestos, persistencia al cerrar/reabrir, confirmaciones, resultado, relés, defensa IA y rendimiento. PR CI verde no sustituye el teléfono.
