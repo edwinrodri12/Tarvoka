@@ -7,6 +7,7 @@ const VERSION := 1
 const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Relays = preload("res://scripts/core/RelayControl.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -27,6 +28,12 @@ static func encode(state: Dictionary) -> String:
         "terrain": state["terrain"],
         "units": units
     }
+    if state.has("control"):
+        var control: Dictionary = state["control"].duplicate(true)
+        for node in control["nodes"]:
+            var pos: Vector2i = node["pos"]
+            node["pos"] = [pos.x, pos.y]
+        snapshot["control"] = control
     if Visibility.enabled(state):
         snapshot["fog_enabled"] = true
         var explored: Dictionary = {}
@@ -74,6 +81,28 @@ static func decode(raw: String) -> Dictionary:
         return {}
     state["faction"] = int(state["faction"])
     state["winner"] = int(state["winner"])
+    if state.has("control"):
+        var objective = state["control"]
+        if not objective is Dictionary or not objective.get("nodes") is Array:
+            return {}
+        for node in objective["nodes"]:
+            if not node is Dictionary or not node.get("pos") is Array:
+                return {}
+            var raw_cell: Array = node["pos"]
+            if raw_cell.size() != 2 or not _whole(raw_cell[0]) or not _whole(raw_cell[1]) or not _whole(node.get("owner")):
+                return {}
+            node["pos"] = Vector2i(int(raw_cell[0]), int(raw_cell[1]))
+            node["owner"] = int(node["owner"])
+        for key in ["target", "turns"]:
+            if not _whole(objective.get(key)):
+                return {}
+            objective[key] = int(objective[key])
+        if not objective.get("scores") is Array or objective["scores"].size() != 2:
+            return {}
+        for i in range(2):
+            if not _whole(objective["scores"][i]):
+                return {}
+            objective["scores"][i] = int(objective["scores"][i])
     if state.has("fog_enabled"):
         if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
             return {}
@@ -203,8 +232,18 @@ static func _valid_state(state: Dictionary) -> bool:
                         return false
     elif state.has("explored") or state.has("contacts"):
         return false
-    # A save cannot declare victory when both armies are still alive.
-    if state["winner"] != Turns.winner(state["units"]):
+    # Relay victories may end a match with living armies; they are valid
+    # only when a real scoreboard meets its documented target.
+    var expected_winner: int = Turns.winner(state["units"])
+    if state.has("control"):
+        if not state["control"] is Dictionary or not Relays.valid(state["control"], state["terrain"]):
+            return false
+        var scoreboard: Dictionary = state["control"]
+        if scoreboard["scores"][0] >= scoreboard["target"] and scoreboard["scores"][1] >= scoreboard["target"]:
+            return false
+        if expected_winner == -1:
+            expected_winner = Relays.score_winner(scoreboard)
+    if state["winner"] != expected_winner:
         return false
     return true
 
