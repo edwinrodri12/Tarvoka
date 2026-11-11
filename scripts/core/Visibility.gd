@@ -45,6 +45,11 @@ static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
 # Starting or ending ON the mountain is allowed; the feature is symmetrical.
 # Diagonal corner occlusion can be refined in a later design pass.
 static func _clear_los(terrain: Array, source: Vector2i, destination: Vector2i) -> bool:
+    # Bresenham tie-breaks may choose different intermediate cells in reverse.
+    # Require both directions to be unobstructed for fair, symmetric vision.
+    return _clear_los_one_way(terrain, source, destination) and _clear_los_one_way(terrain, destination, source)
+
+static func _clear_los_one_way(terrain: Array, source: Vector2i, destination: Vector2i) -> bool:
     var x := source.x
     var y := source.y
     var dx := absi(destination.x - source.x)
