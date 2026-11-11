@@ -2,9 +2,12 @@ extends Control
 
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 
 var board: Control
 var status_label: Label
+var battlefield_status: Label
+var order_preview_label: Label
 var unit_label: Label
 var autosave_alert: Label
 var enemy_turn_label: Label
@@ -91,6 +94,12 @@ func _ready() -> void:
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     status_label.add_theme_font_size_override("font_size", 20)
     panel.add_child(status_label)
+    # Compact field status is deliberately fog-safe: hidden enemies stay hidden.
+    battlefield_status = Label.new()
+    battlefield_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    battlefield_status.add_theme_font_size_override("font_size", 17)
+    battlefield_status.add_theme_color_override("font_color", Color(0.74, 0.88, 0.94))
+    panel.add_child(battlefield_status)
     relay_status = Label.new()
     relay_status.visible = board.state.has("control")
     relay_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -148,6 +157,13 @@ func _ready() -> void:
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
 
+    order_preview_label = Label.new()
+    order_preview_label.visible = false
+    order_preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    order_preview_label.add_theme_font_size_override("font_size", 18)
+    order_preview_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.45))
+    panel.add_child(order_preview_label)
+
     end_button = Button.new()
     end_button.text = "Terminar turno"
     end_button.custom_minimum_size.y = 58
@@ -168,6 +184,9 @@ func _ready() -> void:
     confirm_button.add_theme_font_size_override("font_size", 20)
     confirm_button.pressed.connect(_confirm_order)
     panel.add_child(confirm_button)
+    # Prevent accidental turn endings: confirm/cancel the pending order first.
+    panel.move_child(confirm_button, end_button.get_index())
+    panel.move_child(cancel_button, end_button.get_index())
 
     var saves := HBoxContainer.new()
     saves.add_theme_constant_override("separation", 6)
@@ -289,11 +308,17 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.selected_id])
+    var summary_key: int = hash([board.state, board.selected_id, board.pending_order])
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
         _update_text(unit_label, board.selected_unit_summary())
+        _update_text(battlefield_status, BattleReport.field_summary(board.state))
+        _update_text(order_preview_label, BattleReport.pending_preview(board.state, board.pending_order))
+        var action_kind := str(board.pending_order.get("kind", ""))
+        var button_text := "Confirmar ataque" if action_kind == "attack" else ("Confirmar movimiento" if action_kind == "move" else "Confirmar orden")
+        if confirm_button.text != button_text:
+            confirm_button.text = button_text
 
     relay_status.visible = board.state.has("control")
     if board.state.has("control"):
@@ -306,6 +331,8 @@ func _process(_delta: float) -> void:
     _update_text(autosave_alert, board.autosave_warning)
     autosave_alert.visible = not board.autosave_warning.is_empty()
     var winner := int(board.state.get("winner", -1))
+    battlefield_status.visible = winner == -1
+    order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
     end_button.disabled = winner != -1 or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
     cancel_button.disabled = board.selected_id.is_empty()
     confirm_button.disabled = board.pending_order.is_empty()
@@ -330,23 +357,7 @@ func _is_relay_win(winner: int) -> bool:
     return int(objective["scores"][winner]) >= int(objective["target"])
 
 func _battle_summary() -> String:
-    # Every defeated unit remains in the authoritative battle state with HP 0.
-    # Display unit counts without inventing a score or maximum HP.
-    var alive := [0, 0]
-    var losses := [0, 0]
-    for unit in board.state.get("units", []):
-        if not (unit is Dictionary):
-            continue
-        var faction := int(unit.get("faction", -1))
-        if faction not in [0, 1]:
-            continue
-        if int(unit.get("hp", 0)) > 0:
-            alive[faction] += 1
-        else:
-            losses[faction] += 1
-    return "Aliadas: %d activas, %d bajas. Enemigas: %d activas, %d bajas." % [
-        alive[0], losses[0], alive[1], losses[1]
-    ]
+    return BattleReport.terminal_summary(board.state)
 
 func _update_text(label: Label, content: String) -> void:
     if label.text != content:
