@@ -11,6 +11,8 @@ func _initialize() -> void:
     var matches := 0
     var relay_wins := 0
     var first_player_wins := 0
+    var relay_wins_by_first := [0, 0]
+    var wins_by_map := [0, 0, 0]
     var wins_by_faction := [0, 0]
     var turns_total := 0
     var longest_match := 0
@@ -22,6 +24,8 @@ func _initialize() -> void:
                     assert(result["winner"] in [0, 1])
                     if result["relay_win"]:
                         relay_wins += 1
+                        relay_wins_by_first[first_faction] += 1
+                    wins_by_map[map_id] += 1
                     wins_by_faction[int(result["winner"])] += 1
                     if int(result["winner"]) == first_faction:
                         first_player_wins += 1
@@ -36,9 +40,14 @@ func _initialize() -> void:
     assert(relay_wins >= 1) # The new victory condition must be strategically reachable.
     # Descriptive diagnostics only: 24 deterministic matches are not a balance verdict.
     assert(wins_by_faction[0] + wins_by_faction[1] == matches)
+    assert(relay_wins_by_first[0] + relay_wins_by_first[1] == relay_wins)
+    assert(wins_by_map == [8, 8, 8])
     print("RELAY BALANCE sample=%d first_player_wins=%d second_player_wins=%d blue_wins=%d red_wins=%d avg_turns=%.2f max_turns=%d" % [
         matches, first_player_wins, matches - first_player_wins,
         wins_by_faction[0], wins_by_faction[1], float(turns_total) / float(matches), longest_match
+    ])
+    print("RELAY OUTCOMES objective_wins_when_blue_starts=%d objective_wins_when_red_starts=%d completed_by_map=%s" % [
+        relay_wins_by_first[0], relay_wins_by_first[1], str(wins_by_map)
     ])
     print("PASS relay AI self-play: 24 complete battles, %d objective victories" % relay_wins)
     quit(0)
