@@ -41,7 +41,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
     # Reject off-board combat even when two invalid coordinates are adjacent.
     if not _inside_board(a_pos) or not _inside_board(d_pos):
         return {"valid": false, "units": units.duplicate(true)}
-    if absi(a_pos.x - d_pos.x) + absi(a_pos.y - d_pos.y) != 1:
+    if not Turns.in_attack_range(attacker, defender):
         return {"valid": false, "units": units.duplicate(true)}
     var combat: Dictionary = Combat.resolve(int(attacker.get("hp", 0)), int(defender.get("hp", 0)), int(attacker.get("attack", 0)), int(defender.get("defense", 0)), int(defender.get("cover", 0)))
     if not combat["valid"]:
