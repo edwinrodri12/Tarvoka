@@ -69,12 +69,31 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             attacks[enemy_pos] = {"id": str(enemy["id"]), "damage": int(result["damage"]), "defeated": bool(result["defeated"])}
     return {"moves": moves, "attacks": attacks}
 
+# Explain movement costs without implying combat bonuses from terrain:
+# terrain currently affects path cost; combat cover belongs to the unit.
+static func terrain_name(kind: String) -> String:
+    match kind:
+        "plain":
+            return "Llanura"
+        "forest":
+            return "Bosque"
+        "road":
+            return "Camino"
+        "mountain":
+            return "Montana"
+        "water":
+            return "Agua"
+        _:
+            return "Desconocido"
+
 static func unit_summary(state: Dictionary, unit_id: String) -> String:
     if unit_id.is_empty() or not (state.get("units") is Array):
         return "Toca una unidad azul para ver su alcance."
     for unit in state["units"]:
         if not (unit is Dictionary) or str(unit.get("id", "")) != unit_id:
             continue
+        if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state.get("faction", -1)), unit_id):
+            return "Unidad no disponible."
         var hints: Dictionary = for_unit(state, unit_id)
         var availability: String = "Actuo" if bool(unit.get("acted", false)) else "Disponible"
         var text: String = "%s | Vida %d | Ataque %d | Defensa %d | Movimiento %d | %s | %d destinos / %d objetivos" % [
@@ -84,6 +103,23 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         ]
         if Visibility.enabled(state):
             text += " | Vision %d" % int(unit.get("vision", Visibility.DEFAULT_VISION))
+        # The selected own unit is necessarily in the player's sight.
+        # In fog we never reveal terrain from another unrevealed coordinate.
+        var location = unit.get("pos", null)
+        if location is Vector2i and Rules.inside(location) and state.get("terrain") is Array:
+            var own_faction: int = int(state.get("faction", -1))
+            var is_friendly: bool = int(unit.get("faction", -1)) == own_faction
+            var visible: bool = not Visibility.enabled(state) or Visibility.visible_cells(state, own_faction).has(location)
+            if is_friendly or visible:
+                var terrain: Array = state["terrain"]
+                if terrain.size() == Rules.HEIGHT and terrain[location.y] is Array and terrain[location.y].size() == Rules.WIDTH:
+                    var kind: String = str(terrain[location.y][location.x])
+                    var move_cost: int = Rules.movement_cost(kind)
+                    if move_cost >= 0:
+                        var role := "Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado"
+                        text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [
+                            role, terrain_name(kind), move_cost, int(unit.get("cover", 0))
+                        ]
         if not hints["attacks"].is_empty():
             var damages: PackedStringArray = []
             for target in hints["attacks"].values():
