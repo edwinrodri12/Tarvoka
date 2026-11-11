@@ -34,6 +34,8 @@ func _run() -> void:
     assert(int(board.state["winner"]) == 0)
     screen._process(0.0)
     assert(banner.visible and title.text == "VICTORIA")
+    var result_style: StyleBoxFlat = banner.get_theme_stylebox("panel") as StyleBoxFlat
+    assert(result_style != null and result_style.bg_color.g > result_style.bg_color.r)
     var detail: Label = screen.get("result_detail")
     assert(detail.text.contains("Aliadas: 1 activas, 0 bajas"))
     assert(detail.text.contains("Enemigas: 0 activas, 1 bajas"))
@@ -56,6 +58,7 @@ func _run() -> void:
     assert(board.last_enemy_turn_report.contains("1 ataques"))
     screen._process(0.0)
     assert(banner.visible and title.text == "DERROTA")
+    assert(result_style.bg_color.r > result_style.bg_color.g)
     assert(detail.text.contains("Aliadas: 0 activas, 1 bajas"))
     assert(detail.text.contains("Enemigas: 1 activas, 0 bajas"))
     assert(end_button.disabled)
