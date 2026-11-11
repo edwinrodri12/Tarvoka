@@ -18,10 +18,12 @@ func _run() -> void:
     assert(board.selected_id == "A")
     board._tap(Vector2(200,200))
     assert(board.state["units"][0]["pos"] == Vector2i(2,2))
-    assert(board.state["units"][0]["acted"])
+    assert(board.state["units"][0]["moved"] and not board.state["units"][0]["acted"])
+    board._tap(Vector2(200,200))
+    assert(board.selected_id == "A") # Can still attack if an enemy becomes visible.
+    assert(board.legal_action_hints()["moves"].is_empty()) # But cannot move twice.
     board._tap(Vector2(200,200))
     assert(board.selected_id == "")
-    assert(board.message == "Esta unidad ya actuo durante este turno.")
     board._tap(Vector2(120,440))
     assert(board.selected_id == "B")
     board._tap(Vector2(120,440))
