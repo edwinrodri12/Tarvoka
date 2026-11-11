@@ -134,6 +134,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_session.gd
 
+      - name: Run relay-aware AI goal pursuit and fog fairness tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_ai.gd
+
+      - name: Run twenty-four full objective AI-vs-AI scenario battles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_ai_self_play.gd
+
       - name: Run relay objective capture and scoring rule tests
         shell: bash
         run: |
