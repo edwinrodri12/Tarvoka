@@ -269,3 +269,12 @@
 - [x] La retirada ante enemigo con alcance >=2 verifica casillas fuera de ese alcance, no solo fuera de distancia 1 (PR #97).
 - [ ] Diseñar y prototipar unidades de alcance superior **solo después del gate de Android** y experimentos de balance/contramedidas; evitar unit spam y roles copiados.
 - [ ] QA físico: movimiento seguido de ataque por unidad, avisos HUD, comandos de IA en niebla, continuidad de guardado y rendimiento. Firma persistente aún requiere configuración de secretos.
+
+## 2026-11-11 — P1-05 unidades especializadas: primera entrega jugable
+- [x] Cinco roles originales con estadísticas/visión/alcance distintos y dos contramedidas explícitas, compartiendo reglas de daño motor/UI/IA (#99, Godot/Android CI PASS).
+- [x] Opt-in a escaramuza de cinco clases por bando; clásico por defecto, mapas × niebla × relés compatibles, guardado y selector restaurados (#100, CI PASS).
+- [x] 12 batallas IA×IA de roles terminadas con verificación estricta de acciones, niebla y guardados (#101, CI PASS).
+- [ ] **P1-06 balance:** primer jugador ganó 12/12 simulaciones deterministas de roles. Diseñar matrices de mapas/despliegues/contramedidas e iniciativa invertida más variadas, y ensayos humanos; NO declarar equilibrado ni bonificar un bando a ciegas.
+- [ ] **Android físico agrupado:** confirmar cinco roles, +3/+4 daño correcto, Lanzador mínimo2, movimientos/ataques mismo turno, niebla, relés, guardados tras reinicio, controles grandes y FPS.
+- [ ] **Continuidad de partidas Android:** firma debug persistente con secretos privados y prueba de actualización sobre instalación existente sin perder `user://`.
+- [ ] Tras el gate físico: primeras misiones originales con condiciones de victoria diversas, tutorial de alcance/contramedidas, balance por rol, arte y efectos definitivos.
