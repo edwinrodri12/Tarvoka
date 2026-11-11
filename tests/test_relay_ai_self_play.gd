@@ -86,7 +86,7 @@ static func _play(map_id: int, first: int, fog: bool, symmetric: bool) -> Dictio
     for phase in range(90):
         if int(state["winner"]) != -1:
             break
-        for turn_step in range(units.size() + 1):
+        for turn_step in range(units.size() * 2 + 1):
             var original: Dictionary = state.duplicate(true)
             var visible: Dictionary = Vision.visible_cells(state, int(state["faction"])) if fog else {}
             var ai: Dictionary = AI.step(state)
