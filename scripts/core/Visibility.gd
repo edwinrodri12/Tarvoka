@@ -128,6 +128,51 @@ static func update_exploration(state: Dictionary) -> Dictionary:
                     ordered.append(cell)
         next_explored[str(faction)] = ordered
     result["explored"] = next_explored
+
+    # Last-seen intelligence is faction-private. The record is ONLY the last
+    # observed position, never a live pointer, HP or a targetable unit.
+    var previous_contacts = result.get("contacts", {})
+    var next_contacts: Dictionary = {}
+    for faction in [0, 1]:
+        var currently: Dictionary = visible_cells(result, faction)
+        var remembered: Dictionary = {}
+        var old_side = previous_contacts.get(str(faction), {}) if previous_contacts is Dictionary else {}
+        if old_side is Dictionary:
+            for enemy_id in old_side:
+                var old_pos = old_side[enemy_id]
+                # If the old location is now visible and empty, the sighting
+                # has been disproven; otherwise preserve it as uncertain.
+                if old_pos is Vector2i and Rules.inside(old_pos) and not currently.has(old_pos):
+                    remembered[str(enemy_id)] = old_pos
+        for unit in result.get("units", []):
+            if not unit is Dictionary or int(unit.get("hp", 0)) <= 0:
+                continue
+            if int(unit.get("faction", -1)) == faction:
+                continue
+            var position = unit.get("pos", null)
+            if position is Vector2i and currently.has(position):
+                remembered[str(unit["id"])] = position
+        next_contacts[str(faction)] = remembered
+    result["contacts"] = next_contacts
+    return result
+
+# Only return STALE sightings. Visible enemies are rendered as real units.
+# A stale marker is informational and must never be used as an attack target.
+static func last_known_contacts(state: Dictionary, faction: int) -> Dictionary:
+    var result: Dictionary = {}
+    if not enabled(state) or faction not in [0, 1]:
+        return result
+    var contacts = state.get("contacts", {})
+    if not contacts is Dictionary:
+        return result
+    var side = contacts.get(str(faction), {})
+    if not side is Dictionary:
+        return result
+    var currently: Dictionary = visible_cells(state, faction)
+    for enemy_id in side:
+        var pos = side[enemy_id]
+        if pos is Vector2i and Rules.inside(pos) and not currently.has(pos):
+            result[str(enemy_id)] = pos
     return result
 
 # A faction must not receive hidden unit locations through AI observation.
@@ -154,6 +199,8 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
             if not known.has(Vector2i(x, y)):
                 terrain[y][x] = "water"
     observed["terrain"] = terrain
-    # Never send opponent's explored cells to the planner.
+    # Never send either side's exact contact history to the AI planner.
+    # Planned P1 scouting may use *own* stale sightings only after tests.
     observed.erase("explored")
+    observed.erase("contacts")
     return observed
