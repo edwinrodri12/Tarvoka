@@ -159,6 +159,16 @@ func _draw() -> void:
             draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
                 "HP %d" % int(unit["hp"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.16)), health_tint)
+    # A question mark is deliberately NOT a unit: no HP, target preview,
+    # hitbox or legal attack is created from historical sightings.
+    if fog:
+        var stale_contacts: Dictionary = Visibility.last_known_contacts(state, 0)
+        for enemy_id in stale_contacts:
+            var old_cell: Vector2i = stale_contacts[enemy_id]
+            var ghost_center: Vector2 = origin + (Vector2(old_cell) + Vector2(0.5, 0.5)) * tile
+            draw_arc(ghost_center, tile * 0.26, 0, TAU, 20, Color(0.95, 0.73, 0.38, 0.80), 2.0)
+            draw_string(font, ghost_center + Vector2(-tile * 0.09, tile * 0.11),
+                "?", HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12.0, tile * 0.31)), Color(1.0, 0.86, 0.55))
     if pending_order.has("cell"):
         var preview_cell: Vector2i = pending_order["cell"]
         var preview_pos: Vector2 = origin + Vector2(preview_cell) * tile
