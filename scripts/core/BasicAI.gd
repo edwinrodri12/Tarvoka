@@ -158,6 +158,15 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
                 break
         if not threatened:
             continue
+        # Withdraw only towards friendly support, never flee endlessly
+        # across an empty battlefield.
+        var support: Array = []
+        for candidate in knowledge["units"]:
+            if candidate is Dictionary and int(candidate.get("hp", 0)) > 0 and int(candidate.get("faction", -1)) == int(ally["faction"]) and str(candidate.get("id", "")) != str(ally["id"]):
+                support.append(candidate)
+        if support.is_empty():
+            continue
+        var support_before: int = _closest_enemy_distance(ally["pos"], support)
         var blocked: Array[Vector2i] = occupied.duplicate()
         blocked.erase(ally["pos"])
         var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blocked)
@@ -168,7 +177,11 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
             var nearest: int = _closest_enemy_distance(cell, enemies)
             if nearest <= 1:
                 continue
-            var score: int = nearest * 100 - int(reachable[cell]) * 3
+            var support_after: int = _closest_enemy_distance(cell, support)
+            # Strict improvement prevents indefinite retreat oscillation.
+            if support_after >= support_before or support_after > 3:
+                continue
+            var score: int = nearest * 100 - support_after * 15 - int(reachable[cell]) * 3
             if score > best_score:
                 best_score = score
                 best_id = str(ally["id"])
