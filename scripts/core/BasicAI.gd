@@ -80,6 +80,13 @@ static func step(state: Dictionary) -> Dictionary:
             hit["action"] = "attack"
             return hit
 
+    # Safeguard one already-owned, empty relay when an *observed* enemy can
+    # legally take that tile on its next turn. This comes after lethal attacks
+    # and danger-aware retreat, before chasing further objectives.
+    var defense: Dictionary = _defend_relay(state, knowledge, friends, enemies, occupied)
+    if defense.get("valid", false):
+        return defense
+
     # A signal-relay match offers an alternative strategic objective.
     # Prioritize reaching a neutral or opposing relay after immediate combat.
     var objective_action: Dictionary = _advance_relay(state, knowledge, friends, occupied)
@@ -255,6 +262,67 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
         return idle
     moved["action"] = "move"
     moved["reason"] = best_reason
+    moved["unit_id"] = best_id
+    moved["destination"] = best_cell
+    return moved
+
+# One-action emergency relay garrison. Only ACTUALLY observed enemy units
+# can trigger it, and threat must be demonstrated by a legal terrain path.
+# Occupied friendly relays already have a garrison; occupied hostile relays
+# cannot be entered. Restrict to a reachable defensive move this turn to avoid
+# wandering back and forth or creating an endless defensive march.
+static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var idle := {"valid": false}
+    if not knowledge.get("control") is Dictionary or enemies.is_empty():
+        return idle
+    var faction: int = int(state["faction"])
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
+    var best_id := ""
+    var best_cell := Vector2i(-1, -1)
+    var best_score := -999999
+    for relay in knowledge["control"]["nodes"]:
+        if int(relay.get("owner", -1)) != faction:
+            continue
+        var cell: Vector2i = relay["pos"]
+        if cell in occupied or (fog and not visible.has(cell)):
+            continue
+        var threatened := false
+        for enemy in enemies:
+            var blockers: Array[Vector2i] = occupied.duplicate()
+            blockers.erase(enemy["pos"])
+            var approach: Dictionary = Rules.reachable(enemy["pos"], int(enemy.get("move_points", 0)), knowledge["terrain"], blockers)
+            if approach.has(cell):
+                threatened = true
+                break
+        if not threatened:
+            continue
+        for ally in friends:
+            # Do not desert a different relay to protect this one.
+            var guard_needed_elsewhere := false
+            for other in knowledge["control"]["nodes"]:
+                if other["pos"] == ally["pos"] and int(other.get("owner", -1)) == faction:
+                    guard_needed_elsewhere = true
+                    break
+            if guard_needed_elsewhere:
+                continue
+            var own_blockers: Array[Vector2i] = occupied.duplicate()
+            own_blockers.erase(ally["pos"])
+            var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], own_blockers)
+            if not reachable.has(cell) or cell == ally["pos"]:
+                continue
+            var score: int = 10000 - int(reachable[cell]) * 100 + int(ally.get("hp", 0))
+            if score > best_score:
+                best_score = score
+                best_id = str(ally["id"])
+                best_cell = cell
+    if best_id.is_empty():
+        return idle
+    var moved: Dictionary = Session.move(state, best_id, best_cell)
+    if not moved.get("valid", false):
+        return idle
+    moved["action"] = "move"
+    moved["reason"] = "defend_relay"
     moved["unit_id"] = best_id
     moved["destination"] = best_cell
     return moved
