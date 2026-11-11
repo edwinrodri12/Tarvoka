@@ -223,3 +223,16 @@
 - [ ] Pruebas de balance más amplias con despliegues variados y humanos; las 12 partidas automatizadas no garantizan calidad general.
 - [ ] Firma de depuración estable protegida mediante secretos GitHub, sin subir keystore o contraseña al repositorio, para no borrar guardados al actualizar APK.
 - [ ] Identidad audiovisual, campaña, tutorial y pruebas de accesibilidad después de una puerta P0 verificada en dispositivo; no sobreexpandir antes.
+
+## 2026-11-10 — Objetivos territoriales opcionales P1/P2 #72–#76
+- [x] Reglas puras y originales de control de 2 relés: capturar al concluir turno, propiedad hasta recaptura, señal por turno y victoria a 5; mismo mapa simétrico y sin ventajas ocultas (#72).
+- [x] Integración `BattleSession` con victoria territorial, bloqueo post-partida y guardado v1 opcional compatible con partida de eliminación y niebla (#73).
+- [x] Selector de modo objetivo confirmado, HUD de puntuación, marcadores de relé sin revelar propiedad fuera de visión, y resultado final veraz (#74).
+- [x] IA con desplazamiento a relés neutrales/rivales, ruteo por terreno legal y visión justa; 24 partidas completas IA×IA, 15 victorias por señal y 9 por eliminación (#75).
+- [x] Resúmenes de capturas/ganancia real de señal en ambos bandos, sin declarar falsamente que el turno vuelve al humano tras derrota territorial (#76).
+- [ ] **QA físico obligatorio:** nueva APK agrupada para partida territorial completa, interruptores clásicos/niebla/relés, UI en teléfono y tablet, cerrar/reabrir, condiciones de victoria y mensajes, contraste/scroll, FPS/consumo.
+- [ ] Comparar partidas de eliminación versus control con usuarios reales: evitar bola de nieve de propiedad persistente, captura del primer jugador, partidas cortas o demasiado pasivas; ajustar target/puntaje solo con evidencia.
+- [ ] Defensa táctica explícita de relés propios amenazados, bloqueos, contrajuego y posible recuperación de control sin generar micromanejo excesivo.
+- [ ] Ampliar IA por misiones de defensa/rescate/escolta y condiciones de estancamiento; NO considerar IA estratégica final.
+- [ ] Firma Android persistente mediante secretos/keystore seguro para actualizar sin borrar partidas; no comprometer claves privadas.
+- [ ] Solo entregar APK consolidada al usuario cuando sea apropiado, nunca por cada PR.
