@@ -4,7 +4,7 @@ class_name TarvokaMoveActions
 const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 
-# Immutable movement action. Moving consumes the unit's action for this turn.
+# Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
 static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array) -> Dictionary:
     var rejected := {"valid": false, "units": units.duplicate(true)}
     if not Rules.inside(destination) or unit_id.is_empty():
@@ -31,7 +31,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     if moving_index < 0:
         return rejected
     var mover: Dictionary = result[moving_index]
-    if not Turns.can_act(mover, faction) or destination == mover.get("pos"):
+    if not Turns.can_move(mover, faction) or destination == mover.get("pos"):
         return rejected
     if destination in occupied:
         return rejected
@@ -43,5 +43,5 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     if not reachable.has(destination):
         return rejected
     mover["pos"] = destination
-    mover["acted"] = true
+    mover["moved"] = true
     return {"valid": true, "units": result, "cost": reachable[destination]}
