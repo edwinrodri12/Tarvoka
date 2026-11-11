@@ -263,3 +263,9 @@
 - [x] HUD informa por separado movimientos y ataques disponibles, coherente con unidad que ya se movió y conserva ataque (#95, CI PASS).
 - [ ] **Balance posterior a #94:** segundo jugador gana 17/24 partidas de relés en matriz determinista; estudiar simetría/contrajuego con más posiciones y decisiones humanas antes de alterar stats/bonos o declarar ventaja permanente.
 - [ ] QA físico Android agrupado: legibilidad de contadores, movimientos+ataques, remate IA, exploración sin enemigos, guardado/reanudación, orientaciones y rendimiento. Firma persistente necesita secretos externos no configurados.
+
+## 2026-11-11 — Próxima extensión de roles: base completada #97
+- [x] El camino táctico de la IA contempla distancias de ataque **por unidad** y distingue alcance mínimo/máximo sin crear nuevas unidades (PR #97, Godot/Android PASS).
+- [x] La retirada ante enemigo con alcance >=2 verifica casillas fuera de ese alcance, no solo fuera de distancia 1 (PR #97).
+- [ ] Diseñar y prototipar unidades de alcance superior **solo después del gate de Android** y experimentos de balance/contramedidas; evitar unit spam y roles copiados.
+- [ ] QA físico: movimiento seguido de ataque por unidad, avisos HUD, comandos de IA en niebla, continuidad de guardado y rendimiento. Firma persistente aún requiere configuración de secretos.
