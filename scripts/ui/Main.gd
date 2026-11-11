@@ -15,6 +15,8 @@ var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
 var balance_picker: OptionButton
 var fog_picker: OptionButton
+var relay_picker: OptionButton
+var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
 
@@ -89,6 +91,12 @@ func _ready() -> void:
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     status_label.add_theme_font_size_override("font_size", 20)
     panel.add_child(status_label)
+    relay_status = Label.new()
+    relay_status.visible = board.state.has("control")
+    relay_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    relay_status.add_theme_font_size_override("font_size", 17)
+    relay_status.add_theme_color_override("font_color", Color(0.95, 0.80, 0.42))
+    panel.add_child(relay_status)
     enemy_turn_label = Label.new()
     enemy_turn_label.visible = false
     enemy_turn_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -221,6 +229,24 @@ func _ready() -> void:
     fog_help.add_theme_font_size_override("font_size", 14)
     panel.add_child(fog_help)
 
+    var relay_heading := Label.new()
+    relay_heading.text = "OBJETIVO DE LA BATALLA"
+    relay_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(relay_heading)
+    relay_picker = OptionButton.new()
+    relay_picker.custom_minimum_size.y = 54
+    relay_picker.add_theme_font_size_override("font_size", 16)
+    relay_picker.add_item("Eliminar al enemigo (clasico)", 0)
+    relay_picker.add_item("Controlar reles y acumular senal", 1)
+    relay_picker.select(1 if board.state.has("control") else 0)
+    panel.add_child(relay_picker)
+
+    var relay_help := Label.new()
+    relay_help.text = "Los reles cambian de bando al finalizar el turno sobre ellos. Cada rele controlado produce 1 punto de senal por turno. Gana al llegar a 5."
+    relay_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    relay_help.add_theme_font_size_override("font_size", 14)
+    panel.add_child(relay_help)
+
     var restart_button := Button.new()
     restart_button.text = "Nueva partida"
     restart_button.custom_minimum_size.y = 52
@@ -269,6 +295,12 @@ func _process(_delta: float) -> void:
         unit_summary_refresh_count += 1
         _update_text(unit_label, board.selected_unit_summary())
 
+    relay_status.visible = board.state.has("control")
+    if board.state.has("control"):
+        var control: Dictionary = board.state["control"]
+        _update_text(relay_status, "SENAL: Azul %d | Rojo %d / %d" % [
+            control["scores"][0], control["scores"][1], control["target"]
+        ])
     _update_text(enemy_turn_label, board.last_enemy_turn_report)
     enemy_turn_label.visible = not board.last_enemy_turn_report.is_empty()
     _update_text(autosave_alert, board.autosave_warning)
@@ -280,14 +312,22 @@ func _process(_delta: float) -> void:
     result_banner.visible = winner != -1
     if winner == 0:
         _update_text(result_title, "VICTORIA")
-        _update_text(result_detail, "Objetivo cumplido.\n" + _battle_summary() + "\nPuedes comenzar otra partida.")
+        var victory_mode := "Control territorial asegurado." if _is_relay_win(winner) else "Objetivo cumplido."
+        _update_text(result_detail, victory_mode + "\n" + _battle_summary() + "\nPuedes comenzar otra partida.")
         _update_text(status_label, "Batalla terminada")
     elif winner == 1:
         _update_text(result_title, "DERROTA")
-        _update_text(result_detail, "Tu ejercito fue derrotado.\n" + _battle_summary() + "\nIntenta una estrategia diferente.")
+        var defeat_mode := "El enemigo alcanzo la senal territorial." if _is_relay_win(winner) else "Tu ejercito fue derrotado."
+        _update_text(result_detail, defeat_mode + "\n" + _battle_summary() + "\nIntenta una estrategia diferente.")
         _update_text(status_label, "Batalla terminada")
     else:
         _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
+
+func _is_relay_win(winner: int) -> bool:
+    if winner not in [0, 1] or not board.state.has("control"):
+        return false
+    var objective: Dictionary = board.state["control"]
+    return int(objective["scores"][winner]) >= int(objective["target"])
 
 func _battle_summary() -> String:
     # Every defeated unit remains in the authoritative battle state with HP 0.
@@ -323,17 +363,19 @@ func _load_game() -> void:
         scenario_picker.select(board.current_scenario_id)
         balance_picker.select(1 if board.symmetric_setup else 0)
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
+        relay_picker.select(1 if board.state.has("control") else 0)
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
     var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s? Esto reemplazara el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, fog_name]
+    var objective_name := "control de reles" if relay_picker.get_selected_id() == 1 else "eliminacion"
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, objetivo %s? Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, fog_name, objective_name]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
