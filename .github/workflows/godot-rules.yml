@@ -248,6 +248,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_fog_self_play.gd
 
+      - name: Run twelve initiative-paired mixed-role battles across maps fog and relays
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combined_arms_self_play.gd
+
       - name: Run six full AI self-play matches across terrain scenarios
         shell: bash
         run: |
