@@ -15,30 +15,31 @@ func _initialize() -> void:
     var objectives := 0
     var total_turns := 0
     var start_ms: int = Time.get_ticks_msec()
-    # Three distinct maps; each with one normal and one fog battle.
-    # Exercise both faction initiative positions and alternative objectives.
+    # Three distinct maps, both fog choices AND both starting factions
+    # for each setup. Never confound fog with initiative when estimating
+    # the first-player advantage.
     for map_id in range(Scenarios.LABELS.size()):
         for fog_on in [false,true]:
-            var first_faction: int = 1 if fog_on else 0
-            var relay_mode: bool = map_id != 0
-            var symmetric: bool = map_id != 2
-            var result: Dictionary = _play(map_id, fog_on, relay_mode, symmetric, first_faction)
-            assert(result["winner"] in [0, 1])
-            first_wins += 1 if int(result["winner"]) == first_faction else 0
-            blue_wins += 1 if int(result["winner"]) == 0 else 0
-            objectives += 1 if bool(result["relay_victory"]) else 0
-            total_turns += int(result["turns"])
-            samples += 1
-            print("ROLES SELF PLAY map=%d fog=%s relays=%s symmetric=%s first=%d winner=%d relay_victory=%s turns=%d actions=%d" % [
-                map_id, str(fog_on), str(relay_mode), str(symmetric), first_faction,
-                int(result["winner"]), str(result["relay_victory"]), int(result["turns"]), int(result["actions"])
-            ])
-    assert(samples == 6 and blue_wins >= 0 and first_wins >= 0 and objectives >= 0)
+            for first_faction in [0,1]:
+                var relay_mode: bool = map_id != 0
+                var symmetric: bool = map_id != 2
+                var result: Dictionary = _play(map_id, fog_on, relay_mode, symmetric, first_faction)
+                assert(result["winner"] in [0, 1])
+                first_wins += 1 if int(result["winner"]) == first_faction else 0
+                blue_wins += 1 if int(result["winner"]) == 0 else 0
+                objectives += 1 if bool(result["relay_victory"]) else 0
+                total_turns += int(result["turns"])
+                samples += 1
+                print("ROLES SELF PLAY map=%d fog=%s relays=%s symmetric=%s first=%d winner=%d relay_victory=%s turns=%d actions=%d" % [
+                    map_id, str(fog_on), str(relay_mode), str(symmetric), first_faction,
+                    int(result["winner"]), str(result["relay_victory"]), int(result["turns"]), int(result["actions"])
+                ])
+    assert(samples == 12 and blue_wins >= 0 and first_wins >= 0 and objectives >= 0)
     print("ROLES BALANCE sample=%d first_wins=%d second_wins=%d blue_wins=%d avg_turns=%.2f elapsed_ms=%d" % [
         samples, first_wins, samples-first_wins, blue_wins,
         float(total_turns)/float(samples), Time.get_ticks_msec()-start_ms
     ])
-    print("PASS combined-arms self-play: six full games, fair fog, all legal counters and serialized states")
+    print("PASS combined-arms self-play: twelve initiative-paired games, fog, legal counters and serialized states")
     quit(0)
 
 static func _play(map_id: int, fog_on: bool, relay_mode: bool, symmetric: bool, first_faction: int) -> Dictionary:
