@@ -33,10 +33,16 @@ func _run() -> void:
     assert(preview.visible and preview.text.contains("MOVIMIENTO PREPARADO"))
     assert(preview.text.contains("costo 1"))
     assert(confirm.text == "Confirmar movimiento" and not confirm.disabled)
+    assert(end_turn.disabled)
+    # Even a direct handler call must not silently drop the pending order.
+    screen._end_turn()
+    screen._process(0.0)
+    assert(board.state == before and board.pending_order["kind"] == "move")
+    assert(board.message.contains("Confirma o cancela"))
     confirm.pressed.emit()
     screen._process(0.0)
     assert(board.state["units"][0]["pos"] == Vector2i(2, 2))
-    assert(not preview.visible and confirm.disabled)
+    assert(not preview.visible and confirm.disabled and not end_turn.disabled)
     assert(field.text.contains("AZUL: unidades 2 | sin actuar 1"))
 
     # A pending attack displays only legal authoritative damage and its target.
@@ -51,7 +57,9 @@ func _run() -> void:
     assert(board.state == before)
     assert(preview.visible and preview.text.contains("ATAQUE PREPARADO"))
     assert(preview.text.contains("dano previsto 5 HP"))
-    assert(confirm.text == "Confirmar ataque")
+    assert(confirm.text == "Confirmar ataque" and end_turn.disabled)
+    screen._end_turn()
+    assert(board.state == before and board.pending_order["kind"] == "attack")
     confirm.pressed.emit()
     screen._process(0.0)
     assert(board.state["units"][2]["hp"] == 3)
