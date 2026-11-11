@@ -42,3 +42,11 @@ Cada PR integrado tuvo su Godot 4.3 headless SUCCESS y Android debug APK export 
 
 ## Siguientes validaciones tras PR #66–#67
 La nueva versión agrupada también incorpora montañas que ocultan casillas detrás de ellas y niebla totalmente opaca para terreno nunca explorado. Probar en mapa con montañas: esconder un enemigo detrás, comprobar que no aparece en el mapa ni en ataque/previa, trasladar explorador por otro lado y confirmar que aparece al estar a la vista; comprobar que la montaña en sí es visible. Revisar esquinas diagonales y terreno forestal (bosques no bloquean visión todavía). Godot 42918936432/42919298522 SUCCESS, Android 42918936216/42919298370 SUCCESS. No hay validación real de pantalla ni firma debug persistente todavía.
+
+## 2026-11-10 — Aceptación agrupada adicional #68–#71
+- Visión diagonal bloqueada coherentemente en ambos sentidos por montañas (#68); probar con exploradores en flancos opuestos.
+- Avistamientos históricos no atacables con símbolo `?`, por bando, y eliminación al comprobar terreno vacío (#69); probar en pantalla pequeña sin confundir el símbolo con unidad enemiga real.
+- IA se retira con vida críticamente baja solo hacia otros aliados bajo amenaza letal visible (#70); verificar que no huya indefinidamente ni bloquee el turno.
+- IA investiga última posición observada sin conocer ubicación actual oculta (#71); probar con enemigo moviéndose tras perder visión.
+- Test CI de 12 batallas detectó y corrigió un bloqueo de la primera versión de retirada (42935578821 FAIL, versión corregida Godot 42936080460 PASS). Códigos y compilaciones Android finales de los cuatro PR aprobados (ver TESTS.md).
+- El usuario prefiere acumular mejoras antes de recibir APK; todavía **NO ENTREGADA NI VALIDADA EN TELÉFONO** esta ronda.
