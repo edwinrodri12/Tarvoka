@@ -26,7 +26,7 @@ static func field_summary(state: Dictionary) -> String:
             enemies += 1
             if not fog or visible.has(unit.get("pos", Vector2i(-1, -1))):
                 contacts += 1
-    var friendly := "AZUL: %d unidades, %d listas | HP %d" % [allies, ready, ally_hp]
+    var friendly := "AZUL: unidades %d | sin actuar %d | HP %d" % [allies, ready, ally_hp]
     if fog:
         return friendly + "\nContactos enemigos visibles: %d (otros pueden estar ocultos)" % contacts
     return friendly + "\nROJO: %d unidades activas" % enemies
