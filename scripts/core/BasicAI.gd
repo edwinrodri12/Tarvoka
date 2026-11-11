@@ -8,7 +8,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
-# Fog of war does not exist yet: this is NOT a fog-aware AI implementation.
+# Fog decisions use only currently visible units and previously explored terrain.
 static func step(state: Dictionary) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     if not state.has("units") or not state["units"] is Array or not state.has("terrain"):
@@ -66,6 +66,17 @@ static func step(state: Dictionary) -> Dictionary:
             if score > hit_score:
                 hit_score = score
                 best_hit = {"unit_id": str(unit["id"]), "enemy_id": str(enemy["id"])}
+    # Guaranteed eliminations always take precedence. Otherwise preserve a
+    # critically wounded soldier if a visible enemy can defeat it next turn
+    # and a genuinely safe, currently visible destination exists.
+    if not best_hit.is_empty() and hit_score >= 1000:
+        var finishing_hit: Dictionary = Session.attack(state, best_hit["unit_id"], best_hit["enemy_id"])
+        if finishing_hit.get("valid", false):
+            finishing_hit["action"] = "attack"
+            return finishing_hit
+    var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends, enemies, occupied)
+    if withdrawal.get("valid", false):
+        return withdrawal
     if not best_hit.is_empty():
         var hit: Dictionary = Session.attack(state, best_hit["unit_id"], best_hit["enemy_id"])
         if hit.get("valid", false):
@@ -118,6 +129,73 @@ static func step(state: Dictionary) -> Dictionary:
             moved["destination"] = best_cell
             return moved
     return idle
+
+# Defensive AI is intentionally limited: only a unit that a *visible*
+# enemy can immediately kill is eligible, and only if it can retreat beyond
+# all visible adjacent attack threats. This never reads hidden enemy data.
+static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var idle := {"valid": false}
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state, int(state.get("faction", -1))) if fog else {}
+    var best_id := ""
+    var best_cell := Vector2i(-1, -1)
+    var best_score := -999999
+    for ally in friends:
+        var hp: int = int(ally.get("hp", 0))
+        if hp <= 0 or hp > 3:
+            continue
+        var threatened := false
+        for enemy in enemies:
+            if _distance(ally["pos"], enemy["pos"]) != 1:
+                continue
+            var incoming: Dictionary = Combat.resolve(
+                int(enemy.get("hp", 0)), hp,
+                int(enemy.get("attack", 0)), int(ally.get("defense", 0)),
+                int(ally.get("cover", 0))
+            )
+            if incoming.get("valid", false) and incoming.get("defeated", false):
+                threatened = true
+                break
+        if not threatened:
+            continue
+        # Withdraw only towards friendly support, never flee endlessly
+        # across an empty battlefield.
+        var support: Array = []
+        for candidate in knowledge["units"]:
+            if candidate is Dictionary and int(candidate.get("hp", 0)) > 0 and int(candidate.get("faction", -1)) == int(ally["faction"]) and str(candidate.get("id", "")) != str(ally["id"]):
+                support.append(candidate)
+        if support.is_empty():
+            continue
+        var support_before: int = _closest_enemy_distance(ally["pos"], support)
+        var blocked: Array[Vector2i] = occupied.duplicate()
+        blocked.erase(ally["pos"])
+        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blocked)
+        for destination in reachable:
+            var cell: Vector2i = destination
+            if cell == ally["pos"] or (fog and not visible.has(cell)):
+                continue
+            var nearest: int = _closest_enemy_distance(cell, enemies)
+            if nearest <= 1:
+                continue
+            var support_after: int = _closest_enemy_distance(cell, support)
+            # Strict improvement prevents indefinite retreat oscillation.
+            if support_after >= support_before or support_after > 3:
+                continue
+            var score: int = nearest * 100 - support_after * 15 - int(reachable[cell]) * 3
+            if score > best_score:
+                best_score = score
+                best_id = str(ally["id"])
+                best_cell = cell
+    if best_id.is_empty():
+        return idle
+    var moved: Dictionary = Session.move(state, best_id, best_cell)
+    if not moved.get("valid", false):
+        return idle
+    moved["action"] = "move"
+    moved["reason"] = "retreat"
+    moved["unit_id"] = best_id
+    moved["destination"] = best_cell
+    return moved
 
 # Multi-goal reversed shortest path: from an arbitrary cell to any free
 # orthogonal cell adjacent to a living enemy. Never step through units or water.

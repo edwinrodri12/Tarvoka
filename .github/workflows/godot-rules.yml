@@ -128,6 +128,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_ai_turn_summary.gd
 
+      - name: Run defensive AI retreat and fog fairness regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_ai_retreat.gd
+
       - name: Run terrain-aware tactical AI decision tests
         shell: bash
         run: |
