@@ -135,3 +135,14 @@ Resultados de logs de run 42917319561: 12 combates terminados; Entrenamiento fog
 | #71 | Investigar avistamiento histórico sin seguir enemigo real oculto, 12 fog matches | 42936654420 SUCCESS | 42936654542 SUCCESS |
 **Error real encontrado y corregido:** primera propuesta de retirada #70 (CI run 42935578821) hizo fallar `tests/test_fog_self_play.gd:15` en el mapa Bosque de las Dos Rutas y el proceso terminó por timeout. Se prohibió huida indefinida, exigiendo acercamiento a apoyo aliado en vez de aumentar distancia al enemigo en cualquier dirección. Nueva prueba `tests/test_ai_retreat.gd` incluye escenario aislado de un soldado sin apoyo y obliga a atacar. El CI corregido completó las 12 batallas con niebla, además de todas las demás suites.
 **PENDIENTE:** UX física Android, guardar/cerrar totalmente/reabrir, rendimiento real y orientación; la exportación de una APK no prueba su uso en el teléfono. Por preferencia expresa del usuario no se entregó APK individual.
+
+## 2026-11-10 — Objetivos territoriales y calidad (PR #72–#76)
+| PR | Verificación | Godot 4.3 CI | Android ARM64 debug |
+|---|---|---|---|
+| #72 | RelayControl puro: 2 nodos simétricos, captura/recaptura, señal/victoria, entrada inválida | 42949085771 SUCCESS | 42949085873 SUCCESS |
+| #73 | Session, JSON v1 opcional, victoria con enemigos vivos, guardado fog/legacy, victoria falsa rechazada | 42949451319 SUCCESS | 42949451303 SUCCESS |
+| #74 | UI opcional confirmada, marcador no divulga dueño de objetivo no visible, scoreboard y restauración | 42949852726 SUCCESS | 42949852690 SUCCESS |
+| #75 | IA prioriza relés con rutas legales, vista filtrada de propiedad oculta, **24 partidas completas** | 42950365746 SUCCESS | 42950365816 SUCCESS |
+| #76 | Capturas y señal informadas desde estado autoritativo, mensaje correcto tras derrota por puntuación | 42950697377 SUCCESS | 42950697339 SUCCESS |
+**Métricas observadas** en test `test_relay_ai_self_play.gd`: 24 partidas completas, 15 ganadas por señal, 9 por eliminación, con los tres mapas y variaciones indicadas; ninguna partida se bloqueó ni produjo guardado inválido. Estas cifras NO prueban equilibrio competitivo estadístico, diversión ni usabilidad real. Nuevas suites `test_relay_rules.gd`, `test_relay_session.gd`, `test_relay_ui.gd`, `test_relay_ai.gd`, `test_relay_ai_self_play.gd`, `test_relay_feedback.gd`.
+**NO REALIZADO:** prueba táctil y de rendimiento en móvil Android tras estas modificaciones, alternar modos físicamente, instalar encima de APK con firma diferente, cerrar/apagar la app y restaurar con archivos reales, juego humano completo por señales. Debe quedar como puerta pendiente.
