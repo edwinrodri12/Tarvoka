@@ -68,6 +68,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_tactical_hints.gd
 
+      - name: Run fair relay defense and counterattack tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_defense.gd
+
       - name: Run relay turn feedback and end-of-match message regression
         shell: bash
         run: |
