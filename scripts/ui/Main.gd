@@ -30,6 +30,7 @@ var sidebar: PanelContainer
 var result_banner: PanelContainer
 var result_title: Label
 var result_detail: Label
+var _result_style: StyleBoxFlat
 
 func _ready() -> void:
     var backdrop := ColorRect.new()
@@ -122,13 +123,13 @@ func _ready() -> void:
     # Always visible after a terminal result, without blocking the final board.
     result_banner = PanelContainer.new()
     result_banner.visible = false
-    var result_style := StyleBoxFlat.new()
-    result_style.bg_color = Color(0.10, 0.32, 0.20)
-    result_style.content_margin_left = 14
-    result_style.content_margin_right = 14
-    result_style.content_margin_top = 13
-    result_style.content_margin_bottom = 13
-    result_banner.add_theme_stylebox_override("panel", result_style)
+    _result_style = StyleBoxFlat.new()
+    _result_style.bg_color = Color(0.10, 0.32, 0.20)
+    _result_style.content_margin_left = 14
+    _result_style.content_margin_right = 14
+    _result_style.content_margin_top = 13
+    _result_style.content_margin_bottom = 13
+    result_banner.add_theme_stylebox_override("panel", _result_style)
     panel.add_child(result_banner)
     var result_column := VBoxContainer.new()
     result_column.add_theme_constant_override("separation", 5)
@@ -337,6 +338,10 @@ func _process(_delta: float) -> void:
     cancel_button.disabled = board.selected_id.is_empty()
     confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
+    # A defeat must not appear inside the same green victory panel.
+    var result_tint := Color(0.44, 0.14, 0.16) if winner == 1 else Color(0.10, 0.32, 0.20)
+    if _result_style.bg_color != result_tint:
+        _result_style.bg_color = result_tint
     if winner == 0:
         _update_text(result_title, "VICTORIA")
         var victory_mode := "Control territorial asegurado." if _is_relay_win(winner) else "Objetivo cumplido."
