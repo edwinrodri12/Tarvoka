@@ -36,9 +36,6 @@ static func step(state: Dictionary) -> Dictionary:
             enemies.append(unit)
     if friends.is_empty():
         return idle
-    if enemies.is_empty():
-        # Search only previously unseen terrain: never home in on hidden units.
-        return _reconnoiter(state, knowledge, friends, occupied) if Visibility.enabled(state) else idle
     friends.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
     enemies.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
 
@@ -82,6 +79,14 @@ static func step(state: Dictionary) -> Dictionary:
         if hit.get("valid", false):
             hit["action"] = "attack"
             return hit
+
+    # A signal-relay match offers an alternative strategic objective.
+    # Prioritize reaching a neutral or opposing relay after immediate combat.
+    var objective_action: Dictionary = _advance_relay(state, knowledge, friends, occupied)
+    if objective_action.get("valid", false):
+        return objective_action
+    if enemies.is_empty():
+        return _reconnoiter(state, knowledge, friends, occupied) if Visibility.enabled(state) else idle
 
     # Pick the destination that meaningfully reduces route cost toward a cell
     # adjacent to an enemy. Reverse Dijkstra accounts for water and terrain
@@ -253,6 +258,86 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
     moved["unit_id"] = best_id
     moved["destination"] = best_cell
     return moved
+
+# Objective AI: non-omniscient weighted path to the exact relay tile.
+# The world map outside explored vision is masked in `knowledge`, and
+# enemy-held nodes outside line-of-sight carry owner=-2 (unknown).
+static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var idle := {"valid": false}
+    if not knowledge.get("control") is Dictionary:
+        return idle
+    var faction: int = int(state["faction"])
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if Visibility.enabled(state) else {}
+    var best_score := -999999
+    var best_id := ""
+    var best_cell := Vector2i(-1, -1)
+    for unit in friends:
+        var blocked: Array[Vector2i] = occupied.duplicate()
+        blocked.erase(unit["pos"])
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)
+        for relay in knowledge["control"]["nodes"]:
+            if int(relay["owner"]) == faction:
+                continue
+            var target: Vector2i = relay["pos"]
+            if target in blocked:
+                continue # No teleporting onto an occupied relay.
+            var route: Dictionary = _route_to_relay(knowledge["terrain"], target, blocked)
+            var current_cost: int = int(route.get(unit["pos"], 999999))
+            if current_cost >= 999999 or current_cost == 0:
+                continue
+            for destination in reachable:
+                var cell: Vector2i = destination
+                if cell == unit["pos"] or (Visibility.enabled(state) and not visible.has(cell)):
+                    continue
+                if not route.has(cell) or int(route[cell]) >= current_cost:
+                    continue
+                var score: int = 100000 - int(route[cell]) * 110 - int(reachable[cell]) * 3
+                if cell == target:
+                    score += 50000
+                if score > best_score:
+                    best_score = score
+                    best_id = str(unit["id"])
+                    best_cell = cell
+    if best_id.is_empty():
+        return idle
+    var order: Dictionary = Session.move(state, best_id, best_cell)
+    if not order.get("valid", false):
+        return idle
+    order["action"] = "move"
+    order["reason"] = "relay"
+    order["unit_id"] = best_id
+    order["destination"] = best_cell
+    return order
+
+# Reverse Dijkstra: forward movement pays the cost of the entered tile.
+# Bounded by board dimensions; no heuristic path through impassable unknowns.
+static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vector2i]) -> Dictionary:
+    var distances: Dictionary = {}
+    if not Rules.inside(target) or target in blocked or terrain.size() != Rules.HEIGHT:
+        return distances
+    for row in terrain:
+        if not row is Array or row.size() != Rules.WIDTH:
+            return distances
+    if Rules.movement_cost(str(terrain[target.y][target.x])) < 0:
+        return distances
+    distances[target] = 0
+    var queue: Array[Vector2i] = [target]
+    var cursor := 0
+    while cursor < queue.size():
+        var current: Vector2i = queue[cursor]
+        cursor += 1
+        var enter_cost: int = Rules.movement_cost(str(terrain[current.y][current.x]))
+        for direction in Rules.DIRECTIONS:
+            var previous: Vector2i = current + direction
+            if not Rules.inside(previous) or previous in blocked:
+                continue
+            if Rules.movement_cost(str(terrain[previous.y][previous.x])) < 0:
+                continue
+            var proposed: int = int(distances[current]) + enter_cost
+            if not distances.has(previous) or proposed < int(distances[previous]):
+                distances[previous] = proposed
+                queue.append(previous)
+    return distances
 
 static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i]) -> Dictionary:
     var distances: Dictionary = {}
