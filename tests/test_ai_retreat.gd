@@ -17,7 +17,8 @@ func _initialize() -> void:
     # losing the unit next turn. Movement is still a real legal Session action.
     var units := [
         {"id":"A","faction":0,"hp":2,"pos":Vector2i(3,3),"move_points":3,"attack":2,"defense":0,"cover":0,"acted":false},
-        {"id":"X","faction":1,"hp":10,"pos":Vector2i(4,3),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false}
+        {"id":"X","faction":1,"hp":10,"pos":Vector2i(4,3),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
+        {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,3),"move_points":3,"attack":3,"defense":0,"cover":0,"acted":false}
     ]
     var state: Dictionary = Session.start(units, terrain)
     var unchanged: Dictionary = state.duplicate(true)
@@ -33,6 +34,12 @@ func _initialize() -> void:
     assert(absi(new_cell.x - 4) + absi(new_cell.y - 3) > 1)
     assert(state == unchanged)
     assert(AI.step(state)["destination"] == escaped["destination"]) # Deterministic.
+
+    # A lone critically hurt fighter must not kite its opponent forever.
+    var solo: Array = [units[0].duplicate(true), units[1].duplicate(true)]
+    var lone_state: Dictionary = Session.start(solo, terrain)
+    var solo_action: Dictionary = AI.step(lone_state)
+    assert(solo_action["valid"] and solo_action["action"] == "attack")
 
     # A lethal strike remains better than retreating from a counter-threat.
     units[0]["attack"] = 10
