@@ -312,22 +312,37 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
                 if cell == unit["pos"] or not reachable.has(cell) or not visible.has(cell):
                     continue
                 var discovery := 0
+                var sweep := 0
                 for dy in range(maxi(0, cell.y - radius), mini(Rules.HEIGHT - 1, cell.y + radius) + 1):
                     for dx in range(maxi(0, cell.x - radius), mini(Rules.WIDTH - 1, cell.x + radius) + 1):
                         var unveiled := Vector2i(dx, dy)
-                        if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius and not explored.has(unveiled):
-                            discovery += 1
+                        if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius:
+                            if not explored.has(unveiled):
+                                discovery += 1
+                            elif not visible.has(unveiled):
+                                # No enemies, discovery or remembered lead?
+                                # Sweep previously explored but currently unseen
+                                # ground, rather than idle after scouts die.
+                                sweep += 1
                 var investigation := 0
                 for enemy_id in sightings:
                     var last_seen: Vector2i = sightings[enemy_id]
                     var improvement: int = _distance(unit["pos"], last_seen) - _distance(cell, last_seen)
                     investigation = maxi(investigation, improvement)
                 var score: int = discovery * 100 + investigation * 130 - int(reachable[cell])
-                if (discovery > 0 or investigation > 0) and score > best_score:
+                var reason := "investigate" if investigation * 130 >= discovery * 100 and investigation > 0 else "scout"
+                if discovery > 0 or investigation > 0:
+                    score += 100000 # True exploration/leads outrank patrol.
+                elif sweep > 0:
+                    score = sweep * 10 - int(reachable[cell])
+                    reason = "sweep"
+                else:
+                    continue
+                if score > best_score:
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell
-                    best_reason = "investigate" if investigation * 130 >= discovery * 100 and investigation > 0 else "scout"
+                    best_reason = reason
     if best_id.is_empty():
         return idle
     var moved: Dictionary = Session.move(state, best_id, best_cell)
