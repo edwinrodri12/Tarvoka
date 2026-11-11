@@ -80,3 +80,10 @@ La próxima APK agrupada incluirá **mover y atacar en el mismo turno** (sin mov
 
 ## 2026-11-11 — Infraestructura táctica adicional #97
 La IA contempla posiciones de tiro dentro de un **alcance mínimo/máximo propio** y calcula retiradas fuera de amenazas observadas de mayor distancia. No modifica todavía el conjunto de soldados de prueba (alcance 1–1) ni introduce artillería. Godot `43110595866` PASS, Android `43110595813` PASS; pruebas físicas y firma persistente siguen pendientes. La futura introducción de roles a distancia exigirá contramedidas, IA equilibrada y prueba de claridad visual/táctil.
+
+## 2026-11-11 — Nueva fase incluida en próxima APK agrupada (#99–#101)
+- **Nueva partida → Formación de unidades → Experimental** para jugar con 5 clases distintas por bando. Predeterminado sigue siendo **Clásico**. La selección solo se aplica tras confirmación de nueva partida.
+- Guardia (equilibrado), Rastreador (visión 5, movilidad 4, +3 contra Lanzador), Baluarte (HP12/DEF2), Rompedor (+4 contra Baluarte) y Lanzador (ataque solo a distancia exacta de 2 casillas). El panel de unidad explica los roles/bonificaciones; el tablero marca su distintivo sin depender solo del color.
+- Todas las clases funcionan con mover+atacar en un turno, niebla opcional, relés o eliminación y guardado JSON v1. **Entrenamiento** reduce HP/ataque del enemigo, **Simétrico** los iguala.
+- **QA físico solicitado:** seleccionar experimental, probar contramedidas con previsualización, el Lanzador no puede disparar adyacente, conservar ataque después de mover, comprobar IA rival, fog, ambas condiciones de victoria, guardado manual y recuperación tras cerrar app; cambiar a clásico. Probar legibilidad en horizontal/vertical, lentitud y temperatura.
+- **No prometer equilibrio:** 12 IA×IA completadas, ganó primer jugador en las 12; tarea de balance prioritaria. No confundir Godot/Android CI PASS con QA en el teléfono. Firma persistente requiere configuración externa segura.
