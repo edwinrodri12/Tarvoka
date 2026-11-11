@@ -246,3 +246,5 @@
 - [ ] **QA Android acumulado obligatorio**: diseño, gestos, persistencia al cerrar/reabrir, confirmaciones, resultado, relés, defensa IA y rendimiento. PR CI verde no sustituye el teléfono.
 
 - [ ] Verificar en CI el desglose de victorias por relés según iniciativa y ocho partidas completas por mapa; no extrapolar equilibrio de 24 duelos deterministas. Prueba en Android físico: NO EJECUTADO.
+
+- [ ] Revisar métricas por mapa, niebla y balance de 24 partidas IA×IA tras CI; no interpretar muestra determinista como equilibrio competitivo. QA Android físico sigue NO EJECUTADO.
