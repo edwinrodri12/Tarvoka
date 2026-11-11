@@ -244,3 +244,5 @@
 - [x] **P0 firma Android — infraestructura preparada**: workflow de compilación manual de `main` puede usar clave persistente protegida por tres secretos, mientras PR genera key efímera (#86).
 - [ ] **Firma persistente ACTIVADA / update-in-place:** aún requiere que el propietario configure y custodie los secretos, compile manualmente dos veces, compare huella SHA-256 e instale sobre otra build estable en un Android físico sin perder guardados. No considerar cerrado P0-09 hasta entonces.
 - [ ] **QA Android acumulado obligatorio**: diseño, gestos, persistencia al cerrar/reabrir, confirmaciones, resultado, relés, defensa IA y rendimiento. PR CI verde no sustituye el teléfono.
+
+- [ ] Verificar en CI el desglose de victorias por relés según iniciativa y ocho partidas completas por mapa; no extrapolar equilibrio de 24 duelos deterministas. Prueba en Android físico: NO EJECUTADO.
