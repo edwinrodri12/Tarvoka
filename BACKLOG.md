@@ -248,3 +248,11 @@
 - [ ] Verificar en CI el desglose de victorias por relés según iniciativa y ocho partidas completas por mapa; no extrapolar equilibrio de 24 duelos deterministas. Prueba en Android físico: NO EJECUTADO.
 
 - [ ] Revisar métricas por mapa, niebla y balance de 24 partidas IA×IA tras CI; no interpretar muestra determinista como equilibrio competitivo. QA Android físico sigue NO EJECUTADO.
+
+## 2026-11-11 — Error de acción por movimiento corregido #92
+- [x] **Una unidad puede mover y atacar en el mismo turno** si el blanco es visible y está en su alcance de ataque; no puede mover dos veces ni atacar dos veces. Puede atacar sin mover.
+- [x] Distancias independientes: movimiento `move_points`, ataque `attack_min_range`/`attack_range` opcional (soldados actuales 1–1); reglas/hints/IA y persistencia coherentes con v1.
+- [x] Flujo móvil: confirmar movimiento mantiene seleccionada la unidad si aparece un objetivo legal, luego se prepara y confirma ataque. IA puede ejecutar las dos acciones legalmente.
+- [x] Godot `43100988560` PASS, Android `43100988685` PASS; test nuevo de fog, AI, móvil, guardado y límites, más simulaciones previas.
+- [ ] **QA teléfono**: probar movimiento y ataque en un mismo turno, movimiento sin enemigo visible, cambio a otra unidad, cancelación, niebla, guardado a mitad de turno y reapertura, IA en Android. No marcar probado físicamente hasta recibir evidencia.
+- [ ] Reexaminar **balance territorial**: el cambio de regla modifica fundamentalmente los resultados de simulaciones, por lo que no se deben seguir utilizando cifras anteriores para balance actual.
