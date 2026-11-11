@@ -82,4 +82,8 @@ static func _run_match(scenario_id: int, first_faction: int, symmetric: bool) ->
         state = ended["state"]
         phases += 1
     assert(int(state["winner"]) == Turns.winner(state["units"]))
+    if int(state["winner"]) == -1:
+        print("FOG STALEMATE DIAGNOSTIC map=%d first=%d symmetric=%s phases=%d actions=%d faction=%d units=%s" % [
+            scenario_id, first_faction, str(symmetric), phases, total_actions, int(state["faction"]), str(state["units"])
+        ])
     return {"won": int(state["winner"]) in [0, 1], "winner": int(state["winner"]), "turns": phases, "actions": total_actions}

@@ -75,6 +75,14 @@ static func step(state: Dictionary) -> Dictionary:
     var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends, enemies, occupied)
     if withdrawal.get("valid", false):
         return withdrawal
+
+    # Moving no longer spends an attack. Set up a guaranteed elimination
+    # *this turn* before wasting that opportunity on a nonlethal hit or relay
+    # race. Use only observed enemies and terrain known to this faction.
+    var finish_setup: Dictionary = _advance_finishing_hit(state, knowledge, friends, enemies, occupied)
+    if finish_setup.get("valid", false):
+        return finish_setup
+
     if not best_hit.is_empty():
         var hit: Dictionary = Session.attack(state, best_hit["unit_id"], best_hit["enemy_id"])
         if hit.get("valid", false):
@@ -144,6 +152,64 @@ static func step(state: Dictionary) -> Dictionary:
             moved["destination"] = best_cell
             return moved
     return idle
+
+# Tactical one-step lookahead for a guaranteed elimination:
+# use the legitimate move action and then check if the already observed
+# target remains visible and attackable. Planning never reads a hidden
+# opponent's position, attributes or map terrain.
+static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var none := {"valid": false}
+    if enemies.is_empty():
+        return none
+    var faction: int = int(state["faction"])
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
+    var best_score := -999999
+    var best_order: Dictionary = {}
+    for ally in friends:
+        if not Turns.can_move(ally, faction):
+            continue
+        var blockers: Array[Vector2i] = occupied.duplicate()
+        blockers.erase(ally["pos"])
+        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blockers)
+        for enemy in enemies:
+            var preview: Dictionary = Combat.resolve(
+                int(ally.get("hp", 0)), int(enemy.get("hp", 0)),
+                int(ally.get("attack", 0)), int(enemy.get("defense", 0)),
+                int(enemy.get("cover", 0))
+            )
+            if not preview.get("valid", false) or not preview.get("defeated", false):
+                continue
+            for y in range(Rules.HEIGHT):
+                for x in range(Rules.WIDTH):
+                    var cell := Vector2i(x, y)
+                    if cell == ally["pos"] or not reachable.has(cell) or (fog and not visible.has(cell)):
+                        continue
+                    var attacker: Dictionary = ally.duplicate(true)
+                    attacker["pos"] = cell
+                    if not Turns.in_attack_range(attacker, enemy):
+                        continue
+                    var score: int = 100000 + int(enemy.get("attack", 0)) * 10 - int(reachable[cell])
+                    if score <= best_score:
+                        continue
+                    # State transition is authoritative; no simulated
+                    # attack is applied, and no speculative discovery is
+                    # returned to the caller or used on other candidates.
+                    var proposed: Dictionary = Session.move(state, str(ally["id"]), cell)
+                    if not proposed.get("valid", false):
+                        continue
+                    if fog and not Visibility.is_unit_visible(proposed["state"], faction, str(enemy["id"])):
+                        continue
+                    best_score = score
+                    best_order = proposed
+                    best_order["unit_id"] = str(ally["id"])
+                    best_order["target_id"] = str(enemy["id"])
+                    best_order["destination"] = cell
+    if best_order.is_empty():
+        return none
+    best_order["action"] = "move"
+    best_order["reason"] = "finish_setup"
+    return best_order
 
 # Defensive AI is intentionally limited: only a unit that a *visible*
 # enemy can immediately kill is eligible, and only if it can retreat beyond
@@ -246,22 +312,37 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
                 if cell == unit["pos"] or not reachable.has(cell) or not visible.has(cell):
                     continue
                 var discovery := 0
+                var sweep := 0
                 for dy in range(maxi(0, cell.y - radius), mini(Rules.HEIGHT - 1, cell.y + radius) + 1):
                     for dx in range(maxi(0, cell.x - radius), mini(Rules.WIDTH - 1, cell.x + radius) + 1):
                         var unveiled := Vector2i(dx, dy)
-                        if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius and not explored.has(unveiled):
-                            discovery += 1
+                        if absi(unveiled.x - cell.x) + absi(unveiled.y - cell.y) <= radius:
+                            if not explored.has(unveiled):
+                                discovery += 1
+                            elif not visible.has(unveiled):
+                                # No enemies, discovery or remembered lead?
+                                # Sweep previously explored but currently unseen
+                                # ground, rather than idle after scouts die.
+                                sweep += 1
                 var investigation := 0
                 for enemy_id in sightings:
                     var last_seen: Vector2i = sightings[enemy_id]
                     var improvement: int = _distance(unit["pos"], last_seen) - _distance(cell, last_seen)
                     investigation = maxi(investigation, improvement)
                 var score: int = discovery * 100 + investigation * 130 - int(reachable[cell])
-                if (discovery > 0 or investigation > 0) and score > best_score:
+                var reason := "investigate" if investigation * 130 >= discovery * 100 and investigation > 0 else "scout"
+                if discovery > 0 or investigation > 0:
+                    score += 100000 # True exploration/leads outrank patrol.
+                elif sweep > 0:
+                    score = sweep * 10 - int(reachable[cell])
+                    reason = "sweep"
+                else:
+                    continue
+                if score > best_score:
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell
-                    best_reason = "investigate" if investigation * 130 >= discovery * 100 and investigation > 0 else "scout"
+                    best_reason = reason
     if best_id.is_empty():
         return idle
     var moved: Dictionary = Session.move(state, best_id, best_cell)
