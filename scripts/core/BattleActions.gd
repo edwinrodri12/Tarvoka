@@ -2,7 +2,7 @@ extends RefCounted
 class_name TarvokaBattleActions
 
 const Turns = preload("res://scripts/core/Turns.gd")
-const Combat = preload("res://scripts/core/Combat.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 
 # Pure adjacent attack action; never mutates the supplied unit array.
 static func attack(units: Array, attacker_id: String, defender_id: String, faction: int) -> Dictionary:
@@ -43,7 +43,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         return {"valid": false, "units": units.duplicate(true)}
     if not Turns.in_attack_range(attacker, defender):
         return {"valid": false, "units": units.duplicate(true)}
-    var combat: Dictionary = Combat.resolve(int(attacker.get("hp", 0)), int(defender.get("hp", 0)), int(attacker.get("attack", 0)), int(defender.get("defense", 0)), int(defender.get("cover", 0)))
+    var combat: Dictionary = Roles.resolve(attacker, defender)
     if not combat["valid"]:
         return {"valid": false, "units": units.duplicate(true)}
     defender["hp"] = combat["defender_hp"]

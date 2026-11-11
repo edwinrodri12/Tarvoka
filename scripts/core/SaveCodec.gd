@@ -8,6 +8,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -188,6 +189,8 @@ static func _valid_state(state: Dictionary) -> bool:
         if not unit.get("acted") is bool:
             return false
         if unit.has("moved") and not unit["moved"] is bool:
+            return false
+        if unit.has("role") and (not unit["role"] is String or not Roles.valid(unit["role"])):
             return false
         # Optional fields retain compatibility with every v1 save: missing
         # values mean infantry-style melee range 1..1 and unused movement.

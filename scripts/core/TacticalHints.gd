@@ -2,7 +2,7 @@ extends RefCounted
 class_name TarvokaTacticalHints
 
 const Rules = preload("res://scripts/core/Rules.gd")
-const Combat = preload("res://scripts/core/Combat.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
@@ -62,11 +62,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if not Turns.in_attack_range(unit, enemy):
             continue
-        var result: Dictionary = Combat.resolve(
-            int(unit.get("hp", 0)), int(enemy.get("hp", 0)),
-            int(unit.get("attack", 0)), int(enemy.get("defense", 0)),
-            int(enemy.get("cover", 0))
-        )
+        var result: Dictionary = Roles.resolve(unit, enemy)
         if result.get("valid", false):
             attacks[enemy_pos] = {"id": str(enemy["id"]), "damage": int(result["damage"]), "defeated": bool(result["defeated"])}
     return {"moves": moves, "attacks": attacks}
@@ -119,10 +115,12 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                     var kind: String = str(terrain[location.y][location.x])
                     var move_cost: int = Rules.movement_cost(kind)
                     if move_cost >= 0:
-                        var role := "Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado"
+                        var role: String = Roles.label(str(unit.get("role", ""))) if unit.has("role") else ("Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado")
                         text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [
                             role, terrain_name(kind), move_cost, int(unit.get("cover", 0))
                         ]
+        if Roles.valid(str(unit.get("role", ""))):
+            text += "\n" + Roles.counter_description(str(unit["role"]))
         if not hints["attacks"].is_empty():
             var damages: PackedStringArray = []
             for target in hints["attacks"].values():

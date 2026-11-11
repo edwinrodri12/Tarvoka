@@ -3,7 +3,7 @@ class_name TarvokaBasicAI
 
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
-const Combat = preload("res://scripts/core/Combat.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
@@ -48,11 +48,7 @@ static func step(state: Dictionary) -> Dictionary:
         for enemy in enemies:
             if not Turns.in_attack_range(unit, enemy):
                 continue
-            var preview: Dictionary = Combat.resolve(
-                int(unit.get("hp", 0)), int(enemy.get("hp", 0)),
-                int(unit.get("attack", 0)), int(enemy.get("defense", 0)),
-                int(enemy.get("cover", 0))
-            )
+            var preview: Dictionary = Roles.resolve(unit, enemy)
             if not preview.get("valid", false):
                 continue
             var damage := int(preview["damage"])
@@ -174,11 +170,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
         blockers.erase(ally["pos"])
         var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blockers)
         for enemy in enemies:
-            var preview: Dictionary = Combat.resolve(
-                int(ally.get("hp", 0)), int(enemy.get("hp", 0)),
-                int(ally.get("attack", 0)), int(enemy.get("defense", 0)),
-                int(enemy.get("cover", 0))
-            )
+            var preview: Dictionary = Roles.resolve(ally, enemy)
             if not preview.get("valid", false) or not preview.get("defeated", false):
                 continue
             for y in range(Rules.HEIGHT):
@@ -232,11 +224,7 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
         for enemy in enemies:
             if not Turns.in_attack_range(enemy, ally):
                 continue
-            var incoming: Dictionary = Combat.resolve(
-                int(enemy.get("hp", 0)), hp,
-                int(enemy.get("attack", 0)), int(ally.get("defense", 0)),
-                int(ally.get("cover", 0))
-            )
+            var incoming: Dictionary = Roles.resolve(enemy, ally)
             if incoming.get("valid", false) and incoming.get("defeated", false):
                 threatened = true
                 break
