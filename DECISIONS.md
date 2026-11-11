@@ -117,3 +117,5 @@ Compatibilidad: el estado `control` sólo aparece opcionalmente en partidas nuev
 - **Transparencia táctica**: mostrar costo de movimiento del terreno y cobertura real de unidad, no efectos de defensa inventados. La información oculta por niebla jamás se divulga vía HUD.
 - **Control móvil**: evitar perder órdenes no confirmadas deshabilitando terminar turno en ese estado. La cancelación existente permite descartarlas expresamente, sin pop-ups adicionales.
 - **Firma Android**: claves privadas se guardan fuera del repositorio como GitHub Secrets; PR usan certificado efímero. Solo entrega manual desde main podrá firmar estable tras configuración; no confundir pipeline verde con firma activa o update-in-place comprobado.
+
+2026-11-11 — Propuesta de instrumentación de balance: desglosar victorias territoriales por bando que inicia y partidas completadas por mapa en las 24 simulaciones existentes. No modificar la IA ni aplicar un umbral de 50/50; una muestra determinista pequeña no justifica cambios de balance. Requiere CI antes de merge y QA físico pendiente.
