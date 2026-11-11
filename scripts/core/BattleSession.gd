@@ -5,12 +5,17 @@ const MoveActions = preload("res://scripts/core/MoveActions.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Relays = preload("res://scripts/core/RelayControl.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
+    if relay_mode:
+        var control: Dictionary = Relays.create(state["terrain"])
+        if not control.is_empty():
+            state["control"] = control
     if fog_enabled:
         state["fog_enabled"] = true
         return Visibility.update_exploration(state)
@@ -38,6 +43,12 @@ static func end_turn(state: Dictionary) -> Dictionary:
     if not _active(state):
         return {"valid": false, "state": state.duplicate(true)}
     var next: Dictionary = state.duplicate(true)
+    if next.has("control"):
+        next = Relays.finish_turn(next)
+        # A relay-score victory stops the match at the end of the scoring
+        # faction's turn; never grant the loser a bonus reply turn.
+        if int(next.get("winner", -1)) != -1:
+            return {"valid": true, "state": next}
     next["faction"] = 1 - int(state["faction"])
     next["units"] = Turns.begin_turn(state["units"], next["faction"])
     if Visibility.enabled(next):
