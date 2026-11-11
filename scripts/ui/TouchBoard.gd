@@ -6,12 +6,14 @@ const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
 var current_scenario_id := 0
 var symmetric_setup := false
+var specialized_roster := false
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
@@ -31,8 +33,9 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false) -> void:
     symmetric_setup = symmetric
+    specialized_roster = specialized
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
     current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
@@ -43,8 +46,10 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         {"id":"X","faction":1,"hp":enemy_hp,"pos":Vector2i(8,2),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false},
         {"id":"Y","faction":1,"hp":enemy_hp,"pos":Vector2i(8,5),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false}
     ]
-    if fog_mode:
-        # Recon scouts are mirrored: mobility 4, sight 5, weaker attack 2.
+    if specialized_roster:
+        units = Roles.experimental_armies(symmetric)
+    if fog_mode and not specialized_roster:
+        # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
     state = Session.start(units, terrain, 0, fog_mode, relay_mode)
@@ -167,11 +172,16 @@ func _draw() -> void:
         else:
             var half := tile * 0.32
             draw_rect(Rect2(center - Vector2.ONE * half, Vector2.ONE * (half * 2.0)), face)
-        if str(unit["id"]) in ["S", "Z"]:
+        if str(unit["id"]) in ["S", "Z"] and not unit.has("role") or str(unit.get("role", "")) == "scout":
             draw_arc(center, tile * 0.40, 0, TAU, 24, Color(0.60, 0.94, 0.88), 2.0)
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * 0.44, 0, TAU, 32, Color.YELLOW, 3.0)
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12.0, tile * 0.30)), Color.WHITE)
+        # A second visual marker identifies the tactical role independently
+        # of faction color and unit ID; no borrowed game sprites.
+        if Roles.valid(str(unit.get("role", ""))) and tile >= 36.0:
+            var role_pos := center + Vector2(tile * 0.19, -tile * 0.14)
+            draw_string(font, role_pos, Roles.symbol(str(unit["role"])), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(11.0, tile * 0.19)), Color(1.0, 0.94, 0.65))
         # Numeric health avoids a misleading percentage: this prototype has no
         # persistent per-unit maximum-HP field yet. Hide on very small tiles.
         if tile >= 39.0:
@@ -444,6 +454,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         return false
     state = restored
     current_scenario_id = Scenarios.identify(state["terrain"])
+    specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
     pending_order.clear()
@@ -476,6 +487,7 @@ func resume_autosave() -> bool:
         return false
     state = restored
     current_scenario_id = Scenarios.identify(state["terrain"])
+    specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
     pending_order.clear()
