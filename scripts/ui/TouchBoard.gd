@@ -133,6 +133,7 @@ func _draw() -> void:
                 signal_center + Vector2(0, tile * 0.30),
                 signal_center + Vector2(-tile * 0.30, 0)
             ])
+            marker.append(marker[0])
             draw_polyline(marker, signal_color, maxf(2.0, tile * 0.055), true)
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
