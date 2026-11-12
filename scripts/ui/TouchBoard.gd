@@ -488,7 +488,7 @@ func _commit_order(order: Dictionary) -> bool:
         selected_id = ""
         var outgoing: int = int(result.get("damage",0))
         var incoming: int = int(result.get("counter_damage",0))
-        var exchange_text := "Ataque: enemigo -%d HP. Respuesta: -%d HP propios." % [outgoing,incoming]
+        var exchange_text := "Ataque: Enemigo -%d HP. Respuesta: -%d HP propios." % [outgoing,incoming]
         message = "Impacto confirmado. Municion de un solo uso consumida. " + exchange_text if not str(result.get("consumed_unit_id", "")).is_empty() else exchange_text
     return true
 
