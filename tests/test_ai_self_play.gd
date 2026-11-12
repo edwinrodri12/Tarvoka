@@ -11,7 +11,7 @@ func _initialize() -> void:
     var training_wins := [0, 0]
     var symmetric_wins := [0, 0]
     for symmetric in [false, true]:
-        for scenario_id in range(3) # Preserve original deterministic baseline; coast has its own modern tests.:
+        for scenario_id in range(3):
             for first_faction in [0, 1]:
                 var result: Dictionary = _play(scenario_id, first_faction, symmetric)
                 var winner := int(result["winner"])
