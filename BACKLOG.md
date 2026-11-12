@@ -313,3 +313,14 @@
 - [ ] Mecánicas de combustible, rearmado, municiones de un solo uso FPV/merodeadoras, guerra electrónica y transporte (luego de comprobar básico).
 - [ ] Nuevos mapas costeros y escenario con suficientes créditos para navales/aeronaves; validación de todos los escenarios en Android real, legibilidad y FPS.
 - [ ] Balance de ventaja del primer turno e IA contra humanos. Los PR nuevos son **cimientos funcionales**, NO 32 clases jugables.
+
+
+## 2026-11-12 — Prioridades verificadas al sincronizar la automatización
+- [x] Integrar la propuesta narrativa aprobada: biblia Meridian / 50 capítulos documentados, no misiones ya jugables (#127, `07dff1d`).
+- [x] Reconciliar la matriz económica de la automatización (#114) como código actual en una nueva PR validada, sin fusionar conflictos: 24 partidas + 72 experimentos de iniciativa (#129, `bd4b673`). #114 cerrada como superada.
+- [x] Medir/mapear asimetría de relés y decisiones de IA, mantener ocho facciones v0.1: #128 227 decisiones de espejo equivalentes; colores 4/4 en muestra de ocho con relés.
+- [x] Exponer quién comienza en escaramuza local/IA, permitir iniciativa roja sin doble ejecución de turno, conservar guardados modernos (#131, `5559a51`).
+- [x] Descartar cambio no sustentado: puntuación diferida en relés (#130, NO fusionada; siguió 8-0 y añadió demora) y regalos de dinero al segundo (sin efecto en 8 partidas).
+- [ ] **Alto P1 — iniciativa:** estudiar criterios de ida/vuelta y rematch equilibrado, mapas/estrategias variadas, batalla única vs torneo; el selector NO corrige por sí solo el 8-0 determinista.
+- [ ] **P0 — Android real:** confirmaciones táctiles, apertura roja, fog, relés, recursos, guardar/cerrar/reabrir, orientación, UI legible, temperatura/FPS y actualización con firma persistente gestionada fuera del repositorio.
+- [ ] **P2 futuro:** producir primero un capítulo vertical jugable y semilla de mapa reproducible; después ampliar campaña; no afirmar online, mapas aleatorios ni 50 misiones operativas.
