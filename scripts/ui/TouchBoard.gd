@@ -375,7 +375,13 @@ func resupply_selected() -> bool:
         message = "Reabastecimiento rechazado."
         return false
     state = action["state"]
-    message = "Municion y combustible recuperados (-%d creditos)." % int(action["cost"])
+    message = "Suministros: +%d municion, +%d combustible (-%d creditos)." % [
+        int(action["ammo"]), int(action["fuel"]), int(action["cost"])
+    ]
+    if int(action["cargo_ammo"]) + int(action["cargo_fuel"]) > 0:
+        message += " Camion repuesto: +%d municion, +%d combustible." % [
+            int(action["cargo_ammo"]), int(action["cargo_fuel"])
+        ]
     selected_id = ""
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
