@@ -71,7 +71,9 @@ func _initialize() -> void:
     # Diagnose, do not overclaim, initiative fairness: paired comparison
     # keeps map, first side and fog identical, changing only the objective
     # clock, and reports first-side victories independently.
-    for paired_clock in [false,true]:
+    for case in [{"paired":false,"boost":0},{"paired":true,"boost":0},{"paired":true,"boost":1},{"paired":true,"boost":2},{"paired":true,"boost":3}]:
+        var paired_clock: bool = bool(case["paired"])
+        var responder_boost: int = int(case["boost"])
         var opener_wins := 0
         var responder_wins := 0
         var draws := 0
@@ -79,7 +81,7 @@ func _initialize() -> void:
         for map_id in [0,3]:
             for fog in [false,true]:
                 for starter in [0,1]:
-                    var outcome: Dictionary = _play(map_id,fog,starter,paired_clock)
+                    var outcome: Dictionary = _play(map_id,fog,starter,paired_clock,responder_boost)
                     if int(outcome["winner"]) == -1:
                         draws += 1
                     elif int(outcome["winner"]) == starter:
@@ -88,16 +90,21 @@ func _initialize() -> void:
                         responder_wins += 1
                     phase_count += int(outcome["phases"])
         assert(opener_wins+responder_wins+draws == 8)
-        print("ROUND_BALANCE paired=%s first_wins=%d response_wins=%d ties=%d phases=%d" % [
-            str(paired_clock),opener_wins,responder_wins,draws,phase_count
+        print("ROUND_BALANCE paired=%s boost=%d first_wins=%d response_wins=%d ties=%d phases=%d" % [
+            str(paired_clock),responder_boost,opener_wins,responder_wins,draws,phase_count
         ])
-    print("PASS paired initiative: no early scoring, equal mirrored control, first/follower parity, legacy saves and 16 paired AI diagnostics")
+    print("PASS paired initiative: no early scoring, mirrored captures, legacy saves, 40 paired AI diagnostics with temporary movement compensation")
     quit(0)
 
-static func _play(map_id: int, fog: bool, first: int, paired_clock: bool) -> Dictionary:
+static func _play(map_id: int, fog: bool, first: int, paired_clock: bool, responder_boost: int = 0) -> Dictionary:
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,true,true,true)
     if not paired_clock:
         state["control"].erase("round_scoring")
+    if responder_boost > 0:
+        for unit in state["units"]:
+            if int(unit.get("faction",-1)) == 1-first:
+                unit["opening_move_bonus"] = responder_boost
+    assert(not Codec.encode(state).is_empty())
     var phases := 0
     for phase in range(24):
         if int(state["winner"]) != -1:
@@ -115,6 +122,11 @@ static func _play(map_id: int, fog: bool, first: int, paired_clock: bool) -> Dic
                 break
         if int(state["winner"]) != -1:
             break
+        # The extra movement is available for the responder's *first*
+        # active turn only, not as a permanent bonus across the battle.
+        if responder_boost > 0 and int(state["faction"]) == 1-first:
+            for unit in state["units"]:
+                unit.erase("opening_move_bonus")
         var end: Dictionary = Session.end_turn(state)
         assert(end["valid"])
         state = end["state"]
