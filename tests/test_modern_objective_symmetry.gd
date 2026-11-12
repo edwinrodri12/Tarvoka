@@ -73,5 +73,24 @@ func _initialize() -> void:
             assert(destination.x > 1 if opener == 0 else destination.x < 8)
             assert(Codec.decode(Codec.encode(plan["state"])) == plan["state"])
         assert(mirrored_moves[1] == Vector2i(Rules.WIDTH-1-mirrored_moves[0].x,mirrored_moves[0].y))
+    # Explicit tie-break invariants: equal-value movements must not choose
+    # world-left for both sides. The legal forward direction is mirrored.
+    assert(AI._prefer_cell(Vector2i(6,3),Vector2i(5,3),0))
+    assert(AI._prefer_cell(Vector2i(3,3),Vector2i(4,3),1))
+    assert(not AI._prefer_cell(Vector2i(4,3),Vector2i(3,3),0))
+    assert(not AI._prefer_cell(Vector2i(5,3),Vector2i(6,3),1))
+    var blue_roster: Array = Roles.modern_armies(true)
+    var left_order: Array = []
+    var right_order: Array = []
+    for unit in blue_roster:
+        if int(unit["faction"]) == 0:
+            left_order.append(unit)
+        else:
+            right_order.append(unit)
+    left_order.sort_custom(func(a,b): return AI._unit_before(a,b))
+    right_order.sort_custom(func(a,b): return AI._unit_before(a,b))
+    for i in range(left_order.size()):
+        assert(left_order[i]["role"] == right_order[i]["role"])
+        assert(right_order[i]["pos"] == Vector2i(9-left_order[i]["pos"].x,left_order[i]["pos"].y))
     print("PASS modern objective symmetry: all maps, facilities, rosters, 4 mirrored relays and symmetric legal scout capture")
     quit(0)
