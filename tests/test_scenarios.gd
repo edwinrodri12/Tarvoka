@@ -8,7 +8,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    assert(Scenarios.LABELS.size() == 3)
+    assert(Scenarios.LABELS.size() == 4)
     for id in range(Scenarios.LABELS.size()):
         var terrain: Array = Scenarios.terrain(id)
         assert(terrain.size() == Rules.HEIGHT)
@@ -24,8 +24,9 @@ func _run() -> void:
         var reach: Dictionary = Rules.reachable(Vector2i(1, 2), 100, terrain, [])
         assert(reach.has(Vector2i(7, 2))) # each field permits engagement
         # Prevent callers from modifying static prototypes.
-        terrain[0][0] = "water"
-        assert(Scenarios.terrain(id)[0][0] != "water")
+        var original: String = str(terrain[0][0])
+        terrain[0][0] = "mountain" if original != "mountain" else "plain"
+        assert(Scenarios.terrain(id)[0][0] == original)
     assert(Scenarios.terrain(0)[0][0] == "plain")
     assert(Scenarios.label(-1) == Scenarios.LABELS[0])
 
@@ -35,7 +36,7 @@ func _run() -> void:
     var board = main.get("board")
     var picker: OptionButton = main.get("scenario_picker")
     var dialog: ConfirmationDialog = main.get("new_game_dialog")
-    assert(picker.item_count == 3)
+    assert(picker.item_count == 4)
     assert(board.current_scenario_id == 0)
     picker.select(2)
     var before: Dictionary = board.state.duplicate(true)
