@@ -139,7 +139,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
             continue # Let the regular direct resupply action handle adjacent allies.
         for direction in Rules.DIRECTIONS:
             var staging: Vector2i = needy + direction
-            if not Rules.inside(staging) or staging in blocked or staging == origin:
+            if not Rules.inside(staging,state["terrain"]) or staging in blocked or staging == origin:
                 continue
             if fog and not known.has(staging):
                 continue
@@ -175,7 +175,7 @@ static func _compatible(domain: String, kind: String) -> bool:
 
 static func _distance_to_target(terrain: Array, target: Vector2i, blocked: Array[Vector2i], domain: String, known: Dictionary, fog: bool) -> Dictionary:
     var distances := {}
-    if not Rules.inside(target) or target in blocked:
+    if not Rules.inside(target,terrain) or target in blocked:
         return distances
     if fog and not known.has(target):
         return distances
@@ -191,7 +191,7 @@ static func _distance_to_target(terrain: Array, target: Vector2i, blocked: Array
             continue
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = cell + direction
-            if not Rules.inside(previous) or previous in blocked or (fog and not known.has(previous)):
+            if not Rules.inside(previous,terrain) or previous in blocked or (fog and not known.has(previous)):
                 continue
             if Rules.movement_cost_for(str(terrain[previous.y][previous.x]), domain) < 0:
                 continue
