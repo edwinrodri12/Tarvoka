@@ -5,6 +5,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 # Optional, fully deterministic city-and-production economy. Not a
 # timer, random drop, monetization system or external online service.
@@ -188,6 +189,8 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     var fresh: Dictionary = Roles.make_unit(id, side, factory_pos, role)
     if fresh.is_empty():
         return denied
+    if bool(next["economy"].get("modern", false)):
+        Logistics.equip(fresh)
     fresh["acted"] = true
     fresh["moved"] = true
     next["units"].append(fresh)
