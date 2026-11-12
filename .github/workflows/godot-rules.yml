@@ -56,6 +56,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_urban_economy.gd
 
+      - name: Validate all 32 modern unit definitions and legacy preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_modern_arsenal.gd
+
       - name: Validate combined-arms role profiles and authoritative counters
         shell: bash
         run: |

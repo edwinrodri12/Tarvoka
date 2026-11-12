@@ -3,6 +3,7 @@ class_name TarvokaUrbanEconomy
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 
 # Optional, fully deterministic city-and-production economy. Not a
@@ -35,7 +36,7 @@ static func create(terrain: Array) -> Dictionary:
     return economy if valid(economy, terrain) else {}
 
 static func cost(role: String) -> int:
-    return int(COSTS.get(role, -1))
+    return int(COSTS[role]) if COSTS.has(role) else Arsenal.price(role)
 
 static func income_for(economy: Dictionary, faction: int) -> int:
     if faction not in [0, 1]:
@@ -88,6 +89,11 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     var faction: int = int(state.get("faction", -1))
     if faction not in [0,1] or int(state.get("winner", -1)) != -1:
         return false
+    # New multi-domain roles require specialized producers; until those
+    # sites are wired in a following PR, a legacy ground factory cannot
+    # create a ship on dry land or an aircraft without an airbase.
+    if Arsenal.valid(role):
+        return false
     if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
         return false
     if not valid(state["economy"], state["terrain"]):
@@ -113,6 +119,8 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     if side not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos):
         return denied
     var price: int = cost(role)
+    if Arsenal.valid(role):
+        return denied
     if price <= 0 or state["units"].size() >= MAX_UNITS:
         return denied
     if not valid(state["economy"], state["terrain"]):

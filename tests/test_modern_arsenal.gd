@@ -1,0 +1,90 @@
+extends SceneTree
+
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Turns = preload("res://scripts/core/Turns.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Codec = preload("res://scripts/core/SaveCodec.gd")
+
+func _initialize() -> void:
+    assert(Roles.ORDER.size() == 5)
+    assert(Arsenal.ORDER.size() == 27)
+    var codes := {}
+    var counts := {"ground":0, "air":0, "naval":0}
+    var legacy: Dictionary = Roles.make_unit("A", 0, Vector2i(1,2), "line")
+    assert(not legacy.has("domain") and not legacy.has("target_domains"))
+    assert(Economy.cost("line") == 200 and Economy.cost("scout") == 150)
+    assert(Roles.counter_description("scout").contains("+3"))
+    assert(Roles.counter_description("piercer").contains("+4"))
+    var old: Dictionary = Session.start(Roles.experimental_armies(true),Scenarios.terrain(0),0,false,false,true)
+    assert(not Codec.encode(old).contains("domain"))
+    assert(Codec.decode(Codec.encode(old)) == old)
+
+    for role in Arsenal.ORDER:
+        assert(Arsenal.valid(role) and Roles.valid(role))
+        var profile: Dictionary = Arsenal.profile(role)
+        assert(not codes.has(Arsenal.code(role)))
+        codes[Arsenal.code(role)] = true
+        var domain: String = str(profile["domain"])
+        assert(Domains.valid_domain(domain))
+        assert(Domains.valid_targets(profile["target_domains"]))
+        counts[domain] += 1
+        assert(int(profile["cost"]) > 0 and Economy.cost(role) == int(profile["cost"]))
+        assert(not Arsenal.site(role).is_empty())
+        assert(not Roles.label(role).is_empty() and not Roles.symbol(role).is_empty())
+        var pos := Vector2i(4,3) if domain == "naval" else Vector2i(1,2)
+        var terrain: Array = Scenarios.terrain(2) if domain == "naval" else Scenarios.terrain(0)
+        var soldier: Dictionary = Roles.make_unit("B", 0, pos, role)
+        assert(soldier["domain"] == domain)
+        assert(soldier["target_domains"] == profile["target_domains"])
+        assert(soldier["hp"] == profile["hp"] and soldier["attack"] == profile["attack"])
+        assert(soldier["move_points"] == profile["move_points"] and soldier["vision"] == profile["vision"])
+        assert(soldier["attack_min_range"] == profile["attack_min_range"])
+        assert(soldier["attack_range"] == profile["attack_range"])
+        assert(soldier["acted"] == false)
+        assert(not Roles.counter_description(role).is_empty())
+        var rival: Dictionary = Roles.make_unit("X",1,Vector2i(8,4),"line")
+        var match_state: Dictionary = Session.start([soldier,rival],terrain)
+        var encoded: String = Codec.encode(match_state)
+        assert(not encoded.is_empty())
+        assert(Codec.decode(encoded) == match_state)
+        assert(Roles.is_specialized(match_state["units"]))
+        var ground_only_factory: Dictionary = Session.start([soldier,rival],terrain,0,false,false,true)
+        assert(not Economy.can_purchase(ground_only_factory,Vector2i(0,3),role))
+        assert(not Session.purchase(ground_only_factory,Vector2i(0,3),role)["valid"])
+
+    assert(codes.size() == 27)
+    assert(counts == {"ground":11,"air":8,"naval":8})
+    assert(Roles.valid("line") and Roles.valid("scout") and Roles.valid("bulwark"))
+    assert(Roles.valid("piercer") and Roles.valid("artillery"))
+    for bad_role in ["alien","spacelaser","", "orbital"]:
+        assert(not Roles.valid(bad_role))
+        assert(Roles.make_unit("Z",0,Vector2i(1,2),bad_role).is_empty())
+        assert(Economy.cost(bad_role) < 0)
+
+    # Modern mobile AA can attack a contemporary drone but not a ground tank.
+    var aa: Dictionary = Roles.make_unit("A",0,Vector2i(1,1),"mobile_aa")
+    var uav: Dictionary = Roles.make_unit("U",1,Vector2i(3,1),"uav_recon")
+    var tank: Dictionary = Roles.make_unit("T",1,Vector2i(2,1),"tank")
+    assert(Turns.in_attack_range(aa,uav))
+    assert(not Turns.in_attack_range(aa,tank))
+    assert(not Turns.in_attack_range(tank,uav))
+    assert(not Turns.in_attack_range(uav,tank))
+    var fight: Dictionary = Session.start([aa,uav,tank],Scenarios.terrain(0))
+    assert(not Session.attack(fight,"A","T")["valid"])
+    assert(Session.attack(fight,"A","U")["valid"])
+    assert(Codec.decode(Codec.encode(fight)) == fight)
+
+    # Naval troops stay in sea and match configured legal naval targets.
+    var boat: Dictionary = Roles.make_unit("P",0,Vector2i(4,3),"patrol")
+    var submarine: Dictionary = Roles.make_unit("S",1,Vector2i(5,3),"submarine")
+    assert(Turns.in_attack_range(boat,submarine))
+    var sea: Dictionary = Session.start([boat,submarine],Scenarios.terrain(2))
+    assert(Session.attack(sea,"P","S")["valid"])
+    assert(not Codec.encode(sea).is_empty())
+
+    print("PASS modern arsenal: 32 profiles, 11 new land+8 air+8 naval, 27 valid JSON, strict no premature production, combat")
+    quit(0)
