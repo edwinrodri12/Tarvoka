@@ -18,7 +18,7 @@ func _run() -> void:
     var fog: OptionButton = main.get("fog_picker")
     var relay: OptionButton = main.get("relay_picker")
     var dialog: ConfirmationDialog = main.get("new_game_dialog")
-    assert(picker != null and picker.item_count == 2)
+    assert(picker != null and picker.item_count == 3)
     board.new_game()
     picker.select(0)
     assert(not board.specialized_roster)

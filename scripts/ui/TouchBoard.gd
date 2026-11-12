@@ -7,6 +7,7 @@ const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
@@ -16,6 +17,7 @@ var state: Dictionary = {}
 var current_scenario_id := 0
 var symmetric_setup := false
 var specialized_roster := false
+var modern_roster := false
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
@@ -37,9 +39,10 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false) -> void:
     symmetric_setup = symmetric
-    specialized_roster = specialized
+    specialized_roster = specialized or modern
+    modern_roster = modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
     current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
@@ -52,11 +55,13 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     ]
     if specialized_roster:
         units = Roles.experimental_armies(symmetric)
+    if modern_roster:
+        units = Roles.modern_armies(symmetric)
     if fog_mode and not specialized_roster:
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
-    state = Session.start(units, terrain, 0, fog_mode, relay_mode, economy_mode)
+    state = Session.start(units, terrain, 0, fog_mode, relay_mode, economy_mode, modern_roster)
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     pending_order.clear()
@@ -166,7 +171,8 @@ func _draw() -> void:
             draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), Color(0.03,0.07,0.10,0.82))
             draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), city_tint, false, maxf(2.0,tile*0.065))
             if tile >= 20.0:
-                var symbol := "C" if is_town else "F"
+                var markers := {"city":"C","factory":"F","armor_plant":"B","artillery_depot":"A","drone_center":"D","airbase":"H","shipyard":"P"}
+                var symbol: String = str(markers.get(str(site["kind"]), "?"))
                 draw_string(font, center+Vector2(-tile*0.14,tile*0.12), symbol, HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(11.0,tile*0.27)), city_tint)
             if city_cell == selected_factory_pos:
                 draw_rect(Rect2(top_left,Vector2.ONE*tile),Color.YELLOW,false,3.0)
@@ -508,13 +514,13 @@ func _tap(point: Vector2) -> void:
                         owner_text = "Rojo"
                     _:
                         owner_text = "neutral"
-            if site["kind"] == "factory" and int(site["owner"]) == own_side:
+            if site["kind"] != "city" and int(site["owner"]) == own_side:
                 selected_factory_pos = cell if selected_factory_pos != cell else Vector2i(-1,-1)
                 message = "Taller seleccionado. Elige una unidad y pulsa Producir." if selected_factory_pos == cell else "Taller cancelado."
             else:
                 selected_factory_pos = Vector2i(-1,-1)
                 if site["kind"] == "city":
-                    message = "Ciudad (%s): +100 creditos/turno. Guardia o Rastreador la captura al finalizar turno." % owner_text
+                    message = "Ciudad (%s): genera ingresos al iniciar turno. Infanteria la captura al finalizar turno." % owner_text
                 else:
                     message = "Taller (%s): produce unidades para su propietario." % owner_text
             found = true
@@ -634,6 +640,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     state = restored
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
+    modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
@@ -669,6 +676,7 @@ func resume_autosave() -> bool:
     state = restored
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
+    modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
