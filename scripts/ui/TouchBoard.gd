@@ -35,6 +35,9 @@ var touch_active := false
 var touch_finger_index := -1
 var touch_cancelled := false
 const TAP_DRAG_LIMIT := 18.0
+const COMBAT_EFFECT_SECONDS := 0.55
+# Visual-only state. Never exported to save files or read by game rules.
+var combat_effects: Array[Dictionary] = []
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -69,6 +72,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     message = "Selecciona una unidad."
     last_enemy_turn_report = ""
     last_economy_report = ""
+    combat_effects.clear()
     _write_autosave(false)
     queue_redraw()
 
@@ -267,6 +271,8 @@ func _draw() -> void:
             draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
                 "HP %d" % int(unit["hp"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.16)), health_tint)
+    # Draw transient impact flashes over the battlefield, never as units.
+    _draw_combat_effects(tile, origin)
     # A question mark is deliberately NOT a unit: no HP, target preview,
     # hitbox or legal attack is created from historical sightings.
     if fog:
@@ -289,6 +295,71 @@ func _draw() -> void:
             draw_string(font, target_pos + Vector2(tile * 0.52, tile * 0.89),
                 "-%d" % dmg, HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
+
+func _process(delta: float) -> void:
+    if combat_effects.is_empty():
+        return
+    for effect in combat_effects:
+        effect["elapsed"] = float(effect["elapsed"]) + maxf(0.0, delta)
+    for i in range(combat_effects.size()-1, -1, -1):
+        if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
+            combat_effects.remove_at(i)
+    queue_redraw()
+
+func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: String, defender_id: String) -> void:
+    if attacker_id.is_empty() or defender_id.is_empty():
+        return
+    var shot_from := Vector2i(-1,-1)
+    var target := Vector2i(-1,-1)
+    var target_was_alive := false
+    for unit in before.get("units", []):
+        if not unit is Dictionary:
+            continue
+        if str(unit.get("id","")) == attacker_id:
+            shot_from = unit["pos"]
+        elif str(unit.get("id","")) == defender_id:
+            target = unit["pos"]
+            target_was_alive = int(unit.get("hp",0)) > 0
+    if target.x < 0 or not target_was_alive:
+        return
+    # Enemy fire must never expose positions or origins hidden from the human.
+    var visible: Dictionary = Visibility.visible_cells(before, 0) if Visibility.enabled(before) else {}
+    if Visibility.enabled(before) and not visible.has(target):
+        return
+    if Visibility.enabled(before) and not visible.has(shot_from):
+        shot_from = Vector2i(-1,-1)
+    var target_destroyed := false
+    for unit in result.get("state", {}).get("units", []):
+        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) <= 0:
+            target_destroyed = true
+            break
+    combat_effects.append({
+        "origin":shot_from, "target":target,
+        "elapsed":0.0, "destroyed":target_destroyed,
+        "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
+    })
+    while combat_effects.size() > 8:
+        combat_effects.pop_front()
+    queue_redraw()
+
+func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
+    for effect in combat_effects:
+        var progress: float = clampf(float(effect["elapsed"]) / COMBAT_EFFECT_SECONDS, 0.0, 1.0)
+        var alpha: float = 1.0 - progress
+        var target: Vector2i = effect["target"]
+        var center: Vector2 = board_origin + (Vector2(target) + Vector2(0.5, 0.5)) * tile
+        var radius: float = tile * (0.14 + 0.40 * progress)
+        draw_arc(center, radius, 0.0, TAU, 26,
+            Color(1.0, 0.72, 0.22, alpha), maxf(2.0, tile * 0.055))
+        draw_circle(center, tile * (0.08 + (0.12 if bool(effect["destroyed"]) else 0.04)) * alpha,
+            Color(1.0, 0.37, 0.14, alpha * 0.8))
+        var from_cell: Vector2i = effect["origin"]
+        if from_cell.x >= 0:
+            var launch: Vector2 = board_origin + (Vector2(from_cell) + Vector2(0.5, 0.5)) * tile
+            draw_line(launch, center, Color(1.0, 0.84, 0.41, alpha * 0.6), maxf(1.0, tile * 0.035))
+            if bool(effect["consumed"]):
+                draw_arc(launch, tile * (0.06 + 0.30 * progress), 0.0, TAU, 22,
+                    Color(1.0, 0.28, 0.18, alpha), maxf(2.0, tile * 0.04))
 
 func cancel_selection() -> void:
     if selected_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1):
@@ -358,7 +429,10 @@ func _commit_order(order: Dictionary) -> bool:
     if not result.get("valid", false):
         message = "Accion no permitida."
         return false
+    var prior_state: Dictionary = state
     state = result["state"]
+    if kind == "attack":
+        _record_attack_effect(prior_state, result, unit_id, enemy_id)
     selected_factory_pos = Vector2i(-1,-1)
     _write_autosave()
     var winner := int(state.get("winner", -1))
@@ -632,10 +706,13 @@ func _play_ai_turn() -> void:
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break
+        var prior_state: Dictionary = state
         var result: Dictionary = BasicAI.step(state)
         if not result.get("valid", false):
             break
         state = result["state"]
+        if str(result.get("action","")) == "attack":
+            _record_attack_effect(prior_state, result, str(result.get("attacker_id", "")), str(result.get("defender_id", "")))
         match str(result.get("action", "")):
             "move":
                 movements += 1
@@ -689,6 +766,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
@@ -725,6 +803,7 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
