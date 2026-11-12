@@ -46,6 +46,9 @@ const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
 var combat_effects: Array[Dictionary] = []
+var motion_effects: Array[Dictionary] = [] # Nonpersistent visual-only interpolation.
+var art_phase := 0.0
+var _ambient_accum := 0.0
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -86,6 +89,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     last_enemy_turn_report = ""
     last_economy_report = ""
     combat_effects.clear()
+    motion_effects.clear()
     # When the user selects Red to open a single-player battle, complete
     # precisely one real AI turn BEFORE saving the starting human state.
     # Local two-player games leave Red's opening completely manual.
@@ -139,7 +143,7 @@ static func fog_cover_color(has_explored: bool) -> Color:
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self, state, selected_id, selected_factory_pos,
-            pending_order, combat_effects, iso_zoom, iso_pan)
+            pending_order, combat_effects, iso_zoom, iso_pan, motion_effects, art_phase)
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -355,13 +359,58 @@ func _draw() -> void:
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
 
 func _process(delta: float) -> void:
-    if combat_effects.is_empty():
+    var dt: float = maxf(0.0, delta)
+    var needs_redraw := false
+    if iso_enabled:
+        art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)
+        _ambient_accum += dt
+        if _ambient_accum >= 0.12:
+            _ambient_accum = 0.0
+            needs_redraw = true
+    if not combat_effects.is_empty():
+        for effect in combat_effects:
+            effect["elapsed"] = float(effect["elapsed"]) + dt
+        for i in range(combat_effects.size()-1,-1,-1):
+            if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
+                combat_effects.remove_at(i)
+        needs_redraw = true
+    if not motion_effects.is_empty():
+        for effect in motion_effects:
+            effect["elapsed"] = float(effect["elapsed"]) + dt
+        for i in range(motion_effects.size()-1,-1,-1):
+            if float(motion_effects[i]["elapsed"]) >= 0.32:
+                motion_effects.remove_at(i)
+        needs_redraw = true
+    if needs_redraw:
+        queue_redraw()
+
+func _record_move_effect(before: Dictionary, after: Dictionary, unit_id: String) -> void:
+    if not iso_enabled or unit_id.is_empty():
         return
-    for effect in combat_effects:
-        effect["elapsed"] = float(effect["elapsed"]) + maxf(0.0, delta)
-    for i in range(combat_effects.size()-1, -1, -1):
-        if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
-            combat_effects.remove_at(i)
+    var old: Dictionary = {}
+    var current: Dictionary = {}
+    for u in before.get("units",[]):
+        if str(u.get("id","")) == unit_id:
+            old = u
+            break
+    for u in after.get("units",[]):
+        if str(u.get("id","")) == unit_id:
+            current = u
+            break
+    if old.is_empty() or current.is_empty() or old["pos"] == current["pos"]:
+        return
+    if int(old.get("faction",-1)) != 0:
+        # Do not animate a hidden enemy path; both endpoints must be known.
+        if Visibility.enabled(before) and not Visibility.visible_cells(before,0).has(old["pos"]):
+            return
+        if Visibility.enabled(after) and not Visibility.visible_cells(after,0).has(current["pos"]):
+            return
+    for i in range(motion_effects.size()-1,-1,-1):
+        if str(motion_effects[i]["id"]) == unit_id:
+            motion_effects.remove_at(i)
+    motion_effects.append({"id":unit_id,"from":old["pos"],"to":current["pos"],"elapsed":0.0})
+    while motion_effects.size() > 16:
+        motion_effects.pop_front()
     queue_redraw()
 
 func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: String, defender_id: String) -> void:
@@ -492,6 +541,8 @@ func _commit_order(order: Dictionary) -> bool:
     state = result["state"]
     if kind == "attack":
         _record_attack_effect(prior_state, result, unit_id, enemy_id)
+    elif kind == "move":
+        _record_move_effect(prior_state, state, unit_id)
     selected_factory_pos = Vector2i(-1,-1)
     _write_autosave()
     var winner := int(state.get("winner", -1))
@@ -805,6 +856,8 @@ func _play_ai_turn() -> void:
         state = result["state"]
         if str(result.get("action","")) == "attack":
             _record_attack_effect(prior_state, result, str(result.get("attacker_id", "")), str(result.get("defender_id", "")))
+        elif str(result.get("action","")) == "move":
+            _record_move_effect(prior_state, state, str(result.get("unit_id", "")))
         match str(result.get("action", "")):
             "move":
                 movements += 1

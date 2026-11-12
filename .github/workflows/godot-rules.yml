@@ -20,6 +20,15 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate thirty-two unique military silhouettes and Android preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_unit_art.gd 2>&1 | tee /tmp/tarvoka-art-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-art-test.log; then
+            echo "Unit artwork or animations emitted a Godot error"; exit 1
+          fi
+
       - name: Validate isometric projection touch gestures and unchanged battle rules
         shell: bash
         run: |
