@@ -56,6 +56,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_urban_economy.gd
 
+      - name: Test production of all 32 units from modern specialized facilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_modern_production.gd
+
+      - name: Test playable modern mode with coastal shipyard and airbase UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_modern_arsenal_ui.gd
+
       - name: Validate all 32 modern unit definitions and legacy preservation
         shell: bash
         run: |
