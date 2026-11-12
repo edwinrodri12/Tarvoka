@@ -74,7 +74,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if not Turns.in_attack_range(unit, enemy):
             continue
-        var result: Dictionary = BattleActions.preview_exchange(unit, enemy)
+        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy)
         if result.get("valid", false):
             attacks[enemy_pos] = {
                 "id": str(enemy["id"]), "damage": int(result["damage"]),
@@ -228,7 +228,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             for target in hints["attacks"].values():
                 var retaliates: int = int(target.get("counter_damage",0))
                 damages.append("%s: -%d%s" % [str(target["id"]), int(target["damage"]),
-                    " (respuesta -%d propia)" % retaliates if retaliates > 0 else " (sin respuesta)"])
+                    " (posible respuesta hasta -%d propia)" % retaliates if retaliates > 0 else " (sin respuesta prevista)"])
             text += " | Danio estimado " + ", ".join(damages)
         return text
     return "Unidad no disponible."
