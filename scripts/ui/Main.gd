@@ -6,6 +6,7 @@ const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 var board: Control
 var status_label: Label
@@ -423,6 +424,15 @@ func _process(_delta: float) -> void:
         ])
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
+    if not resupply_button.disabled:
+        var supply_order: Dictionary = Logistics.quote(board.state, board.selected_id)
+        resupply_button.text = "Recargar M+%d F+%d (%d cr.)" % [
+            int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
+        ]
+        if int(supply_order["cargo_ammo"]) + int(supply_order["cargo_fuel"]) > 0:
+            resupply_button.text = "Reponer camion (%d cr.)" % int(supply_order["cost"])
+    else:
+        resupply_button.text = "Reabastecer unidad"
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")
