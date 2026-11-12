@@ -1,5 +1,7 @@
 # TARVOKA — Catálogo militar moderno v0.1
 
+> **REVISIÓN DE REDUNDANCIAS ABIERTA (12-nov-2026):** El usuario solicitó reducir variantes repetitivas porque habrá niveles de tecnología. Ver [UNIT_ROSTER_AUDIT_V02.md](UNIT_ROSTER_AUDIT_V02.md): propuesta de **24 familias funcionales** (23 de las 32 actuales tras nueve fusiones + posible nueva logística naval), sin descartar capacidades de equipamiento. Esta tabla de 32 IDs queda como **referencia histórica y de compatibilidad**, no como cifra de clases finales que deban implementarse; no tocar estadísticas/IDs de las cinco clases ya programadas sin pruebas.
+
 Fecha: 2026-11-11. **DOCUMENTO DE DISEÑO, NO 32 CLASES PROGRAMADAS.** Identidad creativa confirmada por el usuario: tecnología militar moderna y actual, incluidos sistemas avanzados que ya existen y usan diferentes ejércitos. Drones, guerra electrónica, municiones merodeadoras, defensa antidrones y vehículos navales no tripulados SON modernos, no ciencia ficción.
 
 ## Principios
