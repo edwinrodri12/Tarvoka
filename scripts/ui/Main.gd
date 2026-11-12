@@ -8,6 +8,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
+const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 
 var board: Control
 var status_label: Label
@@ -18,6 +19,8 @@ var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
+var unit_art_gallery: AcceptDialog
+var unit_art_gallery_button: Button
 var iso_view_button: Button
 var iso_zoom_in_button: Button
 var iso_zoom_out_button: Button
@@ -120,6 +123,13 @@ func _ready() -> void:
     panel.add_child(faction_gallery_button)
     faction_gallery = FactionGallery.new()
     add_child(faction_gallery)
+    unit_art_gallery_button = Button.new()
+    unit_art_gallery_button.text = "Vista previa: 32 unidades"
+    unit_art_gallery_button.custom_minimum_size.y = 46
+    unit_art_gallery_button.pressed.connect(_open_unit_art_gallery)
+    panel.add_child(unit_art_gallery_button)
+    unit_art_gallery = UnitArtGallery.new()
+    add_child(unit_art_gallery)
 
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation", 5)
@@ -707,6 +717,10 @@ func _toggle_isometric_view() -> void:
     iso_zoom_in_button.visible = board.iso_enabled
     iso_zoom_out_button.visible = board.iso_enabled
     iso_reset_button.visible = board.iso_enabled
+
+func _open_unit_art_gallery() -> void:
+    if unit_art_gallery != null:
+        unit_art_gallery.popup_centered_ratio(0.85)
 
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
