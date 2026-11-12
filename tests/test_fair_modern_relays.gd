@@ -12,18 +12,19 @@ func _initialize() -> void:
     var red: Dictionary = Roles.make_unit("X", 1, Vector2i(8,5), "line")
     var modern: Dictionary = Session.start([blue,red],terrain,0,false,true,true,true)
     assert(modern["control"]["fair_round"] and modern["control"]["first_faction"] == 0)
+    assert(modern["control"]["round_scoring"])
     modern["control"]["target"] = 2
     var untouched: Dictionary = modern.duplicate(true)
     var first: Dictionary = Session.end_turn(modern)
     assert(first["valid"] and first["state"]["winner"] == -1)
-    assert(first["state"]["control"]["scores"] == [1,0])
+    assert(first["state"]["control"]["scores"] == [0,0])
     assert(first["state"]["faction"] == 1 and first["state"]["control"]["turns"] == 1)
     assert(Codec.decode(Codec.encode(first["state"])) == first["state"])
     assert(modern == untouched)
     var reply: Dictionary = Session.end_turn(first["state"])
     assert(reply["valid"] and reply["state"]["winner"] == -1 and reply["state"]["faction"] == 0)
     var lead: Dictionary = Session.end_turn(reply["state"])
-    assert(lead["state"]["control"]["scores"] == [2,0])
+    assert(lead["state"]["control"]["scores"] == [1,0])
     assert(lead["state"]["winner"] == -1 and lead["state"]["faction"] == 1)
     assert(Relay.score_winner(lead["state"]["control"]) == -1)
     assert(Codec.decode(Codec.encode(lead["state"])) == lead["state"])
@@ -46,7 +47,7 @@ func _initialize() -> void:
     assert(Relay.score_winner(tied["control"]) == -1)
     assert(Codec.decode(Codec.encode(tied)) == tied)
     tied = Session.end_turn(tied)["state"]
-    assert(tied["control"]["scores"] == [3,2] and tied["winner"] == -1)
+    assert(tied["control"]["scores"] == [2,2] and tied["winner"] == -1)
     assert(Codec.decode(Codec.encode(tied)) == tied)
     tied = Session.end_turn(tied)["state"]
     assert(tied["control"]["scores"] == [3,3] and tied["winner"] == -1)
@@ -67,7 +68,7 @@ func _initialize() -> void:
     assert(red_first["control"]["first_faction"] == 1)
     var red_start: Dictionary = Session.end_turn(red_first)
     assert(red_start["valid"] and red_start["state"]["winner"] == -1)
-    assert(red_start["state"]["control"]["scores"] == [0,1])
+    assert(red_start["state"]["control"]["scores"] == [0,0])
     assert(red_start["state"]["faction"] == 0)
 
     # Existing non-modern games and old saved relay formats retain their
