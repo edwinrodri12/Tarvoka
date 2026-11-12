@@ -61,17 +61,22 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
     return applied
 
 static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
-    if not _active(state):
+    if not _active(state) or not Opening.can_order(state):
         return {"valid":false, "state":state.duplicate(true)}
     var order: Dictionary = Economy.purchase(state, factory_pos, role)
-    if order.get("valid", false) and Visibility.enabled(order["state"]):
-        order["state"] = Visibility.update_exploration(order["state"])
+    if order.get("valid", false):
+        Opening.record(order["state"])
+        if Visibility.enabled(order["state"]):
+            order["state"] = Visibility.update_exploration(order["state"])
     return order
 
 static func resupply(state: Dictionary, unit_id: String) -> Dictionary:
-    if not _active(state):
+    if not _active(state) or not Opening.can_order(state):
         return {"valid":false, "state":state.duplicate(true)}
-    return Logistics.resupply(state, unit_id)
+    var action: Dictionary = Logistics.resupply(state, unit_id)
+    if action.get("valid",false):
+        Opening.record(action["state"])
+    return action
 
 static func end_turn(state: Dictionary) -> Dictionary:
     if not _active(state):
@@ -109,6 +114,7 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     var next: Dictionary = state.duplicate(true)
     next["units"] = action["units"]
     next["winner"] = Turns.winner(next["units"])
+    Opening.record(next)
     if Visibility.enabled(next):
         next = Visibility.update_exploration(next)
     var response := {"valid": true, "state": next}
