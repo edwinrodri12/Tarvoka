@@ -18,7 +18,7 @@ func _initialize() -> void:
     # Three distinct maps, both fog choices AND both starting factions
     # for each setup. Never confound fog with initiative when estimating
     # the first-player advantage.
-    for map_id in range(3) # Preserve original deterministic baseline; coast has its own modern tests.:
+    for map_id in range(3):
         for fog_on in [false,true]:
             for first_faction in [0,1]:
                 var relay_mode: bool = map_id != 0
