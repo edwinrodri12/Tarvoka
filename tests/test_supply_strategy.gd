@@ -10,7 +10,7 @@ const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
 func _initialize() -> void:
-    var tank: Dictionary = Roles.make_unit("T",0,Vector2i(0,1),"tank")
+    var tank: Dictionary = Roles.make_unit("T",0,Vector2i(1,1),"tank")
     var enemy: Dictionary = Roles.make_unit("E",1,Vector2i(9,7),"line")
     var state: Dictionary = Session.start([tank,enemy],Scenarios.terrain(0),0,false,false,true,true)
     state["units"][0]["fuel"] = 0
@@ -40,7 +40,7 @@ func _initialize() -> void:
     var dispatch: Dictionary = AI.step(return_state)
     assert(dispatch["valid"] and dispatch["action"] == "move" and dispatch["reason"] == "field_supply")
     assert(dispatch["unit_id"] == str(built["units"].back()["id"]))
-    assert(dispatch["destination"] == Vector2i(0,2))
+    assert(dispatch["destination"] == Vector2i(1,2))
     var supplied: Dictionary = AI.step(dispatch["state"])
     assert(supplied["valid"] and supplied["action"] == "resupply" and supplied["cost"] == 0)
     assert(supplied["unit_id"] == "T" and supplied["source_kind"] == "truck")
