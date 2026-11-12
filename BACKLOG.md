@@ -290,3 +290,14 @@
 - [ ] **Prueba física Android:** botón de economía, compra de unidad, ocupación/captura, cantidad de créditos y fecha de cobro, IA reclutando, guardar+cierre+reabrir, fog sin fugas, orientación y rendimiento (NO EJECUTADA).
 - [ ] Configurar firma persistente mediante secretos privados; no asegurar instalación sobre APK anterior ni conservación de saves ante desinstalar.
 - [ ] Expansión futura a edificios especializados, condiciones de victoria económica, balance de inflación y variedad de ciudades; no inventar ni anunciar mecanismos no programados.
+
+## 2026-11-11 — Catálogo militar contemporáneo: diseño cerrado v0.1
+- [x] Definido [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md) con 32 clases: 16 tierra, 8 aire, 8 mar, incluyendo drones FPV, ISR, municiones merodeadoras, dron aéreo de ataque y dron naval USV, guerra electrónica y contra-UAS.
+- [x] Separación explícita: **5 clases existentes programadas** vs **27 clases pendientes de desarrollar**; compatibilidad con la economía urbana de créditos ya integrada.
+- [ ] P0: defender los tipos de dominio/objetivo en motor, UI e IA: no permitir ataques tierra-aire o a submarinos sin capacidad específica.
+- [ ] P0: movilidad por terreno naval/aéreo, capas de ocupación y diseño de nuevos mapas con costa/puerto.
+- [ ] P1: unidades terrestres adicionales, protección antiaérea, módulos logísticos, transporte y edificios diferenciados (cuartel, fábrica, artillería, aeródromo, centro drones, astillero).
+- [ ] P1: comportamiento de drones de un solo uso, rearmado, intercepción y guerra electrónica de forma legible/limitada, compatible con niebla y guardados.
+- [ ] P1: nueva economía y presupuestos por mapa que hagan asequibles fuerzas aéreas/navales, sin regalar recursos ni introducir microtransacciones.
+- [ ] P2: IA y campaña multi-dominio, detección sonar/radar, balance, QA Android y arte definitivo.
+**No crear 27 perfiles vacíos y anunciarlos como unidades jugables antes de construir los sistemas P0.** La decisión de tecnología moderna no excluye hardware militar contemporáneo avanzado.
