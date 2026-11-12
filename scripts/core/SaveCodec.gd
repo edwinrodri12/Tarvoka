@@ -9,6 +9,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const MAX_UNITS := 256
@@ -228,6 +229,10 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         if unit.has("target_domains") and not Domains.valid_targets(unit["target_domains"]):
             return false
+        if Arsenal.valid(str(unit.get("role", ""))):
+            var spec: Dictionary = Arsenal.profile(str(unit["role"]))
+            if unit.get("domain") != spec["domain"] or unit.get("target_domains") != spec["target_domains"]:
+                return false
         # Optional fields retain compatibility with every v1 save: missing
         # values mean infantry-style melee range 1..1 and unused movement.
         if unit.has("attack_range") and (not unit["attack_range"] is int or unit["attack_range"] < 1 or unit["attack_range"] > 8):
