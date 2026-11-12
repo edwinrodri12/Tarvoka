@@ -4,8 +4,8 @@ class_name TarvokaOpeningBalance
 # A deliberately SMALL, public, one-turn deployment constraint for the side
 # choosing initiative. No HP/weapon/money/vision bonus for either faction.
 # The same initial unit roster produces the same cap for Blue or Red.
-const MAX_FIRST_ORDERS := 6
-const MAX_VALID_LIMIT := 6
+const MAX_FIRST_ORDERS := 3
+const MAX_VALID_LIMIT := 3
 
 static func create(units: Array, starter: int) -> Dictionary:
     if starter not in [0,1]:
