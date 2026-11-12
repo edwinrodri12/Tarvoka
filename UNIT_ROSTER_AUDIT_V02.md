@@ -1,6 +1,6 @@
 # TARVOKA — Auditoría de redundancias y familias de unidades v0.2 (PROPUESTA)
 
-**Fecha:** 2026-11-12. **Estado:** auditoría y recomendación de diseño; requiere validación de jugabilidad y ajuste de progresión de campaña. **NO está implementada ni cambia actualmente los 32 IDs ni las estadísticas del motor.**  
+**Fecha:** 2026-11-12. **Estado:** revisión de diseño desarrollada con [CAMPAIGN_TECH_LEVELS_V1.md](CAMPAIGN_TECH_LEVELS_V1.md) y calendario de 50 capítulos actualizado en [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md). La propuesta de 24 familias está documentada; falta validación de jugabilidad. **NO está implementada ni modifica los 32 IDs originales ni las estadísticas del motor.**  
 **Motivación del usuario:** no multiplicar unidades con prácticamente la misma función, pues cada familia de unidad **subirá de nivel y podrá especializarse**.  
 **Fuentes internas:** `MILITARY_UNIT_CATALOG.md` (32 clases), `CAMPAIGN_UNIT_PROGRESSION.md` (32 desbloqueos anteriores), `LOGISTICS_DESIGN.md` (munición/combustible), 39 propuestas creativas anteriores (después de retirar defensa química).
 
