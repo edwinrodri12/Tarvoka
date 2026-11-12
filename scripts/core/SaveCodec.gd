@@ -265,8 +265,6 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         if unit.has("reacted") and not unit["reacted"] is bool:
             return false
-        if unit.has("opening_move_bonus") and (not unit["opening_move_bonus"] is int or unit["opening_move_bonus"] < 0 or unit["opening_move_bonus"] > 3):
-            return false
         if unit.has("role") and (not unit["role"] is String or not Roles.valid(unit["role"])):
             return false
         if unit.has("domain") and not Domains.valid_domain(unit["domain"]):
