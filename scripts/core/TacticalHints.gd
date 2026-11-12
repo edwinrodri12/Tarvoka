@@ -128,9 +128,10 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 text += "\nATENCION: " + warning
             var supply_order: Dictionary = Logistics.quote(state, unit_id)
             if supply_order.get("valid", false):
-                text += "\nRecarga desde %s: +%d municion, +%d combustible (-%d creditos)" % [
+                text += "\nRecarga desde %s: +%d municion, +%d combustible (%s)" % [
                     "camion" if str(supply_order["source_kind"]) == "truck" else "base",
-                    int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
+                    int(supply_order["ammo"]), int(supply_order["fuel"]),
+                    "sin costo" if int(supply_order["cost"]) == 0 else "-%d creditos" % int(supply_order["cost"])
                 ]
                 if int(supply_order["cargo_ammo"]) + int(supply_order["cargo_fuel"]) > 0:
                     text += " | Carga camion: +%d municion, +%d combustible" % [
