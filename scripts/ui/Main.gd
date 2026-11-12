@@ -468,7 +468,11 @@ func _process(_delta: float) -> void:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
         _update_text(unit_label, board.selected_unit_summary())
-        _update_text(battlefield_status, BattleReport.field_summary(board.state))
+        var field_text: String = BattleReport.field_summary(board.state)
+        if board.state.has("opening"):
+            var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
+            field_text += "\nAPERTURA EQUILIBRADA: %d/%d ordenes restantes. Despues, turnos normales." % [remaining_orders,int(board.state["opening"]["limit"])]
+        _update_text(battlefield_status,field_text)
         _update_text(order_preview_label, BattleReport.pending_preview(board.state, board.pending_order))
         var action_kind := str(board.pending_order.get("kind", ""))
         var button_text := "Confirmar ataque" if action_kind == "attack" else ("Confirmar movimiento" if action_kind == "move" else "Confirmar orden")
