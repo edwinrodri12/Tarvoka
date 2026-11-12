@@ -85,6 +85,7 @@ static func end_turn(state: Dictionary) -> Dictionary:
     # Fuel attrition can destroy the last platform of a faction.
     next["winner"] = Turns.winner(next["units"])
     if int(next["winner"]) != -1:
+        next.erase("opening")
         if Visibility.enabled(next):
             next = Visibility.update_exploration(next)
         return {"valid": true, "state": next}
@@ -96,6 +97,8 @@ static func end_turn(state: Dictionary) -> Dictionary:
         # faction's turn; never grant the loser a bonus reply turn.
         if int(next.get("winner", -1)) != -1:
             return {"valid": true, "state": next}
+    # The responder and every later phase can order freely.
+    next.erase("opening")
     next["faction"] = 1 - int(state["faction"])
     # Continue with the post-upkeep army, never restore the pre-consumption array.
     next["units"] = Turns.begin_turn(next["units"], next["faction"])
