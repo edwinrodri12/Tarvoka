@@ -238,6 +238,24 @@ func _draw() -> void:
         if Roles.valid(str(unit.get("role", ""))) and tile >= 36.0:
             var role_pos := center + Vector2(tile * 0.19, -tile * 0.14)
             draw_string(font, role_pos, Roles.symbol(str(unit["role"])), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(11.0, tile * 0.19)), Color(1.0, 0.94, 0.65))
+        # Own-unit warnings only: do not reveal hidden enemy supplies through fog.
+        # Red means empty and amber means critically low. M=ammo, F=fuel.
+        if is_player and unit.has("ammo") and tile >= 36.0:
+            var supply_role: String = str(unit.get("role", ""))
+            var ammo_max: int = Logistics.ammo_capacity(supply_role)
+            var fuel_max: int = Logistics.fuel_capacity(supply_role)
+            var warnings: Array = []
+            if ammo_max > 0 and int(unit["ammo"]) <= maxi(1, int(ammo_max / 4)):
+                warnings.append(["M", int(unit["ammo"]) == 0])
+            if fuel_max > 0 and int(unit["fuel"]) <= maxi(2, int(fuel_max / 4)):
+                warnings.append(["F", int(unit["fuel"]) == 0])
+            for i in range(warnings.size()):
+                var empty: bool = bool(warnings[i][1])
+                var marker_color := Color(1.0, 0.28, 0.27) if empty else Color(1.0, 0.71, 0.24)
+                var tag_pos := origin + Vector2(cell) * tile + Vector2(tile * (0.03 + i * 0.23), tile * 0.03)
+                draw_rect(Rect2(tag_pos, Vector2(tile * 0.20, tile * 0.21)), Color(0.06, 0.08, 0.1, 0.92))
+                draw_string(font, tag_pos + Vector2(tile * 0.035, tile * 0.16), str(warnings[i][0]),
+                    HORIZONTAL_ALIGNMENT_LEFT, -1, int(maxf(9.0, tile * 0.16)), marker_color)
         # Numeric health avoids a misleading percentage: this prototype has no
         # persistent per-unit maximum-HP field yet. Hide on very small tiles.
         if tile >= 39.0:
