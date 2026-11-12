@@ -8,6 +8,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
+const TerrainTactics = preload("res://scripts/core/TerrainTactics.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -74,11 +75,14 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if not Turns.in_attack_range(unit, enemy):
             continue
-        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy)
+        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy, state["terrain"],state.get("economy",{}),Visibility.observed_state(state,faction)["units"])
         if result.get("valid", false):
             attacks[enemy_pos] = {
                 "id": str(enemy["id"]), "damage": int(result["damage"]),
                 "counter_damage": int(result["counter_damage"]),
+                "terrain_attack_bonus":int(result["terrain_attack_bonus"]),
+                "terrain_defense_cover":int(result["terrain_defense_cover"]),
+                "flanked":bool(result["flanked"]),
                 "defeated": bool(result["defeated"])
             }
     return {"moves": moves, "attacks": attacks}
@@ -221,6 +225,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                         text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [
                             role, terrain_name(kind), move_cost, int(unit.get("cover", 0))
                         ]
+                        text += "\n" + TerrainTactics.defensive_description(unit,terrain,state.get("economy",{}))
         if Roles.valid(str(unit.get("role", ""))):
             text += "\n" + Roles.counter_description(str(unit["role"]))
         if not hints["attacks"].is_empty():
@@ -298,5 +303,6 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
     description += "\nAzul: movimiento posible | Naranja: alcance desde posicion actual."
     if fogged:
         description += " Solo area visible."
+    description += "\n" + TerrainTactics.defensive_description(enemy,observed["terrain"],observed.get("economy",{}))
     description += "\nEstimaciones teoricas: no revelan combustible, municion ni acciones restantes."
     return {"valid":true, "moves":moves, "attacks":attacks, "summary":description, "id":enemy_id}
