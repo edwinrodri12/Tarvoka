@@ -12,6 +12,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -110,17 +111,11 @@ func _draw() -> void:
         for x in range(WIDTH):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
-            var terrain_color := Color(0.18, 0.27, 0.22) if (x + y) % 2 == 0 else Color(0.22, 0.32, 0.26)
-            match terrain_type:
-                "forest":
-                    terrain_color = Color(0.09, 0.26, 0.14)
-                "road":
-                    terrain_color = Color(0.32, 0.29, 0.23)
-                "mountain":
-                    terrain_color = Color(0.32, 0.34, 0.41)
-                "water":
-                    terrain_color = Color(0.07, 0.23, 0.40)
+            var terrain_color: Color = VisualStyle.terrain_color(terrain_type, x, y)
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
+            # Subtle tile relief reads as depth without changing top-down touch geometry.
+            draw_line(pos + Vector2(1, 1), pos + Vector2(tile - 1, 1), terrain_color.lightened(0.25), maxf(1.0, tile * 0.024))
+            draw_line(pos + Vector2(1, tile - 1), pos + Vector2(tile - 1, tile - 1), terrain_color.darkened(0.35), maxf(1.0, tile * 0.024))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
             # Simple self-contained symbols, no borrowed art or sprite assets.
             if terrain_type == "forest":
@@ -208,7 +203,7 @@ func _draw() -> void:
     for destination in hints["moves"]:
         var movement_cell: Vector2i = destination
         var movement_pos: Vector2 = origin + Vector2(movement_cell) * tile
-        draw_rect(Rect2(movement_pos, Vector2.ONE * tile), Color(0.18, 0.76, 0.40, 0.34))
+        draw_rect(Rect2(movement_pos, Vector2.ONE * tile), VisualStyle.movement_fill())
         if tile >= 25.0:
             draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
@@ -216,7 +211,7 @@ func _draw() -> void:
     for destination in hints["attacks"]:
         var attack_cell: Vector2i = destination
         var attack_pos: Vector2 = origin + Vector2(attack_cell) * tile
-        draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(0.94, 0.20, 0.16, 0.40))
+        draw_rect(Rect2(attack_pos, Vector2.ONE * tile), VisualStyle.attack_fill())
         draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(1.0, 0.32, 0.24), false, 2.0)
     # Surface units are always painted first, aircraft last. Independent
     # air/surface glyph positions make stacks readable on a small phone.
@@ -238,7 +233,7 @@ func _draw() -> void:
         if airborne:
             center += Vector2(tile * 0.24, -tile * 0.22)
         var is_player := int(unit["faction"]) == 0
-        var color := Color(0.35, 0.65, 1.0) if is_player else Color(1.0, 0.4, 0.3)
+        var color: Color = VisualStyle.faction_color(0 if is_player else 1)
         var face: Color = color.darkened(0.45) if unit.get("acted", false) else (color.darkened(0.18) if unit.get("moved", false) else color)
         # Circle vs square still indicates faction. Smaller airborne symbols
         # have an independent light ring and wing cross, not a borrowed asset.

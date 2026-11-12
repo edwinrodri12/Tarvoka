@@ -7,6 +7,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 
 var board: Control
 var status_label: Label
@@ -15,6 +16,8 @@ var order_preview_label: Label
 var unit_label: Label
 var autosave_alert: Label
 var enemy_turn_label: Label
+var faction_gallery: AcceptDialog
+var faction_gallery_button: Button
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
@@ -105,6 +108,14 @@ func _ready() -> void:
     heading.add_theme_font_size_override("font_size", 27)
     heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
     panel.add_child(heading)
+    # Read-only faction art gallery. Faction bonuses remain locked to v0.1.
+    faction_gallery_button = Button.new()
+    faction_gallery_button.text = "Ver las ocho facciones"
+    faction_gallery_button.custom_minimum_size.y = 46
+    faction_gallery_button.pressed.connect(_open_faction_gallery)
+    panel.add_child(faction_gallery_button)
+    faction_gallery = FactionGallery.new()
+    add_child(faction_gallery)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -180,7 +191,7 @@ func _ready() -> void:
     panel.add_child(unit_label)
 
     var legend := Label.new()
-    legend.text = "VERDE: movimiento y costo\nROJO: objetivo y dano estimado\nALIADAS circulo | ENEMIGAS cuadrado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
+    legend.text = "AZUL: movimiento y costo\nROJO: objetivo y dano estimado\nALIADAS circulo | ENEMIGAS cuadrado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
     legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
@@ -656,3 +667,7 @@ func _refresh_production_catalog() -> void:
         production_picker.set_item_metadata(n,str(role))
     if production_picker.item_count > 0:
         production_picker.select(0)
+
+func _open_faction_gallery() -> void:
+    if faction_gallery != null:
+        faction_gallery.popup_centered_ratio(0.85)
