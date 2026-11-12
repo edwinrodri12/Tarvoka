@@ -189,6 +189,12 @@ static func _blocked_for(knowledge: Dictionary, mover: Dictionary) -> Array[Vect
             blocked.append(occupant["pos"])
     return blocked
 
+static func _ground_occupied(knowledge: Dictionary, cell: Vector2i) -> bool:
+    for occupant in knowledge.get("units", []):
+        if occupant is Dictionary and int(occupant.get("hp", 0)) > 0 and Domains.domain(occupant) == Domains.GROUND and occupant.get("pos") == cell:
+            return true
+    return false
+
 # Economic strategy with only side-owned credits, observed enemies and
 # explored urban locations. Decisions are deterministic and bounded.
 static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, enemies: Array) -> Dictionary:
@@ -522,20 +528,21 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
         if int(relay.get("owner", -1)) != faction:
             continue
         var cell: Vector2i = relay["pos"]
-        if cell in occupied or (fog and not visible.has(cell)):
+        if _ground_occupied(knowledge, cell) or (fog and not visible.has(cell)):
             continue
         var threatened := false
         for enemy in enemies:
-            var blockers: Array[Vector2i] = occupied.duplicate()
-            blockers.erase(enemy["pos"])
-            var approach: Dictionary = Rules.reachable(enemy["pos"], int(enemy.get("move_points", 0)), knowledge["terrain"], blockers)
+            if Domains.domain(enemy) != Domains.GROUND:
+                continue
+            var blockers: Array[Vector2i] = _blocked_for(knowledge, enemy)
+            var approach: Dictionary = Rules.reachable(enemy["pos"], int(enemy.get("move_points", 0)), knowledge["terrain"], blockers, Domains.GROUND)
             if approach.has(cell):
                 threatened = true
                 break
         if not threatened:
             continue
         for ally in friends:
-            if bool(ally.get("moved", false)):
+            if bool(ally.get("moved", false)) or Domains.domain(ally) != Domains.GROUND:
                 continue
             # Do not desert a different relay to protect this one.
             var guard_needed_elsewhere := false
@@ -545,9 +552,8 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
                     break
             if guard_needed_elsewhere:
                 continue
-            var own_blockers: Array[Vector2i] = occupied.duplicate()
-            own_blockers.erase(ally["pos"])
-            var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], own_blockers)
+            var own_blockers: Array[Vector2i] = _blocked_for(knowledge, ally)
+            var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], own_blockers, Domains.GROUND)
             if not reachable.has(cell) or cell == ally["pos"]:
                 continue
             var score: int = 10000 - int(reachable[cell]) * 100 + int(ally.get("hp", 0))
@@ -579,10 +585,10 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
     for unit in friends:
-        if bool(unit.get("moved", false)):
+        if bool(unit.get("moved", false)) or Domains.domain(unit) != Domains.GROUND:
             continue
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
-        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked, Domains.domain(unit))
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked, Domains.GROUND)
         for relay in knowledge["control"]["nodes"]:
             if int(relay["owner"]) == faction:
                 continue
@@ -656,7 +662,12 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
             return {}
     var queue: Array[Vector2i] = []
     var melee: bool = int(attacker.get("attack_min_range", 1)) == 1 and int(attacker.get("attack_range", 1)) == 1
+    var domain: String = Domains.domain(attacker)
+    if domain.is_empty():
+        return distances
     for enemy in enemies:
+        if not Domains.can_attack(attacker, enemy):
+            continue
         var candidates: Array[Vector2i] = []
         if melee:
             # Preserve established melee tie-breaking and existing AI tests.
@@ -676,7 +687,7 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
         for goal in candidates:
             if not Rules.inside(goal) or goal in blocked:
                 continue
-            if Rules.movement_cost(str(terrain[goal.y][goal.x])) < 0:
+            if Rules.movement_cost_for(str(terrain[goal.y][goal.x]), domain) < 0:
                 continue
             if not distances.has(goal):
                 distances[goal] = 0
@@ -685,12 +696,12 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
     while cursor < queue.size():
         var current: Vector2i = queue[cursor]
         cursor += 1
-        var enter_cost := Rules.movement_cost(str(terrain[current.y][current.x]))
+        var enter_cost := Rules.movement_cost_for(str(terrain[current.y][current.x]), domain)
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = current + direction
             if not Rules.inside(previous) or previous in blocked:
                 continue
-            if Rules.movement_cost(str(terrain[previous.y][previous.x])) < 0:
+            if Rules.movement_cost_for(str(terrain[previous.y][previous.x]), domain) < 0:
                 continue
             var proposed: int = int(distances[current]) + enter_cost
             if not distances.has(previous) or proposed < int(distances[previous]):
