@@ -56,7 +56,7 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_c
                 var original_max: int = _maximum_hp(defender)
                 # Round up to keep a weak but armed defender dangerous,
                 # while still giving the initiating strike a clear advantage.
-                var scaled: int = ceili(float(int(retaliation["damage"]) * remaining * response_percent) / float(original_max * 100))
+                var scaled: int = ceili(float(int(retaliation["damage"]) * mini(remaining,original_max) * response_percent) / float(original_max * 100))
                 return_hit = mini(int(attacker["hp"]),maxi(1,scaled))
     return {
         "valid":true,"damage":dealt,"defender_hp":remaining,
