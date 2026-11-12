@@ -15,34 +15,40 @@ func _initialize() -> void:
     var credits_spent := 0
     var turns_total := 0
     var first_wins := 0
+    var symmetric_results := [0,0]
+    var training_results := [0,0]
     var start: int = Time.get_ticks_msec()
     for map_id in range(3):
         for first in [0,1]:
-            var fog: bool = map_id == 1
-            var played: Dictionary = _battle(map_id,first,fog)
-            assert(played["winner"] in [0,1])
-            assert(played["purchases"] >= 1)
-            finished += 1
-            purchases += int(played["purchases"])
-            captured += int(played["captured"])
-            credits_spent += int(played["spent"])
-            turns_total += int(played["turns"])
-            if int(played["winner"]) == first:
-                first_wins += 1
-            print("ECONOMY SELFPLAY map=%d fog=%s first=%d winner=%d turns=%d buys=%d captures=%d spent=%d" % [
-                map_id,str(fog),first,int(played["winner"]),int(played["turns"]),
-                int(played["purchases"]),int(played["captured"]),int(played["spent"])
-            ])
-    assert(finished == 6 and purchases >= 6 and credits_spent > 0)
+            for fog in [false,true]:
+                for symmetric in [false,true]:
+                    var played: Dictionary = _battle(map_id,first,fog,symmetric)
+                    assert(played["winner"] in [0,1])
+                    assert(played["purchases"] >= 1)
+                    finished += 1
+                    purchases += int(played["purchases"])
+                    captured += int(played["captured"])
+                    credits_spent += int(played["spent"])
+                    turns_total += int(played["turns"])
+                    if int(played["winner"]) == first:
+                        first_wins += 1
+                    var counts: Array = symmetric_results if symmetric else training_results
+                    counts[int(played["winner"])] += 1
+                    print("ECONOMY SELFPLAY map=%d fog=%s symmetric=%s first=%d winner=%d turns=%d buys=%d captures=%d spent=%d" % [
+                        map_id,str(fog),str(symmetric),first,int(played["winner"]),int(played["turns"]),
+                        int(played["purchases"]),int(played["captured"]),int(played["spent"])
+                    ])
+    assert(finished == 24 and purchases >= 24 and credits_spent > 0)
     print("ECONOMY BALANCE matches=%d first_wins=%d second_wins=%d produced=%d captures=%d spent=%d avg_turns=%.2f elapsed_ms=%d" % [
         finished,first_wins,finished-first_wins,purchases,captured,credits_spent,
         float(turns_total)/float(finished),Time.get_ticks_msec()-start
     ])
-    print("PASS economy AI self-play: six full games, legal city capture and budgeted reinforcement, fair fog")
+    print("ECONOMY MATRIX training_wins=%s symmetric_wins=%s" % [str(training_results),str(symmetric_results)])
+    print("PASS economy AI self-play: 24 full games, legal city capture and budgeted reinforcement, fair fog")
     quit(0)
 
-static func _battle(map_id: int, first: int, fog: bool) -> Dictionary:
-    var state: Dictionary = Session.start(Roles.experimental_armies(true),Scenarios.terrain(map_id),first,fog,true,true)
+static func _battle(map_id: int, first: int, fog: bool, symmetric: bool) -> Dictionary:
+    var state: Dictionary = Session.start(Roles.experimental_armies(symmetric),Scenarios.terrain(map_id),first,fog,true,true)
     var total_purchases := 0
     var total_captures := 0
     var credits_spent := 0
