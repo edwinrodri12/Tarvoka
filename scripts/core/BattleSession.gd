@@ -9,7 +9,7 @@ const Relays = preload("res://scripts/core/RelayControl.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
@@ -18,7 +18,7 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
         if not control.is_empty():
             state["control"] = control
     if economy_mode:
-        var urban: Dictionary = Economy.create(state["terrain"])
+        var urban: Dictionary = Economy.create(state["terrain"], modern_mode)
         if not urban.is_empty():
             state["economy"] = urban
     if fog_enabled:
