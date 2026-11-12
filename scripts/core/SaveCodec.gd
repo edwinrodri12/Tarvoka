@@ -9,6 +9,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
@@ -222,6 +223,10 @@ static func _valid_state(state: Dictionary) -> bool:
         if unit.has("moved") and not unit["moved"] is bool:
             return false
         if unit.has("role") and (not unit["role"] is String or not Roles.valid(unit["role"])):
+            return false
+        if unit.has("domain") and not Domains.valid_domain(unit["domain"]):
+            return false
+        if unit.has("target_domains") and not Domains.valid_targets(unit["target_domains"]):
             return false
         # Optional fields retain compatibility with every v1 save: missing
         # values mean infantry-style melee range 1..1 and unused movement.
