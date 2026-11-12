@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaUnitRoles
 
 const Combat = preload("res://scripts/core/Combat.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 
 # Original TARVOKA experimental combined-arms lineup.
 # These are combat roles, NOT purchasable units or a campaign progression.
@@ -25,15 +26,17 @@ const BONUSES := {
 }
 
 static func valid(role: String) -> bool:
-    return PROFILES.has(role)
+    return PROFILES.has(role) or Arsenal.valid(role)
 
 static func label(role: String) -> String:
     if not valid(role):
         return "Soldado"
-    return str(PROFILES[role]["label"])
+    return str(PROFILES[role]["label"]) if PROFILES.has(role) else str(Arsenal.profile(role)["label"])
 
 static func symbol(role: String) -> String:
-    return str(PROFILES[role]["symbol"]) if valid(role) else ""
+    if PROFILES.has(role):
+        return str(PROFILES[role]["symbol"])
+    return str(Arsenal.profile(role).get("symbol", ""))
 
 static func counter_description(role: String) -> String:
     match role:
@@ -48,13 +51,13 @@ static func counter_description(role: String) -> String:
         "line":
             return "Fuerza flexible de corto alcance."
         _:
-            return ""
+            return str(Arsenal.profile(role).get("note", ""))
 
 static func make_unit(id: String, faction: int, pos: Vector2i, role: String) -> Dictionary:
     if not valid(role) or id.is_empty() or faction not in [0, 1]:
         return {}
-    var profile: Dictionary = PROFILES[role]
-    return {
+    var profile: Dictionary = PROFILES[role] if PROFILES.has(role) else Arsenal.profile(role)
+    var unit: Dictionary = {
         "id": id, "faction": faction, "hp": int(profile["hp"]),
         "pos": pos, "move_points": int(profile["move_points"]),
         "attack": int(profile["attack"]), "defense": int(profile["defense"]),
@@ -63,6 +66,11 @@ static func make_unit(id: String, faction: int, pos: Vector2i, role: String) -> 
         "attack_range": int(profile["attack_range"]),
         "acted": false, "role": role
     }
+    # Never add extra fields to the five original role saves.
+    if Arsenal.valid(role):
+        unit["domain"] = str(profile["domain"])
+        unit["target_domains"] = profile["target_domains"].duplicate()
+    return unit
 
 static func role_bonus(attacker: Dictionary, defender: Dictionary) -> int:
     var attack_role: String = str(attacker.get("role", ""))
