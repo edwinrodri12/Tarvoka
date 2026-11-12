@@ -7,6 +7,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
 static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false) -> Dictionary:
@@ -21,6 +22,8 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
         var urban: Dictionary = Economy.create(state["terrain"], modern_mode)
         if not urban.is_empty():
             state["economy"] = urban
+    if modern_mode and economy_mode and state.has("economy"):
+        state["units"] = Logistics.equip_army(state["units"])
     if fog_enabled:
         state["fog_enabled"] = true
         return Visibility.update_exploration(state)
@@ -51,6 +54,11 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     if order.get("valid", false) and Visibility.enabled(order["state"]):
         order["state"] = Visibility.update_exploration(order["state"])
     return order
+
+static func resupply(state: Dictionary, unit_id: String) -> Dictionary:
+    if not _active(state):
+        return {"valid":false, "state":state.duplicate(true)}
+    return Logistics.resupply(state, unit_id)
 
 static func end_turn(state: Dictionary) -> Dictionary:
     if not _active(state):
