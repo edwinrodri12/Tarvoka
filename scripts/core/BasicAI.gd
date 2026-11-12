@@ -136,10 +136,9 @@ static func step(state: Dictionary) -> Dictionary:
     for unit in friends:
         if bool(unit.get("moved", false)):
             continue
-        var blocked: Array[Vector2i] = occupied.duplicate()
-        blocked.erase(unit["pos"])
+        var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = Rules.reachable(
-            unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked
+            unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked, Domains.domain(unit)
         )
         var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit)
         var from_route := int(route.get(unit["pos"], 999999))
@@ -256,8 +255,7 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friend
     for unit in friends:
         if not Economy.can_capture(unit) or not Turns.can_move(unit,faction):
             continue
-        var blockers: Array[Vector2i] = occupied.duplicate()
-        blockers.erase(unit["pos"])
+        var blockers: Array[Vector2i] = _blocked_for(knowledge, unit)
         # A unit already securing an installation must stay until end-turn
         # rather than abandoning the city immediately before capture.
         var already_holding := false
@@ -267,7 +265,7 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friend
                 break
         if already_holding:
             continue
-        var reachable: Dictionary = Rules.reachable(unit["pos"],int(unit.get("move_points",0)),knowledge["terrain"],blockers)
+        var reachable: Dictionary = Rules.reachable(unit["pos"],int(unit.get("move_points",0)),knowledge["terrain"],blockers,Domains.domain(unit))
         for site in knowledge["economy"]["sites"]:
             if int(site.get("owner",-1)) == faction:
                 continue
@@ -324,9 +322,8 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
     for ally in friends:
         if not Turns.can_move(ally, faction):
             continue
-        var blockers: Array[Vector2i] = occupied.duplicate()
-        blockers.erase(ally["pos"])
-        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blockers)
+        var blockers: Array[Vector2i] = _blocked_for(knowledge, ally)
+        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blockers, Domains.domain(ally))
         for enemy in enemies:
             var preview: Dictionary = Roles.resolve(ally, enemy)
             if not preview.get("valid", false) or not preview.get("defeated", false):
@@ -397,9 +394,8 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
         if support.is_empty():
             continue
         var support_before: int = _closest_enemy_distance(ally["pos"], support)
-        var blocked: Array[Vector2i] = occupied.duplicate()
-        blocked.erase(ally["pos"])
-        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blocked)
+        var blocked: Array[Vector2i] = _blocked_for(knowledge, ally)
+        var reachable: Dictionary = Rules.reachable(ally["pos"], int(ally.get("move_points", 0)), knowledge["terrain"], blocked, Domains.domain(ally))
         for destination in reachable:
             var cell: Vector2i = destination
             if cell == ally["pos"] or (fog and not visible.has(cell)):
@@ -456,9 +452,8 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
     for unit in friends:
         if bool(unit.get("moved", false)):
             continue
-        var blocked: Array[Vector2i] = occupied.duplicate()
-        blocked.erase(unit["pos"])
-        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)
+        var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked, Domains.domain(unit))
         var radius: int = clampi(int(unit.get("vision", Visibility.DEFAULT_VISION)), 1, Visibility.MAX_VISION)
         for y in range(Rules.HEIGHT):
             for x in range(Rules.WIDTH):
@@ -586,9 +581,8 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
     for unit in friends:
         if bool(unit.get("moved", false)):
             continue
-        var blocked: Array[Vector2i] = occupied.duplicate()
-        blocked.erase(unit["pos"])
-        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked)
+        var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
+        var reachable: Dictionary = Rules.reachable(unit["pos"], int(unit.get("move_points", 0)), knowledge["terrain"], blocked, Domains.domain(unit))
         for relay in knowledge["control"]["nodes"]:
             if int(relay["owner"]) == faction:
                 continue
