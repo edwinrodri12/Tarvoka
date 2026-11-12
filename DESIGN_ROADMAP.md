@@ -2,6 +2,8 @@
 **Fecha:** 2026-11-10 · **Referencia obligatoria:** [GAME_DESIGN.md](GAME_DESIGN.md).
 Las prioridades no son promesas de fecha ni de versión. El objetivo es evolucionar el prototipo Android sin sacrificar estabilidad ni originalidad.
 
+**Decisión creativa 2026-11-12:** [CAMPAIGN_STORY_50.md](CAMPAIGN_STORY_50.md) fija la campaña de *La Red de Meridian* en 50 capítulos; prioriza comercialmente batallas online y escaramuzas con mapas aleatorios/IA como bucles rejugables. **No invertir dependencias técnicas:** el motor offline y la IA siguen primero, luego generación reproducible, prototipo online con sincronización, y producción de capítulos por fases. No confundir prioridad de producto con implementación ya verificada.
+
 ## Estado de partida confirmado
 - **Core en main:** tablero 10×8, movimiento básico, combate, turnos, IA determinista básica, victoria lógica, guardado local y Android debug export.
 - **Validación de campo (reporte del usuario):** selección/movimiento, botones de terminar turno/guardar/cargar operables y ejecución/restitución de turno de la IA en Android.
