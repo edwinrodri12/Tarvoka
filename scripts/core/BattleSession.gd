@@ -79,7 +79,8 @@ static func end_turn(state: Dictionary) -> Dictionary:
         if int(next.get("winner", -1)) != -1:
             return {"valid": true, "state": next}
     next["faction"] = 1 - int(state["faction"])
-    next["units"] = Turns.begin_turn(state["units"], next["faction"])
+    # Continue with the post-upkeep army, never restore the pre-consumption array.
+    next["units"] = Turns.begin_turn(next["units"], next["faction"])
     if next.has("economy"):
         next = Economy.begin_turn(next)
     if Visibility.enabled(next):
