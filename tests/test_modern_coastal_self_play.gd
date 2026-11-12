@@ -87,7 +87,18 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
                             targets += 1
                             if fog_enabled:
                                 assert(visible.has(state["units"][j]["pos"]))
-                    assert(targets == 1)
+                    var consumed_id: String = str(choice.get("consumed_unit_id", ""))
+                    # A one-way strike damages the target AND expends its own
+                    # projectile. Conventional weapons still damage one unit.
+                    assert(targets == (2 if not consumed_id.is_empty() else 1))
+                    if not consumed_id.is_empty():
+                        var sacrificed := false
+                        for j in range(state["units"].size()):
+                            if str(state["units"][j].get("id", "")) == consumed_id:
+                                assert(int(state["units"][j]["faction"]) == side)
+                                assert(int(next["units"][j]["hp"]) == 0)
+                                sacrificed = true
+                        assert(sacrificed)
             assert(Codec.decode(Codec.encode(next)) == next)
             made += 1
             actions += 1
