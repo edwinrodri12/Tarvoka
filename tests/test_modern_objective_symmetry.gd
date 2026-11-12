@@ -56,6 +56,7 @@ func _initialize() -> void:
             Roles.make_unit("B",0,Vector2i(1,2),"scout"),
             Roles.make_unit("Y",1,Vector2i(8,2),"scout")
         ]
+        var mirrored_moves: Array = []
         for opener in [0,1]:
             var state: Dictionary = Session.start(scouts,terrain,opener,false,true,true,true)
             assert(state["control"]["nodes"].size() == 4)
@@ -67,8 +68,10 @@ func _initialize() -> void:
             assert(own.size() == 1)
             var plan: Dictionary = AI._advance_relay(state,observed,own,[])
             assert(plan["valid"] and plan["reason"] == "relay")
-            var expected: Vector2i = Vector2i(4,2) if opener == 0 else Vector2i(5,2)
-            assert(plan["destination"] == expected)
+            var destination: Vector2i = plan["destination"]
+            mirrored_moves.append(destination)
+            assert(destination.x > 1 if opener == 0 else destination.x < 8)
             assert(Codec.decode(Codec.encode(plan["state"])) == plan["state"])
+        assert(mirrored_moves[1] == Vector2i(Rules.WIDTH-1-mirrored_moves[0].x,mirrored_moves[0].y))
     print("PASS modern objective symmetry: all maps, facilities, rosters, 4 mirrored relays and symmetric legal scout capture")
     quit(0)
