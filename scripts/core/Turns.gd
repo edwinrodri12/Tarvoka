@@ -12,6 +12,9 @@ static func begin_turn(units: Array, faction: int) -> Array:
             # The movement flag is optional in pre-upgrade JSON saves.
             if unit.has("moved"):
                 unit["moved"] = false
+            # Field logistics can transfer inventory only once each turn.
+            if unit.has("supply_used"):
+                unit["supply_used"] = false
     return result
 
 static func can_act(unit: Dictionary, faction: int) -> bool:
