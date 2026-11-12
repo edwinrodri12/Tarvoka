@@ -5,6 +5,9 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 
+# These guided munitions ARE the projectile, not reusable weapon platforms.
+const ONE_WAY_ROLES := ["fpv", "loitering", "usv"]
+
 # Pure adjacent attack action; never mutates the supplied unit array.
 static func attack(units: Array, attacker_id: String, defender_id: String, faction: int) -> Dictionary:
     var result: Array = units.duplicate(true)
@@ -50,7 +53,16 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
     defender["hp"] = combat["defender_hp"]
     Logistics.consume_attack(attacker)
     attacker["acted"] = true
-    return {"valid": true, "units": result, "damage": combat["damage"], "winner": Turns.winner(result)}
+    var consumed: bool = str(attacker.get("role", "")) in ONE_WAY_ROLES
+    if consumed:
+        # An executed one-way attack removes its own platform even if the
+        # target survives. Dead units keep their ID for old save compatibility.
+        attacker["hp"] = 0
+    return {
+        "valid": true, "units": result, "damage": combat["damage"],
+        "consumed_unit_id": attacker_id if consumed else "",
+        "winner": Turns.winner(result)
+    }
 
 static func _inside_board(pos: Vector2i) -> bool:
     return pos.x >= 0 and pos.x < 10 and pos.y >= 0 and pos.y < 8
