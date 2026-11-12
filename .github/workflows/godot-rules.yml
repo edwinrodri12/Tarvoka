@@ -68,6 +68,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_terrain_tactics.gd
 
+      - name: Quantify first-turn tactical order limits in classic fog and relay armies
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_classic_opening_experiments.gd
+
       - name: Diagnose paired round scoring against eight old-clock and eight fair-clock AI battles
         shell: bash
         run: |
