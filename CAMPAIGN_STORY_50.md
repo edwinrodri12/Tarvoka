@@ -1,5 +1,7 @@
 # TARVOKA — Biblia narrativa y campaña de 50 capítulos
 
+> **Actualización de arsenal bajo evaluación (12-nov-2026):** Las 50 misiones y las ocho facciones se mantienen. La cifra anterior de 32 clases para campaña está **en revisión por duplicados**: ver [UNIT_ROSTER_AUDIT_V02.md](UNIT_ROSTER_AUDIT_V02.md), propuesta de ~24 familias y mejoras de tres niveles. Hasta aprobar el filtro, los hitos 9/18/26/32 no son objetivos fijos de producción.
+
 **Estado:** Dirección creativa aprobada por el usuario el 2026-11-12; este documento es el plan narrativo **[PLAN]**, no prueba de contenido implementado.  
 **Premisa:** *La Red de Meridian*. **Formato:** 50 capítulos jugables, 5 actos × 10, ocho puntos de vista, tres familias de desenlace.  
 **Relación con el diseño existente:** [GAME_DESIGN.md](GAME_DESIGN.md), [DESIGN_ROADMAP.md](DESIGN_ROADMAP.md), [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md), [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md).
