@@ -308,6 +308,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combined_arms_ui.gd
 
+      - name: Generate forty-eight deterministic symmetric map seeds and play eight AI skirmishes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_seeded_random_battles.gd
+
+      - name: Verify random-skirmish seed selector, Android UI and save restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_seeded_map_ui.gd
+
       - name: Run playable terrain-scenario map and save tests
         shell: bash
         run: |
