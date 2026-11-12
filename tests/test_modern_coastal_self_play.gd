@@ -77,7 +77,8 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
                     if fog_enabled:
                         assert(visible.has(choice["destination"]))
                 "resupply":
-                    assert(int(next["economy"]["credits"][side]) < int(state["economy"]["credits"][side]))
+                    assert(int(choice["cost"]) >= 0)
+                    assert(int(next["economy"]["credits"][side]) == int(state["economy"]["credits"][side]) - int(choice["cost"]))
                     assert(next["units"].size() == state["units"].size())
                 "attack":
                     var targets := 0
