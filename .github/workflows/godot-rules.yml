@@ -104,6 +104,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_economic_choice.gd
 
+      - name: Verify modern relays score only after holding through an enemy answer turn
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_relay_hold_scoring.gd
+
       - name: Verify modern relay round fairness and legacy save compatibility
         shell: bash
         run: |
