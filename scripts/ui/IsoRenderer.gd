@@ -143,7 +143,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 c = _center(previous, canvas, zoom, pan).lerp(c, smooth)
                 break
         if is_air:
-            c += Vector2(hw * 0.23, -hh * 0.48 + sinf(phase*2.5) * hh*0.08)
+            c += Vector2(hw * 0.23, -hh * 0.48 + sin(phase*2.5) * hh*0.08)
         var tint: Color = VisualStyle.faction_color(int(unit["faction"]))
         var face: Color = tint.darkened(0.46) if bool(unit.get("acted", false)) else (tint.darkened(0.18) if bool(unit.get("moved", false)) else tint)
         var role: String = str(unit.get("role",""))
