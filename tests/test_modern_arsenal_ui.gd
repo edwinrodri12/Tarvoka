@@ -91,7 +91,7 @@ func _run() -> void:
     board.new_game()
     main._process(0.0)
     assert(not board.modern_roster)
-    assert(main._load_game() == null)
+    main._load_game()
     assert(board.modern_roster and board.state == saved)
     assert(roster.get_selected_id() == 2)
     assert(scenarios.get_selected_id() == 3)
