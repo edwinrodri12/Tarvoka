@@ -604,6 +604,7 @@ func _play_ai_turn() -> void:
     var movements := 0
     var attacks := 0
     var produced := 0
+    var resupplied := 0
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break
@@ -618,10 +619,14 @@ func _play_ai_turn() -> void:
                 attacks += 1
             "produce":
                 produced += 1
+            "resupply":
+                resupplied += 1
     last_enemy_turn_report = "Turno enemigo: %d movimientos, %d ataques." % [movements, attacks]
     if state.has("economy"):
         last_enemy_turn_report += " %d refuerzos producidos." % produced
-    if movements + attacks + produced == 0:
+    if resupplied > 0:
+        last_enemy_turn_report += " %d reabastecimientos." % resupplied
+    if movements + attacks + produced + resupplied == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if int(state.get("winner", -1)) != -1:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
