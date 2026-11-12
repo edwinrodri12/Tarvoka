@@ -15,7 +15,7 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
     if relay_mode:
-        var control: Dictionary = Relays.create(state["terrain"])
+        var control: Dictionary = Relays.create(state["terrain"], Relays.DEFAULT_TARGET, modern_mode, faction)
         if not control.is_empty():
             state["control"] = control
     if economy_mode:
