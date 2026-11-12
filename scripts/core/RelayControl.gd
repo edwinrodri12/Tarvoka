@@ -18,7 +18,15 @@ static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: boo
     for row in terrain:
         if not row is Array or row.size() != Rules.WIDTH:
             return {}
+    # Classic games keep the original two diagonal relays. Modern tactical
+    # battles use two mirrored pairs: neither side gains a nearer *capturable*
+    # signal from the fixed opening line/scout formation.
     var locations := [Vector2i(4, 2), Vector2i(5, 5)]
+    if fair_round:
+        locations = [
+            Vector2i(4, 2), Vector2i(5, 2),
+            Vector2i(4, 5), Vector2i(5, 5)
+        ]
     var nodes: Array = []
     for position in locations:
         if Rules.movement_cost(str(terrain[position.y][position.x])) < 0:
