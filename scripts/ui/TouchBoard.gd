@@ -13,6 +13,8 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
+const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -36,6 +38,10 @@ var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
 var touch_cancelled := false
+# Display/camera values never enter rules or autosave.
+var iso_enabled := false
+var iso_zoom := 1.0
+var iso_pan := Vector2.ZERO
 const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
@@ -88,6 +94,36 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _write_autosave(false)
     queue_redraw()
 
+func set_isometric(enabled: bool) -> void:
+    iso_enabled = enabled
+    touch_active = false
+    touch_finger_index = -1
+    touch_cancelled = false
+    queue_redraw()
+
+func change_iso_zoom(direction: int) -> void:
+    if not iso_enabled or direction == 0:
+        return
+    var factor: float = 1.2 if direction > 0 else 1.0 / 1.2
+    iso_zoom = clampf(iso_zoom * factor, IsoProjection.MIN_ZOOM, IsoProjection.MAX_ZOOM)
+    queue_redraw()
+
+func reset_iso_camera() -> void:
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    queue_redraw()
+
+func screen_cell(point: Vector2) -> Vector2i:
+    if iso_enabled:
+        return IsoProjection.screen_to_cell(point, size, iso_zoom, iso_pan)
+    var tile := _cell_size()
+    if tile <= 0.0:
+        return Vector2i(-1, -1)
+    var relative: Vector2 = point - _board_origin()
+    if relative.x < 0.0 or relative.y < 0.0 or relative.x >= WIDTH * tile or relative.y >= HEIGHT * tile:
+        return Vector2i(-1, -1)
+    return Vector2i(int(relative.x / tile), int(relative.y / tile))
+
 func _cell_size() -> float:
     return min(size.x / float(WIDTH), size.y / float(HEIGHT))
 
@@ -101,6 +137,10 @@ static func fog_cover_color(has_explored: bool) -> Color:
     return Color(0.025, 0.035, 0.05, 0.73) if has_explored else Color(0.015, 0.025, 0.04, 1.0)
 
 func _draw() -> void:
+    if iso_enabled:
+        IsoRenderer.draw_board(self, state, selected_id, selected_factory_pos,
+            pending_order, combat_effects, iso_zoom, iso_pan)
+        return
     var tile := _cell_size()
     var origin := _board_origin()
     var font := ThemeDB.fallback_font
@@ -563,9 +603,13 @@ func _gui_input(event: InputEvent) -> void:
                 _tap(event.position)
         accept_event()
     elif event is InputEventScreenDrag:
-        # Cancel the gesture permanently if its primary finger ever leaves the tap radius.
-        if touch_active and event.index == touch_finger_index and touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
-            touch_cancelled = true
+        # A pan gesture never executes a tap or tactical order.
+        if touch_active and event.index == touch_finger_index:
+            if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
+                touch_cancelled = true
+            if iso_enabled and touch_cancelled:
+                iso_pan += event.relative
+                queue_redraw()
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
         # Native Buttons need touch-to-mouse emulation on Android, but the board
@@ -579,13 +623,9 @@ func _tap(point: Vector2) -> void:
         return
     if int(state.get("winner",-1)) != -1:
         return
-    var tile := _cell_size()
-    if tile <= 0:
+    var cell: Vector2i = screen_cell(point)
+    if cell.x < 0 or cell.y < 0:
         return
-    var relative := point - _board_origin()
-    if relative.x < 0 or relative.y < 0 or relative.x >= WIDTH * tile or relative.y >= HEIGHT * tile:
-        return
-    var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
     var units_here: Array = []
