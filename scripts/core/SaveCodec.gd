@@ -88,7 +88,7 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(unit["vision"]):
                 return {}
             unit["vision"] = int(unit["vision"])
-        for key in ["ammo", "fuel"]:
+        for key in ["ammo", "fuel", "supply_ammo", "supply_fuel"]:
             if unit.has(key):
                 if not _whole(unit[key]):
                     return {}
