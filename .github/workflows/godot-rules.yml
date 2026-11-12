@@ -74,6 +74,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_consumables_supply_return.gd
 
+      - name: Test truck dispatch, prepaid deliveries and fog-safe combat effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 45s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_mobile_supply_effects.gd
+
+      - name: Test long modern battles for ammo fuel and truck stock integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_logistics_stress.gd
+
       - name: Test coastal modern AI self-play with fog and legal recruitment
         shell: bash
         run: |
