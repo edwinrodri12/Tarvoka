@@ -41,3 +41,13 @@ Sistemas pendientes por separado: destrucción/consumo definitivo de drones FPV,
 - **Pruebas de regresión**: `tests/test_consumables_supply_return.gd` verifica ataques consumibles, guardados después del sacrificio, victoria cuando cae la última unidad, UCAV reutilizable, regreso en varios turnos, falta de combustible, fondos y comportamiento con enemigos ocultos.
 
 Límites todavía existentes: el regreso automático a camiones cercanos no forma parte de esta fase, solo a instalaciones propias; la IA no calcula una ruta de evacuación completa si la base está fuera del terreno ya explorado, ni detecta amenazas móviles invisibles en la ruta. Esta fase no introduce nuevas ventajas de facción ni modifica sus valores aprobados.
+
+
+## Fase v0.4 — Abastecimiento móvil y efectos de batalla
+
+- **Camión de asistencia:** la IA puede trasladar un camión con inventario real hacia una unidad terrestre aliada con munición o combustible críticos, sin transportar recursos virtuales. Selecciona un espacio libre adyacente y calcula rutas ponderadas; conserva 2 puntos de combustible de seguridad. En siguientes pasos de IA entrega con el sistema normal de `Logistics.resupply`: inventario, acciones y créditos mantienen sus reglas.
+- **Restricción de conocimiento:** el convoy solo puede utilizar terreno conocido y movimientos actualmente visibles bajo niebla. No usa posiciones enemigas ocultas. Se detiene si no tiene stock, combustible suficiente o no existe un vecino accesible.
+- **Visualización de combate:** los ataques válidos muestran temporalmente destello de impacto, trayectoria del disparo cuando el origen era visible y pulso de destrucción cuando desaparece el blanco; los drones de un uso incorporan onda en su punto de lanzamiento. Los efectos **no son unidades**, no afectan el cálculo de movimiento/combate, no tocan los guardados ni se muestran en casillas invisibles. Desaparecen a los 0.55 s.
+- **Pruebas añadidas:** abastecimiento móvil, reserva mínima del camión, entrega sin cobrar dos veces, integridad de guardados, niebla de guerra, efecto visual transitorio y cuatro campañas IA de hasta 24 fases para detectar stocks fuera de rango, gasto de créditos negativo, compras sin inventario o deserialización incorrecta.
+
+El comportamiento de los ocho bandos v0.1 permanece intacto. Las simulaciones solo miden integridad y acciones; no prueban todavía que el balance sea competitivo y divertido. La nueva animación es vectorial 2D de prototipo, no arte definitivo.
