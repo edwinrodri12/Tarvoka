@@ -71,7 +71,12 @@ static func _play(map_id: int, fog_on: bool, relay_mode: bool, symmetric: bool, 
                         if int(previous["units"][u]["hp"]) > int(next["units"][u]["hp"]):
                             damaged += 1
                             assert(visible.has(previous["units"][u]["pos"]))
-                    assert(damaged == 1)
+                    # Return fire can lawfully damage the attacker as well.
+                    var counter: int = int(action.get("counter_damage",0))
+                    assert(damaged == (2 if counter > 0 else 1))
+                    if counter > 0:
+                        assert(not str(action.get("attacker_id","")).is_empty())
+                        assert(not str(action.get("defender_id","")).is_empty())
             assert(not Codec.encode(next).is_empty())
             assert(_legal_positions(next))
             state = next
