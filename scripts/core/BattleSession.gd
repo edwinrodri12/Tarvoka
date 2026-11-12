@@ -103,6 +103,11 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     if Visibility.enabled(next):
         next = Visibility.update_exploration(next)
     var response := {"valid": true, "state": next}
+    # Preserve public exchange facts for combat feedback and tactical hints.
+    # The live battle state itself stores only persistent HP/ammo, not events.
+    for key in ["damage", "counter_damage", "counter_spent"]:
+        if action.has(key):
+            response[key] = action[key]
     if not str(action.get("consumed_unit_id", "")).is_empty():
         response["consumed_unit_id"] = str(action["consumed_unit_id"])
     return response
