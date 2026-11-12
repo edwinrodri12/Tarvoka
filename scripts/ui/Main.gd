@@ -5,6 +5,7 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 
 var board: Control
 var status_label: Label
@@ -27,6 +28,7 @@ var economy_status: Label
 var economy_event: Label
 var factory_status: Label
 var production_picker: OptionButton
+var _production_catalog_key := ""
 var produce_button: Button
 var relay_status: Label
 var _unit_summary_cache_key := -1
@@ -225,6 +227,7 @@ func _ready() -> void:
     for i in range(Roles.ORDER.size()):
         var role: String = Roles.ORDER[i]
         production_picker.add_item("%s - %d creditos" % [Roles.label(role),Economy.cost(role)],i)
+        production_picker.set_item_metadata(i, role)
     production_picker.select(0)
     production_picker.visible = false
     panel.add_child(production_picker)
@@ -287,10 +290,11 @@ func _ready() -> void:
     roster_picker.add_theme_font_size_override("font_size", 16)
     roster_picker.add_item("Clasica: soldados de prueba", 0)
     roster_picker.add_item("Experimental: 5 clases y contramedidas", 1)
-    roster_picker.select(1 if board.specialized_roster else 0)
+    roster_picker.add_item("Ejercito moderno: 32 clases y bases", 2)
+    roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
     panel.add_child(roster_picker)
     var roster_help := Label.new()
-    roster_help.text = "Experimental: Guardia, Rastreador, Baluarte, Rompedor y Lanzador. Cada clase tiene alcance y ventajas propias."
+    roster_help.text = "Experimental: cinco clases basicas. Moderno: 32 clases terrestres, aereas y navales; edificios de produccion especializados y costa navegable."
     roster_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     roster_help.add_theme_font_size_override("font_size", 14)
     panel.add_child(roster_help)
@@ -343,7 +347,7 @@ func _ready() -> void:
     economy_picker.select(1 if board.state.has("economy") else 0)
     panel.add_child(economy_picker)
     var urban_help := Label.new()
-    urban_help.text = "Requiere formacion experimental. Guardia y Rastreador capturan ciudades y talleres al terminar turno. Cada ciudad produce +100 creditos por turno. Selecciona un taller propio vacio para comprar unidades."
+    urban_help.text = "Economia experimental: 300 creditos, +100 por ciudad. Arsenal moderno: 2500 creditos, +250 por ciudad y bases especializadas. Infanteria captura; selecciona instalaciones propias para comprar."
     urban_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     urban_help.add_theme_font_size_override("font_size", 14)
     panel.add_child(urban_help)
@@ -420,13 +424,15 @@ func _process(_delta: float) -> void:
             if int(site["owner"]) == 0:
                 if site["kind"] == "city":
                     blue_city_count += 1
-                elif site["kind"] == "factory":
+                else:
                     blue_factory_count += 1
-        _update_text(economy_status, "RECURSOS: %d creditos | %d ciudades (+%d/turno) | %d talleres." % [
+        _update_text(economy_status, "RECURSOS: %d creditos | %d ciudades (+%d/turno) | %d bases." % [
             int(economy["credits"][0]), blue_city_count, Economy.income_for(economy,0), blue_factory_count
         ])
-        _update_text(factory_status, "Taller (%d,%d) seleccionado" % [board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if board.selected_factory_pos != Vector2i(-1,-1) else "Toca un taller F propio y libre, luego elige unidad.")
-        var role: String = Roles.ORDER[production_picker.get_selected_id()]
+        _refresh_production_catalog()
+        var site: Dictionary = Economy.site_at(economy,board.selected_factory_pos)
+        _update_text(factory_status, "%s (%d,%d) seleccionado" % [str(site.get("kind","Base")).capitalize(),board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if not site.is_empty() else "Toca una base propia (F/B/A/D/H/P) y elige unidad.")
+        var role: String = str(production_picker.get_item_metadata(production_picker.get_selected_id())) if production_picker.get_selected_id() >= 0 else ""
         produce_button.disabled = not board.can_purchase_selected(role) or int(board.state.get("winner",-1)) != -1
     _update_text(economy_event,board.last_economy_report)
     economy_event.visible = board.state.has("economy") and not board.last_economy_report.is_empty()
@@ -486,7 +492,7 @@ func _load_game() -> void:
     if board.load_game():
         scenario_picker.select(board.current_scenario_id)
         balance_picker.select(1 if board.symmetric_setup else 0)
-        roster_picker.select(1 if board.specialized_roster else 0)
+        roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
         relay_picker.select(1 if board.state.has("control") else 0)
         economy_picker.select(1 if board.state.has("economy") else 0)
@@ -495,8 +501,10 @@ func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
     var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
     var objective_name := "control de reles" if relay_picker.get_selected_id() == 1 else "eliminacion"
-    var roster_name := "5 clases experimentales" if roster_picker.get_selected_id() == 1 else "soldados clasicos"
-    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() != 1:
+    var roster_name := "32 clases modernas" if roster_picker.get_selected_id() == 2 else ("5 clases experimentales" if roster_picker.get_selected_id() == 1 else "soldados clasicos")
+    if roster_picker.get_selected_id() == 2:
+        economy_picker.select(1)
+    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
         board.message = "La economia necesita formacion experimental. Seleccionala primero."
         return
     var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
@@ -506,10 +514,12 @@ func _new_game() -> void:
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
-    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() != 1:
+    if roster_picker.get_selected_id() == 2:
+        economy_picker.select(1)
+    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
         board.message = "La economia requiere formacion experimental."
         return
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 1, economy_picker.get_selected_id() == 1)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
@@ -520,5 +530,30 @@ func _confirm_order() -> void:
 func _produce_unit() -> void:
     if not board.state.has("economy") or production_picker.get_selected_id() < 0:
         return
-    var role: String = Roles.ORDER[production_picker.get_selected_id()]
+    var role: String = str(production_picker.get_item_metadata(production_picker.get_selected_id()))
     board.buy_selected(role)
+
+# The picker narrows from all 32 catalogue entries to the roles actually
+# produced by the selected installation. Rebuilt only when selection changes.
+func _refresh_production_catalog() -> void:
+    if production_picker == null or not board.state.has("economy"):
+        return
+    var modern: bool = bool(board.state["economy"].get("modern",false))
+    var site: Dictionary = Economy.site_at(board.state["economy"],board.selected_factory_pos)
+    var kind: String = str(site.get("kind","all"))
+    var key: String = str(modern) + ":" + kind
+    if key == _production_catalog_key:
+        return
+    _production_catalog_key = key
+    production_picker.clear()
+    var roles: Array = Roles.ORDER.duplicate()
+    if modern:
+        roles.append_array(Arsenal.ORDER)
+    for role in roles:
+        if kind != "all" and Economy.producer_for(str(role),modern) != kind:
+            continue
+        var n: int = production_picker.item_count
+        production_picker.add_item("%s - %d creditos" % [Roles.label(str(role)),Economy.cost(str(role))],n)
+        production_picker.set_item_metadata(n,str(role))
+    if production_picker.item_count > 0:
+        production_picker.select(0)
