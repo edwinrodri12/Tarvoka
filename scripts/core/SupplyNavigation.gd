@@ -91,6 +91,81 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
             best_distance = total
     return best
 
+# Dispatch a field truck to a needy allied ground unit, rather than forcing
+# that unit to travel back to a distant workshop. Both actions use real turns.
+# The truck stops in a free adjacent tile and can then deliver prepaid cargo.
+static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: Dictionary) -> Dictionary:
+    var none := {"valid":false}
+    var side: int = int(state.get("faction", -1))
+    if side not in [0,1] or not observed.get("economy") is Dictionary or not bool(observed["economy"].get("modern", false)):
+        return none
+    if str(truck.get("role","")) != "logistics" or not Turns.can_move(truck, side) or not truck.has("supply_ammo"):
+        return none
+    var ammo_stock: int = int(truck.get("supply_ammo", 0))
+    var fuel_stock: int = int(truck.get("supply_fuel", 0))
+    if ammo_stock <= 0 and fuel_stock <= 0:
+        return none
+    var truck_fuel: int = int(truck.get("fuel", 0))
+    var usable_fuel: int = truck_fuel - 2 # Do not strand a supply vehicle.
+    if usable_fuel <= 0:
+        return none
+    var fog: bool = Visibility.enabled(state)
+    var known: Dictionary = Visibility.explored_cells(state, side) if fog else {}
+    var visible: Dictionary = Visibility.visible_cells(state, side) if fog else {}
+    var origin: Vector2i = truck["pos"]
+    var blocked: Array[Vector2i] = []
+    for occupant in observed["units"]:
+        if not occupant is Dictionary or int(occupant.get("hp",0)) <= 0 or str(occupant.get("id","")) == str(truck.get("id","")):
+            continue
+        if Domains.layer(occupant) == Domains.layer(truck):
+            blocked.append(occupant["pos"])
+    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND)
+    var best := none
+    var best_cost := 1000000
+    for recipient in observed["units"]:
+        if not recipient is Dictionary or str(recipient.get("id","")) == str(truck.get("id","")) or int(recipient.get("hp",0)) <= 0:
+            continue
+        if int(recipient.get("faction",-1)) != side or bool(recipient.get("acted",true)) or Domains.domain(recipient) != Domains.GROUND:
+            continue
+        if not recipient.has("ammo") or str(recipient.get("role","")) == "logistics":
+            continue
+        var role: String = str(recipient.get("role",""))
+        var needs_ammo: bool = ammo_stock > 0 and Logistics.ammo_capacity(role) > 0 and int(recipient["ammo"]) <= 1
+        var needs_fuel: bool = fuel_stock > 0 and Logistics.fuel_capacity(role) > 0 and int(recipient["fuel"]) <= 2
+        if not needs_ammo and not needs_fuel:
+            continue
+        var needy: Vector2i = recipient["pos"]
+        if absi(needy.x-origin.x) + absi(needy.y-origin.y) <= 1:
+            continue # Let the regular direct resupply action handle adjacent allies.
+        for direction in Rules.DIRECTIONS:
+            var staging: Vector2i = needy + direction
+            if not Rules.inside(staging) or staging in blocked or staging == origin:
+                continue
+            if fog and not known.has(staging):
+                continue
+            var distances: Dictionary = _distance_to_target(observed["terrain"], staging, blocked, Domains.GROUND, known, fog)
+            if not distances.has(origin):
+                continue
+            var whole: int = int(distances[origin])
+            if whole > usable_fuel or whole >= best_cost:
+                continue
+            var next_cell := Vector2i(-1,-1)
+            var remaining := 1000000
+            for cell in reach:
+                if cell == origin or not distances.has(cell) or (fog and not visible.has(cell)):
+                    continue
+                var left: int = int(distances[cell])
+                var spent: int = int(reach[cell])
+                if left >= whole or spent + left > usable_fuel:
+                    continue
+                if left < remaining or (left == remaining and (next_cell.x < 0 or cell.y < next_cell.y or (cell.y == next_cell.y and cell.x < next_cell.x))):
+                    remaining = left
+                    next_cell = cell
+            if next_cell.x >= 0:
+                best_cost = whole
+                best = {"valid":true, "destination":next_cell, "recipient_id":str(recipient["id"]), "total_cost":whole, "remaining_cost":remaining}
+    return best
+
 static func _compatible(domain: String, kind: String) -> bool:
     if domain == Domains.GROUND:
         return kind in ["factory", "armor_plant", "artillery_depot"]

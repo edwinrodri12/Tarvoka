@@ -45,7 +45,11 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
     if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state["faction"]), defender_id):
         return {"valid": false, "state": state.duplicate(true)}
     var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"])
-    return _apply(state, action)
+    var applied: Dictionary = _apply(state, action)
+    if applied.get("valid", false):
+        applied["attacker_id"] = attacker_id
+        applied["defender_id"] = defender_id
+    return applied
 
 static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
     if not _active(state):
