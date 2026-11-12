@@ -57,11 +57,16 @@ static func step(state: Dictionary) -> Dictionary:
         for enemy in enemies:
             if not Logistics.can_fire(unit) or not Turns.in_attack_range(unit, enemy):
                 continue
-            var preview: Dictionary = Roles.resolve(unit, enemy)
+            # Use the same exchange model as the combat action, but assume
+            # the visible enemy MAY still have ammo/reaction. Never inspect
+            # its private stock or readiness to make a planning decision.
+            var preview: Dictionary = BattleActions.public_preview_exchange(unit, enemy)
             if not preview.get("valid", false):
                 continue
             var damage := int(preview["damage"])
-            var score := damage * 12
+            var score := damage * 12 - int(preview["counter_damage"]) * 9
+            if int(preview["attacker_hp"]) <= 0 and not bool(preview["defeated"]):
+                score -= 250
             if preview["defeated"]:
                 score += 1000
             # Prefer the more dangerous enemy when damage/kill is otherwise equal.
