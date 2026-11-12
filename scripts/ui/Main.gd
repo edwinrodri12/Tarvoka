@@ -452,7 +452,7 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.selected_id, board.pending_order])
+    var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.pending_order])
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
@@ -523,7 +523,7 @@ func _process(_delta: float) -> void:
     battlefield_status.visible = winner == -1
     order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
     end_button.disabled = winner != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
-    cancel_button.disabled = board.selected_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
+    cancel_button.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
     confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
     # A defeat must not appear inside the same green victory panel.

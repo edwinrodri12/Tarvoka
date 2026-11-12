@@ -24,6 +24,7 @@ var autosave_enabled := false # Enabled by Main after board initializes; tests o
 var autosave_path := "user://tarvoka_autosave_v1.json"
 var autosave_warning := ""
 var selected_id := ""
+var inspected_enemy_id := "" # Only currently visible enemy, never saved.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
@@ -72,6 +73,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         state["map_seed"] = map_seed
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
+    inspected_enemy_id = ""
     pending_order.clear()
     message = "Selecciona una unidad."
     last_enemy_turn_report = ""
@@ -193,6 +195,16 @@ func _draw() -> void:
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
+    var inspection: Dictionary = enemy_inspection_hints()
+    # Blue and amber footprints show POSSIBLE enemy movement and fire from
+    # its current position. Neither zone grants visibility or legal orders.
+    for cell in inspection.get("moves",{}):
+        var cell_pos: Vector2 = origin + Vector2(cell) * tile
+        draw_rect(Rect2(cell_pos,Vector2.ONE*tile),Color(0.23,0.62,0.98,0.26))
+    for cell in inspection.get("attacks",{}):
+        var cell_pos: Vector2 = origin + Vector2(cell) * tile
+        draw_rect(Rect2(cell_pos,Vector2.ONE*tile),Color(1.0,0.63,0.17,0.19))
+        draw_rect(Rect2(cell_pos,Vector2.ONE*tile),Color(1.0,0.67,0.20,0.78),false,maxf(1.0,tile*0.035))
     for destination in hints["moves"]:
         var movement_cell: Vector2i = destination
         var movement_pos: Vector2 = origin + Vector2(movement_cell) * tile
@@ -245,6 +257,8 @@ func _draw() -> void:
             draw_arc(center, tile * 0.40, 0, TAU, 24, Color(0.60, 0.94, 0.88), 2.0)
         if str(unit["id"]) == selected_id:
             draw_arc(center, tile * (0.28 if airborne else 0.44), 0, TAU, 32, Color.YELLOW, 3.0)
+        elif str(unit["id"]) == inspected_enemy_id and bool(inspection.get("valid",false)):
+            draw_arc(center,tile*(0.30 if airborne else 0.46),0,TAU,32,Color(1.0,0.75,0.27),maxf(2.0,tile*0.055))
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(10.0, tile * (0.20 if airborne else 0.30))), Color.WHITE)
         # A second visual marker identifies the tactical role independently
         # of faction color and unit ID; no borrowed game sprites.
@@ -371,9 +385,10 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
                     Color(1.0, 0.28, 0.18, alpha), maxf(2.0, tile * 0.04))
 
 func cancel_selection() -> void:
-    if selected_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1):
+    if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1):
         return
     selected_id = ""
+    inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     message = "Seleccion cancelada."
@@ -517,7 +532,24 @@ func buy_selected(role: String) -> bool:
     return true
 
 func selected_unit_summary() -> String:
+    if not inspected_enemy_id.is_empty():
+        var intel: Dictionary = enemy_inspection_hints()
+        if bool(intel.get("valid",false)):
+            return str(intel["summary"])
     return TacticalHints.unit_summary(state, selected_id)
+
+func enemy_inspection_hints() -> Dictionary:
+    return TacticalHints.inspect_enemy(state, inspected_enemy_id, 0)
+
+func _inspect_enemy(enemy: Dictionary) -> void:
+    var enemy_id: String = str(enemy.get("id",""))
+    if not bool(TacticalHints.inspect_enemy(state,enemy_id,0).get("valid",false)):
+        return
+    inspected_enemy_id = enemy_id
+    selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
+    pending_order.clear()
+    message = "Inspeccionando unidad enemiga %s (sin ordenar ataque)." % enemy_id
 
 func legal_action_hints() -> Dictionary:
     return TacticalHints.for_unit(state, selected_id)
@@ -608,6 +640,7 @@ func _tap(point: Vector2) -> void:
             target = units_here[0]
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
         selected_factory_pos = Vector2i(-1,-1)
+        inspected_enemy_id = ""
         pending_order.clear()
         var tapped_id := str(target["id"])
         if tapped_id == selected_id:
@@ -619,7 +652,21 @@ func _tap(point: Vector2) -> void:
         else:
             selected_id = tapped_id
             message = "Unidad " + selected_id + " seleccionada."
+    elif not target.is_empty() and int(target.get("faction",-1)) != int(state["faction"]):
+        # Keep the existing attack preview and double-tap confirmation for
+        # a legally targetable enemy. Otherwise tapping enemy shows intel,
+        # never an accidental illegal attack or movement command.
+        var legal_attack: bool = false
+        if not selected_id.is_empty():
+            var attacks: Dictionary = TacticalHints.for_unit(state,selected_id)["attacks"]
+            legal_attack = str(attacks.get(cell,{}).get("id","")) == str(target["id"])
+        if legal_attack:
+            inspected_enemy_id = ""
+            _request_order(cell,target)
+        else:
+            _inspect_enemy(target)
     elif not selected_id.is_empty():
+        inspected_enemy_id = ""
         _request_order(cell, target)
     elif target.is_empty() and state.has("economy"):
         var found := false
@@ -668,6 +715,7 @@ func finish_turn() -> void:
         return
     state = result["state"]
     selected_id = ""
+    inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     last_enemy_turn_report = ""
@@ -782,6 +830,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
+    inspected_enemy_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""
@@ -819,6 +868,7 @@ func resume_autosave() -> bool:
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
+    inspected_enemy_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""

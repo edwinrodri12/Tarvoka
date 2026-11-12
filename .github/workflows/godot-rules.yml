@@ -248,6 +248,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_touch_board.gd
 
+      - name: Check visible enemy intel and fog-safe theoretical threat coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_enemy_intelligence.gd
+
+      - name: Verify Android enemy tapping, inspection, cancellation and attack preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_enemy_inspection_ui.gd
+
       - name: Run tactical hint parity and attack-preview tests
         shell: bash
         run: |
