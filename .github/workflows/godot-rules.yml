@@ -98,6 +98,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_attrition_campaign.gd
 
+      - name: Compare rearm value with recruitment and protect tactical cash
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_economic_choice.gd
+
+      - name: Collect 16 paired battle economy, turn and supply observations
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_paired_balance_telemetry.gd
+
       - name: Test coastal modern AI self-play with fog and legal recruitment
         shell: bash
         run: |

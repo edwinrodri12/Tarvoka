@@ -115,21 +115,16 @@ static func step(state: Dictionary) -> Dictionary:
             hit["action"] = "attack"
             return hit
 
-    # After resolving attacks, restore critically depleted troops if a friendly
-    # depot or a truck with real remaining stock can service them. Never search
-    # hidden enemy information to choose the supply source.
-    for unit in friends:
-        if not unit.has("ammo"):
-            continue
-        var role: String = str(unit.get("role", ""))
-        var ammo_low: bool = Logistics.ammo_capacity(role) > 0 and int(unit["ammo"]) <= 1
-        var fuel_low: bool = Logistics.fuel_capacity(role) > 0 and int(unit["fuel"]) <= (3 if Domains.domain(unit) in ["air", "naval"] else 2)
-        var truck_low: bool = role == "logistics" and (int(unit.get("supply_ammo", Logistics.TRUCK_AMMO_CAP)) <= 3 or int(unit.get("supply_fuel", Logistics.TRUCK_FUEL_CAP)) <= 5)
-        if (ammo_low or fuel_low or truck_low) and Logistics.can_resupply(state, str(unit["id"])):
-            var supply: Dictionary = Session.resupply(state, str(unit["id"]))
-            if supply.get("valid", false):
-                supply["action"] = "resupply"
-                return supply
+    # Compare actual legal recovery orders against replacing those units.
+    # Prioritize stranded or disarmed veterans, then affordable efficient
+    # partial refills. Field cargo is prepaid; no duplicate charge.
+    var rearm: Dictionary = SupplyStrategy.best_resupply(state, knowledge, faction)
+    if rearm.get("valid",false):
+        var supply: Dictionary = Session.resupply(state, str(rearm["unit_id"]))
+        if supply.get("valid",false):
+            supply["action"] = "resupply"
+            supply["reason"] = str(rearm["reason"])
+            return supply
 
     # A nearby fuel-and-ammunition truck can move toward a stranded ally.
     # Its destination and route are computed on observed terrain only.
