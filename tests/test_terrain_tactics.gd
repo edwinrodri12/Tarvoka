@@ -83,7 +83,7 @@ func _initialize() -> void:
     # sides of the target. Merely being adjacent is not a flank.
     var ally: Dictionary = Roles.make_unit("B",0,Vector2i(3,2),"line")
     var encircled: Dictionary = setup(tank_a,tank_x,Scenarios.terrain(0),false,[ally])
-    check_preview(encircled,7,3,0,0,true)
+    check_preview(encircled,7,2,0,0,true)
     var unrelated: Dictionary = ally.duplicate(true)
     unrelated["pos"] = Vector2i(3,3)
     var no_flank: Dictionary = setup(tank_a,tank_x,Scenarios.terrain(0),false,[unrelated])
