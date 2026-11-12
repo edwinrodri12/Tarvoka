@@ -429,6 +429,8 @@ func _process(_delta: float) -> void:
                 relay_text += " | Victoria pendiente de respuesta"
             elif blue_signal == red_signal and blue_signal >= int(control["target"]):
                 relay_text += " | Empate: sigue el combate"
+        if bool(control.get("score_on_hold", false)) and int(board.state.get("winner", -1)) == -1:
+            relay_text += " | Puntúa al mantener"
         _update_text(relay_status, relay_text)
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
