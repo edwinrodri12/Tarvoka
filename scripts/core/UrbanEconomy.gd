@@ -3,6 +3,7 @@ class_name TarvokaUrbanEconomy
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 
 # Optional, fully deterministic city-and-production economy. Not a
@@ -35,7 +36,7 @@ static func create(terrain: Array) -> Dictionary:
     return economy if valid(economy, terrain) else {}
 
 static func cost(role: String) -> int:
-    return int(COSTS.get(role, -1))
+    return int(COSTS[role]) if COSTS.has(role) else Arsenal.price(role)
 
 static func income_for(economy: Dictionary, faction: int) -> int:
     if faction not in [0, 1]:
