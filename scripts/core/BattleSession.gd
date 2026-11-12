@@ -8,9 +8,10 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
@@ -24,13 +25,17 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
             state["economy"] = urban
     if modern_mode and economy_mode and state.has("economy"):
         state["units"] = Logistics.equip_army(state["units"])
+    if balanced_opening and int(state["winner"]) == -1:
+        var deployment: Dictionary = Opening.create(state["units"],faction)
+        if not deployment.is_empty():
+            state["opening"] = deployment
     if fog_enabled:
         state["fog_enabled"] = true
         return Visibility.update_exploration(state)
     return state
 
 static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> Dictionary:
-    if not _active(state):
+    if not _active(state) or not Opening.can_order(state):
         return {"valid": false, "state": state.duplicate(true)}
     # In the first fog prototype, movement destinations must be visible;
     # this also prevents hidden occupancy from revealing enemy coordinates.
@@ -40,7 +45,7 @@ static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> D
     return _apply(state, action)
 
 static func attack(state: Dictionary, attacker_id: String, defender_id: String) -> Dictionary:
-    if not _active(state):
+    if not _active(state) or not Opening.can_order(state):
         return {"valid": false, "state": state.duplicate(true)}
     if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state["faction"]), defender_id):
         return {"valid": false, "state": state.duplicate(true)}
