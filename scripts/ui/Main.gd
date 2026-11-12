@@ -18,6 +18,10 @@ var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
+var iso_view_button: Button
+var iso_zoom_in_button: Button
+var iso_zoom_out_button: Button
+var iso_reset_button: Button
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
@@ -116,6 +120,35 @@ func _ready() -> void:
     panel.add_child(faction_gallery_button)
     faction_gallery = FactionGallery.new()
     add_child(faction_gallery)
+
+    var camera_row := HBoxContainer.new()
+    camera_row.add_theme_constant_override("separation", 5)
+    panel.add_child(camera_row)
+    iso_view_button = Button.new()
+    iso_view_button.text = "Vista isométrica"
+    iso_view_button.tooltip_text = "Alternar entre tablero clásico e isométrico"
+    iso_view_button.custom_minimum_size.y = 48
+    iso_view_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    iso_view_button.pressed.connect(_toggle_isometric_view)
+    camera_row.add_child(iso_view_button)
+    iso_zoom_out_button = Button.new()
+    iso_zoom_out_button.text = "−"
+    iso_zoom_out_button.custom_minimum_size = Vector2(43, 48)
+    iso_zoom_out_button.visible = false
+    iso_zoom_out_button.pressed.connect(func(): board.change_iso_zoom(-1))
+    camera_row.add_child(iso_zoom_out_button)
+    iso_zoom_in_button = Button.new()
+    iso_zoom_in_button.text = "+"
+    iso_zoom_in_button.custom_minimum_size = Vector2(43, 48)
+    iso_zoom_in_button.visible = false
+    iso_zoom_in_button.pressed.connect(func(): board.change_iso_zoom(1))
+    camera_row.add_child(iso_zoom_in_button)
+    iso_reset_button = Button.new()
+    iso_reset_button.text = "Centrar mapa (arrastrar para mover)"
+    iso_reset_button.custom_minimum_size.y = 43
+    iso_reset_button.visible = false
+    iso_reset_button.pressed.connect(func(): board.reset_iso_camera())
+    panel.add_child(iso_reset_button)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -667,6 +700,13 @@ func _refresh_production_catalog() -> void:
         production_picker.set_item_metadata(n,str(role))
     if production_picker.item_count > 0:
         production_picker.select(0)
+
+func _toggle_isometric_view() -> void:
+    board.set_isometric(not board.iso_enabled)
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    iso_zoom_in_button.visible = board.iso_enabled
+    iso_zoom_out_button.visible = board.iso_enabled
+    iso_reset_button.visible = board.iso_enabled
 
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
