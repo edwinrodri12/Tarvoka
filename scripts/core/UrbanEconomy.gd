@@ -106,18 +106,36 @@ static func begin_turn(state: Dictionary) -> Dictionary:
     next["economy"]["credits"][side] = mini(MAX_CREDITS, int(next["economy"]["credits"][side]) + income)
     return next
 
-# Cheap, pure eligibility helper for touchscreen buttons. The authoritative
-# purchase still revalidates everything at the moment of confirmation.
+# A legacy factory can still build ALL five original roles. A modern
+# economy divides the 32 classes into domain-specific installations.
+static func producer_for(role: String, modern: bool = false) -> String:
+    if not modern:
+        return "factory" if COSTS.has(role) else ""
+    if Arsenal.valid(role):
+        return Arsenal.site(role)
+    match role:
+        "line", "scout":
+            return "factory"
+        "piercer", "bulwark":
+            return "armor_plant"
+        "artillery":
+            return "artillery_depot"
+    return ""
+
+static func site_at(economy: Dictionary, position: Vector2i) -> Dictionary:
+    for site in economy.get("sites", []):
+        if site is Dictionary and site.get("pos") == position:
+            return site
+    return {}
+
+# Pure eligibility: the displayed UI price must have the SAME legal result
+# as the authoritative state transition. Production consumes one factory
+# phase and spawns the unit on its appropriate surface/air plane.
 static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> bool:
     if not state.has("economy") or not state.has("terrain") or not state.get("units") is Array:
         return false
     var faction: int = int(state.get("faction", -1))
-    if faction not in [0,1] or int(state.get("winner", -1)) != -1:
-        return false
-    # New multi-domain roles require specialized producers; until those
-    # sites are wired in a following PR, a legacy ground factory cannot
-    # create a ship on dry land or an aircraft without an airbase.
-    if Arsenal.valid(role):
+    if faction not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos):
         return false
     if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
         return false
@@ -125,43 +143,36 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
         return false
     if int(state["economy"]["credits"][faction]) < cost(role):
         return false
+    var modern: bool = bool(state["economy"].get("modern", false))
+    var producer: String = producer_for(role, modern)
+    if producer.is_empty():
+        return false
+    var site: Dictionary = site_at(state["economy"], factory_pos)
+    if site.is_empty() or str(site["kind"]) != producer:
+        return false
+    if int(site["owner"]) != faction or int(site["produced_turn"]) == int(state["economy"]["turn"]):
+        return false
+    var probe: Dictionary = Roles.make_unit("PROBE", faction, factory_pos, role)
+    if probe.is_empty():
+        return false
+    var domain: String = Domains.domain(probe)
+    if Rules.movement_cost_for(str(state["terrain"][factory_pos.y][factory_pos.x]), domain) < 0:
+        return false
+    var layer: String = Domains.layer(probe)
     for unit in state["units"]:
-        if int(unit.get("hp", 0)) > 0 and Domains.layer(unit) == "surface" and unit.get("pos") == factory_pos:
+        if int(unit.get("hp", 0)) > 0 and Domains.layer(unit) == layer and unit.get("pos") == factory_pos:
             return false
-    for site in state["economy"]["sites"]:
-        if site["kind"] == "factory" and site["pos"] == factory_pos and int(site["owner"]) == faction and int(site["produced_turn"]) != int(state["economy"]["turn"]):
-            return true
-    return false
+    return true
 
-# One fresh unit per owned, unoccupied factory per faction turn.
-# New troops cannot attack/move immediately; both flags reset on their
-# owner's next turn, preventing instant two-action rushes or free units.
 static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
     var denied := {"valid":false, "state":state.duplicate(true)}
-    if not state.has("economy") or not state.has("terrain") or not state.has("units"):
+    if not can_purchase(state, factory_pos, role):
         return denied
-    var side: int = int(state.get("faction", -1))
-    if side not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos):
-        return denied
-    var price: int = cost(role)
-    if Arsenal.valid(role):
-        return denied
-    if price <= 0 or state["units"].size() >= MAX_UNITS:
-        return denied
-    if not valid(state["economy"], state["terrain"]):
-        return denied
-    var money: int = int(state["economy"]["credits"][side])
-    if money < price:
-        return denied
-    for unit in state["units"]:
-        if int(unit.get("hp", 0)) > 0 and Domains.layer(unit) == "surface" and unit.get("pos") == factory_pos:
-            return denied
     var next: Dictionary = state.duplicate(true)
-    var selected: Dictionary = {}
-    for site in next["economy"]["sites"]:
-        if site["kind"] == "factory" and site["pos"] == factory_pos and int(site["owner"]) == side and int(site["produced_turn"]) != int(next["economy"]["turn"]):
-            selected = site
-            break
+    var side: int = int(next["faction"])
+    var money: int = int(next["economy"]["credits"][side])
+    var price: int = cost(role)
+    var selected: Dictionary = site_at(next["economy"], factory_pos)
     if selected.is_empty():
         return denied
     var serial: int = int(next["economy"]["next_unit"])
