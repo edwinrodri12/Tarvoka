@@ -427,7 +427,12 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
         if kind == "attack":
             var damage := int(hints["attacks"][cell]["damage"])
             var response_max: int = int(hints["attacks"][cell].get("counter_damage",0))
-            message = "Atacar %s (-%d). Posible respuesta hasta -%d HP. Toca otra vez o Confirmar orden." % [enemy_id,damage,response_max]
+            var effects: Dictionary = hints["attacks"][cell]
+            var ground_note := " | terreno: ATQ %+d, cobertura rival +%d%s" % [
+                int(effects.get("terrain_attack_bonus",0)),int(effects.get("terrain_defense_cover",0)),
+                ", flanqueo" if bool(effects.get("flanked",false)) else ""
+            ]
+            message = "Atacar %s (-%d). Posible respuesta hasta -%d HP%s. Toca otra vez o Confirmar orden." % [enemy_id,damage,response_max,ground_note]
         else:
             message = "Mover a (%d,%d). Toca otra vez o Confirmar orden." % [cell.x + 1, cell.y + 1]
         return
