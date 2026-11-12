@@ -25,7 +25,7 @@ func _initialize() -> void:
     var before: Dictionary = field.duplicate(true)
     var quote: Dictionary = Logistics.quote(field,"T")
     assert(quote["valid"] and quote["source_kind"] == "truck" and quote["source_id"] == "L")
-    assert(quote["ammo"] == 2 and quote["fuel"] == 1 and quote["cost"] == 28)
+    assert(quote["ammo"] == 2 and quote["fuel"] == 1 and quote["cost"] == 0)
     assert(field == before) # Pure quote must never spend credits or consume stock.
     var delivery: Dictionary = Session.resupply(field,"T")
     assert(delivery["valid"])
@@ -35,12 +35,18 @@ func _initialize() -> void:
     assert(delivery["state"]["units"][1]["supply_fuel"] == 0)
     assert(delivery["state"]["units"][1]["supply_used"])
     assert(delivery["state"]["units"][1]["acted"])
-    assert(delivery["state"]["economy"]["credits"][0] == 2500 - 28)
+    assert(delivery["state"]["economy"]["credits"][0] == 2500) # Prepaid truck stock.
     assert(not Session.resupply(delivery["state"],"T")["valid"])
     assert(Codec.decode(Codec.encode(delivery["state"])) == delivery["state"])
     delivery["state"]["units"] = Turns.begin_turn(delivery["state"]["units"],0)
     assert(not delivery["state"]["units"][1]["supply_used"])
     assert(not Logistics.can_resupply(delivery["state"],"T")) # No magical new cargo.
+    var zero_credits: Dictionary = field.duplicate(true)
+    zero_credits["economy"]["credits"][0] = 0
+    assert(Logistics.can_resupply(zero_credits,"T"))
+    var free_delivery: Dictionary = Session.resupply(zero_credits,"T")
+    assert(free_delivery["valid"] and free_delivery["cost"] == 0)
+    assert(free_delivery["state"]["economy"]["credits"][0] == 0)
 
     # A depot can refill a truck's field inventory and its own tank, for credits.
     var depot_truck: Dictionary = Roles.make_unit("L",0,Vector2i(0,3),"logistics")
