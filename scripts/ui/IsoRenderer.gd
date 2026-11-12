@@ -13,6 +13,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 
 static func _ring(vertices: PackedVector2Array) -> PackedVector2Array:
     var outline: PackedVector2Array = vertices.duplicate()
@@ -31,7 +32,8 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2) ->
 
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
-        combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0) -> void:
+        combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
+        unit_headings: Dictionary = {}) -> void:
     var hw: float = IsoTransform.half_width(canvas.size, zoom)
     if hw <= 0.0 or not state.has("terrain"):
         return
@@ -154,16 +156,22 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var pose := "damaged" if int(unit.get("hp",10)) <= 3 else "idle"
         if is_moving:
             pose = "move"
+        var visual_heading: Vector2i = unit_headings.get(str(unit["id"]), Vector2i.ZERO)
         for effect in combat_effects:
-            if effect["origin"] == cell and float(effect["elapsed"]) <= 0.24:
+            if effect["origin"] == cell and float(effect["elapsed"]) <= BattleVFX.FLIGHT_SECONDS:
                 pose = "attack"
+                visual_heading = effect["target"] - cell
                 break
         var sprite: Texture2D = UnitSprites.frame_texture(role,pose)
         if sprite != null:
             var sprite_size := hw * (0.94 if is_air else 0.88)
-            var sprite_origin: Vector2 = c - Vector2(sprite_size*0.5,sprite_size*0.56)
-            canvas.draw_texture_rect(sprite,Rect2(sprite_origin,Vector2.ONE*sprite_size),
+            var rotation: float = BattleVFX.sprite_rotation(role,
+                BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
+            canvas.draw_set_transform(c,rotation)
+            canvas.draw_texture_rect(sprite,
+                Rect2(Vector2(-sprite_size*0.5,-sprite_size*0.56),Vector2.ONE*sprite_size),
                 false,face)
+            canvas.draw_set_transform(Vector2.ZERO)
         elif UnitArt.has_role(role):
             # Existing procedural silhouette is retained as a safe fallback.
             UnitArt.draw_unit(canvas, role, c, radius, face, phase)
@@ -220,13 +228,4 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
 
     # Effects belong to rendering only, and their stored origins already
     # passed the fog-safety check in the core TouchBoard code.
-    for effect in combat_effects:
-        var progress: float = clampf(float(effect["elapsed"]) / 0.55, 0.0, 1.0)
-        var alpha: float = 1.0 - progress
-        var c: Vector2 = _center(effect["target"], canvas, zoom, pan)
-        canvas.draw_arc(c, hw * (0.16 + progress * 0.38), 0, TAU, 24,
-            Color(1.0, 0.73, 0.24, alpha), maxf(1.0, hw * 0.045))
-        var origin_cell: Vector2i = effect["origin"]
-        if origin_cell.x >= 0:
-            canvas.draw_line(_center(origin_cell, canvas, zoom, pan), c,
-                Color(1.0, 0.85, 0.46, alpha * 0.6), maxf(1.0, hw * 0.035))
+    BattleVFX.draw_effects(canvas,combat_effects,hw,canvas.size,zoom,pan)
