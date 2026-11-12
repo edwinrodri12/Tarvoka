@@ -6,6 +6,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Doctrine = preload("res://scripts/core/CombatDoctrine.gd")
+const Terrain = preload("res://scripts/core/TerrainTactics.gd")
 
 # These guided munitions ARE the projectile, not reusable weapon platforms.
 const ONE_WAY_ROLES := ["fpv", "loitering", "usv"]
@@ -29,13 +30,26 @@ static func _maximum_hp(unit: Dictionary) -> int:
     # available reference; never add a new save-file field.
     return maxi(1,int(unit.get("hp",1)))
 
-static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_counter: bool = true) -> Dictionary:
+static func _strike(attacker: Dictionary, defender: Dictionary, terrain: Array, economy: Dictionary, units: Array) -> Dictionary:
+    var effects: Dictionary = Terrain.modifiers(attacker,defender,terrain,economy,units)
+    var shooting: Dictionary = attacker.duplicate(true)
+    var exposed: Dictionary = defender.duplicate(true)
+    shooting["attack"] = maxi(0,int(shooting.get("attack",0))+int(effects["attack_bonus"]))
+    exposed["cover"] = maxi(0,int(exposed.get("cover",0))+int(effects["defense_cover"]))
+    var outcome: Dictionary = Roles.resolve(shooting,exposed)
+    outcome["terrain_attack_bonus"] = int(effects["attack_bonus"])
+    outcome["terrain_defense_cover"] = int(effects["defense_cover"])
+    outcome["height_delta"] = int(effects["height_delta"])
+    outcome["flanked"] = bool(effects["flanked"])
+    return outcome
+
+static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_counter: bool = true, terrain: Array = [], economy: Dictionary = {}, units: Array = []) -> Dictionary:
     var empty := {"valid":false,"damage":0,"defender_hp":maxi(0,int(defender.get("hp",0))),"counter_damage":0,"attacker_hp":maxi(0,int(attacker.get("hp",0))),"counter_spent":false}
     if int(attacker.get("hp",0)) <= 0 or int(defender.get("hp",0)) <= 0:
         return empty
     if not Logistics.can_fire(attacker) or not Turns.in_attack_range(attacker,defender):
         return empty
-    var forward: Dictionary = Roles.resolve(attacker,defender)
+    var forward: Dictionary = _strike(attacker,defender,terrain,economy,units)
     if not bool(forward.get("valid",false)):
         return empty
     var dealt: int = int(forward["damage"])
@@ -51,7 +65,7 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_c
         var surviving: Dictionary = defender.duplicate(true)
         surviving["hp"] = remaining
         if Turns.in_attack_range(surviving,attacker):
-            var retaliation: Dictionary = Roles.resolve(surviving,attacker)
+            var retaliation: Dictionary = _strike(surviving,attacker,terrain,economy,units)
             if bool(retaliation.get("valid",false)) and int(retaliation.get("damage",0)) > 0:
                 var original_max: int = _maximum_hp(defender)
                 # Round up to keep a weak but armed defender dangerous,
@@ -63,6 +77,10 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_c
         "counter_damage":return_hit,
         "attacker_hp":maxi(0,int(attacker["hp"]) - return_hit),
         "counter_spent":return_hit > 0,
+        "terrain_attack_bonus":int(forward["terrain_attack_bonus"]),
+        "terrain_defense_cover":int(forward["terrain_defense_cover"]),
+        "height_delta":int(forward["height_delta"]),
+        "flanked":bool(forward["flanked"]),
         "defeated":remaining == 0
     }
 
@@ -70,15 +88,15 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_c
 # readiness are NOT public intelligence, even if the enemy is visible.
 # Assume the defender can answer, so this number is an upper bound; actual
 # Session.attack checks real ammo, available reaction and its own vision.
-static func public_preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dictionary:
+static func public_preview_exchange(attacker: Dictionary, defender: Dictionary, terrain: Array = [], economy: Dictionary = {}, units: Array = []) -> Dictionary:
     var public_defender: Dictionary = defender.duplicate(true)
     public_defender.erase("reacted")
     if public_defender.has("ammo"):
         public_defender["ammo"] = maxi(1,int(public_defender["ammo"]))
-    return preview_exchange(attacker,public_defender)
+    return preview_exchange(attacker,public_defender,true,terrain,economy,units)
 
 # Pure adjacent attack action; never mutates the supplied unit array.
-static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true) -> Dictionary:
+static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true, terrain: Array = [], economy: Dictionary = {}) -> Dictionary:
     var result: Array = units.duplicate(true)
     # Reject ambiguous identifiers before resolving any combat action.
     var seen_ids := {}
@@ -116,7 +134,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         return {"valid": false, "units": units.duplicate(true)}
     if not Turns.in_attack_range(attacker, defender):
         return {"valid": false, "units": units.duplicate(true)}
-    var exchange: Dictionary = preview_exchange(attacker, defender, allow_counter)
+    var exchange: Dictionary = preview_exchange(attacker, defender, allow_counter, terrain, economy, result)
     if not bool(exchange["valid"]):
         return {"valid": false, "units": units.duplicate(true)}
     defender["hp"] = int(exchange["defender_hp"])
@@ -135,6 +153,9 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         "valid": true, "units": result, "damage": int(exchange["damage"]),
         "counter_damage": int(exchange["counter_damage"]),
         "counter_spent": bool(exchange["counter_spent"]),
+        "terrain_attack_bonus":int(exchange["terrain_attack_bonus"]),
+        "terrain_defense_cover":int(exchange["terrain_defense_cover"]),
+        "flanked":bool(exchange["flanked"]),
         "consumed_unit_id": attacker_id if consumed else "",
         "winner": Turns.winner(result)
     }

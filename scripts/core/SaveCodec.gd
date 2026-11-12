@@ -14,6 +14,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -36,6 +37,8 @@ static func encode(state: Dictionary) -> String:
     }
     if state.has("map_seed"):
         snapshot["map_seed"] = int(state["map_seed"])
+    if state.has("opening"):
+        snapshot["opening"] = state["opening"].duplicate(true)
     if state.has("control"):
         var control: Dictionary = state["control"].duplicate(true)
         for node in control["nodes"]:
@@ -105,6 +108,13 @@ static func decode(raw: String) -> Dictionary:
         return {}
     state["faction"] = int(state["faction"])
     state["winner"] = int(state["winner"])
+    if state.has("opening"):
+        if not state["opening"] is Dictionary:
+            return {}
+        for key in ["starter","limit","used"]:
+            if not _whole(state["opening"].get(key,null)):
+                return {}
+            state["opening"][key] = int(state["opening"][key])
     if state.has("map_seed"):
         if not _whole(state["map_seed"]):
             return {}
@@ -225,6 +235,11 @@ static func _valid_state(state: Dictionary) -> bool:
         return false
     if not state.get("faction") is int or state["faction"] not in [0, 1]:
         return false
+    if state.has("opening"):
+        if not state["opening"] is Dictionary or not Opening.valid(state["opening"]):
+            return false
+        if int(state["opening"]["starter"]) != int(state["faction"]):
+            return false
     if not state.get("winner") is int or state["winner"] not in [-1, 0, 1]:
         return false
     var ids: Dictionary = {}

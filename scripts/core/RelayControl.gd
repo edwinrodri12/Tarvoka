@@ -40,6 +40,10 @@ static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: boo
         # completed one equal opportunity to respond.
         control["fair_round"] = true
         control["first_faction"] = first_faction
+        # Both sides earn signal at the SAME round boundary, instead of
+        # the starter collecting a permanent extra tick each cycle.
+        # Optional marker keeps existing v1 saves on original scoring.
+        control["round_scoring"] = true
     return control
 
 # Immutable and deterministic. Scoring happens BEFORE faction switches.
@@ -58,13 +62,26 @@ static func finish_turn(state: Dictionary) -> Dictionary:
             if unit is Dictionary and int(unit.get("hp", 0)) > 0 and int(unit.get("faction", -1)) == faction and Domains.domain(unit) == Domains.GROUND and unit.get("pos") == node["pos"]:
                 node["owner"] = faction
                 break
-    var owned := 0
-    for node in objectives["nodes"]:
-        if int(node["owner"]) == faction:
-            owned += 1
-    var cap: int = MAX_FAIR_SCORE if bool(objectives.get("fair_round",false)) else int(objectives["target"])
-    objectives["scores"][faction] = mini(cap, int(objectives["scores"][faction]) + owned)
     objectives["turns"] = int(objectives["turns"]) + 1
+    var cap: int = MAX_FAIR_SCORE if bool(objectives.get("fair_round",false)) else int(objectives["target"])
+    if bool(objectives.get("round_scoring",false)):
+        # Owner capture still happens on the correct side's end turn.
+        # Signal is deposited only after BOTH players have completed a
+        # full turn. Symmetric captures made in the same round score equally.
+        if int(objectives["turns"]) % 2 == 0:
+            for side in [0,1]:
+                var owned := 0
+                for node in objectives["nodes"]:
+                    if int(node["owner"]) == side:
+                        owned += 1
+                objectives["scores"][side] = mini(cap,int(objectives["scores"][side]) + owned)
+    else:
+        # Legacy saved games and classic mode retain exact old rules.
+        var owned := 0
+        for node in objectives["nodes"]:
+            if int(node["owner"]) == faction:
+                owned += 1
+        objectives["scores"][faction] = mini(cap,int(objectives["scores"][faction]) + owned)
     var earned_victory: int = score_winner(objectives)
     if earned_victory != -1:
         result["winner"] = earned_victory
@@ -97,6 +114,9 @@ static func valid(control: Dictionary, terrain: Array) -> bool:
             return false
     elif control.has("first_faction"):
         return false
+    if control.has("round_scoring"):
+        if not control["round_scoring"] is bool or control["round_scoring"] != true or not bool(control.get("fair_round",false)):
+            return false
     var ceiling: int = MAX_FAIR_SCORE if bool(control.get("fair_round",false)) else int(control["target"])
     for score in control["scores"]:
         if not score is int or score < 0 or score > ceiling:
