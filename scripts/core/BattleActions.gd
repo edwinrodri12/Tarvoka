@@ -5,6 +5,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
+const Doctrine = preload("res://scripts/core/CombatDoctrine.gd")
 
 # These guided munitions ARE the projectile, not reusable weapon platforms.
 const ONE_WAY_ROLES := ["fpv", "loitering", "usv"]
@@ -14,7 +15,9 @@ const ONE_WAY_ROLES := ["fpv", "loitering", "usv"]
 # and NOT a disposable one-way projectile. Reaction is independent of the
 # defender's active-turn flag, but it spends one real round of ammunition.
 # Its reduced damage accounts for the defender's POST-HIT strength.
-const RESPONSE_PERCENT := 50
+# One reaction per opposing turn and one ammo round per successful reaction.
+# The percentages live in the 32-role doctrine, not universal.
+const RESPONSE_PERCENT := 50 # Fallback for unprofiled legacy soldier saves.
 
 static func _maximum_hp(unit: Dictionary) -> int:
     var role: String = str(unit.get("role", ""))
@@ -26,7 +29,7 @@ static func _maximum_hp(unit: Dictionary) -> int:
     # available reference; never add a new save-file field.
     return maxi(1,int(unit.get("hp",1)))
 
-static func preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dictionary:
+static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_counter: bool = true) -> Dictionary:
     var empty := {"valid":false,"damage":0,"defender_hp":maxi(0,int(defender.get("hp",0))),"counter_damage":0,"attacker_hp":maxi(0,int(attacker.get("hp",0))),"counter_spent":false}
     if int(attacker.get("hp",0)) <= 0 or int(defender.get("hp",0)) <= 0:
         return empty
@@ -38,8 +41,11 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dict
     var dealt: int = int(forward["damage"])
     var remaining: int = int(forward["defender_hp"])
     var return_hit := 0
-    var can_answer: bool = remaining > 0 and str(attacker.get("role","")) not in ONE_WAY_ROLES
-    can_answer = can_answer and str(defender.get("role","")) not in ONE_WAY_ROLES
+    var defender_role: String = str(defender.get("role",""))
+    var response_percent: int = Doctrine.reaction_percent(defender_role) if Doctrine.valid(defender_role) else RESPONSE_PERCENT
+    var can_answer: bool = allow_counter and response_percent > 0 and remaining > 0 and not bool(defender.get("reacted",false))
+    can_answer = can_answer and str(attacker.get("role","")) not in ONE_WAY_ROLES
+    can_answer = can_answer and defender_role not in ONE_WAY_ROLES
     can_answer = can_answer and int(defender.get("attack",0)) > 0 and Logistics.can_fire(defender)
     if can_answer:
         var surviving: Dictionary = defender.duplicate(true)
@@ -50,7 +56,7 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dict
                 var original_max: int = _maximum_hp(defender)
                 # Round up to keep a weak but armed defender dangerous,
                 # while still giving the initiating strike a clear advantage.
-                var scaled: int = ceili(float(int(retaliation["damage"]) * remaining * RESPONSE_PERCENT) / float(original_max * 100))
+                var scaled: int = ceili(float(int(retaliation["damage"]) * remaining * response_percent) / float(original_max * 100))
                 return_hit = mini(int(attacker["hp"]),maxi(1,scaled))
     return {
         "valid":true,"damage":dealt,"defender_hp":remaining,
@@ -61,7 +67,7 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dict
     }
 
 # Pure adjacent attack action; never mutates the supplied unit array.
-static func attack(units: Array, attacker_id: String, defender_id: String, faction: int) -> Dictionary:
+static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true) -> Dictionary:
     var result: Array = units.duplicate(true)
     # Reject ambiguous identifiers before resolving any combat action.
     var seen_ids := {}
@@ -99,7 +105,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         return {"valid": false, "units": units.duplicate(true)}
     if not Turns.in_attack_range(attacker, defender):
         return {"valid": false, "units": units.duplicate(true)}
-    var exchange: Dictionary = preview_exchange(attacker, defender)
+    var exchange: Dictionary = preview_exchange(attacker, defender, allow_counter)
     if not bool(exchange["valid"]):
         return {"valid": false, "units": units.duplicate(true)}
     defender["hp"] = int(exchange["defender_hp"])
@@ -107,6 +113,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
     Logistics.consume_attack(attacker)
     if bool(exchange["counter_spent"]):
         Logistics.consume_attack(defender)
+        defender["reacted"] = true
     attacker["acted"] = true
     var consumed: bool = str(attacker.get("role", "")) in ONE_WAY_ROLES
     if consumed:
