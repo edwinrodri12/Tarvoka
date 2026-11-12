@@ -6,12 +6,13 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const DEFAULT_TARGET := 5
 const MAX_TARGET := 20
 const MAX_NODES := 8
+const MAX_FAIR_SCORE := 100000
 
 # Optional, original prototype objective: secure communications relays.
 # A living unit captures the relay under it only when its faction ENDS a turn.
 # Each relay owned after that capture earns one signal point per completed turn.
 # No extra actions, economy, production, buffs, or hidden RNG.
-static func create(terrain: Array, target: int = DEFAULT_TARGET) -> Dictionary:
+static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: bool = false, first_faction: int = 0) -> Dictionary:
     if target < 2 or target > MAX_TARGET or terrain.size() != Rules.HEIGHT:
         return {}
     for row in terrain:
@@ -23,7 +24,15 @@ static func create(terrain: Array, target: int = DEFAULT_TARGET) -> Dictionary:
         if Rules.movement_cost(str(terrain[position.y][position.x])) < 0:
             return {}
         nodes.append({"pos": position, "owner": -1})
-    return {"nodes": nodes, "scores": [0, 0], "target": target, "turns": 0}
+    var control := {"nodes": nodes, "scores": [0, 0], "target": target, "turns": 0}
+    if fair_round:
+        if first_faction not in [0, 1]:
+            return {}
+        # Modern battles settle score victories only after both sides have
+        # completed one equal opportunity to respond.
+        control["fair_round"] = true
+        control["first_faction"] = first_faction
+    return control
 
 # Immutable and deterministic. Scoring happens BEFORE faction switches.
 static func finish_turn(state: Dictionary) -> Dictionary:
@@ -45,10 +54,12 @@ static func finish_turn(state: Dictionary) -> Dictionary:
     for node in objectives["nodes"]:
         if int(node["owner"]) == faction:
             owned += 1
-    objectives["scores"][faction] = mini(int(objectives["target"]), int(objectives["scores"][faction]) + owned)
+    var cap: int = MAX_FAIR_SCORE if bool(objectives.get("fair_round",false)) else int(objectives["target"])
+    objectives["scores"][faction] = mini(cap, int(objectives["scores"][faction]) + owned)
     objectives["turns"] = int(objectives["turns"]) + 1
-    if int(objectives["scores"][faction]) >= int(objectives["target"]):
-        result["winner"] = faction
+    var earned_victory: int = score_winner(objectives)
+    if earned_victory != -1:
+        result["winner"] = earned_victory
     return result
 
 static func valid(control: Dictionary, terrain: Array) -> bool:
@@ -73,8 +84,14 @@ static func valid(control: Dictionary, terrain: Array) -> bool:
         return false
     if not control.get("target") is int or control["target"] < 2 or control["target"] > MAX_TARGET:
         return false
+    if control.has("fair_round"):
+        if control["fair_round"] != true or not control.get("first_faction") is int or int(control["first_faction"]) not in [0, 1]:
+            return false
+    elif control.has("first_faction"):
+        return false
+    var ceiling: int = MAX_FAIR_SCORE if bool(control.get("fair_round",false)) else int(control["target"])
     for score in control["scores"]:
-        if not score is int or score < 0 or score > control["target"]:
+        if not score is int or score < 0 or score > ceiling:
             return false
     if not control.get("turns") is int or control["turns"] < 0 or control["turns"] > 100000:
         return false
@@ -83,7 +100,19 @@ static func valid(control: Dictionary, terrain: Array) -> bool:
 static func score_winner(control: Dictionary) -> int:
     if not control.has("scores") or not control.get("scores") is Array or control["scores"].size() != 2:
         return -1
+    var target: int = int(control.get("target", DEFAULT_TARGET))
+    if bool(control.get("fair_round",false)):
+        # Nobody wins halfway through a round: even the opening faction must
+        # allow its opponent one equally scored turn. If both reach the target
+        # at the same time and tie, play continues until someone pulls ahead.
+        if int(control.get("turns",0)) % 2 != 0:
+            return -1
+        var blue: int = int(control["scores"][0])
+        var red: int = int(control["scores"][1])
+        if maxi(blue,red) < target or blue == red:
+            return -1
+        return 0 if blue > red else 1
     for faction in [0, 1]:
-        if int(control["scores"][faction]) >= int(control.get("target", DEFAULT_TARGET)):
+        if int(control["scores"][faction]) >= target:
             return faction
     return -1
