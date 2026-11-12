@@ -47,6 +47,7 @@ const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
 var combat_effects: Array[Dictionary] = []
 var motion_effects: Array[Dictionary] = [] # Nonpersistent visual-only interpolation.
+var unit_headings: Dictionary = {} # Unit ID -> last visible grid direction, not saved.
 var art_phase := 0.0
 var _ambient_accum := 0.0
 
@@ -90,6 +91,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     last_economy_report = ""
     combat_effects.clear()
     motion_effects.clear()
+    unit_headings.clear()
     # When the user selects Red to open a single-player battle, complete
     # precisely one real AI turn BEFORE saving the starting human state.
     # Local two-player games leave Red's opening completely manual.
@@ -117,6 +119,14 @@ func reset_iso_camera() -> void:
     iso_pan = Vector2.ZERO
     queue_redraw()
 
+func focus_iso_cell(cell: Vector2i) -> bool:
+    if not iso_enabled or cell.x < 0 or cell.y < 0 or cell.x >= WIDTH or cell.y >= HEIGHT:
+        return false
+    # Camera transformation only. No tactical touch/order or save writes.
+    iso_pan = size * 0.5 - IsoProjection.center(cell,size,iso_zoom,Vector2.ZERO)
+    queue_redraw()
+    return true
+
 func screen_cell(point: Vector2) -> Vector2i:
     if iso_enabled:
         return IsoProjection.screen_to_cell(point, size, iso_zoom, iso_pan)
@@ -143,7 +153,7 @@ static func fog_cover_color(has_explored: bool) -> Color:
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self, state, selected_id, selected_factory_pos,
-            pending_order, combat_effects, iso_zoom, iso_pan, motion_effects, art_phase)
+            pending_order, combat_effects, iso_zoom, iso_pan, motion_effects, art_phase, unit_headings)
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -408,6 +418,7 @@ func _record_move_effect(before: Dictionary, after: Dictionary, unit_id: String)
     for i in range(motion_effects.size()-1,-1,-1):
         if str(motion_effects[i]["id"]) == unit_id:
             motion_effects.remove_at(i)
+    unit_headings[unit_id] = current["pos"] - old["pos"]
     motion_effects.append({"id":unit_id,"from":old["pos"],"to":current["pos"],"elapsed":0.0})
     while motion_effects.size() > 16:
         motion_effects.pop_front()
@@ -419,13 +430,17 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
     var shot_from := Vector2i(-1,-1)
     var target := Vector2i(-1,-1)
     var target_was_alive := false
+    var attacker_role := ""
+    var defender_role := ""
     for unit in before.get("units", []):
         if not unit is Dictionary:
             continue
         if str(unit.get("id","")) == attacker_id:
             shot_from = unit["pos"]
+            attacker_role = str(unit.get("role",""))
         elif str(unit.get("id","")) == defender_id:
             target = unit["pos"]
+            defender_role = str(unit.get("role",""))
             target_was_alive = int(unit.get("hp",0)) > 0
     if target.x < 0 or not target_was_alive:
         return
@@ -435,14 +450,19 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
         return
     if Visibility.enabled(before) and not visible.has(shot_from):
         shot_from = Vector2i(-1,-1)
-    var target_destroyed := false
+    # Destroyed units may be removed entirely from the next state's array.
+    var target_survives := false
     for unit in result.get("state", {}).get("units", []):
-        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) <= 0:
-            target_destroyed = true
+        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) > 0:
+            target_survives = true
             break
+    var target_destroyed := not target_survives
+    if shot_from.x >= 0:
+        unit_headings[attacker_id] = target - shot_from
     combat_effects.append({
         "origin":shot_from, "target":target,
         "elapsed":0.0, "destroyed":target_destroyed,
+        "attacker_role":attacker_role, "defender_role":defender_role,
         "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
     })
     while combat_effects.size() > 8:

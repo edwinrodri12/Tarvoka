@@ -9,6 +9,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
 var status_label: Label
@@ -25,6 +26,9 @@ var iso_view_button: Button
 var iso_zoom_in_button: Button
 var iso_zoom_out_button: Button
 var iso_reset_button: Button
+var battle_minimap: Control
+var minimap_caption: Label
+var _minimap_view_key := -1
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
@@ -159,6 +163,18 @@ func _ready() -> void:
     iso_reset_button.visible = false
     iso_reset_button.pressed.connect(func(): board.reset_iso_camera())
     panel.add_child(iso_reset_button)
+
+    minimap_caption = Label.new()
+    minimap_caption.text = "MINIMAPA · tocar para centrar"
+    minimap_caption.add_theme_font_size_override("font_size", 14)
+    minimap_caption.add_theme_color_override("font_color", Color("#B8CED9"))
+    minimap_caption.visible = false
+    panel.add_child(minimap_caption)
+    battle_minimap = MinimapScript.new()
+    battle_minimap.custom_minimum_size = Vector2(220,138)
+    battle_minimap.visible = false
+    battle_minimap.call("set_board",board)
+    panel.add_child(battle_minimap)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -507,6 +523,11 @@ func _process(_delta: float) -> void:
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
     var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.pending_order])
+    var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,board.size])
+    if battle_minimap != null and minimap_key != _minimap_view_key:
+        _minimap_view_key = minimap_key
+        if board.iso_enabled:
+            battle_minimap.queue_redraw()
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
@@ -717,6 +738,9 @@ func _toggle_isometric_view() -> void:
     iso_zoom_in_button.visible = board.iso_enabled
     iso_zoom_out_button.visible = board.iso_enabled
     iso_reset_button.visible = board.iso_enabled
+    battle_minimap.visible = board.iso_enabled
+    minimap_caption.visible = board.iso_enabled
+    _minimap_view_key = -1
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
