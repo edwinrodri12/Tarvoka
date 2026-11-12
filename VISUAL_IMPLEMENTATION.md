@@ -21,7 +21,8 @@ Fecha: 2026-11-12. Alcance: **infraestructura visual en ejecución**, no se afir
 
 - `scripts/ui/VisualStyle.gd`: registro único de identidades, colores, motivos y rutas futuras de PNG; colores de casillas; indicador azul de movimiento y rojo de ataque.
 - `scripts/ui/TouchBoard.gd`: toma de VisualStyle los colores de terreno, bandos e indicadores, con iluminación simple de borde para dar profundidad sin alterar hitboxes ni niebla.
-- `scripts/ui/Main.gd`: leyenda de movimiento actualizada.
+- `scripts/ui/Main.gd`: leyenda de movimiento actualizada; botón «Ver las ocho facciones» en el HUD.
+- `scripts/ui/FactionGallery.gd`: galería desplazable con las ocho identidades, que muestra cada emblema si su PNG existe y un recuadro de color claramente provisional si falta.
 - `tests/test_visual_style.gd`: congelación de identidades y regresión visual sin cambios de estado; CI la ejecuta junto a pruebas tácticas.
 
 ## Rutas preparadas para el arte final
