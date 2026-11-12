@@ -10,6 +10,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -359,6 +360,27 @@ func _commit_order(order: Dictionary) -> bool:
     else:
         selected_id = ""
         message = "Ataque realizado."
+    return true
+
+# A manual supply action spends credits and the selected unit's action.
+func can_resupply_selected() -> bool:
+    return pending_order.is_empty() and not selected_id.is_empty() and (not ai_enabled or int(state.get("faction", -1)) == 0) and Logistics.can_resupply(state, selected_id)
+
+func resupply_selected() -> bool:
+    if not can_resupply_selected():
+        message = "Reabastecimiento no disponible: requiere base amiga o camion logistico, creditos y suministros gastados."
+        return false
+    var action: Dictionary = Session.resupply(state, selected_id)
+    if not action.get("valid", false):
+        message = "Reabastecimiento rechazado."
+        return false
+    state = action["state"]
+    message = "Municion y combustible recuperados (-%d creditos)." % int(action["cost"])
+    selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
+    pending_order.clear()
+    _write_autosave()
+    queue_redraw()
     return true
 
 # Purchases come from a selected, currently owned and unoccupied workshop.
