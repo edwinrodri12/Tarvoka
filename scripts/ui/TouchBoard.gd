@@ -43,14 +43,15 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0) -> void:
     symmetric_setup = symmetric
     specialized_roster = specialized or modern
     modern_roster = modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
-    current_scenario_id = scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0
-    var terrain: Array = Scenarios.terrain(current_scenario_id)
+    var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
+    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
+    var terrain: Array = Scenarios.seeded_terrain(map_seed) if is_seeded else Scenarios.terrain(current_scenario_id)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -67,6 +68,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster)
+    if is_seeded:
+        state["map_seed"] = map_seed
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     pending_order.clear()
@@ -774,7 +777,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     state = restored
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
-    current_scenario_id = Scenarios.identify(state["terrain"])
+    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
@@ -811,7 +814,7 @@ func resume_autosave() -> bool:
     state = restored
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
-    current_scenario_id = Scenarios.identify(state["terrain"])
+    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
