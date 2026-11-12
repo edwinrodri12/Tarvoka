@@ -1,11 +1,12 @@
 # TARVOKA — Biblia narrativa y campaña de 50 capítulos
 
-> **Actualización de arsenal bajo evaluación (12-nov-2026):** Las 50 misiones y las ocho facciones se mantienen. La cifra anterior de 32 clases para campaña está **en revisión por duplicados**: ver [UNIT_ROSTER_AUDIT_V02.md](UNIT_ROSTER_AUDIT_V02.md), propuesta de ~24 familias y mejoras de tres niveles. Hasta aprobar el filtro, los hitos 9/18/26/32 no son objetivos fijos de producción.
+> **Actualización del arsenal y narrativa (2026-11-12):** progresión revisada a **24 familias** (propuesta 23 si se descarta logística naval M09) y mejoras de tres niveles. Ver [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md), [CAMPAIGN_TECH_LEVELS_V1.md](CAMPAIGN_TECH_LEVELS_V1.md) y [STORY_CHAPTER_01.md](STORY_CHAPTER_01.md). Las 50 misiones y ocho facciones se mantienen. Este es diseño, no programación.
+
 
 **Estado:** Dirección creativa aprobada por el usuario el 2026-11-12; este documento es el plan narrativo **[PLAN]**, no prueba de contenido implementado.  
 **Premisa:** *La Red de Meridian*. **Formato:** 50 capítulos jugables, 5 actos × 10, ocho puntos de vista, tres familias de desenlace.  
 **Relación con el diseño existente:** [GAME_DESIGN.md](GAME_DESIGN.md), [DESIGN_ROADMAP.md](DESIGN_ROADMAP.md), [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md), [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md).
-**Progresión por capítulos (decisión 2026-11-12):** [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md) especifica 32 clases desbloqueadas de forma progresiva (9/18/26/32 al finalizar cada uno de los cuatro primeros actos), conservando todas las clases para combates libres/online según disponibilidad técnica. El Acto V se dedica a dominarlas, no a nuevos tutoriales.
+**Progresión por capítulos (diseño v0.2):** [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md) presenta **24 familias** escalonadas (8/13/19/24 tras los actos I–IV), con 3 niveles tecnológicos por familia. Los modos libres/online no dependen del desbloqueo narrativo y el Acto V se centra en dominar el arsenal completo.
 
 ## 1. Decisión de producto y prioridades
 
