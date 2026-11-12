@@ -484,7 +484,10 @@ func _process(_delta: float) -> void:
         if bool(control.get("fair_round",false)) and int(board.state.get("winner",-1)) == -1:
             var blue_signal: int = int(control["scores"][0])
             var red_signal: int = int(control["scores"][1])
-            if int(control["turns"]) % 2 == 1 and maxi(blue_signal, red_signal) >= int(control["target"]):
+            if bool(control.get("round_scoring",false)) and int(control["turns"]) % 2 == 1:
+                relay_text += " | Senal pendiente: se acredita al cerrar la ronda"
+            elif int(control["turns"]) % 2 == 1 and maxi(blue_signal, red_signal) >= int(control["target"]):
+                # Existing saved matches from before paired scoring.
                 relay_text += " | Victoria pendiente de respuesta"
             elif blue_signal == red_signal and blue_signal >= int(control["target"]):
                 relay_text += " | Empate: sigue el combate"
