@@ -95,11 +95,11 @@ static func viewport_corners(canvas_size: Vector2, state: Dictionary,
         board_size: Vector2, zoom: float, pan: Vector2) -> PackedVector2Array:
     var dims: Vector2i = dimensions(state)
     var bounds: Rect2 = local_bounds(canvas_size,dims)
-    var hw: float = IsoTransform.half_width(board_size,zoom)
+    var hw: float = IsoTransform.half_width(board_size,zoom,dims)
     var result := PackedVector2Array()
     if hw <= 0.0 or bounds.size.x <= 0.0:
         return result
-    var base: Vector2 = IsoTransform.origin(board_size,zoom,pan)
+    var base: Vector2 = IsoTransform.origin(board_size,zoom,pan,dims)
     var cell_size: Vector2 = bounds.size / Vector2(dims)
     for corner in [Vector2.ZERO,Vector2(board_size.x,0),
             board_size,Vector2(0,board_size.y)]:
