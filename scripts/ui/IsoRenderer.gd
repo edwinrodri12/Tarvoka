@@ -11,6 +11,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
+const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 
 static func _ring(vertices: PackedVector2Array) -> PackedVector2Array:
@@ -135,8 +136,10 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var is_air: bool = Domains.domain(unit) == Domains.AIR
         var is_naval: bool = Domains.domain(unit) == Domains.NAVAL
         var c: Vector2 = _center(cell, canvas, zoom, pan)
+        var is_moving := false
         for movement in motion_effects:
             if str(movement.get("id", "")) == str(unit["id"]):
+                is_moving = true
                 var t: float = clampf(float(movement["elapsed"]) / 0.32, 0.0, 1.0)
                 var smooth: float = t*t*(3.0-2.0*t)
                 var previous: Vector2i = movement["from"]
@@ -148,7 +151,21 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var face: Color = tint.darkened(0.46) if bool(unit.get("acted", false)) else (tint.darkened(0.18) if bool(unit.get("moved", false)) else tint)
         var role: String = str(unit.get("role",""))
         var radius: float = hw * (0.29 if is_air else 0.33)
-        if UnitArt.has_role(role):
+        var pose := "damaged" if int(unit.get("hp",10)) <= 3 else "idle"
+        if is_moving:
+            pose = "move"
+        for effect in combat_effects:
+            if effect["origin"] == cell and float(effect["elapsed"]) <= 0.24:
+                pose = "attack"
+                break
+        var sprite: Texture2D = UnitSprites.frame_texture(role,pose)
+        if sprite != null:
+            var sprite_size := hw * (0.94 if is_air else 0.88)
+            var sprite_origin: Vector2 = c - Vector2(sprite_size*0.5,sprite_size*0.56)
+            canvas.draw_texture_rect(sprite,Rect2(sprite_origin,Vector2.ONE*sprite_size),
+                false,face)
+        elif UnitArt.has_role(role):
+            # Existing procedural silhouette is retained as a safe fallback.
             UnitArt.draw_unit(canvas, role, c, radius, face, phase)
         else:
             # Compatibility fallback ONLY for pre-role tutorial soldiers.
