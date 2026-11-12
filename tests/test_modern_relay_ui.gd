@@ -18,6 +18,7 @@ func _run() -> void:
     var blue: Dictionary = Roles.make_unit("A",0,Vector2i(4,2),"line")
     var red: Dictionary = Roles.make_unit("X",1,Vector2i(8,5),"line")
     var battle: Dictionary = Session.start([blue,red],field,0,false,true,true,true)
+    battle["control"].erase("score_on_hold") # Test prior modern save UI
     battle["control"]["target"] = 2
     var first: Dictionary = Session.end_turn(battle)
     var next: Dictionary = Session.end_turn(first["state"])
@@ -38,6 +39,7 @@ func _run() -> void:
 
     var other: Dictionary = Roles.make_unit("Z",1,Vector2i(5,5),"line")
     var tied: Dictionary = Session.start([blue,other],field,0,false,true,true,true)
+    tied["control"].erase("score_on_hold") # Test prior modern save UI
     tied["control"]["target"] = 2
     for i in range(4):
         tied = Session.end_turn(tied)["state"]
