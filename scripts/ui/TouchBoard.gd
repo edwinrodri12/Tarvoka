@@ -496,6 +496,8 @@ func _commit_order(order: Dictionary) -> bool:
         var incoming: int = int(result.get("counter_damage",0))
         var exchange_text := "Ataque: Enemigo -%d HP. Respuesta: -%d HP propios." % [outgoing,incoming]
         message = "Impacto confirmado. Municion de un solo uso consumida. " + exchange_text if not str(result.get("consumed_unit_id", "")).is_empty() else exchange_text
+    if Opening.remaining(state) == 0 and int(state.get("winner",-1)) == -1:
+        message += " Apertura completada: pulsa Terminar turno."
     return true
 
 # A manual supply action spends credits and the selected unit's action.
