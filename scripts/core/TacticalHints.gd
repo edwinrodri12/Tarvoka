@@ -78,6 +78,55 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             attacks[enemy_pos] = {"id": str(enemy["id"]), "damage": int(result["damage"]), "defeated": bool(result["defeated"])}
     return {"moves": moves, "attacks": attacks}
 
+# Separate from for_unit()["attacks"], which contains ONLY currently legal
+# enemy targets. This is the WEAPON FOOTPRINT from the selected unit's
+# existing position (no move-then-fire prediction and no new action).
+# Only currently visible cells are highlighted in fog mode. A cell must
+# support at least one of the weapon's target domains: land, water or air.
+static func friendly_weapon_coverage(state: Dictionary, unit_id: String) -> Dictionary:
+    var coverage: Dictionary = {}
+    if unit_id.is_empty() or int(state.get("winner",-1)) != -1 or not state.get("units") is Array or not state.get("terrain") is Array:
+        return coverage
+    var faction: int = int(state.get("faction",-1))
+    if faction not in [0,1]:
+        return coverage
+    var firing: Dictionary = {}
+    for unit in state["units"]:
+        if unit is Dictionary and str(unit.get("id","")) == unit_id:
+            firing = unit
+            break
+    if firing.is_empty() or not Turns.can_act(firing,faction) or not Logistics.can_fire(firing):
+        return coverage
+    if int(firing.get("attack",0)) <= 0 or Domains.targets(firing).is_empty():
+        return coverage
+    var low: int = int(firing.get("attack_min_range",1))
+    var high: int = int(firing.get("attack_range",1))
+    if low < 1 or high < low or high > 8:
+        return coverage
+    var origin: Vector2i = firing.get("pos", Vector2i(-1,-1))
+    if not Rules.inside(origin):
+        return coverage
+    var visible: Dictionary = Visibility.visible_cells(state,faction) if Visibility.enabled(state) else {}
+    var targets: Array = Domains.targets(firing)
+    var terrain: Array = state["terrain"]
+    if terrain.size() != Rules.HEIGHT:
+        return coverage
+    for y in range(Rules.HEIGHT):
+        if not terrain[y] is Array or terrain[y].size() != Rules.WIDTH:
+            return {}
+        for x in range(Rules.WIDTH):
+            var cell := Vector2i(x,y)
+            var distance: int = absi(x-origin.x) + absi(y-origin.y)
+            if distance < low or distance > high or (Visibility.enabled(state) and not visible.has(cell)):
+                continue
+            var tile: String = str(terrain[y][x])
+            var valid_target_domain: bool = Domains.AIR in targets
+            valid_target_domain = valid_target_domain or (Domains.NAVAL in targets and tile == "water")
+            valid_target_domain = valid_target_domain or (Domains.GROUND in targets and tile != "water")
+            if valid_target_domain:
+                coverage[cell] = true
+    return coverage
+
 # Explain movement costs without implying combat bonuses from terrain:
 # terrain currently affects path cost; combat cover belongs to the unit.
 static func terrain_name(kind: String) -> String:
@@ -111,6 +160,15 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
+        var weapon_area: Dictionary = friendly_weapon_coverage(state,unit_id)
+        if not weapon_area.is_empty():
+            text += "\nAzul: movimiento legal | Naranja: cobertura del arma desde esta casilla | Rojo: objetivo atacable ahora."
+        elif int(unit.get("attack",0)) <= 0 or Domains.targets(unit).is_empty():
+            text += "\nSin armamento ofensivo."
+        elif not Logistics.can_fire(unit):
+            text += "\nArma sin municion: no puede disparar."
+        elif bool(unit.get("acted",false)):
+            text += "\nYa actuo: no puede volver a disparar este turno."
         if unit.has("ammo"):
             var role_key: String = str(unit.get("role", ""))
             text += " | Municion %d/%d" % [int(unit["ammo"]), Logistics.ammo_capacity(role_key)]
