@@ -32,3 +32,12 @@ La estructura JSON v1 preserva campos optativos `ammo` y `fuel`, y para camiones
 Pruebas en `tests/test_logistics.gd` y `tests/test_logistics_advanced.gd`, más partidas de IA, Godot headless y exportación Android ARM64. No se debe declarar finalizado el sistema sin resultados CI correctos y pruebas Android físicas.
 
 Sistemas pendientes por separado: destrucción/consumo definitivo de drones FPV, munición merodeadora y USV después de atacar; diferenciación de tipos de munición y ataque; despliegue/transporte de combustible; abastecimiento de unidades cargadas en transportes; inteligencia del retorno preventivo a base y cálculo de rutas; balance de las reservas y costes en partidas largas.
+
+
+## Fase siguiente — drones consumibles y regreso preventivo (v0.3)
+
+- **FPV, munición merodeadora y USV**: al realizar un ataque válido, infligen el daño habitual y la unidad atacante queda con 0 HP (consumida). No regresan, no reciben un segundo disparo ni se recargan tras el impacto. En un ataque inválido no se consumen. El motor recalcula la victoria si era la última unidad propia. No es lo mismo que el UCAV convencional, que sigue siendo reutilizable.
+- **IA de regreso a suministro**: tras priorizar una amenaza inmediata y los ataques disponibles, unidades con munición/carga/combustible críticos consultan exclusivamente bases propias y topología previamente descubierta. Con el sistema de rutas ponderadas, se busca un destino de movimiento legal que reduzca el trayecto hasta una instalación compatible. No se emprende regreso cuando no hay combustible suficiente para cubrir **toda** la ruta ni cuando no hay crédito mínimo para una recarga en base. No se altera la visibilidad de la niebla de guerra ni se ignoran bloqueos. Los drones consumibles no regresan.
+- **Pruebas de regresión**: `tests/test_consumables_supply_return.gd` verifica ataques consumibles, guardados después del sacrificio, victoria cuando cae la última unidad, UCAV reutilizable, regreso en varios turnos, falta de combustible, fondos y comportamiento con enemigos ocultos.
+
+Límites todavía existentes: el regreso automático a camiones cercanos no forma parte de esta fase, solo a instalaciones propias; la IA no calcula una ruta de evacuación completa si la base está fuera del terreno ya explorado, ni detecta amenazas móviles invisibles en la ruta. Esta fase no introduce nuevas ventajas de facción ni modifica sus valores aprobados.
