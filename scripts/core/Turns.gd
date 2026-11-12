@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaTurns
 
+const Domains = preload("res://scripts/core/Domains.gd")
+
 # Pure turn bookkeeping, independent of scene nodes and Android input.
 static func begin_turn(units: Array, faction: int) -> Array:
     var result := units.duplicate(true)
@@ -30,6 +32,8 @@ static func in_attack_range(attacker: Dictionary, defender: Dictionary) -> bool:
     var low: int = int(attacker.get("attack_min_range", 1))
     var high: int = int(attacker.get("attack_range", 1))
     if low < 1 or high < low or high > 8:
+        return false
+    if not Domains.can_attack(attacker, defender):
         return false
     var distance: int = absi(origin.x - target.x) + absi(origin.y - target.y)
     return distance >= low and distance <= high

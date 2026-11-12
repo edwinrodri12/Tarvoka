@@ -3,6 +3,7 @@ class_name TarvokaTacticalHints
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
@@ -100,6 +101,8 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
+        if unit.has("domain") or unit.has("target_domains"):
+            text += " | Dominio: %s | Objetivos: %s" % [Domains.domain(unit), ", ".join(Domains.targets(unit))]
         if Visibility.enabled(state):
             text += " | Vision %d" % int(unit.get("vision", Visibility.DEFAULT_VISION))
         # The selected own unit is necessarily in the player's sight.
