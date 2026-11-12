@@ -44,8 +44,10 @@ static func step(state: Dictionary) -> Dictionary:
     if friends.is_empty():
         var only_recruits: Dictionary = _produce_reinforcements(state, knowledge, enemies)
         return only_recruits if only_recruits.get("valid",false) else idle
-    friends.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
-    enemies.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
+    # Compare equivalent unit roles and side-normalized positions, not the
+    # artificial A..F vs U..Z names assigned to mirrored starting rosters.
+    friends.sort_custom(func(a, b): return _unit_before(a, b))
+    enemies.sort_custom(func(a, b): return _unit_before(a, b))
 
     # Focus fire deliberately: a lethal strike is more valuable than simply
     # attacking the lexicographically first enemy. Use the same damage engine.
@@ -233,7 +235,7 @@ static func step(state: Dictionary) -> Dictionary:
                     if direct >= from_direct:
                         continue
                     score = 0 - direct * 100 - travel
-                if score > best_score:
+                if score > best_score or (score == best_score and _prefer_cell(cell,best_cell,faction)):
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell
@@ -245,6 +247,34 @@ static func step(state: Dictionary) -> Dictionary:
             moved["destination"] = best_cell
             return moved
     return idle
+
+# Deterministic tie decisions must be invariant under horizontal
+# reflection. Global 'lowest x' and insertion order previously meant that
+# a path toward the center was favored on the left, but not on the right.
+static func _side_x(pos: Vector2i, side: int) -> int:
+    return pos.x if side == 0 else Rules.WIDTH - 1 - pos.x
+
+static func _prefer_cell(candidate: Vector2i, previous: Vector2i, side: int) -> bool:
+    if previous.x < 0:
+        return true
+    var forward: int = _side_x(candidate,side)
+    var prior: int = _side_x(previous,side)
+    if forward != prior:
+        return forward > prior
+    return candidate.y < previous.y
+
+static func _unit_before(a: Dictionary, b: Dictionary) -> bool:
+    var ar: String = str(a.get("role",""))
+    var br: String = str(b.get("role",""))
+    if ar != br:
+        return ar < br
+    var ax: int = _side_x(a["pos"], int(a["faction"]))
+    var bx: int = _side_x(b["pos"], int(b["faction"]))
+    if ax != bx:
+        return ax < bx
+    if a["pos"].y != b["pos"].y:
+        return a["pos"].y < b["pos"].y
+    return str(a["id"]) < str(b["id"])
 
 # Use ONLY observed positions. Air and surface may overlap without
 # blocking each other, while units on the same layer cannot share a cell.
@@ -425,7 +455,7 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friend
                 score += 15000 if site["kind"] == "city" else 10000
                 if destination == target:
                     score += 50000
-                if score > best_score:
+                if score > best_score or (score == best_score and _prefer_cell(destination,best_cell,faction)):
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = destination
@@ -453,6 +483,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
     var best_score := -999999
+    var best_cell := Vector2i(-1,-1)
     var best_order: Dictionary = {}
     for ally in friends:
         if not Turns.can_move(ally, faction):
@@ -475,7 +506,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     if not Turns.in_attack_range(attacker, enemy):
                         continue
                     var score: int = 100000 + int(enemy.get("attack", 0)) * 10 - int(reachable[cell])
-                    if score <= best_score:
+                    if score < best_score or (score == best_score and not _prefer_cell(cell,best_cell,faction)):
                         continue
                     # State transition is authoritative; no simulated
                     # attack is applied, and no speculative discovery is
@@ -486,6 +517,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     if fog and not Visibility.is_unit_visible(proposed["state"], faction, str(enemy["id"])):
                         continue
                     best_score = score
+                    best_cell = cell
                     best_order = proposed
                     best_order["unit_id"] = str(ally["id"])
                     best_order["target_id"] = str(enemy["id"])
@@ -501,8 +533,9 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
 # all visible adjacent attack threats. This never reads hidden enemy data.
 static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
     var idle := {"valid": false}
+    var faction: int = int(state.get("faction", -1))
     var fog: bool = Visibility.enabled(state)
-    var visible: Dictionary = Visibility.visible_cells(state, int(state.get("faction", -1))) if fog else {}
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
     var best_score := -999999
@@ -552,7 +585,7 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
             if support_after >= support_before or support_after > 3:
                 continue
             var score: int = nearest * 100 - support_after * 15 - int(reachable[cell]) * 3
-            if score > best_score:
+            if score > best_score or (score == best_score and _prefer_cell(cell,best_cell,faction)):
                 best_score = score
                 best_id = str(ally["id"])
                 best_cell = cell
@@ -624,7 +657,7 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
                     reason = "sweep"
                 else:
                     continue
-                if score > best_score:
+                if score > best_score or (score == best_score and _prefer_cell(cell,best_cell,faction)):
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell
@@ -688,7 +721,7 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
             if not reachable.has(cell) or cell == ally["pos"]:
                 continue
             var score: int = 10000 - int(reachable[cell]) * 100 + int(ally.get("hp", 0))
-            if score > best_score:
+            if score > best_score or (score == best_score and _prefer_cell(cell,best_cell,faction)):
                 best_score = score
                 best_id = str(ally["id"])
                 best_cell = cell
@@ -739,7 +772,7 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
                 var score: int = 100000 - int(route[cell]) * 110 - int(reachable[cell]) * 3
                 if cell == target:
                     score += 50000
-                if score > best_score:
+                if score > best_score or (score == best_score and _prefer_cell(cell,best_cell,faction)):
                     best_score = score
                     best_id = str(unit["id"])
                     best_cell = cell

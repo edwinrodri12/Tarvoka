@@ -15,6 +15,9 @@ func _initialize() -> void:
     var matches := 0
     var pair_wins := [0,0]
     var undecided := 0
+    var faction_wins := [0,0]
+    var relay_moves := [0,0]
+    var urban_moves := [0,0]
     var total_actions := 0
     var total_phases := 0
     var total_buys := 0
@@ -36,24 +39,40 @@ func _initialize() -> void:
                     total_resupplies += int(report["resupplied"][0]) + int(report["resupplied"][1])
                     total_paid_rearms += int(report["rearm_spent"][0]) + int(report["rearm_spent"][1])
                     total_critical += int(report["low_supply"][0]) + int(report["low_supply"][1])
+                    relay_moves[0] += int(report["relay_moves"][0])
+                    relay_moves[1] += int(report["relay_moves"][1])
+                    urban_moves[0] += int(report["urban_moves"][0])
+                    urban_moves[1] += int(report["urban_moves"][1])
                     if report["winner"] == -1:
                         undecided += 1
-                    elif int(report["winner"]) == first:
-                        pair_wins[0] += 1
                     else:
+                        faction_wins[int(report["winner"])] += 1
+                    if report["winner"] != -1 and int(report["winner"]) == first:
+                        pair_wins[0] += 1
+                    elif report["winner"] != -1:
                         pair_wins[1] += 1
                     pair.append(report)
                     matches += 1
-                print("BALANCE_PAIR map=%d fog=%s relay=%s outcomes=%s/%s phases=%d/%d actions=%d/%d bought=%s/%s supplies=%s/%s" % [
+                # The two runs are mirror-equivalent: switch the opening
+                # faction but retain identical terrain, rosters, tech and AI.
+                # Victory must reflect with the sides or stay unresolved in both.
+                if int(pair[0]["winner"]) == -1:
+                    assert(int(pair[1]["winner"]) == -1)
+                else:
+                    assert(int(pair[1]["winner"]) == 1-int(pair[0]["winner"]))
+                print("BALANCE_PAIR map=%d fog=%s relay=%s outcomes=%s/%s phases=%d/%d actions=%d/%d bought=%s/%s supplies=%s/%s cities=%s/%s objectives=%s/%s relay_moves=%s/%s urban_moves=%s/%s" % [
                     scenario,str(fog),str(relay),str(pair[0]["winner"]),str(pair[1]["winner"]),
                     int(pair[0]["phases"]),int(pair[1]["phases"]),int(pair[0]["actions"]),int(pair[1]["actions"]),
-                    str(pair[0]["bought"]),str(pair[1]["bought"]),str(pair[0]["resupplied"]),str(pair[1]["resupplied"])
+                    str(pair[0]["bought"]),str(pair[1]["bought"]),str(pair[0]["resupplied"]),str(pair[1]["resupplied"]),
+                    str(pair[0]["cities"]),str(pair[1]["cities"]),str(pair[0]["relays"]),str(pair[1]["relays"]),
+                    str(pair[0]["relay_moves"]),str(pair[1]["relay_moves"]),str(pair[0]["urban_moves"]),str(pair[1]["urban_moves"])
                 ])
     assert(matches == 16 and total_actions > 60)
     assert(total_buys > 0)
     assert(pair_wins[0] + pair_wins[1] + undecided == matches)
-    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d" % [
-        matches,total_actions,total_phases,total_buys,total_resupplies,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided
+    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
+        matches,total_actions,total_phases,total_buys,total_resupplies,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
+        faction_wins[0],faction_wins[1],str(relay_moves),str(urban_moves)
     ])
     print("PASS paired balance telemetry: 16 matched games, mirrored starts, action economy, save and supply invariants")
     quit(0)
@@ -63,7 +82,8 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
     var report := {
         "winner":-1, "phases":0, "actions":0,
         "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0],
-        "attacks":[0,0], "low_supply":[0,0]
+        "attacks":[0,0], "low_supply":[0,0],
+        "relay_moves":[0,0], "urban_moves":[0,0], "cities":[0,0], "relays":[0,0]
     }
     assert(Codec.decode(Codec.encode(state)) == state)
     for turn in range(14):
@@ -94,6 +114,12 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
                 assert(next["units"].size() == state["units"].size())
             elif str(step["action"]) == "attack":
                 report["attacks"][side] += 1
+            elif str(step["action"]) == "move":
+                var reason: String = str(step.get("reason",""))
+                if reason in ["relay","defend_relay"]:
+                    report["relay_moves"][side] += 1
+                elif reason in ["capture_city","capture_factory"]:
+                    report["urban_moves"][side] += 1
             assert(before_credits - after_credits == expected_spend)
             for unit in next["units"]:
                 assert(Logistics.valid_unit(unit))
@@ -114,4 +140,11 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
         assert(Codec.decode(Codec.encode(state)) == state)
         report["phases"] += 1
     report["winner"] = int(state["winner"])
+    for site in state["economy"]["sites"]:
+        if site["kind"] == "city" and int(site["owner"]) in [0,1]:
+            report["cities"][int(site["owner"])] += 1
+    if state.has("control"):
+        for node in state["control"]["nodes"]:
+            if int(node["owner"]) in [0,1]:
+                report["relays"][int(node["owner"])] += 1
     return report
