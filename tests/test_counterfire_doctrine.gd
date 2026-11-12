@@ -141,5 +141,17 @@ func _initialize() -> void:
     corrupt["units"][1]["reacted"] = "yes"
     assert(Codec.encode(corrupt).is_empty())
 
+    # Artificial long-form regression battlegrounds may give defenders HP
+    # above their normal role maximum; retaliation never scales >100%.
+    var reinforced: Dictionary = Roles.make_unit("X",1,Vector2i(2,2),"line")
+    reinforced["hp"] = 100
+    var excess: Dictionary = Session.start([
+        Roles.make_unit("A",0,Vector2i(1,2),"tank"), reinforced
+    ],Scenarios.terrain(0),0,false,false,true,true)
+    var safe: Dictionary = Session.attack(excess,"A","X")
+    assert(safe["valid"] and safe["counter_damage"] == 2)
+    assert(safe["state"]["units"][0]["hp"] == 12)
+    assert(Codec.decode(Codec.encode(safe["state"])) == safe["state"])
+
     print("PASS counterfire: 32 doctrines 9/9/8/6 tiers, equal tanks 6/3, ammo, one reply per turn, fog, no one-way response and save")
     quit(0)
