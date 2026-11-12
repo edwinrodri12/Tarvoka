@@ -885,6 +885,8 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
@@ -923,6 +925,8 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
