@@ -20,6 +20,15 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate directional battle effects and fog-safe Android minimap
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_minimap_vfx.gd 2>&1 | tee /tmp/tarvoka-minimap-vfx-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-minimap-vfx-test.log; then
+            echo "Minimap/VFX regression or renderer error"; exit 1
+          fi
+
       - name: Rasterize and test all 128 unit sprite frames (no GPU required)
         shell: bash
         run: |
