@@ -40,6 +40,10 @@ static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: boo
         # completed one equal opportunity to respond.
         control["fair_round"] = true
         control["first_faction"] = first_faction
+        # New modern games award points only after a relay survives a
+        # complete opposing response turn. Old saves without this optional
+        # flag preserve the original immediate-scoring rule.
+        control["score_on_hold"] = true
     return control
 
 # Immutable and deterministic. Scoring happens BEFORE faction switches.
@@ -53,6 +57,11 @@ static func finish_turn(state: Dictionary) -> Dictionary:
     var faction: int = int(result.get("faction", -1))
     if faction not in [0, 1]:
         return result
+    var held_before: Dictionary = {}
+    if bool(objectives.get("score_on_hold",false)):
+        for relay in objectives["nodes"]:
+            if int(relay["owner"]) == faction:
+                held_before[relay["pos"]] = true
     for node in objectives["nodes"]:
         for unit in result.get("units", []):
             if unit is Dictionary and int(unit.get("hp", 0)) > 0 and int(unit.get("faction", -1)) == faction and Domains.domain(unit) == Domains.GROUND and unit.get("pos") == node["pos"]:
@@ -60,7 +69,7 @@ static func finish_turn(state: Dictionary) -> Dictionary:
                 break
     var owned := 0
     for node in objectives["nodes"]:
-        if int(node["owner"]) == faction:
+        if int(node["owner"]) == faction and (not bool(objectives.get("score_on_hold",false)) or held_before.has(node["pos"])):
             owned += 1
     var cap: int = MAX_FAIR_SCORE if bool(objectives.get("fair_round",false)) else int(objectives["target"])
     objectives["scores"][faction] = mini(cap, int(objectives["scores"][faction]) + owned)
@@ -96,6 +105,8 @@ static func valid(control: Dictionary, terrain: Array) -> bool:
         if control["fair_round"] != true or not control.get("first_faction") is int or int(control["first_faction"]) not in [0, 1]:
             return false
     elif control.has("first_faction"):
+        return false
+    if control.has("score_on_hold") and (control["score_on_hold"] != true or not bool(control.get("fair_round",false))):
         return false
     var ceiling: int = MAX_FAIR_SCORE if bool(control.get("fair_round",false)) else int(control["target"])
     for score in control["scores"]:
