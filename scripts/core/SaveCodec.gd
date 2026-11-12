@@ -72,8 +72,13 @@ static func decode(raw: String) -> Dictionary:
     var data = JSON.parse_string(raw)
     if not data is Dictionary or data.get("version") != VERSION:
         return {}
-    if not data.get("units") is Array:
+    if not data.get("units") is Array or not data.get("terrain") is Array:
         return {}
+    # Validate untrusted dimensions before converting positions. Existing
+    # 10x8 saves retain version 1 and the same JSON layout.
+    if not Rules.valid_terrain(data["terrain"]):
+        return {}
+    var dimensions: Vector2i = Rules.map_size(data["terrain"])
     var state: Dictionary = data.duplicate(true)
     state.erase("version")
     for unit in state["units"]:
@@ -165,7 +170,7 @@ static func decode(raw: String) -> Dictionary:
         var result_explored: Dictionary = {}
         for faction in [0, 1]:
             var cells = state["explored"].get(str(faction), null)
-            if not cells is Array or cells.size() > WIDTH * HEIGHT:
+            if not cells is Array or cells.size() > dimensions.x * dimensions.y:
                 return {}
             var restored: Array[Vector2i] = []
             var unique: Dictionary = {}
@@ -173,7 +178,7 @@ static func decode(raw: String) -> Dictionary:
                 if not point is Array or point.size() != 2 or not _whole(point[0]) or not _whole(point[1]):
                     return {}
                 var cell := Vector2i(int(point[0]), int(point[1]))
-                if not Rules.inside(cell) or unique.has(cell):
+                if not Rules.inside(cell,state["terrain"]) or unique.has(cell):
                     return {}
                 unique[cell] = true
                 restored.append(cell)
@@ -195,7 +200,7 @@ static func decode(raw: String) -> Dictionary:
                     if not raw_pos is Array or raw_pos.size() != 2 or not _whole(raw_pos[0]) or not _whole(raw_pos[1]):
                         return {}
                     var position := Vector2i(int(raw_pos[0]), int(raw_pos[1]))
-                    if not Rules.inside(position):
+                    if not Rules.inside(position,state["terrain"]):
                         return {}
                     next_side[enemy_id] = position
                 contacts[str(faction)] = next_side
@@ -205,21 +210,16 @@ static func decode(raw: String) -> Dictionary:
     return state
 
 static func _valid_state(state: Dictionary) -> bool:
-    if not state.get("terrain") is Array or state["terrain"].size() != HEIGHT:
+    if not state.get("terrain") is Array or not Rules.valid_terrain(state["terrain"]):
         return false
-    for row in state["terrain"]:
-        if not row is Array or row.size() != WIDTH:
-            return false
-        for tile in row:
-            if not tile is String or not Rules.TERRAIN_COST.has(tile):
-                return false
+    var dimensions: Vector2i = Rules.map_size(state["terrain"])
     # A seeded map stores its own terrain exactly as before; this
     # optional integer is a reproducibility checksum, not an untrusted
     # instruction to rewrite terrain when the save loads.
     if state.has("map_seed"):
         if not state["map_seed"] is int or not Scenarios.valid_seed(int(state["map_seed"])):
             return false
-        if state["terrain"] != Scenarios.seeded_terrain(int(state["map_seed"])):
+        if state["terrain"] != Scenarios.seeded_terrain(int(state["map_seed"]),dimensions):
             return false
     if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
         return false
@@ -238,7 +238,7 @@ static func _valid_state(state: Dictionary) -> bool:
         if not unit.get("pos") is Vector2i:
             return false
         var pos: Vector2i = unit["pos"]
-        if pos.x < 0 or pos.x >= WIDTH or pos.y < 0 or pos.y >= HEIGHT:
+        if not Rules.inside(pos,state["terrain"]):
             return false
         if not unit.get("faction") is int or unit["faction"] not in [0, 1]:
             return false
@@ -290,11 +290,11 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         for faction in [0, 1]:
             var cells = state["explored"].get(str(faction), null)
-            if not cells is Array or cells.size() > WIDTH * HEIGHT:
+            if not cells is Array or cells.size() > dimensions.x * dimensions.y:
                 return false
             var unique: Dictionary = {}
             for cell in cells:
-                if not cell is Vector2i or not Rules.inside(cell) or unique.has(cell):
+                if not cell is Vector2i or not Rules.inside(cell,state["terrain"]) or unique.has(cell):
                     return false
                 unique[cell] = true
             for currently_visible in Visibility.visible_cells(state, faction):
@@ -312,7 +312,7 @@ static func _valid_state(state: Dictionary) -> bool:
                     if not enemy_id is String or enemy_id.is_empty() or enemy_id.length() > 64:
                         return false
                     var old_cell = side[enemy_id]
-                    if not old_cell is Vector2i or not Rules.inside(old_cell) or not explored.has(old_cell):
+                    if not old_cell is Vector2i or not Rules.inside(old_cell,state["terrain"]) or not explored.has(old_cell):
                         return false
                     var has_enemy := false
                     for enemy in state["units"]:
