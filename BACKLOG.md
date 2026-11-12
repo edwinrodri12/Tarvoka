@@ -301,3 +301,15 @@
 - [ ] P1: nueva economía y presupuestos por mapa que hagan asequibles fuerzas aéreas/navales, sin regalar recursos ni introducir microtransacciones.
 - [ ] P2: IA y campaña multi-dominio, detección sonar/radar, balance, QA Android y arte definitivo.
 **No crear 27 perfiles vacíos y anunciarlos como unidades jugables antes de construir los sistemas P0.** La decisión de tecnología moderna no excluye hardware militar contemporáneo avanzado.
+
+## 2026-11-11 — Fundación multidominio completada parcialmente
+- [x] Ataque válido por categoría ground/air/naval, defaults terrestres compatibles y guardados v1 (PR #111, CI Godot+Android SUCCESS).
+- [x] Movimiento aéreo y acuático sobre terrenos legales, ocupación en dos capas y guardado sin colisiones falsas (#112, CI SUCCESS).
+- [x] IA respeta capas/rutas, no bloquea aviones con soldados ni busca objetivos que no puede atacar, niebla honesta (#113, CI SUCCESS).
+- [x] UI dibuja aviación y marina con símbolos propios, alterna unidades amigas superpuestas y elige blanco antiaéreo legal; clásico intacto (#115, CI SUCCESS).
+- [ ] **Siguiente primer contenido aéreo:** prototipar dron ISR y unidad antiaérea contemporánea con dominio/objetivos definidos, sin desplegar tropas futuristas ficticias.
+- [ ] Ampliar interfaz para **elegir entre dos enemigos superpuestos que sean ambos blancos válidos** de una misma unidad con armas multimisión.
+- [ ] Aeródromos, centros de drones, puertos/astilleros, producción especializada, detección radar/sonar y visibilidad submarina según catálogos.
+- [ ] Mecánicas de combustible, rearmado, municiones de un solo uso FPV/merodeadoras, guerra electrónica y transporte (luego de comprobar básico).
+- [ ] Nuevos mapas costeros y escenario con suficientes créditos para navales/aeronaves; validación de todos los escenarios en Android real, legibilidad y FPS.
+- [ ] Balance de ventaja del primer turno e IA contra humanos. Los PR nuevos son **cimientos funcionales**, NO 32 clases jugables.
