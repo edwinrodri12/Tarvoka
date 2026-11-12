@@ -6,9 +6,10 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
@@ -16,6 +17,10 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
         var control: Dictionary = Relays.create(state["terrain"])
         if not control.is_empty():
             state["control"] = control
+    if economy_mode:
+        var urban: Dictionary = Economy.create(state["terrain"])
+        if not urban.is_empty():
+            state["economy"] = urban
     if fog_enabled:
         state["fog_enabled"] = true
         return Visibility.update_exploration(state)
@@ -39,10 +44,20 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
     var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"])
     return _apply(state, action)
 
+static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
+    if not _active(state):
+        return {"valid":false, "state":state.duplicate(true)}
+    var order: Dictionary = Economy.purchase(state, factory_pos, role)
+    if order.get("valid", false) and Visibility.enabled(order["state"]):
+        order["state"] = Visibility.update_exploration(order["state"])
+    return order
+
 static func end_turn(state: Dictionary) -> Dictionary:
     if not _active(state):
         return {"valid": false, "state": state.duplicate(true)}
     var next: Dictionary = state.duplicate(true)
+    if next.has("economy"):
+        next = Economy.finish_turn(next)
     if next.has("control"):
         next = Relays.finish_turn(next)
         # A relay-score victory stops the match at the end of the scoring
@@ -51,6 +66,8 @@ static func end_turn(state: Dictionary) -> Dictionary:
             return {"valid": true, "state": next}
     next["faction"] = 1 - int(state["faction"])
     next["units"] = Turns.begin_turn(state["units"], next["faction"])
+    if next.has("economy"):
+        next = Economy.begin_turn(next)
     if Visibility.enabled(next):
         next = Visibility.update_exploration(next)
     return {"valid": true, "state": next}
