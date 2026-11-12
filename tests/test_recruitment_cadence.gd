@@ -85,9 +85,11 @@ func _initialize() -> void:
     assert(convoy["valid"] and convoy["state"]["units"].back()["role"] == "logistics")
 
     # AI pressure decisions never inspect an enemy outside line of sight.
-    var fog: Dictionary = Session.start(force,terrain,0,true,false,true,true)
+    var fog_force: Array = force.duplicate(true)
+    fog_force[0]["pos"] = Vector2i(9,0)
+    var fog: Dictionary = Session.start(fog_force,terrain,0,true,false,true,true)
     var alternate: Dictionary = fog.duplicate(true)
-    alternate["units"][0]["pos"] = Vector2i(9,7)
+    alternate["units"][0]["pos"] = Vector2i(8,0)
     alternate["units"][0]["hp"] = 1
     assert(not Visibility.is_unit_visible(fog,0,"X"))
     assert(Strategy.assess(Visibility.observed_state(fog,0),0) == Strategy.assess(Visibility.observed_state(alternate,0),0))
