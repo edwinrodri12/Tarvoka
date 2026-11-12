@@ -53,6 +53,13 @@ func _initialize() -> void:
                         pair_wins[1] += 1
                     pair.append(report)
                     matches += 1
+                # The two runs are mirror-equivalent: switch the opening
+                # faction but retain identical terrain, rosters, tech and AI.
+                # Victory must reflect with the sides or stay unresolved in both.
+                if int(pair[0]["winner"]) == -1:
+                    assert(int(pair[1]["winner"]) == -1)
+                else:
+                    assert(int(pair[1]["winner"]) == 1-int(pair[0]["winner"]))
                 print("BALANCE_PAIR map=%d fog=%s relay=%s outcomes=%s/%s phases=%d/%d actions=%d/%d bought=%s/%s supplies=%s/%s cities=%s/%s objectives=%s/%s relay_moves=%s/%s urban_moves=%s/%s" % [
                     scenario,str(fog),str(relay),str(pair[0]["winner"]),str(pair[1]["winner"]),
                     int(pair[0]["phases"]),int(pair[1]["phases"]),int(pair[0]["actions"]),int(pair[1]["actions"]),
