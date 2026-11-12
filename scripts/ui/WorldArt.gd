@@ -29,7 +29,7 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2, hw: float
             for tree in [Vector2(-0.62,0.12),Vector2(-0.03,-0.20),Vector2(0.49,0.18)]:
                 var trunk: Vector2 = c + (tree+Vector2(offset,0))*s
                 _line(canvas,trunk,s,Vector2(0,0.10),Vector2(0,0.62),Color("#594C3C"),0.17)
-                var sway: float = 0.028*sinf(phase*1.6+tree.x*3.0)
+                var sway: float = 0.028*sin(phase*1.6+tree.x*3.0)
                 _shape(canvas,trunk,s,[[-0.28,0.08],[sway,-0.92],[0.29,0.08]],Color("#194F35"))
                 _shape(canvas,trunk,s,[[-0.24,-0.12],[sway,-0.66],[0.23,-0.12]],Color("#3C9162"))
         "mountain":
@@ -47,7 +47,7 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2, hw: float
         "water":
             for j in range(3):
                 var x: float = -0.74 + j * 0.36
-                var wave: float = 0.09 * sinf(phase*2.2+j*1.7+seed)
+                var wave: float = 0.09 * sin(phase*2.2+j*1.7+seed)
                 _line(canvas,c,s,Vector2(x+wave,-0.25+j*0.22),Vector2(x+0.42+wave,-0.25+j*0.22),Color("#69B9DA"),0.052)
                 _line(canvas,c,s,Vector2(x+0.07+wave,-0.18+j*0.22),Vector2(x+0.27+wave,-0.18+j*0.22),Color("#A9E6EF"),0.035)
         _:
@@ -96,7 +96,7 @@ static func draw_site(canvas: CanvasItem, kind: String, center: Vector2,
             _block(canvas,c,scale,0.78,0.32,0.47,owner_color,roof)
             _line(canvas,c,scale,Vector2(0.14,-0.49),Vector2(0.14,-1.45),ink,0.11)
             canvas.draw_arc(c+Vector2(scale*0.14,-scale*1.25),scale*0.33,PI*0.08,PI*0.92,18,Color("#CDEAF1"),maxf(1.0,scale*0.09))
-            canvas.draw_arc(c+Vector2(scale*0.14,-scale*1.25),scale*(0.37+0.02*sinf(phase*2.1)),PI*1.1,PI*1.9,14,Color("#92EFEB"),maxf(1.0,scale*0.06))
+            canvas.draw_arc(c+Vector2(scale*0.14,-scale*1.25),scale*(0.37+0.02*sin(phase*2.1)),PI*1.1,PI*1.9,14,Color("#92EFEB"),maxf(1.0,scale*0.06))
         "airbase":
             _block(canvas,c+Vector2(0,scale*0.08),scale,0.98,0.37,0.34,owner_color,roof)
             _shape(canvas,c,scale,[[-0.82,0.26],[0.25,-0.21],[0.80,0.25],[-0.28,0.69]],ink)
@@ -121,5 +121,5 @@ static func draw_relay(canvas: CanvasItem, c: Vector2, scale: float,
     for height in [-0.85,-0.30]:
         _line(canvas,c,scale,Vector2(-0.28,height),Vector2(0.28,height),Color("#B3C6D0"),0.09)
     _disk(canvas,c,scale,Vector2(0,-1.49),0.14,owner_color)
-    canvas.draw_arc(c+Vector2(0,-scale*1.49),scale*(0.24+0.07*sinf(phase*2.0)),PI*1.1,PI*1.9,12,
+    canvas.draw_arc(c+Vector2(0,-scale*1.49),scale*(0.24+0.07*sin(phase*2.0)),PI*1.1,PI*1.9,12,
         owner_color.lightened(0.5),maxf(1.0,scale*0.07))
