@@ -66,6 +66,17 @@ static func preview_exchange(attacker: Dictionary, defender: Dictionary, allow_c
         "defeated":remaining == 0
     }
 
+# Fair preview for the human HUD and AI. Exact enemy ammo and reaction
+# readiness are NOT public intelligence, even if the enemy is visible.
+# Assume the defender can answer, so this number is an upper bound; actual
+# Session.attack checks real ammo, available reaction and its own vision.
+static func public_preview_exchange(attacker: Dictionary, defender: Dictionary) -> Dictionary:
+    var public_defender: Dictionary = defender.duplicate(true)
+    public_defender.erase("reacted")
+    if public_defender.has("ammo"):
+        public_defender["ammo"] = maxi(1,int(public_defender["ammo"]))
+    return preview_exchange(attacker,public_defender)
+
 # Pure adjacent attack action; never mutates the supplied unit array.
 static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true) -> Dictionary:
     var result: Array = units.duplicate(true)
