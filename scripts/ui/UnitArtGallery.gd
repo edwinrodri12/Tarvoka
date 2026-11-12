@@ -11,9 +11,9 @@ var entries: VBoxContainer
 func _ready() -> void:
     title = "TARVOKA | 32 diseños militares (preliminar)"
     ok_button_text = "Cerrar"
-    min_size = Vector2i(360,450)
+    min_size = Vector2i(290,280)
     var scroller := ScrollContainer.new()
-    scroller.custom_minimum_size = Vector2(350,400)
+    scroller.custom_minimum_size = Vector2(280,220)
     scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     add_child(scroller)
     entries = VBoxContainer.new()
