@@ -97,7 +97,8 @@ func _initialize() -> void:
     for id in range(3):
         var battleground: Array = Scenarios.terrain(id)
         var modern_land: Dictionary = Session.start(Roles.modern_armies(true),battleground,0,false,false,true,true)
-        assert(modern_land["economy"]["modern"] and modern_land["economy"]["sites"].size() == 14)
+        var expected_sites: int = 16 if id == 2 else 14 # The bridge map has navigable water for dock production.
+        assert(modern_land["economy"]["modern"] and modern_land["economy"]["sites"].size() == expected_sites)
         assert(Economy.valid(modern_land["economy"],battleground))
         assert(Codec.decode(Codec.encode(modern_land)) == modern_land)
 
