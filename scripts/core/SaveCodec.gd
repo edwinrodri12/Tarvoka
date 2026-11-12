@@ -108,6 +108,13 @@ static func decode(raw: String) -> Dictionary:
         return {}
     state["faction"] = int(state["faction"])
     state["winner"] = int(state["winner"])
+    if state.has("opening"):
+        if not state["opening"] is Dictionary:
+            return {}
+        for key in ["starter","limit","used"]:
+            if not _whole(state["opening"].get(key,null)):
+                return {}
+            state["opening"][key] = int(state["opening"][key])
     if state.has("map_seed"):
         if not _whole(state["map_seed"]):
             return {}
