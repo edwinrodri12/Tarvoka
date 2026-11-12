@@ -150,7 +150,7 @@ func _draw() -> void:
             var city_cell: Vector2i = site["pos"]
             if fog and not explored.has(city_cell):
                 continue
-            var known_owner: int = int(site["owner"]) if not fog or visible.has(city_cell) else -1
+            var known_owner: int = int(site["owner"]) if not fog or visible.has(city_cell) or int(site["owner"]) == 0 else -1
             var city_tint := Color(0.94, 0.79, 0.39)
             if known_owner == 0:
                 city_tint = Color(0.35, 0.73, 0.99)
@@ -463,11 +463,14 @@ func _play_ai_turn() -> void:
     # Never advance the computer from a human or terminal state.
     if not ai_enabled or int(state.get("faction", -1)) != 1 or int(state.get("winner", -1)) != -1:
         return
-    # A soldier can now move once AND attack once. Bound both possible
-    # actions for each unit; any extra attempt is rejected by core rules.
+    # A unit may move and attack; each factory may additionally produce at
+    # most once this phase. Bound all possibilities even after recruitment.
     var max_actions: int = (state.get("units", []) as Array).size() * 2
+    if state.has("economy"):
+        max_actions += state["economy"]["sites"].size()
     var movements := 0
     var attacks := 0
+    var produced := 0
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break
@@ -480,8 +483,12 @@ func _play_ai_turn() -> void:
                 movements += 1
             "attack":
                 attacks += 1
+            "produce":
+                produced += 1
     last_enemy_turn_report = "Turno enemigo: %d movimientos, %d ataques." % [movements, attacks]
-    if movements + attacks == 0:
+    if state.has("economy"):
+        last_enemy_turn_report += " %d refuerzos producidos." % produced
+    if movements + attacks + produced == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if int(state.get("winner", -1)) != -1:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
