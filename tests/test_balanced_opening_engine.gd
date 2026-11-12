@@ -51,7 +51,7 @@ func _initialize() -> void:
         var unused_id := "C" if starter == 0 else "Z"
         var denied: Dictionary = Session.move(battle,unused_id,Vector2i(2,3) if starter == 0 else Vector2i(7,3))
         assert(not denied["valid"] and denied["state"] == battle)
-        assert(not Session.purchase(battle,Vector2i(0,4) if starter == 0 else Vector2i(9,4),"tank")["valid"])
+        assert(not Session.purchase(battle,Vector2i(0,1) if starter == 0 else Vector2i(9,1),"tank")["valid"])
         assert(not AI.step(battle)["valid"])
         assert(Codec.decode(Codec.encode(battle)) == battle)
 
