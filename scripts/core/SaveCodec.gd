@@ -5,6 +5,7 @@ const WIDTH := 10
 const HEIGHT := 8
 const VERSION := 1
 const Rules = preload("res://scripts/core/Rules.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
@@ -33,6 +34,8 @@ static func encode(state: Dictionary) -> String:
         "terrain": state["terrain"],
         "units": units
     }
+    if state.has("map_seed"):
+        snapshot["map_seed"] = int(state["map_seed"])
     if state.has("control"):
         var control: Dictionary = state["control"].duplicate(true)
         for node in control["nodes"]:
@@ -102,6 +105,10 @@ static func decode(raw: String) -> Dictionary:
         return {}
     state["faction"] = int(state["faction"])
     state["winner"] = int(state["winner"])
+    if state.has("map_seed"):
+        if not _whole(state["map_seed"]):
+            return {}
+        state["map_seed"] = int(state["map_seed"])
     if state.has("control"):
         var objective = state["control"]
         if not objective is Dictionary or not objective.get("nodes") is Array:
@@ -206,6 +213,14 @@ static func _valid_state(state: Dictionary) -> bool:
         for tile in row:
             if not tile is String or not Rules.TERRAIN_COST.has(tile):
                 return false
+    # A seeded map stores its own terrain exactly as before; this
+    # optional integer is a reproducibility checksum, not an untrusted
+    # instruction to rewrite terrain when the save loads.
+    if state.has("map_seed"):
+        if not state["map_seed"] is int or not Scenarios.valid_seed(int(state["map_seed"])):
+            return false
+        if state["terrain"] != Scenarios.seeded_terrain(int(state["map_seed"])):
+            return false
     if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
         return false
     if not state.get("faction") is int or state["faction"] not in [0, 1]:
