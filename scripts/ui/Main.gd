@@ -419,9 +419,17 @@ func _process(_delta: float) -> void:
     relay_status.visible = board.state.has("control")
     if board.state.has("control"):
         var control: Dictionary = board.state["control"]
-        _update_text(relay_status, "SENAL: Azul %d | Rojo %d / %d" % [
+        var relay_text: String = "SENAL: Azul %d | Rojo %d / %d" % [
             control["scores"][0], control["scores"][1], control["target"]
-        ])
+        ]
+        if bool(control.get("fair_round",false)) and int(board.state.get("winner",-1)) == -1:
+            var blue_signal: int = int(control["scores"][0])
+            var red_signal: int = int(control["scores"][1])
+            if int(control["turns"]) % 2 == 1 and maxi(blue_signal, red_signal) >= int(control["target"]):
+                relay_text += " | Victoria pendiente de respuesta"
+            elif blue_signal == red_signal and blue_signal >= int(control["target"]):
+                relay_text += " | Empate: sigue el combate"
+        _update_text(relay_status, relay_text)
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
     if not resupply_button.disabled:
