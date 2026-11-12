@@ -3,6 +3,7 @@
 **Estado:** Dirección creativa aprobada por el usuario el 2026-11-12; este documento es el plan narrativo **[PLAN]**, no prueba de contenido implementado.  
 **Premisa:** *La Red de Meridian*. **Formato:** 50 capítulos jugables, 5 actos × 10, ocho puntos de vista, tres familias de desenlace.  
 **Relación con el diseño existente:** [GAME_DESIGN.md](GAME_DESIGN.md), [DESIGN_ROADMAP.md](DESIGN_ROADMAP.md), [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md), [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md).
+**Progresión por capítulos (decisión 2026-11-12):** [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md) especifica 32 clases desbloqueadas de forma progresiva (9/18/26/32 al finalizar cada uno de los cuatro primeros actos), conservando todas las clases para combates libres/online según disponibilidad técnica. El Acto V se dedica a dominarlas, no a nuevos tutoriales.
 
 ## 1. Decisión de producto y prioridades
 
