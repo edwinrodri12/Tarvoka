@@ -79,6 +79,28 @@ static func begin_turn(state: Dictionary) -> Dictionary:
     next["economy"]["credits"][side] = mini(MAX_CREDITS, int(next["economy"]["credits"][side]) + income)
     return next
 
+# Cheap, pure eligibility helper for touchscreen buttons. The authoritative
+# purchase still revalidates everything at the moment of confirmation.
+static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> bool:
+    if not state.has("economy") or not state.has("terrain") or not state.get("units") is Array:
+        return false
+    var faction: int = int(state.get("faction", -1))
+    if faction not in [0,1] or int(state.get("winner", -1)) != -1:
+        return false
+    if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
+        return false
+    if not valid(state["economy"], state["terrain"]):
+        return false
+    if int(state["economy"]["credits"][faction]) < cost(role):
+        return false
+    for unit in state["units"]:
+        if int(unit.get("hp", 0)) > 0 and unit.get("pos") == factory_pos:
+            return false
+    for site in state["economy"]["sites"]:
+        if site["kind"] == "factory" and site["pos"] == factory_pos and int(site["owner"]) == faction and int(site["produced_turn"]) != int(state["economy"]["turn"]):
+            return true
+    return false
+
 # One fresh unit per owned, unoccupied factory per faction turn.
 # New troops cannot attack/move immediately; both flags reset on their
 # owner's next turn, preventing instant two-action rushes or free units.
