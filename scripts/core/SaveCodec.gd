@@ -12,6 +12,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -87,6 +88,11 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(unit["vision"]):
                 return {}
             unit["vision"] = int(unit["vision"])
+        for key in ["ammo", "fuel"]:
+            if unit.has(key):
+                if not _whole(unit[key]):
+                    return {}
+                unit[key] = int(unit[key])
         for key in ["attack_range", "attack_min_range"]:
             if unit.has(key):
                 if not _whole(unit[key]):
@@ -228,6 +234,8 @@ static func _valid_state(state: Dictionary) -> bool:
         if unit.has("domain") and not Domains.valid_domain(unit["domain"]):
             return false
         if unit.has("target_domains") and not Domains.valid_targets(unit["target_domains"]):
+            return false
+        if not Logistics.valid_unit(unit):
             return false
         if Arsenal.valid(str(unit.get("role", ""))):
             var spec: Dictionary = Arsenal.profile(str(unit["role"]))
