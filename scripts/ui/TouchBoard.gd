@@ -7,6 +7,7 @@ const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
@@ -405,12 +406,51 @@ func _tap(point: Vector2) -> void:
     var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
+    var units_here: Array = []
     for unit in state["units"]:
         if int(unit.get("hp",0)) > 0 and unit["pos"] == cell:
             if Visibility.enabled(state) and int(unit.get("faction", -1)) != 0 and not visible.has(cell):
                 continue
-            target = unit
-            break
+            units_here.append(unit)
+    # A selected anti-air unit must attack the legally targetable aircraft,
+    # even when an enemy soldier or friendly ground unit shares its tile.
+    if not selected_id.is_empty():
+        var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
+        var preferred_id: String = str(hints["attacks"].get(cell, {}).get("id", ""))
+        for occupant in units_here:
+            if str(occupant.get("id","")) == preferred_id and int(occupant["faction"]) != int(state["faction"]):
+                target = occupant
+                break
+    if target.is_empty():
+        var friendlies: Array = []
+        for occupant in units_here:
+            if int(occupant.get("faction",-1)) == int(state["faction"]):
+                friendlies.append(occupant)
+        if not friendlies.is_empty():
+            # Surface first, aircraft second. Tapping again cycles distinct
+            # actionable units; a single-unit tile retains tap-to-deselect.
+            friendlies.sort_custom(func(a,b):
+                if Domains.layer(a) != Domains.layer(b):
+                    return Domains.layer(a) == "surface"
+                return str(a["id"]) < str(b["id"])
+            )
+            var actionable: Array = []
+            for friendly in friendlies:
+                if not bool(friendly.get("acted",false)):
+                    actionable.append(friendly)
+            if actionable.is_empty():
+                target = friendlies[0]
+            elif actionable.size() == 1:
+                target = actionable[0]
+            else:
+                var current_index := -1
+                for i in range(actionable.size()):
+                    if str(actionable[i]["id"]) == selected_id:
+                        current_index = i
+                        break
+                target = actionable[(current_index + 1) % actionable.size()]
+        elif not units_here.is_empty():
+            target = units_here[0]
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
         selected_factory_pos = Vector2i(-1,-1)
         pending_order.clear()
