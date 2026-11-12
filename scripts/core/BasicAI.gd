@@ -11,6 +11,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
+const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -335,6 +336,7 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
     for enemy in enemies:
         observed_air = observed_air or Domains.domain(enemy) == Domains.AIR
         observed_armor = observed_armor or str(enemy.get("role","")) in ["tank","bulwark","ifv"]
+    var strategy: Dictionary = SupplyStrategy.assess(knowledge, faction)
     var priorities := {
         "factory":["scout","assault","engineer","line","logistics"],
         "armor_plant":["piercer","tank","bulwark","ifv","apc"],
@@ -343,6 +345,10 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
         "airbase":["attack_heli","fighter","ucav","bomber","transport_heli"],
         "shipyard":["patrol","missile_boat","corvette","frigate","submarine","destroyer","usv","landing_ship"]
     }
+    # Use known logistical demand, not hidden enemy state, when deciding
+    # whether to invest in the first supply truck.
+    if bool(strategy.get("need_truck", false)):
+        priorities["factory"] = ["logistics","scout","assault","engineer","line"]
     if observed_air:
         priorities["artillery_depot"] = ["mobile_aa","sam","spg","artillery","mlrs","ew"]
         priorities["airbase"] = ["fighter","attack_heli","ucav","bomber","transport_heli"]
@@ -362,6 +368,8 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
         for role in priorities[kind]:
             candidates.append(role)
         for role in candidates:
+            if not SupplyStrategy.can_spend_on_recruitment(state, faction, role, Economy.cost(role), strategy):
+                continue
             if not Economy.can_purchase(state, site["pos"], role):
                 continue
             var order: Dictionary = Session.purchase(state,site["pos"],role)
