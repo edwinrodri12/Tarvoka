@@ -78,7 +78,9 @@ func _initialize() -> void:
 
     # Fog changes to unseen enemy positions and HP cannot alter observed
     # search decisions even for mobile aircraft.
-    var fog_air: Dictionary = Session.start([flier,soldier],terrain,0,true)
+    var hidden_enemy: Dictionary = soldier.duplicate(true)
+    hidden_enemy["pos"] = Vector2i(8,3) # Beyond vision radius 3.
+    var fog_air: Dictionary = Session.start([flier,hidden_enemy],terrain,0,true)
     var shifted: Dictionary = fog_air.duplicate(true)
     shifted["units"][1]["pos"] = Vector2i(8,4)
     shifted["units"][1]["hp"] = 2
