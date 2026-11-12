@@ -129,7 +129,8 @@ func _ready() -> void:
     iso_view_button.custom_minimum_size.y = 46
     iso_view_button.tooltip_text = "Alternar el tablero clásico y el mapa isométrico"
     iso_view_button.pressed.connect(_toggle_isometric_view)
-    camera_row.add_child(iso_view_button)
+    # Put the view toggle on its own row so 300px-wide Android sidebars do not overflow.
+    panel.add_child(iso_view_button)
     camera_zoom_out = Button.new()
     camera_zoom_out.text = "−"
     camera_zoom_out.tooltip_text = "Alejar mapa táctico"
