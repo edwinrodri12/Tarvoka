@@ -62,6 +62,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_unit_roles.gd
 
+      - name: Validate layered touch selection and legal stacked-target attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_touch_selection.gd
+
       - name: Validate air and naval AI pursuit without fog leaks or phantom blockers
         shell: bash
         run: |

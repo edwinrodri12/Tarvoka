@@ -7,6 +7,7 @@ const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
@@ -185,27 +186,46 @@ func _draw() -> void:
         var attack_pos: Vector2 = origin + Vector2(attack_cell) * tile
         draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(0.94, 0.20, 0.16, 0.40))
         draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(1.0, 0.32, 0.24), false, 2.0)
-    for unit in state.get("units", []):
+    # Surface units are always painted first, aircraft last. Independent
+    # air/surface glyph positions make stacks readable on a small phone.
+    var draw_units: Array = state.get("units", []).duplicate()
+    draw_units.sort_custom(func(a,b):
+        if Domains.layer(a) != Domains.layer(b):
+            return Domains.layer(a) == "surface"
+        return str(a["id"]) < str(b["id"])
+    )
+    for unit in draw_units:
         if int(unit.get("hp",0)) <= 0:
             continue
         var cell: Vector2i = unit["pos"]
         if fog and int(unit.get("faction", -1)) != 0 and not visible.has(cell):
             continue
+        var airborne: bool = Domains.domain(unit) == Domains.AIR
+        var seaborne: bool = Domains.domain(unit) == Domains.NAVAL
         var center := origin + (Vector2(cell) + Vector2(0.5,0.5)) * tile
+        if airborne:
+            center += Vector2(tile * 0.24, -tile * 0.22)
         var is_player := int(unit["faction"]) == 0
         var color := Color(0.35, 0.65, 1.0) if is_player else Color(1.0, 0.4, 0.3)
         var face: Color = color.darkened(0.45) if unit.get("acted", false) else (color.darkened(0.18) if unit.get("moved", false) else color)
-        # Circle vs square provides faction identity without requiring color vision.
+        # Circle vs square still indicates faction. Smaller airborne symbols
+        # have an independent light ring and wing cross, not a borrowed asset.
+        var radius: float = tile * (0.19 if airborne else 0.34)
         if is_player:
-            draw_circle(center, tile * 0.34, face)
+            draw_circle(center, radius, face)
         else:
-            var half := tile * 0.32
+            var half := tile * (0.18 if airborne else 0.32)
             draw_rect(Rect2(center - Vector2.ONE * half, Vector2.ONE * (half * 2.0)), face)
-        if str(unit["id"]) in ["S", "Z"] and not unit.has("role") or str(unit.get("role", "")) == "scout":
+        if airborne:
+            draw_arc(center, tile * 0.23, 0, TAU, 24, Color(0.88,0.96,1.0), maxf(1.0,tile*0.028))
+            draw_line(center+Vector2(-tile*0.10,0),center+Vector2(tile*0.10,0),Color.WHITE,maxf(1.0,tile*0.023))
+        elif seaborne:
+            draw_arc(center, tile * 0.40, 0, TAU, 24, Color(0.52,0.94,0.98), maxf(1.0,tile*0.032))
+        if (str(unit["id"]) in ["S", "Z"] and not unit.has("role") or str(unit.get("role", "")) == "scout") and not airborne:
             draw_arc(center, tile * 0.40, 0, TAU, 24, Color(0.60, 0.94, 0.88), 2.0)
         if str(unit["id"]) == selected_id:
-            draw_arc(center, tile * 0.44, 0, TAU, 32, Color.YELLOW, 3.0)
-        draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(12.0, tile * 0.30)), Color.WHITE)
+            draw_arc(center, tile * (0.28 if airborne else 0.44), 0, TAU, 32, Color.YELLOW, 3.0)
+        draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(10.0, tile * (0.20 if airborne else 0.30))), Color.WHITE)
         # A second visual marker identifies the tactical role independently
         # of faction color and unit ID; no borrowed game sprites.
         if Roles.valid(str(unit.get("role", ""))) and tile >= 36.0:
@@ -215,7 +235,8 @@ func _draw() -> void:
         # persistent per-unit maximum-HP field yet. Hide on very small tiles.
         if tile >= 39.0:
             var unit_pos := origin + Vector2(cell) * tile
-            var badge_rect := Rect2(unit_pos + Vector2(tile * 0.04, tile * 0.76), Vector2(tile * 0.47, tile * 0.22))
+            var badge_pos := Vector2(tile * 0.50, tile * 0.07) if airborne else Vector2(tile * 0.04, tile * 0.76)
+            var badge_rect := Rect2(unit_pos + badge_pos, Vector2(tile * 0.47, tile * 0.22))
             draw_rect(badge_rect, Color(0.03, 0.07, 0.09, 0.89))
             var health_tint := Color(1.0, 0.75, 0.46) if int(unit["hp"]) <= 3 else Color.WHITE
             draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
@@ -405,12 +426,51 @@ func _tap(point: Vector2) -> void:
     var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
+    var units_here: Array = []
     for unit in state["units"]:
         if int(unit.get("hp",0)) > 0 and unit["pos"] == cell:
             if Visibility.enabled(state) and int(unit.get("faction", -1)) != 0 and not visible.has(cell):
                 continue
-            target = unit
-            break
+            units_here.append(unit)
+    # A selected anti-air unit must attack the legally targetable aircraft,
+    # even when an enemy soldier or friendly ground unit shares its tile.
+    if not selected_id.is_empty():
+        var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
+        var preferred_id: String = str(hints["attacks"].get(cell, {}).get("id", ""))
+        for occupant in units_here:
+            if str(occupant.get("id","")) == preferred_id and int(occupant["faction"]) != int(state["faction"]):
+                target = occupant
+                break
+    if target.is_empty():
+        var friendlies: Array = []
+        for occupant in units_here:
+            if int(occupant.get("faction",-1)) == int(state["faction"]):
+                friendlies.append(occupant)
+        if not friendlies.is_empty():
+            # Surface first, aircraft second. Tapping again cycles distinct
+            # actionable units; a single-unit tile retains tap-to-deselect.
+            friendlies.sort_custom(func(a,b):
+                if Domains.layer(a) != Domains.layer(b):
+                    return Domains.layer(a) == "surface"
+                return str(a["id"]) < str(b["id"])
+            )
+            var actionable: Array = []
+            for friendly in friendlies:
+                if not bool(friendly.get("acted",false)):
+                    actionable.append(friendly)
+            if actionable.is_empty():
+                target = friendlies[0]
+            elif actionable.size() == 1:
+                target = actionable[0]
+            else:
+                var current_index := -1
+                for i in range(actionable.size()):
+                    if str(actionable[i]["id"]) == selected_id:
+                        current_index = i
+                        break
+                target = actionable[(current_index + 1) % actionable.size()]
+        elif not units_here.is_empty():
+            target = units_here[0]
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
         selected_factory_pos = Vector2i(-1,-1)
         pending_order.clear()
