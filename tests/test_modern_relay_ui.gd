@@ -49,6 +49,17 @@ func _run() -> void:
     assert(label.text.contains("Empate: sigue el combate"))
     assert(not screen.get("result_banner").visible)
 
+    var hold: Dictionary = Session.start([blue,red],field,0,false,true,true,true)
+    hold["control"]["target"] = 2
+    hold = Session.end_turn(hold)["state"]
+    assert(hold["control"]["scores"] == [0,0])
+    assert(hold["control"]["nodes"][0]["owner"] == 0)
+    board.state = hold
+    screen._process(0.0)
+    assert(label.text.contains("Puntúa al mantener"))
+    assert(label.text.contains("Azul 0 | Rojo 0 / 2"))
+    assert(not screen.get("result_banner").visible)
+
     screen.queue_free()
-    print("PASS modern relay HUD: pending reply, decisive result, prolonged tie and no false victory")
+    print("PASS modern relay HUD: pending reply, delayed capture points, decisive result and tie")
     quit(0)
