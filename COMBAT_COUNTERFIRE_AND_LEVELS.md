@@ -117,3 +117,47 @@ En escaramuzas y en multijugador **ninguna unidad se bloquea por capítulos**. E
 - Bajo niebla, la reacción exige ver la posición atacante. No se revelan munición, bandera `reacted` o unidades ocultas mediante el panel de daño potencial.
 - Guardados viejos sin `reacted` siguen válidos; nuevos guardados solo admiten bool. La IA evalúa riesgo de respuesta sin acceder a reservas enemigas ocultas.
 - Simulaciones comparativas miden tasa de victoria por primera iniciativa, desgastes por dominio, turnos, gastos y destrucción mutua. Si aumenta la ventaja del atacante o se rompe la IA, se reajusta en **una rama nueva con evidencia**, sin cambiar silenciosamente el balance aprobado.
+
+
+## 6. Trayectorias de veterania por clase (PLANIFICADAS, SIN EFECTO ACTUAL)
+
+Estas propuestas son **hipotesis de balance y utilidad**, no habilidades implementadas ni modificadores activados. Las tres etapas se obtendrian al llegar a 15, 40 y 80 XP en campaña, SI esas unidades sobreviven. Deben medirse, limitarse con topes y ser visibles en la ficha. `+1 defensa` significa un punto tactico, no un porcentaje de blindaje real; `+1 vision` respeta el limite de 8. Los perks situacionales (escolta, ciudad, transporte, sonar, guerra electronica, reparacion) requieren implementar primero su accion y verificacion. No se otorgaran en online/ranked.
+
+| Clase | Regular (15 XP) | Veterano (40 XP) | Elite (80 XP) |
+|---|---|---|---|
+| G01 Guardia | +1 vision | +1 municion maxima | +1 defensa en bosque |
+| G02 Asaltante | +1 municion maxima | +1 defensa en ciudad | +1 vision urbana |
+| G03 Rastreador | +1 vision | +1 autonomia a pie | +1 resistencia ante emboscadas |
+| G04 Rompedor | +1 vision | +1 municion antiblindaje | +1 dano solo a blindados |
+| G05 Ingeniero | +1 vision | +1 rendimiento de reparacion | +1 movilidad por camino |
+| G06 Baluarte | +1 municion | +1 defensa si permanece inmovil | +1 resistencia frente a salvas |
+| G07 Transporte blindado | +2 combustible | +1 capacidad de transporte | +1 defensa con tropas cargadas |
+| G08 Vehiculo de infanteria | +1 vision | +1 municion | +1 defensa si acompana infanteria |
+| G09 Tanque principal | +1 vision | +1 municion | +1 defensa contra fuego indirecto |
+| G10 Artilleria autopropulsada | +1 municion | +1 vision | +1 defensa tras cambiar de posicion |
+| G11 Lanzador | +1 municion | +1 vision | +1 proteccion contra ataques directos |
+| G12 Lanzacohetes multiple | +1 municion | +2 combustible | +1 vision compartida con observador |
+| G13 Antiaereo movil | +1 vision | +1 municion | +1 eficacia frente a drones |
+| G14 Bateria SAM | +1 vision | +1 misil | +1 defensa frente a fuego aereo |
+| G15 Guerra electronica | +1 vision | +1 duracion limitada de interferencia | +1 alcance de enlace |
+| G16 Vehiculo logistico | +4 municion de carga | +8 combustible de carga | +1 defensa con escolta |
+| A01 Dron reconocimiento | +1 vision | +2 combustible | +1 deteccion de contacto temporal |
+| A02 Dron FPV | Sin veteranía | Unidad consumible | Mejoras solo por tecnologia prepartida |
+| A03 Municion merodeadora | Sin veteranía | Unidad consumible | Mejoras solo por tecnologia prepartida |
+| A04 UCAV | +1 municion | +1 vision | +2 combustible |
+| A05 Helicoptero ataque | +2 combustible | +1 municion | +1 vision |
+| A06 Helicoptero transporte | +1 vision | +1 capacidad de tropa | +1 defensa tras aterrizar |
+| A07 Caza multirrol | +1 vision | +1 misil | +1 defensa al enfrentar aeronaves |
+| A08 Bombardero tactico | +2 combustible | +1 defensa con escolta | +1 municion |
+| M01 Patrullero | +1 vision | +1 municion | +1 defensa costera |
+| M02 Lancha misilera | +2 combustible | +1 misil | +1 resistencia durante retirada |
+| M03 Corbeta | +1 vision | +1 municion | +1 defensa antiaerea |
+| M04 Fragata | +1 vision | +1 municion | +1 defensa al escoltar |
+| M05 Destructor | +2 combustible | +1 municion | +1 vision antiaerea |
+| M06 Submarino | +1 vision naval | +1 torpedo | +1 sigilo cuando exista sonar |
+| M07 Buque desembarco | +2 combustible | +1 capacidad de tropa | +1 defensa costera |
+| M08 Dron naval USV | Sin veteranía | Unidad consumible | Mejoras solo por tecnologia prepartida |
+
+**Regla de las tres municiones consumibles:** FPV, merodeadora y USV **no ganan veteranía individual** porque se destruyen al impactar. Cualquier mejora futura pertenece al arbol tecnologico prepartida o a misiones, nunca a una experiencia imposible de conservar. No se borran desbloqueos de campaña por perder una unidad veterana.
+
+**Limites preventivos:** ningun nivel concede un segundo disparo por turno, inmunidad, curacion gratuita, ataque a un dominio prohibido, radar omnisciente, vision mayor a 8, dinero externo ni bonus de faccion. Perks que amplien alcance de armas o capacidad de captura solo se consideraran con pruebas de balance especificas. Para rol con funcion pendiente (transporte, EW, sigilo), la mejora permanece oculta/inactiva hasta tener la mecanica real.
