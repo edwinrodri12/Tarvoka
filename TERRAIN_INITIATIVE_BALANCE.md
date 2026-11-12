@@ -58,3 +58,24 @@ Los efectos se resuelven con `TerrainTactics.modifiers(attacker,defender,terrain
 - `tests/test_terrain_tactics.gd`: terreno llano, bosque, montaña ascendiendo/descendiendo, ciudades, flanco real y diagonal falsa, armas indirectas, cobertura no aplicable a aeronaves/buques, daño real = vista previa, contraataque y guardado.
 - `tests/test_paired_round_scoring.gd`: relojes simétricos para azul/rojo, puntos solo al cerrar dos fases, victoria no prematura, guardados previos sin marcador `round_scoring`, invalidación de marcador corrupto, y ocho pares de escenarios IA con reloj antiguo vs emparejado.
 - El resto de la batería de Godot y exportación Android deben continuar verdes; no integrar por una métrica aislada. Revisar también iniciativa económica de 24 encuentros y clásica de 12; **comparar resultados, no prometer que pasará a 50/50 automáticamente.**
+
+
+## 6. Apertura equitativa elegida con simulaciones
+
+**Medición controlada con Godot 4.3, antes de activar la regla en la app** (cada muestra compara mapas, niebla y qué bando comienza):
+
+| Simulación de dos IA | Sin limitar primer turno | Primer turno limitado a 3 órdenes |
+|---|---:|---:|
+| Moderna: 8 partidas, mapas 0/3 y niebla sí/no, ambos iniciadores | 8 primeras / 0 segundas | **4 primeras / 4 segundas** |
+| Clásica: 12 partidas, mapas 0/1/2 y niebla sí/no, ambos iniciadores | 12 primeras / 0 segundas | **6 primeras / 6 segundas** |
+
+El *marcador de relés por rondas* corrige una fuente precisa de ventaja, pero **sin limitar el despliegue seguía dando 8/8 al primer jugador**. Dar +1 movimiento al que contesta seguía dando 8/8; +2 producía 7/8; +3 volvía a 8/8. Por eso se **descartó el bono de velocidad** y no se envía ese atributo en el juego. La regla se validará también mediante `test_real_opening_balance.gd`, que usa las operaciones públicas del motor real, no un bucle de prueba truncado artificialmente.
+
+**Regla de nueva partida [IMPLEMENTADA EN EL MOTOR Y LA INTERFAZ DE ESTA RAMA; SUJETA A CI]:**
+
+- El bando que empieza recibe **hasta 3 órdenes válidas** en su **primer turno**, o menos si inició con 1–2 unidades. Movimiento, ataque, compra en fábrica y reabastecimiento cuentan cada uno como 1 orden. Las órdenes inválidas, toques de inspección y vistas previas **no consumen**.
+- La cifra aparece en el HUD: `APERTURA EQUILIBRADA: 3/3 ordenes restantes`; disminuye solo cuando una acción se ejecuta y al llegar a cero el jugador pulsa **Terminar turno**. El rival no recibe un límite equivalente porque todavía no ha podido actuar; a partir del turno 2 ambos actúan sin cupo especial.
+- Funciona igual si inicia Azul o Rojo, sea IA o humano y sin modificar poder, dinero, autonomía, velocidad, coste, rangos, experiencia ni tecnología. Las ocho facciones conservan sus valores originales.
+- `Session.start(..., balanced_opening=true)` habilita el sistema para las partidas **nuevas** desde `TouchBoard.new_game`. Las llamadas antiguas al motor y guardados v1 sin el campo `opening` mantienen la lógica anterior. El estado `opening={starter,limit,used}` se guarda opcionalmente y se valida. Al acabar el primer turno se elimina; no se reaplica al cargar ni reaparece tras reclutar refuerzos.
+
+**Interpretación honesta:** 4/4 y 6/6 son buenos indicios de menor sesgo del primer turno en **estas IA y mapas**, no garantizan un 50% de victorias en multijugador, ni descartan nuevas ventajas en mapas más grandes, comandantes o estrategias humanas. Conservar mediciones pareadas continuas y ajustar *solo con evidencia*. La restricción de hasta 3 acciones será revisable al ampliar el mapa/tamaño de ejército, porque 3 no sirve universalmente para 30 unidades.
