@@ -118,6 +118,10 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(objective.get(key)):
                 return {}
             objective[key] = int(objective[key])
+        if objective.has("first_faction"):
+            if not _whole(objective["first_faction"]):
+                return {}
+            objective["first_faction"] = int(objective["first_faction"])
         if not objective.get("scores") is Array or objective["scores"].size() != 2:
             return {}
         for i in range(2):
