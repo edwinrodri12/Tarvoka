@@ -11,6 +11,7 @@ func _initialize() -> void:
     var blue: Dictionary = Roles.make_unit("A", 0, Vector2i(4,2), "line")
     var red: Dictionary = Roles.make_unit("X", 1, Vector2i(8,5), "line")
     var modern: Dictionary = Session.start([blue,red],terrain,0,false,true,true,true)
+    modern["control"].erase("score_on_hold") # Existing v0.7 modern save semantics
     assert(modern["control"]["fair_round"] and modern["control"]["first_faction"] == 0)
     modern["control"]["target"] = 2
     var untouched: Dictionary = modern.duplicate(true)
@@ -36,6 +37,7 @@ func _initialize() -> void:
     # An equal 2:2 race is not resolved by either side's earlier clock tick.
     var other: Dictionary = Roles.make_unit("Z", 1, Vector2i(5,5), "line")
     var tied: Dictionary = Session.start([blue,other],terrain,0,false,true,true,true)
+    tied["control"].erase("score_on_hold")
     tied["control"]["target"] = 2
     for i in range(4):
         var phase: Dictionary = Session.end_turn(tied)
@@ -64,6 +66,7 @@ func _initialize() -> void:
 
     # Switching initiative creates an identical opportunity for the red opener.
     var red_first: Dictionary = Session.start([blue,other],terrain,1,false,true,true,true)
+    red_first["control"].erase("score_on_hold")
     assert(red_first["control"]["first_faction"] == 1)
     var red_start: Dictionary = Session.end_turn(red_first)
     assert(red_start["valid"] and red_start["state"]["winner"] == -1)
