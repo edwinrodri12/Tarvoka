@@ -259,7 +259,10 @@ static func label(scenario_id: int) -> String:
     return LABELS[scenario_id]
 
 static func identify(map: Array) -> int:
+    var size: Vector2i = Rules.map_size(map)
+    if not Rules.valid_terrain(map):
+        return 0
     for id in range(LABELS.size()):
-        if map == terrain(id):
+        if map == terrain(id,size):
             return id
     return 0
