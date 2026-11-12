@@ -78,7 +78,7 @@ static func public_preview_exchange(attacker: Dictionary, defender: Dictionary) 
     return preview_exchange(attacker,public_defender)
 
 # Pure adjacent attack action; never mutates the supplied unit array.
-static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true) -> Dictionary:
+static func attack(units: Array, attacker_id: String, defender_id: String, faction: int, allow_counter: bool = true, grid_size: Vector2i = Vector2i(10,8)) -> Dictionary:
     var result: Array = units.duplicate(true)
     # Reject ambiguous identifiers before resolving any combat action.
     var seen_ids := {}
@@ -112,7 +112,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
     if not (a_pos is Vector2i) or not (d_pos is Vector2i):
         return {"valid": false, "units": units.duplicate(true)}
     # Reject off-board combat even when two invalid coordinates are adjacent.
-    if not _inside_board(a_pos) or not _inside_board(d_pos):
+    if not _inside_board(a_pos,grid_size) or not _inside_board(d_pos,grid_size):
         return {"valid": false, "units": units.duplicate(true)}
     if not Turns.in_attack_range(attacker, defender):
         return {"valid": false, "units": units.duplicate(true)}
@@ -139,5 +139,5 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         "winner": Turns.winner(result)
     }
 
-static func _inside_board(pos: Vector2i) -> bool:
-    return pos.x >= 0 and pos.x < 10 and pos.y >= 0 and pos.y < 8
+static func _inside_board(pos: Vector2i, grid_size: Vector2i = Vector2i(10,8)) -> bool:
+    return pos.x >= 0 and pos.x < grid_size.x and pos.y >= 0 and pos.y < grid_size.y
