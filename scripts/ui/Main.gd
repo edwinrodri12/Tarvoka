@@ -3,6 +3,8 @@ extends Control
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 
 var board: Control
 var status_label: Label
@@ -20,6 +22,11 @@ var balance_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
 var relay_picker: OptionButton
+var economy_picker: OptionButton
+var economy_status: Label
+var factory_status: Label
+var production_picker: OptionButton
+var produce_button: Button
 var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
@@ -108,6 +115,12 @@ func _ready() -> void:
     relay_status.add_theme_font_size_override("font_size", 17)
     relay_status.add_theme_color_override("font_color", Color(0.95, 0.80, 0.42))
     panel.add_child(relay_status)
+    economy_status = Label.new()
+    economy_status.visible = board.state.has("economy")
+    economy_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    economy_status.add_theme_font_size_override("font_size", 18)
+    economy_status.add_theme_color_override("font_color", Color(0.98,0.85,0.50))
+    panel.add_child(economy_status)
     enemy_turn_label = Label.new()
     enemy_turn_label.visible = false
     enemy_turn_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -191,6 +204,30 @@ func _ready() -> void:
     panel.move_child(cancel_button, end_button.get_index())
     # Keep action buttons on-screen before the longer legend on small devices.
     panel.move_child(legend, end_button.get_index() + 1)
+
+    # Purchase controls are accessible below the combat action buttons
+    # but do not exist as active actions in classical battles.
+    factory_status = Label.new()
+    factory_status.visible = false
+    factory_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    factory_status.add_theme_font_size_override("font_size", 16)
+    panel.add_child(factory_status)
+    production_picker = OptionButton.new()
+    production_picker.custom_minimum_size.y = 52
+    production_picker.add_theme_font_size_override("font_size", 17)
+    for i in range(Roles.ORDER.size()):
+        var role: String = Roles.ORDER[i]
+        production_picker.add_item("%s - %d creditos" % [Roles.label(role),Economy.cost(role)],i)
+    production_picker.select(0)
+    production_picker.visible = false
+    panel.add_child(production_picker)
+    produce_button = Button.new()
+    produce_button.text = "Producir unidad"
+    produce_button.custom_minimum_size.y = 54
+    produce_button.add_theme_font_size_override("font_size", 19)
+    produce_button.visible = false
+    produce_button.pressed.connect(_produce_unit)
+    panel.add_child(produce_button)
 
     var saves := HBoxContainer.new()
     saves.add_theme_constant_override("separation", 6)
@@ -287,6 +324,23 @@ func _ready() -> void:
     relay_help.add_theme_font_size_override("font_size", 14)
     panel.add_child(relay_help)
 
+    var urban_heading := Label.new()
+    urban_heading.text = "ECONOMIA Y PRODUCCION"
+    urban_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(urban_heading)
+    economy_picker = OptionButton.new()
+    economy_picker.custom_minimum_size.y = 54
+    economy_picker.add_theme_font_size_override("font_size", 16)
+    economy_picker.add_item("Sin economia (clasico)",0)
+    economy_picker.add_item("Ciudades conquistables y talleres",1)
+    economy_picker.select(1 if board.state.has("economy") else 0)
+    panel.add_child(economy_picker)
+    var urban_help := Label.new()
+    urban_help.text = "Requiere formacion experimental. Guardia y Rastreador capturan ciudades y talleres al terminar turno. Cada ciudad produce +100 creditos por turno. Selecciona un taller propio vacio para comprar unidades."
+    urban_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    urban_help.add_theme_font_size_override("font_size", 14)
+    panel.add_child(urban_help)
+
     var restart_button := Button.new()
     restart_button.text = "Nueva partida"
     restart_button.custom_minimum_size.y = 52
@@ -347,6 +401,26 @@ func _process(_delta: float) -> void:
         _update_text(relay_status, "SENAL: Azul %d | Rojo %d / %d" % [
             control["scores"][0], control["scores"][1], control["target"]
         ])
+    economy_status.visible = board.state.has("economy")
+    factory_status.visible = board.state.has("economy")
+    production_picker.visible = board.state.has("economy")
+    produce_button.visible = board.state.has("economy")
+    if board.state.has("economy"):
+        var economy: Dictionary = board.state["economy"]
+        var blue_city_count := 0
+        var blue_factory_count := 0
+        for site in economy["sites"]:
+            if int(site["owner"]) == 0:
+                if site["kind"] == "city":
+                    blue_city_count += 1
+                elif site["kind"] == "factory":
+                    blue_factory_count += 1
+        _update_text(economy_status, "RECURSOS: %d creditos | %d ciudades (+%d/turno) | %d talleres." % [
+            int(economy["credits"][0]), blue_city_count, Economy.income_for(economy,0), blue_factory_count
+        ])
+        _update_text(factory_status, "Taller (%d,%d) seleccionado" % [board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if board.selected_factory_pos != Vector2i(-1,-1) else "Toca un taller F propio y libre, luego elige unidad.")
+        var role: String = Roles.ORDER[production_picker.get_selected_id()]
+        produce_button.disabled = not board.can_purchase_selected(role) or int(board.state.get("winner",-1)) != -1
     _update_text(enemy_turn_label, board.last_enemy_turn_report)
     enemy_turn_label.visible = not board.last_enemy_turn_report.is_empty()
     _update_text(autosave_alert, board.autosave_warning)
@@ -355,7 +429,7 @@ func _process(_delta: float) -> void:
     battlefield_status.visible = winner == -1
     order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
     end_button.disabled = winner != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
-    cancel_button.disabled = board.selected_id.is_empty()
+    cancel_button.disabled = board.selected_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
     confirm_button.disabled = board.pending_order.is_empty()
     result_banner.visible = winner != -1
     # A defeat must not appear inside the same green victory panel.
@@ -406,22 +480,36 @@ func _load_game() -> void:
         roster_picker.select(1 if board.specialized_roster else 0)
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
         relay_picker.select(1 if board.state.has("control") else 0)
+        economy_picker.select(1 if board.state.has("economy") else 0)
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
     var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
     var objective_name := "control de reles" if relay_picker.get_selected_id() == 1 else "eliminacion"
     var roster_name := "5 clases experimentales" if roster_picker.get_selected_id() == 1 else "soldados clasicos"
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, objetivo %s? Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, roster_name, fog_name, objective_name]
+    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() != 1:
+        board.message = "La economia necesita formacion experimental. Seleccionala primero."
+        return
+    var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, roster_name, fog_name, urban_name, objective_name]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 1)
+    if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() != 1:
+        board.message = "La economia requiere formacion experimental."
+        return
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 1, economy_picker.get_selected_id() == 1)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
 
 func _confirm_order() -> void:
     board.confirm_pending_order()
+
+func _produce_unit() -> void:
+    if not board.state.has("economy") or production_picker.get_selected_id() < 0:
+        return
+    var role: String = Roles.ORDER[production_picker.get_selected_id()]
+    board.buy_selected(role)

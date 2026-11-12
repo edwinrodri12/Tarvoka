@@ -7,6 +7,7 @@ const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -21,6 +22,7 @@ var autosave_warning := ""
 var selected_id := ""
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
+var selected_factory_pos := Vector2i(-1,-1)
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var touch_origin := Vector2.ZERO
@@ -33,7 +35,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false) -> void:
     symmetric_setup = symmetric
     specialized_roster = specialized
     var enemy_hp: int = 10 if symmetric else 8
@@ -52,7 +54,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
-    state = Session.start(units, terrain, 0, fog_mode, relay_mode)
+    state = Session.start(units, terrain, 0, fog_mode, relay_mode, economy_mode)
+    selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     pending_order.clear()
     message = "Selecciona una unidad."
@@ -140,6 +143,30 @@ func _draw() -> void:
             ])
             marker.append(marker[0])
             draw_polyline(marker, signal_color, maxf(2.0, tile * 0.055), true)
+    # Urban installations use distinct shapes and letters. Sites not yet
+    # explored stay hidden; the current owner stays unknown outside sight.
+    if state.has("economy"):
+        for site in state["economy"]["sites"]:
+            var city_cell: Vector2i = site["pos"]
+            if fog and not explored.has(city_cell):
+                continue
+            var known_owner: int = int(site["owner"]) if not fog or visible.has(city_cell) else -1
+            var city_tint := Color(0.94, 0.79, 0.39)
+            if known_owner == 0:
+                city_tint = Color(0.35, 0.73, 0.99)
+            elif known_owner == 1:
+                city_tint = Color(1.0, 0.45, 0.39)
+            var top_left := origin + Vector2(city_cell) * tile
+            var center := top_left + Vector2.ONE * (tile * 0.5)
+            var is_town: bool = str(site["kind"]) == "city"
+            var half: float = tile * (0.30 if is_town else 0.35)
+            draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), Color(0.03,0.07,0.10,0.82))
+            draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), city_tint, false, maxf(2.0,tile*0.065))
+            if tile >= 20.0:
+                var symbol := "C" if is_town else "F"
+                draw_string(font, center+Vector2(-tile*0.14,tile*0.12), symbol, HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(11.0,tile*0.27)), city_tint)
+            if city_cell == selected_factory_pos:
+                draw_rect(Rect2(top_left,Vector2.ONE*tile),Color.YELLOW,false,3.0)
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
@@ -216,9 +243,10 @@ func _draw() -> void:
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
 
 func cancel_selection() -> void:
-    if selected_id.is_empty() and pending_order.is_empty():
+    if selected_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1):
         return
     selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     message = "Seleccion cancelada."
     queue_redraw()
@@ -283,6 +311,7 @@ func _commit_order(order: Dictionary) -> bool:
         message = "Accion no permitida."
         return false
     state = result["state"]
+    selected_factory_pos = Vector2i(-1,-1)
     _write_autosave()
     var winner := int(state.get("winner", -1))
     if winner != -1:
@@ -301,6 +330,32 @@ func _commit_order(order: Dictionary) -> bool:
     else:
         selected_id = ""
         message = "Ataque realizado."
+    return true
+
+# Purchases come from a selected, currently owned and unoccupied workshop.
+# The definitive decision is validated again by BattleSession.purchase.
+func can_purchase_selected(role: String) -> bool:
+    if selected_factory_pos == Vector2i(-1,-1) or not pending_order.is_empty():
+        return false
+    if ai_enabled and int(state.get("faction",-1)) != 0:
+        return false
+    return Economy.can_purchase(state, selected_factory_pos, role)
+
+func buy_selected(role: String) -> bool:
+    if not can_purchase_selected(role):
+        message = "No se puede producir: revisa creditos, propietario y espacio."
+        return false
+    var action: Dictionary = Session.purchase(state, selected_factory_pos, role)
+    if not action.get("valid", false):
+        message = "No se pudo producir la unidad."
+        return false
+    state = action["state"]
+    selected_factory_pos = Vector2i(-1,-1)
+    selected_id = ""
+    pending_order.clear()
+    message = "Unidad %s producida (-%d creditos). Actuara el proximo turno." % [Roles.label(role), int(action["cost"])]
+    _write_autosave()
+    queue_redraw()
     return true
 
 func selected_unit_summary() -> String:
@@ -355,6 +410,7 @@ func _tap(point: Vector2) -> void:
             target = unit
             break
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
+        selected_factory_pos = Vector2i(-1,-1)
         pending_order.clear()
         var tapped_id := str(target["id"])
         if tapped_id == selected_id:
@@ -368,6 +424,16 @@ func _tap(point: Vector2) -> void:
             message = "Unidad " + selected_id + " seleccionada."
     elif not selected_id.is_empty():
         _request_order(cell, target)
+    elif target.is_empty() and state.has("economy"):
+        var found := false
+        for site in state["economy"]["sites"]:
+            if site["pos"] == cell and site["kind"] == "factory" and int(site["owner"]) == int(state["faction"]):
+                selected_factory_pos = cell if selected_factory_pos != cell else Vector2i(-1,-1)
+                message = "Taller seleccionado. Elige una unidad y pulsa Producir." if selected_factory_pos == cell else "Taller cancelado."
+                found = true
+                break
+        if not found:
+            selected_factory_pos = Vector2i(-1,-1)
     queue_redraw()
 
 func finish_turn() -> void:
@@ -380,6 +446,7 @@ func finish_turn() -> void:
         return
     state = result["state"]
     selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     last_enemy_turn_report = ""
     message = "Turno de faccion " + str(state["faction"] + 1)
@@ -453,6 +520,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
@@ -486,6 +554,7 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.identify(state["terrain"])
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()

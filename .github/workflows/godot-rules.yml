@@ -26,6 +26,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_rules.gd
 
+      - name: Validate urban economy touchscreen controls and persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_urban_economy_ui.gd
+
       - name: Validate urban economy, capturing and factory recruitment
         shell: bash
         run: |
