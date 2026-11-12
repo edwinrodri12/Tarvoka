@@ -15,6 +15,9 @@ static func begin_turn(units: Array, faction: int) -> Array:
             # Field logistics can transfer inventory only once each turn.
             if unit.has("supply_used"):
                 unit["supply_used"] = false
+            # Ready to defend once when the NEXT enemy turn begins.
+            if unit.has("reacted"):
+                unit["reacted"] = false
     return result
 
 static func can_act(unit: Dictionary, faction: int) -> bool:
