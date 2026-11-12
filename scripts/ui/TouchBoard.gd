@@ -25,6 +25,7 @@ var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
+var last_economy_report := ""
 var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
@@ -60,6 +61,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     pending_order.clear()
     message = "Selecciona una unidad."
     last_enemy_turn_report = ""
+    last_economy_report = ""
     _write_autosave(false)
     queue_redraw()
 
@@ -426,12 +428,37 @@ func _tap(point: Vector2) -> void:
         _request_order(cell, target)
     elif target.is_empty() and state.has("economy"):
         var found := false
+        var own_side: int = int(state["faction"])
+        var fogged: bool = Visibility.enabled(state)
+        var discovered: Dictionary = Visibility.explored_cells(state,own_side) if fogged else {}
         for site in state["economy"]["sites"]:
-            if site["pos"] == cell and site["kind"] == "factory" and int(site["owner"]) == int(state["faction"]):
+            if site["pos"] != cell:
+                continue
+            # Unknown installations never expose their existence or owner
+            # through tapping a dark cell.
+            if fogged and not discovered.has(cell) and int(site["owner"]) != own_side:
+                continue
+            var owner_known: bool = not fogged or visible.has(cell) or int(site["owner"]) == own_side
+            var owner_text := "desconocido"
+            if owner_known:
+                match int(site["owner"]):
+                    0:
+                        owner_text = "Azul"
+                    1:
+                        owner_text = "Rojo"
+                    _:
+                        owner_text = "neutral"
+            if site["kind"] == "factory" and int(site["owner"]) == own_side:
                 selected_factory_pos = cell if selected_factory_pos != cell else Vector2i(-1,-1)
                 message = "Taller seleccionado. Elige una unidad y pulsa Producir." if selected_factory_pos == cell else "Taller cancelado."
-                found = true
-                break
+            else:
+                selected_factory_pos = Vector2i(-1,-1)
+                if site["kind"] == "city":
+                    message = "Ciudad (%s): +100 creditos/turno. Guardia o Rastreador la captura al finalizar turno." % owner_text
+                else:
+                    message = "Taller (%s): produce unidades para su propietario." % owner_text
+            found = true
+            break
         if not found:
             selected_factory_pos = Vector2i(-1,-1)
     queue_redraw()
@@ -449,6 +476,20 @@ func finish_turn() -> void:
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     last_enemy_turn_report = ""
+    last_economy_report = ""
+    if previous.has("economy") and state.has("economy"):
+        var captured_cities := 0
+        var captured_factories := 0
+        for i in range(previous["economy"]["sites"].size()):
+            var before_site: Dictionary = previous["economy"]["sites"][i]
+            var after_site: Dictionary = state["economy"]["sites"][i]
+            if int(before_site["owner"]) != int(previous["faction"]) and int(after_site["owner"]) == int(previous["faction"]):
+                if after_site["kind"] == "city":
+                    captured_cities += 1
+                else:
+                    captured_factories += 1
+        if captured_cities + captured_factories > 0:
+            last_economy_report = "Capturas de faccion %d: %d ciudades, %d talleres." % [int(previous["faction"])+1,captured_cities,captured_factories]
     message = "Turno de faccion " + str(state["faction"] + 1)
     if state.has("control"):
         message = "Reles: " + _relay_turn_report(previous, state, 0)
@@ -456,6 +497,10 @@ func finish_turn() -> void:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
     if ai_enabled and int(state["faction"]) == 1:
         _play_ai_turn()
+        if previous.has("economy") and state.has("economy") and int(state.get("faction",-1)) == 0 and int(state.get("winner",-1)) == -1:
+            var received: int = int(state["economy"]["credits"][0])-int(previous["economy"]["credits"][0])
+            if received > 0:
+                last_economy_report += " +%d creditos al iniciar tu turno." % received
     _write_autosave()
     queue_redraw()
 
@@ -534,6 +579,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     selected_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
+    last_economy_report = ""
     var loaded_winner := int(state.get("winner", -1))
     message = "Victoria de faccion %d." % (loaded_winner + 1) if loaded_winner != -1 else "Partida cargada."
     if bool(report["recovered"]):
@@ -568,6 +614,7 @@ func resume_autosave() -> bool:
     selected_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
+    last_economy_report = ""
     message = "Se recupero una copia anterior de la partida." if bool(report["recovered"]) else "Partida recuperada automaticamente."
     if ai_enabled and int(state.get("faction", -1)) == 1 and int(state.get("winner", -1)) == -1:
         _play_ai_turn()
