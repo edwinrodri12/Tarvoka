@@ -10,6 +10,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
+const BattleActions = preload("res://scripts/core/BattleActions.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -73,6 +74,29 @@ static func step(state: Dictionary) -> Dictionary:
         if finishing_hit.get("valid", false):
             finishing_hit["action"] = "attack"
             return finishing_hit
+    # Expendable missiles must not retreat to save their own HP when a legal
+    # target is currently visible. They are deliberately spent on impact.
+    var expendable_choice: Dictionary = {}
+    var expendable_score := -999999
+    for ally in friends:
+        if str(ally.get("role", "")) not in BattleActions.ONE_WAY_ROLES or not Logistics.can_fire(ally):
+            continue
+        for enemy in enemies:
+            if not Turns.in_attack_range(ally, enemy):
+                continue
+            var impact: Dictionary = Roles.resolve(ally, enemy)
+            if not impact.get("valid", false):
+                continue
+            var score: int = int(impact["damage"]) * 10 + int(enemy.get("attack", 0))
+            if score > expendable_score:
+                expendable_score = score
+                expendable_choice = {"unit_id":str(ally["id"]), "enemy_id":str(enemy["id"])}
+    if not expendable_choice.is_empty():
+        var spent: Dictionary = Session.attack(state, expendable_choice["unit_id"], expendable_choice["enemy_id"])
+        if spent.get("valid", false):
+            spent["action"] = "attack"
+            return spent
+
     var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends, enemies, occupied)
     if withdrawal.get("valid", false):
         return withdrawal
