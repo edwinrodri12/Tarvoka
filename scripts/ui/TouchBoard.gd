@@ -208,6 +208,14 @@ func _draw() -> void:
             draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.20)), Color.WHITE)
+    # Independent amber weapon reach from the current tile. Movement stays
+    # blue, while real, legally attackable enemies remain marked red on top.
+    # This is NOT combined move+fire range and never creates a game action.
+    var weapon_area: Dictionary = selected_weapon_coverage()
+    for covered_cell in weapon_area:
+        var covered_pos: Vector2 = origin + Vector2(covered_cell) * tile
+        draw_rect(Rect2(covered_pos, Vector2.ONE * tile), VisualStyle.weapon_coverage_fill())
+        draw_rect(Rect2(covered_pos, Vector2.ONE * tile), VisualStyle.weapon_coverage_outline(), false, maxf(1.0, tile * 0.027))
     for destination in hints["attacks"]:
         var attack_cell: Vector2i = destination
         var attack_pos: Vector2 = origin + Vector2(attack_cell) * tile
@@ -548,6 +556,10 @@ func _inspect_enemy(enemy: Dictionary) -> void:
 
 func legal_action_hints() -> Dictionary:
     return TacticalHints.for_unit(state, selected_id)
+
+func selected_weapon_coverage() -> Dictionary:
+    # Just a UI preview. It does not reveal enemies or affect the saved game.
+    return TacticalHints.friendly_weapon_coverage(state, selected_id)
 
 func _gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
