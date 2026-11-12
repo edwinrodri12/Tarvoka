@@ -93,10 +93,29 @@ func _initialize() -> void:
         print("ROUND_BALANCE paired=%s boost=%d first_wins=%d response_wins=%d ties=%d phases=%d" % [
             str(paired_clock),responder_boost,opener_wins,responder_wins,draws,phase_count
         ])
-    print("PASS paired initiative: no early scoring, mirrored captures, legacy saves, 40 paired AI diagnostics with temporary movement compensation")
+    # Separate experiment: opening side has fewer active orders *only*
+    # in its first phase; both sides retain normal full turns afterward.
+    # We measure the effect before selecting any playable rule.
+    for first_cap in [1,2,3,4,5,6,8]:
+        var opener_wins := 0
+        var responder_wins := 0
+        var draws := 0
+        for map_id in [0,3]:
+            for fog in [false,true]:
+                for starter in [0,1]:
+                    var outcome: Dictionary = _play(map_id,fog,starter,true,0,first_cap)
+                    if int(outcome["winner"]) == -1:
+                        draws += 1
+                    elif int(outcome["winner"]) == starter:
+                        opener_wins += 1
+                    else:
+                        responder_wins += 1
+        assert(opener_wins + responder_wins + draws == 8)
+        print("OPENING_CAP cap=%d first_wins=%d second_wins=%d draws=%d" % [first_cap,opener_wins,responder_wins,draws])
+    print("PASS paired initiative: round scoring, mirrored captures, legacy saves, 96 AI trials of reply mobility and opening order caps")
     quit(0)
 
-static func _play(map_id: int, fog: bool, first: int, paired_clock: bool, responder_boost: int = 0) -> Dictionary:
+static func _play(map_id: int, fog: bool, first: int, paired_clock: bool, responder_boost: int = 0, first_action_cap: int = -1) -> Dictionary:
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,true,true,true)
     if not paired_clock:
         state["control"].erase("round_scoring")
@@ -111,6 +130,8 @@ static func _play(map_id: int, fog: bool, first: int, paired_clock: bool, respon
             break
         var bound: int = mini(50,state["units"].size()*2 + state["economy"]["sites"].size())
         for i in range(bound):
+            if phase == 0 and first_action_cap >= 0 and i >= first_action_cap:
+                break
             var original: Dictionary = state.duplicate(true)
             var next: Dictionary = AI.step(state)
             assert(original == state)
