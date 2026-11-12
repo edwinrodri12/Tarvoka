@@ -40,6 +40,8 @@ assets/factions/dominio_turquesa.png
 assets/factions/orden_onix.png
 ```
 
+Los primeros PNG pueden generarse automáticamente **sin sustituir el arte aprobado** a partir de la imagen original de 1536×1024: copiarla a `assets/reference/emblemas_ocho_facciones_aprobados_original.png` y ejecutar `godot --headless --path . --script res://tools/import_faction_emblems.gd`. El importador verifica SHA-256 `cf6228746540082c5c9ece7ccb3e043a58ce10300e05e3ea057f88f202294d63`; si la referencia cambió no sobrescribe emblemas. Los recortes iniciales retienen marcos y fondos de la lámina, por lo que sirven como **tarjetas de galería**, no como sprites transparentes de unidades. Una segunda pasada artística podrá separar fondos usando el original de alta resolución.
+
 Cada PNG: fondo transparente, mismo encuadre y tamaño (recomendado 256×256 o 512×512); no recortar laureles, olas, coronas ni alas; no generar reemplazos improvisados. Los emblemas se pueden consultar mediante `emblem_texture(index)`; se devuelven `null` cuando aún faltan, sin bloquear la partida.
 
 ## Secuencia restante
