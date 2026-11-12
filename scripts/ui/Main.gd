@@ -20,6 +20,7 @@ var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var first_picker: OptionButton
 var balance_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
@@ -279,6 +280,23 @@ func _ready() -> void:
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
 
+    var first_heading := Label.new()
+    first_heading.text = "QUIEN COMIENZA LA PARTIDA"
+    first_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(first_heading)
+    first_picker = OptionButton.new()
+    first_picker.custom_minimum_size.y = 54
+    first_picker.add_theme_font_size_override("font_size", 16)
+    first_picker.add_item("Azul (jugador) primero", 0)
+    first_picker.add_item("Rojo (IA / jugador 2) primero", 1)
+    first_picker.select(0)
+    panel.add_child(first_picker)
+    var first_help := Label.new()
+    first_help.text = "Para comprobar la justicia de un duelo, intercambia quien inicia al repetir la batalla. Las reglas y el presupuesto siguen siendo iguales."
+    first_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    first_help.add_theme_font_size_override("font_size", 14)
+    panel.add_child(first_help)
+
     var balance_heading := Label.new()
     balance_heading.text = "FUERZA INICIAL DEL ENEMIGO"
     balance_heading.add_theme_font_size_override("font_size", 16)
@@ -527,6 +545,8 @@ func _load_game() -> void:
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
         relay_picker.select(1 if board.state.has("control") else 0)
         economy_picker.select(1 if board.state.has("economy") else 0)
+        if board.state.has("control") and board.state["control"].has("first_faction"):
+            first_picker.select(int(board.state["control"]["first_faction"]))
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
@@ -539,7 +559,8 @@ func _new_game() -> void:
         board.message = "La economia necesita formacion experimental. Seleccionala primero."
         return
     var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, roster_name, fog_name, urban_name, objective_name]
+    var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
@@ -550,7 +571,7 @@ func _confirm_new_game() -> void:
     if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
         board.message = "La economia requiere formacion experimental."
         return
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id())
 
 func _cancel_selection() -> void:
     board.cancel_selection()
