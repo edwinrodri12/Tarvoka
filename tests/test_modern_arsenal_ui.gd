@@ -26,7 +26,8 @@ func _run() -> void:
     var dialog: ConfirmationDialog = main.new_game_dialog
     board.size = Vector2(800,640)
 
-    assert(roster.item_count == 3 and scenarios.item_count == 4)
+    assert(roster.item_count == 3 and scenarios.item_count == 5)
+    assert(scenarios.get_item_id(4) == Scenarios.RANDOM_SCENARIO_ID)
     assert(roster.get_selected_id() == 0)
     var previous: Dictionary = board.state.duplicate(true)
     scenarios.select(3)

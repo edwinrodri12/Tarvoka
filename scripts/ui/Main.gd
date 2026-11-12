@@ -20,6 +20,7 @@ var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var map_seed_picker: SpinBox
 var first_picker: OptionButton
 var balance_picker: OptionButton
 var roster_picker: OptionButton
@@ -277,8 +278,37 @@ func _ready() -> void:
     scenario_picker.add_theme_font_size_override("font_size", 17)
     for id in range(Scenarios.LABELS.size()):
         scenario_picker.add_item(Scenarios.label(id), id)
+    scenario_picker.add_item(Scenarios.label(Scenarios.RANDOM_SCENARIO_ID), Scenarios.RANDOM_SCENARIO_ID)
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
+
+    var random_controls := HBoxContainer.new()
+    random_controls.add_theme_constant_override("separation", 5)
+    panel.add_child(random_controls)
+    var map_seed_heading := Label.new()
+    map_seed_heading.text = "Semilla"
+    map_seed_heading.add_theme_font_size_override("font_size", 14)
+    random_controls.add_child(map_seed_heading)
+    map_seed_picker = SpinBox.new()
+    map_seed_picker.min_value = Scenarios.MIN_SEED
+    map_seed_picker.max_value = Scenarios.MAX_SEED
+    map_seed_picker.step = 1
+    map_seed_picker.value = int(board.state.get("map_seed", 12345))
+    map_seed_picker.custom_minimum_size.x = 120
+    map_seed_picker.custom_minimum_size.y = 46
+    map_seed_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    map_seed_picker.tooltip_text = "La misma semilla crea exactamente el mismo mapa."
+    random_controls.add_child(map_seed_picker)
+    var new_seed_button := Button.new()
+    new_seed_button.text = "Otra"
+    new_seed_button.custom_minimum_size.y = 46
+    new_seed_button.pressed.connect(_reroll_map_seed)
+    random_controls.add_child(new_seed_button)
+    var map_seed_help := Label.new()
+    map_seed_help.text = "Elige mapa aleatorio y una semilla para jugar otro terreno o repetir uno anterior. Conserva las mismas bases y posiciones para ambos bandos."
+    map_seed_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    map_seed_help.add_theme_font_size_override("font_size", 14)
+    panel.add_child(map_seed_help)
 
     var first_heading := Label.new()
     first_heading.text = "QUIEN COMIENZA LA PARTIDA"
@@ -545,6 +575,8 @@ func _load_game() -> void:
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
         relay_picker.select(1 if board.state.has("control") else 0)
         economy_picker.select(1 if board.state.has("economy") else 0)
+        if board.state.has("map_seed"):
+            map_seed_picker.value = int(board.state["map_seed"])
         if board.state.has("control") and board.state["control"].has("first_faction"):
             first_picker.select(int(board.state["control"]["first_faction"]))
 
@@ -560,7 +592,10 @@ func _new_game() -> void:
         return
     var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
     var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [Scenarios.label(scenario_picker.get_selected_id()), mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
+    var map_name: String = Scenarios.label(scenario_picker.get_selected_id())
+    if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
+        map_name += " (semilla %d)" % int(map_seed_picker.value)
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
@@ -571,7 +606,16 @@ func _confirm_new_game() -> void:
     if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
         board.message = "La economia requiere formacion experimental."
         return
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id())
+    var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed)
+
+func _reroll_map_seed() -> void:
+    var previous: int = int(map_seed_picker.value)
+    var next: int = randi_range(Scenarios.MIN_SEED, Scenarios.MAX_SEED)
+    if next == previous:
+        next = (next % Scenarios.MAX_SEED) + 1
+    map_seed_picker.value = next
+    scenario_picker.select(Scenarios.RANDOM_SCENARIO_ID)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
