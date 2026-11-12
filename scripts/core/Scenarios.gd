@@ -187,10 +187,11 @@ static func _large_terrain(scenario_id: int, grid_size: Vector2i) -> Array:
         for y in [scale_y(2,grid_size),scale_y(5,grid_size)]:
             for x in range(w):
                 map[y][x] = "road"
-        for x in range(3,w-3):
+        for x in range(3,middle-2):
             if x % 5 == 0:
-                map[scale_y(1,grid_size)][x] = "forest"
-                map[scale_y(6,grid_size)][x] = "forest"
+                for y in [scale_y(1,grid_size),scale_y(6,grid_size)]:
+                    map[y][x] = "forest"
+                    map[y][w-1-x] = "forest"
     elif scenario_id == 3:
         for x in range(w):
             map[0][x] = "water"
