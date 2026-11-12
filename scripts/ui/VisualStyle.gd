@@ -24,6 +24,9 @@ const TERRAIN_COLORS = {
 # Movement is blue and attack is red, independent of faction colors.
 const MOVE_FILL = Color(0.17, 0.53, 0.98, 0.38)
 const ATTACK_FILL = Color(0.94, 0.20, 0.16, 0.40)
+# Outline for POTENTIAL weapon range; red remains reserved for an actual legal target.
+const WEAPON_COVERAGE_FILL = Color(1.0, 0.62, 0.16, 0.14)
+const WEAPON_COVERAGE_OUTLINE = Color(1.0, 0.70, 0.24, 0.86)
 
 static func faction_info(index: int) -> Dictionary:
     if index < 0 or index >= FACTIONS.size():
@@ -56,3 +59,9 @@ static func movement_fill() -> Color:
 
 static func attack_fill() -> Color:
     return ATTACK_FILL
+
+static func weapon_coverage_fill() -> Color:
+    return WEAPON_COVERAGE_FILL
+
+static func weapon_coverage_outline() -> Color:
+    return WEAPON_COVERAGE_OUTLINE
