@@ -15,27 +15,52 @@ func _initialize() -> void:
             var terrain: Array = Scenarios.terrain(map_id)
             var left: Dictionary = Session.start(Roles.modern_armies(true),terrain,0,fog,true,true,true)
             var right: Dictionary = Session.start(Roles.modern_armies(true),terrain,1,fog,true,true,true)
-            for i in range(45):
-                var old_l: Dictionary = left.duplicate(true)
-                var old_r: Dictionary = right.duplicate(true)
-                var l: Dictionary = AI.step(left)
-                var r: Dictionary = AI.step(right)
-                assert(left == old_l and right == old_r)
-                var a: String = _action_signature(old_l,l)
-                var b: String = _action_signature(old_r,r)
-                compared += 1
-                if a != b:
-                    mismatches += 1
-                    print("MIRROR_DIAGNOSTIC map=%d fog=%s step=%d LEFT=%s RIGHT=%s" % [map_id,str(fog),i,a,b])
+            var divergent := false
+            for phase in range(12):
+                for i in range(50):
+                    var old_l: Dictionary = left.duplicate(true)
+                    var old_r: Dictionary = right.duplicate(true)
+                    var l: Dictionary = AI.step(left)
+                    var r: Dictionary = AI.step(right)
+                    assert(left == old_l and right == old_r)
+                    var a: String = _action_signature(old_l,l)
+                    var b: String = _action_signature(old_r,r)
+                    compared += 1
+                    if a != b:
+                        mismatches += 1
+                        divergent = true
+                        print("MIRROR_DIAGNOSTIC map=%d fog=%s phase=%d step=%d LEFT=%s RIGHT=%s" % [map_id,str(fog),phase,i,a,b])
+                        break
+                    if not l.get("valid",false):
+                        break
+                    left = l["state"]
+                    right = r["state"]
+                    if int(left["winner"]) != -1 or int(right["winner"]) != -1:
+                        break
+                if divergent:
                     break
-                if not l.get("valid",false):
+                if int(left["winner"]) != -1 or int(right["winner"]) != -1:
+                    if int(left["winner"]) != 1-int(right["winner"]):
+                        mismatches += 1
+                        print("MIRROR_TERMINAL_DIFFERENCE map=%d fog=%s phase=%d left=%d right=%d" % [
+                            map_id,str(fog),phase,int(left["winner"]),int(right["winner"])
+                        ])
                     break
-                left = l["state"]
-                right = r["state"]
-            if int(left["winner"]) == -1 and int(right["winner"]) == -1:
-                assert(left["faction"] == 0 and right["faction"] == 1)
+                var ended_l: Dictionary = Session.end_turn(left)
+                var ended_r: Dictionary = Session.end_turn(right)
+                assert(ended_l["valid"] and ended_r["valid"])
+                left = ended_l["state"]
+                right = ended_r["state"]
+                if int(left["winner"]) != -1 or int(right["winner"]) != -1:
+                    if int(left["winner"]) != 1-int(right["winner"]):
+                        mismatches += 1
+                        print("MIRROR_TERMINAL_DIFFERENCE map=%d fog=%s phase=%d left=%d right=%d" % [
+                            map_id,str(fog),phase,int(left["winner"]),int(right["winner"])
+                        ])
+                    break
+                assert(int(left["faction"]) == 1-int(right["faction"]))
     print("MIRROR_SUMMARY compared=%d divergent_openings=%d" % [compared,mismatches])
-    print("PASS mirror opening diagnostic: compare role, destination, choice and resource ordering between equivalent starts")
+    print("PASS mirror multi-round diagnostic: compare role, destination and resources over twelve paired phases")
     quit(0)
 
 static func _role(state: Dictionary, id: String) -> String:
