@@ -283,7 +283,7 @@ static func build_image() -> Image:
 
 static func image_copy() -> Image:
     var atlas: Image = build_image()
-    return atlas.duplicate() if atlas != null else null
+    return (atlas.duplicate() as Image) if atlas != null else null
 
 static func atlas_texture() -> Texture2D:
     if _texture != null:
