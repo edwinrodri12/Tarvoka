@@ -41,13 +41,44 @@ func _initialize() -> void:
             bonus,starter_wins,responder_wins,unresolved,blue_wins,red_wins,total_turns,total_actions
         ])
         assert(starter_wins+responder_wins+unresolved == 8)
-    assert(count == 32)
-    print("PASS initiative study: 32 simulated modern relay games; no balance changes applied")
+    # Higher relay victory thresholds may allow meaningful counterattacks
+    # without changing either faction, terrain, army or spending power.
+    for target in [5, 7, 9, 12, 15]:
+        var opener_wins := 0
+        var responder_wins := 0
+        var unsettled := 0
+        var blue_wins := 0
+        var red_wins := 0
+        var aggregate_phases := 0
+        for map_id in [0, 3]:
+            for fog in [false, true]:
+                for first in [0, 1]:
+                    var outcome: Dictionary = _battle(map_id, fog, first, 0, target)
+                    var winner: int = int(outcome["winner"])
+                    if winner == -1:
+                        unsettled += 1
+                    elif winner == first:
+                        opener_wins += 1
+                    else:
+                        responder_wins += 1
+                    if winner == 0:
+                        blue_wins += 1
+                    elif winner == 1:
+                        red_wins += 1
+                    aggregate_phases += int(outcome["phases"])
+                    count += 1
+        print("THRESHOLD_EXPERIMENT target=%d games=8 first_wins=%d responder_wins=%d undecided=%d blue=%d red=%d phases=%d" % [
+            target,opener_wins,responder_wins,unsettled,blue_wins,red_wins,aggregate_phases
+        ])
+        assert(opener_wins+responder_wins+unsettled == 8)
+    assert(count == 72)
+    print("PASS initiative study: 72 simulated modern relay games; no balance changes applied")
     quit(0)
 
-static func _battle(map_id: int, fog: bool, first: int, responder_bonus: int) -> Dictionary:
+static func _battle(map_id: int, fog: bool, first: int, responder_bonus: int, score_target: int = 5) -> Dictionary:
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,true,true,true)
     assert(state.has("economy") and state["control"].get("fair_round",false))
+    state["control"]["target"] = score_target
     var responder: int = 1-first
     state["economy"]["credits"][responder] += responder_bonus
     assert(Economy.valid(state["economy"],state["terrain"]))
