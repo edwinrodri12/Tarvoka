@@ -9,6 +9,7 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -35,6 +36,12 @@ static func encode(state: Dictionary) -> String:
             var pos: Vector2i = node["pos"]
             node["pos"] = [pos.x, pos.y]
         snapshot["control"] = control
+    if state.has("economy"):
+        var urban: Dictionary = state["economy"].duplicate(true)
+        for site in urban["sites"]:
+            var position: Vector2i = site["pos"]
+            site["pos"] = [position.x, position.y]
+        snapshot["economy"] = urban
     if Visibility.enabled(state):
         snapshot["fog_enabled"] = true
         var explored: Dictionary = {}
@@ -109,6 +116,30 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(objective["scores"][i]):
                 return {}
             objective["scores"][i] = int(objective["scores"][i])
+    if state.has("economy"):
+        var urban = state["economy"]
+        if not urban is Dictionary or not urban.get("sites") is Array or not urban.get("credits") is Array:
+            return {}
+        for key in ["turn", "next_unit"]:
+            if not _whole(urban.get(key)):
+                return {}
+            urban[key] = int(urban[key])
+        for i in range(urban["credits"].size()):
+            if not _whole(urban["credits"][i]):
+                return {}
+            urban["credits"][i] = int(urban["credits"][i])
+        for site in urban["sites"]:
+            if not site is Dictionary or not site.get("pos") is Array or site["pos"].size() != 2:
+                return {}
+            var city_pos: Array = site["pos"]
+            if not _whole(city_pos[0]) or not _whole(city_pos[1]) or not _whole(site.get("owner")):
+                return {}
+            site["pos"] = Vector2i(int(city_pos[0]), int(city_pos[1]))
+            site["owner"] = int(site["owner"])
+            if site.has("produced_turn"):
+                if not _whole(site["produced_turn"]):
+                    return {}
+                site["produced_turn"] = int(site["produced_turn"])
     if state.has("fog_enabled"):
         if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
             return {}
@@ -207,6 +238,9 @@ static func _valid_state(state: Dictionary) -> bool:
             if positions.has(pos):
                 return false
             positions[pos] = true
+    if state.has("economy"):
+        if not state["economy"] is Dictionary or not Economy.valid(state["economy"], state["terrain"]):
+            return false
     # Fog saves must include coherent, bounded exploration for both factions.
     if state.has("fog_enabled"):
         if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
