@@ -531,8 +531,9 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
 # all visible adjacent attack threats. This never reads hidden enemy data.
 static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
     var idle := {"valid": false}
+    var faction: int = int(state.get("faction", -1))
     var fog: bool = Visibility.enabled(state)
-    var visible: Dictionary = Visibility.visible_cells(state, int(state.get("faction", -1))) if fog else {}
+    var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
     var best_id := ""
     var best_cell := Vector2i(-1, -1)
     var best_score := -999999
