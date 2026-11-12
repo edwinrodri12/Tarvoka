@@ -51,3 +51,14 @@ Límites todavía existentes: el regreso automático a camiones cercanos no form
 - **Pruebas añadidas:** abastecimiento móvil, reserva mínima del camión, entrega sin cobrar dos veces, integridad de guardados, niebla de guerra, efecto visual transitorio y cuatro campañas IA de hasta 24 fases para detectar stocks fuera de rango, gasto de créditos negativo, compras sin inventario o deserialización incorrecta.
 
 El comportamiento de los ocho bandos v0.1 permanece intacto. Las simulaciones solo miden integridad y acciones; no prueban todavía que el balance sea competitivo y divertido. La nueva animación es vectorial 2D de prototipo, no arte definitivo.
+
+
+## Fase v0.5 — economía de desgaste, reservas y campañas prolongadas
+
+**Diagnóstico:** las primeras cuatro partidas de estrés con relés finalizaron a las 5–10 fases por puntuación territorial, no porque ambos ejércitos se quedaran sin reservas. Esa es la causa metodológica de los 0 reabastecimientos observados en esa muestra; no demuestra que la IA sepa gestionar una campaña larga.
+
+**Gestión logística de la IA:** `SupplyStrategy.assess` contabiliza solo tropas aliadas visibles para el propio bando, camiones disponibles, inventarios agotados y unidades críticas en cada dominio. Sin modificar el precio de ninguna unidad, preserva **96 créditos de juego** para rearmar cuando ya existen unidades escasas de recursos. No bloquea la adquisición del primer camión indispensable: si hay tropas terrestres varadas y no existe uno, la IA lo prioriza sobre otra infantería. Si existen cuatro unidades terrestres críticamente desabastecidas, puede priorizar un segundo camión mientras haya menos de dos. Las compras siguen requiriendo créditos, taller propio libre y una sola fabricación por instalación/turno.
+
+**Pruebas separadas:** se conserva el test de victoria por relés para jugabilidad breve, pero `test_attrition_campaign.gd` usa partidas sin relés para medir agotamiento y logística sin victoria prematura. Contiene dos subpruebas: (1) naves desarmadas en un escenario de bajo presupuesto para registrar gasto de combustible, pérdida real de HP y prolongación de turnos; (2) combate moderno con economía activa, compras y control del inventario, sin objetivo de señal. `test_supply_strategy.gd` verifica que la IA compre un camión por demanda real, que el camión alcance a un aliado aislado en un turno posterior y reabastezca usando sus existencias prepagadas, así como la reserva de crédito, la ausencia de omnisciencia y el caso sin déficit.
+
+**Balance:** la reserva y prioridad de compra son decisiones de la IA, no bonificaciones de facciones. No se ha cambiado el v0.1 de los ocho bandos. Estas pruebas son instrumentación y validación funcional; no sustituyen partidas humanas ni métricas de equidad competitiva. Las pruebas sin relés son un modo ya accesible desde la selección de objetivo de TARVOKA.
