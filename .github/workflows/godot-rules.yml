@@ -26,6 +26,15 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_visual_style.gd
 
+      - name: Validate large 24x18 and 40x30 tactical arenas, AI and v1 saves
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_large_maps.gd 2>&1 | tee /tmp/tarvoka-large-maps.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-large-maps.log; then
+            echo "Large maps, dynamic rules, AI or save regression"; exit 1
+          fi
+
       - name: Run GDScript rules tests
         shell: bash
         run: |
