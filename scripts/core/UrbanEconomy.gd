@@ -89,6 +89,11 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     var faction: int = int(state.get("faction", -1))
     if faction not in [0,1] or int(state.get("winner", -1)) != -1:
         return false
+    # New multi-domain roles require specialized producers; until those
+    # sites are wired in a following PR, a legacy ground factory cannot
+    # create a ship on dry land or an aircraft without an airbase.
+    if Arsenal.valid(role):
+        return false
     if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
         return false
     if not valid(state["economy"], state["terrain"]):
@@ -114,6 +119,8 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     if side not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos):
         return denied
     var price: int = cost(role)
+    if Arsenal.valid(role):
+        return denied
     if price <= 0 or state["units"].size() >= MAX_UNITS:
         return denied
     if not valid(state["economy"], state["terrain"]):
