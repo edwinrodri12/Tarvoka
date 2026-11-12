@@ -60,7 +60,11 @@ func _initialize() -> void:
                     break
                 assert(int(left["faction"]) == 1-int(right["faction"]))
     print("MIRROR_SUMMARY compared=%d divergent_openings=%d" % [compared,mismatches])
-    print("PASS mirror multi-round diagnostic: compare role, destination and resources over twelve paired phases")
+    # This is an enforceable parity invariant, not an arbitrary tournament
+    # win-rate threshold. Both starts have identical units, economy and map,
+    # with only the playing side reflected.
+    assert(compared >= 150 and mismatches == 0)
+    print("PASS mirror multi-round regression: equivalent AI actions throughout twelve paired phases")
     quit(0)
 
 static func _role(state: Dictionary, id: String) -> String:
