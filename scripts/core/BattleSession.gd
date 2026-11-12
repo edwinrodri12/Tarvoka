@@ -63,7 +63,13 @@ static func resupply(state: Dictionary, unit_id: String) -> Dictionary:
 static func end_turn(state: Dictionary) -> Dictionary:
     if not _active(state):
         return {"valid": false, "state": state.duplicate(true)}
-    var next: Dictionary = state.duplicate(true)
+    var next: Dictionary = Logistics.apply_turn_upkeep(state)
+    # Fuel attrition can destroy the last platform of a faction.
+    next["winner"] = Turns.winner(next["units"])
+    if int(next["winner"]) != -1:
+        if Visibility.enabled(next):
+            next = Visibility.update_exploration(next)
+        return {"valid": true, "state": next}
     if next.has("economy"):
         next = Economy.finish_turn(next)
     if next.has("control"):
