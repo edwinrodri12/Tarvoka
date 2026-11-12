@@ -134,6 +134,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_modern_mirror_decisions.gd
 
+      - name: Study first-player advantage under hypothetical responder cash grants
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_initiative_experiments.gd
+
       - name: Collect 16 paired battle economy, turn and supply observations
         shell: bash
         run: |
