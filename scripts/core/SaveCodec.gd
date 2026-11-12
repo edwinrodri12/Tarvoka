@@ -248,6 +248,8 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         if unit.has("moved") and not unit["moved"] is bool:
             return false
+        if unit.has("reacted") and not unit["reacted"] is bool:
+            return false
         if unit.has("role") and (not unit["role"] is String or not Roles.valid(unit["role"])):
             return false
         if unit.has("domain") and not Domains.valid_domain(unit["domain"]):
