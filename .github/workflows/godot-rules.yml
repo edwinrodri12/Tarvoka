@@ -80,6 +80,12 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_balanced_opening_ui.gd
 
+      - name: Confirm balance using real first-turn limit across twenty mirrored AI matches
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_real_opening_balance.gd
+
       - name: Quantify first-turn tactical order limits in classic fog and relay armies
         shell: bash
         run: |
