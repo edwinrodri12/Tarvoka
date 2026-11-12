@@ -3,6 +3,7 @@ class_name TarvokaBattleActions
 
 const Turns = preload("res://scripts/core/Turns.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 # Pure adjacent attack action; never mutates the supplied unit array.
 static func attack(units: Array, attacker_id: String, defender_id: String, faction: int) -> Dictionary:
@@ -30,7 +31,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         return {"valid": false, "units": units.duplicate(true)}
     var attacker: Dictionary = result[attacker_index]
     var defender: Dictionary = result[defender_index]
-    if not Turns.can_act(attacker, faction) or int(defender.get("hp", 0)) <= 0:
+    if not Turns.can_act(attacker, faction) or not Logistics.can_fire(attacker) or int(defender.get("hp", 0)) <= 0:
         return {"valid": false, "units": units.duplicate(true)}
     if int(defender.get("faction", -1)) == faction:
         return {"valid": false, "units": units.duplicate(true)}
@@ -47,6 +48,7 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
     if not combat["valid"]:
         return {"valid": false, "units": units.duplicate(true)}
     defender["hp"] = combat["defender_hp"]
+    Logistics.consume_attack(attacker)
     attacker["acted"] = true
     return {"valid": true, "units": result, "damage": combat["damage"], "winner": Turns.winner(result)}
 
