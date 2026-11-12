@@ -6,6 +6,7 @@ const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -36,6 +37,9 @@ var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
 var touch_cancelled := false
+# Display-only camera, never serialized into BattleSession.
+var view_zoom := 1.0
+var view_pan := Vector2.ZERO
 const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
@@ -45,15 +49,19 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8)) -> void:
     symmetric_setup = symmetric
     specialized_roster = specialized or modern
     modern_roster = modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
+    if not Rules.supported_size(map_dimensions):
+        map_dimensions = Vector2i(10,8)
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
     var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
-    var terrain: Array = Scenarios.seeded_terrain(map_seed) if is_seeded else Scenarios.terrain(current_scenario_id)
+    var terrain: Array = Scenarios.seeded_terrain(map_seed,map_dimensions) if is_seeded else Scenarios.terrain(current_scenario_id,map_dimensions)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -68,6 +76,11 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
+    if map_dimensions != Vector2i(10,8):
+        for unit in units:
+            var old: Vector2i = unit["pos"]
+            unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
+                Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster)
     if is_seeded:
@@ -88,12 +101,38 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _write_autosave(false)
     queue_redraw()
 
+func map_dimensions() -> Vector2i:
+    return Rules.map_size(state.get("terrain",[])) if state.get("terrain") is Array else Vector2i(WIDTH,HEIGHT)
+
+func change_view_zoom(direction: int) -> void:
+    if direction == 0:
+        return
+    view_zoom = clampf(view_zoom * (1.3 if direction > 0 else (1.0/1.3)),1.0,4.0)
+    queue_redraw()
+
+func reset_view_camera() -> void:
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    queue_redraw()
+
+func focus_view_cell(cell: Vector2i) -> bool:
+    var dims: Vector2i = map_dimensions()
+    if cell.x < 0 or cell.y < 0 or cell.x >= dims.x or cell.y >= dims.y:
+        return false
+    var tile: float = _cell_size()
+    view_pan = size*0.5 - ((size-Vector2(dims)*tile)*0.5 + (Vector2(cell)+Vector2(0.5,0.5))*tile)
+    queue_redraw()
+    return true
+
 func _cell_size() -> float:
-    return min(size.x / float(WIDTH), size.y / float(HEIGHT))
+    var dims: Vector2i = map_dimensions()
+    if dims.x <= 0 or dims.y <= 0:
+        return 0.0
+    return minf(size.x / float(dims.x), size.y / float(dims.y)) * view_zoom
 
 func _board_origin() -> Vector2:
-    var tile := _cell_size()
-    return (size - Vector2(WIDTH * tile, HEIGHT * tile)) * 0.5
+    var tile: float = _cell_size()
+    return (size - Vector2(map_dimensions()) * tile) * 0.5 + view_pan
 
 # Completely opaque unknown cells prevent even subtle color-based terrain
 # leaks; previously explored cells retain a dim, recognizable map surface.
@@ -107,8 +146,9 @@ func _draw() -> void:
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
+    var dimensions: Vector2i = map_dimensions()
+    for y in range(dimensions.y):
+        for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
             var terrain_color: Color = VisualStyle.terrain_color(terrain_type, x, y)
@@ -586,9 +626,13 @@ func _gui_input(event: InputEvent) -> void:
                 _tap(event.position)
         accept_event()
     elif event is InputEventScreenDrag:
-        # Cancel the gesture permanently if its primary finger ever leaves the tap radius.
-        if touch_active and event.index == touch_finger_index and touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
-            touch_cancelled = true
+        # Panning does not select a cell or commit orders on release.
+        if touch_active and event.index == touch_finger_index:
+            if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
+                touch_cancelled = true
+            if touch_cancelled:
+                view_pan += event.relative
+                queue_redraw()
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
         # Native Buttons need touch-to-mouse emulation on Android, but the board
@@ -606,7 +650,7 @@ func _tap(point: Vector2) -> void:
     if tile <= 0:
         return
     var relative := point - _board_origin()
-    if relative.x < 0 or relative.y < 0 or relative.x >= WIDTH * tile or relative.y >= HEIGHT * tile:
+    if relative.x < 0 or relative.y < 0 or relative.x >= map_dimensions().x * tile or relative.y >= map_dimensions().y * tile:
         return
     var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
