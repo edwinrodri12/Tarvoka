@@ -431,7 +431,9 @@ func _process(_delta: float) -> void:
         ])
         _refresh_production_catalog()
         var site: Dictionary = Economy.site_at(economy,board.selected_factory_pos)
-        _update_text(factory_status, "%s (%d,%d) seleccionado" % [str(site.get("kind","Base")).capitalize(),board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if not site.is_empty() else "Toca una base propia (F/B/A/D/H/P) y elige unidad.")
+        var site_labels := {"factory":"Taller","armor_plant":"Fabrica de blindados","artillery_depot":"Centro de artilleria","drone_center":"Centro de drones","airbase":"Aerodromo","shipyard":"Astillero"}
+        var site_label: String = str(site_labels.get(str(site.get("kind","")),"Base"))
+        _update_text(factory_status, "%s (%d,%d) seleccionado" % [site_label,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if not site.is_empty() else "Toca una base propia (F/B/A/D/H/P) y elige unidad.")
         var role: String = str(production_picker.get_item_metadata(production_picker.get_selected_id())) if production_picker.get_selected_id() >= 0 else ""
         produce_button.disabled = not board.can_purchase_selected(role) or int(board.state.get("winner",-1)) != -1
     _update_text(economy_event,board.last_economy_report)
