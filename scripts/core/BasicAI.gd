@@ -130,6 +130,23 @@ static func step(state: Dictionary) -> Dictionary:
                 supply["action"] = "resupply"
                 return supply
 
+    # A nearby fuel-and-ammunition truck can move toward a stranded ally.
+    # Its destination and route are computed on observed terrain only.
+    for unit in friends:
+        if str(unit.get("role", "")) != "logistics":
+            continue
+        var truck_plan: Dictionary = SupplyNavigation.plan_truck_delivery(state, knowledge, unit)
+        if not truck_plan.get("valid",false):
+            continue
+        var truck_move: Dictionary = Session.move(state, str(unit["id"]), truck_plan["destination"])
+        if truck_move.get("valid", false):
+            truck_move["action"] = "move"
+            truck_move["reason"] = "field_supply"
+            truck_move["unit_id"] = str(unit["id"])
+            truck_move["recipient_id"] = str(truck_plan["recipient_id"])
+            truck_move["destination"] = truck_plan["destination"]
+            return truck_move
+
     # When resources become critical, preserve the platform instead of
     # marching toward another enemy. Only known, friendly, reachable depots
     # qualify; the authoritative move still rechecks fog and occupancy.
