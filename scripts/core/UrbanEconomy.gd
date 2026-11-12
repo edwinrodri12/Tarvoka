@@ -9,9 +9,12 @@ const Domains = preload("res://scripts/core/Domains.gd")
 # Optional, fully deterministic city-and-production economy. Not a
 # timer, random drop, monetization system or external online service.
 const START_CREDITS := 300
+const MODERN_START_CREDITS := 2500
+const MODERN_CITY_INCOME := 250
 const CITY_INCOME := 100
 const MAX_CREDITS := 100000
 const MAX_SITES := 16
+const MODERN_PRODUCERS := ["factory","armor_plant","artillery_depot","drone_center","airbase","shipyard"]
 const MAX_UNITS := 256
 const COSTS := {
     "line": 200,
@@ -23,7 +26,7 @@ const COSTS := {
 
 # Four towns (one held by each side, two contested) and two workshops,
 # all mirrored and walkable across the game's three current terrain maps.
-static func create(terrain: Array) -> Dictionary:
+static func create(terrain: Array, modern_mode: bool = false) -> Dictionary:
     var sites: Array = [
         {"kind":"city", "pos":Vector2i(2,1), "owner":0},
         {"kind":"city", "pos":Vector2i(7,1), "owner":1},
@@ -32,7 +35,29 @@ static func create(terrain: Array) -> Dictionary:
         {"kind":"factory", "pos":Vector2i(0,3), "owner":0, "produced_turn":-1},
         {"kind":"factory", "pos":Vector2i(9,3), "owner":1, "produced_turn":-1}
     ]
-    var economy := {"credits":[START_CREDITS, START_CREDITS], "turn":0, "next_unit":1, "sites":sites}
+    var money: int = MODERN_START_CREDITS if modern_mode else START_CREDITS
+    var economy := {"credits":[money, money], "turn":0, "next_unit":1, "sites":sites}
+    if modern_mode:
+        economy["modern"] = true
+        # Five pairs of specialist facilities complete the 32-unit catalog.
+        for kind in ["armor_plant","artillery_depot","drone_center","airbase"]:
+            var row: int = {"armor_plant":1,"artillery_depot":5,"drone_center":2,"airbase":6}[kind]
+            for faction in [0,1]:
+                var x: int = 0 if faction == 0 else 9
+                sites.append({"kind":kind, "pos":Vector2i(x,row), "owner":faction, "produced_turn":-1})
+        # Docks must be ON navigable water. Conventional maps with no sea
+        # keep all other facilities but cannot manufacture ships.
+        var left := Vector2i(-1,-1)
+        var right := Vector2i(-1,-1)
+        if str(terrain[0][0]) == "water" and str(terrain[0][9]) == "water":
+            left = Vector2i(0,0)
+            right = Vector2i(9,0)
+        elif str(terrain[3][4]) == "water" and str(terrain[3][5]) == "water":
+            left = Vector2i(4,3)
+            right = Vector2i(5,3)
+        if left.x >= 0:
+            sites.append({"kind":"shipyard", "pos":left, "owner":0, "produced_turn":-1})
+            sites.append({"kind":"shipyard", "pos":right, "owner":1, "produced_turn":-1})
     return economy if valid(economy, terrain) else {}
 
 static func cost(role: String) -> int:
@@ -45,12 +70,12 @@ static func income_for(economy: Dictionary, faction: int) -> int:
     for site in economy.get("sites", []):
         if site is Dictionary and site.get("kind") == "city" and int(site.get("owner", -1)) == faction:
             count += 1
-    return count * CITY_INCOME
+    return count * (MODERN_CITY_INCOME if economy.get("modern", false) else CITY_INCOME)
 
 static func can_capture(unit: Dictionary) -> bool:
     # Scouts and guards must commit to a tile until end of turn; armored
     # platforms and ranged weapons cannot capture urban installations.
-    return int(unit.get("hp", 0)) > 0 and Domains.domain(unit) == Domains.GROUND and str(unit.get("role", "")) in ["line", "scout"]
+    return int(unit.get("hp", 0)) > 0 and Domains.domain(unit) == Domains.GROUND and str(unit.get("role", "")) in ["line", "scout", "assault", "engineer"]
 
 static func finish_turn(state: Dictionary) -> Dictionary:
     var next: Dictionary = state.duplicate(true)
