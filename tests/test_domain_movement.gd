@@ -71,7 +71,7 @@ func _initialize() -> void:
     blocked_air.append(other_air)
     assert(not Move.move(blocked_air,"A",Vector2i(4,3),0,terrain)["valid"])
     other_air["pos"] = Vector2i(3,3)
-    assert(Codec.encode(blocked_air).is_empty()) # Colliding aircraft.
+    assert(Codec.encode(Session.start(blocked_air,terrain)).is_empty()) # Colliding aircraft.
     assert(not Move.move(blocked_air,"A",Vector2i(2,3),0,terrain)["valid"])
     var overlapping_surface: Array = army.duplicate(true)
     overlapping_surface[3]["pos"] = ground["pos"]
