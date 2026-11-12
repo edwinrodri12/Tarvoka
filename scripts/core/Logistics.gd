@@ -165,8 +165,6 @@ static func quote(state: Dictionary, unit_id: String) -> Dictionary:
     if not recipient.has("ammo") or not valid_unit(recipient):
         return invalid
     var credits: int = int(state["economy"]["credits"][side])
-    if credits < MIN_SERVICE_PRICE:
-        return invalid
     var pos: Vector2i = recipient["pos"]
     var domain: String = str(recipient.get("domain", "ground"))
     for site in state["economy"].get("sites", []):
@@ -176,7 +174,7 @@ static func quote(state: Dictionary, unit_id: String) -> Dictionary:
         var appropriate: bool = (domain == "ground" and kind in ["factory", "armor_plant", "artillery_depot"])
         appropriate = appropriate or (domain == "air" and kind in ["airbase", "drone_center"])
         appropriate = appropriate or (domain == "naval" and kind == "shipyard")
-        if appropriate:
+        if appropriate and credits >= MIN_SERVICE_PRICE:
             return _calculate_quote(recipient, credits, "base", "", 1000, 1000)
     if domain != "ground":
         return invalid
@@ -209,6 +207,18 @@ static func _calculate_quote(unit: Dictionary, credits: int, source: String, sou
     if role == "logistics" and source == "base":
         missing["cargo_ammo"] = TRUCK_AMMO_CAP - int(unit.get("supply_ammo", TRUCK_AMMO_CAP))
         missing["cargo_fuel"] = TRUCK_FUEL_CAP - int(unit.get("supply_fuel", TRUCK_FUEL_CAP))
+    # Truck inventories were paid when produced/loaded at a depot. Transferring
+    # them uses the truck's stock and action, not a second credits charge.
+    if source == "truck":
+        var transferred_ammo: int = maxi(0, int(missing["ammo"]))
+        var transferred_fuel: int = maxi(0, int(missing["fuel"]))
+        if transferred_ammo + transferred_fuel <= 0:
+            return {"valid":false}
+        return {
+            "valid":true, "source_kind":"truck", "source_id":source_id,
+            "ammo":transferred_ammo, "fuel":transferred_fuel,
+            "cargo_ammo":0, "cargo_fuel":0, "cost":0
+        }
     var delivered := {"ammo":0, "fuel":0, "cargo_ammo":0, "cargo_fuel":0}
     var weighted := 0
     var order := ["ammo", "fuel", "cargo_ammo", "cargo_fuel"]
