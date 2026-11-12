@@ -43,7 +43,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0) -> void:
     symmetric_setup = symmetric
     specialized_roster = specialized or modern
     modern_roster = modern
@@ -65,7 +65,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
-    state = Session.start(units, terrain, 0, fog_mode, relay_mode, economy_mode, modern_roster)
+    var opener: int = first_faction if first_faction in [0,1] else 0
+    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster)
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     pending_order.clear()
@@ -73,6 +74,11 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     last_enemy_turn_report = ""
     last_economy_report = ""
     combat_effects.clear()
+    # When the user selects Red to open a single-player battle, complete
+    # precisely one real AI turn BEFORE saving the starting human state.
+    # Local two-player games leave Red's opening completely manual.
+    if ai_enabled and int(state.get("faction",-1)) == 1 and int(state.get("winner",-1)) == -1:
+        _play_ai_turn()
     _write_autosave(false)
     queue_redraw()
 
