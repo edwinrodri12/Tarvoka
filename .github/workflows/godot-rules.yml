@@ -104,6 +104,24 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_economic_choice.gd
 
+      - name: Verify modern relay round fairness and legacy save compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_fair_modern_relays.gd
+
+      - name: Check relay response and tie messages in Android HUD
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_modern_relay_ui.gd
+
+      - name: Test AI recruitment cadence without restricting player factories
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_recruitment_cadence.gd
+
       - name: Collect 16 paired battle economy, turn and supply observations
         shell: bash
         run: |

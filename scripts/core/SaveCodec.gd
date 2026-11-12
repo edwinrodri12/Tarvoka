@@ -118,6 +118,10 @@ static func decode(raw: String) -> Dictionary:
             if not _whole(objective.get(key)):
                 return {}
             objective[key] = int(objective[key])
+        if objective.has("first_faction"):
+            if not _whole(objective["first_faction"]):
+                return {}
+            objective["first_faction"] = int(objective["first_faction"])
         if not objective.get("scores") is Array or objective["scores"].size() != 2:
             return {}
         for i in range(2):
@@ -311,7 +315,10 @@ static func _valid_state(state: Dictionary) -> bool:
         if not state["control"] is Dictionary or not Relays.valid(state["control"], state["terrain"]):
             return false
         var scoreboard: Dictionary = state["control"]
-        if scoreboard["scores"][0] >= scoreboard["target"] and scoreboard["scores"][1] >= scoreboard["target"]:
+        # Legacy relays could not both finish at target because the first
+        # threshold crossing immediately ended the match. Modern fair rounds
+        # deliberately allow 2:2 ties (and continued over-target scoring).
+        if not bool(scoreboard.get("fair_round",false)) and scoreboard["scores"][0] >= scoreboard["target"] and scoreboard["scores"][1] >= scoreboard["target"]:
             return false
         if expected_winner == -1:
             expected_winner = Relays.score_winner(scoreboard)

@@ -62,12 +62,40 @@ static func assess(knowledge: Dictionary, side: int) -> Dictionary:
     )
     return status
 
+# AI-only per-faction production cadence. The human player still keeps
+# every legal factory action; the game economy and unit prices stay identical.
+# Existing own factory produced_turn markers provide a deterministic counter
+# without inventing save fields or hiding any extra state in the AI.
+static func recruitment_limit(strategy: Dictionary) -> int:
+    var ready: int = int(strategy.get("ready_combat", 0))
+    var observed_enemies: int = int(strategy.get("visible_enemies", 0))
+    if ready < 2 or observed_enemies > ready + 2:
+        return 3 # Genuine emergency: reinforce several arms.
+    if ready >= 6 and ready >= observed_enemies:
+        return 1 # Established force: invest in supply and objectives.
+    return 2
+
+static func produced_this_phase(state: Dictionary, side: int) -> int:
+    if side not in [0, 1] or not state.get("economy") is Dictionary:
+        return 0
+    var economy: Dictionary = state["economy"]
+    var current: int = int(economy.get("turn", -1))
+    var count := 0
+    for site in economy.get("sites", []):
+        if site is Dictionary and int(site.get("owner", -1)) == side and str(site.get("kind","")) != "city" and int(site.get("produced_turn",-2)) == current:
+            count += 1
+    return count
+
 static func can_spend_on_recruitment(state: Dictionary, side: int, role: String, price: int, strategy: Dictionary) -> bool:
     if side not in [0, 1] or not state.get("economy") is Dictionary or price < 1:
         return false
     var credits: int = int(state["economy"]["credits"][side])
     if credits < price:
         return false
+    if bool(state["economy"].get("modern", false)):
+        var count: int = produced_this_phase(state, side)
+        if count >= recruitment_limit(strategy) and not (role == "logistics" and bool(strategy.get("need_truck", false))):
+            return false
     # Purchasing the first supply truck during an emergency is a deliberate
     # investment instead of permanently hoarding money for an unreachable base.
     if role == "logistics" and bool(strategy.get("need_truck", false)):
