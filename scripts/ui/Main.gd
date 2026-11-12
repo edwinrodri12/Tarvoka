@@ -24,6 +24,7 @@ var fog_picker: OptionButton
 var relay_picker: OptionButton
 var economy_picker: OptionButton
 var economy_status: Label
+var economy_event: Label
 var factory_status: Label
 var production_picker: OptionButton
 var produce_button: Button
@@ -121,6 +122,12 @@ func _ready() -> void:
     economy_status.add_theme_font_size_override("font_size", 18)
     economy_status.add_theme_color_override("font_color", Color(0.98,0.85,0.50))
     panel.add_child(economy_status)
+    economy_event = Label.new()
+    economy_event.visible = false
+    economy_event.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    economy_event.add_theme_font_size_override("font_size", 17)
+    economy_event.add_theme_color_override("font_color", Color(0.69,0.92,0.67))
+    panel.add_child(economy_event)
     enemy_turn_label = Label.new()
     enemy_turn_label.visible = false
     enemy_turn_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -421,6 +428,8 @@ func _process(_delta: float) -> void:
         _update_text(factory_status, "Taller (%d,%d) seleccionado" % [board.selected_factory_pos.x+1,board.selected_factory_pos.y+1] if board.selected_factory_pos != Vector2i(-1,-1) else "Toca un taller F propio y libre, luego elige unidad.")
         var role: String = Roles.ORDER[production_picker.get_selected_id()]
         produce_button.disabled = not board.can_purchase_selected(role) or int(board.state.get("winner",-1)) != -1
+    _update_text(economy_event,board.last_economy_report)
+    economy_event.visible = board.state.has("economy") and not board.last_economy_report.is_empty()
     _update_text(enemy_turn_label, board.last_enemy_turn_report)
     enemy_turn_label.visible = not board.last_enemy_turn_report.is_empty()
     _update_text(autosave_alert, board.autosave_warning)
