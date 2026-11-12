@@ -483,6 +483,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, faction) if fog else {}
     var best_score := -999999
+    var best_cell := Vector2i(-1,-1)
     var best_order: Dictionary = {}
     for ally in friends:
         if not Turns.can_move(ally, faction):
@@ -505,7 +506,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     if not Turns.in_attack_range(attacker, enemy):
                         continue
                     var score: int = 100000 + int(enemy.get("attack", 0)) * 10 - int(reachable[cell])
-                    if score <= best_score:
+                    if score < best_score or (score == best_score and not _prefer_cell(cell,best_cell,faction)):
                         continue
                     # State transition is authoritative; no simulated
                     # attack is applied, and no speculative discovery is
@@ -516,6 +517,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     if fog and not Visibility.is_unit_visible(proposed["state"], faction, str(enemy["id"])):
                         continue
                     best_score = score
+                    best_cell = cell
                     best_order = proposed
                     best_order["unit_id"] = str(ally["id"])
                     best_order["target_id"] = str(enemy["id"])
