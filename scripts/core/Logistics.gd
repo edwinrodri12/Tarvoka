@@ -80,7 +80,9 @@ static func can_fire(unit: Dictionary) -> bool:
     return not unit.has("ammo") or int(unit["ammo"]) > 0
 
 static func movement_budget(unit: Dictionary) -> int:
-    var budget: int = maxi(0, int(unit.get("move_points", 0)))
+    # Explicit, temporary opening response allowance only when supplied by
+    # the authoritative battle state. No default bonus for old saves.
+    var budget: int = maxi(0, int(unit.get("move_points", 0)) + int(unit.get("opening_move_bonus",0)))
     if unit.has("fuel") and fuel_capacity(str(unit.get("role", ""))) > 0:
         return mini(budget, maxi(0, int(unit["fuel"])))
     return budget
