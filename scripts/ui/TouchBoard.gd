@@ -10,6 +10,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -361,6 +362,27 @@ func _commit_order(order: Dictionary) -> bool:
         message = "Ataque realizado."
     return true
 
+# A manual supply action spends credits and the selected unit's action.
+func can_resupply_selected() -> bool:
+    return pending_order.is_empty() and not selected_id.is_empty() and (not ai_enabled or int(state.get("faction", -1)) == 0) and Logistics.can_resupply(state, selected_id)
+
+func resupply_selected() -> bool:
+    if not can_resupply_selected():
+        message = "Reabastecimiento no disponible: requiere base amiga o camion logistico, creditos y suministros gastados."
+        return false
+    var action: Dictionary = Session.resupply(state, selected_id)
+    if not action.get("valid", false):
+        message = "Reabastecimiento rechazado."
+        return false
+    state = action["state"]
+    message = "Municion y combustible recuperados (-%d creditos)." % int(action["cost"])
+    selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
+    pending_order.clear()
+    _write_autosave()
+    queue_redraw()
+    return true
+
 # Purchases come from a selected, currently owned and unoccupied workshop.
 # The definitive decision is validated again by BattleSession.purchase.
 func can_purchase_selected(role: String) -> bool:
@@ -582,6 +604,7 @@ func _play_ai_turn() -> void:
     var movements := 0
     var attacks := 0
     var produced := 0
+    var resupplied := 0
     for i in range(max_actions):
         if int(state.get("winner", -1)) != -1:
             break
@@ -596,10 +619,14 @@ func _play_ai_turn() -> void:
                 attacks += 1
             "produce":
                 produced += 1
+            "resupply":
+                resupplied += 1
     last_enemy_turn_report = "Turno enemigo: %d movimientos, %d ataques." % [movements, attacks]
     if state.has("economy"):
         last_enemy_turn_report += " %d refuerzos producidos." % produced
-    if movements + attacks + produced == 0:
+    if resupplied > 0:
+        last_enemy_turn_report += " %d reabastecimientos." % resupplied
+    if movements + attacks + produced + resupplied == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if int(state.get("winner", -1)) != -1:
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1)

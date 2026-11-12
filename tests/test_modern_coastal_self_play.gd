@@ -60,7 +60,7 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
             assert(state == frozen)
             if not choice.get("valid",false):
                 break
-            assert(choice["action"] in ["produce","move","attack"])
+            assert(choice["action"] in ["produce","move","attack","resupply"])
             var next: Dictionary = choice["state"]
             assert(int(next.get("faction",-1)) == side)
             assert(Economy.valid(next["economy"],next["terrain"]))
@@ -76,6 +76,9 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
                 "move":
                     if fog_enabled:
                         assert(visible.has(choice["destination"]))
+                "resupply":
+                    assert(int(next["economy"]["credits"][side]) < int(state["economy"]["credits"][side]))
+                    assert(next["units"].size() == state["units"].size())
                 "attack":
                     var targets := 0
                     for j in range(state["units"].size()):

@@ -4,6 +4,7 @@ class_name TarvokaMoveActions
 const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 # Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
 static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array) -> Dictionary:
@@ -48,12 +49,13 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
         blockers.append(cell)
     if destination in blockers:
         return rejected
-    var points := int(mover.get("move_points", 0))
+    var points := Logistics.movement_budget(mover)
     var origin: Vector2i = mover["pos"]
     blockers.erase(origin)
     var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain)
     if not reachable.has(destination):
         return rejected
+    Logistics.consume_move(mover, int(reachable[destination]))
     mover["pos"] = destination
     mover["moved"] = true
     return {"valid": true, "units": result, "cost": reachable[destination]}

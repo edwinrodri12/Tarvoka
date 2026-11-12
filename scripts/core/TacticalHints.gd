@@ -6,6 +6,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -55,13 +56,15 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     blockers.erase(origin)
     var moves: Dictionary = {}
     if Turns.can_move(unit, faction):
-        moves = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers, Domains.domain(unit))
+        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit))
         moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
             if not visible.has(cell):
                 moves.erase(cell)
     var attacks: Dictionary = {}
+    if not Logistics.can_fire(unit):
+        return {"moves": moves, "attacks": attacks}
     for enemy in units:
         if int(enemy.get("hp", 0)) <= 0 or int(enemy.get("faction", -1)) == faction:
             continue
@@ -108,6 +111,15 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
+        if unit.has("ammo"):
+            var role_key: String = str(unit.get("role", ""))
+            text += " | Municion %d/%d" % [int(unit["ammo"]), Logistics.ammo_capacity(role_key)]
+            if Logistics.fuel_capacity(role_key) > 0:
+                text += " | Combustible %d/%d" % [int(unit["fuel"]), Logistics.fuel_capacity(role_key)]
+            else:
+                text += " | A pie (sin combustible)"
+            if Logistics.can_resupply(state, unit_id):
+                text += " | Reabastecimiento disponible"
         if unit.has("domain") or unit.has("target_domains"):
             text += " | Dominio: %s | Objetivos: %s" % [Domains.domain(unit), ", ".join(Domains.targets(unit))]
         if Visibility.enabled(state):
