@@ -20,6 +20,18 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Rasterize and test all 128 unit sprite frames (no GPU required)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_sprite_atlas.gd 2>&1 | tee /tmp/tarvoka-atlas-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-atlas-test.log; then
+            echo "Sprite atlas failed to rasterize or broke tactics"; exit 1
+          fi
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tools/export_unit_atlas.gd
+          test -s assets/generated/tarvoka_units_32x4.png
+          test -s assets/generated/tarvoka_units_32x4.json
+
       - name: Validate thirty-two unique military silhouettes and Android preview
         shell: bash
         run: |
