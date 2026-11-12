@@ -94,6 +94,20 @@ static func step(state: Dictionary) -> Dictionary:
     if defense.get("valid", false):
         return defense
 
+    # Preserve a guard/scout that is ALREADY occupying an unclaimed site:
+    # it will capture at phase end. This is a planner-only 'moved' marker
+    # in the observed copy; the authoritative state remains unchanged.
+    # Lethal attacks, survival retreats and urgent relay defense above
+    # retain their normal priority before garrison commitment.
+    if knowledge.has("economy"):
+        for ally in friends:
+            if not Economy.can_capture(ally) or not Turns.can_move(ally, faction):
+                continue
+            for site in knowledge["economy"]["sites"]:
+                if site["pos"] == ally["pos"] and int(site.get("owner",-1)) != faction:
+                    ally["moved"] = true
+                    break
+
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
     var urban_action: Dictionary = _capture_urban_site(state, knowledge, friends, occupied)
