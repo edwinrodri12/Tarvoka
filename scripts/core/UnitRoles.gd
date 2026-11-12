@@ -108,3 +108,21 @@ static func experimental_armies(symmetric: bool = true) -> Array:
             enemy["attack"] = maxi(1, int(enemy["attack"]) - 1)
         units.append(enemy)
     return units
+
+# First playable mixed-domain roster. Every modern role is obtainable from
+# an appropriate site; a compact starting detachment demonstrates capture,
+# anti-air, armor and genuine airborne reconnaissance from turn one.
+static func modern_armies(symmetric: bool = true) -> Array:
+    var units: Array = []
+    var formation := ["line", "scout", "tank", "mobile_aa", "uav_recon", "attack_heli"]
+    var ids_blue := ["A","B","C","D","E","F"]
+    var ids_red := ["X","Y","Z","W","V","U"]
+    for i in range(formation.size()):
+        var blue: Dictionary = make_unit(ids_blue[i], 0, Vector2i(1,i+1), formation[i])
+        var red: Dictionary = make_unit(ids_red[i], 1, Vector2i(8,i+1), formation[i])
+        if not symmetric:
+            red["hp"] = maxi(1, int(red["hp"]) - 2)
+            red["attack"] = maxi(0, int(red["attack"]) - 1)
+        units.append(blue)
+        units.append(red)
+    return units
