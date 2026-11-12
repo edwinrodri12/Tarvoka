@@ -426,13 +426,11 @@ func _process(_delta: float) -> void:
     resupply_button.disabled = not board.can_resupply_selected()
     if not resupply_button.disabled:
         var supply_order: Dictionary = Logistics.quote(board.state, board.selected_id)
-        resupply_button.text = "Recargar +%d mun. / +%d comb. (%d cr.)" % [
+        resupply_button.text = "Recargar M+%d F+%d (%d cr.)" % [
             int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
         ]
         if int(supply_order["cargo_ammo"]) + int(supply_order["cargo_fuel"]) > 0:
-            resupply_button.text = "Reponer camion (+%d mun. / +%d comb.)" % [
-                int(supply_order["cargo_ammo"]), int(supply_order["cargo_fuel"])
-            ]
+            resupply_button.text = "Reponer camion (%d cr.)" % int(supply_order["cost"])
     else:
         resupply_button.text = "Reabastecer unidad"
     economy_status.visible = board.state.has("economy")
