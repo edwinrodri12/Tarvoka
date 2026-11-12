@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaRelayControl
 
 const Rules = preload("res://scripts/core/Rules.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const DEFAULT_TARGET := 5
 const MAX_TARGET := 20
 const MAX_NODES := 8
@@ -37,7 +38,7 @@ static func finish_turn(state: Dictionary) -> Dictionary:
         return result
     for node in objectives["nodes"]:
         for unit in result.get("units", []):
-            if unit is Dictionary and int(unit.get("hp", 0)) > 0 and int(unit.get("faction", -1)) == faction and unit.get("pos") == node["pos"]:
+            if unit is Dictionary and int(unit.get("hp", 0)) > 0 and int(unit.get("faction", -1)) == faction and Domains.domain(unit) == Domains.GROUND and unit.get("pos") == node["pos"]:
                 node["owner"] = faction
                 break
     var owned := 0

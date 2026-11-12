@@ -21,7 +21,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         return empty
     var visible: Dictionary = Visibility.visible_cells(state, faction) if Visibility.enabled(state) else {}
     var unit: Dictionary = {}
-    var occupied: Array[Vector2i] = []
+    var occupied_by_layer: Dictionary = {}
     var ids := {}
     for candidate in units:
         if not (candidate is Dictionary):
@@ -35,20 +35,27 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         var location = candidate.get("pos", null)
         if not (location is Vector2i) or not Rules.inside(location):
             return empty
-        if location in occupied:
+        if Domains.domain(candidate).is_empty():
             return empty
         if not Visibility.enabled(state) or int(candidate.get("faction", -1)) == faction or visible.has(location):
-            occupied.append(location)
+            var layer: String = Domains.layer(candidate)
+            if not occupied_by_layer.has(layer):
+                occupied_by_layer[layer] = []
+            if location in occupied_by_layer[layer]:
+                return empty
+            occupied_by_layer[layer].append(location)
         if candidate_id == unit_id:
             unit = candidate
     if unit.is_empty() or not Turns.can_act(unit, faction):
         return empty
     var origin: Vector2i = unit["pos"]
-    var blockers: Array[Vector2i] = occupied.duplicate()
+    var blockers: Array[Vector2i] = []
+    for cell in occupied_by_layer.get(Domains.layer(unit), []):
+        blockers.append(cell)
     blockers.erase(origin)
     var moves: Dictionary = {}
     if Turns.can_move(unit, faction):
-        moves = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers)
+        moves = Rules.reachable(origin, int(unit.get("move_points", 0)), state["terrain"], blockers, Domains.domain(unit))
         moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
@@ -116,7 +123,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 var terrain: Array = state["terrain"]
                 if terrain.size() == Rules.HEIGHT and terrain[location.y] is Array and terrain[location.y].size() == Rules.WIDTH:
                     var kind: String = str(terrain[location.y][location.x])
-                    var move_cost: int = Rules.movement_cost(kind)
+                    var move_cost: int = Rules.movement_cost_for(kind, Domains.domain(unit))
                     if move_cost >= 0:
                         var role: String = Roles.label(str(unit.get("role", ""))) if unit.has("role") else ("Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado")
                         text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [

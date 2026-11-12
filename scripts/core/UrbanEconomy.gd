@@ -3,6 +3,7 @@ class_name TarvokaUrbanEconomy
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 
 # Optional, fully deterministic city-and-production economy. Not a
 # timer, random drop, monetization system or external online service.
@@ -48,7 +49,7 @@ static func income_for(economy: Dictionary, faction: int) -> int:
 static func can_capture(unit: Dictionary) -> bool:
     # Scouts and guards must commit to a tile until end of turn; armored
     # platforms and ranged weapons cannot capture urban installations.
-    return int(unit.get("hp", 0)) > 0 and str(unit.get("role", "")) in ["line", "scout"]
+    return int(unit.get("hp", 0)) > 0 and Domains.domain(unit) == Domains.GROUND and str(unit.get("role", "")) in ["line", "scout"]
 
 static func finish_turn(state: Dictionary) -> Dictionary:
     var next: Dictionary = state.duplicate(true)
@@ -94,7 +95,7 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     if int(state["economy"]["credits"][faction]) < cost(role):
         return false
     for unit in state["units"]:
-        if int(unit.get("hp", 0)) > 0 and unit.get("pos") == factory_pos:
+        if int(unit.get("hp", 0)) > 0 and Domains.layer(unit) == "surface" and unit.get("pos") == factory_pos:
             return false
     for site in state["economy"]["sites"]:
         if site["kind"] == "factory" and site["pos"] == factory_pos and int(site["owner"]) == faction and int(site["produced_turn"]) != int(state["economy"]["turn"]):
@@ -120,7 +121,7 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     if money < price:
         return denied
     for unit in state["units"]:
-        if int(unit.get("hp", 0)) > 0 and unit.get("pos") == factory_pos:
+        if int(unit.get("hp", 0)) > 0 and Domains.layer(unit) == "surface" and unit.get("pos") == factory_pos:
             return denied
     var next: Dictionary = state.duplicate(true)
     var selected: Dictionary = {}
