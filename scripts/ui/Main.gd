@@ -2,6 +2,7 @@ extends Control
 
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
@@ -23,6 +24,10 @@ var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var map_size_picker: OptionButton
+var camera_zoom_in: Button
+var camera_zoom_out: Button
+var camera_reset: Button
 var map_seed_picker: SpinBox
 var first_picker: OptionButton
 var balance_picker: OptionButton
@@ -108,6 +113,27 @@ func _ready() -> void:
     heading.add_theme_font_size_override("font_size", 27)
     heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
     panel.add_child(heading)
+    var camera_row := HBoxContainer.new()
+    camera_row.add_theme_constant_override("separation",5)
+    panel.add_child(camera_row)
+    camera_zoom_out = Button.new()
+    camera_zoom_out.text = "−"
+    camera_zoom_out.tooltip_text = "Alejar mapa táctico"
+    camera_zoom_out.custom_minimum_size = Vector2(48,46)
+    camera_zoom_out.pressed.connect(func(): board.change_view_zoom(-1))
+    camera_row.add_child(camera_zoom_out)
+    camera_zoom_in = Button.new()
+    camera_zoom_in.text = "+"
+    camera_zoom_in.tooltip_text = "Acercar mapa táctico"
+    camera_zoom_in.custom_minimum_size = Vector2(48,46)
+    camera_zoom_in.pressed.connect(func(): board.change_view_zoom(1))
+    camera_row.add_child(camera_zoom_in)
+    camera_reset = Button.new()
+    camera_reset.text = "Centrar cámara"
+    camera_reset.custom_minimum_size.y = 46
+    camera_reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    camera_reset.pressed.connect(func(): board.reset_view_camera())
+    camera_row.add_child(camera_reset)
     # Read-only faction art gallery. Faction bonuses remain locked to v0.1.
     faction_gallery_button = Button.new()
     faction_gallery_button.text = "Ver las ocho facciones"
@@ -292,6 +318,18 @@ func _ready() -> void:
     scenario_picker.add_item(Scenarios.label(Scenarios.RANDOM_SCENARIO_ID), Scenarios.RANDOM_SCENARIO_ID)
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
+    var size_heading := Label.new()
+    size_heading.text = "TAMAÑO DEL CAMPO DE BATALLA"
+    size_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(size_heading)
+    map_size_picker = OptionButton.new()
+    map_size_picker.custom_minimum_size.y = 50
+    map_size_picker.add_item("10 × 8 — clásico",0)
+    map_size_picker.add_item("24 × 18 — grande",1)
+    map_size_picker.add_item("40 × 30 — estratégico",2)
+    var current_dims: Vector2i = board.map_dimensions()
+    map_size_picker.select(0 if current_dims == Vector2i(10,8) else (1 if current_dims == Vector2i(24,18) else 2))
+    panel.add_child(map_size_picker)
 
     var random_controls := HBoxContainer.new()
     random_controls.add_theme_constant_override("separation", 5)
@@ -581,6 +619,8 @@ func _save_game() -> void:
 func _load_game() -> void:
     if board.load_game():
         scenario_picker.select(board.current_scenario_id)
+        var grid: Vector2i = board.map_dimensions()
+        map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
         roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
@@ -603,7 +643,8 @@ func _new_game() -> void:
         return
     var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
     var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
-    var map_name: String = Scenarios.label(scenario_picker.get_selected_id())
+    var dimensions: Vector2i = _selected_map_size()
+    var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
     if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
@@ -618,7 +659,15 @@ func _confirm_new_game() -> void:
         board.message = "La economia requiere formacion experimental."
         return
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size())
+
+func _selected_map_size() -> Vector2i:
+    match map_size_picker.get_selected_id():
+        1:
+            return Vector2i(24,18)
+        2:
+            return Vector2i(40,30)
+    return Vector2i(10,8)
 
 func _reroll_map_seed() -> void:
     var previous: int = int(map_seed_picker.value)
