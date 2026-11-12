@@ -20,6 +20,15 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate isometric projection touch gestures and unchanged battle rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_isometric_board.gd 2>&1 | tee /tmp/tarvoka-iso-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-iso-test.log; then
+            echo "Isometric renderer or regression emitted a Godot error"; exit 1
+          fi
+
       - name: Validate visual faction identity and harmless board styling
         shell: bash
         run: |
