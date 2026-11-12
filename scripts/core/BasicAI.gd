@@ -208,6 +208,8 @@ static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, en
             continue
         var role: String = str(unit.get("role",""))
         counts[role] = int(counts.get(role,0)) + 1
+    if bool(knowledge["economy"].get("modern", false)):
+        return _produce_modern_reinforcements(state, knowledge, enemies, counts)
     var priorities: Array[String] = []
     var seen_enemy_artillery := false
     var seen_enemy_armor := false
@@ -245,6 +247,55 @@ static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, en
                     bought["reason"] = "reinforce"
                     return bought
     return idle
+
+# Modern factions use ALL specialist installations; purchase actions are
+# still checked by the identical budget, terrain, layer and ownership rules
+# used for touchscreen purchases. Only OBSERVED air/naval threats affect
+# counter-unit ordering, never hidden opponents or opponent money.
+static func _produce_modern_reinforcements(state: Dictionary, knowledge: Dictionary, enemies: Array, counts: Dictionary) -> Dictionary:
+    var none := {"valid":false}
+    var faction: int = int(state.get("faction",-1))
+    var observed_air := false
+    var observed_armor := false
+    for enemy in enemies:
+        observed_air = observed_air or Domains.domain(enemy) == Domains.AIR
+        observed_armor = observed_armor or str(enemy.get("role","")) in ["tank","bulwark","ifv"]
+    var priorities := {
+        "factory":["scout","assault","engineer","line","logistics"],
+        "armor_plant":["piercer","tank","bulwark","ifv","apc"],
+        "artillery_depot":["mobile_aa","spg","sam","artillery","mlrs","ew"],
+        "drone_center":["uav_recon","fpv","loitering"],
+        "airbase":["attack_heli","fighter","ucav","bomber","transport_heli"],
+        "shipyard":["patrol","missile_boat","corvette","frigate","submarine","destroyer","usv","landing_ship"]
+    }
+    if observed_air:
+        priorities["artillery_depot"] = ["mobile_aa","sam","spg","artillery","mlrs","ew"]
+        priorities["airbase"] = ["fighter","attack_heli","ucav","bomber","transport_heli"]
+    if observed_armor:
+        priorities["armor_plant"] = ["piercer","tank","ifv","bulwark","apc"]
+        priorities["drone_center"] = ["fpv","loitering","uav_recon"]
+    for site in knowledge["economy"]["sites"]:
+        if int(site.get("owner",-1)) != faction:
+            continue
+        var kind: String = str(site["kind"])
+        if not priorities.has(kind):
+            continue
+        var candidates: Array = []
+        for role in priorities[kind]:
+            if int(counts.get(role,0)) < 1:
+                candidates.append(role)
+        for role in priorities[kind]:
+            candidates.append(role)
+        for role in candidates:
+            if not Economy.can_purchase(state, site["pos"], role):
+                continue
+            var order: Dictionary = Session.purchase(state,site["pos"],role)
+            if order.get("valid",false):
+                order["action"] = "produce"
+                order["factory"] = site["pos"]
+                order["reason"] = "modern_reinforce"
+                return order
+    return none
 
 static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
     var idle := {"valid":false}
