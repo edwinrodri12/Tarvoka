@@ -44,7 +44,11 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
         return {"valid": false, "state": state.duplicate(true)}
     if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state["faction"]), defender_id):
         return {"valid": false, "state": state.duplicate(true)}
-    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"])
+    # A defender cannot magically shoot an attacker outside its own faction
+    # sight. The shot may reveal combat effects, but never unlocks omniscience.
+    var defender_side: int = 1 - int(state["faction"])
+    var counter_visible: bool = not Visibility.enabled(state) or Visibility.is_unit_visible(state,defender_side,attacker_id)
+    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible)
     var applied: Dictionary = _apply(state, action)
     if applied.get("valid", false):
         applied["attacker_id"] = attacker_id
@@ -103,6 +107,11 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     if Visibility.enabled(next):
         next = Visibility.update_exploration(next)
     var response := {"valid": true, "state": next}
+    # Preserve public exchange facts for combat feedback and tactical hints.
+    # The live battle state itself stores only persistent HP/ammo, not events.
+    for key in ["damage", "counter_damage", "counter_spent"]:
+        if action.has(key):
+            response[key] = action[key]
     if not str(action.get("consumed_unit_id", "")).is_empty():
         response["consumed_unit_id"] = str(action["consumed_unit_id"])
     return response

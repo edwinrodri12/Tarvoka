@@ -362,6 +362,7 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
     combat_effects.append({
         "origin":shot_from, "target":target,
         "elapsed":0.0, "destroyed":target_destroyed,
+        "counter_damage":int(result.get("counter_damage",0)),
         "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
     })
     while combat_effects.size() > 8:
@@ -383,6 +384,12 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
         if from_cell.x >= 0:
             var launch: Vector2 = board_origin + (Vector2(from_cell) + Vector2(0.5, 0.5)) * tile
             draw_line(launch, center, Color(1.0, 0.84, 0.41, alpha * 0.6), maxf(1.0, tile * 0.035))
+            if int(effect.get("counter_damage",0)) > 0:
+                # Reverse tracer and blue-red pulse signal the defensive shot.
+                # The origin is never drawn if fog hides the attacking tile.
+                draw_line(center,launch,Color(0.99,0.30,0.23,alpha*0.8),maxf(2.0,tile*0.055))
+                draw_arc(launch,tile*(0.11+0.23*progress),0.0,TAU,24,
+                    Color(1.0,0.28,0.22,alpha),maxf(2.0,tile*0.04))
             if bool(effect["consumed"]):
                 draw_arc(launch, tile * (0.06 + 0.30 * progress), 0.0, TAU, 22,
                     Color(1.0, 0.28, 0.18, alpha), maxf(2.0, tile * 0.04))
@@ -419,7 +426,8 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
         pending_order = order
         if kind == "attack":
             var damage := int(hints["attacks"][cell]["damage"])
-            message = "Atacar %s (-%d). Toca el objetivo otra vez o Confirmar orden." % [enemy_id, damage]
+            var response_max: int = int(hints["attacks"][cell].get("counter_damage",0))
+            message = "Atacar %s (-%d). Posible respuesta hasta -%d HP. Toca otra vez o Confirmar orden." % [enemy_id,damage,response_max]
         else:
             message = "Mover a (%d,%d). Toca otra vez o Confirmar orden." % [cell.x + 1, cell.y + 1]
         return
@@ -478,7 +486,10 @@ func _commit_order(order: Dictionary) -> bool:
             message = "Movimiento completado. Sin objetivos visibles en alcance."
     else:
         selected_id = ""
-        message = "Impacto confirmado. Municion de un solo uso consumida." if not str(result.get("consumed_unit_id", "")).is_empty() else "Ataque realizado."
+        var outgoing: int = int(result.get("damage",0))
+        var incoming: int = int(result.get("counter_damage",0))
+        var exchange_text := "Ataque: Enemigo -%d HP. Respuesta: -%d HP propios." % [outgoing,incoming]
+        message = "Impacto confirmado. Municion de un solo uso consumida. " + exchange_text if not str(result.get("consumed_unit_id", "")).is_empty() else exchange_text
     return true
 
 # A manual supply action spends credits and the selected unit's action.

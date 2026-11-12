@@ -7,6 +7,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const BattleActions = preload("res://scripts/core/BattleActions.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -73,9 +74,13 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if not Turns.in_attack_range(unit, enemy):
             continue
-        var result: Dictionary = Roles.resolve(unit, enemy)
+        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy)
         if result.get("valid", false):
-            attacks[enemy_pos] = {"id": str(enemy["id"]), "damage": int(result["damage"]), "defeated": bool(result["defeated"])}
+            attacks[enemy_pos] = {
+                "id": str(enemy["id"]), "damage": int(result["damage"]),
+                "counter_damage": int(result["counter_damage"]),
+                "defeated": bool(result["defeated"])
+            }
     return {"moves": moves, "attacks": attacks}
 
 # Separate from for_unit()["attacks"], which contains ONLY currently legal
@@ -221,7 +226,9 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         if not hints["attacks"].is_empty():
             var damages: PackedStringArray = []
             for target in hints["attacks"].values():
-                damages.append("%s: -%d" % [str(target["id"]), int(target["damage"])])
+                var retaliates: int = int(target.get("counter_damage",0))
+                damages.append("%s: -%d%s" % [str(target["id"]), int(target["damage"]),
+                    " (posible respuesta hasta -%d propia)" % retaliates if retaliates > 0 else " (sin respuesta prevista)"])
             text += " | Danio estimado " + ", ".join(damages)
         return text
     return "Unidad no disponible."

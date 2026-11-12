@@ -61,7 +61,13 @@ static func _run_match(scenario_id: int, first_faction: int, symmetric: bool) ->
                     if int(previous["units"][i]["hp"]) > int(changed["units"][i]["hp"]):
                         hits += 1
                         assert(visible.has(previous["units"][i]["pos"]))
-                assert(hits == 1)
+                # Both target and attacker are legal visible casualties when
+                # a surviving defender answers with a single counter-shot.
+                var counter: int = int(activity.get("counter_damage",0))
+                assert(hits == (2 if counter > 0 else 1))
+                if counter > 0:
+                    assert(not str(activity.get("attacker_id","")).is_empty())
+                    assert(not str(activity.get("defender_id","")).is_empty())
             assert(Vision.explored_cells(changed, active_faction).size() >= Vision.explored_cells(previous, active_faction).size())
             state = changed
             total_actions += 1

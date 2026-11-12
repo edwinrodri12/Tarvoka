@@ -88,9 +88,20 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
                             if fog_enabled:
                                 assert(visible.has(state["units"][j]["pos"]))
                     var consumed_id: String = str(choice.get("consumed_unit_id", ""))
-                    # A one-way strike damages the target AND expends its own
-                    # projectile. Conventional weapons still damage one unit.
-                    assert(targets == (2 if not consumed_id.is_empty() else 1))
+                    # A one-way strike damages its target AND the projectile.
+                    # A conventional shot can damage TWO units only when the
+                    # surviving defender makes a legal one-shot reaction.
+                    var counter_damage: int = int(choice.get("counter_damage",0))
+                    var expected_targets: int = 2 if not consumed_id.is_empty() or counter_damage > 0 else 1
+                    assert(targets == expected_targets)
+                    if counter_damage > 0:
+                        assert(consumed_id.is_empty())
+                        var attacker_id: String = str(choice.get("attacker_id",""))
+                        var defender_id: String = str(choice.get("defender_id",""))
+                        assert(not attacker_id.is_empty() and not defender_id.is_empty())
+                        for j in range(state["units"].size()):
+                            if str(state["units"][j]["id"]) == attacker_id:
+                                assert(int(state["units"][j]["hp"])-int(next["units"][j]["hp"]) == counter_damage)
                     if not consumed_id.is_empty():
                         var sacrificed := false
                         for j in range(state["units"].size()):

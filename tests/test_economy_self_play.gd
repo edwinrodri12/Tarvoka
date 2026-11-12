@@ -78,13 +78,22 @@ static func _battle(map_id: int, first: int, fog: bool, symmetric: bool) -> Dict
                         assert(seen.has(result["destination"]))
                     assert(next["units"].size() == old["units"].size())
                 "attack":
-                    var targets := 0
+                    # A normal shot can now damage TWO units: defender
+                    # and attacking platform struck by a legal single counter.
+                    var damaged_ids: Array[String] = []
                     for i in range(old["units"].size()):
                         if int(next["units"][i]["hp"]) < int(old["units"][i]["hp"]):
-                            targets += 1
+                            damaged_ids.append(str(old["units"][i]["id"]))
                             if fog:
                                 assert(seen.has(old["units"][i]["pos"]))
-                    assert(targets == 1)
+                    var answer_damage: int = int(result.get("counter_damage",0))
+                    assert(damaged_ids.size() == (2 if answer_damage > 0 else 1))
+                    assert(str(result.get("defender_id","")) in damaged_ids)
+                    if answer_damage > 0:
+                        assert(str(result.get("attacker_id","")) in damaged_ids)
+                        for i in range(old["units"].size()):
+                            if str(old["units"][i]["id"]) == str(result["attacker_id"]):
+                                assert(int(old["units"][i]["hp"])-int(next["units"][i]["hp"]) == answer_damage)
                 "produce":
                     var price: int = int(result["cost"])
                     assert(next["units"].size() == old["units"].size()+1)
