@@ -30,6 +30,7 @@ var factory_status: Label
 var production_picker: OptionButton
 var _production_catalog_key := ""
 var produce_button: Button
+var resupply_button: Button
 var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
@@ -194,6 +195,14 @@ func _ready() -> void:
     end_button.add_theme_font_size_override("font_size", 20)
     end_button.pressed.connect(_end_turn)
     panel.add_child(end_button)
+
+    resupply_button = Button.new()
+    resupply_button.text = "Reabastecer unidad"
+    resupply_button.custom_minimum_size.y = 52
+    resupply_button.add_theme_font_size_override("font_size", 18)
+    resupply_button.visible = false
+    resupply_button.pressed.connect(_resupply_unit)
+    panel.add_child(resupply_button)
 
     cancel_button = Button.new()
     cancel_button.text = "Cancelar seleccion"
@@ -412,6 +421,8 @@ func _process(_delta: float) -> void:
         _update_text(relay_status, "SENAL: Azul %d | Rojo %d / %d" % [
             control["scores"][0], control["scores"][1], control["target"]
         ])
+    resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
+    resupply_button.disabled = not board.can_resupply_selected()
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")
@@ -528,6 +539,9 @@ func _cancel_selection() -> void:
 
 func _confirm_order() -> void:
     board.confirm_pending_order()
+
+func _resupply_unit() -> void:
+    board.resupply_selected()
 
 func _produce_unit() -> void:
     if not board.state.has("economy") or production_picker.get_selected_id() < 0:
