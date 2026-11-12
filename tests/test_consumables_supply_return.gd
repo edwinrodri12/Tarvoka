@@ -32,6 +32,10 @@ func _initialize() -> void:
         assert(strike["state"]["winner"] == 1) # No other friendly units survive.
         assert(Codec.decode(Codec.encode(strike["state"])) == strike["state"])
         assert(state == before)
+        var computer: Dictionary = AI.step(state)
+        assert(computer["valid"] and computer["action"] == "attack")
+        assert(str(computer.get("consumed_unit_id", "")) == "A")
+        assert(computer["state"]["units"][0]["hp"] == 0)
         assert(not Session.attack(strike["state"],"A","X")["valid"])
         var invalid: Dictionary = Session.start([drone,enemy],terrain,1,false,false,true,true)
         assert(not Session.attack(invalid,"A","X")["valid"])
