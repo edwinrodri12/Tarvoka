@@ -5,7 +5,7 @@ class_name TarvokaOpeningBalance
 # choosing initiative. No HP/weapon/money/vision bonus for either faction.
 # The same initial unit roster produces the same cap for Blue or Red.
 const MAX_FIRST_ORDERS := 6
-const MAX_VALID_LIMIT := 256
+const MAX_VALID_LIMIT := 6
 
 static func create(units: Array, starter: int) -> Dictionary:
     if starter not in [0,1]:
