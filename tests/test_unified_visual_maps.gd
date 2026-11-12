@@ -5,7 +5,7 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Save = preload("res://scripts/core/SaveCodec.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Board = preload("res://scripts/ui/TouchBoard.gd")
-const Projection = preload("res://scripts/ui/IsoProjection.gd")
+const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const Mini = preload("res://scripts/ui/BattleMinimap.gd")
 const Sprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 
@@ -37,7 +37,7 @@ func _run() -> void:
             board.iso_pan = pan
             for cell in [Vector2i(0,0),Vector2i(dims.x-1,dims.y-1),
                     Vector2i(int(dims.x/2),int(dims.y/2))]:
-                var pos: Vector2 = Projection.center(cell,board.size,zoom,pan,dims)
+                var pos: Vector2 = IsoTransform.center(cell,board.size,zoom,pan,dims)
                 assert(board.screen_cell(pos) == cell)
         board.iso_zoom = 1.0
         board.iso_pan = Vector2.ZERO
@@ -89,7 +89,7 @@ func _run() -> void:
             if hints["moves"].is_empty():
                 continue
             var destination: Vector2i = hints["moves"].keys()[0]
-            var dest: Vector2 = Projection.center(destination,board.size,board.iso_zoom,board.iso_pan,dims)
+            var dest: Vector2 = IsoTransform.center(destination,board.size,board.iso_zoom,board.iso_pan,dims)
             board._tap(dest)
             var shifted: Dictionary = board.state
             assert(Save.decode(Save.encode(shifted)) == shifted)
