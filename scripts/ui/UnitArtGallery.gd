@@ -11,6 +11,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 var entries: VBoxContainer
 var pose_picker: OptionButton
 var faction_picker: OptionButton
+var heading_picker: OptionButton
 
 func _ready() -> void:
     title = "TARVOKA | 32 diseños militares (preliminar)"
@@ -33,8 +34,15 @@ func _ready() -> void:
     faction_picker.select(0)
     faction_picker.item_selected.connect(_select_faction)
     controls.add_child(faction_picker)
+    heading_picker = OptionButton.new()
+    heading_picker.custom_minimum_size.y = 39
+    for direction in ["Sin giro","N","NE","E","SE","S","SO","O","NO"]:
+        heading_picker.add_item(direction)
+    heading_picker.select(0)
+    heading_picker.item_selected.connect(_select_heading)
+    controls.add_child(heading_picker)
     var scroller := ScrollContainer.new()
-    scroller.custom_minimum_size = Vector2(280,180)
+    scroller.custom_minimum_size = Vector2(280,145)
     scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     add_child(scroller)
     entries = VBoxContainer.new()
@@ -78,3 +86,15 @@ func _select_faction(index: int) -> void:
     for row in entries.get_children():
         var icon = row.get_child(0)
         icon.configure(str(icon.role),tint)
+
+func _select_heading(index: int) -> void:
+    if entries == null or index < 0 or index > 8:
+        return
+    var headings := [
+        Vector2.ZERO, Vector2.UP, Vector2(1,-1), Vector2.RIGHT,
+        Vector2(1,1), Vector2.DOWN, Vector2(-1,1), Vector2.LEFT, Vector2(-1,-1)
+    ]
+    var heading: Vector2 = headings[index]
+    for row in entries.get_children():
+        var icon = row.get_child(0)
+        icon.set_heading(heading)
