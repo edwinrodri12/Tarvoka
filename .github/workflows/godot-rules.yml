@@ -254,6 +254,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_touch_board.gd
 
+      - name: Verify own movement vs actual and potential weapon range on land air and sea
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_friendly_weapon_coverage.gd
+
+      - name: Verify one-tap own-vehicle firing overlay and preserved attack confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_friendly_weapon_ui.gd
+
       - name: Check visible enemy intel and fog-safe theoretical threat coverage
         shell: bash
         run: |
