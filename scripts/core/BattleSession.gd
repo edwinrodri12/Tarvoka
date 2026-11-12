@@ -98,4 +98,7 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     next["winner"] = Turns.winner(next["units"])
     if Visibility.enabled(next):
         next = Visibility.update_exploration(next)
-    return {"valid": true, "state": next}
+    var response := {"valid": true, "state": next}
+    if not str(action.get("consumed_unit_id", "")).is_empty():
+        response["consumed_unit_id"] = str(action["consumed_unit_id"])
+    return response

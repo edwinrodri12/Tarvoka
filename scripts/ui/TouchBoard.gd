@@ -377,7 +377,7 @@ func _commit_order(order: Dictionary) -> bool:
             message = "Movimiento completado. Sin objetivos visibles en alcance."
     else:
         selected_id = ""
-        message = "Ataque realizado."
+        message = "Impacto confirmado. Municion de un solo uso consumida." if not str(result.get("consumed_unit_id", "")).is_empty() else "Ataque realizado."
     return true
 
 # A manual supply action spends credits and the selected unit's action.
