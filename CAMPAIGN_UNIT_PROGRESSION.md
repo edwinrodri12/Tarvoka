@@ -1,5 +1,7 @@
 # TARVOKA — Progresión de unidades del modo historia
 
+> **REVISIÓN PENDIENTE (12-nov-2026):** El calendario de **32 desbloqueos** debajo se preparó antes de la petición de eliminar clases duplicadas. **No usarlo como especificación definitiva de producción.** [UNIT_ROSTER_AUDIT_V02.md](UNIT_ROSTER_AUDIT_V02.md) propone **24 familias** con 3 niveles y 8/13/19/24 acumuladas al finalizar los actos I–IV, conservando el resto como mejoras de equipamiento. El cambio de catálogo es una propuesta de diseño, no código ya programado.
+
 **Decisión aprobada por el usuario:** 2026-11-12. **Estado:** diseño de campaña [PLAN], no implementación demostrada.  
 **Documentos:** [CAMPAIGN_STORY_50.md](CAMPAIGN_STORY_50.md), [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md), [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md).
 
