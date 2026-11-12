@@ -44,7 +44,11 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
         return {"valid": false, "state": state.duplicate(true)}
     if Visibility.enabled(state) and not Visibility.is_unit_visible(state, int(state["faction"]), defender_id):
         return {"valid": false, "state": state.duplicate(true)}
-    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"])
+    # A defender cannot magically shoot an attacker outside its own faction
+    # sight. The shot may reveal combat effects, but never unlocks omniscience.
+    var defender_side: int = 1 - int(state["faction"])
+    var counter_visible: bool = not Visibility.enabled(state) or Visibility.is_unit_visible(state,defender_side,attacker_id)
+    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible)
     var applied: Dictionary = _apply(state, action)
     if applied.get("valid", false):
         applied["attacker_id"] = attacker_id
