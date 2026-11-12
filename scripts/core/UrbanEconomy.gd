@@ -211,6 +211,9 @@ static func valid(economy: Dictionary, terrain: Array) -> bool:
         return false
     if not economy.get("sites") is Array or economy["sites"].is_empty() or economy["sites"].size() > MAX_SITES:
         return false
+    if economy.has("modern") and not economy["modern"] is bool:
+        return false
+    var modern: bool = bool(economy.get("modern", false))
     var unique: Dictionary = {}
     var factories := [0, 0]
     for site in economy["sites"]:
@@ -220,13 +223,20 @@ static func valid(economy: Dictionary, terrain: Array) -> bool:
         if not Rules.inside(cell) or unique.has(cell):
             return false
         unique[cell] = true
-        if Rules.movement_cost(str(terrain[cell.y][cell.x])) < 0:
+        if not site.get("kind") is String:
             return false
-        if not site.get("kind") is String or site["kind"] not in ["city", "factory"]:
+        var kind: String = site["kind"]
+        if kind != "city" and kind != "factory" and (not modern or kind not in MODERN_PRODUCERS):
+            return false
+        var tile: String = str(terrain[cell.y][cell.x])
+        if kind == "shipyard":
+            if tile != "water":
+                return false
+        elif Rules.movement_cost(tile) < 0:
             return false
         if not site.get("owner") is int or site["owner"] not in [-1, 0, 1]:
             return false
-        if site["kind"] == "factory":
+        if kind != "city":
             if not site.get("produced_turn") is int or site["produced_turn"] < -1 or site["produced_turn"] > economy["turn"]:
                 return false
             if site["owner"] in [0,1]:
