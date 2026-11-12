@@ -77,8 +77,8 @@ func _initialize() -> void:
     # world-left for both sides. The legal forward direction is mirrored.
     assert(AI._prefer_cell(Vector2i(6,3),Vector2i(5,3),0))
     assert(AI._prefer_cell(Vector2i(3,3),Vector2i(4,3),1))
-    assert(not AI._prefer_cell(Vector2i(4,3),Vector2i(3,3),0))
-    assert(not AI._prefer_cell(Vector2i(5,3),Vector2i(6,3),1))
+    assert(not AI._prefer_cell(Vector2i(2,3),Vector2i(3,3),0))
+    assert(not AI._prefer_cell(Vector2i(7,3),Vector2i(6,3),1))
     var blue_roster: Array = Roles.modern_armies(true)
     var left_order: Array = []
     var right_order: Array = []
