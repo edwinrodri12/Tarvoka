@@ -77,6 +77,8 @@ TARVOKA es un videojuego **original** de estrategia militar por turnos para Andr
 - Desempate, estancamientos y rendición [PLAN]: ofrecer salidas claras sin forzar límites de turnos arbitrarios en todos los mapas.
 
 ## 5. Campaña, misiones y aprendizaje
+
+> **Dirección de campaña aprobada 2026-11-12:** [CAMPAIGN_STORY_50.md](CAMPAIGN_STORY_50.md) — *La Red de Meridian*, 50 capítulos (5 actos), ocho facciones oficiales y tres desenlaces; documento de diseño, **no funcionalidad implementada**. Los modos de escaramuza contra IA con mapas generados y las batallas online son pilares de rejugabilidad; la campaña no es requisito para acceder a ellos. Mantener balance v0.1 y logística por unidad.
 - **[BASE] Objetivos transparentes** y condiciones de victoria/derrota visibles siempre.
 - **[PLAN] Variedad de misiones:** ataque, defensa por turnos, rescate/evacuación, reconocimiento, captura de instalaciones, apertura de corredores, escolta, intercepción y control territorial.
 - **[PLAN] Varias soluciones viables:** no diseñar misiones que solo admitan una secuencia exacta.
