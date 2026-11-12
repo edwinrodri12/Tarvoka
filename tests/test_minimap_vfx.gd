@@ -29,6 +29,20 @@ func _run() -> void:
     assert(VFX.impact_color("fighter") != VFX.impact_color("tank"))
     assert(VFX.impact_color("frigate") != VFX.impact_color("tank"))
 
+    # Larger maps already have a reversible projection and camera footprint,
+    # before their separate movement/AI/serialization migration.
+    for dimensions in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:
+        for zoom in [0.7,1.0,2.0]:
+            for cell in [Vector2i(0,0),
+                    Vector2i(dimensions.x-1,dimensions.y-1),
+                    Vector2i(int(dimensions.x/2),int(dimensions.y/2))]:
+                var view := Vector2(1200,740)
+                var pan := Vector2(-63,27)
+                var screen: Vector2 = Iso.center(cell,view,zoom,pan,dimensions)
+                assert(Iso.screen_to_cell(screen,view,zoom,pan,dimensions)==cell)
+                assert(Iso.diamond(cell,view,zoom,pan,dimensions).size()==4)
+    assert(Iso.half_width(Vector2(800,640),1.0,Vector2i.ZERO)==0.0)
+
     var board = Board.new()
     board.ai_enabled = false
     board.size = Vector2(800,640)
@@ -49,6 +63,20 @@ func _run() -> void:
     var touch: Vector2 = bounds.position+(Vector2(target)+Vector2(0.5,0.5)) * (bounds.size/Vector2(10,8))
     assert(Minimap.point_to_cell(touch,map.size,Vector2i(10,8)) == target)
     assert(Minimap.viewport_corners(map.size,board.state,board.size,1.0,Vector2.ZERO).size() == 5)
+    var expanded_state := {"terrain":[]}
+    for y in range(18):
+        var row: Array = []
+        for x in range(24):
+            row.append("plain")
+        expanded_state["terrain"].append(row)
+    assert(Minimap.dimensions(expanded_state)==Vector2i(24,18))
+    var expanded_corners: PackedVector2Array = Minimap.viewport_corners(map.size,
+        expanded_state,board.size,1.6,Vector2(-100,70))
+    assert(expanded_corners.size()==5)
+    var expanded_bounds: Rect2 = Minimap.local_bounds(map.size,Vector2i(24,18))
+    var expanded_point: Vector2 = expanded_bounds.position+Vector2(21.5,15.5)*(
+        expanded_bounds.size/Vector2(24,18))
+    assert(Minimap.point_to_cell(expanded_point,map.size,Vector2i(24,18))==Vector2i(21,15))
     var hidden_data: Dictionary = Minimap.safe_snapshot(board.state)
     assert(hidden_data["tiles"].size() == 80)
     assert(hidden_data["size"] == Vector2i(10,8))
