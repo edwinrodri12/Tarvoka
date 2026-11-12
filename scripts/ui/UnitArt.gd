@@ -117,7 +117,7 @@ static func _support(canvas: CanvasItem, c: Vector2, s: float, variant: String, 
         _line(canvas,c,s,Vector2(0,-0.51),Vector2(0,-1.35),light,0.13)
         canvas.draw_arc(c + Vector2(0,-1.08)*s,s*0.32,PI*0.15,PI*0.85,13,ink,maxf(1.0,s*0.12))
         _disk(canvas,c,s,Vector2(0,-1.12),0.10,light)
-        canvas.draw_arc(c + Vector2(0,-1.08)*s,s*(0.39+0.04*sinf(phase*2.0)),PI*1.15,PI*1.85,13,Color("#A8F4EE"),maxf(1.0,s*0.06))
+        canvas.draw_arc(c + Vector2(0,-1.08)*s,s*(0.39+0.04*sin(phase*2.0)),PI*1.15,PI*1.85,13,Color("#A8F4EE"),maxf(1.0,s*0.06))
     elif variant == "truck":
         _poly(canvas,c,s,[[-0.86,-0.61],[0.31,-0.61],[0.31,0.02],[-0.86,0.02]],light)
         _poly(canvas,c,s,[[0.37,-0.49],[0.79,-0.49],[1.05,-0.17],[1.05,0.13],[0.37,0.13]],ink)
@@ -188,7 +188,7 @@ static func _naval(canvas: CanvasItem, c: Vector2, s: float, variant: String, hu
         if variant == "destroyer":
             _disk(canvas,c,s,Vector2(0.42,-0.52),0.13,light)
     # Soft wake moves only visually, never changes water movement cost.
-    _line(canvas,c,s,Vector2(-0.75,0.61),Vector2(-0.19+0.10*sinf(phase*3.0),0.71),Color("#8ADCEB"),0.06)
+    _line(canvas,c,s,Vector2(-0.75,0.61),Vector2(-0.19+0.10*sin(phase*3.0),0.71),Color("#8ADCEB"),0.06)
 
 static func draw_unit(canvas: CanvasItem, role: String, center: Vector2, size: float,
         faction_color: Color, phase: float = 0.0) -> void:
