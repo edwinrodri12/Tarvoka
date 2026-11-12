@@ -118,8 +118,19 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 text += " | Combustible %d/%d" % [int(unit["fuel"]), Logistics.fuel_capacity(role_key)]
             else:
                 text += " | A pie (sin combustible)"
-            if Logistics.can_resupply(state, unit_id):
-                text += " | Reabastecimiento disponible"
+            if role_key == "logistics":
+                text += " | Carga del camion: municion %d/%d, combustible %d/%d" % [
+                    int(unit.get("supply_ammo", Logistics.TRUCK_AMMO_CAP)), Logistics.TRUCK_AMMO_CAP,
+                    int(unit.get("supply_fuel", Logistics.TRUCK_FUEL_CAP)), Logistics.TRUCK_FUEL_CAP
+                ]
+            var warning: String = Logistics.alert(unit)
+            if not warning.is_empty():
+                text += "\nATENCION: " + warning
+            var supply_order: Dictionary = Logistics.quote(state, unit_id)
+            if supply_order.get("valid", false):
+                text += "\nReabastecimiento: +%d municion, +%d combustible (-%d creditos)" % [
+                    int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
+                ]
         if unit.has("domain") or unit.has("target_domains"):
             text += " | Dominio: %s | Objetivos: %s" % [Domains.domain(unit), ", ".join(Domains.targets(unit))]
         if Visibility.enabled(state):
