@@ -4,6 +4,7 @@ class_name TarvokaBasicAI
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
@@ -174,6 +175,20 @@ static func step(state: Dictionary) -> Dictionary:
             moved["destination"] = best_cell
             return moved
     return idle
+
+# Use ONLY observed positions. Air and surface may overlap without
+# blocking each other, while units on the same layer cannot share a cell.
+# This keeps AI routes consistent with MoveActions and fog observations.
+static func _blocked_for(knowledge: Dictionary, mover: Dictionary) -> Array[Vector2i]:
+    var blocked: Array[Vector2i] = []
+    for occupant in knowledge.get("units", []):
+        if not occupant is Dictionary or int(occupant.get("hp", 0)) <= 0:
+            continue
+        if str(occupant.get("id", "")) == str(mover.get("id", "")):
+            continue
+        if Domains.layer(occupant) == Domains.layer(mover):
+            blocked.append(occupant["pos"])
+    return blocked
 
 # Economic strategy with only side-owned credits, observed enemies and
 # explored urban locations. Decisions are deterministic and bounded.
