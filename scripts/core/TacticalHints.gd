@@ -167,3 +167,71 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             text += " | Danio estimado " + ", ".join(damages)
         return text
     return "Unidad no disponible."
+
+
+# Enemy intelligence is a READ-ONLY UI preview, not an order or a promise
+# that an opponent can move/attack this turn. Use the player's legal sight:
+# never reveal an enemy in fog, remembered contacts or unexplored terrain.
+# Static movement points intentionally avoid disclosing current fuel, ammo,
+# hidden orders or whether the enemy already moved this phase.
+static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) -> Dictionary:
+    var empty: Dictionary = {"valid":false, "moves":{}, "attacks":{}, "summary":""}
+    if enemy_id.is_empty() or viewer not in [0,1] or not state.get("units") is Array or not state.get("terrain") is Array:
+        return empty
+    var fogged: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state, viewer) if fogged else {}
+    var observed: Dictionary = Visibility.observed_state(state, viewer)
+    var enemy: Dictionary = {}
+    for candidate in observed.get("units",[]):
+        if not candidate is Dictionary:
+            continue
+        if str(candidate.get("id","")) == enemy_id and int(candidate.get("faction",-1)) != viewer and int(candidate.get("hp",0)) > 0:
+            enemy = candidate
+            break
+    if enemy.is_empty():
+        return empty
+    var origin: Vector2i = enemy["pos"]
+    if not Rules.inside(origin) or (fogged and not visible.has(origin)):
+        return empty
+    var same_layer: Array[Vector2i] = []
+    for unit in observed.get("units",[]):
+        if not unit is Dictionary or int(unit.get("hp",0)) <= 0 or unit["pos"] == origin:
+            continue
+        if Domains.layer(unit) == Domains.layer(enemy):
+            same_layer.append(unit["pos"])
+    var base_move: int = maxi(0,int(enemy.get("move_points",0)))
+    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], same_layer, Domains.domain(enemy))
+    moves.erase(origin)
+    if fogged:
+        for cell in moves.keys():
+            if not visible.has(cell):
+                moves.erase(cell)
+    var attacks: Dictionary = {}
+    var targets: Array = Domains.targets(enemy)
+    var armed: bool = int(enemy.get("attack",0)) > 0 and not targets.is_empty()
+    var minimum: int = int(enemy.get("attack_min_range",1))
+    var maximum: int = int(enemy.get("attack_range",1))
+    if armed and minimum >= 1 and maximum >= minimum and maximum <= 8:
+        for y in range(Rules.HEIGHT):
+            for x in range(Rules.WIDTH):
+                var cell := Vector2i(x,y)
+                var distance: int = absi(cell.x-origin.x) + absi(cell.y-origin.y)
+                if distance >= minimum and distance <= maximum and (not fogged or visible.has(cell)):
+                    attacks[cell] = true
+    var role: String = str(enemy.get("role",""))
+    var label: String = Roles.label(role) if Roles.valid(role) else "Soldado"
+    var description: String = "%s | Enemigo %s | Vida %d | Ataque %d | Defensa %d" % [
+        label, enemy_id, int(enemy.get("hp",0)), int(enemy.get("attack",0)), int(enemy.get("defense",0))
+    ]
+    description += "\nMovimiento: %d puntos | Vision: %d | Dominio: %s" % [
+        base_move, int(enemy.get("vision",Visibility.DEFAULT_VISION)), Domains.domain(enemy)
+    ]
+    if armed:
+        description += "\nAlcance de ataque: %d-%d casillas | Ataca: %s" % [minimum,maximum,", ".join(targets)]
+    else:
+        description += "\nSin ataque convencional"
+    description += "\nAzul: movimiento posible | Naranja: alcance desde posicion actual."
+    if fogged:
+        description += " Solo area visible."
+    description += "\nEstimaciones teoricas: no revelan combustible, municion ni acciones restantes."
+    return {"valid":true, "moves":moves, "attacks":attacks, "summary":description, "id":enemy_id}
