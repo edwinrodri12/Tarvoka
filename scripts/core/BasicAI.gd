@@ -4,6 +4,7 @@ class_name TarvokaBasicAI
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
@@ -36,7 +37,8 @@ static func step(state: Dictionary) -> Dictionary:
         else:
             enemies.append(unit)
     if friends.is_empty():
-        return idle
+        var only_recruits: Dictionary = _produce_reinforcements(state, knowledge, enemies)
+        return only_recruits if only_recruits.get("valid",false) else idle
     friends.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
     enemies.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
 
@@ -91,6 +93,15 @@ static func step(state: Dictionary) -> Dictionary:
     var defense: Dictionary = _defend_relay(state, knowledge, friends, enemies, occupied)
     if defense.get("valid", false):
         return defense
+
+    # Cities are a longer-term source of reinforcements. Only guards/scouts
+    # may occupy and capture an urban site; never infer unseen defenders.
+    var urban_action: Dictionary = _capture_urban_site(state, knowledge, friends, occupied)
+    if urban_action.get("valid", false):
+        return urban_action
+    var reinforcement: Dictionary = _produce_reinforcements(state, knowledge, enemies)
+    if reinforcement.get("valid", false):
+        return reinforcement
 
     # A signal-relay match offers an alternative strategic objective.
     # Prioritize reaching a neutral or opposing relay after immediate combat.
@@ -149,6 +160,124 @@ static func step(state: Dictionary) -> Dictionary:
             moved["destination"] = best_cell
             return moved
     return idle
+
+# Economic strategy with only side-owned credits, observed enemies and
+# explored urban locations. Decisions are deterministic and bounded.
+static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, enemies: Array) -> Dictionary:
+    var idle := {"valid":false}
+    if not knowledge.has("economy") or not knowledge.get("economy") is Dictionary:
+        return idle
+    var faction: int = int(state.get("faction",-1))
+    var counts: Dictionary = {}
+    for unit in knowledge.get("units", []):
+        if int(unit.get("faction",-1)) != faction or int(unit.get("hp",0)) <= 0:
+            continue
+        var role: String = str(unit.get("role",""))
+        counts[role] = int(counts.get(role,0)) + 1
+    var priorities: Array[String] = []
+    var seen_enemy_artillery := false
+    var seen_enemy_armor := false
+    for enemy in enemies:
+        seen_enemy_artillery = seen_enemy_artillery or str(enemy.get("role","")) == "artillery"
+        seen_enemy_armor = seen_enemy_armor or str(enemy.get("role","")) == "bulwark"
+    if seen_enemy_artillery:
+        priorities.append("scout")
+    if seen_enemy_armor:
+        priorities.append("piercer")
+    var cities_to_capture := false
+    var explored: Dictionary = Visibility.explored_cells(state, faction) if Visibility.enabled(state) else {}
+    for site in knowledge["economy"]["sites"]:
+        if site["kind"] == "city" and int(site.get("owner",-1)) != faction and (not Visibility.enabled(state) or explored.has(site["pos"])):
+            cities_to_capture = true
+    if cities_to_capture and int(counts.get("scout",0)) < 2:
+        priorities.append("scout")
+    for role in ["line","piercer","bulwark","artillery","scout"]:
+        if int(counts.get(role,0)) < 2:
+            priorities.append(role)
+    for role in ["line","scout","piercer","bulwark","artillery"]:
+        priorities.append(role)
+    for site in knowledge["economy"]["sites"]:
+        if site["kind"] != "factory" or int(site.get("owner",-1)) != faction:
+            continue
+        var factory: Vector2i = site["pos"]
+        for role in priorities:
+            # Legality and actual funds are independently rechecked in the
+            # authoritative state. No enemy treasury or hidden site owner read.
+            if Economy.can_purchase(state, factory, role):
+                var bought: Dictionary = Session.purchase(state, factory, role)
+                if bought.get("valid",false):
+                    bought["action"] = "produce"
+                    bought["factory"] = factory
+                    bought["reason"] = "reinforce"
+                    return bought
+    return idle
+
+static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+    var idle := {"valid":false}
+    if not knowledge.has("economy") or not knowledge.get("economy") is Dictionary:
+        return idle
+    var faction: int = int(state.get("faction",-1))
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state,faction) if fog else {}
+    var explored: Dictionary = Visibility.explored_cells(state,faction) if fog else {}
+    var best_score := -99999999
+    var best_id := ""
+    var best_cell := Vector2i(-1,-1)
+    var best_kind := ""
+    for unit in friends:
+        if not Economy.can_capture(unit) or not Turns.can_move(unit,faction):
+            continue
+        var blockers: Array[Vector2i] = occupied.duplicate()
+        blockers.erase(unit["pos"])
+        # A unit already securing an installation must stay until end-turn
+        # rather than abandoning the city immediately before capture.
+        var already_holding := false
+        for owned_site in knowledge["economy"]["sites"]:
+            if owned_site["pos"] == unit["pos"] and int(owned_site.get("owner",-1)) != faction:
+                already_holding = true
+                break
+        if already_holding:
+            continue
+        var reachable: Dictionary = Rules.reachable(unit["pos"],int(unit.get("move_points",0)),knowledge["terrain"],blockers)
+        for site in knowledge["economy"]["sites"]:
+            if int(site.get("owner",-1)) == faction:
+                continue
+            var target: Vector2i = site["pos"]
+            # Neither the player's board nor the AI knows unexplored
+            # installations under fog. Explored but unseen = valid lead.
+            if fog and not explored.has(target):
+                continue
+            if target in blockers:
+                continue
+            var route: Dictionary = _route_to_relay(knowledge["terrain"],target,blockers)
+            var current_cost: int = int(route.get(unit["pos"],999999))
+            if current_cost == 0 or current_cost >= 999999:
+                continue
+            for cell in reachable:
+                var destination: Vector2i = cell
+                if destination == unit["pos"] or (fog and not visible.has(destination)):
+                    continue
+                if not route.has(destination) or int(route[destination]) >= current_cost:
+                    continue
+                var score: int = 100000 - int(route[destination])*100 - int(reachable[destination])*3
+                score += 15000 if site["kind"] == "city" else 10000
+                if destination == target:
+                    score += 50000
+                if score > best_score:
+                    best_score = score
+                    best_id = str(unit["id"])
+                    best_cell = destination
+                    best_kind = str(site["kind"])
+    if best_id.is_empty():
+        return idle
+    var order: Dictionary = Session.move(state,best_id,best_cell)
+    if not order.get("valid",false):
+        return idle
+    order["action"] = "move"
+    order["reason"] = "capture_city" if best_kind == "city" else "capture_factory"
+    order["unit_id"] = best_id
+    order["destination"] = best_cell
+    return order
 
 # Tactical one-step lookahead for a guaranteed elimination:
 # use the legitimate move action and then check if the already observed

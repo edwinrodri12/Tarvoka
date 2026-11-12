@@ -203,9 +203,13 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
         observed["economy"]["credits"][1-faction] = -1
         for site in observed["economy"].get("sites", []):
             if site is Dictionary and not visible.has(site.get("pos", null)):
-                site["owner"] = -2
-                if site.get("kind") == "factory":
-                    site["produced_turn"] = -1
+                # A faction always knows the facilities it currently owns,
+                # but cannot know remote enemy captures or installations
+                # it has never observed. Don't mask one's own workshops.
+                if int(site.get("owner", -1)) != faction:
+                    site["owner"] = -2
+                    if site.get("kind") == "factory":
+                        site["produced_turn"] = -1
     # Unexplored topology is not public knowledge in fog mode. Present it to
     # the planner as unknown/impassable, never as its actual forest/road/water.
     # The authoritative state still owns true movement validation.
