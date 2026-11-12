@@ -5,6 +5,8 @@ const Minimap = preload("res://scripts/ui/BattleMinimap.gd")
 const VFX = preload("res://scripts/ui/BattleVFX.gd")
 const Iso = preload("res://scripts/ui/IsoProjection.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const ArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -155,6 +157,23 @@ func _run() -> void:
     assert(board.state == before)
     map.queue_redraw()
     await process_frame
+
+    # Preview all eight facings without changing any actual battle unit.
+    var gallery = ArtGallery.new()
+    root.add_child(gallery)
+    var picker: OptionButton = gallery.get("heading_picker")
+    assert(picker != null and picker.item_count == 9)
+    gallery._select_heading(3) # East.
+    gallery._select_pose(2) # Attack.
+    gallery._select_faction(2) # Green faction.
+    var entry_list: VBoxContainer = gallery.get("entries")
+    assert(entry_list.get_child_count() == 32)
+    var preview = (entry_list.get_child(0) as HBoxContainer).get_child(0)
+    assert(preview.get("heading") == Vector2.RIGHT)
+    assert(preview.get("pose") == "attack")
+    assert(preview.get("faction_tint") == VisualStyle.faction_color(2))
+    await process_frame
+    gallery.queue_free()
 
     # The actual Android HUD toggles the minimap alongside isometric mode.
     var scene: PackedScene = load("res://scenes/Main.tscn")
