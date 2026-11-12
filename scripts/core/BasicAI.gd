@@ -11,6 +11,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -20,7 +21,7 @@ static func step(state: Dictionary) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     if not state.has("units") or not state["units"] is Array or not state.has("terrain"):
         return idle
-    if int(state.get("winner", -1)) != -1:
+    if int(state.get("winner", -1)) != -1 or not Opening.can_order(state):
         return idle
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
