@@ -5,7 +5,8 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const LABELS := [
     "Campo abierto",
     "Bosque de las Dos Rutas",
-    "Puentes de la Cuenca"
+    "Puentes de la Cuenca",
+    "Costa de las Dos Bahias"
 ]
 
 # All starting armies remain on passable ground in each scenario. These are
@@ -42,6 +43,18 @@ static func terrain(scenario_id: int = 0) -> Array:
                     map[y][x] = "mountain"
             for y in [3, 4]:
                 for x in [2, 7]:
+                    map[y][x] = "forest"
+        3:
+            # First coastal prototype: two continuous, navigable sea lanes.
+            # Shipyards can be placed at the upper shore without letting
+            # terrestrial units walk across open water or occupy a dock.
+            for x in range(Rules.WIDTH):
+                map[0][x] = "water"
+                map[7][x] = "water"
+            for x in range(Rules.WIDTH):
+                map[3][x] = "road"
+            for y in [2,5]:
+                for x in [3,6]:
                     map[y][x] = "forest"
         _:
             pass
