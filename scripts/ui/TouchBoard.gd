@@ -830,6 +830,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
+    inspected_enemy_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""
@@ -867,6 +868,7 @@ func resume_autosave() -> bool:
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
     selected_id = ""
+    inspected_enemy_id = ""
     pending_order.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""
