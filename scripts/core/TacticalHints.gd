@@ -9,12 +9,13 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const TerrainTactics = preload("res://scripts/core/TerrainTactics.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
 static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     var empty := {"moves": {}, "attacks": {}}
-    if unit_id.is_empty() or int(state.get("winner", -1)) != -1:
+    if unit_id.is_empty() or int(state.get("winner", -1)) != -1 or not Opening.can_order(state):
         return empty
     if not (state.get("units") is Array) or not (state.get("terrain") is Array):
         return empty
@@ -94,7 +95,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
 # support at least one of the weapon's target domains: land, water or air.
 static func friendly_weapon_coverage(state: Dictionary, unit_id: String) -> Dictionary:
     var coverage: Dictionary = {}
-    if unit_id.is_empty() or int(state.get("winner",-1)) != -1 or not state.get("units") is Array or not state.get("terrain") is Array:
+    if unit_id.is_empty() or int(state.get("winner",-1)) != -1 or not Opening.can_order(state) or not state.get("units") is Array or not state.get("terrain") is Array:
         return coverage
     var faction: int = int(state.get("faction",-1))
     if faction not in [0,1]:
