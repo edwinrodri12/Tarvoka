@@ -240,9 +240,13 @@ static func _valid_state(state: Dictionary) -> bool:
         if unit.has("vision") and (not unit["vision"] is int or unit["vision"] < 1 or unit["vision"] > Visibility.MAX_VISION):
             return false
         if unit["hp"] > 0:
-            if positions.has(pos):
+            var plane: int = 1 if Domains.layer(unit) == Domains.AIR else 0
+            var occupied_key := Vector3i(pos.x, pos.y, plane)
+            if positions.has(occupied_key):
                 return false
-            positions[pos] = true
+            if Rules.movement_cost_for(str(state["terrain"][pos.y][pos.x]), Domains.domain(unit)) < 0:
+                return false
+            positions[occupied_key] = true
     if state.has("economy"):
         if not state["economy"] is Dictionary or not Economy.valid(state["economy"], state["terrain"]):
             return false
