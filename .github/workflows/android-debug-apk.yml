@@ -9,6 +9,8 @@ on:
       - "scripts/**"
       - "scenes/**"
       - "tests/**"
+      - "tools/**"
+      - "assets/**"
   workflow_dispatch:
 
 permissions:
@@ -102,6 +104,14 @@ jobs:
             echo "Signing: disposable debug identity (not update-in-place compatible)."
           fi
 
+      - name: Generate production sprite atlas (32 roles x 4 poses)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tools/export_unit_atlas.gd
+          test -s assets/generated/tarvoka_units_32x4.png
+          test -s assets/generated/tarvoka_units_32x4.json
+
       - name: Import and export debug APK with Godot
         shell: bash
         env:
@@ -134,6 +144,16 @@ jobs:
         with:
           name: TARVOKA-Android-debug-arm64
           path: build/TARVOKA-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload reusable sprite atlas and frame manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Sprites-32-units-4-states
+          path: |
+            assets/generated/tarvoka_units_32x4.png
+            assets/generated/tarvoka_units_32x4.json
           if-no-files-found: error
           retention-days: 14
 
