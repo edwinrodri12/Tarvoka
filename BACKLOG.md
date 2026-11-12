@@ -278,3 +278,15 @@
 - [ ] **Android físico agrupado:** confirmar cinco roles, +3/+4 daño correcto, Lanzador mínimo2, movimientos/ataques mismo turno, niebla, relés, guardados tras reinicio, controles grandes y FPS.
 - [ ] **Continuidad de partidas Android:** firma debug persistente con secretos privados y prueba de actualización sobre instalación existente sin perder `user://`.
 - [ ] Tras el gate físico: primeras misiones originales con condiciones de victoria diversas, tutorial de alcance/contramedidas, balance por rol, arte y efectos definitivos.
+
+## 2026-11-11 — Economía urbana solicitada: primera implementación consolidada
+- [x] Ciudades conquistables y talleres de producción como opción de escaramuza de cinco roles, sin afectar modo clásico (#103/#104).
+- [x] Ingreso de 100 créditos/ciudad a inicio del turno propietario, bolsa inicial 300/300, propiedad persistente, capturas por Guardia/Rastreador al cerrar su fase, fábricas conquistables (#103).
+- [x] Producción por cada fábrica propia/libre, una unidad por turno, costos definidos por clase, recién producida sin acciones hasta próximo turno; reversión ante fondos insuficientes, fábrica ajena/ocupada y compra duplicada (#103).
+- [x] Marcadores C/F, HUD dinero/ciudades/ingresos, selección táctil de fábrica, menú Producir y avisos de captura/ingreso (#104/#108).
+- [x] IA compra unidades con crédito propio y conquista instalaciones con información de niebla legal; no abandona ciudad al final del turno (#105/#108).
+- [x] JSON v1 conserva estado económico opcional e impide corrupción; CI Godot+Android verde en #103–#108, con 6 simulaciones económicas completas (#106).
+- [ ] **Alta prioridad — equilibrio**: 6/6 IA×IA económicas ganadas por primer jugador, similar a 12/12 previas sin economía. Hacer escenarios iniciales alternativos y contramedidas por rol, test humano y medir causalidad antes de modificar dinero/unidades.
+- [ ] **Prueba física Android:** botón de economía, compra de unidad, ocupación/captura, cantidad de créditos y fecha de cobro, IA reclutando, guardar+cierre+reabrir, fog sin fugas, orientación y rendimiento (NO EJECUTADA).
+- [ ] Configurar firma persistente mediante secretos privados; no asegurar instalación sobre APK anterior ni conservación de saves ante desinstalar.
+- [ ] Expansión futura a edificios especializados, condiciones de victoria económica, balance de inflación y variedad de ciudades; no inventar ni anunciar mecanismos no programados.
