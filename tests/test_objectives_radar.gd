@@ -25,7 +25,12 @@ func _run() -> void:
     enemy["fuel"] = 0
     enemy["hp"] = 2
     var battle: Dictionary = Session.start([own,tank,enemy],terrain,0,false,false,true,true)
-    # Starting a turn refreshes flags but never changes the unit's actual HP.
+    # Modern-mode setup equips units on spawn; simulate shortages AFTER spawn.
+    for unit in battle["units"]:
+        if str(unit.get("id","")) in ["T","X"]:
+            unit["ammo"] = 0
+            unit["fuel"] = 0
+            unit["hp"] = 2
     var initial: Dictionary = battle.duplicate(true)
     var radar: Dictionary = Radar.build(battle)
     assert(radar["valid"])
