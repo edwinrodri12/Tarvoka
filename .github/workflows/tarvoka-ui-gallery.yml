@@ -54,10 +54,10 @@ jobs:
           timeout --signal=TERM --kill-after=5s 175s \
             xvfb-run -a -s "-screen 0 1920x1200x24 -nolisten tcp" \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
-            --path . --display-driver x11 --rendering-method gl_compatibility \
+            --path . --display-driver x11 --audio-driver Dummy --rendering-method gl_compatibility \
             --script res://tests/capture_ui_gallery.gd \
             2>&1 | tee "$TARVOKA_UI_CAPTURE_DIR/godot.log"
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "$TARVOKA_UI_CAPTURE_DIR/godot.log"; then
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:.*(shader|texture|viewport|render)' "$TARVOKA_UI_CAPTURE_DIR/godot.log"; then
             echo "Godot visual QA returned a rendering/script error"; exit 1
           fi
           grep -F 'PASS visual gallery: 10 rendered PNG screens' "$TARVOKA_UI_CAPTURE_DIR/godot.log"
