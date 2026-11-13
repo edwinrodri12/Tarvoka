@@ -54,12 +54,19 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         return empty
     var origin: Vector2i = unit["pos"]
     var blockers: Array[Vector2i] = []
-    for cell in occupied_by_layer.get(Domains.layer(unit), []):
-        blockers.append(cell)
-    blockers.erase(origin)
+    var transit_only: Array[Vector2i] = []
+    for candidate in units:
+        if int(candidate.get("hp", 0)) <= 0 or str(candidate.get("id", "")) == unit_id or Domains.layer(candidate) != Domains.layer(unit):
+            continue
+        if Visibility.enabled(state) and int(candidate.get("faction", -1)) != faction and not visible.has(candidate["pos"]):
+            continue
+        if int(candidate.get("faction", -1)) == faction:
+            transit_only.append(candidate["pos"])
+        else:
+            blockers.append(candidate["pos"])
     var moves: Dictionary = {}
     if Turns.can_move(unit, faction):
-        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit), Logistics.road_fast(unit))
+        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit), Logistics.road_fast(unit), transit_only)
         moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
@@ -212,6 +219,13 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             if not warning.is_empty():
                 text += "\nATENCION: " + warning
             var supply_order: Dictionary = Logistics.quote(state, unit_id)
+            if not supply_order.get("valid", false) and (Logistics.ammo_capacity(role_key) > 0 or Logistics.fuel_capacity(role_key) > 0):
+                if Logistics.field_air_service_allowed(state, unit):
+                    text += "\nRecarga: base aerea o camion logistico cercano sobre terreno plano/carretera."
+                elif Domains.domain(unit) == Domains.GROUND:
+                    text += "\nRecarga: instalacion aliada compatible o camion logistico adyacente."
+                else:
+                    text += "\nRecarga: instalacion aerea o naval compatible."
             if supply_order.get("valid", false):
                 text += "\nRecarga desde %s: +%d municion, +%d combustible (%s)" % [
                     "camion" if str(supply_order["source_kind"]) == "truck" else "base",
@@ -284,14 +298,19 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
     var origin: Vector2i = enemy["pos"]
     if not Rules.inside(origin,state.get("terrain",[])) or (fogged and not visible.has(origin)):
         return empty
-    var same_layer: Array[Vector2i] = []
+    var blockers: Array[Vector2i] = []
+    var transit_only: Array[Vector2i] = []
     for unit in observed.get("units",[]):
         if not unit is Dictionary or int(unit.get("hp",0)) <= 0 or unit["pos"] == origin:
             continue
-        if Domains.layer(unit) == Domains.layer(enemy):
-            same_layer.append(unit["pos"])
+        if Domains.layer(unit) != Domains.layer(enemy):
+            continue
+        if int(unit.get("faction", -1)) == int(enemy.get("faction", -1)):
+            transit_only.append(unit["pos"])
+        else:
+            blockers.append(unit["pos"])
     var base_move: int = maxi(0,int(enemy.get("move_points",0)))
-    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], same_layer, Domains.domain(enemy), Logistics.road_fast(enemy))
+    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], blockers, Domains.domain(enemy), Logistics.road_fast(enemy), transit_only)
     moves.erase(origin)
     if fogged:
         for cell in moves.keys():

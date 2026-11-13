@@ -38,6 +38,10 @@ static func _naval_exhaustion(fog: bool) -> Dictionary:
         Roles.make_unit("X",1,Vector2i(7,0),"landing_ship")
     ]
     var state: Dictionary = Session.start(units,Scenarios.terrain(3),0,fog,false,true,true)
+    # Deliberately start near reserve to exercise empty-tank attrition within
+    # this bounded QA scenario even after the standard fuel tanks grew 3x.
+    for vessel in state["units"]:
+        vessel["fuel"] = mini(int(vessel["fuel"]), 18)
     # Long low-cash exercise, separate from ordinary production gameplay.
     # Cities are neutral: no income enters this intentionally isolated fixture.
     state["economy"]["credits"] = [0,0]

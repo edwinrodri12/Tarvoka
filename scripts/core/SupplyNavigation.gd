@@ -37,17 +37,21 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
     var known: Dictionary = Visibility.explored_cells(state, faction) if Visibility.enabled(state) else {}
     var visible: Dictionary = Visibility.visible_cells(state, faction) if Visibility.enabled(state) else {}
     var blocked: Array[Vector2i] = []
+    var transit_only: Array[Vector2i] = []
     for other in observed["units"]:
         if not other is Dictionary or int(other.get("hp",0)) <= 0:
             continue
         if str(other.get("id","")) == str(unit.get("id","")):
             continue
         if Domains.layer(other) == Domains.layer(unit):
-            blocked.append(other["pos"])
+            if int(other.get("faction",-1)) == faction:
+                transit_only.append(other["pos"])
+            else:
+                blocked.append(other["pos"])
     var move_budget: int = Logistics.movement_budget(unit)
     if move_budget <= 0:
         return none
-    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit))
+    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit), transit_only)
     var best := none
     var best_distance := 1000000
     for site in observed["economy"]["sites"]:
@@ -56,7 +60,7 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
         if not _compatible(domain, str(site.get("kind", ""))):
             continue
         var target: Vector2i = site["pos"]
-        if target == origin or target in blocked:
+        if target == origin or target in blocked or target in transit_only:
             continue
         var dist: Dictionary = _distance_to_target(observed["terrain"], target, blocked, domain, known, Visibility.enabled(state))
         if not dist.has(origin):
@@ -91,8 +95,9 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
             best_distance = total
     return best
 
-# Dispatch a field truck to a needy allied ground unit, rather than forcing
-# that unit to travel back to a distant workshop. Both actions use real turns.
+# Dispatch a field truck to a needy allied ground or landing-capable air
+# unit, rather than forcing it to travel to a distant installation.
+# Both actions use real turns and finite cargo.
 # The truck stops in a free adjacent tile and can then deliver prepaid cargo.
 static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: Dictionary) -> Dictionary:
     var none := {"valid":false}
@@ -114,18 +119,24 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
     var visible: Dictionary = Visibility.visible_cells(state, side) if fog else {}
     var origin: Vector2i = truck["pos"]
     var blocked: Array[Vector2i] = []
+    var transit_only: Array[Vector2i] = []
     for occupant in observed["units"]:
         if not occupant is Dictionary or int(occupant.get("hp",0)) <= 0 or str(occupant.get("id","")) == str(truck.get("id","")):
             continue
         if Domains.layer(occupant) == Domains.layer(truck):
-            blocked.append(occupant["pos"])
-    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck))
+            if int(occupant.get("faction",-1)) == side:
+                transit_only.append(occupant["pos"])
+            else:
+                blocked.append(occupant["pos"])
+    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck), transit_only)
     var best := none
     var best_cost := 1000000
     for recipient in observed["units"]:
         if not recipient is Dictionary or str(recipient.get("id","")) == str(truck.get("id","")) or int(recipient.get("hp",0)) <= 0:
             continue
-        if int(recipient.get("faction",-1)) != side or bool(recipient.get("acted",true)) or Domains.domain(recipient) != Domains.GROUND:
+        if int(recipient.get("faction",-1)) != side or bool(recipient.get("acted",true)):
+            continue
+        if Domains.domain(recipient) != Domains.GROUND and not (Domains.domain(recipient) == Domains.AIR and Logistics.field_air_service_allowed(observed, recipient)):
             continue
         if not recipient.has("ammo") or str(recipient.get("role","")) == "logistics":
             continue
@@ -139,7 +150,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
             continue # Let the regular direct resupply action handle adjacent allies.
         for direction in Rules.DIRECTIONS:
             var staging: Vector2i = needy + direction
-            if not Rules.inside(staging,state["terrain"]) or staging in blocked or staging == origin:
+            if not Rules.inside(staging,state["terrain"]) or staging in blocked or staging in transit_only or staging == origin:
                 continue
             if fog and not known.has(staging):
                 continue

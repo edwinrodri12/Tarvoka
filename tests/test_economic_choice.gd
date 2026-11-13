@@ -41,7 +41,8 @@ func _initialize() -> void:
     assert(costed["valid"] and costed["reason"] == "efficient")
     assert(costed["unit_id"] == "T" and costed["cost"] > 0)
     partial["units"][0]["ammo"] = 4
-    partial["units"][0]["fuel"] = 13
+    # Almost full is relative to the current tank capacity, not the old 14.
+    partial["units"][0]["fuel"] = Logistics.fuel_capacity("tank") - 1
     assert(not Strategy.best_resupply(partial,Visibility.observed_state(partial,0),0)["valid"])
 
     # A disposable munition cannot be rearmed: it is only a one-use projectile.

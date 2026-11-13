@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaLogistics
 
+const Rules = preload("res://scripts/core/Rules.gd")
+
 # Opt-in supplies for modern battles. Legacy roles and saves without ammo/fuel
 # remain unchanged until a new modern battle explicitly equips them.
 # Ammo is counted in attacks; fuel is counted in terrain movement-cost points.
@@ -24,8 +26,10 @@ const CAPACITIES := {
 static func ammo_capacity(role: String) -> int:
     return int(CAPACITIES.get(role, [0, 0])[0])
 
+# Longer-lived operational tanks. New units receive three times the old
+# fuel reserve; existing saved quantities remain valid and can be replenished.
 static func fuel_capacity(role: String) -> int:
-    return int(CAPACITIES.get(role, [0, 0])[1])
+    return int(CAPACITIES.get(role, [0, 0])[1]) * 3
 
 # Only motorized *land* vehicles gain road speed. Infantry (no fuel), drones,
 # planes and ships retain their existing map costs. Role is public information.
@@ -34,7 +38,7 @@ static func road_fast(unit: Dictionary) -> bool:
 
 # Each truck carries finite, persistent stocks. Repair/cargo operations are separate.
 const TRUCK_AMMO_CAP := 16
-const TRUCK_FUEL_CAP := 36
+const TRUCK_FUEL_CAP := 90
 const AMMO_PRICE := 12
 const FUEL_PRICE := 4
 const MIN_SERVICE_PRICE := 20
@@ -148,6 +152,18 @@ static func alert(unit: Dictionary) -> String:
             messages.append("Carga logistica baja")
     return " | ".join(messages)
 
+# Small helicopters and light reconnaissance drones can land briefly beside
+# a truck on open ground. Fighters, bombers, UCAVs and expendable drones require
+# dedicated facilities; no midair refueling or landing on water/mountains.
+static func field_air_service_allowed(state: Dictionary, unit: Dictionary) -> bool:
+    if str(unit.get("role", "")) not in ["attack_heli", "transport_heli", "uav_recon"]:
+        return false
+    var terrain: Array = state.get("terrain", [])
+    var pos = unit.get("pos", null)
+    if not pos is Vector2i or not Rules.valid_terrain(terrain) or not Rules.inside(pos, terrain):
+        return false
+    return str(terrain[pos.y][pos.x]) in ["plain", "road"]
+
 # Source-aware quote: base stocks are unlimited but ALWAYS paid, while field
 # trucks have finite ammunition/fuel and can supply only once per friendly turn.
 # Partial orders are allowed when funds or truck stocks cannot cover full demand.
@@ -181,7 +197,9 @@ static func quote(state: Dictionary, unit_id: String) -> Dictionary:
         appropriate = appropriate or (domain == "naval" and kind == "shipyard")
         if appropriate and credits >= MIN_SERVICE_PRICE:
             return _calculate_quote(recipient, credits, "base", "", 1000, 1000)
-    if domain != "ground":
+    # A field truck can support land forces and landing-capable rotorcraft
+    # or reconnaissance drones. All other aerial units need a real airbase.
+    if domain != "ground" and not (domain == "air" and field_air_service_allowed(state, recipient)):
         return invalid
     var best: Dictionary = invalid
     var best_units := 0

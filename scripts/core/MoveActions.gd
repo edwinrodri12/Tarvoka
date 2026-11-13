@@ -45,14 +45,19 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     var mover_domain: String = Domains.domain(mover)
     var mover_layer: String = Domains.layer(mover)
     var blockers: Array[Vector2i] = []
-    for cell in occupied_layers.get(mover_layer, []):
-        blockers.append(cell)
-    if destination in blockers:
+    var transit_only: Array[Vector2i] = []
+    for other in result:
+        if int(other.get("hp", 0)) <= 0 or str(other.get("id", "")) == unit_id or Domains.layer(other) != mover_layer:
+            continue
+        if int(other.get("faction", -1)) == faction:
+            transit_only.append(other["pos"])
+        else:
+            blockers.append(other["pos"])
+    if destination in blockers or destination in transit_only:
         return rejected
     var points := Logistics.movement_budget(mover)
     var origin: Vector2i = mover["pos"]
-    blockers.erase(origin)
-    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain, Logistics.road_fast(mover))
+    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain, Logistics.road_fast(mover), transit_only)
     if not reachable.has(destination):
         return rejected
     Logistics.consume_move(mover, int(reachable[destination]))
