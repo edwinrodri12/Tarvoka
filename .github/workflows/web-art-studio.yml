@@ -85,6 +85,20 @@ jobs:
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v6_vs_v7_same_camera.png
+      - name: Export actual G09 V7 to portable Blender-compatible GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_hero_glb.gd 2>&1 | tee /tmp/tarvoka-hero-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-hero-glb.log; then
+            echo "G09 glTF export contains invalid geometry or material" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V7 GLB export:" /tmp/tarvoka-hero-glb.log
+          test -s artifacts/TARVOKA_G09_V7_Hero_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -112,6 +126,7 @@ jobs:
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v6_vs_v7_same_camera.png
+            artifacts/TARVOKA_G09_V7_Hero_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
