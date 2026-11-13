@@ -61,7 +61,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             var parts: Array = model.find_children("*","MeshInstance3D",true,false)
             for node in parts:
                 var label: String = str(node.name)
-                if label.begins_with("Rodillo") or label.begins_with("BujeOscuro"):
+                if label.begins_with("Rodillo") or label.begins_with("BujeOscuro") or label.begins_with("RuedaG09V7") or label.begins_with("BujeG09V7"):
                     var wheel: MeshInstance3D = node as MeshInstance3D
                     wheel.rotation_degrees = Vector3(0,0,90)
                     wheel.rotate_object_local(Vector3.UP,cycle*0.85)
@@ -70,6 +70,13 @@ static func pose(model: Node3D, kind: String, progress: float,
                     var mat: StandardMaterial3D = track.material_override as StandardMaterial3D
                     if mat != null:
                         mat.uv1_offset = Vector3(0,fmod(t*1.9,1.0),0)
+            # The new running-gear links use only two draw submissions,
+            # while UV travel keeps their rubber surfaces visibly moving.
+            var link_belts: Array = model.find_children("OrugaArticuladaG09V7_*","MultiMeshInstance3D",true,false)
+            for belt in link_belts:
+                var link_mat: StandardMaterial3D = belt.material_override as StandardMaterial3D
+                if link_mat != null:
+                    link_mat.uv1_offset = Vector3(0,fmod(t*1.9,1.0),0)
             turret.rotation_degrees.y = 0.0
             if dust != null:
                 dust.visible = t > 0.05 and t < 0.95
