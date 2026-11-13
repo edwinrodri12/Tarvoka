@@ -120,11 +120,22 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.28,0.045,0.22),Color("#2A2C2D"),Vector3(0,-18,9))
     _box(light,"MetalExpuestoGlacis",Vector3(-0.24,1.165,-0.85),
         Vector3(0.10,0.02,0.11),Color("#B19C7B"),Vector3(0,-18,9))
+    # The default Android camera observes the rear-right of the vehicle.
+    # Include a readable but modest scuff there, otherwise stage 1 appears
+    # almost identical to "intact" even when the player selects it.
+    _box(light,"QuemaduraRejillaMotor",Vector3(0.36,1.083,0.97),
+        Vector3(0.34,0.027,0.23),Color("#282C2C"),Vector3(0,18,0))
+    _box(light,"MetalExpuestoMotor",Vector3(0.37,1.105,0.94),
+        Vector3(0.16,0.024,0.062),Color("#9B8D76"),Vector3(0,15,-4))
     var on_turret_1 := Node3D.new()
     on_turret_1.name = "MarcasEnTorre"
     turret.add_child(on_turret_1)
     _box(on_turret_1,"MarcaReboteTorre",Vector3(-0.46,0.31,-0.73),
         Vector3(0.25,0.15,0.040),Color("#38342E"),Vector3(-12,14,0))
+    _box(on_turret_1,"AbolladuraTechoTorre",Vector3(0.31,0.572,0.36),
+        Vector3(0.27,0.033,0.19),Color("#282D30"),Vector3(0,22,0))
+    _box(on_turret_1,"RayaduraMetalTecho",Vector3(0.31,0.594,0.38),
+        Vector3(0.15,0.028,0.04),Color("#9D9D91"),Vector3(0,-18,4))
     on_turret_1.visible = false
 
     # Stage 2: damaged bolt-on armor, missing right skirt module, hot
