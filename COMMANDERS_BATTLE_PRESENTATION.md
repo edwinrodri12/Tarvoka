@@ -10,6 +10,7 @@
 - Los retratos son de **solo lectura**: no activan poderes ni ejecutan órdenes, y el panel deja pasar los gestos táctiles hacia el tablero.
 - En **Resultados** aparecen los dos comandantes, el nombre de la facción ganadora y las métricas con los colores correctos. Para partidas antiguas sin identidad seleccionada, conserva las etiquetas históricas AZUL/ROJO.
 - Las partidas que incluyan `visual_factions` muestran las identidades elegidas al recargar. Los guardados anteriores sin el campo mantienen las referencias visuales Alianza Norte / Pacto Escarlata.
+- En **Centro de mando**, el encabezado de turno muestra el nombre real de la facción elegida y los iconos de las unidades utilizan el color de la facción activa (incluida producción). Antes estaban limitados incorrectamente a azul/rojo.
 - `FactionGallery.gd` lista las ocho insignias **y** los ocho retratos aprobados en la pantalla de referencias.
 
 ## Selección y Android
