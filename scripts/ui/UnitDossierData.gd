@@ -10,6 +10,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Terrain = preload("res://scripts/core/TerrainTactics.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
+const SiteOverlay = preload("res://scripts/ui/SiteOverlayData.gd")
 
 # Extra, structured fields for visual battle fichas. A prior Inspector.inspect
 # must approve visibility before any enemy or building fields are considered.
@@ -32,6 +33,11 @@ static func inspect(state: Dictionary, friendly_id: String, enemy_id: String,
         var site: Dictionary = Economy.site_at(state.get("economy",{}),cell)
         if site.is_empty():
             return {}
+        var overlay: Dictionary = {}
+        for marker in SiteOverlay.snapshots(state,viewer):
+            if marker is Dictionary and marker.get("pos") == cell:
+                overlay = marker
+                break
         var sight: Dictionary = Visibility.visible_cells(state,viewer) if Visibility.enabled(state) else {}
         var known_owner: bool = not Visibility.enabled(state) or sight.has(cell) or int(site.get("owner",-1)) == viewer
         var owner: int = int(site.get("owner",-1))
@@ -47,11 +53,21 @@ static func inspect(state: Dictionary, friendly_id: String, enemy_id: String,
         }
         if kind_name == "city":
             var revenue: int = Economy.MODERN_CITY_INCOME if bool(economy.get("modern",false)) else Economy.CITY_INCOME
-            data["stats"] = [{"name":"INGRESO","value":"+%d/turno" % revenue},{"name":"CAPTURA","value":"Infantería"}]
+            var pending: bool = bool(overlay.get("capture_pending",false))
+            data["stats"] = [
+                {"name":"INGRESO","value":"+%d/turno" % revenue},
+                {"name":"CAPTURA","value":"Al fin de turno" if pending else "Infantería"}
+            ]
+            if pending:
+                data["note"] = "Captura pendiente: se resuelve al terminar este turno, no al entrar en la ciudad."
         elif known_owner and owner == viewer:
-            var ready: bool = int(site.get("produced_turn",-1)) != int(economy.get("turn",-2))
-            data["stats"] = [{"name":"PRODUCCIÓN","value":"Lista" if ready else "Usada"}]
-            data["note"] = "Base propia · elige una unidad en Centro de mando > Producción."
+            var production_state: String = str(overlay.get("status","unknown"))
+            var status_text := {
+                "ready":"Lista","used":"Usada","wait":"Otro turno",
+                "funds":"Sin créditos","blocked":"Bloqueada"
+            }
+            data["stats"] = [{"name":"PRODUCCIÓN","value":str(status_text.get(production_state,"No disponible"))}]
+            data["note"] = str(overlay.get("caption","")) + " · Centro de mando > Producción."
         else:
             data["stats"] = [{"name":"PRODUCCIÓN","value":"Propietario"}]
         return data
