@@ -100,7 +100,8 @@ static func kind(x: int, z: int, scene: int) -> String:
             if z == 5 and x in [3,6,7]:
                 return "road"
             var river_left: int = 3 + int(z / 3)
-            if z >= 1 and z <= 8 and (x == river_left or x == river_left + 1):
+            # Continue the river to the map boundaries: no abrupt river ends.
+            if x == river_left or x == river_left + 1:
                 return "water"
             if x <= 2 or (x >= 9 and z <= 4):
                 return "mountain"
@@ -563,7 +564,10 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     _shore(props,x,z,preset,p,top)
                 "water":
                     _water_details(props,p,x,z,preset)
-                    if preset == 1 and z == 5 and x in [4,5]:
+                    # Both east-west causeways remain visually continuous
+                    # over the winding river at rows 5 and 8.
+                    if preset == 1 and ((z == 5 and x in [4,5]) or
+                        (z == 8 and x in [5,6])):
                         _bridge(props,p,x)
             if show_grid:
                 var grid_tint: Color = Color("#223842") if type != "water" else Color("#19566d")
