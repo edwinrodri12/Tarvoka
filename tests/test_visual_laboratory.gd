@@ -26,11 +26,11 @@ func _run() -> void:
     assert(lab.render_picker.item_count == 2)
     assert(lab.lab_board.autosave_enabled == false)
     assert(lab.lab_board.ai_enabled == false)
-    assert(lab.lab_board.get_process() == false)
+    assert(lab.lab_board.is_processing() == false)
     lab.open_lab()
     assert(lab.visible)
     assert(lab.lab_board.iso_enabled)
-    assert(lab.lab_board.get_process())
+    assert(lab.lab_board.is_processing())
     assert(lab.lab_board.state["units"].size() == 2)
     var before: Dictionary = lab.lab_board.state.duplicate(true)
     assert(before["units"][0]["role"] == "tank")
@@ -121,7 +121,7 @@ func _run() -> void:
 
     lab.close_lab()
     assert(not lab.visible)
-    assert(not lab.lab_board.get_process())
+    assert(not lab.lab_board.is_processing())
     lab.queue_free()
 
     # Most important isolation assertion: opening/closing lab cannot overwrite
