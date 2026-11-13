@@ -220,6 +220,22 @@ func focus_view_cell(cell: Vector2i) -> bool:
     queue_redraw()
     return true
 
+# Fit small tactical maps fully after resizing a device. Keeping the whole
+# 10x8 map on screen matters more than centering the player's left-side units.
+# Large maps continue using frame_player_force for readable unit zoom.
+func frame_small_map() -> bool:
+    var dimensions: Vector2i = map_dimensions()
+    if size.x < 10.0 or size.y < 10.0 or dimensions.x > 12 or dimensions.y > 10:
+        return false
+    if iso_enabled:
+        iso_zoom = 1.0
+        iso_pan = Vector2.ZERO
+    else:
+        view_zoom = 1.0
+        view_pan = Vector2.ZERO
+    queue_redraw()
+    return true
+
 # Only the camera changes. Frame the player's visible army near the
 # middle of the screen instead of opening a 40x30 map as tiny tiles.
 # This is called on first layout, loading a match and changing projection,

@@ -1,0 +1,73 @@
+name: TARVOKA visual gallery (no APK)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/**'
+      - 'assets/factions/**'
+      - 'assets/branding/**'
+      - 'tests/capture_ui_gallery.gd'
+      - 'scripts/qa/build_gallery_index.py'
+      - '.github/workflows/tarvoka-ui-gallery.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/**'
+      - 'assets/factions/**'
+      - 'assets/branding/**'
+      - 'tests/capture_ui_gallery.gd'
+      - 'scripts/qa/build_gallery_index.py'
+      - '.github/workflows/tarvoka-ui-gallery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tarvoka-ui-gallery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-review:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    env:
+      TARVOKA_UI_CAPTURE_DIR: /tmp/tarvoka-ui-gallery
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and X11 virtual display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Capture ten real game screens with a virtual GPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$TARVOKA_UI_CAPTURE_DIR"
+          timeout --signal=TERM --kill-after=5s 175s \
+            xvfb-run -a -s "-screen 0 1920x1200x24 -nolisten tcp" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --path . --display-driver x11 --audio-driver Dummy --rendering-method gl_compatibility \
+            --script res://tests/capture_ui_gallery.gd \
+            2>&1 | tee "$TARVOKA_UI_CAPTURE_DIR/godot.log"
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:.*(shader|texture|viewport|render)' "$TARVOKA_UI_CAPTURE_DIR/godot.log"; then
+            echo "Godot visual QA returned a rendering/script error"; exit 1
+          fi
+          grep -F 'PASS visual gallery: 10 rendered PNG screens' "$TARVOKA_UI_CAPTURE_DIR/godot.log"
+      - name: Validate PNGs and generate offline review page
+        run: python3 scripts/qa/build_gallery_index.py "$TARVOKA_UI_CAPTURE_DIR"
+      - name: Publish reviewable PNG and HTML gallery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-ui-visual-review
+          path: /tmp/tarvoka-ui-gallery/
+          if-no-files-found: warn
+          retention-days: 30

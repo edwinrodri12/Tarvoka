@@ -28,6 +28,8 @@ var commander_notice: Label
 var band_color: ColorRect
 var confirm_button: Button
 var scroll: ScrollContainer
+var header_row: BoxContainer
+var sides_row: BoxContainer
 var chooser_card: PanelContainer
 var dossier_card: PanelContainer
 var emblem_display_box: Control
@@ -51,12 +53,12 @@ func _ready() -> void:
     frame.add_theme_constant_override("separation",10)
     add_child(frame)
 
-    var header := HBoxContainer.new()
-    header.add_theme_constant_override("separation",9)
-    frame.add_child(header)
+    header_row = BoxContainer.new()
+    header_row.add_theme_constant_override("separation",9)
+    frame.add_child(header_row)
     var overline := VBoxContainer.new()
     overline.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    header.add_child(overline)
+    header_row.add_child(overline)
     var title := Label.new()
     title.text = "TARVOKA  /  ELEGIR FACCIONES"
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -74,17 +76,17 @@ func _ready() -> void:
     back.custom_minimum_size = Vector2(82,50)
     back.pressed.connect(func(): back_requested.emit())
     Chrome.emphasize(back,"secondary")
-    header.add_child(back)
+    header_row.add_child(back)
 
-    var sides := HBoxContainer.new()
-    sides.add_theme_constant_override("separation",8)
-    frame.add_child(sides)
+    sides_row = BoxContainer.new()
+    sides_row.add_theme_constant_override("separation",8)
+    frame.add_child(sides_row)
     for side in range(2):
         var side_button := Button.new()
         side_button.custom_minimum_size.y = 53
         side_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         side_button.pressed.connect(_choose_side.bind(side))
-        sides.add_child(side_button)
+        sides_row.add_child(side_button)
         side_buttons.append(side_button)
 
     scroll = ScrollContainer.new()
@@ -344,6 +346,12 @@ func reflow_for_size(viewport: Vector2) -> void:
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
     is_portrait_layout = viewport.y > viewport.x * 1.12 or viewport.x < 880.0
     content_rail.vertical = is_portrait_layout
+    # Portrait headers and long real faction names cannot fit side-by-side.
+    # Stack them instead of allowing "Volver" and "Rival" off-screen.
+    if header_row != null:
+        header_row.vertical = is_portrait_layout
+    if sides_row != null:
+        sides_row.vertical = is_portrait_layout
     if chooser_card != null and dossier_card != null:
         if is_portrait_layout:
             content_rail.move_child(dossier_card,0)

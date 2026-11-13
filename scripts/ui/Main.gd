@@ -130,6 +130,8 @@ var compact_confirm: Button
 var compact_cancel: Button
 var compact_end_turn: Button
 var compact_resupply: Button
+var compact_top_shortcuts: HBoxContainer
+var compact_options_button: Button
 var compact_center: Button
 var compact_iso: Button
 var expanded_header: PanelContainer
@@ -828,7 +830,7 @@ func _build_battle_hud() -> void:
     var top_style := StyleBoxFlat.new()
     top_style.bg_color = Color(0.035,0.060,0.083,0.88)
     top_style.content_margin_left = 9
-    top_style.content_margin_right = 145 # Reserve room for the panel button.
+    top_style.content_margin_right = 9 # Buttons have their own row on small phones.
     top_style.content_margin_top = 5
     top_style.content_margin_bottom = 5
     top_panel.add_theme_stylebox_override("panel",top_style)
@@ -850,6 +852,13 @@ func _build_battle_hud() -> void:
     compact_detail.add_theme_color_override("font_color",Color("#D9E6ED"))
     compact_detail.clip_text = true
     title_row.add_child(compact_detail)
+
+    # Separate touch controls from status/commander portraits. Anchoring
+    # three floating buttons over the top card clipped both names and art.
+    compact_top_shortcuts = HBoxContainer.new()
+    compact_top_shortcuts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_top_shortcuts.add_theme_constant_override("separation",5)
+    battle_hud_commands.add_child(compact_top_shortcuts)
 
     var spacer := Control.new()
     spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -910,7 +919,10 @@ func _build_battle_hud() -> void:
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",5)
     actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    bottom_panel.add_child(actions)
+    var action_rows := VBoxContainer.new()
+    action_rows.add_theme_constant_override("separation",4)
+    bottom_panel.add_child(action_rows)
+    action_rows.add_child(actions)
 
     compact_menu_button = Button.new()
     compact_menu_button.text = "Menu"
@@ -955,6 +967,14 @@ func _build_battle_hud() -> void:
     compact_end_turn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_end_turn.pressed.connect(_end_turn)
     actions.add_child(compact_end_turn)
+    # Split actions into two touch rows, without hiding or removing any
+    # existing callbacks. A single 6-button row clipped "Fin turno" on phones.
+    var other_actions := HBoxContainer.new()
+    other_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    other_actions.add_theme_constant_override("separation",5)
+    action_rows.add_child(other_actions)
+    for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply]:
+        shortcut.reparent(other_actions,false)
     # Strong hierarchy: order confirmation is the positive command;
     # finishing a turn stays distinct and visually cautionary.
     GameUiTheme.emphasize(compact_confirm,"success")
@@ -1035,27 +1055,27 @@ func _build_battle_hud() -> void:
     battle_hud_toggle.pressed.connect(_toggle_battle_hud)
     battle_hud_overlay.add_child(battle_hud_toggle)
 
-    # Independent camera shortcuts in full-map mode for non-gesture users.
+    # Separate responsive camera shortcut row avoids overlaying commander
+    # portraits and the status label on narrow Android displays.
     compact_center = Button.new()
     compact_center.text = "Ejército"
-    compact_center.custom_minimum_size = Vector2(85,42)
-    compact_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    compact_center.offset_left = -230
-    compact_center.offset_right = -145
-    compact_center.offset_top = 7
-    compact_center.offset_bottom = 49
+    compact_center.custom_minimum_size.y = 44
+    compact_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_center.pressed.connect(func(): board.frame_player_force())
-    battle_hud_overlay.add_child(compact_center)
+    compact_top_shortcuts.add_child(compact_center)
     compact_iso = Button.new()
     compact_iso.text = "Vista"
-    compact_iso.custom_minimum_size = Vector2(68,42)
-    compact_iso.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    compact_iso.offset_left = -305
-    compact_iso.offset_right = -235
-    compact_iso.offset_top = 7
-    compact_iso.offset_bottom = 49
+    compact_iso.custom_minimum_size.y = 44
+    compact_iso.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_iso.pressed.connect(_toggle_isometric_view)
-    battle_hud_overlay.add_child(compact_iso)
+    compact_top_shortcuts.add_child(compact_iso)
+    compact_options_button = Button.new()
+    compact_options_button.text = "Opciones"
+    compact_options_button.custom_minimum_size.y = 44
+    compact_options_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_options_button.pressed.connect(_toggle_battle_hud)
+    compact_top_shortcuts.add_child(compact_options_button)
+    GameUiTheme.emphasize(compact_options_button,"primary")
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
@@ -1068,9 +1088,12 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    compact_options_button.visible = compact
+    compact_top_shortcuts.visible = compact
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
-    battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
+    battle_hud_toggle.visible = not compact
+    battle_hud_toggle.text = "Ampliar mapa"
     layout_for_size(get_viewport_rect().size)
 
 func _toggle_battle_hud() -> void:
@@ -1083,7 +1106,7 @@ func _recenter_camera_after_layout(cell: Vector2i) -> void:
         board.frame_player_force()
 
 func _frame_camera_after_layout() -> void:
-    if board != null:
+    if board != null and not board.frame_small_map():
         board.frame_player_force()
 
 # The pure sizing entry point is called on both initial layout and resize.
@@ -1108,7 +1131,15 @@ func layout_for_size(view_size: Vector2) -> void:
         board_holder.custom_minimum_size = Vector2(255, 0)
 
 func _on_viewport_resized() -> void:
+    # Camera offsets from the previous orientation can place the entire
+    # battlefield off screen after rotating Android or resizing a window.
+    var previous_center: Vector2i = board.screen_cell(board.size * 0.5) if board != null else Vector2i(-1,-1)
     layout_for_size(get_viewport_rect().size)
+    if board != null:
+        if board.map_dimensions().x <= 12 and board.map_dimensions().y <= 10:
+            call_deferred("_frame_camera_after_layout")
+        else:
+            call_deferred("_recenter_camera_after_layout",previous_center)
 
 func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
