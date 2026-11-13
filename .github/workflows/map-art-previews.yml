@@ -1,6 +1,16 @@
 name: TARVOKA map art preview (no APK)
 
 on:
+  push:
+    branches:
+      - feat/connected-environment-map-20261113
+    paths:
+      - ".github/workflows/map-art-previews.yml"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeTransitions.gd"
+      - "scripts/ui/TerrainTextureAtlas.gd"
+      - "tools/export_environment_preview.gd"
   pull_request:
     paths:
       - ".github/workflows/map-art-previews.yml"
