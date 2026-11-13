@@ -14,6 +14,7 @@ on:
       - ".github/workflows/web-art-studio.yml"
       - "tests/test_web_art_studio.gd"
       - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_g09_production_v9.gd"
       - "tests/test_mbt_silhouette_v5.gd"
   push:
     branches:
@@ -25,6 +26,7 @@ on:
       - "export_presets.cfg"
       - ".github/workflows/web-art-studio.yml"
       - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_g09_production_v9.gd"
       - "tests/test_mbt_silhouette_v5.gd"
   workflow_dispatch:
 
@@ -93,6 +95,15 @@ jobs:
           timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_production_v9.gd 2>&1 | tee /tmp/production-g09-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/production-g09-check.log; then
+            echo "Production G09 V9 body/paint/HP test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 production V9:" /tmp/production-g09-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/test_web_art_studio.gd 2>&1 | tee /tmp/studio-check.log
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-check.log; then
             echo "Model studio parsing, scene or functional test failed" >&2
@@ -111,7 +122,7 @@ jobs:
           test -s artifacts/tarvoka_headquarters_web_studio.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
-          test -s artifacts/tarvoka_mbt_v6_vs_v7_same_camera.png
+          test -s artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
       - name: Export actual G09 V7 to portable Blender-compatible GLB
         shell: bash
         run: |
@@ -153,7 +164,7 @@ jobs:
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
-            artifacts/tarvoka_mbt_v6_vs_v7_same_camera.png
+            artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V7_Hero_Editable.glb
           include-hidden-files: true
