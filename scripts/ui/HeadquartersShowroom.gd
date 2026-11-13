@@ -109,13 +109,13 @@ func _compose_screen() -> void:
     _label(controls,"Cámara isométrica",17,Color("#e9eff2"))
     var orbit := HBoxContainer.new()
     controls.add_child(orbit)
-    _button(orbit,"↶ Girar",func(): _yaw -= deg_to_rad(35.0); _orbit_camera())
-    _button(orbit,"Girar ↷",func(): _yaw += deg_to_rad(35.0); _orbit_camera())
+    _button(orbit,"↶ Girar",_rotate_left)
+    _button(orbit,"Girar ↷",_rotate_right)
     var zoom := HBoxContainer.new()
     controls.add_child(zoom)
-    _button(zoom,"Acercar +",func(): _change_zoom(-1.65))
-    _button(zoom,"Alejar −",func(): _change_zoom(1.65))
-    _button(controls,"Restablecer cámara",func(): _reset_camera())
+    _button(zoom,"Acercar +",_zoom_in)
+    _button(zoom,"Alejar −",_zoom_out)
+    _button(controls,"Restablecer cámara",_reset_camera)
     _label(controls,"Arrastra sobre el edificio para girar. Pellizca con dos dedos o utiliza los botones para cambiar el zoom.",14,Color("#a8bcc8"))
     status_label = _label(controls,"",16,Color("#e8eff3"))
     status_label.name = "FichaDeVisualizacion"
@@ -217,6 +217,20 @@ func _orbit_camera() -> void:
         13.0+_elevation*6.0,cos(_yaw)*distance)
     camera.size = _camera_size
     camera.look_at(Vector3(0,1.8,0),Vector3.UP)
+
+func _rotate_left() -> void:
+    _yaw -= deg_to_rad(35.0)
+    _orbit_camera()
+
+func _rotate_right() -> void:
+    _yaw += deg_to_rad(35.0)
+    _orbit_camera()
+
+func _zoom_in() -> void:
+    _change_zoom(-1.65)
+
+func _zoom_out() -> void:
+    _change_zoom(1.65)
 
 func _change_zoom(delta: float) -> void:
     _camera_size = clampf(_camera_size+delta,11.0,32.0)
