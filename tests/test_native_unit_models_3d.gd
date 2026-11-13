@@ -100,6 +100,8 @@ func _run() -> void:
     for i in range(5):
         await process_frame
     assert(bool(library.get("captures_completed")))
+    assert(int(library.get("baked_static_captures")) == 15)
+    assert((library.get("viewports") as Dictionary).is_empty())
     var sheet := Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,false,Image.FORMAT_RGBA8)
     sheet.fill(Color("#13212c"))
     var nonempty: int = 0
