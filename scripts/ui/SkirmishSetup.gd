@@ -8,6 +8,7 @@ signal advanced_requested
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
+const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -20,6 +21,8 @@ var first_picker: OptionButton
 var seed_picker: SpinBox
 var summary: Label
 var start_button: Button
+var map_preview: Control
+var preview_caption: Label
 var _preset_label: Label
 
 # Preflight overlay. Changing these widgets NEVER touches game state.
@@ -90,6 +93,35 @@ func _ready() -> void:
     size_picker = _picker(content,"Tamano",[
         "10 x 8 · Rapida","24 x 18 · Campana amplia","40 x 30 · Gran batalla"
     ])
+    # Live preview reuses the real scenario generator. Pure UI: it never
+    # creates units, reveals fog from a running match or replaces save data.
+    var map_card := PanelContainer.new()
+    map_card.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#10293B"),Chrome.EDGE_BRIGHT,10,10))
+    content.add_child(map_card)
+    var map_column := VBoxContainer.new()
+    map_column.add_theme_constant_override("separation",6)
+    map_card.add_child(map_column)
+    var map_title := Label.new()
+    map_title.text = "RECONOCIMIENTO DEL TERRENO"
+    map_title.add_theme_color_override("font_color",Chrome.GOLD)
+    map_title.add_theme_font_size_override("font_size",15)
+    map_column.add_child(map_title)
+    map_preview = MapPreview.new()
+    map_preview.name = "VistaPreviaRealDelTerreno"
+    map_column.add_child(map_preview)
+    preview_caption = Label.new()
+    preview_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    preview_caption.add_theme_font_size_override("font_size",13)
+    preview_caption.add_theme_color_override("font_color",Chrome.MUTED)
+    map_column.add_child(preview_caption)
+    var legend := Label.new()
+    legend.text = "Bosque · Carretera · Montaña · Agua / Azul y rojo: despliegue orientativo"
+    legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    legend.add_theme_font_size_override("font_size",12)
+    legend.add_theme_color_override("font_color",Chrome.MUTED)
+    map_column.add_child(legend)
+
     var seed_row := HBoxContainer.new()
     seed_row.add_theme_constant_override("separation",8)
     content.add_child(seed_row)
@@ -244,6 +276,12 @@ func _changed() -> void:
     if scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID:
         preset_summary += "\nSemilla reproducible: %d" % int(seed_picker.value)
     summary.text = preset_summary + "\nLa partida activa solo se reemplaza al confirmar."
+    if map_preview != null:
+        map_preview.configure(scenario_picker.selected,size_picker.selected,int(seed_picker.value))
+        preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
+            scenario_picker.get_item_text(scenario_picker.selected),
+            size_picker.get_item_text(size_picker.selected)]
+
 
 func options() -> Dictionary:
     return {
