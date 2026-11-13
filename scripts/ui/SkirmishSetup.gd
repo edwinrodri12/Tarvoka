@@ -4,11 +4,13 @@ class_name TarvokaSkirmishSetup
 signal start_requested(options: Dictionary)
 signal back_requested
 signal advanced_requested
+signal factions_requested
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -24,6 +26,9 @@ var start_button: Button
 var map_preview: Control
 var preview_caption: Label
 var _preset_label: Label
+var selected_factions: Dictionary = Identity.defaults()
+var faction_summary: Label
+var faction_button: Button
 
 # Preflight overlay. Changing these widgets NEVER touches game state.
 # Main translates the values into its existing authoritative pickers, then
@@ -138,7 +143,27 @@ func _ready() -> void:
     seed_picker.value_changed.connect(func(_v: float): _changed())
     seed_row.add_child(seed_picker)
 
-    _section(content,"3  ·  Reglas")
+    _section(content,"3  ·  Facciones y comandantes")
+    var faction_card := PanelContainer.new()
+    faction_card.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#0D273A"),Chrome.GOLD,10,12))
+    content.add_child(faction_card)
+    var faction_column := VBoxContainer.new()
+    faction_column.add_theme_constant_override("separation",8)
+    faction_card.add_child(faction_column)
+    faction_summary = Label.new()
+    faction_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    faction_summary.add_theme_color_override("font_color",Chrome.TEXT)
+    faction_summary.add_theme_font_size_override("font_size",16)
+    faction_column.add_child(faction_summary)
+    faction_button = Button.new()
+    faction_button.text = "ELEGIR FACCIONES Y COMANDANTES"
+    faction_button.custom_minimum_size.y = 54
+    faction_button.pressed.connect(func(): factions_requested.emit())
+    Chrome.emphasize(faction_button,"primary")
+    faction_column.add_child(faction_button)
+
+    _section(content,"4  ·  Reglas")
     roster_picker = _picker(content,"Ejercito",[
         "Clasico · unidades de prueba","Experimental · cinco clases",
         "Moderno · 32 clases y bases"
@@ -149,7 +174,7 @@ func _ready() -> void:
     balance_picker = _picker(content,"Equilibrio",["Entrenamiento","Dos fuerzas simetricas"])
     first_picker = _picker(content,"Primer turno",["Azul (jugador)","Rojo (rival)"])
 
-    _section(content,"4  ·  Resumen de preparacion")
+    _section(content,"5  ·  Resumen de preparacion")
     summary = Label.new()
     summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     summary.add_theme_font_size_override("font_size",16)
@@ -246,11 +271,18 @@ func apply_preset(index: int) -> void:
     _changed()
 
 func load_choices(values: Dictionary) -> void:
+    selected_factions = Identity.resolved(values.get("factions",{}))
     for name in ["scenario","size","roster","fog","economy","objective","balance","first"]:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
     _preset_label.text = "Configuracion personalizada."
+    _changed()
+
+func set_factions(values: Dictionary) -> void:
+    if not Identity.is_valid(values):
+        return
+    selected_factions = values.duplicate(true)
     _changed()
 
 func _changed() -> void:
@@ -275,7 +307,11 @@ func _changed() -> void:
     ]
     if scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID:
         preset_summary += "\nSemilla reproducible: %d" % int(seed_picker.value)
-    summary.text = preset_summary + "\nLa partida activa solo se reemplaza al confirmar."
+    var blue: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},0)
+    var red: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},1)
+    if faction_summary != null:
+        faction_summary.text = "JUGADOR: %s  ·  RIVAL: %s\nLos comandantes conservan los artes aprobados pendientes de importar." % [blue,red]
+    summary.text = preset_summary + "\nBandos: %s contra %s.\nLa partida activa solo se reemplaza al confirmar." % [blue,red]
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,int(seed_picker.value))
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
@@ -293,5 +329,6 @@ func options() -> Dictionary:
         "objective":objective_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(),
         "first":first_picker.get_selected_id(),
-        "seed":int(seed_picker.value)
+        "seed":int(seed_picker.value),
+        "factions":selected_factions.duplicate(true)
     }
