@@ -36,13 +36,29 @@ static func _strip(canvas: CanvasItem, a: Vector2, b: Vector2,
 # Each bank is a curved series of narrow TRIANGLUATED bands strictly
 # inside its known tile. The corners and gameplay diamond remain untouched.
 # Contrast remains high enough to read the coastline at tactical zoom.
+# Both sides of one land-water boundary share the same noise sample.
+# For example, cell (x,y) east and (x+1,y) west use the same key.
+static func shared_edge_seed(cell: Vector2i, side: int) -> int:
+    if side < 0 or side > 3:
+        return -1
+    var delta: Vector2i = [
+        Vector2i(1,0), Vector2i(-1,0),
+        Vector2i(0,1), Vector2i(0,-1)
+    ][side]
+    var other: Vector2i = cell+delta
+    var start_x: int = mini(cell.x,other.x)
+    var start_y: int = mini(cell.y,other.y)
+    var axis: int = 0 if side < 2 else 1
+    return posmod(start_x*1783+start_y*3259+axis*8171+113,65521)
+
 static func _shore_meander(t: float, seed: int, side: int) -> float:
     var a: float = sin(t*TAU*1.65+float(posmod(seed*7+side*13,37))*0.19)
     var b: float = sin(t*TAU*3.10+float(posmod(seed*11+side*5,47))*0.13)
     return 0.145+0.030*a+0.013*b
 
 static func shore_curve(c: Vector2, hw: float,
-        side: int, seed: int, steps: int = 9) -> PackedVector2Array:
+        side: int, seed: int, steps: int = 9,
+        cell: Vector2i = Vector2i(-1,-1)) -> PackedVector2Array:
     var points := PackedVector2Array()
     if hw <= 0.0 or steps < 2 or side < 0 or side > 3:
         return points
@@ -50,14 +66,22 @@ static func shore_curve(c: Vector2, hw: float,
     for j in range(steps):
         var t: float = float(j)/float(steps-1)
         var edge_point: Vector2 = edge[0].lerp(edge[1],t)
-        points.append(edge_point.lerp(c,_shore_meander(t,seed,side)))
+        # Opposite edges enumerate points in opposite directions;
+        # flip t to keep the shared wave in the same world orientation.
+        var canonical_t: float = t if side%2 == 0 else 1.0-t
+        var canonical_side: int = 0 if side < 2 else 2
+        var shared_seed: int = shared_edge_seed(cell,side) if (
+            cell.x >= 0 and cell.y >= 0) else seed
+        points.append(edge_point.lerp(c,_shore_meander(
+            canonical_t,shared_seed,canonical_side)))
     return points
 
 static func _shore_band(canvas: CanvasItem, c: Vector2, hw: float,
         side: int, seed: int, steps: int, outer_inset: float,
-        tint: Color, highlight: Color, border_thickness: float) -> void:
+        tint: Color, highlight: Color, border_thickness: float,
+        cell: Vector2i = Vector2i(-1,-1)) -> void:
     var edge: PackedVector2Array = _edge(_corners(c,hw),side)
-    var inner: PackedVector2Array = shore_curve(c,hw,side,seed,steps)
+    var inner: PackedVector2Array = shore_curve(c,hw,side,seed,steps,cell)
     if inner.size() < 2:
         return
     for j in range(inner.size()-1):
@@ -77,16 +101,17 @@ static func _shore_band(canvas: CanvasItem, c: Vector2, hw: float,
             maxf(1.0,hw*border_thickness),true)
 
 static func draw_water_shore(canvas: CanvasItem, c: Vector2, hw: float,
-        land_edges: int, detail: int, seed: int) -> void:
+        land_edges: int, detail: int, seed: int,
+        cell: Vector2i = Vector2i(-1,-1)) -> void:
     if land_edges == 0 or detail <= 0 or hw <= 0.0:
         return
     for i in range(4):
         if (land_edges & (1 << i)) == 0:
             continue
         _shore_band(canvas,c,hw,i,seed,6 if detail == 1 else 10,
-            0.028,Color("#3D9BB7"),Color("#B8EEF1"),0.033)
+            0.028,Color("#3D9BB7"),Color("#B8EEF1"),0.033,cell)
         if detail >= 2:
-            var foam: PackedVector2Array = shore_curve(c,hw,i,seed,10)
+            var foam: PackedVector2Array = shore_curve(c,hw,i,seed,10,cell)
             for j in range(1,foam.size()-2,3):
                 canvas.draw_line(foam[j].lerp(c,0.22),
                     foam[j+1].lerp(c,0.22),Color("#D7F4E9"),
@@ -94,7 +119,7 @@ static func draw_water_shore(canvas: CanvasItem, c: Vector2, hw: float,
 
 static func draw_land_shore(canvas: CanvasItem, c: Vector2, hw: float,
         water_edges: int, terrain: String, detail: int,
-        seed: int = 0) -> void:
+        seed: int = 0, cell: Vector2i = Vector2i(-1,-1)) -> void:
     if water_edges == 0 or hw <= 0.0 or detail <= 0:
         return
     var soil := Color("#B5AD81")
@@ -112,9 +137,9 @@ static func draw_land_shore(canvas: CanvasItem, c: Vector2, hw: float,
         if (water_edges & (1 << i)) == 0:
             continue
         _shore_band(canvas,c,hw,i,seed,6 if detail == 1 else 10,
-            0.025,soil,rim,0.022)
+            0.025,soil,rim,0.022,cell)
         if detail >= 2:
-            var inner: PackedVector2Array = shore_curve(c,hw,i,seed,10)
+            var inner: PackedVector2Array = shore_curve(c,hw,i,seed,10,cell)
             # Small stones stay inside the visible bank tile.
             for j in [2,6]:
                 var stone: Vector2 = inner[j].lerp(c,0.16)
