@@ -24,33 +24,61 @@ static func _line(canvas: CanvasItem, c: Vector2, s: float, a: Vector2, b: Vecto
 # Map-art continuity: central asphalt joins the exact shared edges of
 # adjacent isometric tiles. Each exit is a half-cell vector in screen space;
 # road width is constant on either side of the shared edge.
-static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float, connections: int) -> void:
-    var exits: Array = [
-        Vector2(0.50,0.25), Vector2(-0.50,-0.25),
-        Vector2(-0.50,0.25), Vector2(0.50,-0.25)
-    ]
-    var asphalt := Color("#465057")
-    var shoulder := Color("#A7A086")
-    var line_tint := Color("#F2DE95")
-    # A standalone road tile remains recognizable instead of disappearing.
-    _shape(canvas,center,hw,[[-0.28,0],[0,-0.155],[0.28,0],[0,0.155]],shoulder)
-    _shape(canvas,center,hw,[[-0.25,0],[0,-0.135],[0.25,0],[0,0.135]],asphalt)
-    for i in range(exits.size()):
-        if (connections & (1 << i)) == 0:
+# Contiguous pavement with curved centerlines instead of repeated diagonal
+# rectangles. Existing topology still determines each legitimate connection;
+# the curves are decoration only and never alter speed or passability.
+static func _road_strip(canvas: CanvasItem, start: Vector2, end: Vector2,
+        half_width: float, tint: Color) -> void:
+    var forward: Vector2 = end-start
+    if forward.length_squared() < 0.00001:
+        return
+    var side: Vector2 = Vector2(-forward.y,forward.x).normalized()*half_width
+    canvas.draw_colored_polygon(PackedVector2Array([
+        start+side,start-side,end-side,end+side
+    ]),tint)
+
+static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float,
+        connections: int, cell: Vector2i = Vector2i.ZERO,
+        detail: int = 2) -> void:
+    var asphalt := Color("#414950")
+    var shoulder := Color("#978F7B")
+    var stripe := Color("#E3D1A0")
+    # This central junction covers the meeting of branch strips. It stays
+    # inside the tile even when a road has no visible links under fog.
+    _shape(canvas,center,hw,[
+        [-0.28,0],[0,-0.16],[0.28,0],[0,0.16]
+    ],shoulder)
+    for side_index in range(4):
+        if (connections & (1 << side_index)) == 0:
             continue
-        var exit: Vector2 = exits[i]
-        var side: Vector2 = Vector2(-exit.y,exit.x).normalized()
-        var a: Vector2 = side * hw * 0.096
-        var b: Vector2 = exit * hw
-        var outer: Vector2 = side * hw * 0.124
-        canvas.draw_colored_polygon(PackedVector2Array([
-            center+outer,center-outer,center+b-outer,center+b+outer
-        ]),shoulder)
-        canvas.draw_colored_polygon(PackedVector2Array([
-            center+a,center-a,center+b-a,center+b+a
-        ]),asphalt)
-        canvas.draw_line(center+exit*hw*0.36,center+exit*hw*0.79,
-            line_tint,maxf(1.0,hw*0.025),true)
+        var curve: PackedVector2Array = Continuity.river_curve(
+            center,hw,side_index,cell,4 if detail < 2 else 9)
+        for index in range(curve.size()-1):
+            _road_strip(canvas,curve[index],curve[index+1],
+                hw*0.126,shoulder)
+        for index in range(curve.size()-1):
+            _road_strip(canvas,curve[index],curve[index+1],
+                hw*0.096,asphalt)
+        if detail >= 2:
+            for j in range(1,curve.size()-2,3):
+                canvas.draw_line(curve[j],curve[j+1],stripe,
+                    maxf(1.0,hw*0.020),true)
+            # Variable wear marks follow the same centerline and never
+            # exceed the known road tile.
+            var wear_index: int = posmod(
+                cell.x*19+cell.y*23+side_index*11,4)+2
+            var spot: Vector2 = curve[mini(wear_index,curve.size()-2)]
+            canvas.draw_circle(spot,maxf(1.0,hw*0.017),
+                Color(0.15,0.17,0.18,0.36))
+    _shape(canvas,center,hw,[
+        [-0.247,0],[0,-0.135],[0.247,0],[0,0.135]
+    ],asphalt)
+    # Junctions use a subtle road-center highlight. An isolated road
+    # remains a distinguishable pavement patch.
+    if detail >= 2 and connections == 0:
+        canvas.draw_line(center+Vector2(-hw*0.08,0),
+            center+Vector2(hw*0.08,0),
+            stripe,maxf(1.0,hw*0.019),true)
 
 static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
         hw: float, phase: float, seed: int, road_connections: int = 0,
@@ -76,7 +104,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
                 int(context.get("exposed_edges",0)),
                 context.get("cell",Vector2i.ZERO))
         "road":
-            _connected_road(canvas,c,hw,road_connections)
+            _connected_road(canvas,c,hw,road_connections,
+                context.get("cell",Vector2i.ZERO),detail)
             if bridge_axis != 0:
                 Landscape.draw_bridge(canvas,c,hw,bridge_axis,detail)
         "water":
