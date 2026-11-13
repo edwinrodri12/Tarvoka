@@ -56,6 +56,9 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 ## Cuarto incremento — texturas procedurales y visor de comparación sin APK
 
 - `TerrainSurfaceMaterials.gd`: microdetalle original en hierba, bosque, roca, agua y asfalto; distribución determinista, comprimida dentro de cada diamante. Dos perfiles de detalle en el render; ahorro de batería/mínimo omite microtexturas.
+- `TerrainTextureAtlas.gd`: genera texturas reales de Godot `ImageTexture` a partir de ruido multiescala, con estratos rocosos y reflejos de agua; se almacenan en caché por material y nivel de calidad (96 px medio, 160 px completo). Se pintan recortadas dentro del diamante; no se descargan librerías, imágenes ni assets de terceros.
+- Las laderas de `LandscapeDetailPainter.gd` reciben material sobre sus facetas. La variedad de alturas y número de picos reduce la repetición visible en la primera captura de prueba.
+- `export_environment_preview.gd` utiliza tanto el material como el atlas de texturas de la batalla, para que el laboratorio no muestre una versión distinta.
 - `IsoRenderer.gd`: incluye esas marcas **solamente en celdas actualmente visibles**, bajo el mismo control de niebla, zoom y mapa táctico. Ninguna de ellas modifica terreno, reglas o guardados.
 - `test_landscape_materials.gd`: verifica estabilidad del sembrado y que las marcas no sobrepasen los límites geométricos; se dibujan tanto a calidad media como completa.
 - `tools/export_environment_preview.gd`: crea dos capturas reales del mismo pintor gráfico Godot 4.3 usado en la partida, sobre un escenario de exhibición fijo con montañas, bosques, río y carretera con puente; no simula una partida ni reemplaza las pruebas de reglas.
