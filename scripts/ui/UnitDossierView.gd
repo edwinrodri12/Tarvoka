@@ -3,6 +3,7 @@ class_name TarvokaUnitDossierView
 
 const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 
 var compact := false
 var _header: HBoxContainer
@@ -41,8 +42,15 @@ func _ready() -> void:
     info.add_child(_status)
     _health = ProgressBar.new()
     _health.show_percentage = false
-    _health.custom_minimum_size.y = 9 if compact else 12
+    _health.custom_minimum_size.y = 12 if compact else 16
     _health.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var gauge_bg := StyleBoxFlat.new()
+    gauge_bg.bg_color = Color("#051522")
+    gauge_bg.border_color = GameUiTheme.EDGE
+    gauge_bg.set_border_width_all(1)
+    gauge_bg.set_corner_radius_all(4)
+    _health.add_theme_stylebox_override("background",gauge_bg)
+    _set_health_tint(1.0)
     info.add_child(_health)
     _stats = Label.new()
     _stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -55,6 +63,14 @@ func _ready() -> void:
     _details.add_theme_color_override("font_color",Color("#B5CED8"))
     add_child(_details)
     hide()
+
+func _set_health_tint(ratio: float) -> void:
+    if _health == null:
+        return
+    var gauge := StyleBoxFlat.new()
+    gauge.bg_color = Color("#2DD793") if ratio > 0.55 else (Color("#F4C33C") if ratio > 0.28 else Color("#ED5963"))
+    gauge.set_corner_radius_all(4)
+    _health.add_theme_stylebox_override("fill",gauge)
 
 func bind_dossier(data: Dictionary) -> void:
     if data.is_empty() or str(data.get("kind","none")) not in ["friendly","enemy","building"]:
@@ -72,6 +88,7 @@ func bind_dossier(data: Dictionary) -> void:
         var full: int = maxi(1,int(data.get("max_hp",current)))
         _health.max_value = full
         _health.value = mini(current,full)
+        _set_health_tint(float(current)/float(full))
         _name.text += " · HP %d/%d" % [current,full]
     var values: Array = data.get("stats",[])
     var portions: PackedStringArray = []
