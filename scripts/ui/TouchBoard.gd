@@ -85,6 +85,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _reset_touch_gesture()
     motion_effects.clear()
     unit_headings.clear()
+    if _models_3d != null:
+        _models_3d.call("clear_live_tanks")
     var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
     var terrain: Array = Scenarios.seeded_terrain(map_seed,map_dimensions) if is_seeded else Scenarios.terrain(current_scenario_id,map_dimensions)
@@ -152,12 +154,16 @@ func set_3d_models_enabled(enabled: bool) -> void:
     models_3d_enabled = enabled
     if enabled and iso_enabled:
         _prepare_3d_models()
+    elif _models_3d != null:
+        _models_3d.call("clear_live_tanks")
     queue_redraw()
 
 func set_isometric(enabled: bool) -> void:
     iso_enabled = enabled
     if enabled:
         _prepare_3d_models()
+    elif _models_3d != null:
+        _models_3d.call("clear_live_tanks")
     _ambient_accum = 0.0
     touch_active = false
     touch_finger_index = -1
@@ -532,6 +538,12 @@ func _process(delta: float) -> void:
             if float(motion_effects[i]["elapsed"]) >= 0.32:
                 motion_effects.remove_at(i)
         needs_redraw = true
+    if iso_enabled and _models_3d != null and models_3d_enabled:
+        if not combat_effects.is_empty() or not motion_effects.is_empty() or int(_models_3d.call("live_tank_count")) > 0:
+            var fog_on: bool = Visibility.enabled(state)
+            var visible_now: Dictionary = Visibility.visible_cells(state,0) if fog_on else {}
+            _models_3d.call("update_tank_actions",state.get("units",[]),
+                motion_effects,combat_effects,fog_on,visible_now,battery_saver)
     if needs_redraw:
         queue_redraw()
 
