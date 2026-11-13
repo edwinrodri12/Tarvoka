@@ -300,8 +300,8 @@ func _refresh() -> void:
     commander_notice.visible = approved_commander == null
     if approved_commander == null:
         commander_fallback.color = color.darkened(0.78)
-    preview_commander.text = ("COMANDANTE\\nRetrato oficial de esta facción" if approved_commander != null else
-        "COMANDANTE\\nRetrato aprobado pendiente de incorporar al proyecto.")
+    preview_commander.text = ("COMANDANTE\nRetrato oficial de esta facción" if approved_commander != null else
+        "COMANDANTE\nRetrato aprobado pendiente de incorporar al proyecto.")
     selection_status.text = "BANDO %s  /  %s" % ["AZUL" if active_side == 0 else "ROJO",str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
 
