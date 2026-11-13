@@ -24,6 +24,9 @@ func _run() -> void:
     await process_frame
     main.board.autosave_enabled = false
     var before: Dictionary = main.board.state.duplicate(true)
+    # Headless Godot starts with a tiny synthetic viewport; request the real
+    # landscape configuration before checking desktop-only controls.
+    main.layout_for_size(Vector2(1400,800))
     assert(main.theme != null)
     assert(main.polished_status_card != null)
     assert(main.polished_unit_card != null)
