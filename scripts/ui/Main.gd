@@ -18,6 +18,7 @@ const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
+const SavedMatchesMenu = preload("res://scripts/ui/SavedMatchesMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
@@ -41,6 +42,9 @@ var objectives_scrim: ColorRect
 var objectives_button: Button
 var compact_objectives_button: Button
 var home_menu: Control
+var saved_matches_menu: Control
+var _command_from_home := false
+var _gallery_from_home := false
 var skirmish_setup: Control
 var compact_combat_preview: Control
 var sidebar_combat_preview: Control
@@ -271,6 +275,8 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
+    unit_art_gallery.confirmed.connect(_return_home_from_arsenal)
+    unit_art_gallery.canceled.connect(_return_home_from_arsenal)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -630,7 +636,7 @@ func _ready() -> void:
 
     command_menu = CommandMenu.new()
     add_child(command_menu)
-    command_menu.close_requested.connect(func(): command_menu.hide())
+    command_menu.close_requested.connect(_close_command_menu)
     command_menu.save_requested.connect(func(): _save_game(); command_menu.refresh())
     command_menu.load_requested.connect(func(): _load_game(); command_menu.refresh())
     command_menu.new_battle_requested.connect(_prepare_skirmish)
@@ -676,6 +682,12 @@ func _ready() -> void:
     home_menu.skirmish_requested.connect(_prepare_skirmish)
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
+    home_menu.saves_requested.connect(_open_saved_matches_from_home)
+
+    saved_matches_menu = SavedMatchesMenu.new()
+    add_child(saved_matches_menu)
+    saved_matches_menu.back_requested.connect(_back_from_saved_matches)
+    saved_matches_menu.load_requested.connect(_load_saved_match)
 
     skirmish_setup = SkirmishSetup.new()
     add_child(skirmish_setup)
@@ -1301,8 +1313,8 @@ func _end_turn() -> void:
 func _save_game() -> void:
     board.save_game()
 
-func _load_game() -> void:
-    if board.load_game():
+func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
+    if board.load_game(path):
         scenario_picker.select(board.current_scenario_id)
         var grid: Vector2i = board.map_dimensions()
         map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
@@ -1316,6 +1328,8 @@ func _load_game() -> void:
         if board.state.has("control") and board.state["control"].has("first_faction"):
             first_picker.select(int(board.state["control"]["first_faction"]))
         call_deferred("_frame_camera_after_layout")
+        return true
+    return false
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
@@ -1414,10 +1428,35 @@ func _refresh_production_catalog() -> void:
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
+    _command_from_home = false
     _close_results_screen()
     command_menu.hide()
     skirmish_setup.hide()
+    saved_matches_menu.hide()
     home_menu.show()
+
+func _open_saved_matches_from_home() -> void:
+    home_menu.hide()
+    skirmish_setup.hide()
+    saved_matches_menu.refresh_slots()
+    saved_matches_menu.show()
+
+func _back_from_saved_matches() -> void:
+    saved_matches_menu.hide()
+    home_menu.show()
+
+func _load_saved_match(path: String) -> void:
+    # The save UI only emits the two existing, fixed save paths.
+    if path not in [SavedMatchesMenu.AUTO_PATH,SavedMatchesMenu.MANUAL_PATH]:
+        return
+    if _load_game(path):
+        saved_matches_menu.hide()
+        home_menu.hide()
+        if OS.has_feature("mobile"):
+            _set_compact_hud(true)
+    else:
+        saved_matches_menu.refresh_slots()
+        saved_matches_menu.status_label.text = "No se pudo cargar este guardado. La partida actual se conserva."
 
 func _continue_from_home() -> void:
     home_menu.hide()
@@ -1427,6 +1466,7 @@ func _continue_from_home() -> void:
 func _prepare_skirmish() -> void:
     _close_results_screen()
     home_menu.hide()
+    saved_matches_menu.hide()
     command_menu.hide()
     skirmish_setup.load_choices({
         "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
@@ -1459,11 +1499,23 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
 
 func _open_arsenal_from_home() -> void:
     home_menu.hide()
+    _gallery_from_home = true
     _open_unit_art_gallery()
+
+func _return_home_from_arsenal() -> void:
+    if _gallery_from_home:
+        _gallery_from_home = false
+        _show_home_menu()
 
 func _open_settings_from_home() -> void:
     home_menu.hide()
+    _command_from_home = true
     command_menu.open_for(board,"Ajustes")
+
+func _close_command_menu() -> void:
+    command_menu.hide()
+    if _command_from_home:
+        _show_home_menu()
 
 func _close_objectives_radar() -> void:
     objectives_panel.hide()
@@ -1546,6 +1598,7 @@ func _results_to_home() -> void:
     _show_home_menu()
 
 func _open_command_menu() -> void:
+    _command_from_home = false
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
     command_menu.open_for(board,section)
 
