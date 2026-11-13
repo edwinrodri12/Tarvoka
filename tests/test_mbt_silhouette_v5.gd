@@ -53,6 +53,7 @@ func _run() -> void:
     assert(base != null and finished != null)
     assert(not base.get_meta("tarvoka_mbt_silhouette_v5",false))
     assert(finished.get_meta("tarvoka_mbt_silhouette_v5",false))
+    assert(finished.get_meta("tarvoka_mbt_art_v6",false))
     var hull: MeshInstance3D = finished.find_child("CascoHermeticoV5",true,false) as MeshInstance3D
     var turret: MeshInstance3D = finished.find_child("TorreHermeticaV5",true,false) as MeshInstance3D
     var stern: MeshInstance3D = finished.find_child("PortonTraseroHermeticoV5",true,false) as MeshInstance3D
@@ -68,16 +69,25 @@ func _run() -> void:
     var old_cheek: MeshInstance3D = finished.find_child("MejillaCeramicaBiselada1",true,false) as MeshInstance3D
     var new_cheek: MeshInstance3D = finished.find_child("MejillaPrincipalV5_1",true,false) as MeshInstance3D
     assert(old_cheek != null and new_cheek != null)
-    assert(not old_cheek.visible and new_cheek.visible)
+    assert(not old_cheek.visible and not new_cheek.visible)
+    var ceramic: MeshInstance3D = finished.find_child("MejillaMonoliticaV6_1",true,false) as MeshInstance3D
+    var optical: MeshInstance3D = finished.find_child("VentanaOpticaPanoramicaV6",true,false) as MeshInstance3D
+    var new_mantlet: MeshInstance3D = finished.find_child("BastidorCanonIntegradoV6",true,false) as MeshInstance3D
+    assert(ceramic != null and optical != null and new_mantlet != null)
+    assert(_watertight(ceramic.mesh))
+    assert(ceramic.visible and optical.visible and new_mantlet.visible)
+    assert(not finished.find_child("MantleteMonoliticoV5",true,false).visible)
     assert(Damage.apply_stage(finished,3))
-    assert(not new_cheek.visible)
+    assert(not ceramic.visible and not new_cheek.visible)
     assert(Damage.apply_stage(finished,0))
-    assert(not old_cheek.visible and new_cheek.visible)
+    assert(not old_cheek.visible and not new_cheek.visible and ceramic.visible)
     assert(Damage.apply_stage(finished,4))
+    assert(not new_mantlet.visible and not optical.visible)
     assert(not finished.find_child("AroSelladoCanonV5",true,false).visible)
     assert(Damage.apply_stage(finished,0))
-    assert(finished.find_child("AroSelladoCanonV5",true,false).visible)
+    assert(new_mantlet.visible and optical.visible)
+    assert(not finished.find_child("AroSelladoCanonV5",true,false).visible)
     base.free()
     finished.free()
-    print("PASS G09 V5: closed top/side/bottom hull and turret topology, no restored old armor, full faction and damage compatibility")
+    print("PASS G09 V5: closed hull turret and V6 ceramic cheeks, no restored old optics or mantlet, faction and damage compatibility")
     quit(0)
