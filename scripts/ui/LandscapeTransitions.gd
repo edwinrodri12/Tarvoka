@@ -33,11 +33,70 @@ static func _strip(canvas: CanvasItem, a: Vector2, b: Vector2,
         a,b,b.lerp(c,inset),a.lerp(c,inset)
     ]),tint)
 
+# Each bank is a curved series of narrow TRIANGLUATED bands strictly
+# inside its known tile. The corners and gameplay diamond remain untouched.
+# Contrast remains high enough to read the coastline at tactical zoom.
+static func _shore_meander(t: float, seed: int, side: int) -> float:
+    var a: float = sin(t*TAU*1.65+float(posmod(seed*7+side*13,37))*0.19)
+    var b: float = sin(t*TAU*3.10+float(posmod(seed*11+side*5,47))*0.13)
+    return 0.145+0.030*a+0.013*b
+
+static func shore_curve(c: Vector2, hw: float,
+        side: int, seed: int, steps: int = 9) -> PackedVector2Array:
+    var points := PackedVector2Array()
+    if hw <= 0.0 or steps < 2 or side < 0 or side > 3:
+        return points
+    var edge: PackedVector2Array = _edge(_corners(c,hw),side)
+    for j in range(steps):
+        var t: float = float(j)/float(steps-1)
+        var edge_point: Vector2 = edge[0].lerp(edge[1],t)
+        points.append(edge_point.lerp(c,_shore_meander(t,seed,side)))
+    return points
+
+static func _shore_band(canvas: CanvasItem, c: Vector2, hw: float,
+        side: int, seed: int, steps: int, outer_inset: float,
+        tint: Color, highlight: Color, border_thickness: float) -> void:
+    var edge: PackedVector2Array = _edge(_corners(c,hw),side)
+    var inner: PackedVector2Array = shore_curve(c,hw,side,seed,steps)
+    if inner.size() < 2:
+        return
+    for j in range(inner.size()-1):
+        var t0: float = float(j)/float(steps-1)
+        var t1: float = float(j+1)/float(steps-1)
+        var a: Vector2 = edge[0].lerp(edge[1],t0).lerp(c,outer_inset)
+        var b: Vector2 = edge[0].lerp(edge[1],t1).lerp(c,outer_inset)
+        # Two triangles, not a concave quad, prevent polygon
+        # triangulation failures even at sharp coast bends.
+        canvas.draw_colored_polygon(PackedVector2Array([
+            a,b,inner[j]
+        ]),tint)
+        canvas.draw_colored_polygon(PackedVector2Array([
+            inner[j],b,inner[j+1]
+        ]),tint)
+        canvas.draw_line(inner[j],inner[j+1],highlight,
+            maxf(1.0,hw*border_thickness),true)
+
+static func draw_water_shore(canvas: CanvasItem, c: Vector2, hw: float,
+        land_edges: int, detail: int, seed: int) -> void:
+    if land_edges == 0 or detail <= 0 or hw <= 0.0:
+        return
+    for i in range(4):
+        if (land_edges & (1 << i)) == 0:
+            continue
+        _shore_band(canvas,c,hw,i,seed,6 if detail == 1 else 10,
+            0.028,Color("#3D9BB7"),Color("#B8EEF1"),0.033)
+        if detail >= 2:
+            var foam: PackedVector2Array = shore_curve(c,hw,i,seed,10)
+            for j in range(1,foam.size()-2,3):
+                canvas.draw_line(foam[j].lerp(c,0.22),
+                    foam[j+1].lerp(c,0.22),Color("#D7F4E9"),
+                    maxf(1.0,hw*0.023),true)
+
 static func draw_land_shore(canvas: CanvasItem, c: Vector2, hw: float,
-        water_edges: int, terrain: String, detail: int) -> void:
+        water_edges: int, terrain: String, detail: int,
+        seed: int = 0) -> void:
     if water_edges == 0 or hw <= 0.0 or detail <= 0:
         return
-    var corners: PackedVector2Array = _corners(c,hw)
     var soil := Color("#B5AD81")
     var rim := Color("#D7C99B")
     if terrain == "mountain":
@@ -52,18 +111,17 @@ static func draw_land_shore(canvas: CanvasItem, c: Vector2, hw: float,
     for i in range(4):
         if (water_edges & (1 << i)) == 0:
             continue
-        var edge: PackedVector2Array = _edge(corners,i)
-        _strip(canvas,edge[0],edge[1],c,0.20,soil)
+        _shore_band(canvas,c,hw,i,seed,6 if detail == 1 else 10,
+            0.025,soil,rim,0.022)
         if detail >= 2:
-            canvas.draw_line(edge[0].lerp(c,0.09),
-                edge[1].lerp(c,0.09),rim,maxf(1.0,hw*0.027),true)
-            # Rounded pebbles at the tide line; visually contained in
-            # the known land tile and never over water or fog.
-            for j in range(2):
-                var point: Vector2 = edge[0].lerp(edge[1],0.28+float(j)*0.43)
-                point = point.lerp(c,0.14)
-                canvas.draw_circle(point,maxf(1.1,hw*0.028),
-                    Color("#C8C0A6") if terrain != "mountain" else Color("#D2D6D4"))
+            var inner: PackedVector2Array = shore_curve(c,hw,i,seed,10)
+            # Small stones stay inside the visible bank tile.
+            for j in [2,6]:
+                var stone: Vector2 = inner[j].lerp(c,0.16)
+                canvas.draw_circle(stone,maxf(1.1,hw*0.022),
+                    Color("#C8C0A6") if terrain != "mountain" else (
+                    Color("#D2D6D4")))
+
 
 static func draw_talus(canvas: CanvasItem, c: Vector2, hw: float,
         mountain_edges: int, detail: int) -> void:
