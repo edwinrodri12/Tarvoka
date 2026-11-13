@@ -7,6 +7,8 @@ on:
     paths:
       - ".github/workflows/map-art-previews.yml"
       - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/VisualStyle.gd"
       - "scripts/ui/LandscapeDetailPainter.gd"
       - "scripts/ui/LandscapeContinuity.gd"
       - "scripts/ui/LandscapeTransitions.gd"
