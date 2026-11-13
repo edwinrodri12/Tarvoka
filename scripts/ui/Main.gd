@@ -530,6 +530,12 @@ func _ready() -> void:
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
     _set_compact_hud(OS.has_feature("mobile"))
+    # Open the actual illustrated map on Android; classic remains one tap away.
+    if OS.has_feature("mobile"):
+        board.set_isometric(true)
+        iso_view_button.text = "Vista clásica"
+        battle_minimap.visible = true
+        minimap_caption.visible = true
     call_deferred("_frame_camera_after_layout")
     set_process(true)
     _process(0.0)
@@ -735,8 +741,6 @@ func _process(_delta: float) -> void:
         _update_text(relay_status, relay_text)
     # Compact controls mirror exactly the same guards as the full sidebar.
     # Never bypass pending-order confirmation or turn ownership.
-    compact_status.text = status_label.text
-    compact_detail.text = unit_label.text.replace("\n","  ")
     compact_confirm.disabled = board.pending_order.is_empty()
     compact_confirm.text = "Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar"
     compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
@@ -805,6 +809,8 @@ func _process(_delta: float) -> void:
         _update_text(status_label, "Batalla terminada")
     else:
         _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
+    compact_status.text = status_label.text
+    compact_detail.text = unit_label.text.replace("\n","  ")
 
 func _is_relay_win(winner: int) -> bool:
     if winner not in [0, 1] or not board.state.has("control"):
