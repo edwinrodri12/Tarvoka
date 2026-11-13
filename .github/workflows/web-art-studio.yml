@@ -67,6 +67,15 @@ jobs:
           timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mbt_silhouette_v5.gd 2>&1 | tee /tmp/watertight-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/watertight-check.log; then
+            echo "G09 body topology or visual damage restoration failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V5:" /tmp/watertight-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/test_web_art_studio.gd 2>&1 | tee /tmp/studio-check.log
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-check.log; then
             echo "Model studio parsing, scene or functional test failed" >&2
