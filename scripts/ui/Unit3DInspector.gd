@@ -6,6 +6,7 @@ class_name TarvokaUnit3DInspector
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 
 var picker: OptionButton
 var faction_paint_picker: OptionButton
@@ -20,6 +21,11 @@ var _model_yaw := 0.0
 var _last_touch := Vector2.ZERO
 var _touch_active := false
 var _zoom_factor := 1.0
+var tank_animation_mode := ""
+var tank_animation_elapsed := 0.0
+var tank_animation_button: Button
+var tank_move_button: Button
+var tank_stop_button: Button
 const MIN_ZOOM := 0.65
 const MAX_ZOOM := 2.4
 
@@ -61,6 +67,27 @@ func _ready() -> void:
     faction_paint_picker.item_selected.connect(set_faction_paint)
     faction_paint_picker.visible = false
     controls.add_child(faction_paint_picker)
+
+    var animation_controls := HBoxContainer.new()
+    animation_controls.name = "TankAnimationControls"
+    animation_controls.add_theme_constant_override("separation",5)
+    controls.add_child(animation_controls)
+    tank_move_button = Button.new()
+    tank_move_button.text = "Orugas"
+    tank_move_button.custom_minimum_size.y = 42
+    tank_move_button.pressed.connect(func(): preview_tank_animation("move"))
+    animation_controls.add_child(tank_move_button)
+    tank_animation_button = Button.new()
+    tank_animation_button.text = "Disparo"
+    tank_animation_button.custom_minimum_size.y = 42
+    tank_animation_button.pressed.connect(func(): preview_tank_animation("attack"))
+    animation_controls.add_child(tank_animation_button)
+    tank_stop_button = Button.new()
+    tank_stop_button.text = "Detener"
+    tank_stop_button.custom_minimum_size.y = 42
+    tank_stop_button.pressed.connect(stop_tank_animation)
+    animation_controls.add_child(tank_stop_button)
+    animation_controls.visible = false
 
     viewport_holder = SubViewportContainer.new()
     viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport().get_visible_rect().size.y*0.355,205.0,310.0))
@@ -158,6 +185,9 @@ func show_role(role: String) -> void:
     model_root = Models.build(role,_selected_faction if role == "tank" else -1)
     preview.add_child(model_root)
     faction_paint_picker.visible = (role == "tank")
+    tank_move_button.get_parent().visible = (role == "tank")
+    tank_animation_mode = ""
+    tank_animation_elapsed = 0.0
     _current_role = role
     _model_yaw = 0.0
     _zoom_factor = 1.0
@@ -184,6 +214,31 @@ func rotate_tank_turret(degrees: float) -> void:
     if turret != null:
         turret.rotation_degrees.y = fposmod(turret.rotation_degrees.y+degrees,360.0)
 
+func preview_tank_animation(kind: String) -> void:
+    if _current_role != "tank" or model_root == null or not TankRig.has_rig(model_root):
+        return
+    if kind not in ["move","attack"]:
+        return
+    tank_animation_mode = kind
+    tank_animation_elapsed = 0.0
+    TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
+
+func stop_tank_animation() -> void:
+    tank_animation_mode = ""
+    tank_animation_elapsed = 0.0
+    if _current_role == "tank" and model_root != null:
+        TankRig.restore(model_root)
+
+func _process(delta: float) -> void:
+    if not visible or tank_animation_mode.is_empty() or model_root == null:
+        return
+    tank_animation_elapsed += maxf(0.0,delta)
+    var duration: float = TankRig.MOVE_DURATION if tank_animation_mode == "move" else TankRig.SHOT_DURATION
+    var progress: float = clampf(tank_animation_elapsed/duration,0.0,1.0)
+    TankRig.pose(model_root,tank_animation_mode,progress,Vector2i(1,-1))
+    if progress >= 1.0:
+        stop_tank_animation()
+
 func open_viewer() -> void:
     if not Models.supports(_current_role):
         show_role(str(Models.ROLES[0]))
@@ -207,6 +262,7 @@ func rotate_model(degrees: float) -> void:
     model_root.rotation_degrees.y = _model_yaw
 
 func reset_rotation() -> void:
+    stop_tank_animation()
     _zoom_factor = 1.0
     _update_camera_size()
     _model_yaw = 0.0
