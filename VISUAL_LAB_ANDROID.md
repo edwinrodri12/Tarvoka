@@ -11,6 +11,13 @@
 - Seleccionar terreno (llanura, bosque, carretera, montaña, agua), distancia de 1 a 5 y velocidad de 0.5×, 1× o 1.5×.
 - La pantalla utiliza el tablero isométrico verdadero de TARVOKA, no una simulación dibujada fuera del motor, con zoom y un interruptor de mallas 3D / sprites provisionales.
 
+## Revisión visual Android — video 242263.mp4 (13 nov 2026)
+El video confirma uso del mapa isométrico, giro del MBT en inspector, selector de etapas y apariencia destruida, pero revela que el panel lateral de 340 px quedaba demasiado estrecho en pantalla horizontal, que el visor estaba rodeado de margen gris sin utilizar y que el tablero iniciaba muy acercado.
+
+Cambios en la rama de revisión: ancho proporcional del panel (28,5 % de la pantalla, con límites de 400–700 px), fondo opaco con contraste alto, botones/selectores táctiles de 50 px, fuente más legible y mensajes de resultado cerca del selector. El tablero arranca con zoom 0,85× y permite acercar de nuevo. El inspector aumenta el área de malla 3D, encuadra el tanque más cerca y reduce margen vertical muerto; el lateral sigue desplazable.
+
+**Aún pendiente**: el video muestra humo volumétrico simple, fuego demasiado geométrico y carrocería de estilo blockout; el acabado final requiere arte mejorado y comprobación de rendimiento en el dispositivo. No confundir screenshots de CI con validación física del teléfono.
+
 ## Controles de pruebas
 - **Mover**: ejecuta un movimiento realmente permitido por la lógica, y reproduce su recorrido animado sin extender la movilidad.
 - **Ataque real**: ejecuta el ataque y su contraataque cuando las reglas y las armas permiten el enfrentamiento. El resultado mostrado corresponde a la lógica verdadera de HP.
