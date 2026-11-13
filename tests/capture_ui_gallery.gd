@@ -44,6 +44,9 @@ func _run_gallery() -> void:
     main._show_home_menu()
     if not await _capture("01-home-portrait",Vector2i(412,915),"Inicio · teléfono vertical"):
         _failed = true
+    if main.home_menu.faction_showcase.visible:
+        push_error("The eight-crest gallery must not displace portrait home buttons.")
+        _failed = true
     # Keep Continue, Story, Skirmish and Saved Matches accessible before
     # the first screenful on a normal Android phone (no mandatory scrolling).
     for key in ["Continuar","Modo historia","Escaramuza","Partidas guardadas"]:
@@ -51,6 +54,13 @@ func _run_gallery() -> void:
             _failed = true
     if not await _capture("02-home-landscape",Vector2i(1280,720),"Inicio · horizontal"):
         _failed = true
+    if not main.home_menu.faction_showcase.visible:
+        push_error("Landscape home must display the official faction emblem gallery.")
+        _failed = true
+    for crest in main.home_menu.showcase_emblems:
+        if crest.texture == null:
+            push_error("Landscape home is missing an approved faction crest.")
+            _failed = true
 
     main._prepare_skirmish()
     if not await _capture("03-skirmish-portrait",Vector2i(412,915),"Escaramuza · preparación"):
