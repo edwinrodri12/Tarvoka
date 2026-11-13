@@ -19,6 +19,14 @@ Se han modelado ocho clases reales del catálogo autorizado, sin añadir nombres
 | `fighter` | Caza multifunción | Alas triangulares con volumen, cabina, motores, estabilizadores y misiles |
 | `destroyer` | Destructor | Casco 3D afilado, cubierta, superestructura, radares, VLS, cañón, helipuerto |
 
+## Inspección 3D real desde Android
+
+La interfaz incluye un botón **«Inspeccionar 8 modelos 3D»** que abre el visor `Unit3DInspector.gd`. El jugador de pruebas puede seleccionar una de las ocho clases, girar el modelo con el dedo o los botones de 45° y restablecer su orientación. El visor usa una sola cámara 3D mientras está visible y **no modifica la partida**.
+
+## Contrato para sustituir las mallas técnicas por las definitivas
+
+`UnitModels3D.build(role)` busca primero un modelo del artista en `res://assets/units3d/<role>.glb` y **solo si falta** genera la geometría nativa de respaldo. El archivo GLB importado debe ser una escena `Node3D`, con origen cerca del centro del modelo, eje Y vertical y frente hacia -Z, escala acordada con el visor. Así pueden revisarse los modelos definitivos uno por uno sin cambiar el código de movimiento, combate, IA o guardado. Esta rama **todavía no incluye esos archivos GLB finales**.
+
 ## Integración real de juego
 
 1. `UnitModels3D.build(role)` produce un **nodo Godot 3D** con `MeshInstance3D` editables, mallas y materiales propios; sus modelos no dependen de controles de combate ni del estado serializado.
