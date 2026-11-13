@@ -135,15 +135,3 @@ jobs:
         with:
           path: build/web/
 
-  deploy-preview:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: build-art-studio
-    runs-on: ubuntu-22.04
-    environment:
-      name: github-pages
-    steps:
-      # The owner must first choose Settings -> Pages -> Build source:
-      # GitHub Actions. GITHUB_TOKEN cannot auto-enable disabled Pages.
-      - name: Deploy native model viewer to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
