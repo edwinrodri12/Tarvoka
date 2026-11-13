@@ -12,6 +12,7 @@ const Backdrop = preload("res://scripts/ui/GameUiBackdrop.gd")
 var active_side := 0
 var selected: Dictionary = Identity.defaults()
 var faction_buttons: Array[Button] = []
+var faction_card_emblems: Array[TextureRect] = []
 var side_buttons: Array[Button] = []
 var content_rail: BoxContainer
 var preview_title: Label
@@ -114,6 +115,16 @@ func _ready() -> void:
         color_block.color = Style.faction_color(i)
         color_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_child(color_block)
+        # Show the actual approved shield on each selectable faction row,
+        # not a generic placeholder or a recreated symbol.
+        var emblem := TextureRect.new()
+        emblem.texture = Style.emblem_texture(i)
+        emblem.custom_minimum_size = Vector2(50,50)
+        emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        row.add_child(emblem)
+        faction_card_emblems.append(emblem)
         var choice := Button.new()
         choice.text = str(info["name"]) + "  ·  " + str(info["motif"])
         choice.alignment = HORIZONTAL_ALIGNMENT_LEFT
