@@ -16,6 +16,7 @@ const TankArt = preload("res://scripts/ui/TankArtV6.gd")
 const TankHero = preload("res://scripts/ui/TankHeroV7.gd")
 const TankProductionV9 = preload("res://scripts/ui/TankProductionV9.gd")
 const TankArmorV10 = preload("res://scripts/ui/TankArmorV10.gd")
+const TankSilhouetteV11 = preload("res://scripts/ui/TankSilhouetteV11.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -744,6 +745,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     TankProductionV9.apply(model)
                     if art_level >= 10:
                         TankArmorV10.apply(model)
+                        if art_level >= 11:
+                            TankSilhouetteV11.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         if finish_enabled and art_level >= 7:
@@ -754,6 +757,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 TankProductionV9.restore_materials(model)
                 if art_level >= 10:
                     TankArmorV10.finish_materials(model)
+                    if art_level >= 11:
+                        TankSilhouetteV11.finish_materials(model)
         TankDamage.prepare(model)
     return model
 
