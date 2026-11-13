@@ -9,6 +9,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Board = preload("res://scripts/ui/TouchBoard.gd")
+const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 
 func _initialize() -> void:
     var terrain: Array = Scenarios.terrain(0)
@@ -82,7 +83,7 @@ func _initialize() -> void:
     board._record_attack_effect(front,shot,"A","X")
     assert(board.combat_effects.size() == 1)
     assert(board.combat_effects[0]["target"] == Vector2i(2,2))
-    board._process(0.60)
+    board._process(BattleVFX.EFFECT_SECONDS+0.04)
     assert(board.combat_effects.is_empty())
     var hidden: Dictionary = Session.start([
         Roles.make_unit("A",0,Vector2i(1,2),"tank"),
