@@ -41,6 +41,15 @@ func _run() -> void:
     ],map)
     high_order["cell"] = Vector2i(4,0)
     assert(str(Preview.estimate(uphill,high_order)["explanation"]).contains("Ataque cuesta arriba: -1"))
+    var disposable: Dictionary = Session.start([
+        Roles.make_unit("F",0,Vector2i(2,2),"fpv"),
+        Roles.make_unit("T",1,Vector2i(3,2),"tank")
+    ],map)
+    var kamikaze: Dictionary = Preview.estimate(disposable,{
+        "kind":"attack","unit_id":"F","target_id":"T","cell":Vector2i(3,2)
+    })
+    assert(bool(kamikaze["valid"]))
+    assert(bool(kamikaze["consumed"]) and int(kamikaze["attacker_after_min"]) == 0)
     # A hypothetical unseen reacted flag is never used to tell the player
     # that a defender cannot respond. No hidden ammo or readiness leaks.
     var altered: Dictionary = state.duplicate(true)
