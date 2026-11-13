@@ -26,7 +26,7 @@ func _color_average(img: Image) -> float:
 func _run() -> void:
     for level in [1,2,3]:
         var basic: Node3D = HQ.build(level,0,"operativo",false)
-        var premium: Node3D = HQ.build(level,0,"operativo",true)
+        var premium: Node3D = HQ.build(level,0,"operativo",true,false,false)
         assert(basic != null and premium != null)
         assert(not basic.has_meta("tarvoka_hq_visual_v2"))
         assert(premium.get_meta("tarvoka_hq_visual_v2",false))
@@ -50,20 +50,21 @@ func _run() -> void:
 
     # Same architectural finishes must exist in all faction palettes.
     for faction in range(8):
-        var hq: Node3D = HQ.build(1,faction,"operativo")
+        var hq: Node3D = HQ.build(1,faction,"operativo",true,false,false)
         assert(hq.get_meta("visual_faction") == faction)
         assert(hq.get_meta("tarvoka_hq_visual_v2"))
         hq.free()
-    var damaged: Node3D = HQ.build(3,1,"danado")
+    var damaged: Node3D = HQ.build(3,1,"danado",true,false,false)
     assert(damaged.find_child("DesgasteEstructuralPremium",true,false) != null)
     assert(damaged.find_child("AntenaColapsada",true,false) != null)
     damaged.free()
-    var ruins: Node3D = HQ.build(3,2,"destruido")
+    var ruins: Node3D = HQ.build(3,2,"destruido",true,false,false)
     assert(ruins.find_child("RuinasDeMandoPremium",true,false) != null)
     assert(ruins.find_child("VigaRetorcida_00",true,false) != null)
     assert(ruins.find_child("MandoBiseladoPrincipal",true,false) == null)
     ruins.free()
-    assert(FINISH._textures.size() <= 5)
+    # Four surface families share color/normal/roughness maps, even across 8 factions.
+    assert(FINISH._textures.size() <= 15)
 
     root.content_scale_size = Vector2i(1200,740)
     var scene: PackedScene = load("res://scenes/UnitArtStudioWeb.tscn")
@@ -72,6 +73,8 @@ func _run() -> void:
     root.add_child(studio)
     for i in range(5):
         await process_frame
+    studio._hq_show_v3 = false
+    studio._hq_show_v4 = false
     studio._switch_category(1)
     studio._reset_camera()
     for i in range(8):

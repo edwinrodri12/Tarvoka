@@ -8,6 +8,9 @@ on:
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
       - "scripts/ui/HeadquartersDetail3D.gd"
+      - "scripts/ui/HeadquartersHero4.gd"
+      - "tests/test_headquarters_v4.gd"
+      - "tests/export_headquarters_hero_glb.gd"
       - "tests/test_headquarters_v3.gd"
       - "tests/test_headquarters_premium_v2.gd"
       - "tests/test_web_building_studio.gd"
@@ -155,6 +158,17 @@ jobs:
           fi
           grep -q "PASS headquarters V3:" /tmp/hq-v3-check.log
           test -s artifacts/tarvoka_headquarters_v2_v3_comparison.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v4.gd 2>&1 | tee /tmp/hq-v4-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v4-check.log; then
+            echo "HQ V4 game-asset visual or model regression" >&2
+            exit 1
+          fi
+          grep -q "PASS headquarters V4:" /tmp/hq-v4-check.log
+          test -s artifacts/tarvoka_hq_v3_vs_v4_real_render.png
+          test -s artifacts/tarvoka_hq_v4_level3_render.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -174,6 +188,20 @@ jobs:
           fi
           grep -q "PASS G09 V10 GLB export:" /tmp/tarvoka-hero-glb.log
           test -s artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+      - name: Export HQ V4 as editable Blender GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_headquarters_hero_glb.gd 2>&1 | tee /tmp/hq-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-glb.log; then
+            echo "HQ V4 Blender GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V4 GLB export:" /tmp/hq-glb.log
+          test -s artifacts/TARVOKA_CuartelGeneral_V4_Nivel3_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -202,12 +230,15 @@ jobs:
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
+            artifacts/tarvoka_hq_v3_vs_v4_real_render.png
+            artifacts/tarvoka_hq_v4_level3_render.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+            artifacts/TARVOKA_CuartelGeneral_V4_Nivel3_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

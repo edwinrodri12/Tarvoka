@@ -14,12 +14,39 @@ var building_controls: VBoxContainer
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
+var hq_version_picker: OptionButton
+var hq_ground: MeshInstance3D
+var hq_key_light: DirectionalLight3D
 var _hq_show_v2 := true
 var _hq_show_v3 := true
+var _hq_show_v4 := true
 
 func _ready() -> void:
     super._ready()
     _add_building_mode()
+    _setup_architecture_stage()
+
+func _setup_architecture_stage() -> void:
+    # Only the laboratory gets a ground plane and true shadows. The actual
+    # building geometry and tactical terrain remain separate.
+    var ground_mesh := PlaneMesh.new()
+    ground_mesh.size = Vector2(120.0,120.0)
+    var ground_material := StandardMaterial3D.new()
+    ground_material.albedo_color = Color("#182d32")
+    ground_material.metallic = 0.04
+    ground_material.roughness = 0.98
+    hq_ground = MeshInstance3D.new()
+    hq_ground.name = "SueloNeutroDeEstudio3D"
+    hq_ground.mesh = ground_mesh
+    hq_ground.material_override = ground_material
+    hq_ground.position = Vector3(0,-0.28,0)
+    hq_ground.visible = false
+    preview.add_child(hq_ground)
+    for child in preview.get_children():
+        if child is DirectionalLight3D:
+            hq_key_light = child as DirectionalLight3D
+            hq_key_light.shadow_enabled = false
+            break
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -72,6 +99,20 @@ func _add_building_mode() -> void:
         "Comparar arquitectura V2 / V3",_toggle_hq_detail)
     hq_v3_compare_button.name = "ComparadorArquitecturaV3"
     hq_v3_compare_button.custom_minimum_size.y = 49
+    hq_compare_button.visible = false
+    hq_v3_compare_button.visible = false
+    _title(building_controls,"ACABADO VISUAL",14)
+    hq_version_picker = OptionButton.new()
+    hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
+    hq_version_picker.custom_minimum_size.y = 50
+    for name_version in ["V4 · Centro de mando premium",
+            "V3 · Arquitectura anterior",
+            "V2 · Primera revisión",
+            "V1 · Prototipo original"]:
+        hq_version_picker.add_item(name_version)
+    hq_version_picker.select(0)
+    hq_version_picker.item_selected.connect(_change_hq_version)
+    building_controls.add_child(hq_version_picker)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -102,9 +143,22 @@ func _add_building_mode() -> void:
     column.move_child(building_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
 
+func _change_hq_version(index: int) -> void:
+    if index < 0 or index > 3:
+        return
+    _hq_show_v2 = index <= 2
+    _hq_show_v3 = index <= 1
+    _hq_show_v4 = index == 0
+    hq_version_picker.select(index)
+    if _role == "headquarters":
+        _display_headquarters()
+
 func _toggle_hq_detail() -> void:
     _hq_show_v2 = true
+    _hq_show_v4 = false
     _hq_show_v3 = not _hq_show_v3
+    if hq_version_picker != null:
+        hq_version_picker.select(1 if _hq_show_v3 else 2)
     hq_v3_compare_button.text = (
         "Volver al diseño V3 mejorado" if not _hq_show_v3
         else "Comparar arquitectura V2 / V3")
@@ -114,6 +168,10 @@ func _toggle_hq_detail() -> void:
 
 func _toggle_hq_finish() -> void:
     _hq_show_v2 = not _hq_show_v2
+    _hq_show_v3 = false
+    _hq_show_v4 = false
+    if hq_version_picker != null:
+        hq_version_picker.select(2 if _hq_show_v2 else 3)
     hq_compare_button.text = (
         "Volver al diseño arquitectónico V2" if not _hq_show_v2
         else "Comparar con diseño anterior (V1)")
@@ -125,6 +183,10 @@ func _switch_category(index: int) -> void:
         return
     var building: bool = index == 1
     building_controls.visible = building
+    if hq_ground != null:
+        hq_ground.visible = building
+    if hq_key_light != null:
+        hq_key_light.shadow_enabled = building
     for widget in _unit_only_controls:
         widget.visible = not building
     if building:
@@ -157,23 +219,35 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3)
+    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4)
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
-        _yaw = -32.0
+        _yaw = 32.0
         _zoom = 1.0
     model_root.rotation_degrees.y = _yaw
     # Front-right camera reveals the command entrance, insignia, and helipad.
-    camera.position = Vector3(18.0,16.5,-19.0)
+    camera.position = Vector3(-18.0,16.5,-19.0)
     camera.look_at(Vector3(0,2.3,0),Vector3.UP)
     _update_camera()
     _update_details()
 
+func _reset_camera() -> void:
+    if _role == "headquarters":
+        _yaw = 32.0
+        _zoom = 1.0
+        if model_root != null:
+            model_root.rotation_degrees.y = _yaw
+        _update_camera()
+        return
+    super._reset_camera()
+
 func _update_camera() -> void:
     if _role == "headquarters":
         if camera != null:
-            camera.size = 20.0 / _zoom
+            camera.size = 18.6 / _zoom
+            if model_root != null:
+                Headquarters.set_render_detail(model_root,_zoom >= 1.24)
         return
     super._update_camera()
 
@@ -188,7 +262,7 @@ func _update_details() -> void:
     var condition: String = str(model_root.get_meta("visual_condition","operativo"))
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
-        ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2") if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
+        ("ARQUITECTURA V4" if _hq_show_v4 else ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2")) if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
     status_label.text = "%s · %s · Piezas de color: %d" % [
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),
