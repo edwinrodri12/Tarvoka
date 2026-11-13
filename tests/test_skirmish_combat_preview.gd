@@ -29,6 +29,18 @@ func _run() -> void:
     assert(str(forecast["explanation"]).contains("Cobertura enemiga: +1"))
     assert(str(forecast["counter_note"]).contains("MAXIMA"))
     assert(state == snapshot)
+    var summit: Dictionary = Session.start([
+        Roles.make_unit("A",0,Vector2i(4,0),"line"),
+        Roles.make_unit("X",1,Vector2i(4,1),"line")
+    ],map)
+    var high_order := {"kind":"attack","unit_id":"A","target_id":"X","cell":Vector2i(4,1)}
+    assert(str(Preview.estimate(summit,high_order)["explanation"]).contains("Ataque desde altura: +1"))
+    var uphill: Dictionary = Session.start([
+        Roles.make_unit("A",0,Vector2i(4,1),"line"),
+        Roles.make_unit("X",1,Vector2i(4,0),"line")
+    ],map)
+    high_order["cell"] = Vector2i(4,0)
+    assert(str(Preview.estimate(uphill,high_order)["explanation"]).contains("Ataque cuesta arriba: -1"))
     # A hypothetical unseen reacted flag is never used to tell the player
     # that a defender cannot respond. No hidden ammo or readiness leaks.
     var altered: Dictionary = state.duplicate(true)
