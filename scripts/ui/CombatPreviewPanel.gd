@@ -92,5 +92,7 @@ func update_forecast(state: Dictionary, pending: Dictionary) -> void:
     if bool(forecast["lethal"]):
         exchange.text += "   |   OBJETIVO ELIMINADO"
     effects.text = str(forecast["explanation"])
-    warning.text = "* HP aliado mínimo estimado si el enemigo responde. No es daño garantizado."
+    warning.text = ("* Unidad de un solo uso: será destruida tras ejecutar el ataque."
+        if bool(forecast.get("consumed",false)) else
+        "* HP aliado mínimo estimado si el enemigo responde. No es daño garantizado.")
     show()
