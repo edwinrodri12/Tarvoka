@@ -49,6 +49,7 @@ func _run() -> void:
         assert(front.get_parent().name == "ChasisBlindado")
         assert(rear.get_parent().name == "ChasisBlindado")
         assert(model.find_child("CubiertaCompuestaFrontalG09_%s" % side,true,false) != null)
+        assert(model.find_child("SoporteFaroBlindadoG09_%s" % side,true,false) != null)
         for end in [-1,1]:
             var drive: MeshInstance3D = model.find_child(
                 "RuedaMotrizG09_%s_%s" % [side,end],true,false) as MeshInstance3D
@@ -57,7 +58,6 @@ func _run() -> void:
         "DientesCoronasMotricesG09",true,false) as MultiMeshInstance3D
     assert(sprocket_teeth != null)
     assert(sprocket_teeth.multimesh.instance_count == 48)
-        assert(model.find_child("SoporteFaroBlindadoG09_%s" % side,true,false) != null)
     var mantlet := model.find_child("MantleteConjuntoV7",true,false) as MeshInstance3D
     assert(mantlet != null and mantlet.get_parent().name == Models.TANK_BARREL_PIVOT)
     for faction in range(8):
