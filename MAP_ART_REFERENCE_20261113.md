@@ -75,6 +75,16 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 
 **Límite:** se trata de materiales procedurales pintados por CanvasItem en 2.5D. Todavía no son materiales 3D PBR, modelos de suelo texturizados ni fotogrametría. El producto comercial debe evaluarse con capturas reales y evitar prometer paridad total hasta mejorar geometría, iluminación y detalle.
 
+## Quinto incremento — relieve orgánico y riberas curvas (13 de noviembre)
+
+- `LandscapeTransitions.gd`: reemplaza las franjas de costa rectas por bandas de nueve a diez puntos con curvas deterministas de pequeña escala. Usa **dos triángulos convexos por segmento**, evitando fallos de triangulación. Todo permanece dentro de la casilla conocida; no cambia datos del mapa ni la niebla de guerra.
+- `WorldArt.gd`: unifica la pintura de riberas terrestres y espuma de la orilla acuática con las curvas nuevas, en detalle medio y completo.
+- `LandscapeDetailPainter.gd`: siluetas rocosas de nueve vértices, facetas irregulares, estratos texturizados y nieve selectiva; cada macizo ya no depende de los mismos dos triángulos. Las copas de los pinos tienen franjas escalonadas con bordes de ramas desiguales, distinta amplitud y sombreado.
+- `tools/export_environment_preview.gd`: escenario de prueba con río serpenteante que desemboca en un estuario, cruzado por una carretera con puente, para comparar los mismos materiales con capturas originales de Godot.
+- `tests/test_landscape_materials.gd`: prueba nuevos puntos de la ribera curva para cuatro bordes y cuatro semillas, comprueba que son reproducibles y que **ninguno sale del diamante**, además de rasterizar montañas y vegetación para detectar polígonos defectuosos.
+
+**Criterio de aceptación:** CI Godot de reglas y material debe pasar sin `SCRIPT ERROR` o `ERROR`, la vista previa debe exportar PNG de detalle completo y medio, y la APK debe compilar. **Esto sigue siendo 2.5D isométrico**, no una malla de terreno 3D físicamente basada. El siguiente gran salto de fidelidad requerirá resolver la geometría tridimensional, escalar materiales/iluminación y validar el rendimiento móvil con vistas próximas y lejanas.
+
 ## Desglose de fases restantes
 
 A. Continuidad de suelo: carreteras en cuatro direcciones, riberas de aguas, cruces con puente y pruebas de niebla — **primera iteración en esta rama**.
