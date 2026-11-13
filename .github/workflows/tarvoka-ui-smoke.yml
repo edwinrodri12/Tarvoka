@@ -1,0 +1,66 @@
+name: TARVOKA UI quick smoke
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/**'
+      - 'assets/factions/**'
+      - 'tests/test_commander_presentation.gd'
+      - 'tests/test_official_faction_art.gd'
+      - 'tests/test_postbattle_results.gd'
+      - '.github/workflows/tarvoka-ui-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/**'
+      - 'assets/factions/**'
+      - 'tests/test_commander_presentation.gd'
+      - 'tests/test_official_faction_art.gd'
+      - 'tests/test_postbattle_results.gd'
+      - '.github/workflows/tarvoka-ui-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  ui-smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get official Godot 4.3 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run quick commander and UI tests without installing an APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            test_official_faction_art \
+            test_commander_presentation \
+            test_eight_faction_selection \
+            test_postbattle_results \
+            test_visual_chrome \
+            test_responsive_ui
+          do
+            echo "::group::UI check: ${test}"
+            timeout --signal=TERM --kill-after=5s 65s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then
+              echo "UI regression detected in ${test}"
+              exit 1
+            fi
+            grep -F 'PASS ' "/tmp/${test}.log" >/dev/null
+            echo "::endgroup::"
+          done
+      - name: Upload UI smoke logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-ui-smoke-logs
+          path: /tmp/test_*.log
+          if-no-files-found: ignore
