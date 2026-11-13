@@ -16,7 +16,7 @@ func _count(node: Node) -> int:
     return n
 
 func _same(a: Color, b: Color) -> bool:
-    return a.distance_to(b) < 0.02
+    return absf(a.r-b.r)+absf(a.g-b.g)+absf(a.b-b.b) < 0.02
 
 func _difference(a: Image, b: Image) -> int:
     var aa: Image = a.duplicate()
