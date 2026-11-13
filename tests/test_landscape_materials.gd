@@ -9,6 +9,7 @@ class TerrainMaterialCanvas:
     extends Control
     const WorldArt = preload("res://scripts/ui/WorldArt.gd")
     const Materials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
+    const Textures = preload("res://scripts/ui/TerrainTextureAtlas.gd")
     var detail: int = 2
 
     func _draw() -> void:
@@ -24,6 +25,8 @@ class TerrainMaterialCanvas:
             for kind_index in range(5):
                 var kind: String = ["mountain","forest","road","water","plain"][kind_index]
                 var material_c: Vector2 = c+Vector2(0,340*kind_index)
+                Textures.draw_ground(self,kind,material_c,hw,
+                    Vector2i(mask,kind_index),detail)
                 Materials.draw_surface(self,kind,material_c,hw,
                     Vector2i(mask,kind_index),detail)
             Materials.draw_road_wear(self,c+Vector2(0,680),hw,
@@ -85,6 +88,16 @@ func _run() -> void:
         for mark in range(24):
             var local: Vector2 = Materials.material_position(terrain_cell,mark)
             assert(absf(local.x)+2.0*absf(local.y) <= 0.745)
+    const Textures = preload("res://scripts/ui/TerrainTextureAtlas.gd")
+    assert(Textures.get_material("unknown",2) == null)
+    assert(Textures.get_material("plain",0) == null)
+    var same_texture: Texture2D = Textures.get_material("plain",2)
+    assert(same_texture != null)
+    assert(same_texture == Textures.get_material("plain",2))
+    assert(same_texture.get_width() == 160)
+    assert(Textures.get_material("water",1).get_width() == 96)
+    var material_count: int = Textures.texture_count()
+    assert(material_count >= 2)
     for detail in [1,2]:
         var probe := TerrainMaterialCanvas.new()
         probe.size = Vector2(1300,1700)
@@ -93,5 +106,5 @@ func _run() -> void:
         probe.queue_redraw()
         await process_frame
         probe.queue_free()
-    print("PASS landscape materials: rock grass water asphalt, masks, deterministic smooth palette and Godot draw")
+    print("PASS landscape materials: cached texture atlas, rock grass water asphalt, deterministic masks and Godot draw")
     quit(0)
