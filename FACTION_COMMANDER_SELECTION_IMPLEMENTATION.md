@@ -1,0 +1,31 @@
+# TARVOKA — Selección oficial de facciones y comandantes
+
+Implementada el 13 de noviembre de 2026 para el flujo de **Escaramuza**.
+
+## Recorrido del jugador
+
+`Inicio > Escaramuza > Elegir facciones y comandantes` abre la pantalla táctica con las ocho identidades aprobadas de `VisualStyle.FACTIONS`. Cada tarjeta identifica facción, color y motivo del emblema. Se puede elegir **Jugador (bando 0)** o **Rival (bando 1)**. Si se elige una facción asignada al otro bando, se intercambian ambas, sin duplicación accidental. **Volver** conserva las elecciones anteriores sin aplicar las tentativas; **Confirmar bandos** devuelve las selecciones a Preparar Escaramuza. La creación de la batalla sigue utilizando la confirmación original de reemplazo del autoguardado.
+
+El mundo y la partida siguen teniendo **dos bandos tácticos**. El selector presenta las **ocho identidades visuales** como opciones para esos bandos, no simula combates simultáneos de ocho facciones. No añade poderes, comandantes activos, IA especial ni modificadores de balance (los valores v0.1 definidos permanecen congelados).
+
+Los retratos e insignias de las ocho facciones que ya se aprobaron en concepto **no están todavía en `assets/factions`**, por lo que el dossier muestra **"INSIGNIA PENDIENTE"** y **"Retrato aprobado pendiente de incorporar"**. Se carga automáticamente una insignia si existe `assets/factions/<clave>.png`. Queda prohibido sustituirla por un retrato inventado sin validación.
+
+## Persistencia y compatibilidad
+
+- Las partidas nuevas que pasan por el selector guardan `visual_factions={"0":"clave","1":"clave"}`.
+- Sólo se admiten dos claves válidas y diferentes según el catálogo oficial. Se valida durante `SaveCodec.encode/decode`.
+- El campo es **opcional** en el formato actual v1; partidas anteriores siguen funcionando exactamente igual (azul/rojo).
+- El motor conserva las identidades entre turnos y al guardar/cargar.
+- Las unidades clásicas e isométricas y los objetivos de control usan los colores elegidos; el HUD indica el nombre de la facción.
+- El sistema de combate continúa usando IDs internos 0 y 1. La personalización no altera munición, economía, daño, visibilidad ni turnos.
+
+## Verificación
+
+`tests/test_eight_faction_selection.gd` revisa las ocho tarjetas oficiales, la posibilidad de cancelar, el intercambio de bandos, los cambios visuales, que abrir menús no altere partidas, validación de guardados y compatibilidad histórica. Está integrado en CI.
+
+## Pendiente para paridad visual con las artes aprobadas
+
+1. Añadir a GitHub los ocho escudos PNG oficiales con el nombre exacto del catálogo.
+2. Añadir las imágenes oficiales de comandantes, nombres y retratos tal como se aprobaron en las láminas; no inventar comandantes.
+3. Conectar las habilidades/ventajas v0.1 al motor **sólo después de confirmar su implementación y probarlas**. El selector actual es visual y funcional, pero todavía no activa bonificaciones.
+4. Verificación de la pantalla en teléfono Android real y su legibilidad vertical.
