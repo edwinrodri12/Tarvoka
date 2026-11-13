@@ -259,6 +259,37 @@ static func _tracks(parent: Node3D, side: int) -> MultiMeshInstance3D:
     parent.add_child(inst)
     return inst
 
+static func apply_final_materials(model: Node3D) -> void:
+    # Called AFTER TankSurface.apply_finish because generic PBR processing
+    # installs another albedo texture. This guarantees the actual original
+    # armored UV material is what both Android and browser ultimately render.
+    if model == null or not model.get_meta("tarvoka_mbt_hero_v7",false):
+        return
+    var painted: int = 0
+    for name in ["CorazaSoldadaHermeticaV7","TorreBajaSoldadaV7",
+            "CubiertaMotorRectificadaV7","EstibaBlindadaTraseraV7",
+            "MantleteConjuntoV7",
+            "GlacisCeramicoV7_-1","GlacisCeramicoV7_1",
+            "ModuloBlindajeCeramicoV7_-1","ModuloBlindajeCeramicoV7_1",
+            "HombroBastidorV7_-1","HombroBastidorV7_1",
+            "FaldonBlindadoIntegradoV7_-1","FaldonBlindadoIntegradoV7_1",
+            "EscotillaCircularV7_00","EscotillaCircularV7_01"]:
+        var mesh: MeshInstance3D = model.find_child(name,true,false) as MeshInstance3D
+        if mesh == null:
+            continue
+        var old: StandardMaterial3D = mesh.material_override as StandardMaterial3D
+        var mat: StandardMaterial3D = old.duplicate(true) as StandardMaterial3D if old != null else _army_material()
+        mat.albedo_color = Color.WHITE
+        mat.albedo_texture = _army_texture()
+        mat.roughness = 0.83
+        mat.metallic = 0.15
+        mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+        mesh.material_override = mat
+        painted += 1
+    model.set_meta("tarvoka_mbt_hero_v7_textured",painted)
+
+
 static func apply(model: Node3D) -> bool:
     if model == null or model.find_child(ROOT,true,false) != null:
         return false
