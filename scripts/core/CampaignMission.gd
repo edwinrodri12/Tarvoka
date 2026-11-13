@@ -168,11 +168,23 @@ static func decode(raw_text: String) -> Dictionary:
         if not (value is float or value is int) or float(value) != float(int(value)):
             return {}
         mission[key] = int(value)
-    mission["battle"] = battle
-    if not valid_meta(mission):
+    # Check beacon coordinates numerically before replacing the JSON array
+    # with canonical integer coordinates. Godot can parse JSON numbers as
+    # floating point, which makes raw nested Array equality unreliable.
+    var stored_beacons: Variant = mission.get("beacons")
+    if not (stored_beacons is Array) or stored_beacons.size() != BEACONS.size():
         return {}
+    for i in range(BEACONS.size()):
+        var pair: Variant = stored_beacons[i]
+        if not (pair is Array) or pair.size() != 2:
+            return {}
+        for axis in range(2):
+            var n: Variant = pair[axis]
+            if not (n is float or n is int) or float(n) != float(int(n)) or int(n) != int(BEACONS[i][axis]):
+                return {}
     mission["beacons"] = BEACONS.duplicate(true)
-    return mission
+    mission["battle"] = battle
+    return mission if valid_meta(mission) else {}
 
 static func valid_meta(mission: Dictionary) -> bool:
     if str(mission.get("id","")) != CHAPTER_ID or int(mission.get("version",-1)) != SAVE_VERSION:
