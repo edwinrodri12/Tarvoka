@@ -16,6 +16,7 @@ var terrain_controls: VBoxContainer
 var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
 var terrain_grid_toggle: CheckButton
+var terrain_continuous_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
@@ -133,6 +134,13 @@ func _add_building_mode() -> void:
     terrain_samples_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_samples_toggle)
 
+    terrain_continuous_toggle = CheckButton.new()
+    terrain_continuous_toggle.name = "CompararSueloV1V2"
+    terrain_continuous_toggle.text = "Suelo continuo V2 (desactivar para V1)"
+    terrain_continuous_toggle.button_pressed = true
+    terrain_continuous_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_continuous_toggle)
+
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
     terrain_light_picker.name = "LuzDeEntorno"
@@ -238,7 +246,8 @@ func _display_terrain() -> void:
         model_root.queue_free()
     _role = "terrain"
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
-        terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,_faction)
+        terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
+        _faction,terrain_continuous_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
