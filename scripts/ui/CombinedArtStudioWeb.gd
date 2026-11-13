@@ -181,6 +181,7 @@ func _switch_category(index: int) -> void:
         widget.visible = not building and not terrain
     faction_picker.visible = building or terrain
     if building:
+        _restore_default_lighting()
         _display_headquarters()
     elif terrain:
         _display_terrain()
