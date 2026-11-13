@@ -7,10 +7,15 @@ signal home_requested
 
 const Data = preload("res://scripts/ui/ResultsData.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
+const CommanderStrip = preload("res://scripts/ui/CommanderIdentityStrip.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 var title_label: Label
 var cause_label: Label
 var stats_column: VBoxContainer
+var commander_matchup: Control
+var _side_labels: Array[String] = ["AZUL","ROJO"]
+var _side_tints: Array[Color] = [Color("#82C5FF"),Color("#FF9D96")]
 var hint_label: Label
 var _data: Dictionary = {}
 
@@ -36,6 +41,9 @@ func _ready() -> void:
     cause_label = _label("",15,Color("#C2D6E1"))
     cause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     main.add_child(cause_label)
+    commander_matchup = CommanderStrip.new()
+    commander_matchup.name = "ComandantesDelResultado"
+    main.add_child(commander_matchup)
     var divider := HSeparator.new()
     main.add_child(divider)
     var scroll := ScrollContainer.new()
@@ -105,10 +113,10 @@ func _line(label_text: String,blue: String,red: String) -> void:
     row.add_child(_label(label_text,13,Color("#E6D6AE")))
     var metrics := HBoxContainer.new()
     row.add_child(metrics)
-    var blue_value := _label("AZUL  "+blue,15,Color("#82C5FF"))
+    var blue_value := _label(_side_labels[0]+"  "+blue,15,_side_tints[0])
     blue_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     metrics.add_child(blue_value)
-    var red_value := _label("ROJO  "+red,15,Color("#FF9D96"))
+    var red_value := _label(_side_labels[1]+"  "+red,15,_side_tints[1])
     red_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     metrics.add_child(red_value)
 
@@ -123,9 +131,19 @@ func open_for(state: Dictionary, viewer: int = 0) -> void:
         hide()
         return
     _clear()
+    commander_matchup.bind_state(state,false)
+    # Preserve the typed Array[String]; Godot 4 rejects replacing it
+    # with an untyped conditional array at runtime.
+    _side_labels[0] = "BANDO 1" if state.has(Identity.STATE_FIELD) else "AZUL"
+    _side_labels[1] = "BANDO 2" if state.has(Identity.STATE_FIELD) else "ROJO"
+    _side_tints[0] = Identity.color_for(state,0) if state.has(Identity.STATE_FIELD) else Color("#82C5FF")
+    _side_tints[1] = Identity.color_for(state,1) if state.has(Identity.STATE_FIELD) else Color("#FF9D96")
     var winner: int = int(_data["winner"])
     var victory: bool = winner == viewer
-    title_label.text = ("VICTORIA" if victory else "DERROTA") + (" · AZUL" if winner == 0 else " · ROJO")
+    var winner_name: String = Identity.name_for(state,winner).to_upper()
+    if not state.has(Identity.STATE_FIELD):
+        winner_name = "AZUL" if winner == 0 else "ROJO"
+    title_label.text = ("VICTORIA" if victory else "DERROTA") + " · " + winner_name
     title_label.add_theme_color_override("font_color",Color("#8FE3B6") if victory else Color("#FFA19B"))
     cause_label.text = str(_data["cause"])
     _line("Unidades supervivientes",str(_data["survivors"][0]),str(_data["survivors"][1]))

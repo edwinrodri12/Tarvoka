@@ -40,6 +40,16 @@ jobs:
           fi
           grep -F 'PASS approved faction assets' /tmp/tarvoka-official-faction-art.log
 
+      - name: Validate commander portraits in battle and responsive Android selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_commander_presentation.gd 2>&1 | tee /tmp/tarvoka-commanders-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-commanders-ui.log; then
+            echo 'Commander UI or responsive layout regression'; exit 1
+          fi
+          grep -F 'PASS commander presentation' /tmp/tarvoka-commanders-ui.log
+
       - name: Validate eight official faction identities, commander slot and save-safe skirmish selection
         shell: bash
         run: |

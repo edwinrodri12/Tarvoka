@@ -21,7 +21,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
-const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
@@ -158,7 +158,7 @@ func _unit_action(body: VBoxContainer, role: String, label_text: String, action:
     var portrait := UnitIcon.new()
     portrait.custom_minimum_size = Vector2(62,62)
     row.add_child(portrait)
-    portrait.configure(role,VisualStyle.faction_color(clampi(faction,0,7)))
+    portrait.configure(role,Identity.color_for(board.state,clampi(faction,0,1)))
     _action(row,label_text,action,enabled)
 
 func _production_unit_row(role: String, viewer: int) -> void:
@@ -181,7 +181,7 @@ func _production_unit_row(role: String, viewer: int) -> void:
     var portrait := UnitIcon.new()
     portrait.custom_minimum_size = Vector2(52,52)
     top.add_child(portrait)
-    portrait.configure(role,VisualStyle.faction_color(clampi(viewer,0,7)))
+    portrait.configure(role,Identity.color_for(board.state,clampi(viewer,0,1)))
     var details := VBoxContainer.new()
     details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     top.add_child(details)
@@ -238,7 +238,8 @@ func refresh() -> void:
     var state: Dictionary = board.state
     var faction: int = int(state.get("faction",0))
     var viewer: int = 0 if bool(board.ai_enabled) else faction
-    var turn_text := "Turno: %s" % ("Alianza Azul" if faction == 0 else "Faccion Roja")
+    var side_name: String = Identity.name_for(state,faction) if state.has(Identity.STATE_FIELD) else ("Alianza Azul" if faction == 0 else "Faccion Roja")
+    var turn_text := "Turno: %s" % side_name
     if state.has("economy"):
         var funds: Array = state["economy"].get("credits",[])
         if funds.size() > viewer and viewer >= 0:
