@@ -50,6 +50,15 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
+      - name: Validate first eight genuine Godot 3D unit models and in-game fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_native_unit_models_3d.gd 2>&1 | tee /tmp/tarvoka-3d-units.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-3d-units.log; then
+            echo "3D military unit model regression"; exit 1
+          fi
+
       - name: Validate isometric projection touch gestures and unchanged battle rules
         shell: bash
         run: |
