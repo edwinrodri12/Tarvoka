@@ -38,7 +38,8 @@ func _run() -> void:
     assert(SitePaint.owner_tint(-1) != SitePaint.owner_tint(-2))
     assert(state == original)
     var taken: Dictionary = state.duplicate(true)
-    Economy.site_at(taken["economy"],factory)["produced_turn"] = int(taken["economy"]["turn"])
+    var used_factory: Dictionary = Economy.site_at(taken["economy"],factory)
+    used_factory["produced_turn"] = int(taken["economy"]["turn"])
     assert(_at(SiteData.snapshots(taken),factory)["status"] == "used")
     assert(SitePaint.status_symbol(_at(SiteData.snapshots(taken),factory)) == "-")
     var poor: Dictionary = state.duplicate(true)
@@ -85,7 +86,8 @@ func _run() -> void:
     assert(not str(remembered).contains("Rival"))
     # The current owner does not matter unless a scouting unit observes it.
     var remote: Dictionary = fogged.duplicate(true)
-    Economy.site_at(remote["economy"],rival_city)["owner"] = -1
+    var rival_site: Dictionary = Economy.site_at(remote["economy"],rival_city)
+    rival_site["owner"] = -1
     assert(_at(SiteData.snapshots(remote),rival_city) == remembered)
     assert(fogged["units"] == dark["units"])
 
@@ -98,7 +100,8 @@ func _run() -> void:
     var baseline: Array = board.site_overlay_snapshots()
     assert(not baseline.is_empty())
     var site_change: Dictionary = board.state.duplicate(true)
-    Economy.site_at(site_change["economy"],factory)["produced_turn"] = int(site_change["economy"]["turn"])
+    var site_modified: Dictionary = Economy.site_at(site_change["economy"],factory)
+    site_modified["produced_turn"] = int(site_change["economy"]["turn"])
     board.state = site_change
     assert(_at(board.site_overlay_snapshots(),factory)["status"] == "used")
     assert(board.state == site_change)
