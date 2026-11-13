@@ -70,9 +70,9 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
         var seed: int = x * 7349 + z * 9283 + preset * 5671
         if kind == "plain" or kind == "forest":
             # Leave enough empty ground for roads, vehicles and buildings.
-            var quantity: int = 3 if kind == "forest" else 2
+            var quantity: int = 6 if kind == "forest" else 5
             if preset == 1:
-                quantity = 1 if kind == "plain" else 2
+                quantity = 3 if kind == "plain" else 4
             for i in range(quantity):
                 var rx: float = _variation(seed,i*7+2)
                 var rz: float = _variation(seed,i*11+19)

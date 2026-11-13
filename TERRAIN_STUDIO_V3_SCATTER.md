@@ -13,7 +13,7 @@ terreno táctico ficticio ni cambios en los modelos de tanque y Cuartel General.
 - Cada bioma tiene una paleta propia (verde bosque, tonos secos en cañón,
   vegetación costera en el delta). Distribución reproducible por escena y celda.
 - Control **Vegetación y orillas detalladas V3** en Entorno y mapa 3D. Es
-  independiente de cuadrícula, iluminación, modelos de referencia y V1/V2.
+  independiente de cuadrícula, iluminación y modelos de referencia. Al apagar V3 se restaura la capa de hierba V2 para comparar; la vista de bloques V1 sigue siendo independiente.
 - El contador muestra cuántas piezas visuales instanciadas existen y cuántos lotes
   se utilizan. V1, por definición, no usa esta pasada: la comparativa V1/V2
   permanece limpia.

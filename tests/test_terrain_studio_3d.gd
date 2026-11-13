@@ -47,12 +47,21 @@ func _run() -> void:
     assert(not studio.model_root.get_meta("terrain_studio_scatter"))
     assert(studio.model_root.find_child("HierbaInstanciadaV3",true,false) == null)
     assert(int(studio.model_root.get_meta("terrain_scatter_counts").get("grass",0)) == 0)
+    var old_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
+    assert(old_grass != null and old_grass.multimesh.instance_count >= 100)
     studio.terrain_scatter_toggle.button_pressed = true
     studio._rebuild_terrain(true)
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
     assert(key_light.shadow_enabled)
+    var fill_light: DirectionalLight3D = studio.preview.get_child(3) as DirectionalLight3D
+    assert(fill_light != null)
+    assert(key_light.light_energy >= 0.50 and key_light.light_energy < 1.0)
+    assert(fill_light.light_energy <= 0.32)
+    assert(key_light.light_energy > fill_light.light_energy*2.0)
+    assert(not fill_light.shadow_enabled)
     studio.terrain_shadow_toggle.button_pressed = false
     studio._change_terrain_shadow(false)
     assert(not key_light.shadow_enabled)
@@ -65,6 +74,7 @@ func _run() -> void:
     assert(ground.mesh.get_surface_count() == 1)
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
+    assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
     assert(int(old_counts.get("road",0)) > 0)
     assert(int(old_counts.get("water",0)) > 0)
@@ -82,6 +92,7 @@ func _run() -> void:
     assert(not studio.model_root.get_meta("terrain_studio_continuous"))
     assert(not studio.model_root.get_meta("terrain_studio_scatter"))
     assert(studio.model_root.find_child("SueloContinuoConRelieve",true,false) == null)
+    assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     assert(studio.model_root.find_child("Casilla_00_00_mountain",true,false) != null)
     for i in range(7):
         await process_frame
@@ -150,6 +161,9 @@ func _run() -> void:
         if preset == 1:
             assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
             assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
+            assert(studio.model_root.find_child("PuenteElevado_6",true,false) != null)
+            assert(Terrain.kind(3,0,preset) == "water")
+            assert(Terrain.kind(6,9,preset) == "water")
             assert(studio.model_root.find_child("PilarPuente",true,false) != null)
         if preset == 2:
             assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or

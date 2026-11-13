@@ -101,7 +101,8 @@ static func kind(x: int, z: int, scene: int) -> String:
             if z == 5 and x in [3,6,7]:
                 return "road"
             var river_left: int = 3 + int(z / 3)
-            if z >= 1 and z <= 8 and (x == river_left or x == river_left + 1):
+            # Continue the river to the map boundaries: no abrupt river ends.
+            if x == river_left or x == river_left + 1:
                 return "water"
             if x <= 2 or (x >= 9 and z <= 4):
                 return "mountain"
@@ -182,6 +183,17 @@ static func _vertex_tint(grid_x: int, grid_z: int, scene: int) -> Color:
         return SAND
     return result * (1.0 / float(neighbors))
 
+static func _water_corner_tint(x: int, z: int, scene: int) -> Color:
+    # Deterministic shallow turquoise at shores, dark blue farther away.
+    var near_shore: int = 0
+    for dz in [-1,0]:
+        for dx in [-1,0]:
+            var terrain: String = kind(x+dx,z+dz,scene)
+            if terrain != "water" and terrain != "outside":
+                near_shore += 1
+    var depth_mix: float = 1.0 - float(near_shore)/4.0
+    return Color("#4b91a3").lerp(Color("#25536f"),depth_mix)
+
 static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
     # Deliberately unindexed: faceted normals describe readable low-poly relief.
@@ -210,9 +222,12 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
                 var b := center+Vector3(half,WATER_LEVEL,-half)
                 var d := center+Vector3(half,WATER_LEVEL,half)
                 var e := center+Vector3(-half,WATER_LEVEL,half)
-                for triangle in [[a,e,b],[b,e,d]]:
-                    _triangle(water,triangle[0],triangle[1],triangle[2],
-                        WATER,WATER,WATER)
+                var nw: Color = _water_corner_tint(x,z,scene)
+                var ne: Color = _water_corner_tint(x+1,z,scene)
+                var se: Color = _water_corner_tint(x+1,z+1,scene)
+                var sw: Color = _water_corner_tint(x,z+1,scene)
+                _triangle(water,a,e,b,nw,sw,ne)
+                _triangle(water,b,e,d,ne,sw,se)
                 continue
             var corners: Array[Vector3] = [
                 center+Vector3(-half,0,-half),
@@ -261,7 +276,12 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
     var water_surface := MeshInstance3D.new()
     water_surface.name = "LaminaDeAguaContinua"
     water_surface.mesh = water.commit()
-    water_surface.material_override = _material(WATER,0.28)
+    var water_mat := StandardMaterial3D.new()
+    water_mat.vertex_color_use_as_albedo = true
+    water_mat.roughness = 0.32
+    water_mat.metallic = 0.05
+    water_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    water_surface.material_override = water_mat
     parent.add_child(water_surface)
     _box(parent,"LechoSubmarino",Vector3(0,BASE_LEVEL-0.09,0),
         Vector3(float(WIDTH)*CELL,0.20,float(HEIGHT)*CELL),DEEP_WATER)
@@ -312,6 +332,62 @@ static func _ellipsoid(parent: Node3D, label: String, center: Vector3,
     leaf.material_override = _material(tint)
     parent.add_child(leaf)
     return leaf
+
+static func _scatter_grass(parent: Node3D, scene: int) -> void:
+    # Efficient visible texture for large battlefields: hundreds of blades,
+    # but exactly ONE MultiMesh draw group instead of many Godot nodes.
+    var grass_mesh_tool := SurfaceTool.new()
+    grass_mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for blade_index in range(3):
+        var angle: float = float(blade_index)*TAU/3.0
+        var dx: float = cos(angle)*0.115
+        var dz: float = sin(angle)*0.115
+        var height: float = 0.24 if blade_index == 0 else 0.17
+        var triangle: Array[Vector3] = [
+            Vector3(-dx,0,-dz), Vector3(dx,0,dz),
+            Vector3(-dz*0.15,height,dx*0.15)]
+        # Both faces are rendered with CULL_DISABLED, so no doubles.
+        for vertex in triangle:
+            grass_mesh_tool.add_vertex(vertex)
+    grass_mesh_tool.generate_normals()
+    var mesh: ArrayMesh = grass_mesh_tool.commit()
+    var mat: StandardMaterial3D = _material(
+        Color("#527a46") if scene == 0 else (
+        Color("#99885e") if scene == 1 else Color("#3c7765"))
+    var grass_material := mat.duplicate() as StandardMaterial3D
+    grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    grass_material.roughness = 0.98
+    mesh.surface_set_material(0,grass_material)
+    var candidates: Array[Transform3D] = []
+    for z in range(HEIGHT):
+        for x in range(WIDTH):
+            if kind(x,z,scene) not in ["plain","forest"]:
+                continue
+            var origin: Vector3 = _cell_center(x,z)
+            var seed: int = x*83+z*127
+            for index in range(7):
+                var a: float = float(posmod(seed*3 + index*29,360))*PI/180.0
+                var r: float = 0.35+float(posmod(seed+index*17,19))*0.038
+                var offset := Vector3(cos(a)*r,0,sin(a)*r)
+                var pos: Vector3 = origin+offset
+                pos.y = height_at(x,z,scene)+0.012
+                var yaw: float = float(posmod(seed*7+index*13,360))*PI/180.0
+                var scale_factor: float = 0.69+float(posmod(seed+index*5,11))*0.055
+                var transform := Transform3D(Basis(Vector3.UP,yaw),pos)
+                transform.basis = transform.basis.scaled(Vector3.ONE*scale_factor)
+                candidates.append(transform)
+    if candidates.is_empty():
+        return
+    var multi := MultiMesh.new()
+    multi.transform_format = MultiMesh.TRANSFORM_3D
+    multi.mesh = mesh
+    multi.instance_count = candidates.size()
+    for index in range(candidates.size()):
+        multi.set_instance_transform(index,candidates[index])
+    var group := MultiMeshInstance3D.new()
+    group.name = "HierbaInstanciadaEnUnaMalla"
+    group.multimesh = multi
+    parent.add_child(group)
 
 static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> void:
     var size: float = 0.75 + float(posmod(seed,5))*0.085
@@ -469,6 +545,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.add_child(props)
     if continuous:
         _continuous_ground(tiles,preset)
+        if not show_scatter:
+            _scatter_grass(props,preset) # Exact legacy V2 comparison.
     var detail_cells: Array[Dictionary] = []
     for z in range(HEIGHT):
         for x in range(WIDTH):
@@ -517,7 +595,10 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     _shore(props,x,z,preset,p,top)
                 "water":
                     _water_details(props,p,x,z,preset)
-                    if preset == 1 and z == 5 and x in [4,5]:
+                    # Both east-west causeways remain visually continuous
+                    # over the winding river at rows 5 and 8.
+                    if preset == 1 and ((z == 5 and x in [4,5]) or
+                        (z == 8 and x in [5,6])):
                         _bridge(props,p,x)
             if show_grid:
                 var grid_tint: Color = Color("#223842") if type != "water" else Color("#19566d")
