@@ -64,8 +64,9 @@ static func _enemy_unit(state: Dictionary, enemy_id: String, viewer: int) -> Dic
         var body: String = "Vida %d  ·  ATQ %d  ·  DEF %d  ·  MOV base %d" % [
             int(unit.get("hp",0)),int(unit.get("attack",0)),int(unit.get("defense",0)),int(unit.get("move_points",0))
         ]
+        var threat_cells: Dictionary = intel.get("attacks",{})
         body += "\nAlcance %d–%d  ·  Amenaza teorica %d casillas" % [
-            int(unit.get("attack_min_range",1)),int(unit.get("attack_range",1)),(intel.get("attacks",{}) as Dictionary).size()
+            int(unit.get("attack_min_range",1)),int(unit.get("attack_range",1)),threat_cells.size()
         ]
         body += "\n" + Terrain.defensive_description(unit,observed["terrain"],observed.get("economy",{}))
         return _card("enemy",title,body)
