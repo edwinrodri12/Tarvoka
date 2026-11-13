@@ -47,7 +47,7 @@ jobs:
           timeout --signal=TERM --kill-after=5s 110s \
             xvfb-run -a -s "-screen 0 1600x960x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
-              --path . --rendering-driver opengl3 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
               --script res://tools/export_environment_preview.gd \
             2>&1 | tee /tmp/tarvoka-env-preview.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Invalid polygon|Assertion failed' /tmp/tarvoka-env-preview.log; then
