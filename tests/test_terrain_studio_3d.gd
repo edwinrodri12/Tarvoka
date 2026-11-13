@@ -27,6 +27,28 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.terrain_scatter_toggle.button_pressed)
+    var detail: Dictionary = studio.model_root.get_meta("terrain_scatter_counts",{})
+    assert(int(detail.get("grass",0)) > 0)
+    assert(int(detail.get("reeds",0)) > 0)
+    assert(int(detail.get("batches",0)) <= 3)
+    var first_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+    assert(first_grass != null and first_grass.multimesh != null)
+    assert(first_grass.multimesh.instance_count == int(detail["grass"]))
+    var first_origin: Vector3 = first_grass.multimesh.get_instance_transform(0).origin
+    studio._rebuild_terrain(false)
+    var second_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+    assert(second_grass != null)
+    assert(second_grass.multimesh.get_instance_transform(0).origin.is_equal_approx(first_origin))
+    studio.terrain_scatter_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_studio_scatter"))
+    assert(studio.model_root.find_child("HierbaInstanciadaV3",true,false) == null)
+    assert(int(studio.model_root.get_meta("terrain_scatter_counts").get("grass",0)) == 0)
+    studio.terrain_scatter_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
@@ -58,6 +80,7 @@ func _run() -> void:
     studio.terrain_continuous_toggle.button_pressed = false
     studio._rebuild_terrain(false)
     assert(not studio.model_root.get_meta("terrain_studio_continuous"))
+    assert(not studio.model_root.get_meta("terrain_studio_scatter"))
     assert(studio.model_root.find_child("SueloContinuoConRelieve",true,false) == null)
     assert(studio.model_root.find_child("Casilla_00_00_mountain",true,false) != null)
     for i in range(7):
@@ -110,6 +133,17 @@ func _run() -> void:
         assert(int(counts.get("road",0)) > 0)
         assert(int(counts.get("mountain",0)) > 0)
         assert(int(counts.get("forest",0)) > 0)
+        var scatter: Dictionary = studio.model_root.get_meta("terrain_scatter_counts",{})
+        assert(int(scatter.get("grass",0)) > 0)
+        assert(int(scatter.get("batches",0)) <= 3)
+        var visual_grass: MultiMeshInstance3D = studio.model_root.find_child(
+            "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+        assert(visual_grass != null)
+        for sample in range(mini(visual_grass.multimesh.instance_count,20)):
+            var pos: Vector3 = visual_grass.multimesh.get_instance_transform(sample).origin
+            var grid_x: int = roundi(pos.x / Terrain.CELL + float(Terrain.WIDTH-1)*0.5)
+            var grid_z: int = roundi(pos.z / Terrain.CELL + float(Terrain.HEIGHT-1)*0.5)
+            assert(Terrain.kind(grid_x,grid_z,preset) in ["plain","forest"])
         assert(Terrain.kind(-1,0,preset) == "outside")
         if preset == 0:
             assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)
