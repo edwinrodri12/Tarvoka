@@ -21,6 +21,7 @@ on:
       - "tests/test_g09_production_v9.gd"
       - "tests/test_g09_sculpted_v10.gd"
       - "tests/test_g09_structural_v11.gd"
+      - "tests/test_g09_art_v12.gd"
       - "tests/test_mbt_silhouette_v5.gd"
   push:
     branches:
@@ -213,6 +214,35 @@ jobs:
           fi
           grep -q "PASS G09 V11 GLB export:" /tmp/g09-v11-glb.log
           test -s artifacts/TARVOKA_G09_V11_Escultura_Editable.glb
+      - name: Render G09 V12 improvement, five-stage damage and same-camera V11 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v12.gd 2>&1 | tee /tmp/g09-v12-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v12-art.log; then
+            echo "V12 body panels, color, damage or real render failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V12:" /tmp/g09-v12-art.log
+          test -s artifacts/tarvoka_g09_v11_v12_same_camera.png
+          test -s artifacts/tarvoka_g09_v12_four_angles.png
+      - name: Export fully editable V12 production model to glTF
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v12_glb.gd 2>&1 | tee /tmp/g09-v12-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v12-glb.log; then
+            echo "V12 GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V12 GLB export:" /tmp/g09-v12-glb.log
+          test -s artifacts/TARVOKA_G09_V12_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -246,10 +276,13 @@ jobs:
             artifacts/tarvoka_g09_v10_four_angles.png
             artifacts/tarvoka_g09_v10_vs_v11_same_camera.png
             artifacts/tarvoka_g09_v11_four_angles.png
+            artifacts/tarvoka_g09_v11_v12_same_camera.png
+            artifacts/tarvoka_g09_v12_four_angles.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V11_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V12_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
