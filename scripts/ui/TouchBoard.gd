@@ -19,6 +19,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
@@ -78,7 +79,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8)) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}) -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -119,6 +120,9 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
+    if Identity.is_valid(chosen_factions):
+        # Cosmetic team presentation only; no new engine faction values.
+        state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
     inspected_cell = Vector2i(-1,-1)
     if is_seeded:
         state["map_seed"] = map_seed
@@ -422,7 +426,7 @@ func _draw() -> void:
         if airborne:
             center += Vector2(tile * 0.24, -tile * 0.22)
         var is_player := int(unit["faction"]) == 0
-        var color: Color = VisualStyle.faction_color(0 if is_player else 1)
+        var color: Color = Identity.color_for(state,0 if is_player else 1)
         var face: Color = color.darkened(0.45) if unit.get("acted", false) else (color.darkened(0.18) if unit.get("moved", false) else color)
         # Circle vs square still indicates faction. Smaller airborne symbols
         # have an independent light ring and wing cross, not a borrowed asset.
