@@ -154,12 +154,13 @@ func _run() -> void:
     for settle in range(3):
         await process_frame
     var parked_model: Node3D = capture.parked_tank_models["T-01"] as Node3D
+    var previous_viewport: SubViewport = capture.parked_tank_viewports["T-01"] as SubViewport
     assert(parked_model != null and Rig.has_rig(parked_model))
     assert(capture.parked_tank_viewports["T-01"].render_target_update_mode != SubViewport.UPDATE_ALWAYS)
     # A new move reuses the same viewport and its expensive 3D mesh.
     capture.call("update_tank_actions",units,movement,[],true,vision,false)
     assert(capture.call("live_tank_count") == 1)
-    assert(capture.live_tank_viewports["T-01"] == frozen.get_viewport() if frozen is SubViewportTexture else true)
+    assert(capture.live_tank_viewports["T-01"] == previous_viewport)
     capture.call("update_tank_actions",units,movement,[],true,vision,true)
     assert(capture.call("live_tank_count") == 0)
     assert(capture.call("parked_tank_count") == 0)
