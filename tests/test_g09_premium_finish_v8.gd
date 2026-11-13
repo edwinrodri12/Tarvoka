@@ -11,7 +11,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var model: Node3D = Models.build("tank",0)
+    var model: Node3D = Models.build("tank",0,true,8)
     assert(model != null and model.get_meta("tarvoka_mbt_premium_finish_v8",false))
     assert(Models.paintable_count(model) == 14)
     var hull := model.find_child("CorazaSoldadaHermeticaV7",true,false) as MeshInstance3D
