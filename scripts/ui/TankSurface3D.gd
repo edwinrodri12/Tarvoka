@@ -64,9 +64,9 @@ static func material_family(node_name: String) -> String:
     var key: String = node_name.to_lower()
     if "oruga" in key or "zapata" in key or "neumatico" in key or "banda" in key:
         return SURFACE_RUBBER
-    if "optic" in key or "visor" in key or "cristal" in key or "periscopio" in key or "camara" in key or "termic" in key:
+    if "optic" in key or "visor" in key or "cristal" in key or "periscopio" in key or "camara" in key or "termic" in key or "lente" in key or "sensor" in key:
         return SURFACE_OPTIC
-    if "canon" in key or "boca" in key or "rodillo" in key or "buj" in key or "metal" in key or "rejilla" in key or "escape" in key:
+    if "canon" in key or "boca" in key or "rodillo" in key or "buj" in key or "metal" in key or "rejilla" in key or "escape" in key or "soldadura" in key or "perno" in key or "bisagra" in key:
         return SURFACE_METAL
     return SURFACE_ARMOR
 
