@@ -146,6 +146,16 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_urban_economy.gd
 
+      - name: Validate slow mountain climb and contextual Android unit/building/terrain HUD
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_mountain_inspection_hud.gd 2>&1 | tee /tmp/tarvoka-inspection-hud.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-inspection-hud.log; then
+            echo "Mountain movement or contextual HUD regression"; exit 1
+          fi
+          grep -F "PASS mountain mobility and contextual inspection" /tmp/tarvoka-inspection-hud.log
+
       - name: Check mountain height, forest and city cover, tactical flanks and terrain-aware counterfire
         shell: bash
         run: |
