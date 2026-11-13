@@ -37,19 +37,33 @@ func _run() -> void:
     var gun: Node3D = tank.find_child(Models.TANK_BARREL_PIVOT,true,false) as Node3D
     var wheel: MeshInstance3D = tank.find_child("Rodillo-1_00",true,false) as MeshInstance3D
     assert(turret != null and gun != null and wheel != null)
+    var flash_fx: Node3D = tank.find_child("EfectoFogonazoCanon",true,false) as Node3D
+    var smoke_fx: Node3D = tank.find_child("EfectoHumoCanon",true,false) as Node3D
+    var dust_fx: Node3D = tank.find_child("EfectoPolvoOrugas",true,false) as Node3D
+    var impact_fx: Node3D = tank.find_child("EfectoImpactoBlindaje",true,false) as Node3D
+    assert(flash_fx != null and smoke_fx != null and dust_fx != null and impact_fx != null)
+    assert(not flash_fx.visible and not smoke_fx.visible and not dust_fx.visible and not impact_fx.visible)
+    var light_mesh: MeshInstance3D = tank.find_child("NucleoLuminoso",true,false) as MeshInstance3D
+    var smoke_mesh: MeshInstance3D = tank.find_child("NubeHumo",true,false) as MeshInstance3D
+    assert(light_mesh.material_override.emission_enabled)
+    assert(smoke_mesh.material_override.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA)
     var rest_y: float = tank.position.y
     var wheel_at_rest: Basis = wheel.transform.basis
     assert(Rig.pose(tank,"move",0.18,Vector2i(1,0)))
     assert(tank.position.y < rest_y)
     assert(not wheel.transform.basis.is_equal_approx(wheel_at_rest))
     assert(tracks.material_override.uv1_offset.y > 0.0)
+    assert(dust_fx.visible and not flash_fx.visible)
     assert(Rig.pose(tank,"attack",0.15,Vector2i(1,0)))
     assert(absf(turret.rotation_degrees.y) > 15.0)
     assert(gun.rotation_degrees.x >= 4.0)
     assert(gun.position.z > -0.56)
+    assert(flash_fx.visible and smoke_fx.visible and not dust_fx.visible)
     assert(Rig.pose(tank,"damaged",0.35))
     assert(not is_zero_approx(tank.rotation_degrees.z))
+    assert(impact_fx.visible and not flash_fx.visible)
     Rig.restore(tank)
+    assert(not impact_fx.visible and not smoke_fx.visible)
     assert(is_equal_approx(tank.position.y,rest_y))
     assert(is_zero_approx(turret.rotation_degrees.y))
     assert(is_zero_approx(gun.rotation_degrees.x))
@@ -118,6 +132,20 @@ func _run() -> void:
     assert(live_turret != null and absf(live_turret.rotation_degrees.y) > 1.0)
     assert(capture.live_tank_render_updates >= 3)
     assert(capture.call("live_tank_count") <= Captures.MAX_LIVE_TANKS)
+    var both_visible: Dictionary = {own_pos:true,enemy_pos:true}
+    capture.call("update_tank_actions",units,[],[
+        {"attacker_role":"tank","defender_role":"tank",
+        "origin":own_pos,"target":enemy_pos,"elapsed":0.20}
+    ],true,both_visible,false)
+    assert(capture.call("live_tank_count") == 2)
+    var defender: Node3D = capture.live_tank_models["T-02"] as Node3D
+    var impact: Node3D = defender.find_child("EfectoImpactoBlindaje",true,false) as Node3D
+    assert(impact != null and impact.visible)
+    capture.call("update_tank_actions",units,[],[
+        {"attacker_role":"tank","defender_role":"tank",
+        "origin":own_pos,"target":enemy_pos,"elapsed":0.20}
+    ],true,vision,false)
+    assert(capture.call("live_tank_count") == 1) # Hidden enemy is never animated.
     capture.call("update_tank_actions",units,[],[],true,vision,false)
     assert(capture.call("live_tank_count") == 0)
     assert(capture.call("texture_for","tank",0,"T-01") == capture.call("texture_for","tank",0))
