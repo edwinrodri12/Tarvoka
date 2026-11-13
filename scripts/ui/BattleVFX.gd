@@ -5,8 +5,10 @@ class_name TarvokaBattleVFX
 # are decided by BattleSession; these functions never produce combat effects.
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
-const FLIGHT_SECONDS := 0.24
-const EFFECT_SECONDS := 0.55
+const FLIGHT_SECONDS := 0.36
+const COUNTER_START_SECONDS := 0.48
+const COUNTER_FLIGHT_SECONDS := 0.22
+const EFFECT_SECONDS := 0.88
 const STEP_ANGLE := PI / 4.0
 
 static func projected_heading(from_cell: Vector2i, to_cell: Vector2i) -> Vector2:
@@ -74,6 +76,20 @@ static func _impact(canvas: CanvasItem, center: Vector2, radius: float,
         canvas.draw_line(start, finish, Color(tint.r, tint.g, tint.b, alpha),
             maxf(1.0, radius * (0.05 if destroyed else 0.028)), true)
 
+static func _damage_number(canvas: CanvasItem, position: Vector2,
+        amount: int, opacity: float, scale: float) -> void:
+    if amount <= 0 or opacity <= 0.0 or scale < 8.0:
+        return
+    var font: Font = ThemeDB.fallback_font
+    var font_size: int = int(clampf(scale*0.27,14.0,28.0))
+    var label: String = "-%d" % amount
+    canvas.draw_string(font,position+Vector2(1,1),
+        label,HORIZONTAL_ALIGNMENT_CENTER,-1,font_size,
+        Color(0.07,0.09,0.11,opacity*0.9))
+    canvas.draw_string(font,position,
+        label,HORIZONTAL_ALIGNMENT_CENTER,-1,font_size,
+        Color(1.0,0.91,0.73,opacity))
+
 static func draw_effects(canvas: CanvasItem, effects: Array, scale: float,
         view_size: Vector2, zoom: float, pan: Vector2, grid_size: Vector2i = Vector2i(10,8)) -> void:
     for effect in effects:
@@ -90,22 +106,53 @@ static func draw_effects(canvas: CanvasItem, effects: Array, scale: float,
         var destroyed: bool = bool(effect.get("destroyed", false))
         var family: String = family_for_role(defender_role)
         var tint: Color = impact_color(defender_role)
+        var src: Vector2 = IsoTransform.center(source, view_size, zoom, pan, grid_size) if source.x >= 0 else target_pos
+        var is_tank_shot: bool = attacker_role == "tank"
         if source.x >= 0 and elapsed <= FLIGHT_SECONDS:
-            var src: Vector2 = IsoTransform.center(source, view_size, zoom, pan, grid_size)
             var t: float = clampf(elapsed / FLIGHT_SECONDS, 0.0, 1.0)
-            var point: Vector2 = src.lerp(target_pos, t)
-            var back: Vector2 = src.lerp(target_pos, maxf(0.0, t - 0.18))
+            var direction: Vector2 = (target_pos-src).normalized()
+            var muzzle: Vector2 = src + direction*minf(scale*0.26,src.distance_to(target_pos)*0.20)
+            var point: Vector2 = muzzle.lerp(target_pos, t)
+            var back: Vector2 = muzzle.lerp(target_pos, maxf(0.0, t - 0.25))
             var shot_tint: Color = impact_color(attacker_role)
-            # Long-range artillery and naval weapons leave a pronounced tracer.
-            var beam: float = 0.05 if family_for_role(attacker_role) in ["gun", "naval"] else 0.036
-            canvas.draw_line(back, point, Color(shot_tint.r, shot_tint.g, shot_tint.b, 0.84),
-                maxf(1.0, scale * beam), true)
-            canvas.draw_circle(point, maxf(1.5, scale * 0.065), Color("#FFEAB1"))
+            var beam: float = 0.085 if is_tank_shot else (0.05 if family_for_role(attacker_role) in ["gun","naval"] else 0.036)
+            canvas.draw_line(back,point,Color(0.10,0.10,0.10,0.45),
+                maxf(2.0,scale*beam*1.8),true)
+            canvas.draw_line(back,point,Color(shot_tint.r,shot_tint.g,shot_tint.b,0.97),
+                maxf(1.3,scale*beam),true)
+            canvas.draw_circle(point,maxf(2.4,scale*(0.11 if is_tank_shot else 0.065)),Color("#FFF2C3"))
+            if is_tank_shot and elapsed < 0.20:
+                var flash: float = 1.0-clampf(elapsed/0.20,0.0,1.0)
+                canvas.draw_circle(muzzle,maxf(2.0,scale*0.22*flash),
+                    Color(1.0,0.69,0.16,0.82*flash))
         else:
-            # A hidden attack origin is never plotted, but an already-visible
-            # impact may still be shown without disclosing the attacker.
-            _impact(canvas, target_pos, scale, maxf(elapsed, FLIGHT_SECONDS),
-                tint, destroyed, family)
+            # A hidden attack origin is never plotted, but a visible impact
+            # may still be shown without revealing its attacker.
+            _impact(canvas,target_pos,scale,maxf(elapsed,FLIGHT_SECONDS),
+                tint,destroyed,family)
+        var inflicted: int = int(effect.get("damage",0))
+        if inflicted > 0 and elapsed >= FLIGHT_SECONDS and elapsed < EFFECT_SECONDS:
+            var rise: float = clampf((elapsed-FLIGHT_SECONDS)/(EFFECT_SECONDS-FLIGHT_SECONDS),0.0,1.0)
+            _damage_number(canvas,target_pos+Vector2(0,-scale*(0.26+0.18*rise)),
+                inflicted,1.0-rise,scale)
+        var returned: int = int(effect.get("counter_damage",0))
+        if returned > 0 and source.x >= 0 and elapsed >= COUNTER_START_SECONDS:
+            # Response is a distinct visible shot, not a silent HP change.
+            var response_time: float = elapsed-COUNTER_START_SECONDS
+            if response_time <= COUNTER_FLIGHT_SECONDS:
+                var response_t: float = clampf(response_time/COUNTER_FLIGHT_SECONDS,0.0,1.0)
+                var counter_point: Vector2 = target_pos.lerp(src,response_t)
+                var counter_back: Vector2 = target_pos.lerp(src,maxf(0.0,response_t-0.22))
+                canvas.draw_line(counter_back,counter_point,
+                    Color(0.89,0.76,0.65,0.96),maxf(1.7,scale*0.08),true)
+                canvas.draw_circle(counter_point,maxf(2.2,scale*0.09),Color("#FFDFB9"))
+            else:
+                var response_elapsed: float = response_time-COUNTER_FLIGHT_SECONDS
+                var response_opacity: float = 1.0-clampf(response_elapsed/0.18,0.0,1.0)
+                canvas.draw_arc(src,scale*(0.13+response_elapsed*0.70),0.0,TAU,20,
+                    Color(1.0,0.56,0.35,response_opacity),maxf(1.5,scale*0.065),true)
+                _damage_number(canvas,src+Vector2(0,-scale*0.30),returned,
+                    response_opacity,scale)
         if bool(effect.get("consumed", false)) and source.x >= 0:
             var launch: Vector2 = IsoTransform.center(source, view_size, zoom, pan, grid_size)
             var fade: float = 1.0 - clampf(elapsed / EFFECT_SECONDS, 0.0, 1.0)

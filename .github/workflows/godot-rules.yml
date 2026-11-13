@@ -50,6 +50,15 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
+      - name: Validate recorded Android tank movement and counterfire feedback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_video_movement_attack_feedback.gd 2>&1 | tee /tmp/tarvoka-video-feedback.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-video-feedback.log; then
+            echo "Recorded movement/attack UI feedback regression"; exit 1
+          fi
+
       - name: Render and verify eight actual 3D military meshes with software OpenGL
         shell: bash
         run: |

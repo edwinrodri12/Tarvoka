@@ -71,7 +71,12 @@ func _run() -> void:
     board._record_move_effect(before,after,blue_id)
     assert(board.motion_effects.size() == 1)
     assert(board.state == original)
+    var full_travel_time: float = float(board.motion_effects[0]["duration"])
+    assert(full_travel_time >= 0.32)
     board._process(0.33)
+    if full_travel_time > 0.33:
+        assert(not board.motion_effects.is_empty())
+    board._process(full_travel_time)
     assert(board.motion_effects.is_empty())
     assert(board.state == original)
     # Under fog, a hidden enemy move must not create a visual trail.

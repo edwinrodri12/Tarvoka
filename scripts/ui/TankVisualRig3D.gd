@@ -7,7 +7,7 @@ const REST_META := "tarvoka_tank_rest_position"
 const TURRET_NAME := "TorretaGiratoria"
 const CANNON_NAME := "ElevacionCanon"
 const HULL_NAME := "ChasisBlindado"
-const SHOT_DURATION := 0.55
+const SHOT_DURATION := 0.88
 const MOVE_DURATION := 0.32
 
 static func has_rig(model: Node3D) -> bool:

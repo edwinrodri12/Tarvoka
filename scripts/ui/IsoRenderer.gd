@@ -15,6 +15,7 @@ const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
+const UnitMotionVFX = preload("res://scripts/ui/UnitMotionVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 static var last_frame_stats: Dictionary = {}
 
@@ -207,13 +208,18 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var is_naval: bool = Domains.domain(unit) == Domains.NAVAL
         var c: Vector2 = _center(cell, canvas, zoom, pan, dims)
         var is_moving := false
+        var motion_heading := Vector2i.ZERO
         for movement in motion_effects:
             if str(movement.get("id", "")) == str(unit["id"]):
                 is_moving = true
-                var t: float = clampf(float(movement["elapsed"]) / 0.32, 0.0, 1.0)
-                var smooth: float = t*t*(3.0-2.0*t)
-                var previous: Vector2i = movement["from"]
-                c = _center(previous, canvas, zoom, pan, dims).lerp(c, smooth)
+                var route: Array = movement.get("route",[movement["from"],cell])
+                var progress: Dictionary = UnitMotionVFX.segment(route,
+                    float(movement["elapsed"]),float(movement.get("duration",UnitMotionVFX.DEFAULT_DURATION)))
+                var previous: Vector2i = progress["from"]
+                var next_cell: Vector2i = progress["to"]
+                motion_heading = next_cell-previous
+                c = _center(previous,canvas,zoom,pan,dims).lerp(
+                    _center(next_cell,canvas,zoom,pan,dims),float(progress["fraction"]))
                 break
         if is_air:
             c += Vector2(hw * 0.23, -hh * 0.48 + sin(phase*2.5) * hh*0.08)
@@ -224,7 +230,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var pose := "damaged" if int(unit.get("hp",10)) <= 3 else "idle"
         if is_moving:
             pose = "move"
-        var visual_heading: Vector2i = unit_headings.get(str(unit["id"]), Vector2i.ZERO)
+        var visual_heading: Vector2i = motion_heading if is_moving else unit_headings.get(str(unit["id"]), Vector2i.ZERO)
         for effect in combat_effects:
             if effect["origin"] == cell and float(effect["elapsed"]) <= BattleVFX.FLIGHT_SECONDS:
                 pose = "attack"
@@ -254,7 +260,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 canvas.draw_line(c+Vector2(0,-marker_radius),c+Vector2(0,marker_radius),
                     Color("#BDF2F3"),maxf(1.0,hw*0.09),true)
         elif sprite != null:
-            var sprite_size := hw * ((1.70 if from_3d else (0.94 if is_air else 0.88)))
+            var sprite_size := hw * ((1.52 if role == "tank" else 1.70) if from_3d else (0.94 if is_air else 0.88))
             var rotation: float = 0.0 if from_3d else BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
             var unit_tint: Color = face

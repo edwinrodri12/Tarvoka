@@ -18,6 +18,8 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
 const UnitRender3D = preload("res://scripts/ui/UnitRender3D.gd")
+const UnitMotionVFX = preload("res://scripts/ui/UnitMotionVFX.gd")
+const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -62,7 +64,7 @@ var unit_headings: Dictionary = {}
 var art_phase := 0.0
 var _ambient_accum := 0.0
 const TAP_DRAG_LIMIT := 18.0
-const COMBAT_EFFECT_SECONDS := 0.55
+const COMBAT_EFFECT_SECONDS := BattleVFX.EFFECT_SECONDS
 # Visual-only state. Never exported to save files or read by game rules.
 var combat_effects: Array[Dictionary] = []
 
@@ -537,7 +539,7 @@ func _process(delta: float) -> void:
         for effect in motion_effects:
             effect["elapsed"] = float(effect["elapsed"]) + dt
         for i in range(motion_effects.size()-1,-1,-1):
-            if float(motion_effects[i]["elapsed"]) >= 0.32:
+            if float(motion_effects[i]["elapsed"]) >= float(motion_effects[i].get("duration",UnitMotionVFX.DEFAULT_DURATION)):
                 motion_effects.remove_at(i)
         needs_redraw = true
     if iso_enabled and _models_3d != null and models_3d_enabled:
@@ -573,8 +575,20 @@ func _record_move_effect(before: Dictionary, after: Dictionary, unit_id: String)
     for i in range(motion_effects.size()-1,-1,-1):
         if str(motion_effects[i]["id"]) == unit_id:
             motion_effects.remove_at(i)
-    unit_headings[unit_id] = current["pos"] - old["pos"]
-    motion_effects.append({"id":unit_id,"from":old["pos"],"to":current["pos"],"elapsed":0.0})
+    var route: Array[Vector2i] = UnitMotionVFX.legal_route(before,old,current["pos"])
+    if int(old.get("faction",-1)) != 0 and Visibility.enabled(before):
+        # Never visualize a hidden intermediate position of an enemy mover.
+        var before_visible: Dictionary = Visibility.visible_cells(before,0)
+        var after_visible: Dictionary = Visibility.visible_cells(after,0)
+        for waypoint in route:
+            if not before_visible.has(waypoint) and not after_visible.has(waypoint):
+                return
+    var travel_time: float = UnitMotionVFX.duration(route)
+    unit_headings[unit_id] = UnitMotionVFX.heading(route,0.0,travel_time)
+    motion_effects.append({
+        "id":unit_id,"from":old["pos"],"to":current["pos"],
+        "route":route,"duration":travel_time,"elapsed":0.0
+    })
     while motion_effects.size() > 16:
         motion_effects.pop_front()
     queue_redraw()
@@ -619,6 +633,7 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
         "elapsed":0.0, "destroyed":target_destroyed,
         "attacker_role":attacker_role, "defender_role":defender_role,
         "counter_damage":int(result.get("counter_damage",0)),
+        "damage":int(result.get("damage",0)),
         "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
     })
     while combat_effects.size() > 8:
