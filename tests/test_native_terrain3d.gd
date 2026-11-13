@@ -2,6 +2,7 @@ extends SceneTree
 
 const Terrain = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Lab = preload("res://tools/terrain3d_lab.gd")
+const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -86,5 +87,15 @@ func _run() -> void:
     var lab_grid: Array = Lab.sample_terrain()
     assert(lab_grid.size() == 10)
     assert((lab_grid[0] as Array).size() == 15)
-    print("PASS native terrain 3D: seam-safe heightfield, water outline, fog privacy, 10x8/24x18/40x30, immutable tactics")
+    assert(Topology.bridge_axis(lab_grid,Vector2i(9,5)) == 1)
+    assert(Terrain.tactical_cell_from_world(grid,
+        Vector3(1.4,31.0,2.7)) == Vector2i(1,2))
+    assert(Terrain.tactical_cell_from_world(grid,
+        Vector3(-0.2,1.0,0.7)) == Vector2i(-1,-1))
+    var grid_center: Vector3 = Terrain.tactical_cell_center(
+        grid,Vector2i(2,2))
+    assert(grid_center.x == 2.5 and grid_center.z == 2.5)
+    assert(Terrain.tactical_cell_from_world(grid,
+        grid_center) == Vector2i(2,2))
+    print("PASS native terrain 3D: seam-safe heightfield, bridges, world-to-cell, fog privacy, 10x8/24x18/40x30, immutable tactics")
     quit(0)
