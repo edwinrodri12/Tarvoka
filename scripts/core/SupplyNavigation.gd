@@ -47,7 +47,7 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
     var move_budget: int = Logistics.movement_budget(unit)
     if move_budget <= 0:
         return none
-    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain)
+    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit))
     var best := none
     var best_distance := 1000000
     for site in observed["economy"]["sites"]:
@@ -119,7 +119,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
             continue
         if Domains.layer(occupant) == Domains.layer(truck):
             blocked.append(occupant["pos"])
-    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND)
+    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck))
     var best := none
     var best_cost := 1000000
     for recipient in observed["units"]:
