@@ -85,6 +85,17 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 
 **Criterio de aceptación:** CI Godot de reglas y material debe pasar sin `SCRIPT ERROR` o `ERROR`, la vista previa debe exportar PNG de detalle completo y medio, y la APK debe compilar. **Esto sigue siendo 2.5D isométrico**, no una malla de terreno 3D físicamente basada. El siguiente gran salto de fidelidad requerirá resolver la geometría tridimensional, escalar materiales/iluminación y validar el rendimiento móvil con vistas próximas y lejanas.
 
+## Sexto incremento — conexiones geométricas entre casillas (13 de noviembre)
+
+- `LandscapeContinuity.gd`: trayectorias de cauce y crestas enlazadas entre vecinos por **puntos de salida idénticos** en el borde común. La trayectoria interna puede variar sin romper la conexión; el río conserva continuidad visual y la piedra tiene una espina central más legible.
+- `LandscapeDetailPainter.gd`: integra las crestas de montaña antes de dibujar sus siluetas de roca.
+- `WorldArt.gd`: pinta el cauce conectado y pasa la coordenada de la casilla a la decoración. `IsoRenderer.gd` mantiene su filtro de niebla; únicamente entran máscaras de vecinos observados, sin revelar territorio oculto.
+- `LandscapeTransitions.gd`: ruido costero compartido por cada borde tierra-agua; ambas casillas emplean la misma semilla canónica y el extremo inverso. La espuma curva de un lado coincide con la geometría del otro y no excede los límites tácticos del diamante.
+- `test_continuous_world_seams.gd`: verifica salidas coincidentes N/S/E/O para cauces y cordilleras, bancos emparejados al invertir la dirección de borde y ausencia de secretos bajo niebla. La galería automática ejecuta este test antes de exportar PNG.
+- `tools/export_environment_preview.gd`: usa las mismas coordenadas de mundo y fuentes de la batalla para mostrar esa continuidad en el laboratorio visual.
+
+**Límite del sistema:** es un renderizador isométrico 2.5D que sigue usando casillas de agua y montaña como fuente de verdad. Se han corregido discontinuidades decorativas, **no** generado aún una única malla tridimensional de terreno. La futura conversión a relieve 3D no debe alterar la selección de celdas, las propiedades de las unidades, los costes ni los guardados.
+
 ## Desglose de fases restantes
 
 A. Continuidad de suelo: carreteras en cuatro direcciones, riberas de aguas, cruces con puente y pruebas de niebla — **primera iteración en esta rama**.
