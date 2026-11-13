@@ -131,3 +131,15 @@ En esta ejecución se completa una pasada de detalle y articulaciones compatible
 **Evidencia visual**: `artifacts/tarvoka_mbt_before_after_same_camera.png` compara la misma toma real del modelo base y el V5, y `artifacts/tarvoka_mbt_detail_turntable.png` presenta cuatro ángulos V5 del renderizador Godot 4.3. El visor HTML5 se publica con el SHA exacto de GitHub.
 
 **Estado artístico**: primera reconstrucción estructural integrada y probada; **NO se certifica todavía como textura/material/pulido comercial definitivo** sin nueva evaluación en visor web. Siguiente fase: tratamiento de materiales de alta legibilidad, señales de uso PBR con normal/roughness y moderar accesorios restantes; después validar tamaño de icono y rendimiento Android. No repetir largas rondas de APK por unidad.
+
+
+## G09 V8 — pulido implementado en el modelo real de Godot (13 nov 2026)
+
+El usuario rechazó renders conceptuales como entregables. Las siguientes modificaciones afectan a la fuente real scripts/ui/TankHeroV7.gd, invocada desde UnitModels3D.build('tank') por Android, el visor y las capturas de combate. NO sustituir código por imágenes generadas.
+
+- Pintura de acero grafito mate con blindaje cerámico de otro pigmento. Mapa original neutro de 256 px y microtexturas de normales y rugosidad compartidas entre instancias, sin fuentes externas.
+- Las dos orugas tienen 84 zapatas modeladas con biseles y costillas, no cajas. TankVisualRig.pose mueve realmente estas zapatas por una trayectoria cerrada alrededor de sprockets e idlers; al parar regresa a posición inicial. Se conservan dos MultiMesh de orugas.
+- Cuatro ruedas motrices de 32 segmentos, bujes y 48 dientes agrupados en un solo MultiMesh para móviles; se conservan las 14 ruedas de rodaje.
+- Dos grupos de faros delanteros protegidos y emisivos, luces rojas posteriores, ceja frontal de protección y paneles cerámicos de torreta. Las 14 zonas originales de color para ocho facciones y el cañón articulado siguen intactos.
+- Tests/test_g09_premium_finish_v8.gd valida pigmentos, mapas PBR, geometría de orugas, su circulación y restauración, luces, sprockets, facciones y 5 etapas de daño. CI browser obliga a pasar este test antes de crear WebGL o GLB.
+- El único estado aprobado hasta ahora es integración estructural. Faltan valoración artística en el navegador, presupuesto de rendimiento Android y, si corresponde, acabado DCC UV más refinado. CI verde NO equivale a perfecto comercial.
