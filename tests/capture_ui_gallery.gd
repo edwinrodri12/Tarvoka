@@ -58,6 +58,14 @@ func _run_gallery() -> void:
     main.faction_selector._choose_side(0)
     if not await _capture("04-factions-portrait",Vector2i(412,915),"Ocho facciones · teléfono vertical"):
         _failed = true
+    # Catch the clipping that visual QA revealed in the original selector.
+    for control in [main.faction_selector.header_row.get_child(1),
+            main.faction_selector.side_buttons[0],
+            main.faction_selector.side_buttons[1],
+            main.faction_selector.commander_portrait,
+            main.faction_selector.confirm_button]:
+        if not _inside_viewport(control,Vector2i(412,915)):
+            _failed = true
     if not await _capture("05-factions-landscape",Vector2i(1280,720),"Ocho facciones · horizontal"):
         _failed = true
     # Cancel the tentative faction changes. This screenshot tool does not
@@ -75,6 +83,18 @@ func _run_gallery() -> void:
     main._process(0.0)
     main._set_compact_hud(true)
     if not await _capture("06-battle-portrait",Vector2i(412,915),"Batalla · HUD compacto Android"):
+        _failed = true
+    # Check every essential action stays entirely within the touch screen.
+    for action in [main.compact_cancel,main.compact_confirm,
+            main.compact_end_turn,main.compact_menu_button,
+            main.compact_objectives_button,main.compact_options_button]:
+        if not _inside_viewport(action,Vector2i(412,915)):
+            _failed = true
+    var tile: float = main.board._cell_size()
+    var start: Vector2 = main.board._board_origin()
+    var extent: Vector2 = Vector2(main.board.map_dimensions())*tile
+    if start.x < -2.0 or start.x+extent.x > main.board.size.x+2.0:
+        push_error("Small battlefield is clipped after Android rotation.")
         _failed = true
     main._set_compact_hud(false)
     if not await _capture("07-battle-landscape",Vector2i(1280,720),"Batalla · HUD ampliado"):
@@ -112,6 +132,20 @@ func _run_gallery() -> void:
         return
     print("PASS visual gallery: 10 rendered PNG screens with nonblank frame checks and manifest")
     quit(0)
+
+func _inside_viewport(control: Control, resolution: Vector2i) -> bool:
+    if control == null or not control.is_visible_in_tree():
+        push_error("Important Android control is hidden or missing.")
+        return false
+    var rect: Rect2 = control.get_global_rect()
+    var safe: Rect2 = Rect2(Vector2.ZERO,Vector2(resolution))
+    if rect.size.x < 24.0 or rect.size.y < 24.0:
+        push_error("Touch control is too small: "+str(control.name))
+        return false
+    if not safe.encloses(rect):
+        push_error("Android control clipped: %s (%s)" % [str(control.name),str(rect)])
+        return false
+    return true
 
 func _capture(stem: String, resolution: Vector2i, caption: String) -> bool:
     root.size = resolution
