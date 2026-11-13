@@ -8,7 +8,7 @@ Implementada el 13 de noviembre de 2026 para el flujo de **Escaramuza**.
 
 El mundo y la partida siguen teniendo **dos bandos tácticos**. El selector presenta las **ocho identidades visuales** como opciones para esos bandos, no simula combates simultáneos de ocho facciones. No añade poderes, comandantes activos, IA especial ni modificadores de balance (los valores v0.1 definidos permanecen congelados).
 
-Los retratos e insignias de las ocho facciones que ya se aprobaron en concepto **no están todavía en `assets/factions`**, por lo que el dossier muestra **"INSIGNIA PENDIENTE"** y **"Retrato aprobado pendiente de incorporar"**. Se carga automáticamente una insignia si existe `assets/factions/<clave>.png`. Queda prohibido sustituirla por un retrato inventado sin validación.
+Los **primeros cuatro escudos y retratos oficiales** (Alianza Norte, Pacto Escarlata, Unión Verde y Confederación Solar) ya están integrados como un atlas optimizado `assets/factions/official_first_four_atlas.webp`, recortado de las dos imágenes aprobadas. Véase `assets/factions/ART_SOURCES.md` para procedencia y coordenadas. Los otros cuatro muestran **INSIGNIA PENDIENTE** y **Retrato aprobado pendiente de incorporar**; no se inventan retratos. Si aparecen imágenes individuales `assets/factions/<clave>.png` o `assets/commanders/<clave>.png`, tienen prioridad.
 
 ## Persistencia y compatibilidad
 
@@ -25,7 +25,7 @@ Los retratos e insignias de las ocho facciones que ya se aprobaron en concepto *
 
 ## Pendiente para paridad visual con las artes aprobadas
 
-1. Añadir a GitHub los ocho escudos PNG oficiales con el nombre exacto del catálogo.
-2. Añadir las imágenes oficiales de comandantes, nombres y retratos tal como se aprobaron en las láminas; no inventar comandantes.
+1. Separar e integrar los cuatro escudos y retratos restantes de las láminas aprobadas. Los primeros cuatro ya están implementados en atlas WEBP.
+2. Opcionalmente agregar los archivos maestros individuales de máxima resolución para portadas y marketing. El atlas actual está optimizado para Android; no sustituye al maestro.
 3. Conectar las habilidades/ventajas v0.1 al motor **sólo después de confirmar su implementación y probarlas**. El selector actual es visual y funcional, pero todavía no activa bonificaciones.
 4. Verificación de la pantalla en teléfono Android real y su legibilidad vertical.
