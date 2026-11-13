@@ -657,4 +657,5 @@ static func apply(model: Node3D) -> bool:
         collar.rotation_degrees.x = 90.0
         gun.add_child(collar)
     model.set_meta("tarvoka_mbt_hero_v7",true)
+    model.set_meta("tarvoka_mbt_premium_finish_v8",true)
     return true
