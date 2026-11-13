@@ -1,0 +1,87 @@
+name: Publish TARVOKA native 3D art studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tarvoka-3d-pages.yml"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["TARVOKA Browser 3D Art Studio"]
+    types: [completed]
+    branches:
+      - feat/browser-3d-model-lab-20261113
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tarvoka-production-3d-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out native 3D models from studio branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/browser-3d-model-lab-20261113
+          persist-credentials: false
+      - name: Download Godot 4.3 and Web export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/godot-templates/templates/web_*.zip "$T/"
+          test -s "$T/web_nothreads_release.zip"
+          printf '4.3.stable\n' > "$T/version.txt"
+      - name: Select native 3D scene and revision watermark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets build/web
+          git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Export native Godot 3D browser studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
+            exit 1
+          fi
+          test -s build/web/index.html
+          test -s build/web/index.js
+          test -s build/web/index.pck
+          test -s build/web/index.wasm
+          touch build/web/.nojekyll
+      - name: Upload GitHub Pages web site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+    steps:
+      - name: Publish native 3D studio
+        id: deployment
+        uses: actions/deploy-pages@v4
