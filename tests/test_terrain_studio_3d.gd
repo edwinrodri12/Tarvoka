@@ -63,6 +63,19 @@ func _run() -> void:
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
+    # Same-camera image captures are mandatory; smoke tests that only
+    # inspect node counts can miss unlit, empty or visually broken terrain.
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    for preset in range(Terrain.SCENES.size()):
+        studio.terrain_scene_picker.select(preset)
+        studio._change_terrain_scene(preset)
+        studio._reset_camera()
+        for capture_frame in range(8):
+            await process_frame
+        var landscape: Image = studio.preview.get_texture().get_image()
+        assert(landscape != null and not landscape.is_empty())
+        assert(landscape.get_width() >= 640)
+        assert(landscape.save_png("res://artifacts/tarvoka_terrain_scene_%02d.png" % preset) == OK)
     studio.terrain_light_picker.select(1)
     studio._change_terrain_light(1)
     for frame in range(8):
