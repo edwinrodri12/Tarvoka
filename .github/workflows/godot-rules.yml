@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_tank_damage_laboratory.gd 2>&1 | tee /tmp/tarvoka-tank-damage.log
+          timeout --signal=TERM --kill-after=5s 110s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_tank_damage_laboratory.gd 2>&1 | tee /tmp/tarvoka-tank-damage.log
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-tank-damage.log; then
             echo "Tank destruction visual regression"; exit 1
           fi
