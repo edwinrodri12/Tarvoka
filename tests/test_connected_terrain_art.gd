@@ -37,6 +37,46 @@ func _run() -> void:
     assert(Topology.shore_mask(grid,Vector2i(1,0),
         {Vector2i(2,0):true},true) == Topology.EAST)
 
+    # River crossings are visual bridges built from real road lanes.
+    # Neither a simple waterside road nor hidden neighbor can manufacture one.
+    var river := [
+        ["plain","water","water","plain"],
+        ["road","road","road","road"],
+        ["plain","water","water","plain"]
+    ]
+    assert(Topology.bridge_axis(river,Vector2i(1,1)) == 1)
+    assert(Topology.bridge_axis(river,Vector2i(2,1)) == 1)
+    assert(Topology.bridge_axis(river,Vector2i(0,1)) == 0)
+    assert(Topology.bridge_axis(river,Vector2i(3,1)) == 0)
+    var river_observed := {
+        Vector2i(0,1):true,Vector2i(2,1):true,
+        Vector2i(1,0):true,Vector2i(1,2):true
+    }
+    assert(Topology.bridge_axis(river,Vector2i(1,1),
+        river_observed,true) == 1)
+    river_observed.erase(Vector2i(1,0))
+    assert(Topology.bridge_axis(river,Vector2i(1,1),
+        river_observed,true) == 0)
+    var north_south := [
+        ["plain","road","plain"],
+        ["water","road","water"],
+        ["water","road","water"]
+    ]
+    assert(Topology.bridge_axis(north_south,Vector2i(1,1)) == 2)
+    var pine_ridge := [
+        ["forest","forest","plain"],
+        ["mountain","mountain","forest"]
+    ]
+    assert(Topology.neighbor_mask(pine_ridge,Vector2i(0,0),
+        "forest") == Topology.EAST)
+    assert(Topology.neighbor_mask(pine_ridge,Vector2i(0,1),
+        "mountain") == Topology.EAST)
+    assert(Topology.neighbor_mask(pine_ridge,Vector2i(1,1),
+        "mountain",true,{Vector2i(0,1):true},true
+        ) == Topology.WEST)
+    assert(Topology.neighbor_mask(pine_ridge,Vector2i(1,1),
+        "mountain",true,{},true) == 0)
+
     var board := Board.new()
     board.ai_enabled = false
     board.autosave_enabled = false
@@ -63,5 +103,5 @@ func _run() -> void:
         await process_frame
         assert(board.state == saved)
     board.queue_free()
-    print("PASS connected environment: 4-way roads, shorelines, fog-safe masks, all map sizes and immutable battles")
+    print("PASS connected environment: forest ridges, river bridges, shorelines, fog-safe masks, all map sizes and immutable battles")
     quit(0)
