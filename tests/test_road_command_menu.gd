@@ -41,6 +41,7 @@ func _run() -> void:
     var battle: Dictionary = Session.start([apc,defender],field)
     var before: Dictionary = battle.duplicate(true)
     var hints: Dictionary = Hints.for_unit(battle,"APC")
+    assert(Hints.unit_summary(battle,"APC").contains("entrar cuesta 0.5"))
     assert(hints["moves"].has(end))
     assert(not hints["moves"].has(too_far))
     var moved: Dictionary = Session.move(battle,"APC",end)
