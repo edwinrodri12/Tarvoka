@@ -241,18 +241,24 @@ func _apply_terrain_lighting() -> void:
     for item in preview.get_children():
         if item is WorldEnvironment:
             var env: Environment = (item as WorldEnvironment).environment
-            env.background_color = Color("#55454c") if setting == 1 else Color("#3e5360") if setting == 2 else Color("#304451")
-            env.ambient_light_color = Color("#edb990") if setting == 1 else Color("#c3d5df")
-            env.ambient_light_energy = 0.73 if setting == 1 else 0.94 if setting == 2 else 0.83
+            env.background_color = Color("#374c58") if setting == 1 else Color("#4b606c") if setting == 2 else Color("#526c75")
+            env.ambient_light_color = Color("#f1c8a7") if setting == 1 else Color("#becdd6")
+            env.ambient_light_energy = 0.37 if setting == 1 else 0.53 if setting == 2 else 0.46
         elif item is DirectionalLight3D:
             var sun: DirectionalLight3D = item as DirectionalLight3D
-            sun.light_color = Color("#ffbc86") if setting == 1 else Color("#e3edf4") if setting == 2 else Color.WHITE
-            sun.light_energy = 0.92 if setting == 2 else 1.32 if setting == 1 else 1.65
             var is_key: bool = sun == preview.get_child(2)
-            sun.shadow_enabled = is_key and terrain_shadow_toggle.button_pressed
             if is_key:
-                sun.rotation_degrees = Vector3(-29,-52,0) if setting == 1 else Vector3(-46,-32,0)
-                sun.shadow_blur = 1.30
+                sun.light_color = Color("#f5b98b") if setting == 1 else Color("#e3edf4") if setting == 2 else Color("#fff6dd")
+                sun.light_energy = 0.89 if setting == 0 else 0.76 if setting == 1 else 0.62
+                sun.rotation_degrees = Vector3(-27,-52,0) if setting == 1 else Vector3(-46,-32,0)
+                sun.shadow_enabled = terrain_shadow_toggle.button_pressed
+                sun.shadow_blur = 1.18
+            else:
+                # The old prototype used the FULL key-light energy on BOTH
+                # directionals, bleaching vertex-coloured ground to white.
+                sun.light_color = Color("#9cb7d5") if setting == 1 else Color("#bbcbd6")
+                sun.light_energy = 0.20 if setting == 1 else 0.30 if setting == 2 else 0.26
+                sun.shadow_enabled = false
 
 func _display_terrain() -> void:
     if preview == null:
