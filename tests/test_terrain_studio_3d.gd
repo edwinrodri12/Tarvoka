@@ -27,6 +27,16 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
+    assert(key_light != null)
+    assert(studio.terrain_shadow_toggle.button_pressed)
+    assert(key_light.shadow_enabled)
+    studio.terrain_shadow_toggle.button_pressed = false
+    studio._change_terrain_shadow(false)
+    assert(not key_light.shadow_enabled)
+    studio.terrain_shadow_toggle.button_pressed = true
+    studio._change_terrain_shadow(true)
+    assert(key_light.shadow_enabled)
     assert(studio.model_root.get_meta("terrain_studio_continuous"))
     var ground: MeshInstance3D = studio.model_root.find_child("SueloContinuoConRelieve",true,false) as MeshInstance3D
     assert(ground != null and ground.mesh != null)
@@ -134,6 +144,7 @@ func _run() -> void:
     assert(studio._role == "headquarters")
     assert(studio.building_controls.visible)
     assert(not studio.terrain_controls.visible)
+    assert(not key_light.shadow_enabled)
     studio._switch_category(0)
     assert(studio._role == "tank")
     assert(studio.role_picker.visible)
