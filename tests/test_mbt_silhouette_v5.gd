@@ -23,7 +23,10 @@ static func _watertight(mesh: Mesh) -> bool:
         return false
     var arrays: Array = mesh.surface_get_arrays(0)
     var positions: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-    var faces: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+    # Non-indexed SurfaceTool triangles expose a null index slot in Godot 4.
+    var faces := PackedInt32Array()
+    if arrays[Mesh.ARRAY_INDEX] is PackedInt32Array:
+        faces = arrays[Mesh.ARRAY_INDEX]
     var edges: Dictionary = {}
     var count: int = faces.size() if faces.size() > 0 else positions.size()
     if count < 60 or count % 3 != 0:
