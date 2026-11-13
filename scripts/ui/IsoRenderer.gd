@@ -121,6 +121,21 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     if terrain == "water":
                         environment["water_connections"] = Topology.neighbor_mask(
                             state["terrain"],cell,"water",true,visible,fog)
+                        var bank_colors: Dictionary = {}
+                        for side in range(4):
+                            if (shoreline & (1 << side)) == 0:
+                                continue
+                            var land_cell: Vector2i = cell+Topology.DIRECTIONS[side]
+                            if land_cell.x < 0 or land_cell.y < 0 or (
+                                    land_cell.x >= dims.x or land_cell.y >= dims.y):
+                                continue
+                            if fog and not visible.has(land_cell):
+                                continue
+                            var land_kind: String = str(
+                                state["terrain"][land_cell.y][land_cell.x])
+                            bank_colors[side] = VisualStyle.terrain_color(
+                                land_kind,land_cell.x,land_cell.y)
+                        environment["shore_colors"] = bank_colors
                     else:
                         environment["water_edges"] = Topology.neighbor_mask(
                             state["terrain"],cell,"water",true,visible,fog)
