@@ -5,8 +5,11 @@ class_name TarvokaUnit3DInspector
 # cached 3D unit textures; this single live camera only renders when opened.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 
 var picker: OptionButton
+var faction_paint_picker: OptionButton
+var _selected_faction := 0
 var preview: SubViewport
 var viewport_holder: SubViewportContainer
 var camera: Camera3D
@@ -50,6 +53,14 @@ func _ready() -> void:
         picker.add_item(Roles.label(str(role)))
     picker.item_selected.connect(_on_select)
     controls.add_child(picker)
+    faction_paint_picker = OptionButton.new()
+    faction_paint_picker.name = "ColorDeFaccion"
+    faction_paint_picker.custom_minimum_size.y = 44
+    for info_data in VisualStyle.FACTIONS:
+        faction_paint_picker.add_item(str(info_data["name"]))
+    faction_paint_picker.item_selected.connect(set_faction_paint)
+    faction_paint_picker.visible = false
+    controls.add_child(faction_paint_picker)
 
     viewport_holder = SubViewportContainer.new()
     viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport().get_visible_rect().size.y*0.355,205.0,310.0))
@@ -144,8 +155,9 @@ func show_role(role: String) -> void:
     if model_root != null:
         preview.remove_child(model_root)
         model_root.queue_free()
-    model_root = Models.build(role)
+    model_root = Models.build(role,_selected_faction if role == "tank" else -1)
     preview.add_child(model_root)
+    faction_paint_picker.visible = (role == "tank")
     _current_role = role
     _model_yaw = 0.0
     _zoom_factor = 1.0
@@ -154,6 +166,23 @@ func show_role(role: String) -> void:
     info.text = Roles.label(role) + " · Geometría 3D. Versión técnica (no arte final)."
     if picker != null:
         picker.select(Models.ROLES.find(role))
+
+func set_faction_paint(faction: int) -> void:
+    if faction < 0 or faction >= VisualStyle.FACTIONS.size():
+        return
+    _selected_faction = faction
+    if faction_paint_picker != null:
+        faction_paint_picker.select(faction)
+    if _current_role == "tank" and model_root != null:
+        Models.apply_faction_palette(model_root,faction)
+        info.text = Roles.label("tank") + " · Paneles intercambiables: " + str(VisualStyle.FACTIONS[faction]["name"])
+
+func rotate_tank_turret(degrees: float) -> void:
+    if _current_role != "tank" or model_root == null:
+        return
+    var turret: Node3D = model_root.find_child(Models.TANK_TURRET,true,false) as Node3D
+    if turret != null:
+        turret.rotation_degrees.y = fposmod(turret.rotation_degrees.y+degrees,360.0)
 
 func open_viewer() -> void:
     if not Models.supports(_current_role):
