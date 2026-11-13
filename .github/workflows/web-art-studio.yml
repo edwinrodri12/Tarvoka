@@ -13,6 +13,8 @@ on:
       - "export_presets.cfg"
       - ".github/workflows/web-art-studio.yml"
       - "tests/test_web_art_studio.gd"
+      - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_mbt_silhouette_v5.gd"
   push:
     branches:
       - feat/browser-3d-model-lab-20261113
@@ -22,6 +24,8 @@ on:
       - "scenes/UnitArtStudioWeb.tscn"
       - "export_presets.cfg"
       - ".github/workflows/web-art-studio.yml"
+      - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_mbt_silhouette_v5.gd"
   workflow_dispatch:
 
 permissions:
