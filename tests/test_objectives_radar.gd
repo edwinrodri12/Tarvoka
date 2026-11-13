@@ -45,6 +45,12 @@ func _run() -> void:
     assert(str(radar["alerts"][0]["status"]).contains("SIN COMBUSTIBLE"))
     assert(not str(radar).contains("X · "))
     assert(battle == initial)
+    var rival_radar: Dictionary = Radar.build(battle,1)
+    assert(rival_radar["alerts"].size() == 1)
+    assert(rival_radar["alerts"][0]["id"] == "X")
+    assert(not str(rival_radar["alerts"]).contains("T ·"))
+    assert(int(rival_radar["owned_cities"]) == 1)
+    assert(battle == initial)
 
     var relay_battle: Dictionary = Session.start([own,enemy],terrain,0,true,true,true,false)
     var relays: Dictionary = Radar.build(relay_battle)
@@ -143,6 +149,12 @@ func _run() -> void:
     assert(screen.objectives_panel.visible)
     screen._close_objectives_radar()
     assert(board.state == modified)
+    board.ai_enabled = false
+    board.state["faction"] = 1
+    assert(screen._radar_viewer() == 1)
+    screen._open_objectives_radar()
+    assert(screen.objectives_panel._data["alert_count"] == 0)
+    screen._close_objectives_radar()
     screen.queue_free()
     for suffix in ["",".bak"]:
         var path: String = "user://tarvoka_autosave_v1.json" + suffix
