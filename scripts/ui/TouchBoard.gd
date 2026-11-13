@@ -210,7 +210,7 @@ static func fog_cover_color(has_explored: bool) -> Color:
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
-            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver)
+            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id)
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -303,8 +303,8 @@ func _draw() -> void:
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     var inspection: Dictionary = enemy_inspection_hints()
-    # Blue and amber footprints show POSSIBLE enemy movement and fire from
-    # its current position. Neither zone grants visibility or legal orders.
+    # Blue and amber footprints show POSSIBLE enemy movement and fire after
+    # a legal future move or from its present cell. No actions are created.
     for cell in inspection.get("moves",{}):
         var cell_pos: Vector2 = origin + Vector2(cell) * tile
         draw_rect(Rect2(cell_pos,Vector2.ONE*tile),Color(0.23,0.62,0.98,0.26))
@@ -320,9 +320,9 @@ func _draw() -> void:
             draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.20)), Color.WHITE)
-    # Independent amber weapon reach from the current tile. Movement stays
-    # blue, while real, legally attackable enemies remain marked red on top.
-    # This is NOT combined move+fire range and never creates a game action.
+    # Combined amber threat reach (legal move endpoint + weapon range).
+    # Red targets remain attacks executable NOW from the current position.
+    # The player must still move first, then issue a separate attack order.
     var weapon_area: Dictionary = selected_weapon_coverage()
     for covered_cell in weapon_area:
         var covered_pos: Vector2 = origin + Vector2(covered_cell) * tile
