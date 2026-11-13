@@ -8,6 +8,7 @@ signal arsenal_requested
 signal settings_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
+const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 
 var primary_buttons: Dictionary = {}
 var home_scroll: ScrollContainer
@@ -26,6 +27,9 @@ func _ready() -> void:
     shell.content_margin_top = 12
     shell.content_margin_bottom = 12
     add_theme_stylebox_override("panel",shell)
+    var backdrop := Backplate.new()
+    backdrop.mode = "home"
+    add_child(backdrop)
 
     var center := CenterContainer.new()
     center.size_flags_vertical = Control.SIZE_EXPAND_FILL
