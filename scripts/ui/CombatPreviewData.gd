@@ -45,6 +45,7 @@ static func estimate(state: Dictionary, pending: Dictionary) -> Dictionary:
     var own_hp: int = maxi(0,int(own.get("hp",0)))
     var enemy_hp: int = maxi(0,int(opponent.get("hp",0)))
     var own_role: String = str(own.get("role",""))
+    var is_consumable: bool = own_role in BattleActions.ONE_WAY_ROLES
     var enemy_role: String = str(opponent.get("role",""))
     var attack_bonus: int = int(entry.get("terrain_attack_bonus",0))
     var defender_cover: int = int(entry.get("terrain_defense_cover",0))
@@ -66,7 +67,7 @@ static func estimate(state: Dictionary, pending: Dictionary) -> Dictionary:
         notes.append("Flanqueo activo")
     if notes.is_empty():
         notes.append("Sin modificadores de terreno")
-    if own_role in BattleActions.ONE_WAY_ROLES:
+    if is_consumable:
         notes.append("Munición de un solo uso: el atacante se consume al impactar")
     return {
         "valid":true,
@@ -75,7 +76,8 @@ static func estimate(state: Dictionary, pending: Dictionary) -> Dictionary:
         "attacker_hp":own_hp,"defender_hp":enemy_hp,
         "enemy_loss":mini(enemy_hp,dealt),
         "counter_max":mini(own_hp,possible_counter),
-        "attacker_after_min":maxi(0,own_hp-possible_counter),
+        "attacker_after_min":0 if is_consumable else maxi(0,own_hp-possible_counter),
+        "consumed":is_consumable,
         "defender_after":maxi(0,enemy_hp-dealt),
         "lethal":bool(entry.get("defeated",false)),
         "explanation":"  ·  ".join(notes),
