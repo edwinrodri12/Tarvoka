@@ -199,6 +199,7 @@ static func _suppress_prototype(model: Node3D) -> void:
             "VisorComandante_0","VisorComandante_1","VisorComandante_2",
             "VisorComandante_3","VisorComandante_4","VisorComandante_5",
             "AntenaTorre1","AntenaTorre-1",
+            "AntenaTorre1Tip","AntenaTorre-1Tip",
             "AroRuedaMotriz-1_0","AroRuedaMotriz-1_1",
             "AroRuedaMotriz1_0","AroRuedaMotriz1_1",
             "ArgollaRemolque-1","ArgollaRemolque1",
@@ -355,16 +356,15 @@ static func apply(model: Node3D) -> bool:
         _rod(hull,"BordeVentilacionV7_%02d" % i,
             Vector3(-0.50,1.151,z+0.038),
             Vector3(0.50,1.151,z+0.038),0.009,METAL)
-    # A recessed rear servicing bulkhead replaces the prototype's large
-    # exposed box and has a continuous gasket and recessed lock points.
-    _bevel(hull,"PanelMantenimientoPosteriorV7",
-        Vector3(0,0.71,1.482),Vector3(1.38,0.51,0.082),
-        0.067,ARMOR)
-    _dark_box(hull,"JuntaSelloPosteriorV7",
-        Vector3(0,0.72,1.535),Vector3(1.10,0.37,0.013),SEAM)
-    _bevel(hull,"EscudoPosteriorMotoresV7",
-        Vector3(0,0.725,1.551),Vector3(0.96,0.285,0.035),
-        0.058,METAL)
+    # The watertight main chassis ALREADY has a solid, painted rear face.
+    # Three stacked prototype panels created a distracting bright rectangular
+    # outline in the real WebGL review. Leave a flush service closure and
+    # small recessed black latches instead of another floating rear box.
+    for side in [-1,1]:
+        var rear_sign: float = float(side)
+        _dark_box(hull,"CerrojoRebajadoPosteriorV7_%s" % side,
+            Vector3(rear_sign*0.49,0.71,1.529),
+            Vector3(0.12,0.18,0.019),SEAM)
     for side in [-1,1]:
         var sign: float = float(side)
         # Actual heavy side composite shoulder and inside tread belt.
