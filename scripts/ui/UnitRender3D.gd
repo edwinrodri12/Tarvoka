@@ -16,10 +16,16 @@ var viewports: Dictionary = {} # Role -> SubViewport
 var prepared := false
 var captures_completed := false
 const MAX_LIVE_TANKS := 2
+const MAX_PARKED_TANKS := 4
 const LIVE_CAPTURE_SIZE := Vector2i(192,192)
 var live_tank_viewports: Dictionary = {}
 var live_tank_models: Dictionary = {}
 var live_tank_factions: Dictionary = {}
+var live_tank_tasks: Dictionary = {}
+var parked_tank_viewports: Dictionary = {}
+var parked_tank_models: Dictionary = {}
+var parked_tank_factions: Dictionary = {}
+var parked_order: Array[String] = []
 var live_tank_render_updates := 0
 
 func prepare() -> void:
@@ -93,6 +99,11 @@ func texture_for(role: String, faction: int = -1, unit_id: String = "") -> Textu
             var live_viewport: SubViewport = live_tank_viewports[unit_id] as SubViewport
             if live_viewport != null:
                 return live_viewport.get_texture()
+    if role == "tank" and parked_tank_viewports.has(unit_id):
+        if int(parked_tank_factions.get(unit_id,-1)) == faction:
+            var retained: SubViewport = parked_tank_viewports[unit_id] as SubViewport
+            if retained != null:
+                return retained.get_texture()
     var key: String = role
     if role == "tank" and faction >= 0 and faction < 8:
         key = "tank#%d" % faction
@@ -112,6 +123,16 @@ func live_tank_count() -> int:
 
 func _create_live_tank(unit_id: String, faction: int) -> void:
     if live_tank_viewports.has(unit_id) or live_tank_viewports.size() >= MAX_LIVE_TANKS:
+        return
+    # Reuse the last camera and mesh if this unit moves/attacks again.
+    if parked_tank_viewports.has(unit_id) and int(parked_tank_factions.get(unit_id,-1)) == faction:
+        live_tank_viewports[unit_id] = parked_tank_viewports[unit_id]
+        live_tank_models[unit_id] = parked_tank_models[unit_id]
+        live_tank_factions[unit_id] = faction
+        parked_tank_viewports.erase(unit_id)
+        parked_tank_models.erase(unit_id)
+        parked_tank_factions.erase(unit_id)
+        parked_order.erase(unit_id)
         return
     var viewport := SubViewport.new()
     viewport.name = "LiveMBT_" + unit_id
@@ -150,9 +171,63 @@ func clear_live_tanks() -> void:
         if viewport != null:
             viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
             viewport.queue_free()
+    for unit_id in parked_tank_viewports.keys():
+        var retained: SubViewport = parked_tank_viewports[unit_id] as SubViewport
+        if retained != null:
+            retained.render_target_update_mode = SubViewport.UPDATE_DISABLED
+            retained.queue_free()
     live_tank_viewports.clear()
     live_tank_models.clear()
     live_tank_factions.clear()
+    live_tank_tasks.clear()
+    parked_tank_viewports.clear()
+    parked_tank_models.clear()
+    parked_tank_factions.clear()
+    parked_order.clear()
+
+func _expire_parked(unit_id: String) -> void:
+    if parked_tank_viewports.has(unit_id):
+        var retained: SubViewport = parked_tank_viewports[unit_id] as SubViewport
+        if retained != null:
+            retained.render_target_update_mode = SubViewport.UPDATE_DISABLED
+            retained.queue_free()
+    parked_tank_viewports.erase(unit_id)
+    parked_tank_models.erase(unit_id)
+    parked_tank_factions.erase(unit_id)
+    parked_order.erase(unit_id)
+
+func _park_live_tank(unit_id: String, keep: bool) -> void:
+    var viewport: SubViewport = live_tank_viewports.get(unit_id,null) as SubViewport
+    var model: Node3D = live_tank_models.get(unit_id,null) as Node3D
+    if viewport != null and model != null and keep:
+        var last: Dictionary = live_tank_tasks.get(unit_id,{})
+        var original_yaw: float = model.rotation_degrees.y
+        TankRig.restore(model)
+        model.rotation_degrees.y = original_yaw
+        if str(last.get("kind","")) == "attack":
+            var turret: Node3D = model.find_child("TorretaGiratoria",true,false) as Node3D
+            if turret != null:
+                var heading: Vector2i = last.get("heading",Vector2i.ZERO)
+                turret.rotation_degrees.y = wrapf(TankRig.heading_yaw(heading)-original_yaw,-180.0,180.0)
+        # A single final GPU frame locks a real 3D heading (no flat sprite
+        # rotation). Keep at most four; all others use neutral cached texture.
+        viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+        parked_tank_viewports[unit_id] = viewport
+        parked_tank_models[unit_id] = model
+        parked_tank_factions[unit_id] = live_tank_factions.get(unit_id,-1)
+        parked_order.append(unit_id)
+        while parked_order.size() > MAX_PARKED_TANKS:
+            _expire_parked(parked_order[0])
+    elif viewport != null:
+        viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+        viewport.queue_free()
+    live_tank_viewports.erase(unit_id)
+    live_tank_models.erase(unit_id)
+    live_tank_factions.erase(unit_id)
+    live_tank_tasks.erase(unit_id)
+
+func parked_tank_count() -> int:
+    return parked_tank_viewports.size()
 
 func update_tank_actions(units: Array, motion: Array, combat: Array,
         fog_enabled: bool, visible_cells: Dictionary, battery_saver: bool = false) -> void:
@@ -216,13 +291,12 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             break
     for unit_id in live_tank_viewports.keys():
         if not desired.has(unit_id):
-            var view: SubViewport = live_tank_viewports[unit_id] as SubViewport
-            if view != null:
-                view.render_target_update_mode = SubViewport.UPDATE_DISABLED
-                view.queue_free()
-            live_tank_viewports.erase(unit_id)
-            live_tank_models.erase(unit_id)
-            live_tank_factions.erase(unit_id)
+            var still_exists := false
+            for unit in units:
+                if str(unit.get("id","")) == str(unit_id) and int(unit.get("hp",0)) > 0:
+                    still_exists = true
+                    break
+            _park_live_tank(str(unit_id),still_exists)
     for unit_id in desired:
         var task: Dictionary = desired[unit_id]
         var faction: int = int(task["faction"])
@@ -238,6 +312,7 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
         else:
             model.rotation_degrees.y = 0.0
         if TankRig.pose(model,kind,float(task["progress"]),heading):
+            live_tank_tasks[unit_id] = task.duplicate(true)
             var active_view: SubViewport = live_tank_viewports[unit_id] as SubViewport
             active_view.render_target_update_mode = SubViewport.UPDATE_ONCE
             live_tank_render_updates += 1
