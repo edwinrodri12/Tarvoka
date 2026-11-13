@@ -5,6 +5,8 @@ const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
+const Terrain = preload("res://scripts/core/TerrainTactics.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 
 # Public, pure, confirmation-time forecast. All numbers come from
 # TacticalHints.for_unit: the same legal forecast used to confirm attacks.
@@ -48,6 +50,14 @@ static func estimate(state: Dictionary, pending: Dictionary) -> Dictionary:
     var defender_cover: int = int(entry.get("terrain_defense_cover",0))
     var flank: bool = bool(entry.get("flanked",false))
     var notes: Array[String] = []
+    if Domains.domain(own) == Domains.GROUND and Domains.domain(opponent) == Domains.GROUND:
+        var own_ground: String = Terrain.tile_at(state["terrain"],own["pos"])
+        var enemy_ground: String = Terrain.tile_at(state["terrain"],opponent["pos"])
+        var height_advantage: int = Terrain.height_of(own_ground) - Terrain.height_of(enemy_ground)
+        if height_advantage > 0:
+            notes.append("Ataque desde altura: +1")
+        elif height_advantage < 0:
+            notes.append("Ataque cuesta arriba: -1")
     if attack_bonus != 0:
         notes.append("Posición: ataque %+d" % attack_bonus)
     if defender_cover > 0:
