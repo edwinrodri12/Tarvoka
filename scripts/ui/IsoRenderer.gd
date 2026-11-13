@@ -139,7 +139,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
             var selected: bool = cell == selected_factory_pos or cell == inspected_cell
             SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver)
-            if cell == selected_factory_pos:
+            if selected:
                 canvas.draw_polyline(_ring(_poly(cell,canvas,zoom,pan,dims)),
                     Color("#FFE451"),maxf(2.0,hw*0.055),true)
 
