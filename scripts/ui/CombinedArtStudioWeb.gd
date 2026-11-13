@@ -15,7 +15,9 @@ var building_controls: VBoxContainer
 var terrain_controls: VBoxContainer
 var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
+var terrain_shadow_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
+var terrain_continuous_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
@@ -133,6 +135,13 @@ func _add_building_mode() -> void:
     terrain_samples_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_samples_toggle)
 
+    terrain_continuous_toggle = CheckButton.new()
+    terrain_continuous_toggle.name = "CompararSueloV1V2"
+    terrain_continuous_toggle.text = "Suelo continuo V2 (desactivar para V1)"
+    terrain_continuous_toggle.button_pressed = true
+    terrain_continuous_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_continuous_toggle)
+
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
     terrain_light_picker.name = "LuzDeEntorno"
@@ -140,6 +149,12 @@ func _add_building_mode() -> void:
         terrain_light_picker.add_item(option)
     terrain_light_picker.item_selected.connect(_change_terrain_light)
     terrain_controls.add_child(terrain_light_picker)
+    terrain_shadow_toggle = CheckButton.new()
+    terrain_shadow_toggle.name = "SombrasDeRelieve"
+    terrain_shadow_toggle.text = "Sombras del relieve (comparar)"
+    terrain_shadow_toggle.button_pressed = true
+    terrain_shadow_toggle.toggled.connect(_change_terrain_shadow)
+    terrain_controls.add_child(terrain_shadow_toggle)
     _title(terrain_controls,
         "Escenarios artísticos 3D de prueba. Las casillas, alturas y modelos "
         + "de referencia NO cambian el combate, la movilidad ni los guardados. "
@@ -203,6 +218,10 @@ func _change_terrain_light(_index: int) -> void:
     if _role == "terrain":
         _apply_terrain_lighting()
 
+func _change_terrain_shadow(_checked: bool) -> void:
+    if _role == "terrain":
+        _apply_terrain_lighting()
+
 func _restore_default_lighting() -> void:
     for item in preview.get_children():
         if item is WorldEnvironment:
@@ -214,19 +233,32 @@ func _restore_default_lighting() -> void:
             var light: DirectionalLight3D = item as DirectionalLight3D
             light.light_color = Color.WHITE
             light.light_energy = 1.65 if light == preview.get_child(2) else 0.8
+            light.shadow_enabled = false
+            light.rotation_degrees = Vector3(-46,-32,0) if light == preview.get_child(2) else Vector3(-25,132,0)
 
 func _apply_terrain_lighting() -> void:
     var setting: int = terrain_light_picker.selected
     for item in preview.get_children():
         if item is WorldEnvironment:
             var env: Environment = (item as WorldEnvironment).environment
-            env.background_color = Color("#304956") if setting == 1 else Color("#536877") if setting == 2 else Color("#7b9aa8")
-            env.ambient_light_color = Color("#edb990") if setting == 1 else Color("#c3d5df")
-            env.ambient_light_energy = 0.73 if setting == 1 else 0.94 if setting == 2 else 0.83
+            env.background_color = Color("#374c58") if setting == 1 else Color("#4b606c") if setting == 2 else Color("#526c75")
+            env.ambient_light_color = Color("#f1c8a7") if setting == 1 else Color("#becdd6")
+            env.ambient_light_energy = 0.37 if setting == 1 else 0.53 if setting == 2 else 0.46
         elif item is DirectionalLight3D:
             var sun: DirectionalLight3D = item as DirectionalLight3D
-            sun.light_color = Color("#ffbc86") if setting == 1 else Color("#e3edf4") if setting == 2 else Color.WHITE
-            sun.light_energy = 0.92 if setting == 2 else 1.32 if setting == 1 else 1.65
+            var is_key: bool = sun == preview.get_child(2)
+            if is_key:
+                sun.light_color = Color("#f5b98b") if setting == 1 else Color("#e3edf4") if setting == 2 else Color("#fff6dd")
+                sun.light_energy = 0.89 if setting == 0 else 0.76 if setting == 1 else 0.62
+                sun.rotation_degrees = Vector3(-27,-52,0) if setting == 1 else Vector3(-46,-32,0)
+                sun.shadow_enabled = terrain_shadow_toggle.button_pressed
+                sun.shadow_blur = 1.18
+            else:
+                # The old prototype used the FULL key-light energy on BOTH
+                # directionals, bleaching vertex-coloured ground to white.
+                sun.light_color = Color("#9cb7d5") if setting == 1 else Color("#bbcbd6")
+                sun.light_energy = 0.20 if setting == 1 else 0.30 if setting == 2 else 0.26
+                sun.shadow_enabled = false
 
 func _display_terrain() -> void:
     if preview == null:
@@ -238,7 +270,8 @@ func _display_terrain() -> void:
         model_root.queue_free()
     _role = "terrain"
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
-        terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,_faction)
+        terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
+        _faction,terrain_continuous_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -289,7 +322,7 @@ func _display_headquarters() -> void:
 func _update_camera() -> void:
     if _role == "terrain":
         if camera != null:
-            camera.size = 43.0 / _zoom
+            camera.size = 30.5 / _zoom
         return
     if _role == "headquarters":
         if camera != null:
