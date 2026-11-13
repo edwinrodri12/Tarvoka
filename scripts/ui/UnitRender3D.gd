@@ -35,7 +35,7 @@ func prepare() -> void:
         var camera := Camera3D.new()
         camera.name = "CamaraIsometrica"
         camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-        camera.size = 3.95 if str(role) in ["line","scout"] else 4.45
+        camera.size = Models.preview_frame_height(str(role))
         camera.near = 0.1
         camera.far = 50.0
         camera.position = ORBIT
