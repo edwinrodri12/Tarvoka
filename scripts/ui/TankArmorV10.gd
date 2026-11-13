@@ -9,8 +9,8 @@ const ROOT := "G09ArmaduraIntegralV10"
 
 const HULL := Color("#556974")
 const TURRET := Color("#465966")
-const CERAMIC := Color("#697A85")
-const CERAMIC_DARK := Color("#586C77")
+const CERAMIC := Color("#586D78")
+const CERAMIC_DARK := Color("#495E69")
 const GUNMETAL := Color("#2D3C48")
 const SEAM := Color("#202F37")
 const WEAR := Color("#8E9695")
@@ -350,7 +350,9 @@ static func finish_materials(model: Node3D) -> int:
         cloned.metallic = 0.23
         cloned.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
         var tint: Color = material.albedo_color
-        if "Mejilla" in str(node.name) or "Glacis" in str(node.name):
+        if "Inferior" in str(node.name) or "Exterior" in str(node.name):
+            tint = CERAMIC_DARK
+        elif "Mejilla" in str(node.name) or "Glacis" in str(node.name):
             tint = CERAMIC
         elif "Soldadura" in str(node.name) or "Union" in str(node.name) or \
                 "Costura" in str(node.name) or "Rejilla" in str(node.name):
@@ -391,5 +393,19 @@ static func finish_materials(model: Node3D) -> int:
         mat.roughness = 0.74
         mat.metallic = 0.24
         head.material_override = mat
+    # Real moving-gun metal now matches the military enamel. These meshes
+    # remain attached to ElevacionCanon and retain elevation/recoil.
+    for name in ["ManguitoTermico","ExtractorGases",
+            "AbrazaderaManguitoCanon0","AbrazaderaManguitoCanon1"]:
+        var gun_part: MeshInstance3D = model.find_child(
+            name,true,false) as MeshInstance3D
+        if gun_part == null or gun_part.material_override == null:
+            continue
+        var gun_finish: StandardMaterial3D = gun_part.material_override.duplicate(true) as StandardMaterial3D
+        gun_finish.albedo_color = Color("#43545F")
+        gun_finish.albedo_texture = Hero._army_texture()
+        gun_finish.roughness = 0.62
+        gun_finish.metallic = 0.36
+        gun_part.material_override = gun_finish
     model.set_meta("tarvoka_mbt_sculpted_v10_pbr_count",count)
     return count
