@@ -44,12 +44,39 @@ func _run_gallery() -> void:
     main._show_home_menu()
     if not await _capture("01-home-portrait",Vector2i(412,915),"Inicio · teléfono vertical"):
         _failed = true
+    if main.home_menu.faction_showcase.visible:
+        push_error("The eight-crest gallery must not displace portrait home buttons.")
+        _failed = true
+    # Keep Continue, Story, Skirmish and Saved Matches accessible before
+    # the first screenful on a normal Android phone (no mandatory scrolling).
+    for key in ["Continuar","Modo historia","Escaramuza","Partidas guardadas"]:
+        if not _inside_viewport(main.home_menu.primary_buttons[key],Vector2i(412,915)):
+            _failed = true
     if not await _capture("02-home-landscape",Vector2i(1280,720),"Inicio · horizontal"):
         _failed = true
+    if not main.home_menu.faction_showcase.visible:
+        push_error("Landscape home must display the official faction emblem gallery.")
+        _failed = true
+    for crest in main.home_menu.showcase_emblems:
+        if crest.texture == null:
+            push_error("Landscape home is missing an approved faction crest.")
+            _failed = true
 
     main._prepare_skirmish()
     if not await _capture("03-skirmish-portrait",Vector2i(412,915),"Escaramuza · preparación"):
         _failed = true
+    for required in [main.skirmish_setup.heading,
+            main.skirmish_setup.footer_faction_button,
+            main.skirmish_setup.start_button]:
+        if not _inside_viewport(required,Vector2i(412,915)):
+            _failed = true
+    if main.skirmish_setup.map_preview.custom_minimum_size.y > 152.0:
+        push_error("Terrain reconnaissance card is too tall for Android portrait.")
+        _failed = true
+    for portrait in main.skirmish_setup.faction_portraits:
+        if portrait.texture == null:
+            push_error("Skirmish preparation still lacks approved commander art.")
+            _failed = true
     main._open_faction_selection()
     main.faction_selector._choose_side(0)
     main.faction_selector._choose_faction(6)
@@ -108,6 +135,14 @@ func _run_gallery() -> void:
     main.board.state["winner"] = 0
     main._process(0.0)
     if not await _capture("09-results-portrait",Vector2i(412,915),"Resultados · teléfono vertical"):
+        _failed = true
+    if main.results_panel.get_global_rect().size.y > 635.0:
+        push_error("Result sheet wastes excessive height in portrait.")
+        _failed = true
+    var result_scroller: ScrollContainer = main.results_panel.stats_column.get_parent()
+    var last_metric: Control = main.results_panel.stats_column.get_child(2)
+    if not result_scroller.get_global_rect().encloses(last_metric.get_global_rect()):
+        push_error("Essential results metric still clipped inside its scroll region.")
         _failed = true
     if not await _capture("10-results-landscape",Vector2i(1280,720),"Resultados · horizontal"):
         _failed = true

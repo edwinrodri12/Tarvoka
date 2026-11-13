@@ -91,12 +91,31 @@ func _reflow() -> void:
     var portrait: bool = size_rect.y > size_rect.x
     set_anchor(SIDE_LEFT,0.04 if portrait else 0.24)
     set_anchor(SIDE_RIGHT,0.96 if portrait else 0.76)
-    set_anchor(SIDE_TOP,0.12 if portrait else 0.07)
-    set_anchor(SIDE_BOTTOM,0.91 if portrait else 0.92)
     offset_left = 0
     offset_right = 0
-    offset_top = 0
-    offset_bottom = 0
+    if portrait:
+        # On tall Android screens, the old 79%-height sheet left a long
+        # empty lower half when the battle had just three result metrics.
+        # Limit its size while keeping the metric list scrollable.
+        # Short match reports should not have 150+ blank pixels below the
+        # last stat. More complex economic/territorial games retain room for
+        # a scrolling metric list.
+        var metric_count: int = 3
+        if bool(_data.get("has_relay",false)):
+            metric_count += 1
+        if bool(_data.get("has_economy",false)):
+            metric_count += 4
+        var panel_height: float = minf(size_rect.y*0.76,
+            clampf(440.0 + metric_count*55.0,605.0,680.0))
+        set_anchor(SIDE_TOP,0.5)
+        set_anchor(SIDE_BOTTOM,0.5)
+        offset_top = -panel_height*0.5
+        offset_bottom = panel_height*0.5
+    else:
+        set_anchor(SIDE_TOP,0.07)
+        set_anchor(SIDE_BOTTOM,0.92)
+        offset_top = 0
+        offset_bottom = 0
 
 func _line(label_text: String,blue: String,red: String) -> void:
     var panel := PanelContainer.new()
@@ -157,6 +176,7 @@ func open_for(state: Dictionary, viewer: int = 0) -> void:
         _line("Bases productoras",str(_data["bases"][0]),str(_data["bases"][1]))
         _line("Ingresos por turno",str(_data["income"][0]),str(_data["income"][1]))
         _line("Créditos restantes",str(_data["credits"][0]),str(_data["credits"][1]))
+    _reflow() # The number of metric cards determines the mobile sheet height.
     show()
 
 func _unhandled_key_input(event: InputEvent) -> void:

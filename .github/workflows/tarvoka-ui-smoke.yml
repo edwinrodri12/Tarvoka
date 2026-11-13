@@ -7,6 +7,7 @@ on:
       - 'assets/factions/**'
       - 'tests/test_commander_presentation.gd'
       - 'tests/test_battle_focus_hud.gd'
+      - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -17,6 +18,7 @@ on:
       - 'assets/factions/**'
       - 'tests/test_commander_presentation.gd'
       - 'tests/test_battle_focus_hud.gd'
+      - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -43,6 +45,7 @@ jobs:
           for test in \
             test_official_faction_art \
             test_battle_focus_hud \
+            test_mobile_menu_polish \
             test_commander_presentation \
             test_eight_faction_selection \
             test_postbattle_results \

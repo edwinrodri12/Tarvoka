@@ -11,6 +11,7 @@ const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -29,6 +30,10 @@ var _preset_label: Label
 var selected_factions: Dictionary = Identity.defaults()
 var faction_summary: Label
 var faction_button: Button
+var footer_faction_button: Button
+var faction_portraits: Array[TextureRect] = []
+var faction_names: Array[Label] = []
+var heading: Label
 
 # Preflight overlay. Changing these widgets NEVER touches game state.
 # Main translates the values into its existing authoritative pickers, then
@@ -55,11 +60,11 @@ func _ready() -> void:
     add_child(layout)
     var header := HBoxContainer.new()
     layout.add_child(header)
-    var heading := Label.new()
-    heading.text = "PREPARAR ESCARAMUZA"
+    heading = Label.new()
+    heading.text = "ESCARAMUZA"
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_theme_color_override("font_color",Color("#F1D58C"))
-    heading.add_theme_font_size_override("font_size",24)
+    heading.add_theme_font_size_override("font_size",26)
     header.add_child(heading)
     var back := Button.new()
     back.text = "Volver"
@@ -151,13 +156,46 @@ func _ready() -> void:
     var faction_column := VBoxContainer.new()
     faction_column.add_theme_constant_override("separation",8)
     faction_card.add_child(faction_column)
+    var match_row := HBoxContainer.new()
+    match_row.add_theme_constant_override("separation",7)
+    faction_column.add_child(match_row)
+    for side in range(2):
+        var profile := PanelContainer.new()
+        profile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        profile.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#10283A"),Chrome.EDGE,7,5))
+        match_row.add_child(profile)
+        var profile_column := VBoxContainer.new()
+        profile_column.add_theme_constant_override("separation",3)
+        profile.add_child(profile_column)
+        var rank := Label.new()
+        rank.text = "TU EJÉRCITO" if side == 0 else "RIVAL"
+        rank.add_theme_font_size_override("font_size",12)
+        rank.add_theme_color_override("font_color",Chrome.GOLD)
+        profile_column.add_child(rank)
+        var member := HBoxContainer.new()
+        member.add_theme_constant_override("separation",5)
+        profile_column.add_child(member)
+        var portrait := TextureRect.new()
+        portrait.custom_minimum_size = Vector2(48,48)
+        portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        member.add_child(portrait)
+        faction_portraits.append(portrait)
+        var name := Label.new()
+        name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        name.add_theme_font_size_override("font_size",13)
+        member.add_child(name)
+        faction_names.append(name)
     faction_summary = Label.new()
     faction_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     faction_summary.add_theme_color_override("font_color",Chrome.TEXT)
-    faction_summary.add_theme_font_size_override("font_size",16)
+    faction_summary.add_theme_font_size_override("font_size",12)
     faction_column.add_child(faction_summary)
     faction_button = Button.new()
-    faction_button.text = "ELEGIR FACCIONES Y COMANDANTES"
+    faction_button.text = "CAMBIAR FACCIONES  ·  8 DISPONIBLES"
     faction_button.custom_minimum_size.y = 54
     faction_button.pressed.connect(func(): factions_requested.emit())
     Chrome.emphasize(faction_button,"primary")
@@ -187,6 +225,15 @@ func _ready() -> void:
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",6)
     layout.add_child(actions)
+    # Keep faction selection reachable at all times on a phone. The
+    # scrollable dossier still contains the detailed button for context.
+    footer_faction_button = Button.new()
+    footer_faction_button.text = "Facciones"
+    footer_faction_button.custom_minimum_size.y = 54
+    footer_faction_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    footer_faction_button.pressed.connect(func(): factions_requested.emit())
+    actions.add_child(footer_faction_button)
+    Chrome.emphasize(footer_faction_button,"secondary")
     var advanced := Button.new()
     advanced.text = "Avanzado"
     advanced.custom_minimum_size.y = 54
@@ -201,8 +248,20 @@ func _ready() -> void:
     actions.add_child(start_button)
     Chrome.emphasize(start_button,"success")
     Chrome.emphasize(advanced,"secondary")
+    get_viewport().size_changed.connect(_reflow)
+    call_deferred("_reflow")
     apply_preset(1)
     hide()
+
+func _reflow() -> void:
+    if map_preview == null:
+        return
+    # A shorter reconnaissance preview on narrow Android phones keeps the
+    # real commander choices closer to the first screenful. Landscape still
+    # displays the full tactical map.
+    var viewport: Vector2 = get_viewport_rect().size
+    var portrait: bool = viewport.y > viewport.x * 1.12 or viewport.x < 520.0
+    map_preview.custom_minimum_size = Vector2(250,148 if portrait else 196)
 
 func _section(parent: VBoxContainer, text_value: String) -> void:
     var item := Label.new()
@@ -310,8 +369,15 @@ func _changed() -> void:
     var blue: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},0)
     var red: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},1)
     if faction_summary != null:
-        faction_summary.text = "JUGADOR: %s  ·  RIVAL: %s\nLos comandantes conservan los artes aprobados pendientes de importar." % [blue,red]
-    summary.text = preset_summary + "\nBandos: %s contra %s.\nLa partida activa solo se reemplaza al confirmar." % [blue,red]
+        faction_summary.text = "Escudos y retratos oficiales · los bandos no modifican el balance aprobado."
+    if faction_portraits.size() == 2:
+        for side in range(2):
+            var key: String = str(selected_factions[str(side)])
+            var index: int = Identity.index_for(key)
+            faction_portraits[side].texture = Style.commander_texture(index)
+            faction_names[side].text = blue if side == 0 else red
+            faction_names[side].add_theme_color_override("font_color",Style.faction_color(index).lightened(0.30))
+    summary.text = preset_summary + "\n%s vs. %s\nEl juego pedirá confirmación antes de empezar." % [blue,red]
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,int(seed_picker.value))
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
