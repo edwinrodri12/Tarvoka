@@ -115,6 +115,23 @@ func _run() -> void:
     assert(studio.damage_picker.visible)
     for step in range(3):
         await process_frame
+    # Turntable from the EXACT Godot model used in combat. Four orthogonal
+    # rotations expose gaps, overhanging cheeks and missing body/roof seals.
+    studio._display_role("tank")
+    assert(studio.model_root.get_meta("tarvoka_mbt_sculpted_v10",false))
+    var turntable := Image.create(1920,330,false,Image.FORMAT_RGBA8)
+    turntable.fill(Color("#14232D"))
+    for angle_index in range(4):
+        studio._reset_camera()
+        studio._rotate(float(angle_index)*90.0)
+        for capture_frame in range(5):
+            await process_frame
+        var view: Image = studio.preview.get_texture().get_image()
+        assert(view != null and not view.is_empty())
+        view.resize(480,330,Image.INTERPOLATE_LANCZOS)
+        turntable.blit_rect(view,Rect2i(0,0,480,330),
+            Vector2i(angle_index*480,0))
+    assert(turntable.save_png("res://artifacts/tarvoka_g09_v10_four_angles.png") == OK)
     # Close-up inspection: no reference painting or external image.
     # Verify how armor seams and running gear actually look in the WebGL
     # scene at phone zoom instead of trusting metadata-only tests.
