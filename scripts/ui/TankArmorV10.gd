@@ -279,6 +279,59 @@ static func _upgrade_turret(turret: Node3D) -> void:
         Vector3(-0.17,0.707,0.859),
         Vector3(0.17,0.707,0.859),0.011,WEAR)
 
+static func _authored_roof_hard_surface(turret: Node3D) -> void:
+    # Real shallow panels and steel fixings sit on the watertight V10 roof.
+    # No tall disconnected boxes and no interference with animated sights.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _plate(turret,"G09V10PanelAnteriorTecho_%s" % side,
+            Vector3(sign*0.438,0.669,-0.542),
+            Vector3(0.267,0.033,0.390),0.048,HULL,
+            Vector3(-5,sign*2,0))
+        _line(turret,"G09V10JuntaPanelAnterior_%s" % side,
+            Vector3(sign*0.568,0.691,-0.706),
+            Vector3(sign*0.569,0.691,-0.368),0.011,SEAM)
+        _plate(turret,"G09V10PanelPosteriorTecho_%s" % side,
+            Vector3(sign*0.458,0.675,0.824),
+            Vector3(0.306,0.031,0.226),0.048,HULL)
+        _line(turret,"G09V10SoldaduraPanelPosterior_%s" % side,
+            Vector3(sign*0.317,0.698,0.941),
+            Vector3(sign*0.599,0.698,0.941),0.012,SEAM)
+        _dark(turret,"G09V10ZonaAntideslizante_%s" % side,
+            Vector3(sign*0.365,0.681,-0.129),
+            Vector3(0.169,0.014,0.215),GUNMETAL)
+    _plate(turret,"G09V10RegistroCentralTorre",
+        Vector3(0,0.677,-0.103),Vector3(0.210,0.023,0.281),
+        0.033,TURRET)
+    _line(turret,"G09V10CierreRegistroCentral",
+        Vector3(-0.09,0.693,0.026),
+        Vector3(0.09,0.693,0.026),0.009,WEAR)
+    # Twenty-four visible roof fasteners, ONE mobile MultiMesh draw batch.
+    var nuts := MultiMeshInstance3D.new()
+    nuts.name = "G09V10TornillosTecho"
+    var sphere := SphereMesh.new()
+    sphere.radius = 0.010
+    sphere.height = 0.018
+    sphere.radial_segments = 8
+    sphere.rings = 4
+    var mm := MultiMesh.new()
+    mm.transform_format = MultiMesh.TRANSFORM_3D
+    mm.mesh = sphere
+    mm.instance_count = 24
+    var i: int = 0
+    for side in [-1,1]:
+        var sign: float = float(side)
+        for z in [-0.73,-0.54,-0.35,0.62,0.79,0.96]:
+            for edge in [0,1]:
+                var x: float = sign*(0.335 if edge==0 else 0.594)
+                var y: float = 0.692 if z<0.0 else 0.699
+                mm.set_instance_transform(i,
+                    Transform3D(Basis.IDENTITY,Vector3(x,y,float(z))))
+                i += 1
+    nuts.multimesh = mm
+    nuts.material_override = Hero._army_material(WEAR,false)
+    turret.add_child(nuts)
+
 static func _mobile_microdetail_lod(model: Node3D) -> void:
     # Save actual mobile fill/draw time at long camera distances: tiny
     # fasteners and weld beads fade out only when they are sub-pixel small.
@@ -286,6 +339,7 @@ static func _mobile_microdetail_lod(model: Node3D) -> void:
     var affected: int = 0
     for pattern in ["G09TornillosRuedasV9","RemachesBujesRodaje",
             "PernosFaldones","PernosCorazaTorre",
+            "G09V10TornillosTecho",
             "G09V10CosturaBlindaje_*",
             "G09V10SoldaduraMotor_*","G09V10UnionGlacis_*",
             "G09V10AnclajeLateral_*","G09V10BisagraPanelTecho"]:
@@ -327,6 +381,7 @@ static func apply(model: Node3D) -> bool:
         "CubiertaMotorRectificadaV7"])
     _upgrade_hull(hull)
     _upgrade_turret(turret)
+    _authored_roof_hard_surface(turret)
     _mobile_microdetail_lod(model)
     model.set_meta("tarvoka_mbt_sculpted_v10",true)
     return true
