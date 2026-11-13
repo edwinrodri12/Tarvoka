@@ -9,7 +9,7 @@ const Studio = preload("res://scripts/ui/UnitArtStudioWeb.gd")
 func _initialize() -> void:
     call_deferred("_run")
 
-func _capture(studio: Control) -> Image:
+func _capture(studio) -> Image:
     for i in range(6):
         await process_frame
     var texture: Texture2D = studio.preview.get_texture()
