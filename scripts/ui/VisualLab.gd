@@ -95,15 +95,21 @@ func _ready() -> void:
     outer.add_child(content)
 
     var board_frame := PanelContainer.new()
+    # 242287.mp4: large iso tiles were painted above the header and across
+    # the sidebar. Clip both parent viewport and board drawing to the battle
+    # rectangle; no terrain may cover menu buttons or inspector chrome.
+    board_frame.clip_contents = true
     board_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     board_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content.add_child(board_frame)
     var board_margin := MarginContainer.new()
+    board_margin.clip_contents = true
     for side in ["margin_left","margin_right","margin_top","margin_bottom"]:
         board_margin.add_theme_constant_override(side,4)
     board_frame.add_child(board_margin)
     lab_board = BoardScript.new()
     lab_board.name = "TableroExclusivoLaboratorio"
+    lab_board.clip_contents = true
     lab_board.autosave_enabled = false
     lab_board.ai_enabled = false
     lab_board.require_order_confirmation = false
@@ -114,8 +120,20 @@ func _ready() -> void:
     lab_board.set_process(false)
 
     var right := PanelContainer.new()
-    right.custom_minimum_size.x = 340
+    # Video 242263.mp4: at 2316x1080 the old 340px panel was only 15% of
+    # the screen, leaving important controls hard to read on the phone.
+    right.custom_minimum_size.x = clampf(
+        get_viewport().get_visible_rect().size.x * 0.285,400.0,700.0)
     right.size_flags_horizontal = Control.SIZE_FILL
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color("#111F2B")
+    panel_style.border_color = Color("#304858")
+    panel_style.set_border_width_all(1)
+    panel_style.content_margin_left = 12.0
+    panel_style.content_margin_right = 12.0
+    panel_style.content_margin_top = 8.0
+    panel_style.content_margin_bottom = 8.0
+    right.add_theme_stylebox_override("panel",panel_style)
     right.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content.add_child(right)
     var scroll := ScrollContainer.new()
@@ -229,6 +247,9 @@ func _ready() -> void:
     feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     feedback_label.add_theme_color_override("font_color",Color("#F6D88A"))
     controls.add_child(feedback_label)
+    # Operation feedback belongs by the selectors, not hidden after every
+    # damage control at the very bottom of a long landscape sidebar.
+    controls.move_child(feedback_label,1)
 
     var Inspector = load("res://scripts/ui/Unit3DInspector.gd")
     preview_viewer = Inspector.new()
@@ -238,7 +259,8 @@ func _ready() -> void:
 func _action_button(container: Container, label: String) -> Button:
     var button := Button.new()
     button.text = label
-    button.custom_minimum_size.y = 42
+    button.custom_minimum_size.y = 50
+    button.add_theme_font_size_override("font_size",16)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     container.add_child(button)
     return button
@@ -246,11 +268,12 @@ func _action_button(container: Container, label: String) -> Button:
 func _picker(container: Container, label: String, values: Array, show_role_name: bool) -> OptionButton:
     var title := Label.new()
     title.text = label
-    title.add_theme_font_size_override("font_size",13)
+    title.add_theme_font_size_override("font_size",15)
     title.add_theme_color_override("font_color",Color("#AAC6D6"))
     container.add_child(title)
     var picker := OptionButton.new()
-    picker.custom_minimum_size.y = 42
+    picker.custom_minimum_size.y = 50
+    picker.add_theme_font_size_override("font_size",16)
     picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     for key in values:
         picker.add_item(Roles.label(str(key)) if show_role_name else str(key))
@@ -431,6 +454,10 @@ func demo_move() -> void:
     if best.x < 0:
         feedback_label.text = "Sin movimiento legal para esta unidad y este terreno."
         return
+    # BattleSession intentionally strips movement metadata from its public
+    # response. Use the SAME authoritative Rules.reachable cost just used
+    # to choose the legal destination; never report an invented zero.
+    var travel_cost: int = int(reachable[best])
     var result: Dictionary = Session.move(state_before,"LAB-A",best)
     if not bool(result.get("valid",false)):
         feedback_label.text = "Movimiento rechazado por las reglas del juego."
@@ -440,7 +467,7 @@ func demo_move() -> void:
     lab_board.queue_redraw()
     _recent_action = "move"
     feedback_label.text = "MOVIMIENTO REAL: %s · %d puntos de recorrido. Movimiento animado por casillas." % [
-        Roles.label(_selected_role(attacker_picker)),int(result.get("cost",0))]
+        Roles.label(_selected_role(attacker_picker)),travel_cost]
 
 func repeat_action() -> void:
     match _recent_action:
@@ -519,6 +546,9 @@ func open_lab() -> void:
     move_to_front()
     lab_board.set_process(true)
     lab_board.set_isometric(true)
+    # The video showed the laboratory map cropped along the landscape edges.
+    # Start slightly zoomed out; users can still pinch or use +/- buttons.
+    lab_board.iso_zoom = 0.85
     rebuild_stage()
     feedback_label.text = "Laboratorio listo. Aquí puedes comparar las animaciones sin modificar tu partida."
 

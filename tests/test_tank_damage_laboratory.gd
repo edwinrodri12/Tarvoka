@@ -71,6 +71,7 @@ func _run() -> void:
     var inspector = Inspector.new()
     root.add_child(inspector)
     inspector.show_role("tank")
+    assert(inspector.camera.size < Models.preview_frame_height("tank")) # Closer physical model framing.
     assert(inspector.tank_damage_picker.item_count == 5)
     assert(inspector.tank_hit_button != null and inspector.tank_destroy_button != null)
     assert(inspector.tank_damage_picker.visible)

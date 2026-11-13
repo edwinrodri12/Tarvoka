@@ -360,23 +360,29 @@ func open_viewer() -> void:
     var parent_control: Control = get_parent() as Control
     if parent_control != null and parent_control.size.x > screen.x*0.6:
         screen = parent_control.size
-    var panel_height: float = clampf(screen.y*0.54,280.0,445.0)
-    var panel_width: float = clampf(screen.x*0.53,370.0,770.0)
+    # Video 242263: the model occupied a narrow 3D window surrounded by
+    # unused dark-gray dialog space. Give the asset viewport visual priority.
+    var panel_height: float = clampf(screen.y*0.60,300.0,525.0)
+    var panel_width: float = clampf(screen.x*0.60,400.0,1120.0)
     viewport_holder.custom_minimum_size = Vector2(panel_width,panel_height)
     if inspector_sidebar_scroll != null:
         inspector_sidebar_scroll.custom_minimum_size = Vector2(
-            clampf(screen.x*0.22,220.0,345.0),panel_height)
+            clampf(screen.x*0.245,245.0,430.0),panel_height)
+    var desired_width: int = int(clampf(screen.x*0.95,670.0,1600.0))
+    var desired_height: int = int(clampf(screen.y*0.79,420.0,650.0))
+    # A full-height scroll pane removes the old empty lower gray band while
+    # allowing all mechanical controls to scroll independently of the model.
     if inspector_outer != null:
-        inspector_outer.custom_minimum_size.y = clampf(screen.y*0.68,320.0,490.0)
-    var desired_width: int = int(clampf(screen.x*0.90,640.0,1220.0))
-    var desired_height: int = int(clampf(screen.y*0.73,390.0,570.0))
+        inspector_outer.custom_minimum_size.y = maxf(330.0,float(desired_height)-82.0)
     min_size = Vector2i(desired_width,desired_height)
     popup_centered(Vector2i(desired_width,desired_height))
 
 func _update_camera_size() -> void:
     if camera == null or not Models.supports(_current_role):
         return
-    camera.size = Models.preview_frame_height(_current_role) / _zoom_factor
+    # Keep barrels and tracks in view while bringing MBT details closer.
+    var framing: float = 1.12 if _current_role == "tank" else 1.0
+    camera.size = Models.preview_frame_height(_current_role) / (_zoom_factor*framing)
 
 func change_zoom(direction: int) -> void:
     if direction == 0:

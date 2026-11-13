@@ -96,6 +96,7 @@ func _run() -> void:
     assert(lab.lab_board.motion_effects[0].has("duration"))
     assert(lab.lab_board.motion_effects[0]["from"] != lab.lab_board.motion_effects[0]["to"])
     assert(lab.feedback_label.text.contains("MOVIMIENTO REAL"))
+    assert(not lab.feedback_label.text.contains("· 0 puntos")) # Real video 242263 regression.
     lab.repeat_action()
     assert(lab.lab_board.motion_effects.size() == 1)
     lab._set_playback_speed(2)
