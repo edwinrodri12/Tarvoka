@@ -49,6 +49,20 @@ static func emblem_texture(index: int) -> Texture2D:
         return null
     return ResourceLoader.load(path) as Texture2D
 
+# Approved commander portraits will be imported at this predictable path.
+# The missing asset is handled explicitly; no generated stand-ins masquerade
+# as approved character artwork.
+static func commander_path(index: int) -> String:
+    if index < 0 or index >= FACTIONS.size():
+        return ""
+    return "res://assets/commanders/%s.png" % str(FACTIONS[index]["key"])
+
+static func commander_texture(index: int) -> Texture2D:
+    var path: String = commander_path(index)
+    if path.is_empty() or not ResourceLoader.exists(path):
+        return null
+    return ResourceLoader.load(path) as Texture2D
+
 static func terrain_color(kind: String, x: int, y: int) -> Color:
     var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))
     # Inexpensive deterministic light variation; never affects movement cost.
