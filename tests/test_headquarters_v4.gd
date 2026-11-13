@@ -48,6 +48,10 @@ func _run() -> void:
         assert(pbr.normal_texture != null and pbr.roughness_texture != null)
         assert(v4.find_child("NucleoVerticalDeMandoV4",true,false) != null)
         assert(v4.find_child("EscudoDeFaccionModular",true,false) != null)
+        var center_panel: MeshInstance3D = v4.find_child("PanelFaccionCentralDeMando",true,false) as MeshInstance3D
+        assert(center_panel != null and center_panel.has_meta("tarvoka_faction_panel"))
+        assert(v4.find_child("CubiertaFaccionAla_-1",true,false) != null)
+        assert(v4.find_child("CubiertaFaccionAla_1",true,false) != null)
         assert(v4.find_child("TorreDeRedesTrianguladaV4",true,false) != null)
         assert(v4.find_child("PlatoParabolicoConcavo",true,false) != null)
         var pad: Node3D = v4.find_child("Helipuerto",true,false) as Node3D
