@@ -6,6 +6,7 @@ signal back_requested
 signal advanced_requested
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const TacticalUI = preload("res://scripts/ui/TacticalUITheme.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -26,24 +27,26 @@ var _preset_label: Label
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    var bg := StyleBoxFlat.new()
-    bg.bg_color = Color("#091520")
-    bg.content_margin_left = 12
-    bg.content_margin_right = 12
-    bg.content_margin_top = 8
-    bg.content_margin_bottom = 8
+    var bg: StyleBoxFlat = TacticalUI.frame("screen")
+    bg.content_margin_left = 16
+    bg.content_margin_right = 16
+    bg.content_margin_top = 12
+    bg.content_margin_bottom = 12
     add_theme_stylebox_override("panel",bg)
 
     var layout := VBoxContainer.new()
     layout.add_theme_constant_override("separation",8)
     layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
     add_child(layout)
+    var hero := PanelContainer.new()
+    hero.add_theme_stylebox_override("panel",TacticalUI.frame("hero"))
+    layout.add_child(hero)
     var header := HBoxContainer.new()
-    layout.add_child(header)
+    hero.add_child(header)
     var heading := Label.new()
     heading.text = "PREPARAR ESCARAMUZA"
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    heading.add_theme_color_override("font_color",Color("#F1D58C"))
+    heading.add_theme_color_override("font_color",TacticalUI.GOLD)
     heading.add_theme_font_size_override("font_size",21)
     header.add_child(heading)
     var back := Button.new()
@@ -131,6 +134,7 @@ func _ready() -> void:
     start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     start_button.pressed.connect(func(): start_requested.emit(options()))
     actions.add_child(start_button)
+    TacticalUI.accent(start_button,true)
     apply_preset(1)
     hide()
 
