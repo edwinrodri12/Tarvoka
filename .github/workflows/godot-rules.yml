@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate real objectives radar, unit alerts and fog-safe strategic map navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_objectives_radar.gd 2>&1 | tee /tmp/tarvoka-objectives-radar.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-objectives-radar.log; then
+            echo 'Objectives radar regression'; exit 1
+          fi
+          grep -F 'PASS objectives radar' /tmp/tarvoka-objectives-radar.log
+
       - name: Verify Android city/building shortcuts and safe capturer location
         shell: bash
         run: |

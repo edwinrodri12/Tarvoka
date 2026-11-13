@@ -20,6 +20,8 @@ const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
+const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
+const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 
 var board: Control
 var status_label: Label
@@ -27,6 +29,10 @@ var battlefield_status: Label
 var order_preview_label: Label
 var unit_label: Label
 var command_menu: Control
+var objectives_panel: Control
+var objectives_scrim: ColorRect
+var objectives_button: Button
+var compact_objectives_button: Button
 var home_menu: Control
 var skirmish_setup: Control
 var compact_combat_preview: Control
@@ -174,6 +180,12 @@ func _ready() -> void:
     command_menu_button.custom_minimum_size.y = 54
     command_menu_button.pressed.connect(_open_command_menu)
     panel.add_child(command_menu_button)
+    objectives_button = Button.new()
+    objectives_button.text = "OBJETIVOS Y ALERTAS"
+    objectives_button.custom_minimum_size.y = 50
+    objectives_button.tooltip_text = "Mostrar puntos estratégicos y unidades que requieren atención"
+    objectives_button.pressed.connect(_open_objectives_radar)
+    panel.add_child(objectives_button)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -597,6 +609,21 @@ func _ready() -> void:
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
     command_menu.purchase_requested.connect(_purchase_command_unit)
     command_menu.home_requested.connect(_show_home_menu)
+    command_menu.objectives_requested.connect(_open_objectives_radar)
+
+    # The backdrop is translucent so the map remains visible, but it stops
+    # battlefield taps and end-turn shortcuts while the drawer is open.
+    objectives_scrim = ColorRect.new()
+    objectives_scrim.color = Color(0.0,0.015,0.035,0.20)
+    objectives_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+    objectives_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(objectives_scrim)
+    objectives_scrim.hide()
+    objectives_panel = ObjectivesPanel.new()
+    add_child(objectives_panel)
+    objectives_panel.close_requested.connect(_close_objectives_radar)
+    objectives_panel.locate_site_requested.connect(_locate_objective_site)
+    objectives_panel.locate_unit_requested.connect(_locate_objective_unit)
 
     home_menu = HomeMenu.new()
     add_child(home_menu)
@@ -732,6 +759,13 @@ func _build_battle_hud() -> void:
     compact_menu_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_menu_button.pressed.connect(_open_command_menu)
     actions.add_child(compact_menu_button)
+
+    compact_objectives_button = Button.new()
+    compact_objectives_button.text = "Objetivos"
+    compact_objectives_button.custom_minimum_size.y = 48
+    compact_objectives_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_objectives_button.pressed.connect(_open_objectives_radar)
+    actions.add_child(compact_objectives_button)
 
     compact_cancel = Button.new()
     compact_cancel.text = "Cancelar"
@@ -885,6 +919,8 @@ func _process(_delta: float) -> void:
         # For units and buildings the graphical compact card replaces it,
         # rather than consuming a third of the map with duplicate details.
         compact_info_body.visible = not compact_dossier.visible
+        if objectives_panel != null and objectives_panel.visible:
+            objectives_panel.refresh_from_state(board.state,_radar_viewer())
         var field_text: String = BattleReport.field_summary(board.state)
         if board.state.has("opening"):
             var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
@@ -1180,6 +1216,63 @@ func _open_arsenal_from_home() -> void:
 func _open_settings_from_home() -> void:
     home_menu.hide()
     command_menu.open_for(board,"Ajustes")
+
+func _close_objectives_radar() -> void:
+    objectives_panel.hide()
+    objectives_scrim.hide()
+
+func _radar_viewer() -> int:
+    # Local hotseat uses the active human side; single player always blue.
+    return 0 if board.ai_enabled else int(board.state.get("faction",0))
+
+func _open_objectives_radar() -> void:
+    if objectives_panel == null or board == null:
+        return
+    command_menu.hide()
+    objectives_scrim.show()
+    objectives_panel.open_with_state(board.state,_radar_viewer())
+
+func _locate_objective_site(cell: Vector2i, category: String) -> void:
+    if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
+        return
+    var snapshot: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
+    var known := false
+    var choices: Array = snapshot.get("relays",[]) if category == "relay" else snapshot.get("sites",[])
+    for item in choices:
+        if item is Dictionary and item.get("pos",null) == cell:
+            known = true
+            break
+    if not known:
+        return
+    board.cancel_selection()
+    board.inspected_cell = cell
+    board.focus_view_cell(cell)
+    board.message = "Objetivo localizado. Las órdenes tácticas siguen necesitando confirmación."
+    board.queue_redraw()
+    _close_objectives_radar()
+
+func _locate_objective_unit(unit_id: String) -> void:
+    if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
+        return
+    var snapshot: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
+    var allowed := false
+    for item in snapshot.get("alerts",[]):
+        if item is Dictionary and str(item.get("id","")) == unit_id:
+            allowed = true
+            break
+    if not allowed:
+        return
+    for unit in board.state.get("units",[]):
+        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != _radar_viewer() or int(unit.get("hp",0)) <= 0:
+            continue
+        board.cancel_selection()
+        board.selected_id = unit_id
+        board.inspected_cell = unit["pos"]
+        board.focus_view_cell(unit["pos"])
+        board.message = "Unidad localizada. Comprueba sus estadísticas antes de ordenar."
+        board.queue_redraw()
+        _close_objectives_radar()
+        return
 
 func _open_command_menu() -> void:
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
