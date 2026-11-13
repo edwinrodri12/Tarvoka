@@ -21,6 +21,8 @@ var revision_label: Label
 var detail_label: Label
 var status_label: Label
 var _role := "tank"
+var _final_detail := true
+var comparison_button: Button
 var _faction := 0
 var _yaw := -32.0
 var _zoom := 1.0
@@ -137,6 +139,7 @@ func _construct() -> void:
     _title(column,"El mismo modelo de Godot usado en Android. Arrastra para girar y acerca con dos dedos.",13)
 
     _title(column,"MODELO",12)
+    comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
     role_picker = OptionButton.new()
     role_picker.custom_minimum_size.y = 44
     for role in Models.ROLES:
@@ -193,7 +196,7 @@ func _display_role(role: String) -> void:
         preview.remove_child(model_root)
         model_root.queue_free()
     _role = role
-    model_root = Models.build(_role,_faction if _role == "tank" else -1)
+    model_root = Models.build(_role,_faction if _role == "tank" else -1,_final_detail)
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
@@ -202,6 +205,8 @@ func _display_role(role: String) -> void:
     role_picker.select(Models.ROLES.find(role))
     faction_picker.visible = (_role == "tank")
     damage_picker.visible = (_role == "tank")
+    comparison_button.visible = (_role == "tank")
+    comparison_button.text = "COMPARAR: Ver modelo base" if _final_detail else "COMPARAR: Ver acabado nuevo"
     if _role == "tank":
         damage_picker.select(0)
     _update_camera()
@@ -212,9 +217,16 @@ func _update_details() -> void:
         return
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
-    status_label.text = "G09 · %s · %s" % [
+    status_label.text = "G09 · %s · %s · %s" % [
+        "ACABADO NUEVO" if _final_detail else "MODELO BASE",
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])] if _role == "tank" else "Modelo técnico 3D · misma librería de TARVOKA"
+
+func _toggle_details() -> void:
+    if _role != "tank":
+        return
+    _final_detail = not _final_detail
+    _display_role("tank")
 
 func _on_role(index: int) -> void:
     if index >= 0 and index < Models.ROLES.size():
