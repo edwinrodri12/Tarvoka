@@ -44,6 +44,14 @@ func _run() -> void:
         assert((strip.portraits[1].texture as AtlasTexture).region == Rect2(480,160,160,113))
         assert(strip.bars[0].color == Style.faction_color(4))
     assert(board.state.get(Identity.STATE_FIELD,{}) == picks)
+    screen.command_menu.open_for(board,"Ejercito")
+    assert(screen.command_menu.info_label.text.contains("Sindicato Violeta"))
+    var test_group := VBoxContainer.new()
+    screen.command_menu._unit_action(test_group,"line","Prueba",func(): pass,true,0)
+    var test_icon = test_group.get_child(0).get_child(0)
+    assert(test_icon.faction_tint == Style.faction_color(4))
+    test_group.free()
+    screen.command_menu.hide()
 
     # Hotseat and AI turns use distinct labels without leaking fogged
     # enemy unit data, and the identities survive turn switches.
