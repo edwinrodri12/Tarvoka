@@ -45,7 +45,9 @@ jobs:
           unzip -q /tmp/tpl.tpz -d /tmp/tpl
           T="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$T"
-          cp /tmp/tpl/templates/web_debug.zip /tmp/tpl/templates/web_release.zip "$T/"
+          cp /tmp/tpl/templates/web_*.zip "$T/"
+          test -s "$T/web_nothreads_release.zip"
+          test -s "$T/web_nothreads_debug.zip"
           printf '4.3.stable\n' > "$T/version.txt"
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
       - name: Mark exact Git revision in browser viewer
