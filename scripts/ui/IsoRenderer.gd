@@ -108,7 +108,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     if state.has("control"):
         for objective in state["control"]["nodes"]:
             var cell: Vector2i = objective["pos"]
-            if fog and not explored.has(cell):
+            if (fog and not explored.has(cell)) or not bounds.has_point(cell):
                 continue
             var owner: int = int(objective["owner"]) if not fog or visible.has(cell) else -1
             var tint := Color("#F2C04C")
@@ -127,7 +127,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     if state.has("economy"):
         for site in state["economy"]["sites"]:
             var cell: Vector2i = site["pos"]
-            if fog and not explored.has(cell):
+            if (fog and not explored.has(cell)) or not bounds.has_point(cell):
                 continue
             var owner: int = int(site["owner"]) if not fog or visible.has(cell) or int(site["owner"]) == 0 else -1
             var tint := Color("#E5C57D")
@@ -143,6 +143,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     for destination in hints["moves"]:
         var cell: Vector2i = destination
+        if not bounds.has_point(cell):
+            continue
         var poly: PackedVector2Array = _poly(cell, canvas, zoom, pan, dims)
         canvas.draw_colored_polygon(poly, VisualStyle.movement_fill())
         canvas.draw_polyline(_ring(poly), Color("#62BDFF"), maxf(1.0, hw * 0.025), true)
@@ -152,6 +154,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 int(maxf(10.0, hw * 0.20)), Color.WHITE)
     for destination in hints["attacks"]:
         var cell: Vector2i = destination
+        if not bounds.has_point(cell):
+            continue
         var poly: PackedVector2Array = _poly(cell, canvas, zoom, pan, dims)
         canvas.draw_colored_polygon(poly, VisualStyle.attack_fill())
         canvas.draw_polyline(_ring(poly), Color("#FF6655"), maxf(2.0, hw * 0.035), true)
@@ -167,13 +171,17 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             return Domains.layer(a) == "surface"
         return str(a["id"]) < str(b["id"])
     )
+    var units_drawn := 0
     for unit in draw_units:
         if int(unit.get("hp", 0)) <= 0:
             continue
         var cell: Vector2i = unit["pos"]
+        if not bounds.has_point(cell):
+            continue
         var own: bool = int(unit["faction"]) == 0
         if fog and not own and not visible.has(cell):
             continue
+        units_drawn += 1
         var is_air: bool = Domains.domain(unit) == Domains.AIR
         var is_naval: bool = Domains.domain(unit) == Domains.NAVAL
         var c: Vector2 = _center(cell, canvas, zoom, pan, dims)
@@ -201,8 +209,20 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 pose = "attack"
                 visual_heading = effect["target"] - cell
                 break
-        var sprite: Texture2D = UnitSprites.frame_texture(role,pose)
-        if sprite != null:
+        var sprite: Texture2D = null if detail == VisualBudget.DETAIL_COMPACT else UnitSprites.frame_texture(role,pose)
+        if detail == VisualBudget.DETAIL_COMPACT:
+            # Screen-space, high-contrast military markers stay legible where
+            # a full 96px original sprite would become an indistinct 8px blur.
+            var marker_radius: float = maxf(2.4,hw*0.31)
+            canvas.draw_circle(c,marker_radius,Color("#102534"))
+            canvas.draw_circle(c,maxf(1.9,marker_radius*0.73),face)
+            if is_air:
+                canvas.draw_line(c+Vector2(-marker_radius,0),c+Vector2(marker_radius,0),
+                    Color.WHITE,maxf(1.0,hw*0.09),true)
+            elif is_naval:
+                canvas.draw_line(c+Vector2(0,-marker_radius),c+Vector2(0,marker_radius),
+                    Color("#BDF2F3"),maxf(1.0,hw*0.09),true)
+        elif sprite != null:
             var sprite_size := hw * (0.94 if is_air else 0.88)
             var rotation: float = BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
@@ -246,9 +266,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     "/".join(warnings),HORIZONTAL_ALIGNMENT_LEFT,-1,
                     int(maxf(10.0,hw*0.19)),Color("#FFD15A"))
 
+    last_frame_stats["units_drawn"] = units_drawn
     if fog:
-        for enemy_id in Visibility.last_known_contacts(state, 0):
-            var old_cell: Vector2i = Visibility.last_known_contacts(state, 0)[enemy_id]
+        var stale_contacts: Dictionary = Visibility.last_known_contacts(state, 0)
+        for enemy_id in stale_contacts:
+            var old_cell: Vector2i = stale_contacts[enemy_id]
+            if not bounds.has_point(old_cell):
+                continue
             var c: Vector2 = _center(old_cell, canvas, zoom, pan, dims)
             canvas.draw_arc(c, hw * 0.23, 0, TAU, 24, Color("#F0C86D"), maxf(1.0, hw * 0.035))
             canvas.draw_string(font, c + Vector2(-hw * 0.10, hh * 0.19), "?",
@@ -259,7 +283,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             Color("#FFE451"), maxf(2.0, hw * 0.06), true)
 
     for destination in hints["attacks"]:
-        if hw >= 24.0:
+        if bounds.has_point(destination) and VisualBudget.should_draw_label(detail,hw):
             var damage: int = int(hints["attacks"][destination]["damage"])
             canvas.draw_string(font, _center(destination, canvas, zoom, pan, dims) + Vector2(hw * 0.12, hh * 0.52),
                 "-%d" % damage, HORIZONTAL_ALIGNMENT_LEFT, -1,
