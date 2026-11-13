@@ -9,9 +9,9 @@ const V10 = preload("res://scripts/ui/TankArmorV10.gd")
 const Hero = preload("res://scripts/ui/TankHeroV7.gd")
 const ROOT := "G09V11EstructuraMonolitica"
 const MAIN := Color("#3E535E")
-const ROOF := Color("#2B414C")
+const ROOF := Color("#40535D")
 const FRONT := Color("#728690")
-const CERAMIC := Color("#87979D")
+const CERAMIC := Color("#788993")
 const CERAMIC_SIDE := Color("#617783")
 const SHADOW := Color("#1D3039")
 const TINT := Color("#99A7A8")
@@ -84,11 +84,11 @@ static func apply(model: Node3D) -> bool:
     var turret_outline := [
         Vector2(-0.17,-1.60),Vector2(0.17,-1.60),
         Vector2(0.47,-1.49),Vector2(0.84,-1.17),
-        Vector2(1.14,-0.56),Vector2(1.19,-0.13),
-        Vector2(1.09,0.70),Vector2(0.91,1.10),
+        Vector2(1.07,-0.56),Vector2(1.09,-0.13),
+        Vector2(1.02,0.70),Vector2(0.88,1.10),
         Vector2(0.79,1.33),Vector2(-0.79,1.33),
-        Vector2(-0.91,1.10),Vector2(-1.09,0.70),
-        Vector2(-1.19,-0.13),Vector2(-1.14,-0.56),
+        Vector2(-0.88,1.10),Vector2(-1.02,0.70),
+        Vector2(-1.09,-0.13),Vector2(-1.07,-0.56),
         Vector2(-0.84,-1.17),Vector2(-0.47,-1.49)
     ]
     var turret_rings := [
@@ -116,11 +116,29 @@ static func apply(model: Node3D) -> bool:
         "G09V10PlanchaMejillaExterior_-1","G09V10PlanchaMejillaExterior_1",
         "G09V10BlindajeLateral_-1","G09V10BlindajeLateral_1",
         "G09V10TapaEscudoPosterior_-1","G09V10TapaEscudoPosterior_1",
-        "G09V10ModuloAnteriorTorre",
+        # Keep the mantlet housing: it closes the central gun aperture.
+
         "G09V10GlacisSuperior_-1","G09V10GlacisSuperior_1",
         "G09V10GlacisInferior_-1","G09V10GlacisInferior_1",
         "G09V10EscudoProaUnificado"
     ])
+
+    # One continuous bevelled central roof links both armored cheeks to
+    # the rear ammunition bustle. V11 iteration 1 had a dark visual cavity
+    # that made the turret look hollow; this is real geometry, not a decal.
+    var roof_shape := [
+        Vector2(-0.49,-1.01),Vector2(0.49,-1.01),
+        Vector2(0.68,-0.69),Vector2(0.72,-0.12),
+        Vector2(0.70,0.76),Vector2(0.53,1.05),
+        Vector2(-0.53,1.05),Vector2(-0.70,0.76),
+        Vector2(-0.72,-0.12),Vector2(-0.68,-0.69)
+    ]
+    _surface(turret,"G09V11TechoEstructuralUnificado",roof_shape,
+        [[0.543,0.95,0.019],[0.616,0.992,0.034],
+            [0.652,0.884,0.045]],Color("#526872"))
+    _groove(turret,"G09V11JuntaCentralTecho",
+        Vector3(-0.37,0.665,-0.72),
+        Vector3(0.37,0.665,-0.72),0.012)
 
     # Two continuous wedge cheeks. These are NOT blocks; closed, tapered
     # authored eight-sided 3D surfaces with three-dimensional top contours.
@@ -130,10 +148,10 @@ static func apply(model: Node3D) -> bool:
         var cheek_shape := [
             Vector2(sign*0.23,-1.58),
             Vector2(sign*0.51,-1.60),
-            Vector2(sign*0.86,-1.37),
-            Vector2(sign*1.18,-0.84),
-            Vector2(sign*1.21,-0.35),
-            Vector2(sign*0.89,-0.42),
+            Vector2(sign*0.80,-1.37),
+            Vector2(sign*1.08,-0.84),
+            Vector2(sign*1.11,-0.35),
+            Vector2(sign*0.84,-0.42),
             Vector2(sign*0.50,-0.88),
             Vector2(sign*0.24,-1.17)
         ]
@@ -155,8 +173,8 @@ static func apply(model: Node3D) -> bool:
             Vector3(sign*1.09,0.548,-0.53),0.024,SHADOW)
         edge.material_override = Hero._army_material(SHADOW,false)
         var side_shape := [
-            Vector2(sign*0.94,-0.25),Vector2(sign*1.20,-0.24),
-            Vector2(sign*1.20,0.62),Vector2(sign*0.87,0.89)
+            Vector2(sign*0.89,-0.25),Vector2(sign*1.08,-0.24),
+            Vector2(sign*1.08,0.62),Vector2(sign*0.82,0.89)
         ]
         if side < 0:
             side_shape.reverse()
@@ -164,16 +182,16 @@ static func apply(model: Node3D) -> bool:
             side_shape,[[0.22,0.90,0.0],[0.38,1.0,0.0],
                 [0.56,0.88,0.0]],CERAMIC_SIDE)
         _groove(turret,"G09V11UnionFlanco_%s" % side,
-            Vector3(sign*1.106,0.571,-0.05),
-            Vector3(sign*1.029,0.570,0.55),0.017)
+            Vector3(sign*1.015,0.566,-0.05),
+            Vector3(sign*0.985,0.559,0.55),0.017)
         # Rear armoured ammunition bustle, structural part of the top-down
         # outline and therefore visible at actual Android map size.
         _surface(turret,"G09V11BastionPosterior_%s" % side,[
-            Vector2(sign*0.47,0.81),Vector2(sign*0.95,0.87),
-            Vector2(sign*0.97,1.34),Vector2(sign*0.48,1.39)
+            Vector2(sign*0.45,0.81),Vector2(sign*0.85,0.87),
+            Vector2(sign*0.86,1.19),Vector2(sign*0.48,1.23)
         ] if side>0 else [
-            Vector2(sign*0.48,1.39),Vector2(sign*0.97,1.34),
-            Vector2(sign*0.95,0.87),Vector2(sign*0.47,0.81)
+            Vector2(sign*0.48,1.23),Vector2(sign*0.86,1.19),
+            Vector2(sign*0.85,0.87),Vector2(sign*0.45,0.81)
         ],[[0.20,0.91,0.0],[0.38,1.0,0.0],
             [0.516,0.85,0.0]],MAIN)
         # Front compound glacis armour on the ACTUAL hull, not dangling
@@ -214,7 +232,8 @@ static func finish_materials(model: Node3D) -> int:
         var black: bool = "Linea" in part_name or "Union" in part_name or "Nervio" in part_name or "Entrada" in part_name
         mat.albedo_color = SHADOW if black else (CERAMIC if "Mordaza" in part_name else
             (FRONT if "Glacis" in part_name else
-                (CERAMIC_SIDE if "Hombrera" in part_name else MAIN)))
+                (CERAMIC_SIDE if "Hombrera" in part_name else
+                    (Color("#526872") if "TechoEstructural" in part_name else MAIN))))
         mat.albedo_texture = null if black else V10._enamel_mask(armor)
         mat.normal_enabled = not black
         mat.normal_texture = Hero._army_micro_normal() if not black else null
