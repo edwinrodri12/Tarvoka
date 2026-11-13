@@ -26,6 +26,13 @@ func _run() -> void:
     assert(not studio.building_controls.visible)
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
+    assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.model_root.get_meta("terrain_studio_continuous"))
+    var ground: MeshInstance3D = studio.model_root.find_child("SueloContinuoConRelieve",true,false) as MeshInstance3D
+    assert(ground != null and ground.mesh != null)
+    assert(ground.mesh.get_surface_count() == 1)
+    assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
+    assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
     assert(int(old_counts.get("road",0)) > 0)
     assert(int(old_counts.get("water",0)) > 0)
@@ -33,6 +40,40 @@ func _run() -> void:
     assert(int(old_counts.get("mountain",0)) > 0)
     assert(studio.model_root.find_child("TanqueDeReferencia",true,false) != null)
     assert(studio.model_root.find_child("CuartelDeReferencia",true,false) != null)
+    # Compare exactly the same camera and biome against the V1 block grid.
+    for i in range(7):
+        await process_frame
+    var seamless: Image = studio.preview.get_texture().get_image()
+    assert(seamless != null and not seamless.is_empty())
+    studio.terrain_continuous_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_studio_continuous"))
+    assert(studio.model_root.find_child("SueloContinuoConRelieve",true,false) == null)
+    assert(studio.model_root.find_child("Casilla_00_00_mountain",true,false) != null)
+    for i in range(7):
+        await process_frame
+    var blocks: Image = studio.preview.get_texture().get_image()
+    assert(blocks != null and not blocks.is_empty())
+    studio.terrain_continuous_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    assert(studio.model_root.get_meta("terrain_studio_continuous"))
+    var tile_a := blocks.duplicate()
+    var tile_b := seamless.duplicate()
+    tile_a.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    tile_b.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var pixel_differences: int = 0
+    for py in range(0,330,5):
+        for px in range(0,480,5):
+            var old_color: Color = tile_a.get_pixel(px,py)
+            var new_color: Color = tile_b.get_pixel(px,py)
+            if absf(old_color.r-new_color.r)+absf(old_color.g-new_color.g)+absf(old_color.b-new_color.b) > 0.14:
+                pixel_differences += 1
+    assert(pixel_differences > 100)
+    var comparison := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    comparison.blit_rect(tile_a,Rect2i(0,0,480,330),Vector2i.ZERO)
+    comparison.blit_rect(tile_b,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(comparison.save_png("res://artifacts/tarvoka_terrain_v1_v2_same_camera.png") == OK)
     var initial_zoom: float = studio.camera.size
     studio._change_zoom(1)
     assert(studio.camera.size < initial_zoom)
@@ -60,6 +101,10 @@ func _run() -> void:
         assert(int(counts.get("mountain",0)) > 0)
         assert(int(counts.get("forest",0)) > 0)
         assert(Terrain.kind(-1,0,preset) == "outside")
+        if preset == 1:
+            assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
+            assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
+            assert(studio.model_root.find_child("PilarPuente",true,false) != null)
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
