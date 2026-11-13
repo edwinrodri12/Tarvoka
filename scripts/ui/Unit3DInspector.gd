@@ -26,6 +26,7 @@ var _touch_active := false
 var _zoom_factor := 1.0
 var tank_animation_mode := ""
 var tank_animation_elapsed := 0.0
+var tank_smoke_elapsed := 0.0
 var tank_animation_button: Button
 var tank_move_button: Button
 var tank_stop_button: Button
@@ -276,6 +277,7 @@ func show_role(role: String) -> void:
     tank_damage_picker.select(0)
     tank_animation_mode = ""
     tank_animation_elapsed = 0.0
+    tank_smoke_elapsed = 0.0
     _current_role = role
     _model_yaw = 0.0
     _zoom_factor = 1.0
@@ -339,7 +341,15 @@ func stop_tank_animation() -> void:
         TankDamage.apply_stage(model_root,stage)
 
 func _process(delta: float) -> void:
-    if not visible or tank_animation_mode.is_empty() or model_root == null:
+    if not visible or model_root == null:
+        return
+    # Damage smoke and flame keep breathing while the viewer is open, not
+    # only during a 0.88-second shot or impact animation. No extra GPU view
+    # is created and no gameplay state is touched.
+    if _current_role == "tank" and TankDamage.current_stage(model_root) >= 2:
+        tank_smoke_elapsed += maxf(0.0,delta)
+        TankDamage.animate_smoke(model_root,tank_smoke_elapsed)
+    if tank_animation_mode.is_empty():
         return
     tank_animation_elapsed += maxf(0.0,delta)
     var duration: float = TankRig.MOVE_DURATION if tank_animation_mode == "move" else TankRig.SHOT_DURATION
