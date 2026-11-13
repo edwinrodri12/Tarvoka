@@ -31,6 +31,12 @@ func _run() -> void:
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
     assert(key_light.shadow_enabled)
+    var fill_light: DirectionalLight3D = studio.preview.get_child(3) as DirectionalLight3D
+    assert(fill_light != null)
+    assert(key_light.light_energy >= 0.50 and key_light.light_energy < 1.0)
+    assert(fill_light.light_energy <= 0.32)
+    assert(key_light.light_energy > fill_light.light_energy*2.0)
+    assert(not fill_light.shadow_enabled)
     studio.terrain_shadow_toggle.button_pressed = false
     studio._change_terrain_shadow(false)
     assert(not key_light.shadow_enabled)
