@@ -6,6 +6,7 @@ signal save_requested
 signal load_requested
 signal new_battle_requested
 signal campaign_requested
+signal home_requested
 signal change_view_requested
 signal battery_requested
 signal inspect_unit_requested(unit_id: String)
@@ -167,6 +168,7 @@ func refresh() -> void:
     _heading(battle_body,"Situacion de batalla")
     _description(battle_body,BattleReport.field_summary(state))
     _action(battle_body,"Volver al mapa",func(): close_requested.emit())
+    _action(battle_body,"Menu principal",func(): home_requested.emit())
     _action(battle_body,"Guardar partida",func(): save_requested.emit())
     _action(battle_body,"Cargar partida",func(): load_requested.emit())
     _action(battle_body,"Preparar escaramuza nueva",func(): new_battle_requested.emit())
