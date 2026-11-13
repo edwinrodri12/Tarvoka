@@ -59,6 +59,20 @@ func _run() -> void:
     screen._process(0.0)
     assert(mobile.turns[0].text == "VICTORIA")
     assert(mobile.turns[1].text == "DERROTA")
+    assert(screen.results_panel.visible)
+    assert(screen.results_panel.title_label.text.contains("SINDICATO VIOLETA"))
+    assert(screen.results_panel.commander_matchup.names[1].text == "Orden Ónix")
+    assert(screen.results_panel.commander_matchup.portraits[0].texture != null)
+    assert(screen.results_panel._side_labels == ["BANDO 1","BANDO 2"])
+
+    # Legacy saved games must keep their old AZUL / ROJO labels and still
+    # display the default, real commander imagery.
+    var legacy_result: Dictionary = board.state.duplicate(true)
+    legacy_result.erase(Identity.STATE_FIELD)
+    screen.results_panel.open_for(legacy_result,0)
+    assert(screen.results_panel.title_label.text.contains("AZUL"))
+    assert(screen.results_panel._side_labels == ["AZUL","ROJO"])
+    assert(screen.results_panel.commander_matchup.portraits[1].texture != null)
     board.state["winner"] = -1
     board.state["faction"] = 0
     board.ai_enabled = false
