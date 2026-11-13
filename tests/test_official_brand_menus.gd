@@ -83,7 +83,7 @@ func _run() -> void:
     assert(home.visible and not screen.command_menu.visible)
     home.primary_buttons["Arsenal"].pressed.emit()
     assert(screen._gallery_from_home and not home.visible)
-    screen.unit_art_gallery.popup_hide.emit()
+    screen.unit_art_gallery.confirmed.emit()
     assert(home.visible and not screen._gallery_from_home)
     screen._open_command_menu()
     assert(not screen._command_from_home)
