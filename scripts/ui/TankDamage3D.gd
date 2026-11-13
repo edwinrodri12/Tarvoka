@@ -445,6 +445,8 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             if armored_part != null:
                 armored_part.visible = stage < 3
         for part_name in ["G09V10ModuloAnteriorTorre","G09V10PanelServicioTecho",
+                "G09V10PanelAnteriorTecho_1","G09V10PanelPosteriorTecho_1",
+                "G09V10TornillosTecho",
                 "G09V10BisagraPanelTecho","G09V10CubiertaMotorBlindada",
                 "G09V10RejillaRefrigeracion_02","G09V10RejillaRefrigeracion_03"]:
             var damaged_part: Node3D = model.find_child(part_name,true,false) as Node3D
