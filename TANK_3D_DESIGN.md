@@ -113,3 +113,21 @@ En esta ejecución se completa una pasada de detalle y articulaciones compatible
 `tests/test_mbt_art_finish.gd` valida geometría, grupos MultiMesh, colores de ocho facciones, ópticas, cañón y restauración del estado destruido. `tests/test_tank_damage_laboratory.gd` exige QuadMesh transparente con textura suave y un desplazamiento de humo reproducible. Las pruebas existentes continúan protegiendo animación de orugas, disparo, retroceso, inspector en Android, render de cuatro ángulos y cinco fases de destrucción. El render `artifacts/tarvoka_mbt_detail_turntable.png` es un render real de Godot, no un concepto.
 
 **Alcance honesto del cierre:** es un modelo 3D detallado, animable y utilizable en Android, elaborado proceduralmente. Aún no se puede certificar como arte comercial final sin una aceptación estética del usuario de la APK más reciente y sin presupuesto medido de FPS/temperatura en su teléfono. Tampoco se debe confundir este acabado con un paquete externo de GLB/UV y texturas 2K de estudio; el proyecto mantiene su sistema PBR reproducible actual. No bloquear la jugabilidad ni el trabajo sobre otros modelos por pendientes visuales de este tipo, pero conservarlos como checklist de pulido artístico opcional.
+
+
+## Revisión visual 242346 + capturas del visor web: reconstrucción G09 V5 (13 nov 2026)
+
+**Diagnóstico comprobado:** los detalles V4 añadían mallas pero no modificaban suficientemente la silueta; desde atrás la torreta y cubierta parecían huecas, algunos cubos y barandillas estaban desconectados, y el blindaje parecía un prototipo en vez de una máquina hermética. Por ello el G09 no ha obtenido aprobación de acabado definitivo.
+
+**Solución implementada en `scripts/ui/TankSilhouetteV5.gd`:**
+- Geometría principal reconstruida como **dos volúmenes triangulados completamente cerrados** (`CascoHermeticoV5`, `TorreHermeticaV5`) con cubiertas superior e inferior, caras laterales y cierre trasero. Cada uno tiene 10 esquinas articuladas en anillo y forma de cuña; se conserva el casco anterior internamente como fuente de compatibilidad.
+- Viga delantera integrada, dos placas de glacis, faldones laterales continuos sobre las 14 zonas pintables, portón de cierre trasero y cubierta de motor, rejillas movidas al techo real.
+- Torre modernizada con silueta baja y gruesa, mejillas grandes de compuesto, techo hermético y cesta/bastidor trasero conectados. El mantlete se reconstruyó en el pivote `ElevacionCanon`, manteniendo giro/disparo/recoil.
+- Mallas obsoletas visibles (`CestaEquipamiento`, ERA cúbico, mejillas anteriores, mantlete rectangular) se ocultan sin borrarlas; el inspector y combate usan el mismo nuevo G09. La opción **Comparar** conserva el modelo inicial al construirlo con `finish_enabled=false`.
+- Los cinco estados de daño incluyen marcas en la nueva cota de cubierta, pérdida de mejilla y sensor, reparación que **nunca reexpone** los cubos antiguos y cañón destruido. No cambia reglas, HP, fuego, facciones ni IA.
+
+**Prueba estricta antihuguos**: `tests/test_mbt_silhouette_v5.gd` recorre **cada triángulo** de las mallas del casco y torreta y comprueba que cada arista geométrica pertenezca a exactamente **dos** caras. También verifica el pivote del cañón, los 14 paneles, las mallas del modelo anterior y el daño reversible. Se ejecuta en CI del estudio web antes de exportar; si falla, no se publica.
+
+**Evidencia visual**: `artifacts/tarvoka_mbt_before_after_same_camera.png` compara la misma toma real del modelo base y el V5, y `artifacts/tarvoka_mbt_detail_turntable.png` presenta cuatro ángulos V5 del renderizador Godot 4.3. El visor HTML5 se publica con el SHA exacto de GitHub.
+
+**Estado artístico**: primera reconstrucción estructural integrada y probada; **NO se certifica todavía como textura/material/pulido comercial definitivo** sin nueva evaluación en visor web. Siguiente fase: tratamiento de materiales de alta legibilidad, señales de uso PBR con normal/roughness y moderar accesorios restantes; después validar tamaño de icono y rendimiento Android. No repetir largas rondas de APK por unidad.
