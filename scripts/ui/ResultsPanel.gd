@@ -15,6 +15,7 @@ var cause_label: Label
 var stats_column: VBoxContainer
 var commander_matchup: Control
 var _side_labels: Array[String] = ["AZUL","ROJO"]
+var _side_tints: Array[Color] = [Color("#82C5FF"),Color("#FF9D96")]
 var hint_label: Label
 var _data: Dictionary = {}
 
@@ -112,10 +113,10 @@ func _line(label_text: String,blue: String,red: String) -> void:
     row.add_child(_label(label_text,13,Color("#E6D6AE")))
     var metrics := HBoxContainer.new()
     row.add_child(metrics)
-    var blue_value := _label(_side_labels[0]+"  "+blue,15,Color("#82C5FF"))
+    var blue_value := _label(_side_labels[0]+"  "+blue,15,_side_tints[0])
     blue_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     metrics.add_child(blue_value)
-    var red_value := _label(_side_labels[1]+"  "+red,15,Color("#FF9D96"))
+    var red_value := _label(_side_labels[1]+"  "+red,15,_side_tints[1])
     red_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     metrics.add_child(red_value)
 
@@ -132,6 +133,8 @@ func open_for(state: Dictionary, viewer: int = 0) -> void:
     _clear()
     commander_matchup.bind_state(state,false)
     _side_labels = ["BANDO 1","BANDO 2"] if state.has(Identity.STATE_FIELD) else ["AZUL","ROJO"]
+    _side_tints[0] = Identity.color_for(state,0) if state.has(Identity.STATE_FIELD) else Color("#82C5FF")
+    _side_tints[1] = Identity.color_for(state,1) if state.has(Identity.STATE_FIELD) else Color("#FF9D96")
     var winner: int = int(_data["winner"])
     var victory: bool = winner == viewer
     var winner_name: String = Identity.name_for(state,winner).to_upper()
