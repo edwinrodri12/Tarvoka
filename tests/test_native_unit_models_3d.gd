@@ -99,6 +99,14 @@ func _run() -> void:
     await process_frame
     assert(int(IsoRenderer.last_frame_stats.get("real_3d_units_drawn",0)) >= 2)
     var real_battle: Dictionary = board.state.duplicate(true)
+    var battle_damaged: Dictionary = real_battle.duplicate(true)
+    battle_damaged["units"][0]["hp"] = 2
+    board.state = battle_damaged
+    board.queue_redraw()
+    await process_frame
+    # Taking damage must never make 3D models turn back into old 2D frames.
+    assert(int(IsoRenderer.last_frame_stats.get("real_3d_units_drawn",0)) >= 2)
+    board.state = real_battle
     board.set_3d_models_enabled(false)
     board.queue_redraw()
     await process_frame
