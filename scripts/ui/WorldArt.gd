@@ -6,6 +6,7 @@ class_name TarvokaWorldArt
 const SITE_KINDS := ["city","factory","armor_plant","artillery_depot","drone_center","airbase","shipyard"]
 const Landscape = preload("res://scripts/ui/LandscapeDetailPainter.gd")
 const Transitions = preload("res://scripts/ui/LandscapeTransitions.gd")
+const Continuity = preload("res://scripts/ui/LandscapeContinuity.gd")
 
 static func supports_site(kind: String) -> bool:
     return kind in SITE_KINDS
@@ -71,7 +72,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
             Landscape.draw_forest(canvas,c,hw,seed,terrain_neighbors,detail)
         "mountain":
             Landscape.draw_mountain(canvas,c,hw,seed,terrain_neighbors,detail,
-                int(context.get("exposed_edges",0)))
+                int(context.get("exposed_edges",0)),
+                context.get("cell",Vector2i.ZERO))
         "road":
             _connected_road(canvas,c,hw,road_connections)
             if bridge_axis != 0:
@@ -80,6 +82,9 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
             # Flow direction is derived from known neighboring water tiles.
             Transitions.draw_river_current(canvas,c,hw,
                 int(context.get("water_connections",0)),seed,phase,detail)
+            Continuity.draw_river_spine(canvas,c,hw,
+                int(context.get("water_connections",0)),
+                context.get("cell",Vector2i.ZERO),detail,phase)
             Transitions.draw_water_shore(canvas,c,hw,shore_mask,detail,seed)
         _:
             # Plains remain readable at a glance but get fine vegetation
