@@ -182,6 +182,13 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.28,0.045,0.22),Color("#2A2C2D"),Vector3(0,-18,9))
     _box(light,"MetalExpuestoGlacis",Vector3(-0.24,1.165,-0.85),
         Vector3(0.10,0.02,0.11),Color("#B19C7B"),Vector3(0,-18,9))
+    # V5's truly sealed glacis sits slightly higher than the prototype,
+    # so first-impact scrapes need to be physically visible on the new roof.
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        _box(light,"RaspadoCorazaHermeticaV5",Vector3(-0.37,1.092,-1.12),
+            Vector3(0.26,0.025,0.15),Color("#33393B"),Vector3(0,13,0))
+        _box(light,"AceroDescubiertoHermeticoV5",Vector3(-0.40,1.113,-1.14),
+            Vector3(0.12,0.018,0.045),Color("#A29A87"),Vector3(0,13,0))
     # The default Android camera observes the rear-right of the vehicle.
     # Include a readable but modest scuff there, otherwise stage 1 appears
     # almost identical to "intact" even when the player selects it.
@@ -211,6 +218,9 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.35,0.038,0.25),Color("#373939"),Vector3(-5,-12,9))
     _box(medium,"BaseExpuestaRejilla",Vector3(0.19,1.142,1.05),
         Vector3(0.16,0.029,0.11),Color("#897F70"),Vector3(0,16,0))
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        _box(medium,"FugaSelladoTraseroV5",Vector3(-0.30,1.148,1.22),
+            Vector3(0.25,0.044,0.27),Color("#30383B"),Vector3(-6,10,8))
     _cloud(medium,"HumoGrisMotor",Vector3(-0.09,1.37,1.01),
         Vector3(0.54,0.77,0.55),Color(0.25,0.28,0.29,0.26))
     _cloud(medium,"VahoMotor",Vector3(0.12,1.71,1.16),
@@ -322,7 +332,8 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             "CristalPanoramicoLateral","BastidorTrasero-1",
             "VisorTermicoProtegido","LenteTermicoPrincipal",
             "BarraCestaSuperior1","BolsaLonaEstiba1",
-            "AroBocaPrincipal","InteriorOscuroCanon"]:
+            "AroBocaPrincipal","InteriorOscuroCanon",
+            "AroSelladoCanonV5"]:
         var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if upper_piece != null:
             upper_piece.visible = stage < 4
@@ -333,4 +344,19 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         turret.position.y = 1.11 if stage < 4 else 0.93
     if gun != null:
         gun.rotation_degrees.x = -18.0 if stage >= 4 else (5.0 if stage == 3 else 0.0)
+    # The V5 overhaul deliberately hides obsolete prototype blocks even at
+    # full HP. Damage stage changes must never resurrect those old shapes.
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        for obsolete_name in ["MejillaCeramicaBiselada1",
+                "ERACompuestaBiselada1_1","ERACompuestaBiselada1_2"]:
+            var obsolete: Node3D = model.find_child(obsolete_name,true,false) as Node3D
+            if obsolete != null:
+                obsolete.visible = false
+        for wreck_name in ["MejillaPrincipalV5_1","LaminaExteriorTorreV5_1"]:
+            var blown: Node3D = model.find_child(wreck_name,true,false) as Node3D
+            if blown != null:
+                blown.visible = stage < 3
+        var grille: Node3D = model.find_child("CerrojoPortonV5_1",true,false) as Node3D
+        if grille != null:
+            grille.visible = stage < 4
     return true
