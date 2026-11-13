@@ -234,8 +234,9 @@ static func _radar_dish(parent: Node3D, roof_y: float, level: int,
             var p1 := Vector3(cos(a)*r1,-0.24*(1.0-pow(r1/radius,2.0)),sin(a)*r1)
             var q0 := Vector3(cos(b)*r0,-0.24*(1.0-pow(r0/radius,2.0)),sin(b)*r0)
             var q1 := Vector3(cos(b)*r1,-0.24*(1.0-pow(r1/radius,2.0)),sin(b)*r1)
-            _tri(st,p0,p1,q1)
-            _tri(st,p0,q1,q0)
+            # Dish normals must face the feed horn, not the underside.
+            _tri(st,p0,q1,p1)
+            _tri(st,p0,q0,q1)
     st.generate_normals()
     var bowl := MeshInstance3D.new()
     bowl.name = "PlatoParabolicoConcavo"
