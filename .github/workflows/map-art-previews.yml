@@ -31,6 +31,12 @@ on:
 permissions:
   contents: read
 
+# Keep only the latest environmental snapshot when this branch is
+# iterated rapidly. The result is still inspectable as a run artifact.
+concurrency:
+  group: map-art-preview-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   render:
     runs-on: ubuntu-22.04
