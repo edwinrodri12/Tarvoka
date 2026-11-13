@@ -36,7 +36,7 @@ func _difference(a: Image, b: Image) -> int:
 func _run() -> void:
     for level in [1,2,3]:
         var v2: Node3D = HQ.build(level,0,"operativo",true,false)
-        var v3: Node3D = HQ.build(level,0,"operativo",true,true)
+        var v3: Node3D = HQ.build(level,0,"operativo",true,true,false)
         assert(v2 != null and v3 != null)
         assert(v2.get_meta("tarvoka_hq_visual_v2",false))
         assert(not v2.get_meta("tarvoka_hq_visual_v3",false))
@@ -61,23 +61,23 @@ func _run() -> void:
         v3.free()
 
     for faction in range(8):
-        var model: Node3D = HQ.build(2,faction,"operativo",true,true)
+        var model: Node3D = HQ.build(2,faction,"operativo",true,true,false)
         assert(int(model.get_meta("visual_faction",-1)) == faction)
         var marker := model.find_child("MarcaDeFaccionModular",true,false) as MeshInstance3D
         assert(marker != null)
         var m: StandardMaterial3D = marker.material_override as StandardMaterial3D
         assert(_same(m.albedo_color,Factions.faction_color(faction)))
         model.free()
-    var wounded: Node3D = HQ.build(3,0,"danado")
+    var wounded: Node3D = HQ.build(3,0,"danado",true,true,false)
     assert(wounded.find_child("ImpactosDeCombateV3",true,false) != null)
     assert(wounded.find_child("FisuraEnPortal_0",true,false) != null)
     wounded.free()
-    var ruined: Node3D = HQ.build(3,2,"destruido")
+    var ruined: Node3D = HQ.build(3,2,"destruido",true,true,false)
     assert(ruined.find_child("RestosDeComandoV3",true,false) != null)
     assert(ruined.find_child("FachadaColapsadaHero",true,false) != null)
     assert(ruined.find_child("PabellonComandoElevado",true,false) == null)
     ruined.free()
-    var captured: Node3D = HQ.build(2,4,"capturado")
+    var captured: Node3D = HQ.build(2,4,"capturado",true,true,false)
     assert(captured.find_child("MarcaDeCaptura",true,false) != null)
     assert(captured.get_meta("tarvoka_hq_visual_v3",false))
     captured.free()
@@ -89,6 +89,7 @@ func _run() -> void:
     root.add_child(studio)
     for i in range(6):
         await process_frame
+    studio._hq_show_v4 = false
     studio._switch_category(1)
     studio._reset_camera()
     for i in range(8):
