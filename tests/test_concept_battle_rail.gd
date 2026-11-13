@@ -54,6 +54,7 @@ func _run() -> void:
     assert(main.battle_hud_commands.visible)
     assert(not main.expanded_actions.visible and not main.expanded_header.visible)
     main._set_compact_hud(false)
+    main.layout_for_size(Vector2(1400,800))
     assert(main.expanded_actions.visible and main.expanded_header.visible)
     assert(main.board.state == before)
 
