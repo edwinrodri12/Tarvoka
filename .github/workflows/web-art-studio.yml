@@ -241,7 +241,12 @@ jobs:
   deploy-preview:
     # Publish the SAME validated WebGL files as the artifact. Do not deploy
     # speculative previews from untrusted pull-request events.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Pages is published by the main-branch workflow
+    # .github/workflows/tarvoka-3d-pages.yml after a successful feature
+    # branch build. Deploying directly from this feature branch violates
+    # github-pages environment branch protection and marks an otherwise
+    # successful WebGL build as failed.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: build-art-studio
     runs-on: ubuntu-22.04
     permissions:
