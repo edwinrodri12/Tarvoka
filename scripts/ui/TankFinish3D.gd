@@ -158,6 +158,14 @@ static func _neutral_tone(node: Node) -> void:
                 tone = Color("#808D91")
             elif tone == Color("#D5DCE0"):
                 tone = Color("#A3ACAD")
+            # Roof modules and main gun thermal sleeves looked nearly white
+            # in the first 4-angle screenshot; use matte metal, not plastic.
+            if str(node.name).begins_with("ModuloERAChasis"):
+                tone = Color("#58686E")
+            elif str(node.name) in ["ManguitoTermico","ExtractorGases"]:
+                tone = Color("#616E74")
+            elif str(node.name).begins_with("SeparadorFaldon"):
+                tone = Color("#263239")
             if tone != material.albedo_color:
                 var instance: StandardMaterial3D = material.duplicate(true) as StandardMaterial3D
                 instance.albedo_color = tone
