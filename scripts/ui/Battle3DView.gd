@@ -10,7 +10,7 @@ const Terrain3D = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 
 var _viewport: SubViewport
-var _lab: Node3D
+var _lab: TarvokaTerrain3DLab
 var _camera: Camera3D
 var _markers: Node3D
 var _terrain_signature := -1
@@ -29,7 +29,7 @@ func _ready() -> void:
     _viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     _viewport.size = Vector2i(960,600)
     add_child(_viewport)
-    _lab = LabScene.instantiate() as Node3D
+    _lab = LabScene.instantiate() as TarvokaTerrain3DLab
     _viewport.add_child(_lab)
     _camera = _lab.get_node("IsoCamera") as Camera3D
     _markers = Node3D.new()
@@ -49,6 +49,11 @@ func _resize_viewport() -> void:
     if dimensions != _last_size:
         _last_size = dimensions
         _viewport.size = dimensions
+
+func set_rendering(active: bool) -> void:
+    if _viewport != null:
+        _viewport.render_target_update_mode = (
+            SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED)
 
 func _local_to_viewport(point: Vector2) -> Vector2:
     if _viewport == null or size.x < 1.0 or size.y < 1.0:
