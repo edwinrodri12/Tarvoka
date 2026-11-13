@@ -26,8 +26,8 @@ func _run() -> void:
     board.state = lead["state"]
     screen._process(0.0)
     assert(label.visible)
-    assert(label.text.contains("Azul 2 | Rojo 0 / 2"))
-    assert(label.text.contains("pendiente de respuesta"))
+    assert(label.text.contains("Azul 1 | Rojo 0 / 2"))
+    assert(label.text.contains("Senal pendiente: se acredita al cerrar la ronda"))
     assert(not screen.get("result_banner").visible)
     var finish: Dictionary = Session.end_turn(board.state)
     assert(finish["state"]["winner"] == 0)
