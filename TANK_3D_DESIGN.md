@@ -67,3 +67,28 @@ Se añadió `tests/test_mbt_finishing_animation.gd` a la ejecución OpenGL real 
 La prueba real con software OpenGL crea y revisa las 8 pinturas, valida que se vean distintas, verifica que todas tengan paneles pintables, que el casco neutral no cambie, que girar la torre y elevar el cañón sea posible, y genera `artifacts/tarvoka_mbt_8_faction_colors.png` para inspección. También ejecuta las pruebas previas de sprites, batallas, ahorro de batería, visibilidad y Android.
 
 **Todavía no considerarlo arte comercial definitivo**: ya existen UV procedurales, materiales PBR y movimientos de torre, cañón y suspensión, pero falta pasar de texturas técnicas generadas en código a mallas optimizadas de producción con UV y texturas creadas por artista, degradación/destrucción persistente, LOD y validación física de FPS, legibilidad, temperatura y batería en varios móviles. El rediseño de IFV, artillería y otros vehículos aprovechará los mismos materiales y sistemas. Ningún cambio visual debe alterar equilibrio, daño, munición o reglas.
+
+
+## Tercera pasada de modelado en juego — acabados físicos G09 (13 nov 2026)
+
+La solicitud es dejar de usar el tanque como maqueta gris con cubos. Esta nueva pasada genera **mallas editables reales** en `TankFinish3D.gd`, acopladas a `ChasisBlindado` y `TorretaGiratoria` antes de aplicar PBR, de modo que funcionan tanto en el inspector Android como en las capturas que se usan en la batalla.
+
+- **Silueta y blindaje**: dos módulos de glacis de sección biselada, dos mejillas cerámicas con chaflanes, aristas y cordones de soldadura; el perfil sigue bajo y original, moderno pero no una reproducción exacta de un blindado comercial.
+- **Casco y rodaje**: faros delanteros con lente, ganchos de remolque, cables laterales, protectores de ruedas extremas, faldones con tornillos físicos y cubiertas detalladas de mantenimiento y enfriamiento de motor.
+- **Torre**: módulo óptico panorámico con lentes independientes, protectores laterales, armaduras laterales, bastidor de estiba posterior y uniones visibles. El equipo se ancla a la torreta real: rota junto con ella.
+- **Materiales**: metales mate, caucho, ópticas brillantes y soldados/charcos de acero contrastados. `TankSurface3D.material_family` clasifica también sensores y lentes; las texturas PBR del sistema siguen siendo proceduralmente reproducibles.
+- **Rendimiento**: la tornillería se agrupa en **dos MultiMesh** (20 pernos de faldones y 12 de torre), en lugar de 32 nodos de draw individuales. No se agregan nuevas cámaras a `UnitRender3D`.
+- **Facciones**: exactamente los mismos **14 paneles** recoloreables y las 8 facciones originales, sin escudos. Ninguna pieza de la nueva pasada recibe la marca `Faccion`.
+- **Daño**: las piezas laterales y el sensor panorámico desaparecen físicamente en fases críticas; restos de óptica, blindaje y bastidores quedan visibles junto a lenguas de fuego angulares y el motor quemado. Reparar el modelo restablece los componentes.
+
+### Criterios de aceptación visual
+
+1. Frente, costados, popa y techo deben leerse como un MBT original moderno al girar a 0°, 90°, 180° y 270°; la cámara no debe cortar el cañón ni las orugas.
+2. La geometría debe ofrecer detalles a nivel de inspector, pero su silueta seguir reconocible cuando TARVOKA la rasteriza a 224×224 y al zoom del mapa.
+3. El cambio a cualquiera de las ocho facciones solo toca los catorce paneles y jamás los visores, el cañón, las orugas o las partes mecánicas.
+4. Las cinco fases de daño deben ser distintas aun sin humo; la revisión de HP de la batalla no modifica nunca sus estadísticas, consumibles ni reglas.
+5. La APK debe superar render OpenGL real y exportación ARM64; los 15 renders cacheados se liberan del GPU al terminar su primera captura; solo dos tanques dinámicos pueden actualizarse a la vez.
+
+Las nuevas pruebas `tests/test_mbt_art_finish.gd` generan `artifacts/tarvoka_mbt_detail_turntable.png` desde Godot para revisión de los cuatro ángulos y validan los pernos agrupados, 14 paneles, materiales PBR y reversión de daños.
+
+**Estado honesto:** este pase mejora de forma material los acabados 3D integrados, pero aprobar un arte comercial definitivo exige **ver las capturas y la APK en el teléfono**. Faltan mapas UV y texturas de producción pintados manualmente, LOD validados en Android y evaluación estética del usuario antes de marcar el MBT como final.
