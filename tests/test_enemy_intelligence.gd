@@ -22,7 +22,7 @@ func _initialize() -> void:
     assert(str(intel["summary"]).contains("Movimiento: 3"))
     assert(str(intel["summary"]).contains("Alcance de ataque: 2-4"))
     assert(intel["attacks"].has(Vector2i(6,2)))
-    assert(not intel["attacks"].has(Vector2i(5,2))) # Artillery dead zone, minimum two.
+    assert(intel["attacks"].has(Vector2i(5,2))) # Enemy can reposition to fire from >=2 tiles.
     assert(not intel["attacks"].has(Vector2i(8,2))) # Outside player's current sight.
     assert(not intel["moves"].has(Vector2i(8,2)))
     assert(intel["moves"].has(Vector2i(3,2)))
