@@ -662,7 +662,7 @@ func _set_compact_hud(compact: bool) -> void:
     compact_center.visible = compact
     compact_iso.visible = compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
-    layout_for_size(get_viewport_rect().size())
+    layout_for_size(get_viewport_rect().size)
 
 func _toggle_battle_hud() -> void:
     var current_cell: Vector2i = board.screen_cell(board.size * 0.5)
