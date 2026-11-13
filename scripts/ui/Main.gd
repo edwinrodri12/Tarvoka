@@ -60,6 +60,7 @@ var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
+var view_3d_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -221,6 +222,12 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    view_3d_button = Button.new()
+    view_3d_button.text = "Vista 3D experimental"
+    view_3d_button.custom_minimum_size.y = 46
+    view_3d_button.tooltip_text = "Activar terreno 3D real con selección táctica; vuelve al 2D en cualquier momento"
+    view_3d_button.pressed.connect(_toggle_3d_view)
+    panel.add_child(view_3d_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -777,7 +784,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,polished_status_card,command_menu_button,objectives_button,
         minimap_shell,polished_unit_card,polished_actions_card,result_banner,
-        camera_row,iso_view_button,battery_saver_button]
+        camera_row,iso_view_button,view_3d_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
     minimap_shell.hide() # Main restores actual saved preference after menus exist.
@@ -1014,14 +1021,14 @@ func _build_battle_hud() -> void:
     compact_center.pressed.connect(func(): board.frame_player_force())
     battle_hud_overlay.add_child(compact_center)
     compact_iso = Button.new()
-    compact_iso.text = "Vista"
+    compact_iso.text = "Iso"
     compact_iso.custom_minimum_size = Vector2(68,42)
     compact_iso.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
     compact_iso.offset_left = -305
     compact_iso.offset_right = -235
     compact_iso.offset_top = 7
     compact_iso.offset_bottom = 49
-    compact_iso.pressed.connect(_toggle_isometric_view)
+    compact_iso.pressed.connect(_cycle_compact_view)
     battle_hud_overlay.add_child(compact_iso)
     battle_hud_commands.hide()
     compact_center.hide()
@@ -1621,7 +1628,7 @@ func _save_display_preferences() -> void:
 func _apply_minimap_visibility() -> void:
     # The existing minimap projects the isometric camera; hide it in classic
     # view rather than showing a misleading viewport or inert tap handler.
-    var enabled: bool = _minimap_preference and board.iso_enabled
+    var enabled: bool = _minimap_preference and board.iso_enabled and not board.three_d_enabled
     battle_minimap.visible = enabled
     minimap_caption.visible = enabled
     if minimap_shell != null:
@@ -1643,12 +1650,46 @@ func _toggle_battery_saver() -> void:
     _save_display_preferences()
 
 func _toggle_isometric_view() -> void:
-    board.set_isometric(not board.iso_enabled)
+    if board.three_d_enabled:
+        board.set_3d_view(false)
+    else:
+        board.set_isometric(not board.iso_enabled)
     board.frame_player_force()
-    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
-    camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
+    _update_view_labels()
     _apply_minimap_visibility()
     _save_display_preferences()
+
+func _toggle_3d_view() -> void:
+    board.set_3d_view(not board.three_d_enabled)
+    _update_view_labels()
+    _apply_minimap_visibility()
+    _save_display_preferences()
+
+func _cycle_compact_view() -> void:
+    # Classic -> isometric -> experimental 3D -> classic. Android always
+    # keeps a single large enough view button instead of three tiny ones.
+    if board.three_d_enabled:
+        board.set_3d_view(false)
+        board.set_isometric(false)
+    elif board.iso_enabled:
+        board.set_3d_view(true)
+    else:
+        board.set_isometric(true)
+    board.frame_player_force()
+    _update_view_labels()
+    _apply_minimap_visibility()
+    _save_display_preferences()
+
+func _update_view_labels() -> void:
+    iso_view_button.text = "Volver a vista isométrica" if board.three_d_enabled else (
+        "Vista clásica" if board.iso_enabled else "Vista isométrica")
+    view_3d_button.text = "Desactivar vista 3D" if board.three_d_enabled else (
+        "Vista 3D experimental")
+    compact_iso.text = "2D" if board.three_d_enabled else (
+        "3D" if board.iso_enabled else "Iso")
+    compact_iso.tooltip_text = "Cambiar a la siguiente vista: clásica, isométrica o 3D"
+    camera_reset.text = "Centrar 3D" if board.three_d_enabled else (
+        "Centrar isométrico" if board.iso_enabled else "Centrar cámara")
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
