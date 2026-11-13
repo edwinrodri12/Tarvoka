@@ -47,7 +47,7 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, di
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
-        unit_headings: Dictionary = {}, battery_saver: bool = false) -> void:
+        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "") -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -139,7 +139,20 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 canvas.draw_polyline(_ring(_poly(cell, canvas, zoom, pan, dims)),
                     Color("#FFE451"), maxf(2.0, hw * 0.055), true)
 
-    # Blue movement/Red attacks come exclusively from authoritative hints.
+    # Read-only enemy inspection and friendly move+weapon envelopes. Orange
+    # marks a possible shot AFTER a separate legal move, never an instant shot.
+    var inspection: Dictionary = TacticalHints.inspect_enemy(state,inspected_enemy_id,0)
+    for cell in inspection.get("moves",{}):
+        if not bounds.has_point(cell):
+            continue
+        var poly: PackedVector2Array = _poly(cell,canvas,zoom,pan,dims)
+        canvas.draw_colored_polygon(poly,Color(0.23,0.62,0.98,0.26))
+    for cell in inspection.get("attacks",{}):
+        if not bounds.has_point(cell):
+            continue
+        var poly: PackedVector2Array = _poly(cell,canvas,zoom,pan,dims)
+        canvas.draw_colored_polygon(poly,VisualStyle.weapon_coverage_fill())
+        canvas.draw_polyline(_ring(poly),VisualStyle.weapon_coverage_outline(),maxf(1.0,hw*0.025),true)
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     for destination in hints["moves"]:
         var cell: Vector2i = destination
@@ -152,6 +165,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             canvas.draw_string(font, _center(cell, canvas, zoom, pan, dims) + Vector2(-hw * 0.06, hh * 0.16),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(maxf(10.0, hw * 0.20)), Color.WHITE)
+    var weapon_area: Dictionary = TacticalHints.friendly_weapon_coverage(state,selected_id)
+    for cell in weapon_area:
+        if not bounds.has_point(cell):
+            continue
+        var poly: PackedVector2Array = _poly(cell,canvas,zoom,pan,dims)
+        canvas.draw_colored_polygon(poly,VisualStyle.weapon_coverage_fill())
+        canvas.draw_polyline(_ring(poly),VisualStyle.weapon_coverage_outline(),maxf(1.0,hw*0.025),true)
     for destination in hints["attacks"]:
         var cell: Vector2i = destination
         if not bounds.has_point(cell):
