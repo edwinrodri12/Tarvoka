@@ -216,7 +216,7 @@ static func _site(parent: Node3D,level: int,tint: Color) -> void:
 
 static func _helipad(parent: Node3D,tint: Color) -> void:
     var node: Node = parent.find_child("Helipuerto",true,false)
-    if not node is Node3D:
+    if not (node is Node3D):
         return
     var pad: Node3D = node as Node3D
     var ring := Finish._group(pad,"SeguridadHelipuertoV3")
