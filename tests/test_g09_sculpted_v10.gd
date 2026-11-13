@@ -52,6 +52,7 @@ func _run() -> void:
     assert(not old.get_meta("tarvoka_mbt_sculpted_v10",false))
     assert(new_model.get_meta("tarvoka_mbt_sculpted_v10",false))
     assert(int(new_model.get_meta("tarvoka_mbt_sculpted_v10_pbr_count",0)) >= 30)
+    assert(int(new_model.get_meta("tarvoka_mbt_sculpted_v10_micro_lod_count",0)) >= 10)
     var old_body: MeshInstance3D = old.find_child(
         "CorazaSoldadaHermeticaV7",true,false) as MeshInstance3D
     var new_body: MeshInstance3D = new_model.find_child(
@@ -72,6 +73,15 @@ func _run() -> void:
     assert(body_mat != null and head_mat != null)
     assert(body_mat.albedo_color != head_mat.albedo_color)
     assert(body_mat.normal_enabled and body_mat.roughness_texture != null)
+    var ceramic_material: StandardMaterial3D = new_model.find_child(
+        "G09V10MejillaCompuesta_1",true,false).material_override as StandardMaterial3D
+    assert(ceramic_material != null and ceramic_material.albedo_texture != null)
+    assert(body_mat.albedo_texture != ceramic_material.albedo_texture)
+    assert(ceramic_material.roughness > head_mat.roughness)
+    var wheel_fasteners: GeometryInstance3D = new_model.find_child(
+        "G09TornillosRuedasV9",true,false) as GeometryInstance3D
+    assert(wheel_fasteners != null)
+    assert(is_equal_approx(wheel_fasteners.visibility_range_end,23.0))
     assert(Models.paintable_count(new_model) == 14)
     assert(Models.paintable_count(old) == 14)
     for side in [-1,1]:
