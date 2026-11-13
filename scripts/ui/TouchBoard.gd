@@ -41,6 +41,11 @@ var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
 var touch_cancelled := false
+# Every physical finger has its own position. Multitouch gestures consume
+# all their releases so they never accidentally select or attack.
+var _touch_points: Dictionary = {}
+var _pinch_distance := 0.0
+var _pinch_midpoint := Vector2.ZERO
 # Display-only camera, never serialized into BattleSession.
 var view_zoom := 1.0
 var view_pan := Vector2.ZERO
@@ -74,6 +79,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     view_pan = Vector2.ZERO
     iso_zoom = 1.0
     iso_pan = Vector2.ZERO
+    _reset_touch_gesture()
     motion_effects.clear()
     unit_headings.clear()
     var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
@@ -129,6 +135,9 @@ func set_isometric(enabled: bool) -> void:
     touch_active = false
     touch_finger_index = -1
     touch_cancelled = false
+    _touch_points.clear()
+    _pinch_distance = 0.0
+    _pinch_midpoint = Vector2.ZERO
     queue_redraw()
 
 func change_iso_zoom(direction: int) -> void:
@@ -751,37 +760,120 @@ func selected_weapon_coverage() -> Dictionary:
     # Just a UI preview. It does not reveal enemies or affect the saved game.
     return TacticalHints.friendly_weapon_coverage(state, selected_id)
 
+# Display-only anchored camera transformation. Classic and isometric
+# projections both scale about the board centre and add a pixel pan.
+# Pinch zoom preserves the terrain point beneath the moving midpoint.
+func zoom_camera_anchored(scale: float, old_anchor: Vector2, new_anchor: Vector2) -> void:
+    if scale <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
+        return
+    var previous: float = iso_zoom if iso_enabled else view_zoom
+    var minimum: float = IsoProjection.MIN_ZOOM if iso_enabled else 1.0
+    var maximum: float = IsoProjection.MAX_ZOOM if iso_enabled else 4.0
+    var next_zoom: float = clampf(previous * scale,minimum,maximum)
+    var previous_pan: Vector2 = iso_pan if iso_enabled else view_pan
+    var ratio: float = next_zoom / maxf(previous,0.0001)
+    var next_pan: Vector2 = new_anchor - size * 0.5 - (old_anchor - size * 0.5 - previous_pan) * ratio
+    if iso_enabled:
+        iso_zoom = next_zoom
+        iso_pan = next_pan
+    else:
+        view_zoom = next_zoom
+        view_pan = next_pan
+    queue_redraw()
+
+func _reset_touch_gesture() -> void:
+    _touch_points.clear()
+    touch_origin = Vector2.ZERO
+    touch_active = false
+    touch_finger_index = -1
+    touch_cancelled = false
+    _pinch_distance = 0.0
+    _pinch_midpoint = Vector2.ZERO
+
+func _pinch_pair() -> Array:
+    var indices: Array = _touch_points.keys()
+    indices.sort()
+    return [_touch_points[indices[0]],_touch_points[indices[1]]]
+
+func _start_pinch() -> void:
+    var pair: Array = _pinch_pair()
+    var first: Vector2 = pair[0]
+    var second: Vector2 = pair[1]
+    _pinch_distance = maxf(1.0,first.distance_to(second))
+    _pinch_midpoint = (first+second)*0.5
+    touch_cancelled = true
+
+func _update_pinch() -> void:
+    var pair: Array = _pinch_pair()
+    var first: Vector2 = pair[0]
+    var second: Vector2 = pair[1]
+    var distance: float = maxf(1.0,first.distance_to(second))
+    var midpoint: Vector2 = (first+second)*0.5
+    if _pinch_distance > 0.0:
+        zoom_camera_anchored(distance/_pinch_distance,_pinch_midpoint,midpoint)
+    _pinch_distance = distance
+    _pinch_midpoint = midpoint
+
 func _gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
-        if event.pressed and not touch_active:
-            touch_origin = event.position
-            touch_cancelled = false
-            touch_finger_index = event.index
-            touch_active = true
-        elif not event.pressed and touch_active and event.index == touch_finger_index:
-            touch_active = false
-            touch_finger_index = -1
-            if not touch_cancelled and touch_origin.distance_to(event.position) <= TAP_DRAG_LIMIT:
-                _tap(event.position)
+        if event.pressed:
+            _touch_points[event.index] = event.position
+            if _touch_points.size() == 1:
+                touch_origin = event.position
+                touch_cancelled = false
+                touch_finger_index = event.index
+                touch_active = true
+            elif _touch_points.size() == 2:
+                _start_pinch()
+            else:
+                touch_cancelled = true
+        elif _touch_points.has(event.index):
+            var only_finger: bool = _touch_points.size() == 1
+            var should_tap: bool = only_finger and touch_active and event.index == touch_finger_index and not touch_cancelled and touch_origin.distance_to(event.position) <= TAP_DRAG_LIMIT
+            _touch_points.erase(event.index)
+            if _touch_points.is_empty():
+                _reset_touch_gesture()
+                if should_tap:
+                    _tap(event.position)
+            elif _touch_points.size() == 1:
+                # Remaining finger can continue panning after a pinch,
+                # but its release can never issue a game order.
+                var index: int = int(_touch_points.keys()[0])
+                touch_finger_index = index
+                touch_origin = _touch_points[index]
+                touch_active = true
+                touch_cancelled = true
+                _pinch_distance = 0.0
+            else:
+                _start_pinch()
         accept_event()
     elif event is InputEventScreenDrag:
-        # Panning does not select a cell or commit orders on release.
-        if touch_active and event.index == touch_finger_index:
-            if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
-                touch_cancelled = true
-            if touch_cancelled:
-                if iso_enabled:
-                    iso_pan += event.relative
-                else:
-                    view_pan += event.relative
-                queue_redraw()
+        if _touch_points.has(event.index):
+            _touch_points[event.index] = event.position
+            if _touch_points.size() >= 2:
+                _update_pinch()
+            elif touch_active and event.index == touch_finger_index:
+                if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
+                    touch_cancelled = true
+                if touch_cancelled:
+                    if iso_enabled:
+                        iso_pan += event.relative
+                    else:
+                        view_pan += event.relative
+                    queue_redraw()
         accept_event()
-    elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-        # Native Buttons need touch-to-mouse emulation on Android, but the board
-        # already handles ScreenTouch release. Ignore only duplicated mouse events.
-        if event.device != InputEvent.DEVICE_ID_EMULATION:
+    elif event is InputEventMouseButton:
+        # Android synthesizes mouse clicks from touches, including pinches.
+        # Do not let a synthetic press execute an order.
+        if event.device == InputEvent.DEVICE_ID_EMULATION:
+            accept_event()
+        elif event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
             _tap(event.position)
-        accept_event()
+            accept_event()
+        elif event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
+            var factor: float = 1.15 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0/1.15
+            zoom_camera_anchored(factor,event.position,event.position)
+            accept_event()
 
 func _tap(point: Vector2) -> void:
     if ai_enabled and int(state.get("faction", -1)) != 0:
