@@ -52,8 +52,7 @@ func _run() -> void:
     assert(chooser.is_portrait_layout)
     assert(not chooser.selection_status.visible)
     assert(chooser.commander_display_box.custom_minimum_size.x <= 82)
-    assert(chooser.commander_portrait.texture == Style.commander_texture(6) or
-        chooser.commander_portrait.texture != null)
+    assert(chooser.commander_portrait.texture is AtlasTexture)
     chooser.reflow_for_size(Vector2(1280,720))
     assert(not chooser.is_portrait_layout)
     assert(chooser.selection_status.visible)
