@@ -16,7 +16,10 @@ const GLASS := Color("#174b62")
 const WEAR := Color("#929b9c")
 const SEAM := Color("#18242c")
 const DIRT := Color("#625d55")
-const TRACK_COUNT := 156
+const TRACK_COUNT := 84
+const TRACK_RADIUS := 0.286
+const TRACK_HALF_STRAIGHT := 1.22
+const TRACK_PERIMETER := 4.0*TRACK_HALF_STRAIGHT+TAU*TRACK_RADIUS
 
 static var _paint_map: ImageTexture
 static var _metal_map: ImageTexture
@@ -310,37 +313,62 @@ static func _tread_mesh() -> ArrayMesh:
         _tri(st,a,e,d)
     return st.commit()
 
+static func _track_transform(side: int, progress: float) -> Transform3D:
+    # Continuous, equal-arc-length circulation around both sprockets; unlike
+    # UV scrolling this visibly articulates the individual metal shoes.
+    var distance: float = fposmod(progress,1.0)*TRACK_PERIMETER
+    var straight: float = TRACK_HALF_STRAIGHT*2.0
+    var arc: float = PI*TRACK_RADIUS
+    var z: float
+    var y: float
+    var angle: float
+    if distance < straight:
+        z = -TRACK_HALF_STRAIGHT+distance
+        y = 0.327+TRACK_RADIUS
+        angle = 0.0
+    elif distance < straight+arc:
+        angle = (distance-straight)/TRACK_RADIUS
+        z = TRACK_HALF_STRAIGHT+TRACK_RADIUS*sin(angle)
+        y = 0.327+TRACK_RADIUS*cos(angle)
+    elif distance < straight*2.0+arc:
+        z = TRACK_HALF_STRAIGHT-(distance-straight-arc)
+        y = 0.327-TRACK_RADIUS
+        angle = PI
+    else:
+        angle = PI+(distance-straight*2.0-arc)/TRACK_RADIUS
+        z = -TRACK_HALF_STRAIGHT+TRACK_RADIUS*sin(angle)
+        y = 0.327+TRACK_RADIUS*cos(angle)
+    return Transform3D(Basis(Vector3.RIGHT,angle),
+        Vector3(float(side)*1.335,y,z))
+
 static func _tracks(parent: Node3D, side: int) -> MultiMeshInstance3D:
-    var sign: float = float(side)
-    var transforms: Array = []
-    const N := 29
-    for row in [0,1]:
-        for i in range(N):
-            var z: float = lerpf(-1.22,1.22,float(i)/float(N-1))
-            var y: float = 0.613 if row == 0 else 0.041
-            transforms.append(Transform3D(Basis.IDENTITY,
-                Vector3(sign*1.335,y,z)))
-    # Both semicircular links curve around realistic end sprockets.
-    for end in [-1,1]:
-        for i in range(13):
-            var angle: float = -PI*0.50+PI*float(i)/12.0
-            var z: float = float(end)*(1.22+0.29*cos(angle))
-            var y: float = 0.327+0.286*sin(angle)
-            var rotation := Basis(Vector3.RIGHT,float(end)*angle)
-            transforms.append(Transform3D(rotation,Vector3(sign*1.335,y,z)))
     var inst := MultiMeshInstance3D.new()
     inst.name = "OrugaArticuladaG09V7_%s" % side
-    var link_mesh: ArrayMesh = _tread_mesh()
     var batch := MultiMesh.new()
     batch.transform_format = MultiMesh.TRANSFORM_3D
-    batch.mesh = link_mesh
-    batch.instance_count = transforms.size()
-    for i in range(transforms.size()):
-        batch.set_instance_transform(i,transforms[i])
+    batch.mesh = _tread_mesh()
+    batch.instance_count = TRACK_COUNT
+    for i in range(TRACK_COUNT):
+        batch.set_instance_transform(i,
+            _track_transform(side,float(i)/float(TRACK_COUNT)))
     inst.multimesh = batch
     inst.material_override = _army_material(RUBBER,false)
     parent.add_child(inst)
     return inst
+
+static func slide_tracks(model: Node3D, phase: float) -> void:
+    # Batches stay on the GPU. Only 2 x 84 matrices are updated in the
+    # inspection and animated-battle capture views; no new mesh/draw calls.
+    if model == null or not model.get_meta("tarvoka_mbt_hero_v7",false):
+        return
+    for side in [-1,1]:
+        var belt: MultiMeshInstance3D = model.find_child(
+            "OrugaArticuladaG09V7_%s" % side,true,false) as MultiMeshInstance3D
+        if belt == null or belt.multimesh == null:
+            continue
+        for i in range(TRACK_COUNT):
+            belt.multimesh.set_instance_transform(i,_track_transform(
+                side,float(i)/float(TRACK_COUNT)+phase))
 
 static func apply_final_materials(model: Node3D) -> void:
     # Called AFTER TankSurface.apply_finish because generic PBR processing
