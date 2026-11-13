@@ -192,6 +192,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         return str(a["id"]) < str(b["id"])
     )
     var units_drawn := 0
+    var real_3d_units_drawn := 0
     for unit in draw_units:
         if int(unit.get("hp", 0)) <= 0:
             continue
@@ -258,6 +259,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
             var unit_tint: Color = face
             if from_3d:
+                real_3d_units_drawn += 1
                 # Real 3D mesh captures have neutral materials; preserve the
                 # game's approved faction palette without eight GPU cameras
                 # for every role (one colorized draw and a clear team ring).
@@ -307,6 +309,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     int(maxf(10.0,hw*0.19)),Color("#FFD15A"))
 
     last_frame_stats["units_drawn"] = units_drawn
+    last_frame_stats["real_3d_units_drawn"] = real_3d_units_drawn
     if fog:
         var stale_contacts: Dictionary = Visibility.last_known_contacts(state, 0)
         for enemy_id in stale_contacts:
