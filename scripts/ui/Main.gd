@@ -13,6 +13,7 @@ const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
+const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 
 var board: Control
 var status_label: Label
@@ -20,6 +21,7 @@ var battlefield_status: Label
 var order_preview_label: Label
 var unit_label: Label
 var command_menu: Control
+var home_menu: Control
 var command_menu_button: Button
 var compact_menu_button: Button
 var inspection_title: Label
@@ -571,6 +573,15 @@ func _ready() -> void:
     command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
     command_menu.purchase_requested.connect(_purchase_command_unit)
+    command_menu.home_requested.connect(_show_home_menu)
+
+    home_menu = HomeMenu.new()
+    add_child(home_menu)
+    home_menu.continue_requested.connect(_continue_from_home)
+    home_menu.story_requested.connect(_open_campaign)
+    home_menu.skirmish_requested.connect(_prepare_skirmish)
+    home_menu.arsenal_requested.connect(_open_arsenal_from_home)
+    home_menu.settings_requested.connect(_open_settings_from_home)
 
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
@@ -582,6 +593,8 @@ func _ready() -> void:
         battle_minimap.visible = true
         minimap_caption.visible = true
     call_deferred("_frame_camera_after_layout")
+    if OS.has_feature("mobile"):
+        call_deferred("_show_home_menu")
     set_process(true)
     _process(0.0)
 
@@ -1031,6 +1044,28 @@ func _refresh_production_catalog() -> void:
 
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
+func _show_home_menu() -> void:
+    command_menu.hide()
+    home_menu.show()
+
+func _continue_from_home() -> void:
+    home_menu.hide()
+    if OS.has_feature("mobile"):
+        _set_compact_hud(true)
+
+func _prepare_skirmish() -> void:
+    home_menu.hide()
+    command_menu.hide()
+    _set_compact_hud(false) # The existing scenario/map/seed settings remain authoritative.
+
+func _open_arsenal_from_home() -> void:
+    home_menu.hide()
+    _open_unit_art_gallery()
+
+func _open_settings_from_home() -> void:
+    home_menu.hide()
+    command_menu.open_for(board,"Ajustes")
+
 func _open_command_menu() -> void:
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
     command_menu.open_for(board,section)
