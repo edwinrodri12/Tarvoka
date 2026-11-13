@@ -191,6 +191,9 @@ static func _suppress_prototype(model: Node3D) -> void:
             "BastidorTrasero1","BarraCestaSuperior1","BarraCestaSuperior-1",
             "BrazaSuperiorTorre1","BrazaSuperiorTorre-1",
             "CubiertaMotorSelladaV5","TapaBlindadaEstibaV6",
+            "PortonTraseroHermeticoV5",
+            "ModuloCeramicoLateralV6_-1_0","ModuloCeramicoLateralV6_-1_1",
+            "ModuloCeramicoLateralV6_1_0","ModuloCeramicoLateralV6_1_1",
             "VisorComandante_0","VisorComandante_1","VisorComandante_2",
             "VisorComandante_3","VisorComandante_4","VisorComandante_5",
             "AntenaTorre1","AntenaTorre-1"]:
@@ -344,6 +347,16 @@ static func apply(model: Node3D) -> bool:
         _rod(hull,"BordeVentilacionV7_%02d" % i,
             Vector3(-0.50,1.151,z+0.038),
             Vector3(0.50,1.151,z+0.038),0.009,METAL)
+    # A recessed rear servicing bulkhead replaces the prototype's large
+    # exposed box and has a continuous gasket and recessed lock points.
+    _bevel(hull,"PanelMantenimientoPosteriorV7",
+        Vector3(0,0.71,1.482),Vector3(1.38,0.51,0.082),
+        0.067,ARMOR)
+    _dark_box(hull,"JuntaSelloPosteriorV7",
+        Vector3(0,0.72,1.535),Vector3(1.10,0.37,0.013),SEAM)
+    _bevel(hull,"EscudoPosteriorMotoresV7",
+        Vector3(0,0.725,1.551),Vector3(0.96,0.285,0.035),
+        0.058,METAL)
     for side in [-1,1]:
         var sign: float = float(side)
         # Actual heavy side composite shoulder and inside tread belt.
@@ -429,6 +442,30 @@ static func apply(model: Node3D) -> bool:
         _rod(turret,"CierreEscotillaV7_%02d" % hatch,
             Vector3(sign*0.40-0.10,0.72,0.29),
             Vector3(sign*0.40+0.10,0.72,0.29),0.014,SEAM)
+    # Replace the square toy roof station with a low armored remote
+    # weapon module. Keep its original machine-gun barrel (for animations).
+    var remote: Node3D = model.find_child("ArmaSecundariaEstabilizada",true,false) as Node3D
+    if remote != null:
+        for label in ["ReceptorAmetralladora","MunicionAmetralladora","CamaraArma"]:
+            var original: Node3D = remote.find_child(label,true,false) as Node3D
+            if original != null:
+                original.visible = false
+        _bevel(remote,"EstacionRemotaBlindadaV7",
+            Vector3(0,0.115,-0.08),Vector3(0.28,0.145,0.33),
+            0.056,METAL)
+        _dark_box(remote,"LenteArmaEstabilizadaV7",
+            Vector3(-0.092,0.14,-0.258),Vector3(0.071,0.059,0.018),GLASS)
+        _rod(remote,"UnionArmaEstabilizadaV7",
+            Vector3(0.0,0.232,-0.11),Vector3(0.0,0.245,0.03),0.014,SEAM)
+    # Flexible dark radio whips without bright toy-gold antenna tips.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _rod(turret,"AntenaFlexibleG09V7_%s" % side,
+            Vector3(sign*0.59,0.64,0.72),
+            Vector3(sign*0.615,1.22,0.77),0.009,SEAM)
+        _bevel(turret,"BaseAntenaG09V7_%s" % side,
+            Vector3(sign*0.59,0.646,0.72),Vector3(0.095,0.070,0.095),
+            0.022,METAL)
     # Angular engine-independent bustle has proper rear slope and a rigid
     # steel frame, but no exposed toy bars or loose floating ammunition.
     _bevel(turret,"EstibaBlindadaTraseraV7",
