@@ -102,14 +102,19 @@ static func _shore_band(canvas: CanvasItem, c: Vector2, hw: float,
 
 static func draw_water_shore(canvas: CanvasItem, c: Vector2, hw: float,
         land_edges: int, detail: int, seed: int,
-        cell: Vector2i = Vector2i(-1,-1)) -> void:
+        cell: Vector2i = Vector2i(-1,-1),
+        shore_colors: Dictionary = {}) -> void:
     if land_edges == 0 or detail <= 0 or hw <= 0.0:
         return
     for i in range(4):
         if (land_edges & (1 << i)) == 0:
             continue
+        # The thin outer belt is painted with the OBSERVED neighbor's
+        # actual ground tint. It masks the otherwise straight water tile
+        # border and leaves a curving waterline strictly inside this tile.
+        var ground_tint: Color = shore_colors.get(i,Color("#B5AD81"))
         _shore_band(canvas,c,hw,i,seed,6 if detail == 1 else 10,
-            0.028,Color("#3D9BB7"),Color("#B8EEF1"),0.033,cell)
+            0.0,ground_tint,Color("#B8EEF1"),0.033,cell)
         if detail >= 2:
             var foam: PackedVector2Array = shore_curve(c,hw,i,seed,10,cell)
             for j in range(1,foam.size()-2,3):
