@@ -75,6 +75,22 @@ func _run() -> void:
     slots.back_requested.emit()
     assert(home.visible)
 
+    # Settings/Arsenal opened from the title screen must return to Inicio,
+    # not silently expose the battle behind the menu.
+    home.primary_buttons["Ajustes"].pressed.emit()
+    assert(screen.command_menu.visible and not home.visible)
+    screen.command_menu.close_requested.emit()
+    assert(home.visible and not screen.command_menu.visible)
+    home.primary_buttons["Arsenal"].pressed.emit()
+    assert(screen._gallery_from_home and not home.visible)
+    screen.unit_art_gallery.popup_hide.emit()
+    assert(home.visible and not screen._gallery_from_home)
+    screen._open_command_menu()
+    assert(not screen._command_from_home)
+    screen.command_menu.close_requested.emit()
+    assert(not screen.command_menu.visible and not home.visible)
+    screen._show_home_menu()
+
     # The campaign button stays wired, but tests do not switch the scene.
     assert(home.primary_buttons["Modo historia"].disabled == false)
     assert(home.primary_buttons["Escaramuza"].disabled == false)
