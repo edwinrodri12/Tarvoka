@@ -132,7 +132,10 @@ func open_for(state: Dictionary, viewer: int = 0) -> void:
         return
     _clear()
     commander_matchup.bind_state(state,false)
-    _side_labels = ["BANDO 1","BANDO 2"] if state.has(Identity.STATE_FIELD) else ["AZUL","ROJO"]
+    # Preserve the typed Array[String]; Godot 4 rejects replacing it
+    # with an untyped conditional array at runtime.
+    _side_labels[0] = "BANDO 1" if state.has(Identity.STATE_FIELD) else "AZUL"
+    _side_labels[1] = "BANDO 2" if state.has(Identity.STATE_FIELD) else "ROJO"
     _side_tints[0] = Identity.color_for(state,0) if state.has(Identity.STATE_FIELD) else Color("#82C5FF")
     _side_tints[1] = Identity.color_for(state,1) if state.has(Identity.STATE_FIELD) else Color("#FF9D96")
     var winner: int = int(_data["winner"])
