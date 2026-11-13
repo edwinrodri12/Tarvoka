@@ -142,7 +142,11 @@ static func _bevel(parent: Node3D,name: String,pos: Vector3,
         angles: Vector3 = Vector3.ZERO) -> MeshInstance3D:
     var obj: MeshInstance3D = Finish._bevel(parent,name,pos,dimensions,radius,tint)
     obj.rotation_degrees = angles
-    obj.material_override = _army_material(tint)
+    # Do not map the pale camouflage coat onto optics/steel fittings:
+    # this was the cause of two nearly white toy squares on the turret roof.
+    var armor_paint: bool = not (tint == METAL or tint == RUBBER
+        or tint == GLASS or tint == WEAR or tint == SEAM or tint == DIRT)
+    obj.material_override = _army_material(tint,armor_paint)
     return obj
 
 static func _dark_box(parent: Node3D,name: String,pos: Vector3,
@@ -402,8 +406,8 @@ static func apply(model: Node3D) -> bool:
         Vector2(-0.85,-0.79),Vector2(-0.58,-1.11)
     ]
     var turret_levels := [
-        [0.08,0.86,0.01],[0.16,1.0,0.04],[0.39,1.0,0.05],
-        [0.58,0.90,0.07],[0.675,0.77,0.09]
+        [0.08,0.88,0.01],[0.16,1.0,0.03],[0.40,1.0,0.04],
+        [0.605,0.92,0.045],[0.665,0.88,0.050]
     ]
     _loft(turret,"TorreBajaSoldadaV7",turret_profile,turret_levels)
     # Integrated armor cheek extensions follow sloped shell; each bevel has
