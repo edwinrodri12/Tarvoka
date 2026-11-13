@@ -222,7 +222,9 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
             for i in range(4):
                 var dx: int = 1 if i == 1 or i == 2 else 0
                 var dz: int = 1 if i >= 2 else 0
-                corners[i].y = _vertex_height(x+dx,z+dz,scene)
+                var corner: Vector3 = corners[i]
+                corner.y = _vertex_height(x+dx,z+dz,scene)
+                corners[i] = corner
                 shades.append(_vertex_tint(x+dx,z+dz,scene))
             center.y = height_at(x,z,scene)
             var face_color: Color = _ground_tint(biome,scene,x*29+z*43)
@@ -322,29 +324,32 @@ static func _mountain(parent: Node3D, origin: Vector3, top: float,
 
 static func _road(parent: Node3D, x: int, z: int, scene: int,
         origin: Vector3, top: float) -> void:
-    var along_z: bool = x == (8 if scene == 1 else 5)
-    var crossing: bool = z == (8 if scene == 1 else 7 if scene == 2 else 5)
-    if scene == 2:
-        along_z = x == 5
+    # Tile-to-tile topology, not arbitrary road labels, drives junctions.
+    var along_z: bool = kind(x,z-1,scene) == "road" or kind(x,z+1,scene) == "road"
+    var along_x: bool = kind(x-1,z,scene) == "road" or kind(x+1,z,scene) == "road"
+    if scene == 1 and z == 5 and x in [3,6,7]:
+        along_x = true
+    if not along_z and not along_x:
+        along_z = true
     var orientations: Array[bool] = []
     if along_z:
         orientations.append(true)
-    if crossing:
+    if along_x:
         orientations.append(false)
-    if orientations.is_empty():
-        orientations.append(true)
     for vertical in orientations:
-        var size := Vector3(1.30,0.055,CELL*1.01) if vertical else Vector3(CELL*1.01,0.055,1.30)
+        var size: Vector3 = Vector3(1.30,0.065,CELL*1.01) if vertical else Vector3(CELL*1.01,0.065,1.30)
         _box(parent,"Calzada_%d_%d_%s" % [x,z,str(vertical)],
-            origin+Vector3(0,top+0.04,0),size,ROAD)
+            origin+Vector3(0,top+0.055,0),size,ROAD)
         for side in [-1.0,1.0]:
-            var offset: Vector3 = Vector3(0.68*side,top+0.082,0) if vertical else Vector3(0,top+0.082,0.68*side)
-            var edge_size: Vector3 = Vector3(0.045,0.025,CELL) if vertical else Vector3(CELL,0.025,0.045)
-            _box(parent,"BordeVial",origin+offset,edge_size,ROAD_EDGE)
-        for n in [-1,0,1]:
-            var marking: Vector3 = Vector3(0,top+0.085,float(n)*0.70) if vertical else Vector3(float(n)*0.70,top+0.085,0)
-            var mark_size: Vector3 = Vector3(0.06,0.022,0.37) if vertical else Vector3(0.37,0.022,0.06)
-            _box(parent,"LineaDiscontinua",origin+marking,mark_size,MARKER)
+            var offset: Vector3 = Vector3(0.70*side,top+0.093,0) if vertical else Vector3(0,top+0.093,0.70*side)
+            var edge_size: Vector3 = Vector3(0.055,0.035,CELL*1.02) if vertical else Vector3(CELL*1.02,0.035,0.055)
+            _box(parent,"ArcénLateral",origin+offset,edge_size,ROAD_EDGE)
+        # Never draw crossing lane lines through the center of a junction.
+        if orientations.size() == 1:
+            for n in [-1,0,1]:
+                var marking: Vector3 = Vector3(0,top+0.098,float(n)*0.70) if vertical else Vector3(float(n)*0.70,top+0.098,0)
+                var mark_size: Vector3 = Vector3(0.065,0.022,0.37) if vertical else Vector3(0.37,0.022,0.065)
+                _box(parent,"LineaDiscontinua",origin+marking,mark_size,MARKER)
 
 static func _shore(parent: Node3D, x: int, z: int, scene: int,
         origin: Vector3, top: float) -> void:
