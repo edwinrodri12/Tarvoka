@@ -114,8 +114,20 @@ func _ready() -> void:
     lab_board.set_process(false)
 
     var right := PanelContainer.new()
-    right.custom_minimum_size.x = 340
+    # Video 242263.mp4: at 2316x1080 the old 340px panel was only 15% of
+    # the screen, leaving important controls hard to read on the phone.
+    right.custom_minimum_size.x = clampf(
+        get_viewport().get_visible_rect().size.x * 0.285,400.0,700.0)
     right.size_flags_horizontal = Control.SIZE_FILL
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color("#111F2B")
+    panel_style.border_color = Color("#304858")
+    panel_style.set_border_width_all(1)
+    panel_style.content_margin_left = 12.0
+    panel_style.content_margin_right = 12.0
+    panel_style.content_margin_top = 8.0
+    panel_style.content_margin_bottom = 8.0
+    right.add_theme_stylebox_override("panel",panel_style)
     right.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content.add_child(right)
     var scroll := ScrollContainer.new()
@@ -229,6 +241,9 @@ func _ready() -> void:
     feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     feedback_label.add_theme_color_override("font_color",Color("#F6D88A"))
     controls.add_child(feedback_label)
+    # Operation feedback belongs by the selectors, not hidden after every
+    # damage control at the very bottom of a long landscape sidebar.
+    controls.move_child(feedback_label,1)
 
     var Inspector = load("res://scripts/ui/Unit3DInspector.gd")
     preview_viewer = Inspector.new()
@@ -238,7 +253,8 @@ func _ready() -> void:
 func _action_button(container: Container, label: String) -> Button:
     var button := Button.new()
     button.text = label
-    button.custom_minimum_size.y = 42
+    button.custom_minimum_size.y = 50
+    button.add_theme_font_size_override("font_size",16)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     container.add_child(button)
     return button
@@ -246,11 +262,12 @@ func _action_button(container: Container, label: String) -> Button:
 func _picker(container: Container, label: String, values: Array, show_role_name: bool) -> OptionButton:
     var title := Label.new()
     title.text = label
-    title.add_theme_font_size_override("font_size",13)
+    title.add_theme_font_size_override("font_size",15)
     title.add_theme_color_override("font_color",Color("#AAC6D6"))
     container.add_child(title)
     var picker := OptionButton.new()
-    picker.custom_minimum_size.y = 42
+    picker.custom_minimum_size.y = 50
+    picker.add_theme_font_size_override("font_size",16)
     picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     for key in values:
         picker.add_item(Roles.label(str(key)) if show_role_name else str(key))
@@ -519,6 +536,9 @@ func open_lab() -> void:
     move_to_front()
     lab_board.set_process(true)
     lab_board.set_isometric(true)
+    # The video showed the laboratory map cropped along the landscape edges.
+    # Start slightly zoomed out; users can still pinch or use +/- buttons.
+    lab_board.iso_zoom = 0.85
     rebuild_stage()
     feedback_label.text = "Laboratorio listo. Aquí puedes comparar las animaciones sin modificar tu partida."
 
