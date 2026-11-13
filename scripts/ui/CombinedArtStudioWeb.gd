@@ -30,9 +30,9 @@ func _setup_architecture_stage() -> void:
     # Only the laboratory gets a ground plane and true shadows. The actual
     # building geometry and tactical terrain remain separate.
     var ground_mesh := PlaneMesh.new()
-    ground_mesh.size = Vector2(34.0,34.0)
+    ground_mesh.size = Vector2(120.0,120.0)
     var ground_material := StandardMaterial3D.new()
-    ground_material.albedo_color = Color("#49615a")
+    ground_material.albedo_color = Color("#182d32")
     ground_material.metallic = 0.04
     ground_material.roughness = 0.98
     hq_ground = MeshInstance3D.new()
