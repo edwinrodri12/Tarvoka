@@ -14,7 +14,7 @@ func _run() -> void:
     _remove(local_path)
     _remove(Preferences.FILE_PATH)
     assert(Preferences.load_config(false,local_path) == {
-        "isometric":false,"battery_saver":false,"minimap_enabled":false
+        "isometric":false,"battery_saver":false,"minimap_enabled":true
     })
     assert(Preferences.load_config(true,local_path) == {
         "isometric":true,"battery_saver":false,"minimap_enabled":true
@@ -44,20 +44,22 @@ func _run() -> void:
     var before: Dictionary = board.state.duplicate(true)
     assert(not board.iso_enabled)
     assert(not board.battery_saver)
-    assert(not main._minimap_preference)
+    assert(main._minimap_preference)
     assert(not main.battle_minimap.visible)
     main._toggle_isometric_view()
     assert(board.iso_enabled)
-    assert(not main.battle_minimap.visible) # User preference still off.
+    assert(main.battle_minimap.visible) # Original behavior: iso shows minimap by default.
     main._toggle_minimap()
-    assert(main.battle_minimap.visible)
-    assert(main.minimap_caption.visible)
-    assert(main._minimap_preference)
+    assert(not main.battle_minimap.visible)
+    assert(not main.minimap_caption.visible)
+    assert(not main._minimap_preference)
     main._toggle_isometric_view()
     assert(not board.iso_enabled)
     assert(not main.battle_minimap.visible)
-    assert(main._minimap_preference) # Remember until next iso switch.
+    assert(not main._minimap_preference) # Remember until next iso switch.
     main._toggle_isometric_view()
+    assert(not main.battle_minimap.visible)
+    main._toggle_minimap()
     assert(main.battle_minimap.visible)
     main._toggle_battery_saver()
     assert(board.battery_saver)
