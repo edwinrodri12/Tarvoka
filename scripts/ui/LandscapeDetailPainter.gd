@@ -97,9 +97,9 @@ static func _mountain_peak(canvas: CanvasItem, center: Vector2,
     var snow_left := tip.lerp(left,0.26)
     var snow_right := tip.lerp(right,0.25)
     if detail >= 2:
-        _polygon(canvas,[tip,snow_left,tip+Vector2(-hw*0.045,hw*0.085),
-            tip+Vector2(hw*0.035,hw*0.09),snow_right],
-            Color("#DFE7E7"))
+        # Convex triangular snow cap: irregular five-point ribbons could
+        # self-intersect and flood Godot's canvas triangulator with errors.
+        _polygon(canvas,[tip,snow_left,snow_right],Color("#DFE7E7"))
         _line(canvas,tip,middle,Color("#AAB8C2"),hw*0.014)
         _line(canvas,left.lerp(tip,0.22),left.lerp(middle,0.43),
             Color("#5A6975"),hw*0.017)
