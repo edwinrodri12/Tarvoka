@@ -423,4 +423,31 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var impact_part: Node3D = model.find_child(label,true,false) as Node3D
             if impact_part != null:
                 impact_part.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_sculpted_v10",false):
+        # New cast-welded hull/turret remain sealed at all HP levels, while
+        # individual ceramic modules crack/detach on the exposed right side.
+        # The older V7/V9 cheeks stay retired even after full restoration.
+        for old in ["ModuloBlindajeCeramicoV7_1",
+                "ModuloBlindajeCeramicoV7_-1",
+                "GlacisCeramicoV7_1","GlacisCeramicoV7_-1",
+                "G09PlacaCeramicaMandibulaV9_1",
+                "G09PlacaCeramicaMandibulaV9_-1"]:
+            var retired: Node3D = model.find_child(old,true,false) as Node3D
+            if retired != null:
+                retired.visible = false
+        for part_name in ["G09V10MejillaCompuesta_1",
+                "G09V10PlanchaMejillaExterior_1",
+                "G09V10BlindajeLateral_1",
+                "G09V10CosturaBlindaje_1_0","G09V10CosturaBlindaje_1_1",
+                "G09V10CosturaBlindaje_1_2",
+                "G09V10GlacisSuperior_1"]:
+            var armored_part: Node3D = model.find_child(part_name,true,false) as Node3D
+            if armored_part != null:
+                armored_part.visible = stage < 3
+        for part_name in ["G09V10ModuloAnteriorTorre","G09V10PanelServicioTecho",
+                "G09V10BisagraPanelTecho","G09V10CubiertaMotorBlindada",
+                "G09V10RejillaRefrigeracion_02","G09V10RejillaRefrigeracion_03"]:
+            var damaged_part: Node3D = model.find_child(part_name,true,false) as Node3D
+            if damaged_part != null:
+                damaged_part.visible = stage < 4
     return true
