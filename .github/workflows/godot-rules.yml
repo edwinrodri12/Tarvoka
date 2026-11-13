@@ -30,6 +30,16 @@ jobs:
           fi
           grep -F 'PASS concept rail' /tmp/tarvoka-concept-battle-rail.log
 
+      - name: Validate official TARVOKA home, real saved matches and map preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_official_brand_menus.gd 2>&1 | tee /tmp/tarvoka-official-home.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-official-home.log; then
+            echo 'Official brand menu regression'; exit 1
+          fi
+          grep -F 'PASS official brand home and save selection' /tmp/tarvoka-official-home.log
+
       - name: Verify TARVOKA polished command UI, theme and safe navigation
         shell: bash
         run: |
