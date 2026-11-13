@@ -135,11 +135,11 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var cell: Vector2i = marker["pos"]
             if not bounds.has_point(cell):
                 continue
-            var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
+            var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
             WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
             var selected: bool = cell == selected_factory_pos or cell == inspected_cell
-            SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver)
+            SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver,state)
             if selected:
                 canvas.draw_polyline(_ring(_poly(cell,canvas,zoom,pan,dims)),
                     Color("#FFE451"),maxf(2.0,hw*0.055),true)
