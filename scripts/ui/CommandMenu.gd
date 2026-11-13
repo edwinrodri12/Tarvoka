@@ -143,11 +143,12 @@ func refresh() -> void:
         return
     var state: Dictionary = board.state
     var faction: int = int(state.get("faction",0))
+    var viewer: int = 0 if bool(board.ai_enabled) else faction
     var turn_text := "Turno: %s" % ("Alianza Azul" if faction == 0 else "Faccion Roja")
     if state.has("economy"):
         var funds: Array = state["economy"].get("credits",[])
-        if funds.size() > faction and faction >= 0:
-            turn_text += "  ·  %d creditos" % int(funds[faction])
+        if funds.size() > viewer and viewer >= 0:
+            turn_text += "  ·  %d creditos" % int(funds[viewer])
     info_label.text = turn_text
     _clear(battle_body)
     _heading(battle_body,"Situacion de batalla")
@@ -164,7 +165,7 @@ func refresh() -> void:
     var owned: int = 0
     var visible_count: int = 0
     for unit in state.get("units",[]):
-        if not unit is Dictionary or int(unit.get("faction",-1)) != faction or int(unit.get("hp",0)) <= 0:
+        if not unit is Dictionary or int(unit.get("faction",-1)) != viewer or int(unit.get("hp",0)) <= 0:
             continue
         owned += 1
         if visible_count >= 30:
@@ -187,7 +188,7 @@ func refresh() -> void:
         _description(production_body,"La economia no esta activada en esta batalla.")
     else:
         var site: Dictionary = Economy.site_at(economy,board.selected_factory_pos)
-        if site.is_empty() or int(site.get("owner",-1)) != faction or str(site.get("kind","")) == "city":
+        if site.is_empty() or int(site.get("owner",-1)) != viewer or str(site.get("kind","")) == "city":
             _description(production_body,"Selecciona primero una base propia en el mapa. Aqui apareceran solo las unidades que esa instalacion puede fabricar.")
         else:
             var kind: String = str(site.get("kind",""))
