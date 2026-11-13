@@ -17,6 +17,7 @@ func _run() -> void:
     assert(tank.get_meta("tarvoka_mbt_finish_v3",false))
     assert(tank.get_meta("tarvoka_mbt_production_v4",false))
     assert(tank.get_meta("tarvoka_mbt_silhouette_v5",false))
+    assert(tank.get_meta("tarvoka_mbt_art_v6",false))
     assert(tank.get_meta("tarvoka_pbr_applied",false))
     assert(Models.paintable_count(tank) == 14)
     assert(Models.inspect_meshes(tank) >= 190)
@@ -86,13 +87,17 @@ func _run() -> void:
     assert(not bore.visible and not lens.visible and not era.visible)
     assert(Damage.apply_stage(tank,0))
     assert(Damage.current_stage(tank) == 0)
-    assert(bore.visible and lens.visible)
-    assert(not era.visible and not cheek.visible)
-    assert(sight.visible and new_cheek.visible)
+    var new_optic: MeshInstance3D = tank.find_child("VentanaOpticaPanoramicaV6",true,false) as MeshInstance3D
+    var new_armor: MeshInstance3D = tank.find_child("MejillaMonoliticaV6_1",true,false) as MeshInstance3D
+    var new_mantlet: MeshInstance3D = tank.find_child("BastidorCanonIntegradoV6",true,false) as MeshInstance3D
+    assert(new_optic != null and new_armor != null and new_mantlet != null)
+    assert(bore.visible and not lens.visible and not sight.visible)
+    assert(not era.visible and not cheek.visible and not new_cheek.visible)
+    assert(new_armor.visible and new_optic.visible and new_mantlet.visible)
     assert(Damage.apply_stage(tank,3))
-    assert(not new_cheek.visible)
+    assert(not new_armor.visible)
     assert(Damage.apply_stage(tank,0))
-    assert(new_cheek.visible and not cheek.visible and not era.visible)
+    assert(new_armor.visible and not new_cheek.visible and not era.visible)
     tank.free()
 
     var inspector = Inspector.new()
