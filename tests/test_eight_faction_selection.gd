@@ -33,7 +33,10 @@ func _run() -> void:
     setup.faction_button.pressed.emit()
     assert(chooser.visible and not setup.visible)
     assert(chooser.selected == Identity.defaults())
-    assert(chooser.portrait.texture == null) # Official portrait assets not in repo.
+    assert(chooser.portrait.texture == null) # Official emblem art not in repo.
+    assert(chooser.commander_portrait.texture == null) # Official commander art not in repo.
+    assert(chooser.commander_notice.visible)
+    assert(Style.commander_path(7) == "res://assets/commanders/orden_onix.png")
     chooser._choose_faction(3)
     assert(chooser.selected["0"] == "confederacion_solar")
     chooser._choose_side(1)
@@ -89,6 +92,10 @@ func _run() -> void:
     assert(bool(next.get("valid",false)))
     assert(next["state"]["visual_factions"] == actual["visual_factions"])
     assert(Identity.color_for(next["state"],0) == Style.faction_color(3))
+    # Unit and base flags use the same selectable visual faction colors.
+    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(0,actual) == Style.faction_color(3))
+    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(1,actual) == Style.faction_color(7))
+    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(-1,actual) != Style.faction_color(3))
 
     assert(board.save_game())
     board.new_game()
