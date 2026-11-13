@@ -20,7 +20,9 @@ static func load_config(mobile: bool = false, path: String = FILE_PATH) -> Dicti
     if int(config.get_value("display","version",-1)) != VERSION:
         return values
     for key in FIELDS:
-        var content: Variant = config.get_value("display",key,null)
+        if not config.has_section_key("display",key):
+            continue
+        var content: Variant = config.get_value("display",key)
         if content is bool:
             values[key] = content
     return values
