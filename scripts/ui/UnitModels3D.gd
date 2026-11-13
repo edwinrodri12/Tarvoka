@@ -685,7 +685,7 @@ static func _destroyer(root: Node3D) -> void:
     _box(root,"EstelaEspuma",Vector3(0,0.07,1.71),
         Vector3(1.43,0.04,0.37),WATER)
 
-static func build(role: String, faction: int = -1) -> Node3D:
+static func build(role: String, faction: int = -1, finish_enabled: bool = true) -> Node3D:
     if not supports(role):
         return null
     var imported: Node3D = _imported_model(role)
@@ -726,8 +726,9 @@ static func build(role: String, faction: int = -1) -> Node3D:
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
-        TankFinish.apply(model)
-        TankProduction.apply(model)
+        if finish_enabled:
+            TankFinish.apply(model)
+            TankProduction.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         TankDamage.prepare(model)
