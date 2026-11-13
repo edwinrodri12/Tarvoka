@@ -95,15 +95,21 @@ func _ready() -> void:
     outer.add_child(content)
 
     var board_frame := PanelContainer.new()
+    # 242287.mp4: large iso tiles were painted above the header and across
+    # the sidebar. Clip both parent viewport and board drawing to the battle
+    # rectangle; no terrain may cover menu buttons or inspector chrome.
+    board_frame.clip_contents = true
     board_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     board_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content.add_child(board_frame)
     var board_margin := MarginContainer.new()
+    board_margin.clip_contents = true
     for side in ["margin_left","margin_right","margin_top","margin_bottom"]:
         board_margin.add_theme_constant_override(side,4)
     board_frame.add_child(board_margin)
     lab_board = BoardScript.new()
     lab_board.name = "TableroExclusivoLaboratorio"
+    lab_board.clip_contents = true
     lab_board.autosave_enabled = false
     lab_board.ai_enabled = false
     lab_board.require_order_confirmation = false
