@@ -114,6 +114,18 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
         node.position.y = float(node.get_meta("tarvoka_smoke_rest_y",node.position.y)) + 0.055*sin(phase)
         var breath: float = 1.0+0.055*sin(phase*0.64+0.5)
         node.scale = Vector3.ONE * breath
+    if current_stage(model) == 4:
+        # Three tapered flame tongues sway independently. Never animate the
+        # structural wreck meshes: players must see exactly what broke.
+        for index in range(3):
+            var flame_name: String = ["LenguaFuegoIzquierda","LenguaFuegoCentro",
+                "LenguaFuegoAlta"][index]
+            var flame: Node3D = model.find_child(flame_name,true,false) as Node3D
+            if flame == null:
+                continue
+            var swish: float = elapsed*3.2+float(index)*1.8
+            flame.rotation_degrees.z = [-18.0,12.0,23.0][index] + 4.5*sin(swish)
+            flame.scale = Vector3.ONE * (0.92 + 0.11*sin(swish*1.7))
 
 # Angled, light-emitting flame tongues instead of a fire effect made
 # entirely of round spheres. Kept under 8 segments for Android OpenGL.
@@ -189,9 +201,9 @@ static func prepare(model: Node3D) -> bool:
     _box(medium,"PlacaDesprendida",Vector3(1.38,0.39,0.46),
         Vector3(0.09,0.29,0.48),Color("#5B6468"),Vector3(13,25,27))
     _cloud(medium,"HumoGrisMotor",Vector3(-0.09,1.37,1.01),
-        Vector3(0.54,0.77,0.55),Color(0.25,0.28,0.29,0.43))
+        Vector3(0.54,0.77,0.55),Color(0.25,0.28,0.29,0.26))
     _cloud(medium,"VahoMotor",Vector3(0.12,1.71,1.16),
-        Vector3(0.67,0.76,0.59),Color(0.35,0.36,0.35,0.22))
+        Vector3(0.67,0.76,0.59),Color(0.35,0.36,0.35,0.13))
 
     # Stage 3: broken right tread, fractured applique armor and dense
     # smoke on the turret/engine, with real separated track segment shapes.
@@ -207,9 +219,9 @@ static func prepare(model: Node3D) -> bool:
     _box(critical,"FragmentoBlindaje",Vector3(0.85,0.56,-1.21),
         Vector3(0.40,0.15,0.48),Color("#4C5456"),Vector3(19,25,27))
     _cloud(critical,"HumoNegroCritico",Vector3(0.07,1.79,0.74),
-        Vector3(0.78,1.11,0.75),Color(0.09,0.10,0.12,0.62))
+        Vector3(0.78,1.11,0.75),Color(0.09,0.10,0.12,0.34))
     _cloud(critical,"HumoElevado",Vector3(-0.12,2.38,0.75),
-        Vector3(0.78,0.92,0.79),Color(0.12,0.14,0.16,0.47))
+        Vector3(0.78,0.92,0.79),Color(0.12,0.14,0.16,0.23))
 
     # Stage 4: broken gun and slumped turret, flame/fire glow and wreck
     # debris. The neutral chassis remains to make faction/vehicle identity
@@ -230,9 +242,9 @@ static func prepare(model: Node3D) -> bool:
     _cloud(destroyed,"FuegoNucleo",Vector3(0.17,1.26,-0.05),
         Vector3(0.34,0.68,0.35),Color(1.0,0.81,0.25,0.82),true)
     _cloud(destroyed,"ColumnaHumo",Vector3(0.28,2.13,-0.02),
-        Vector3(1.04,1.45,0.92),Color(0.08,0.09,0.11,0.59))
+        Vector3(1.04,1.45,0.92),Color(0.08,0.09,0.11,0.34))
     _cloud(destroyed,"HumoSuperior",Vector3(0.36,2.91,-0.04),
-        Vector3(1.23,1.03,1.04),Color(0.13,0.14,0.17,0.38))
+        Vector3(1.23,1.03,1.04),Color(0.13,0.14,0.17,0.20))
     # Broken hardware remains visible even when flame/smoke fades.
     _box(destroyed,"BastidorTorrePartido",Vector3(-0.83,1.04,0.68),
         Vector3(0.09,0.57,0.71),Color("#22282B"),Vector3(16,-26,42))
