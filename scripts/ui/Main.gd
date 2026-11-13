@@ -23,6 +23,7 @@ var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
 var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
+var campaign_button: Button
 var iso_view_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
@@ -136,6 +137,12 @@ func _ready() -> void:
     heading.add_theme_font_size_override("font_size", 27)
     heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
     panel.add_child(heading)
+    campaign_button = Button.new()
+    campaign_button.text = "MODO HISTORIA · CAPÍTULO 01"
+    campaign_button.custom_minimum_size.y = 55
+    campaign_button.tooltip_text = "Jugar o continuar Escudo compartido. Guardado separado de las batallas libres."
+    campaign_button.pressed.connect(_open_campaign)
+    panel.add_child(campaign_button)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -958,6 +965,11 @@ func _toggle_isometric_view() -> void:
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
         unit_art_gallery.popup_centered_ratio(0.85)
+
+func _open_campaign() -> void:
+    # Main keeps the existing skirmish autosave unchanged. Campaign resumes
+    # independently when its own scene opens.
+    get_tree().change_scene_to_file("res://scenes/CampaignChapter01.tscn")
 
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
