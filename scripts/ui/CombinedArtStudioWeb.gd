@@ -15,6 +15,7 @@ var building_controls: VBoxContainer
 var terrain_controls: VBoxContainer
 var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
+var terrain_shadow_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
@@ -148,6 +149,12 @@ func _add_building_mode() -> void:
         terrain_light_picker.add_item(option)
     terrain_light_picker.item_selected.connect(_change_terrain_light)
     terrain_controls.add_child(terrain_light_picker)
+    terrain_shadow_toggle = CheckButton.new()
+    terrain_shadow_toggle.name = "SombrasDeRelieve"
+    terrain_shadow_toggle.text = "Sombras del relieve (comparar)"
+    terrain_shadow_toggle.button_pressed = true
+    terrain_shadow_toggle.toggled.connect(_change_terrain_shadow)
+    terrain_controls.add_child(terrain_shadow_toggle)
     _title(terrain_controls,
         "Escenarios artísticos 3D de prueba. Las casillas, alturas y modelos "
         + "de referencia NO cambian el combate, la movilidad ni los guardados. "
@@ -211,6 +218,10 @@ func _change_terrain_light(_index: int) -> void:
     if _role == "terrain":
         _apply_terrain_lighting()
 
+func _change_terrain_shadow(_checked: bool) -> void:
+    if _role == "terrain":
+        _apply_terrain_lighting()
+
 func _restore_default_lighting() -> void:
     for item in preview.get_children():
         if item is WorldEnvironment:
@@ -222,19 +233,26 @@ func _restore_default_lighting() -> void:
             var light: DirectionalLight3D = item as DirectionalLight3D
             light.light_color = Color.WHITE
             light.light_energy = 1.65 if light == preview.get_child(2) else 0.8
+            light.shadow_enabled = false
+            light.rotation_degrees = Vector3(-46,-32,0) if light == preview.get_child(2) else Vector3(-25,132,0)
 
 func _apply_terrain_lighting() -> void:
     var setting: int = terrain_light_picker.selected
     for item in preview.get_children():
         if item is WorldEnvironment:
             var env: Environment = (item as WorldEnvironment).environment
-            env.background_color = Color("#304956") if setting == 1 else Color("#536877") if setting == 2 else Color("#7b9aa8")
+            env.background_color = Color("#55454c") if setting == 1 else Color("#3e5360") if setting == 2 else Color("#304451")
             env.ambient_light_color = Color("#edb990") if setting == 1 else Color("#c3d5df")
             env.ambient_light_energy = 0.73 if setting == 1 else 0.94 if setting == 2 else 0.83
         elif item is DirectionalLight3D:
             var sun: DirectionalLight3D = item as DirectionalLight3D
             sun.light_color = Color("#ffbc86") if setting == 1 else Color("#e3edf4") if setting == 2 else Color.WHITE
             sun.light_energy = 0.92 if setting == 2 else 1.32 if setting == 1 else 1.65
+            var is_key: bool = sun == preview.get_child(2)
+            sun.shadow_enabled = is_key and terrain_shadow_toggle.button_pressed
+            if is_key:
+                sun.rotation_degrees = Vector3(-29,-52,0) if setting == 1 else Vector3(-46,-32,0)
+                sun.shadow_blur = 1.30
 
 func _display_terrain() -> void:
     if preview == null:
