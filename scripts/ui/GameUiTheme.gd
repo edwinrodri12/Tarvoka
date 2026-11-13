@@ -8,12 +8,12 @@ class_name TarvokaGameUiTheme
 const BACKGROUND := Color("#08131F")
 const SURFACE := Color("#102332")
 const SURFACE_RAISED := Color("#193447")
-const EDGE := Color("#36596D")
-const EDGE_BRIGHT := Color("#608497")
+const EDGE := Color("#1475A8")
+const EDGE_BRIGHT := Color("#36C3FF")
 const TEXT := Color("#F1F5F2")
 const MUTED := Color("#B3CEDD")
-const GOLD := Color("#EBD08F")
-const BLUE := Color("#448DD2")
+const GOLD := Color("#FFD44A")
+const BLUE := Color("#158DD9")
 const BLUE_HOVER := Color("#2469A2")
 const RED := Color("#C96361")
 const GREEN := Color("#398C72")
@@ -22,8 +22,10 @@ static func box_style(bg: Color, border: Color, radius: int = 9, inset: int = 10
     var style := StyleBoxFlat.new()
     style.bg_color = bg
     style.border_color = border
-    style.set_border_width_all(1)
+    style.set_border_width_all(2)
     style.set_corner_radius_all(radius)
+    style.shadow_color = Color(border.r,border.g,border.b,0.17)
+    style.shadow_size = 3
     style.content_margin_left = inset
     style.content_margin_right = inset
     style.content_margin_top = inset
@@ -34,6 +36,8 @@ static func _button_style(bg: Color,border: Color,radius: int = 7) -> StyleBoxFl
     var style: StyleBoxFlat = box_style(bg,border,radius,8)
     style.content_margin_top = 7
     style.content_margin_bottom = 7
+    style.shadow_color = Color(border.r,border.g,border.b,0.22)
+    style.shadow_size = 3
     return style
 
 static func create_theme() -> Theme:
@@ -84,7 +88,7 @@ static func create_theme() -> Theme:
     return style
 
 static func emphasize(button: Button, variant: String = "primary") -> void:
-    var fill: Color = BLUE if variant == "primary" else (GREEN if variant == "success" else (RED if variant == "danger" else SURFACE_RAISED))
+    var fill: Color = Color("#4D390E") if variant == "primary" else (GREEN if variant == "success" else (RED if variant == "danger" else SURFACE_RAISED))
     var edge: Color = GOLD if variant == "primary" else (Color("#72CAB0") if variant == "success" else (Color("#EA9690") if variant == "danger" else EDGE_BRIGHT))
     button.add_theme_stylebox_override("normal",_button_style(fill,edge))
     button.add_theme_stylebox_override("hover",_button_style(fill.lightened(0.16),GOLD))
