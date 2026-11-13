@@ -15,6 +15,7 @@ const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 # The 64-pixel repository preview is deliberately kept near native size.
 # Switch to the high-resolution master only after it is committed.
 const OFFICIAL_ICON := "res://assets/branding/tarvoka_icon_fictional_planet_64.png"
+const OFFICIAL_ICON_HD := "res://assets/branding/tarvoka_emblem_fictional_planet_512.webp"
 
 var primary_buttons: Dictionary = {}
 var home_scroll: ScrollContainer
@@ -62,6 +63,7 @@ func _ready() -> void:
     hero = PanelContainer.new()
     hero.name = "MarcaTarvokaPlanetaFicticio"
     hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hero.size_flags_stretch_ratio = 0.85
     hero.size_flags_vertical = Control.SIZE_EXPAND_FILL
     hero.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0B1F30"),Chrome.EDGE_BRIGHT,12,12))
@@ -83,15 +85,19 @@ func _ready() -> void:
     _brand_image.name = "EmblemaOficial"
     _brand_image.custom_minimum_size = Vector2(68,68)
     _brand_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _brand_image.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     _brand_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     _brand_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var logo := Image.new()
-    if logo.load(OFFICIAL_ICON) == OK:
+    # Prefer the actual approved high-resolution art, which preserves the
+    # fictional planet. The old 64px thumbnail remains a safe fallback.
+    if logo.load(OFFICIAL_ICON_HD) == OK or logo.load(OFFICIAL_ICON) == OK:
         _brand_image.texture = ImageTexture.create_from_image(logo)
     emblem_row.add_child(_brand_image)
 
     var title_block := VBoxContainer.new()
     title_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    title_block.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     emblem_row.add_child(title_block)
     var brand := Label.new()
     brand.text = "TARVOKA"
@@ -139,6 +145,7 @@ func _ready() -> void:
 
     action_card = PanelContainer.new()
     action_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    action_card.size_flags_stretch_ratio = 1.15
     action_card.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0C1D2C"),Chrome.EDGE,12,9))
     content_rail.add_child(action_card)
@@ -174,7 +181,7 @@ func _reflow() -> void:
     hero.custom_minimum_size = Vector2(0,0 if portrait else 310)
     action_card.custom_minimum_size = Vector2(0 if portrait else 385,0)
     home_scroll.custom_minimum_size.x = 300
-    _brand_image.custom_minimum_size = Vector2(64,64)
+    _brand_image.custom_minimum_size = Vector2(64,64) if portrait else Vector2(116,116)
 
 func _section(parent: VBoxContainer, title_text: String) -> void:
     var label := Label.new()
