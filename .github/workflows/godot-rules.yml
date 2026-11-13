@@ -337,6 +337,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_friendly_weapon_coverage.gd
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combined_move_fire_reach.gd
 
       - name: Verify one-tap own-vehicle firing overlay and preserved attack confirmation
         shell: bash
