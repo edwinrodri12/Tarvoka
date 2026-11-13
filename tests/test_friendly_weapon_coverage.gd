@@ -19,8 +19,8 @@ func _initialize() -> void:
     var legal: Dictionary = Hints.for_unit(battle,"A")
     assert(possible.has(Vector2i(4,2)))
     assert(possible.has(Vector2i(5,2)))
-    assert(not possible.has(Vector2i(2,2))) # 1 cell: artillery dead zone.
-    assert(not possible.has(Vector2i(6,2))) # 5 cells: too far.
+    assert(possible.has(Vector2i(2,2))) # Can reposition to fire from >=2 cells away.
+    assert(possible.has(Vector2i(6,2))) # Move 1 then fire 4, beyond static range.
     assert(legal["attacks"].has(Vector2i(4,2)))
     assert(not legal["attacks"].has(Vector2i(5,2))) # empty coverage != legal attack.
     assert(legal["moves"].has(Vector2i(2,2)))

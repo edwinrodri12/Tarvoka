@@ -20,11 +20,77 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate directional battle effects and fog-safe Android minimap
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_minimap_vfx.gd 2>&1 | tee /tmp/tarvoka-minimap-vfx-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-minimap-vfx-test.log; then
+            echo "Minimap/VFX regression or renderer error"; exit 1
+          fi
+
+      - name: Rasterize and test all 128 unit sprite frames (no GPU required)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_sprite_atlas.gd 2>&1 | tee /tmp/tarvoka-atlas-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-atlas-test.log; then
+            echo "Sprite atlas failed to rasterize or broke tactics"; exit 1
+          fi
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tools/export_unit_atlas.gd
+          test -s assets/generated/tarvoka_units_32x4.png
+          test -s assets/generated/tarvoka_units_32x4.json
+
+      - name: Validate thirty-two unique military silhouettes and Android preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_unit_art.gd 2>&1 | tee /tmp/tarvoka-art-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-art-test.log; then
+            echo "Unit artwork or animations emitted a Godot error"; exit 1
+          fi
+
+      - name: Validate isometric projection touch gestures and unchanged battle rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_isometric_board.gd 2>&1 | tee /tmp/tarvoka-iso-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-iso-test.log; then
+            echo "Isometric renderer or regression emitted a Godot error"; exit 1
+          fi
+
+      - name: Benchmark large-map viewport, minimap texture cache and Android battery toggle
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_mobile_visual_performance.gd 2>&1 | tee /tmp/tarvoka-visual-performance.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-visual-performance.log; then
+            echo "Mobile map performance regression"; exit 1
+          fi
+
+      - name: Validate playable 10x8 24x18 and 40x30 isometric battle and fog minimap
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_unified_visual_maps.gd 2>&1 | tee /tmp/tarvoka-unified-iso.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-unified-iso.log; then
+            echo "Unified visual/tactical map regression"; exit 1
+          fi
+
       - name: Validate visual faction identity and harmless board styling
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_visual_style.gd
+
+      - name: Validate large 24x18 and 40x30 tactical arenas, AI and v1 saves
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_large_maps.gd 2>&1 | tee /tmp/tarvoka-large-maps.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-large-maps.log; then
+            echo "Large maps, dynamic rules, AI or save regression"; exit 1
+          fi
 
       - name: Run GDScript rules tests
         shell: bash
@@ -67,6 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_terrain_tactics.gd
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_large_map_terrain_combat.gd
 
       - name: Enforce three symmetric first-turn orders, legal production, AI and backwards-compatible saves
         shell: bash
@@ -307,6 +374,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_friendly_weapon_coverage.gd
+          timeout --signal=TERM --kill-after=5s 50s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_combined_move_fire_reach.gd
 
       - name: Verify one-tap own-vehicle firing overlay and preserved attack confirmation
         shell: bash

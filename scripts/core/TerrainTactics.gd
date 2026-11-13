@@ -14,9 +14,11 @@ const FLANK_BONUS := 1
 const CITY_COVER := 1
 
 static func tile_at(terrain: Array, cell: Vector2i) -> String:
-    if not Rules.inside(cell) or terrain.size() != Rules.HEIGHT:
+    # Terrain bonuses must work at every coordinate in 10x8, 24x18
+    # and 40x30 maps, not only within the legacy compact board.
+    if not Rules.inside(cell,terrain):
         return ""
-    if not terrain[cell.y] is Array or terrain[cell.y].size() != Rules.WIDTH:
+    if not terrain[cell.y] is Array or cell.x >= terrain[cell.y].size():
         return ""
     return str(terrain[cell.y][cell.x])
 

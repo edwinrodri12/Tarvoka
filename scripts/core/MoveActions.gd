@@ -9,7 +9,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 # Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
 static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array) -> Dictionary:
     var rejected := {"valid": false, "units": units.duplicate(true)}
-    if not Rules.inside(destination) or unit_id.is_empty():
+    if not Rules.inside(destination,terrain) or unit_id.is_empty():
         return rejected
     var result: Array = units.duplicate(true)
     var seen_ids := {}
@@ -27,7 +27,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
             return rejected
         if int(unit.get("hp", 0)) > 0:
             var position = unit.get("pos", null)
-            if not (position is Vector2i) or not Rules.inside(position):
+            if not (position is Vector2i) or not Rules.inside(position,terrain):
                 return rejected
             var layer: String = Domains.layer(unit)
             if not occupied_layers.has(layer):

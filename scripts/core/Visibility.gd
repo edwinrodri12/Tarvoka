@@ -16,26 +16,24 @@ static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
     var visible: Dictionary = {}
     if faction not in [0, 1] or not state.get("units") is Array:
         return visible
+    var terrain: Array = state.get("terrain", []) if state.get("terrain") is Array else []
+    if not Rules.valid_terrain(terrain):
+        return visible
+    var dimensions: Vector2i = Rules.map_size(terrain)
     if not enabled(state):
-        for y in range(Rules.HEIGHT):
-            for x in range(Rules.WIDTH):
+        for y in range(dimensions.y):
+            for x in range(dimensions.x):
                 visible[Vector2i(x, y)] = true
         return visible
-    var terrain = state.get("terrain", null)
-    if not terrain is Array or terrain.size() != Rules.HEIGHT:
-        return visible
-    for row in terrain:
-        if not row is Array or row.size() != Rules.WIDTH:
-            return visible
     for unit in state["units"]:
         if not unit is Dictionary or int(unit.get("hp", 0)) <= 0 or int(unit.get("faction", -1)) != faction:
             continue
         var center = unit.get("pos", null)
-        if not center is Vector2i or not Rules.inside(center):
+        if not center is Vector2i or not Rules.inside(center, terrain):
             continue
         var radius: int = clampi(int(unit.get("vision", DEFAULT_VISION)), 1, MAX_VISION)
-        for y in range(maxi(0, center.y - radius), mini(Rules.HEIGHT - 1, center.y + radius) + 1):
-            for x in range(maxi(0, center.x - radius), mini(Rules.WIDTH - 1, center.x + radius) + 1):
+        for y in range(maxi(0, center.y - radius), mini(dimensions.y - 1, center.y + radius) + 1):
+            for x in range(maxi(0, center.x - radius), mini(dimensions.x - 1, center.x + radius) + 1):
                 var cell := Vector2i(x, y)
                 if absi(cell.x - center.x) + absi(cell.y - center.y) <= radius and _clear_los(terrain, center, cell):
                     visible[cell] = true
@@ -68,7 +66,7 @@ static func _clear_los_one_way(terrain: Array, source: Vector2i, destination: Ve
         var current := Vector2i(x, y)
         if current == destination:
             break
-        if not Rules.inside(current) or str(terrain[y][x]) == "mountain":
+        if not Rules.inside(current,terrain) or str(terrain[y][x]) == "mountain":
             return false
     return true
 
@@ -83,7 +81,7 @@ static func explored_cells(state: Dictionary, faction: int) -> Dictionary:
     if not saved is Array:
         return visible
     for cell in saved:
-        if cell is Vector2i and Rules.inside(cell):
+        if cell is Vector2i and Rules.inside(cell,state.get("terrain",[])):
             visible[cell] = true
     return visible
 
@@ -115,14 +113,15 @@ static func update_exploration(state: Dictionary) -> Dictionary:
         var old = explored.get(str(faction), [])
         if old is Array:
             for cell in old:
-                if cell is Vector2i and Rules.inside(cell):
+                if cell is Vector2i and Rules.inside(cell,result.get("terrain",[])):
                     existing[cell] = true
         var currently: Dictionary = visible_cells(result, faction)
         for cell in currently:
             existing[cell] = true
         var ordered: Array[Vector2i] = []
-        for y in range(Rules.HEIGHT):
-            for x in range(Rules.WIDTH):
+        var dimensions: Vector2i = Rules.map_size(result.get("terrain",[]))
+        for y in range(dimensions.y):
+            for x in range(dimensions.x):
                 var cell := Vector2i(x, y)
                 if existing.has(cell):
                     ordered.append(cell)
@@ -142,7 +141,7 @@ static func update_exploration(state: Dictionary) -> Dictionary:
                 var old_pos = old_side[enemy_id]
                 # If the old location is now visible and empty, the sighting
                 # has been disproven; otherwise preserve it as uncertain.
-                if old_pos is Vector2i and Rules.inside(old_pos) and not currently.has(old_pos):
+                if old_pos is Vector2i and Rules.inside(old_pos,result.get("terrain",[])) and not currently.has(old_pos):
                     remembered[str(enemy_id)] = old_pos
         for unit in result.get("units", []):
             if not unit is Dictionary or int(unit.get("hp", 0)) <= 0:
@@ -171,7 +170,7 @@ static func last_known_contacts(state: Dictionary, faction: int) -> Dictionary:
     var currently: Dictionary = visible_cells(state, faction)
     for enemy_id in side:
         var pos = side[enemy_id]
-        if pos is Vector2i and Rules.inside(pos) and not currently.has(pos):
+        if pos is Vector2i and Rules.inside(pos,state.get("terrain",[])) and not currently.has(pos):
             result[str(enemy_id)] = pos
     return result
 
@@ -215,8 +214,9 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
     # The authoritative state still owns true movement validation.
     var known: Dictionary = explored_cells(state, faction)
     var terrain: Array = observed["terrain"].duplicate(true)
-    for y in range(Rules.HEIGHT):
-        for x in range(Rules.WIDTH):
+    var dimensions: Vector2i = Rules.map_size(terrain)
+    for y in range(dimensions.y):
+        for x in range(dimensions.x):
             if not known.has(Vector2i(x, y)):
                 terrain[y][x] = "water"
     observed["terrain"] = terrain

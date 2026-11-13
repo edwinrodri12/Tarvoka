@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaUrbanEconomy
 
 const Rules = preload("res://scripts/core/Rules.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -36,6 +37,13 @@ static func create(terrain: Array, modern_mode: bool = false) -> Dictionary:
         {"kind":"factory", "pos":Vector2i(0,3), "owner":0, "produced_turn":-1},
         {"kind":"factory", "pos":Vector2i(9,3), "owner":1, "produced_turn":-1}
     ]
+    var grid_size: Vector2i = Rules.map_size(terrain)
+    if not Rules.valid_terrain(terrain):
+        return {}
+    if grid_size != Vector2i(10,8):
+        for site in sites:
+            var old: Vector2i = site["pos"]
+            site["pos"] = Vector2i(Scenarios.scale_x(old.x,grid_size), Scenarios.scale_y(old.y,grid_size))
     var money: int = MODERN_START_CREDITS if modern_mode else START_CREDITS
     var economy := {"credits":[money, money], "turn":0, "next_unit":1, "sites":sites}
     if modern_mode:
@@ -44,18 +52,22 @@ static func create(terrain: Array, modern_mode: bool = false) -> Dictionary:
         for kind in ["armor_plant","artillery_depot","drone_center","airbase"]:
             var row: int = {"armor_plant":1,"artillery_depot":5,"drone_center":2,"airbase":6}[kind]
             for faction in [0,1]:
-                var x: int = 0 if faction == 0 else 9
-                sites.append({"kind":kind, "pos":Vector2i(x,row), "owner":faction, "produced_turn":-1})
+                var x: int = 0 if faction == 0 else grid_size.x-1
+                sites.append({"kind":kind, "pos":Vector2i(x,Scenarios.scale_y(row,grid_size)), "owner":faction, "produced_turn":-1})
         # Docks must be ON navigable water. Conventional maps with no sea
         # keep all other facilities but cannot manufacture ships.
         var left := Vector2i(-1,-1)
         var right := Vector2i(-1,-1)
-        if str(terrain[0][0]) == "water" and str(terrain[0][9]) == "water":
+        if str(terrain[0][0]) == "water" and str(terrain[0][grid_size.x-1]) == "water":
             left = Vector2i(0,0)
-            right = Vector2i(9,0)
-        elif str(terrain[3][4]) == "water" and str(terrain[3][5]) == "water":
-            left = Vector2i(4,3)
-            right = Vector2i(5,3)
+            right = Vector2i(grid_size.x-1,0)
+        else:
+            var bridge_row: int = Scenarios.scale_y(3,grid_size)
+            var west: int = int(grid_size.x/2)-1
+            var east: int = int(grid_size.x/2)
+            if str(terrain[bridge_row][west]) == "water" and str(terrain[bridge_row][east]) == "water":
+                left = Vector2i(west,bridge_row)
+                right = Vector2i(east,bridge_row)
         if left.x >= 0:
             sites.append({"kind":"shipyard", "pos":left, "owner":0, "produced_turn":-1})
             sites.append({"kind":"shipyard", "pos":right, "owner":1, "produced_turn":-1})
@@ -136,7 +148,7 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     if not state.has("economy") or not state.has("terrain") or not state.get("units") is Array:
         return false
     var faction: int = int(state.get("faction", -1))
-    if faction not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos):
+    if faction not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos,state["terrain"]):
         return false
     if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
         return false
@@ -200,11 +212,8 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     return {"valid":true, "state":next, "cost":price, "unit_id":id, "role":role}
 
 static func valid(economy: Dictionary, terrain: Array) -> bool:
-    if terrain.size() != Rules.HEIGHT or not economy.get("credits") is Array or economy["credits"].size() != 2:
+    if not Rules.valid_terrain(terrain) or not economy.get("credits") is Array or economy["credits"].size() != 2:
         return false
-    for row in terrain:
-        if not row is Array or row.size() != Rules.WIDTH:
-            return false
     for credit in economy["credits"]:
         if not credit is int or credit < 0 or credit > MAX_CREDITS:
             return false
@@ -223,7 +232,7 @@ static func valid(economy: Dictionary, terrain: Array) -> bool:
         if not site is Dictionary or not site.get("pos") is Vector2i:
             return false
         var cell: Vector2i = site["pos"]
-        if not Rules.inside(cell) or unique.has(cell):
+        if not Rules.inside(cell,terrain) or unique.has(cell):
             return false
         unique[cell] = true
         if not site.get("kind") is String:

@@ -37,7 +37,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         if int(candidate.get("hp", 0)) <= 0:
             continue
         var location = candidate.get("pos", null)
-        if not (location is Vector2i) or not Rules.inside(location):
+        if not (location is Vector2i) or not Rules.inside(location,state.get("terrain",[])):
             return empty
         if Domains.domain(candidate).is_empty():
             return empty
@@ -88,11 +88,36 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             }
     return {"moves": moves, "attacks": attacks}
 
-# Separate from for_unit()["attacks"], which contains ONLY currently legal
-# enemy targets. This is the WEAPON FOOTPRINT from the selected unit's
-# existing position (no move-then-fire prediction and no new action).
-# Only currently visible cells are highlighted in fog mode. A cell must
-# support at least one of the weapon's target domains: land, water or air.
+# Display-only union of the weapon footprint from every available legal
+# movement endpoint plus the current cell. Attack remains a SEPARATE action:
+# highlighting a tile never authorizes a remote shot or a move+shot in one tap.
+# Respect actual map boundaries, weapon minimum range, target domain and fog.
+static func _weapon_footprint(terrain: Array, origins: Array[Vector2i], low: int, high: int, targets: Array, fogged: bool, visible: Dictionary) -> Dictionary:
+    var coverage: Dictionary = {}
+    var dimensions: Vector2i = Rules.map_size(terrain)
+    for origin in origins:
+        for dx in range(-high,high+1):
+            var vertical: int = high - absi(dx)
+            for dy in range(-vertical,vertical+1):
+                var distance: int = absi(dx) + absi(dy)
+                if distance < low:
+                    continue
+                var cell: Vector2i = origin + Vector2i(dx,dy)
+                if cell.x < 0 or cell.x >= dimensions.x or cell.y < 0 or cell.y >= dimensions.y:
+                    continue
+                if fogged and not visible.has(cell):
+                    continue
+                var tile: String = str(terrain[cell.y][cell.x])
+                var valid_domain: bool = Domains.AIR in targets
+                valid_domain = valid_domain or (Domains.NAVAL in targets and tile == "water")
+                valid_domain = valid_domain or (Domains.GROUND in targets and tile != "water")
+                if valid_domain:
+                    coverage[cell] = true
+    return coverage
+
+# Weapon THREAT from anywhere this friendly unit can legally end movement
+# this turn. A unit that already moved can only shoot from its actual cell.
+# Only visible destinations are offered as movement endpoints in fog.
 static func friendly_weapon_coverage(state: Dictionary, unit_id: String) -> Dictionary:
     var coverage: Dictionary = {}
     if unit_id.is_empty() or int(state.get("winner",-1)) != -1 or not Opening.can_order(state) or not state.get("units") is Array or not state.get("terrain") is Array:
@@ -107,35 +132,27 @@ static func friendly_weapon_coverage(state: Dictionary, unit_id: String) -> Dict
             break
     if firing.is_empty() or not Turns.can_act(firing,faction) or not Logistics.can_fire(firing):
         return coverage
-    if int(firing.get("attack",0)) <= 0 or Domains.targets(firing).is_empty():
+    var targets: Array = Domains.targets(firing)
+    if int(firing.get("attack",0)) <= 0 or targets.is_empty():
         return coverage
     var low: int = int(firing.get("attack_min_range",1))
     var high: int = int(firing.get("attack_range",1))
     if low < 1 or high < low or high > 8:
         return coverage
-    var origin: Vector2i = firing.get("pos", Vector2i(-1,-1))
-    if not Rules.inside(origin):
-        return coverage
-    var visible: Dictionary = Visibility.visible_cells(state,faction) if Visibility.enabled(state) else {}
-    var targets: Array = Domains.targets(firing)
     var terrain: Array = state["terrain"]
-    if terrain.size() != Rules.HEIGHT:
+    if not Rules.valid_terrain(terrain):
         return coverage
-    for y in range(Rules.HEIGHT):
-        if not terrain[y] is Array or terrain[y].size() != Rules.WIDTH:
-            return {}
-        for x in range(Rules.WIDTH):
-            var cell := Vector2i(x,y)
-            var distance: int = absi(x-origin.x) + absi(y-origin.y)
-            if distance < low or distance > high or (Visibility.enabled(state) and not visible.has(cell)):
-                continue
-            var tile: String = str(terrain[y][x])
-            var valid_target_domain: bool = Domains.AIR in targets
-            valid_target_domain = valid_target_domain or (Domains.NAVAL in targets and tile == "water")
-            valid_target_domain = valid_target_domain or (Domains.GROUND in targets and tile != "water")
-            if valid_target_domain:
-                coverage[cell] = true
-    return coverage
+    var origin: Vector2i = firing.get("pos", Vector2i(-1,-1))
+    if not Rules.inside(origin,terrain):
+        return coverage
+    var positions: Array[Vector2i] = [origin]
+    if Turns.can_move(firing,faction):
+        var movement: Dictionary = for_unit(state,unit_id)["moves"]
+        for endpoint in movement:
+            positions.append(endpoint)
+    var fogged: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state,faction) if fogged else {}
+    return _weapon_footprint(terrain,positions,low,high,targets,fogged,visible)
 
 # Explain movement costs without implying combat bonuses from terrain:
 # terrain currently affects path cost; combat cover belongs to the unit.
@@ -172,7 +189,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
         var weapon_area: Dictionary = friendly_weapon_coverage(state,unit_id)
         if not weapon_area.is_empty():
-            text += "\nAzul: movimiento legal | Naranja: cobertura del arma desde esta casilla | Rojo: objetivo atacable ahora."
+            text += "\nAzul: movimiento legal | Naranja: cobertura del arma tras mover o desde esta casilla | Rojo: objetivo atacable ahora."
         elif int(unit.get("attack",0)) <= 0 or Domains.targets(unit).is_empty():
             text += "\nSin armamento ofensivo."
         elif not Logistics.can_fire(unit):
@@ -212,13 +229,13 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
         # The selected own unit is necessarily in the player's sight.
         # In fog we never reveal terrain from another unrevealed coordinate.
         var location = unit.get("pos", null)
-        if location is Vector2i and Rules.inside(location) and state.get("terrain") is Array:
+        if location is Vector2i and Rules.inside(location,state.get("terrain",[])) and state.get("terrain") is Array:
             var own_faction: int = int(state.get("faction", -1))
             var is_friendly: bool = int(unit.get("faction", -1)) == own_faction
             var visible: bool = not Visibility.enabled(state) or Visibility.visible_cells(state, own_faction).has(location)
             if is_friendly or visible:
                 var terrain: Array = state["terrain"]
-                if terrain.size() == Rules.HEIGHT and terrain[location.y] is Array and terrain[location.y].size() == Rules.WIDTH:
+                if Rules.valid_terrain(terrain):
                     var kind: String = str(terrain[location.y][location.x])
                     var move_cost: int = Rules.movement_cost_for(kind, Domains.domain(unit))
                     if move_cost >= 0:
@@ -262,7 +279,7 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
     if enemy.is_empty():
         return empty
     var origin: Vector2i = enemy["pos"]
-    if not Rules.inside(origin) or (fogged and not visible.has(origin)):
+    if not Rules.inside(origin,state.get("terrain",[])) or (fogged and not visible.has(origin)):
         return empty
     var same_layer: Array[Vector2i] = []
     for unit in observed.get("units",[]):
@@ -283,12 +300,12 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
     var minimum: int = int(enemy.get("attack_min_range",1))
     var maximum: int = int(enemy.get("attack_range",1))
     if armed and minimum >= 1 and maximum >= minimum and maximum <= 8:
-        for y in range(Rules.HEIGHT):
-            for x in range(Rules.WIDTH):
-                var cell := Vector2i(x,y)
-                var distance: int = absi(cell.x-origin.x) + absi(cell.y-origin.y)
-                if distance >= minimum and distance <= maximum and (not fogged or visible.has(cell)):
-                    attacks[cell] = true
+        var positions: Array[Vector2i] = [origin]
+        # Enemy movement is theoretical: never inspect its real fuel, ammo,
+        # already-used actions or hidden blockers. Only observed endpoints.
+        for endpoint in moves:
+            positions.append(endpoint)
+        attacks = _weapon_footprint(observed["terrain"],positions,minimum,maximum,targets,fogged,visible)
     var role: String = str(enemy.get("role",""))
     var label: String = Roles.label(role) if Roles.valid(role) else "Soldado"
     var description: String = "%s | Enemigo %s | Vida %d | Ataque %d | Defensa %d" % [
@@ -301,7 +318,7 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
         description += "\nAlcance de ataque: %d-%d casillas | Ataca: %s" % [minimum,maximum,", ".join(targets)]
     else:
         description += "\nSin ataque convencional"
-    description += "\nAzul: movimiento posible | Naranja: alcance desde posicion actual."
+    description += "\nAzul: movimiento posible | Naranja: amenaza teorica tras mover y atacar."
     if fogged:
         description += " Solo area visible."
     description += "\n" + TerrainTactics.defensive_description(enemy,observed["terrain"],observed.get("economy",{}))

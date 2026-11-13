@@ -2,12 +2,15 @@ extends Control
 
 const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
+const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
 var status_label: Label
@@ -18,11 +21,22 @@ var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
+var unit_art_gallery: AcceptDialog
+var unit_art_gallery_button: Button
+var iso_view_button: Button
+var battery_saver_button: Button
+var battle_minimap: Control
+var minimap_caption: Label
+var _minimap_view_key := -1
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var map_size_picker: OptionButton
+var camera_zoom_in: Button
+var camera_zoom_out: Button
+var camera_reset: Button
 var map_seed_picker: SpinBox
 var first_picker: OptionButton
 var balance_picker: OptionButton
@@ -108,6 +122,51 @@ func _ready() -> void:
     heading.add_theme_font_size_override("font_size", 27)
     heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
     panel.add_child(heading)
+    var camera_row := HBoxContainer.new()
+    camera_row.add_theme_constant_override("separation",5)
+    panel.add_child(camera_row)
+    iso_view_button = Button.new()
+    iso_view_button.text = "Vista isométrica"
+    iso_view_button.custom_minimum_size.y = 46
+    iso_view_button.tooltip_text = "Alternar el tablero clásico y el mapa isométrico"
+    iso_view_button.pressed.connect(_toggle_isometric_view)
+    # Keep controls separate so landscape sidebars down to ~300px never overflow.
+    panel.add_child(iso_view_button)
+    battery_saver_button = Button.new()
+    battery_saver_button.text = "Ahorro de batería: desactivado"
+    battery_saver_button.custom_minimum_size.y = 43
+    battery_saver_button.tooltip_text = "Reduce animación ambiental; las órdenes y ataques mantienen sus efectos"
+    battery_saver_button.pressed.connect(_toggle_battery_saver)
+    panel.add_child(battery_saver_button)
+    camera_zoom_out = Button.new()
+    camera_zoom_out.text = "−"
+    camera_zoom_out.tooltip_text = "Alejar mapa táctico"
+    camera_zoom_out.custom_minimum_size = Vector2(48,46)
+    camera_zoom_out.pressed.connect(func(): board.change_view_zoom(-1))
+    camera_row.add_child(camera_zoom_out)
+    camera_zoom_in = Button.new()
+    camera_zoom_in.text = "+"
+    camera_zoom_in.tooltip_text = "Acercar mapa táctico"
+    camera_zoom_in.custom_minimum_size = Vector2(48,46)
+    camera_zoom_in.pressed.connect(func(): board.change_view_zoom(1))
+    camera_row.add_child(camera_zoom_in)
+    camera_reset = Button.new()
+    camera_reset.text = "Centrar cámara"
+    camera_reset.custom_minimum_size.y = 46
+    camera_reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    camera_reset.pressed.connect(func(): board.reset_view_camera())
+    camera_row.add_child(camera_reset)
+    minimap_caption = Label.new()
+    minimap_caption.text = "MINIMAPA · tocar para centrar"
+    minimap_caption.add_theme_font_size_override("font_size",14)
+    minimap_caption.add_theme_color_override("font_color",Color("#B8CED9"))
+    minimap_caption.visible = false
+    panel.add_child(minimap_caption)
+    battle_minimap = MinimapScript.new()
+    battle_minimap.custom_minimum_size = Vector2(220,138)
+    battle_minimap.visible = false
+    battle_minimap.call("set_board",board)
+    panel.add_child(battle_minimap)
     # Read-only faction art gallery. Faction bonuses remain locked to v0.1.
     faction_gallery_button = Button.new()
     faction_gallery_button.text = "Ver las ocho facciones"
@@ -116,6 +175,13 @@ func _ready() -> void:
     panel.add_child(faction_gallery_button)
     faction_gallery = FactionGallery.new()
     add_child(faction_gallery)
+    unit_art_gallery_button = Button.new()
+    unit_art_gallery_button.text = "Vista previa: 32 unidades"
+    unit_art_gallery_button.custom_minimum_size.y = 46
+    unit_art_gallery_button.pressed.connect(_open_unit_art_gallery)
+    panel.add_child(unit_art_gallery_button)
+    unit_art_gallery = UnitArtGallery.new()
+    add_child(unit_art_gallery)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -292,6 +358,18 @@ func _ready() -> void:
     scenario_picker.add_item(Scenarios.label(Scenarios.RANDOM_SCENARIO_ID), Scenarios.RANDOM_SCENARIO_ID)
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
+    var size_heading := Label.new()
+    size_heading.text = "TAMAÑO DEL CAMPO DE BATALLA"
+    size_heading.add_theme_font_size_override("font_size", 16)
+    panel.add_child(size_heading)
+    map_size_picker = OptionButton.new()
+    map_size_picker.custom_minimum_size.y = 50
+    map_size_picker.add_item("10 × 8 — clásico",0)
+    map_size_picker.add_item("24 × 18 — grande",1)
+    map_size_picker.add_item("40 × 30 — estratégico",2)
+    var current_dims: Vector2i = board.map_dimensions()
+    map_size_picker.select(0 if current_dims == Vector2i(10,8) else (1 if current_dims == Vector2i(24,18) else 2))
+    panel.add_child(map_size_picker)
 
     var random_controls := HBoxContainer.new()
     random_controls.add_theme_constant_override("separation", 5)
@@ -464,6 +542,12 @@ func _process(_delta: float) -> void:
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
     var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.pending_order])
+    var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,
+        board.view_zoom,board.view_pan,board.size,board.map_dimensions()])
+    if battle_minimap != null and minimap_key != _minimap_view_key:
+        _minimap_view_key = minimap_key
+        if board.iso_enabled:
+            battle_minimap.queue_redraw()
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
@@ -588,6 +672,8 @@ func _save_game() -> void:
 func _load_game() -> void:
     if board.load_game():
         scenario_picker.select(board.current_scenario_id)
+        var grid: Vector2i = board.map_dimensions()
+        map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
         roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
@@ -610,7 +696,8 @@ func _new_game() -> void:
         return
     var urban_name := "ciudades/talleres" if economy_picker.get_selected_id() == 1 else "sin economia"
     var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
-    var map_name: String = Scenarios.label(scenario_picker.get_selected_id())
+    var dimensions: Vector2i = _selected_map_size()
+    var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
     if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
@@ -625,7 +712,15 @@ func _confirm_new_game() -> void:
         board.message = "La economia requiere formacion experimental."
         return
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed)
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size())
+
+func _selected_map_size() -> Vector2i:
+    match map_size_picker.get_selected_id():
+        1:
+            return Vector2i(24,18)
+        2:
+            return Vector2i(40,30)
+    return Vector2i(10,8)
 
 func _reroll_map_seed() -> void:
     var previous: int = int(map_seed_picker.value)
@@ -674,6 +769,25 @@ func _refresh_production_catalog() -> void:
         production_picker.set_item_metadata(n,str(role))
     if production_picker.item_count > 0:
         production_picker.select(0)
+
+func _toggle_battery_saver() -> void:
+    board.set_battery_saver(not board.battery_saver)
+    battery_saver_button.text = ("Ahorro de batería: activado"
+        if board.battery_saver else "Ahorro de batería: desactivado")
+
+func _toggle_isometric_view() -> void:
+    board.set_isometric(not board.iso_enabled)
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    battle_minimap.visible = board.iso_enabled
+    minimap_caption.visible = board.iso_enabled
+    camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
+    _minimap_view_key = -1
+    if board.iso_enabled:
+        battle_minimap.queue_redraw()
+
+func _open_unit_art_gallery() -> void:
+    if unit_art_gallery != null:
+        unit_art_gallery.popup_centered_ratio(0.85)
 
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
