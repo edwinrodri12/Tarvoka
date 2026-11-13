@@ -17,10 +17,11 @@ static func context_for(state: Dictionary, selected_id: String) -> Dictionary:
     for site in state.get("economy",{}).get("sites",[]):
         if site is Dictionary and str(site.get("kind","")) == "city" and site.get("pos") is Vector2i:
             result["cities"][site["pos"]] = true
+    var active_faction: int = int(state.get("faction",0))
     for candidate in state.get("units",[]):
         if not candidate is Dictionary:
             continue
-        if str(candidate.get("id","")) != selected_id or int(candidate.get("faction",-1)) != 0 or int(candidate.get("hp",0)) <= 0:
+        if str(candidate.get("id","")) != selected_id or int(candidate.get("faction",-1)) != active_faction or int(candidate.get("hp",0)) <= 0:
             continue
         result["domain"] = Domains.domain(candidate)
         result["motorized"] = Logistics.road_fast(candidate)
