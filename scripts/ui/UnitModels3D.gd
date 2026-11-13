@@ -688,7 +688,7 @@ static func _destroyer(root: Node3D) -> void:
     _box(root,"EstelaEspuma",Vector3(0,0.07,1.71),
         Vector3(1.43,0.04,0.37),WATER)
 
-static func build(role: String, faction: int = -1, finish_enabled: bool = true) -> Node3D:
+static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 7) -> Node3D:
     if not supports(role):
         return null
     var imported: Node3D = _imported_model(role)
@@ -736,10 +736,11 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true) 
             # angles, not accessory detail layered over the first blockout.
             TankSilhouette.apply(model)
             TankArt.apply(model)
-            TankHero.apply(model)
+            if art_level >= 7:
+                TankHero.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
-        if finish_enabled:
+        if finish_enabled and art_level >= 7:
             # Reapply the authored high-resolution military UV armor coat after
             # the generic five-family PBR pass; battle/Android/Web share it.
             TankHero.apply_final_materials(model)
