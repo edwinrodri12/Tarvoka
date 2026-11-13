@@ -88,19 +88,31 @@ func _setup_stage() -> void:
     _camera.far = 350.0
     add_child(_camera)
 
+func _grid_dimensions(grid: Array) -> Vector2i:
+    var width := 0
+    for line in grid:
+        if line is Array:
+            width = maxi(width,(line as Array).size())
+    return Vector2i(width,grid.size())
+
 func set_terrain(grid: Array,
         visible: Dictionary = {}, restrict: bool = false) -> void:
     # The complete battle state is never accepted or modified here.
+    # Fog and unit movement must NOT reset a manually panned camera.
+    var previous_dimensions: Vector2i = _grid_dimensions(terrain)
     terrain = grid.duplicate(true)
     observed = visible.duplicate()
     restrict_to_observed = restrict
     if is_inside_tree() and _ground != null:
-        rebuild()
+        rebuild(previous_dimensions != _grid_dimensions(terrain))
 
 func set_quality(segments: int) -> void:
-    divisions = clampi(segments,2,7)
+    var next_divisions: int = clampi(segments,2,7)
+    if next_divisions == divisions:
+        return
+    divisions = next_divisions
     if is_inside_tree() and _ground != null:
-        rebuild()
+        rebuild(false)
 
 func _fit_camera() -> void:
     var h: int = terrain.size()
@@ -114,7 +126,7 @@ func _fit_camera() -> void:
     _camera.look_at(center,Vector3.UP)
     _camera.size = span*1.46
 
-func rebuild() -> void:
+func rebuild(fit_camera: bool = true) -> void:
     if _ground == null or _water == null:
         return
     _ground.mesh = TerrainMesh.build_ground(
@@ -124,7 +136,8 @@ func rebuild() -> void:
         maxi(6,divisions*2))
     _generate_forest()
     _generate_bridges()
-    _fit_camera()
+    if fit_camera:
+        _fit_camera()
 
 func _generate_forest() -> void:
     var trees: Array = []
