@@ -417,7 +417,9 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
                 cheek_part.visible = stage < 3
         for label in ["G09PanelServicioTorreV9",
                 "G09PlacaCentralGlacisV9","G09NeumaticosRuedasV9",
-                "G09TornillosRuedasV9"]:
+                "G09TornillosRuedasV9","G09CabezalPanoramicoCompactoV9",
+                "G09PanoramicoCristalRebajadoV9","G09EstacionArmaRasanteV9",
+                "G09CamaraArmaCompactaV9"]:
             var impact_part: Node3D = model.find_child(label,true,false) as Node3D
             if impact_part != null:
                 impact_part.visible = stage < 4
