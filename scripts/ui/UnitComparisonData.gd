@@ -51,6 +51,7 @@ static func candidate(state: Dictionary, site_pos: Vector2i, role: String, viewe
         "range_min":int(unit.get("attack_min_range",1)),
         "range_max":int(unit.get("attack_range",1)),
         "domain":Domains.domain(unit),"targets":targets,
+        "can_capture":Economy.can_capture(unit),
         "ammo_capacity":ammo_capacity,"fuel_capacity":fuel_capacity,
         "note":Roles.counter_description(role),
         "road_fast":modern and Logistics.road_fast(unit)
@@ -64,7 +65,8 @@ static func compare(state: Dictionary, site_pos: Vector2i, left_role: String, ri
     var rows: Array = []
     for entry in [
         ["hp","VIDA"],["attack","ATAQUE"],["defense","DEFENSA"],
-        ["move","MOVIMIENTO"],["vision","VISIÓN"],["range_max","ALCANCE MÁX."],
+        ["move","MOVIMIENTO"],["vision","VISIÓN"],
+        ["range_min","ALCANCE MÍN."],["range_max","ALCANCE MÁX."],
         ["price","PRECIO"]
     ]:
         var key: String = str(entry[0])
