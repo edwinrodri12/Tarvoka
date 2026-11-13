@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify skirmish preparation and fog-safe attack/defense forecast
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_skirmish_combat_preview.gd 2>&1 | tee /tmp/tarvoka-combat-setup.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-combat-setup.log; then
+            echo 'Combat forecast or skirmish setup regression'; exit 1
+          fi
+          grep -F 'PASS skirmish setup and combat forecast' /tmp/tarvoka-combat-setup.log
+
       - name: Validate directional battle effects and fog-safe Android minimap
         shell: bash
         run: |

@@ -14,6 +14,8 @@ const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
+const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
+const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 
 var board: Control
 var status_label: Label
@@ -22,6 +24,9 @@ var order_preview_label: Label
 var unit_label: Label
 var command_menu: Control
 var home_menu: Control
+var skirmish_setup: Control
+var compact_combat_preview: Control
+var sidebar_combat_preview: Control
 var command_menu_button: Button
 var compact_menu_button: Button
 var inspection_title: Label
@@ -317,6 +322,8 @@ func _ready() -> void:
     order_preview_label.add_theme_font_size_override("font_size", 18)
     order_preview_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.45))
     panel.add_child(order_preview_label)
+    sidebar_combat_preview = CombatPanel.new()
+    panel.add_child(sidebar_combat_preview)
 
     end_button = Button.new()
     end_button.text = "Terminar turno"
@@ -567,7 +574,7 @@ func _ready() -> void:
     command_menu.close_requested.connect(func(): command_menu.hide())
     command_menu.save_requested.connect(func(): _save_game(); command_menu.refresh())
     command_menu.load_requested.connect(func(): _load_game(); command_menu.refresh())
-    command_menu.new_battle_requested.connect(func(): command_menu.hide(); _new_game())
+    command_menu.new_battle_requested.connect(_prepare_skirmish)
     command_menu.campaign_requested.connect(_open_campaign)
     command_menu.change_view_requested.connect(func(): _toggle_isometric_view(); command_menu.refresh())
     command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
@@ -582,6 +589,12 @@ func _ready() -> void:
     home_menu.skirmish_requested.connect(_prepare_skirmish)
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
+
+    skirmish_setup = SkirmishSetup.new()
+    add_child(skirmish_setup)
+    skirmish_setup.back_requested.connect(_back_from_skirmish)
+    skirmish_setup.advanced_requested.connect(_show_advanced_skirmish)
+    skirmish_setup.start_requested.connect(_start_skirmish_setup)
 
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
@@ -640,6 +653,12 @@ func _build_battle_hud() -> void:
     spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
     spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
     battle_hud_commands.add_child(spacer)
+
+    # Combat decisions use a dedicated preview, not a vague popup or
+    # execution button. The actual shot still requires confirmation.
+    compact_combat_preview = CombatPanel.new()
+    compact_combat_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    battle_hud_commands.add_child(compact_combat_preview)
 
     # Read-only context card: always below the battlefield and above actions.
     # Mouse events pass through it so pinch-zoom and map taps still work.
@@ -820,6 +839,10 @@ func _process(_delta: float) -> void:
             field_text += "\nAPERTURA EQUILIBRADA: %d/%d ordenes restantes. Despues, turnos normales." % [remaining_orders,int(board.state["opening"]["limit"])]
         _update_text(battlefield_status,field_text)
         _update_text(order_preview_label, BattleReport.pending_preview(board.state, board.pending_order))
+        sidebar_combat_preview.update_forecast(board.state,board.pending_order)
+        compact_combat_preview.update_forecast(board.state,board.pending_order)
+        if str(board.pending_order.get("kind","")) == "attack":
+            compact_info_panel.hide() # Avoid stacking two overlapping cards on phones.
         var action_kind := str(board.pending_order.get("kind", ""))
         var button_text := "Confirmar ataque" if action_kind == "attack" else ("Confirmar movimiento" if action_kind == "move" else "Confirmar orden")
         if confirm_button.text != button_text:
@@ -985,6 +1008,9 @@ func _confirm_new_game() -> void:
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size())
     call_deferred("_frame_camera_after_layout")
+    if skirmish_setup != null and skirmish_setup.visible:
+        skirmish_setup.hide()
+        _set_compact_hud(OS.has_feature("mobile"))
 
 func _selected_map_size() -> Vector2i:
     match map_size_picker.get_selected_id():
@@ -1046,6 +1072,7 @@ func _refresh_production_catalog() -> void:
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
     command_menu.hide()
+    skirmish_setup.hide()
     home_menu.show()
 
 func _continue_from_home() -> void:
@@ -1056,7 +1083,34 @@ func _continue_from_home() -> void:
 func _prepare_skirmish() -> void:
     home_menu.hide()
     command_menu.hide()
-    _set_compact_hud(false) # The existing scenario/map/seed settings remain authoritative.
+    skirmish_setup.load_choices({
+        "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
+        "roster":roster_picker.get_selected_id(), "fog":fog_picker.get_selected_id(),
+        "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
+        "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
+        "seed":int(map_seed_picker.value)
+    })
+    skirmish_setup.show()
+
+func _back_from_skirmish() -> void:
+    skirmish_setup.hide()
+    home_menu.show()
+
+func _show_advanced_skirmish() -> void:
+    skirmish_setup.hide()
+    _set_compact_hud(false)
+
+func _start_skirmish_setup(configuration: Dictionary) -> void:
+    scenario_picker.select(int(configuration["scenario"]))
+    map_size_picker.select(int(configuration["size"]))
+    roster_picker.select(int(configuration["roster"]))
+    fog_picker.select(int(configuration["fog"]))
+    economy_picker.select(int(configuration["economy"]))
+    relay_picker.select(int(configuration["objective"]))
+    balance_picker.select(int(configuration["balance"]))
+    first_picker.select(int(configuration["first"]))
+    map_seed_picker.value = int(configuration["seed"])
+    _new_game() # Same confirmation, permissions and autosave guards.
 
 func _open_arsenal_from_home() -> void:
     home_menu.hide()
