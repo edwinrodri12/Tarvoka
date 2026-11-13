@@ -140,6 +140,16 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
+      - name: Verify seamless river ridge and organic shore geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_continuous_world_seams.gd 2>&1 | tee /tmp/tarvoka-continuous-seams.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-continuous-seams.log; then
+            echo 'World seam regression'; exit 1
+          fi
+          grep -F 'PASS continuous world seams:' /tmp/tarvoka-continuous-seams.log
+
       - name: Verify continuous isometric roads, shorelines, fog privacy and all map sizes
         shell: bash
         run: |
