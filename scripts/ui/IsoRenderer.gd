@@ -104,8 +104,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                         state["terrain"],cell,visible,fog) if terrain == "road" else 0
                     var shoreline: int = Topology.shore_mask(
                         state["terrain"],cell,visible,fog) if terrain == "water" else 0
+                    var terrain_links: int = Topology.neighbor_mask(
+                        state["terrain"],cell,terrain,true,visible,fog
+                        ) if terrain == "mountain" or terrain == "forest" else 0
+                    var crossing: int = Topology.bridge_axis(
+                        state["terrain"],cell,visible,fog) if terrain == "road" else 0
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
-                        road_links,shoreline)
+                        road_links,shoreline,terrain_links,crossing,detail)
                     decorated += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
