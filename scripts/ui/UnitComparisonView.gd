@@ -43,6 +43,18 @@ func _portrait(parent: Container, data: Dictionary, side: String) -> void:
     visual.add_child(labels)
     _text(labels,str(data.get("name","")),15)
     _text(labels,"%d cr." % int(data.get("price",0)),14,Color("#F1D58C"))
+    _text(labels,"%s · Blanco: %s" % [str(data.get("domain","")),str(data.get("targets",""))],12)
+    var logistics: PackedStringArray = []
+    if int(data.get("ammo_capacity",0)) > 0:
+        logistics.append("Mun. %d" % int(data["ammo_capacity"]))
+    if int(data.get("fuel_capacity",0)) > 0:
+        logistics.append("Gas. %d" % int(data["fuel_capacity"]))
+    if bool(data.get("can_capture",false)):
+        logistics.append("Conquista")
+    if bool(data.get("road_fast",false)):
+        logistics.append("Carretera x2")
+    if not logistics.is_empty():
+        _text(cell," · ".join(logistics),12,Color("#B3D2C3"))
 
 # Render ONLY actual producer-eligible roles already authorized by the model.
 # The comparison is informational: there are no clickable purchase surfaces.
