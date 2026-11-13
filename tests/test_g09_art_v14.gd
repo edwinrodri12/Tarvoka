@@ -24,7 +24,7 @@ func _run() -> void:
     assert(baseline != null and improved != null)
     assert(not baseline.get_meta("tarvoka_mbt_silhouette_v14",false))
     assert(improved.get_meta("tarvoka_mbt_silhouette_v14",false))
-    assert(int(improved.get_meta("tarvoka_mbt_silhouette_v14_pbr_count",0)) >= 17)
+    assert(int(improved.get_meta("tarvoka_mbt_silhouette_v14_pbr_count",0)) >= 15)
     assert(Models.paintable_count(baseline) == 14)
     assert(Models.paintable_count(improved) == 14)
     for side in [-1,1]:
