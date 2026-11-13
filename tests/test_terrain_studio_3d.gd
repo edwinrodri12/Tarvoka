@@ -43,6 +43,10 @@ func _run() -> void:
     assert(ground.mesh.get_surface_count() == 1)
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
+    var grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
+    assert(grass != null and grass.multimesh != null)
+    assert(grass.multimesh.instance_count >= 100)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
     assert(int(old_counts.get("road",0)) > 0)
     assert(int(old_counts.get("water",0)) > 0)
@@ -59,6 +63,7 @@ func _run() -> void:
     studio._rebuild_terrain(false)
     assert(not studio.model_root.get_meta("terrain_studio_continuous"))
     assert(studio.model_root.find_child("SueloContinuoConRelieve",true,false) == null)
+    assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     assert(studio.model_root.find_child("Casilla_00_00_mountain",true,false) != null)
     for i in range(7):
         await process_frame
