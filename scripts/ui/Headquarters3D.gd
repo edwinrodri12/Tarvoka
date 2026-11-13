@@ -5,6 +5,7 @@ class_name TarvokaHeadquarters3D
 # del 12-11-2026 es referencia artistica; esto NO convierte su PNG en una malla.
 # Las estadisticas, los turnos, el combate y los guardados NO se modifican.
 const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Finish = preload("res://scripts/ui/HeadquartersFinish3D.gd")
 const CONDITIONS := ["operativo", "capturado", "danado", "destruido"]
 const BASE := Color("#788693")
 const CONCRETE := Color("#b3b9b5")
@@ -387,7 +388,7 @@ static func paintable_count(node: Node) -> int:
     return count
 
 static func build(level: int = 1, faction: int = 0,
-        condition: String = "operativo") -> Node3D:
+        condition: String = "operativo", finish_enabled: bool = true) -> Node3D:
     if not valid_spec(level,faction,condition):
         return null
     var model := Node3D.new()
@@ -412,4 +413,6 @@ static func build(level: int = 1, faction: int = 0,
             _box(marker,"FranjaCambioDeControl",
                 Vector3(0,0.13,-5.89),Vector3(2.30,0.05,0.16),
                 accent,0.16,true)
+    if finish_enabled:
+        Finish.apply(model,level,accent,condition)
     return model
