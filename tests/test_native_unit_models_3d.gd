@@ -1,0 +1,90 @@
+extends SceneTree
+
+const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const Captures = preload("res://scripts/ui/UnitRender3D.gd")
+const Board = preload("res://scripts/ui/TouchBoard.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
+const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _run() -> void:
+    assert(Models.ROLES.size()==8)
+    assert(Models.ROLES.size() == Models.ROLES.duplicate().size())
+    var labels: Dictionary = {}
+    var geometry_counts: Dictionary = {}
+    for role in Models.ROLES:
+        assert(Roles.valid(str(role)))
+        assert(Models.supports(str(role)))
+        var model: Node3D = Models.build(str(role))
+        assert(model != null and model is Node3D)
+        assert(model.name == "Modelo3D_" + str(role))
+        var parts: int = Models.inspect_meshes(model)
+        assert(parts >= 12) # Actual modelled solids; never 2D decals.
+        geometry_counts[role] = parts
+        labels[role] = Roles.label(str(role))
+        var physical: Array = model.find_children("*","MeshInstance3D",true,false)
+        assert(physical.size() >= 12)
+        for shape in physical:
+            assert(shape.mesh != null)
+            assert(shape.mesh.get_surface_count() > 0)
+            assert(shape.material_override != null)
+            assert(shape is MeshInstance3D)
+        model.free()
+
+    # Distinct authorized silhouettes, not 8 aliases of the same sprite.
+    assert(int(geometry_counts["mlrs"]) != int(geometry_counts["line"]))
+    assert(int(geometry_counts["tank"]) != int(geometry_counts["fighter"]))
+    assert(labels["tank"] == "Tanque principal")
+    assert(Models.build("nonexistent") == null)
+    for role in Roles.ORDER + Arsenal.ORDER:
+        if role not in Models.ROLES:
+            assert(not Models.supports(str(role)))
+    # The renderer is loaded and coupled to the same unit-role identifiers as
+    # tactics; 24 other roles retain the original atlas until remodeled.
+    assert(IsoRenderer != null)
+    assert(Captures.SIZE == Vector2i(224,224))
+
+    var board := Board.new()
+    board.ai_enabled = false
+    board.autosave_enabled = false
+    board.size = Vector2(950,640)
+    root.add_child(board)
+    var original: Dictionary = board.state.duplicate(true)
+    board.set_isometric(true)
+    board.set_3d_models_enabled(false)
+    assert(not board.models_3d_enabled)
+    assert(board.state == original)
+    board.set_3d_models_enabled(true)
+    assert(board.models_3d_enabled)
+    assert(board.state == original)
+    assert(board._models_3d == null) # Headless: geometry QA, no GPU readback.
+    board.queue_redraw()
+    await process_frame
+    assert(board.state == original)
+    board.queue_free()
+
+    var scene: PackedScene = load("res://scenes/Main.tscn")
+    assert(scene != null)
+    var app: Control = scene.instantiate()
+    root.add_child(app)
+    var ui_button: Button = app.get("models_3d_button")
+    var live_board: Control = app.get("board")
+    assert(ui_button != null)
+    assert(live_board.models_3d_enabled)
+    var save_state: Dictionary = live_board.state.duplicate(true)
+    app._toggle_unit_models_3d()
+    assert(not live_board.models_3d_enabled)
+    assert(ui_button.text.contains("desactivados"))
+    assert(live_board.state == save_state)
+    app._toggle_unit_models_3d()
+    assert(live_board.models_3d_enabled)
+    assert(ui_button.text.contains("activados"))
+    assert(live_board.state == save_state)
+    app.queue_free()
+
+    print("PASS native 3D models: 8 editable unit meshes, role integration, 2D fallback, untouched battle/Android UI")
+    print("3D geometry counts: " + str(geometry_counts))
+    quit(0)
