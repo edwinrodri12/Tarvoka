@@ -86,7 +86,7 @@ func _run() -> void:
         assert(track.multimesh.instance_count == 84)
         for wheel in range(7):
             assert(finished.find_child("RuedaG09V7_%s_%02d" % [side,wheel],true,false) != null)
-    var wheel: MeshInstance3D = finished.find_child("RuedaG09V7_1_0",true,false) as MeshInstance3D
+    var wheel: MeshInstance3D = finished.find_child("RuedaG09V7_1_00",true,false) as MeshInstance3D
     var rest: Basis = wheel.transform.basis
     assert(Rig.pose(finished,"move",0.27,Vector2i(1,0)))
     assert(not rest.is_equal_approx(wheel.transform.basis))
