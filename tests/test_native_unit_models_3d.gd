@@ -153,6 +153,9 @@ func _run() -> void:
     assert(is_equal_approx(inspector.camera.size,before_zoom))
     for i in range(3):
         await process_frame
+    print("VISOR3D screen=",app.get_viewport().get_visible_rect().size,
+        " dialog=",inspector.size," top=",inspector.position,
+        " preview=",inspector.viewport_holder.size," camera=",inspector.camera.size)
     assert(inspector.viewport_holder.size.y >= 200.0)
     assert(inspector.viewport_holder.size.y <= 335.0)
     assert(inspector.position.y >= -2)
