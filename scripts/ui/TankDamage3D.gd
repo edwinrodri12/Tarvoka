@@ -171,6 +171,13 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.12,0.039,0.07),Color("#5F5950"),Vector3(-32,0,-15))
     _box(light,"RozaduraFaldon",Vector3(1.224,0.72,-0.52),
         Vector3(0.039,0.12,0.26),Color("#302D2C"),Vector3(0,8,0))
+    # A visible shallow hit across the right-hand identification stripe:
+    # the first condition must be distinguishable even at the 224px battle
+    # portrait, not only through a close-up of the nose.
+    _box(light,"MarcaOblicuaFaldonDerecho",Vector3(1.258,0.735,-0.53),
+        Vector3(0.026,0.132,0.18),Color("#303637"),Vector3(-9,0,22))
+    _box(light,"RaspadoAceroFaldonDerecho",Vector3(1.278,0.75,-0.55),
+        Vector3(0.014,0.026,0.15),Color("#A1937E"),Vector3(7,0,18))
     _box(light,"ImpactoSuperiorGlacis",Vector3(-0.23,1.13,-0.82),
         Vector3(0.28,0.045,0.22),Color("#2A2C2D"),Vector3(0,-18,9))
     _box(light,"MetalExpuestoGlacis",Vector3(-0.24,1.165,-0.85),
@@ -200,6 +207,10 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.09,0.31,0.39),Color("#4D4943"),Vector3(0,0,13))
     _box(medium,"PlacaDesprendida",Vector3(1.38,0.39,0.46),
         Vector3(0.09,0.29,0.48),Color("#5B6468"),Vector3(13,25,27))
+    _box(medium,"RejillaMotorFracturada",Vector3(0.32,1.119,0.98),
+        Vector3(0.35,0.038,0.25),Color("#373939"),Vector3(-5,-12,9))
+    _box(medium,"BaseExpuestaRejilla",Vector3(0.19,1.142,1.05),
+        Vector3(0.16,0.029,0.11),Color("#897F70"),Vector3(0,16,0))
     _cloud(medium,"HumoGrisMotor",Vector3(-0.09,1.37,1.01),
         Vector3(0.54,0.77,0.55),Color(0.25,0.28,0.29,0.26))
     _cloud(medium,"VahoMotor",Vector3(0.12,1.71,1.16),
