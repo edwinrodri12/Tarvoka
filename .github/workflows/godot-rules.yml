@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify visual concept theme, battle action rail and responsive menus
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_tactical_ui_theme.gd 2>&1 | tee /tmp/tarvoka-concept-ui-theme.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-concept-ui-theme.log; then
+            echo 'Concept interface regression'; exit 1
+          fi
+          grep -F 'PASS concept UI' /tmp/tarvoka-concept-ui-theme.log
+
       - name: Validate persistent Android visual settings and battle-save isolation
         shell: bash
         run: |
