@@ -15,11 +15,13 @@ const FACTIONS = [
     {"key":"orden_onix","name":"Orden Ónix","color":"#AEB5C2","motif":"Insignia alada plateada"}
 ]
 const TERRAIN_COLORS = {
-    "plain":"#3C5D46",
-    "forest":"#1E4931",
-    "road":"#76644B",
-    "mountain":"#606D7A",
-    "water":"#195476"
+    # Temperate palette follows the approved Operacion Rio Azul landscape.
+    # Faction color is applied separately and never tints this geography.
+    "plain":"#587F4B",
+    "forest":"#27583C",
+    "road":"#807259",
+    "mountain":"#78858A",
+    "water":"#216D91"
 }
 # Movement is blue and attack is red, independent of faction colors.
 const MOVE_FILL = Color(0.17, 0.53, 0.98, 0.38)
@@ -49,10 +51,33 @@ static func emblem_texture(index: int) -> Texture2D:
         return null
     return ResourceLoader.load(path) as Texture2D
 
+static func _terrain_noise(x: int, y: int) -> float:
+    # Small integer-valued noise field: no random generator or state,
+    # stable at every zoom and after loading a saved battle.
+    var hashed: int = posmod(
+        x*127+y*313+x*y*541+x*x*47+y*y*91+421,997)
+    return float(hashed)/997.0
+
 static func terrain_color(kind: String, x: int, y: int) -> Color:
-    var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))
-    # Inexpensive deterministic light variation; never affects movement cost.
-    return base.lightened(0.055) if (x + y) % 2 == 0 else base.darkened(0.055)
+    var base: Color = Color.html(str(TERRAIN_COLORS.get(
+        kind,TERRAIN_COLORS["plain"])))
+    # Bilinear low-frequency noise gives broad material color zones.
+    # The old alternating +/-5.5% checkerboard created visible seams.
+    var gx: float = float(x)/4.0
+    var gy: float = float(y)/4.0
+    var ax: int = floori(gx)
+    var ay: int = floori(gy)
+    var tx: float = gx-float(ax)
+    var ty: float = gy-float(ay)
+    tx = tx*tx*(3.0-2.0*tx)
+    ty = ty*ty*(3.0-2.0*ty)
+    var north: float = lerpf(_terrain_noise(ax,ay),
+        _terrain_noise(ax+1,ay),tx)
+    var south: float = lerpf(_terrain_noise(ax,ay+1),
+        _terrain_noise(ax+1,ay+1),tx)
+    var variation: float = (lerpf(north,south,ty)-0.5)*0.16
+    return base.lightened(variation) if variation >= 0.0 else (
+        base.darkened(-variation))
 
 static func movement_fill() -> Color:
     return MOVE_FILL
