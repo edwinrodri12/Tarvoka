@@ -18,6 +18,7 @@ func _run() -> void:
     assert(tank.get_meta("tarvoka_mbt_production_v4",false))
     assert(tank.get_meta("tarvoka_mbt_silhouette_v5",false))
     assert(tank.get_meta("tarvoka_mbt_art_v6",false))
+    assert(tank.get_meta("tarvoka_mbt_hero_v7",false))
     assert(tank.get_meta("tarvoka_pbr_applied",false))
     assert(Models.paintable_count(tank) == 14)
     assert(Models.inspect_meshes(tank) >= 190)
@@ -31,7 +32,7 @@ func _run() -> void:
     var angular_turret: MeshInstance3D = tank.find_child("CorazaTorreFacetada",true,false) as MeshInstance3D
     assert(angular_hull != null and angular_turret != null)
     assert(angular_hull.mesh is ArrayMesh and angular_turret.mesh is ArrayMesh)
-    assert(angular_hull.visible and angular_turret.visible)
+    assert(not angular_hull.visible and not angular_turret.visible)
     var sealed_hull: MeshInstance3D = tank.find_child("CascoHermeticoV5",true,false) as MeshInstance3D
     var sealed_turret: MeshInstance3D = tank.find_child("TorreHermeticaV5",true,false) as MeshInstance3D
     var closed_back: MeshInstance3D = tank.find_child("PortonTraseroHermeticoV5",true,false) as MeshInstance3D
@@ -39,11 +40,18 @@ func _run() -> void:
     var new_cheek: MeshInstance3D = tank.find_child("MejillaPrincipalV5_1",true,false) as MeshInstance3D
     assert(sealed_hull != null and sealed_turret != null and closed_back != null)
     assert(mantlet != null and new_cheek != null)
-    assert(sealed_hull.visible and sealed_turret.visible and closed_back.visible)
+    assert(not sealed_hull.visible and not sealed_turret.visible and closed_back.visible)
     assert(sealed_hull.mesh is ArrayMesh and sealed_turret.mesh is ArrayMesh)
     assert(sealed_hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 120)
     assert(sealed_turret.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 120)
     assert(mantlet.get_parent().name == Models.TANK_BARREL_PIVOT)
+    var hero_hull: MeshInstance3D = tank.find_child("CorazaSoldadaHermeticaV7",true,false) as MeshInstance3D
+    var hero_turret: MeshInstance3D = tank.find_child("TorreBajaSoldadaV7",true,false) as MeshInstance3D
+    var hero_mantlet: MeshInstance3D = tank.find_child("MantleteConjuntoV7",true,false) as MeshInstance3D
+    assert(hero_hull != null and hero_turret != null and hero_mantlet != null)
+    assert(hero_hull.visible and hero_turret.visible)
+    assert(hero_hull.material_override.albedo_texture.get_size() == Vector2(256,256))
+    assert(hero_mantlet.get_parent().name == Models.TANK_BARREL_PIVOT)
     var prototype_hull: MeshInstance3D = tank.find_child("MonocascoBlindajeCompuesto",true,false) as MeshInstance3D
     var prototype_turret: MeshInstance3D = tank.find_child("TorreBlindada",true,false) as MeshInstance3D
     assert(prototype_hull != null and prototype_turret != null)
@@ -87,17 +95,17 @@ func _run() -> void:
     assert(not bore.visible and not lens.visible and not era.visible)
     assert(Damage.apply_stage(tank,0))
     assert(Damage.current_stage(tank) == 0)
-    var new_optic: MeshInstance3D = tank.find_child("VentanaOpticaPanoramicaV6",true,false) as MeshInstance3D
-    var new_armor: MeshInstance3D = tank.find_child("MejillaMonoliticaV6_1",true,false) as MeshInstance3D
-    var new_mantlet: MeshInstance3D = tank.find_child("BastidorCanonIntegradoV6",true,false) as MeshInstance3D
-    assert(new_optic != null and new_armor != null and new_mantlet != null)
+    var hero_cheek: MeshInstance3D = tank.find_child("ModuloBlindajeCeramicoV7_1",true,false) as MeshInstance3D
+    var hero_optic: MeshInstance3D = tank.find_child("CristalVisionIntegradoV7_1",true,false) as MeshInstance3D
+    assert(hero_cheek != null and hero_optic != null)
     assert(bore.visible and not lens.visible and not sight.visible)
     assert(not era.visible and not cheek.visible and not new_cheek.visible)
-    assert(new_armor.visible and new_optic.visible and new_mantlet.visible)
+    assert(hero_cheek.visible and hero_optic.visible and hero_mantlet.visible)
+    assert(not tank.find_child("MejillaMonoliticaV6_1",true,false).visible)
     assert(Damage.apply_stage(tank,3))
-    assert(not new_armor.visible)
+    assert(not hero_cheek.visible)
     assert(Damage.apply_stage(tank,0))
-    assert(new_armor.visible and not new_cheek.visible and not era.visible)
+    assert(hero_cheek.visible and not new_cheek.visible and not era.visible)
     tank.free()
 
     var inspector = Inspector.new()
@@ -128,5 +136,5 @@ func _run() -> void:
     assert(output.save_png("res://artifacts/tarvoka_mbt_detail_turntable.png") == OK)
     inspector.hide()
     inspector.queue_free()
-    print("PASS MBT art detail: fully sealed V5 chassis and turret, protected mantlet, 14 paint zones, 5 reversible 3D damage stages, 4 OpenGL views")
+    print("PASS MBT art detail: original V7 hero armor UVs, full 3D wear, 14 paint panels, 5 repair stages, 4 OpenGL views")
     quit(0)
