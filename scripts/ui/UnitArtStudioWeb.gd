@@ -26,9 +26,11 @@ var _previous_version := false
 var _v11_preview := false
 var _v12_preview := false
 var _v13_preview := false
+var _v14_preview := false
 var v11_button: Button
 var v12_button: Button
 var v13_button: Button
+var v14_button: Button
 var comparison_button: Button
 var previous_version_button: Button
 var _faction := 0
@@ -150,6 +152,7 @@ func _construct() -> void:
     v11_button = _button(column,"NUEVO G09 V11 · Escultura angular",_toggle_v11)
     v12_button = _button(column,"V12 · Blindaje y materiales refinados",_toggle_v12)
     v13_button = _button(column,"V13 · Faldones segmentados y torreta",_toggle_v13)
+    v14_button = _button(column,"V14 · Coraza pronunciada y ruedas activas",_toggle_v14)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
     previous_version_button = _button(column,"COMPARAR: V9 anterior / V10 nuevo",_toggle_previous)
     role_picker = OptionButton.new()
@@ -209,7 +212,7 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
     _role = role
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
-        _final_detail,13 if _v13_preview else (12 if _v12_preview else (11 if _v11_preview else (9 if _previous_version else 10))))
+        _final_detail,14 if _v14_preview else (13 if _v13_preview else (12 if _v12_preview else (11 if _v11_preview else (9 if _previous_version else 10)))))
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
@@ -224,6 +227,8 @@ func _display_role(role: String) -> void:
     v11_button.visible = (_role == "tank")
     v12_button.visible = (_role == "tank")
     v13_button.visible = (_role == "tank")
+    v14_button.visible = (_role == "tank")
+    v14_button.text = "COMPARAR: Volver a V13" if _v14_preview else "V14 · Coraza pronunciada y ruedas activas"
     v13_button.text = "COMPARAR: Volver a V12" if _v13_preview else "V13 · Faldones segmentados y torreta"
     v12_button.text = "COMPARAR: Volver a V11" if _v12_preview else "V12 · Blindaje y materiales refinados"
     v11_button.text = "COMPARAR: Volver al G09 V10" if _v11_preview else "NUEVO G09 V11 · Escultura angular"
@@ -240,7 +245,7 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     status_label.text = "G09 · %s · %s · %s" % [
-        ("ESCULTURA V13" if _v13_preview else ("REFINAMIENTO V12" if _v12_preview else ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL")))) if _final_detail else "MODELO BASE",
+        ("ESCULTURA V14" if _v14_preview else ("ESCULTURA V13" if _v13_preview else ("REFINAMIENTO V12" if _v12_preview else ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL"))))) if _final_detail else "MODELO BASE",
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])] if _role == "tank" else "Modelo técnico 3D · misma librería de TARVOKA"
 
@@ -257,6 +262,7 @@ func _toggle_previous() -> void:
     _v11_preview = false
     _v12_preview = false
     _v13_preview = false
+    _v14_preview = false
     _final_detail = true
     _reload_tank_same_camera()
 
@@ -266,6 +272,7 @@ func _toggle_v11() -> void:
     _v11_preview = not _v11_preview
     _v12_preview = false
     _v13_preview = false
+    _v14_preview = false
     _previous_version = false
     _final_detail = true
     _reload_tank_same_camera()
@@ -275,6 +282,7 @@ func _toggle_v12() -> void:
         return
     _v12_preview = not _v12_preview
     _v13_preview = false
+    _v14_preview = false
     _v11_preview = not _v12_preview
     _previous_version = false
     _final_detail = true
@@ -286,7 +294,19 @@ func _toggle_v13() -> void:
     # The V13 ↔ V12 A/B preview preserves yaw, zoom and damage; Android
     # remains on V10 until the visual design receives explicit approval.
     _v13_preview = not _v13_preview
+    _v14_preview = false
     _v12_preview = not _v13_preview
+    _v11_preview = true
+    _previous_version = false
+    _final_detail = true
+    _reload_tank_same_camera()
+
+func _toggle_v14() -> void:
+    if _role != "tank":
+        return
+    _v14_preview = not _v14_preview
+    _v13_preview = not _v14_preview
+    _v12_preview = false
     _v11_preview = true
     _previous_version = false
     _final_detail = true
