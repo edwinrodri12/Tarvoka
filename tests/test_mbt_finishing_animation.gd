@@ -77,6 +77,8 @@ func _run() -> void:
     for i in range(8):
         await process_frame
     assert(capture.captures_completed)
+    assert(capture.baked_static_captures == 15)
+    assert(capture.viewports.is_empty())
     var own_pos := Vector2i(2,3)
     var enemy_pos := Vector2i(7,3)
     var units: Array = [
