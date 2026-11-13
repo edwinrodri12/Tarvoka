@@ -23,12 +23,23 @@ const MAX_ZOOM := 2.4
 func _ready() -> void:
     title = "TARVOKA · Inspección real de modelos 3D"
     ok_button_text = "Volver a la batalla"
-    min_size = Vector2i(340,455)
+    min_size = Vector2i(340,430)
+    # A native AcceptDialog expands to the minimum height of its direct child.
+    # Constrain that child and scroll its contents instead of extending
+    # the SubViewport beyond the phone's visible landscape height.
+    var visible_height: float = get_viewport().get_visible_rect().size.y
+    var outer := ScrollContainer.new()
+    outer.name = "InspectorScroll"
+    outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.67,300.0,490.0))
+    outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    outer.size_flags_vertical = Control.SIZE_FILL
+    outer.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    add_child(outer)
     var controls := VBoxContainer.new()
     controls.size_flags_vertical = Control.SIZE_FILL
     controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     controls.add_theme_constant_override("separation",5)
-    add_child(controls)
+    outer.add_child(controls)
     var intro := Label.new()
     intro.text = "Modelos editables de Godot · Gira con el dedo"
     intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
