@@ -156,3 +156,18 @@ El usuario rechazó renders conceptuales como entregables. Las siguientes modifi
 **Pruebas verificables:** `tests/test_g09_production_v9.gd` verifica nativamente todas estas mallas, UV/PBR, dos ópticas compactas, material por familia, 5 fases HP y 8 facciones. `tests/test_web_art_studio.gd` genera `tarvoka_mbt_v8_vs_v9_same_camera.png` y `tarvoka_g09_v9_closeup_engine.png` desde la cámara real del visor. La acción `web-art-studio.yml` bloquea publicación si cualquiera de estas comprobaciones falla. El exportador GLB de autoría ahora se llama `TARVOKA_G09_V9_Produccion_Editable.glb` para mantener clara su procedencia.
 
 **Aceptación comercial:** todavía NO aprobado; después de validación de Godot y publicación WebGL falta revisar escala de combate en un teléfono real, textura y rendimiento sostenido, y si corresponde pulido DCC de autor. El usuario pidió explícitamente trabajar **sobre el diseño 3D incorporado al juego**, nunca sustitutos en imagen.
+
+
+## G09 V10 — rediseño profundo integrado (13 nov 2026)
+
+El usuario observa que la V9 aún parece prototipo. Se priorizó sustituir grandes superficies, no agregar más tornillos o arte conceptual.
+
+- scripts/ui/TankArmorV10.gd sustituye **de verdad** las mallas originales del casco y torreta usadas por UnitModels3D, conservando sus identificadores, articulación y nombre. El casco utiliza siete anillos y la torreta ocho, con cierres superior/inferior triangulados.
+- Mejillas cerámicas reemplazadas por mallas facetadas cerradas de seis sectores, no cubos inclinados. Blindaje frontal y lateral conectado con soldaduras y guarniciones. Motor y techo integran paneles funcionales y ventilación, sin tapar los 14 identificadores oficiales de facción.
+- Acero y cerámica: máscaras de desgaste 256 px originales e independientes, materiales PBR con relieve y rugosidad propia, tonos de gris militar más coherentes, sin logos ni emblemas.
+- TankDamage3D.gd incorpora desprendimiento y restauración reversible de las placas V10 en HP 3–4, con casco y torreta todavía herméticos.
+- LOD Android para tornillos y soldaduras menores a escala de píxel, sin perder detalles en cámara cercana. El motor conserva los dos lotes MultiMesh de orugas y los lotes de neumáticos.
+- El visor web alterna V9/V10 sin APK. CI Godot exige mallas físicamente cerradas, comparación de vértices respecto a la V9, separación de materiales, ocho facciones, 14 paneles, cinco estados de destrucción y LOD.
+- Renders reales de Godot: artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png y artifacts/tarvoka_g09_v10_four_angles.png. Fuente editable en artifacts/TARVOKA_G09_V10_Escultura_Editable.glb.
+
+**Pendiente antes de certificar producto comercial:** revisión visual humana en cuatro ángulos y con zoom, rendimiento/FPS/temperatura sostenida en Android, corrección de arte DCC/texturas donde siga notándose procedural. CI funcional no equivale a aprobación estética; conservar PR en borrador hasta esa revisión.
