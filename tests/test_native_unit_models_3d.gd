@@ -29,9 +29,7 @@ func _run() -> void:
         assert(physical.size() >= 12)
         for shape in physical:
             assert(shape.mesh != null)
-            # The headless dummy renderer cannot allocate GPU mesh surfaces:
-            # calling get_surface_count() there logs "Parameter m is null".
-            # Geometry type and non-null materials remain verifiable on CI.
+            # Run with real software OpenGL via xvfb; inspect geometry types.
             assert(shape.mesh is PrimitiveMesh or shape.mesh is ArrayMesh)
             assert(shape.material_override != null)
             assert(shape is MeshInstance3D)
@@ -63,7 +61,32 @@ func _run() -> void:
     board.set_3d_models_enabled(true)
     assert(board.models_3d_enabled)
     assert(board.state == original)
-    assert(board._models_3d == null) # Headless: geometry QA, no GPU readback.
+    var library: Node = board._models_3d
+    assert(library != null) # Real software OpenGL, not Godot dummy headless.
+    for i in range(5):
+        await process_frame
+    assert(bool(library.get("captures_completed")))
+    var sheet := Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,false,Image.FORMAT_RGBA8)
+    sheet.fill(Color("#13212c"))
+    var nonempty: int = 0
+    for n in range(Models.ROLES.size()):
+        var role: String = str(Models.ROLES[n])
+        assert(library.call("is_ready_for",role))
+        var tex: Texture2D = library.call("texture_for",role)
+        assert(tex != null and tex.get_size() == Vector2(Captures.SIZE))
+        var img: Image = tex.get_image()
+        assert(img != null and img.get_size() == Captures.SIZE)
+        var visible: int = 0
+        for y in range(0,img.get_height(),8):
+            for x in range(0,img.get_width(),8):
+                if img.get_pixel(x,y).a > 0.1:
+                    visible += 1
+        nonempty += 1 if visible > 4 else 0
+        var dst := Vector2i((n%4)*Captures.SIZE.x,int(n/4)*Captures.SIZE.y)
+        sheet.blit_rect(img,Rect2i(Vector2i.ZERO,Captures.SIZE),dst)
+    assert(nonempty == 8) # Every model really has visible 3D pixels.
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(sheet.save_png("res://artifacts/tarvoka_3d_first8.png") == OK)
     board.queue_redraw()
     await process_frame
     assert(board.state == original)
