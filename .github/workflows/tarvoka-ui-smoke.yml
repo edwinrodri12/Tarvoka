@@ -8,6 +8,8 @@ on:
       - 'tests/test_commander_presentation.gd'
       - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_mobile_menu_polish.gd'
+      - 'tests/test_landscape_only_ui.gd'
+      - 'project.godot'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -19,6 +21,8 @@ on:
       - 'tests/test_commander_presentation.gd'
       - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_mobile_menu_polish.gd'
+      - 'tests/test_landscape_only_ui.gd'
+      - 'project.godot'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -44,6 +48,7 @@ jobs:
           set -euo pipefail
           for test in \
             test_official_faction_art \
+            test_landscape_only_ui \
             test_battle_focus_hud \
             test_mobile_menu_polish \
             test_commander_presentation \
