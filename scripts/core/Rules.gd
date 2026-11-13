@@ -49,15 +49,22 @@ static func movement_cost_for(terrain: String, domain: String = "ground") -> int
         return 1 if terrain == "water" else -1
     return movement_cost(terrain)
 
-static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground") -> Dictionary:
+# Vehicle routing uses half-point precision internally. Roads cost 0.5 for
+# motorized ground units, while ordinary ground/air/naval rules remain intact.
+# A full movement point therefore covers TWO road cells for a vehicle.
+# Returned costs stay integer (ceil of half-points) for fuel and UI parity.
+static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground", motorized: bool = false) -> Dictionary:
     var distances := {}
     if not valid_terrain(terrain) or not inside(origin, terrain) or points < 0 or origin in blocked or not Domains.valid_domain(domain):
         return distances
     if movement_cost_for(terrain[origin.y][origin.x], domain) < 0:
         return {}
+    var road_bonus: bool = motorized and domain == Domains.GROUND
+    var scale: int = 2 if road_bonus else 1
+    var budget: int = points * scale
     distances[origin] = 0
     var frontier: Array[Vector2i] = [origin]
-    # Indexed queue avoids O(n) pop_front shifts; revisits still handle weighted terrain.
+    # Weighted relaxation: keeps the cheapest route on nonuniform roads.
     var cursor := 0
     while cursor < frontier.size():
         var current: Vector2i = frontier[cursor]
@@ -66,19 +73,23 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
             var next: Vector2i = current + direction
             if not inside(next, terrain) or next in blocked:
                 continue
-            var cost := movement_cost_for(terrain[next.y][next.x], domain)
-            if cost < 0:
+            var kind: String = str(terrain[next.y][next.x])
+            var base: int = movement_cost_for(kind, domain)
+            if base < 0:
                 continue
-            # Slow ground units must not be locked out of hills entirely.
-            # A direct climb from the starting tile is always possible with
-            # positive movement: it consumes the WHOLE budget if below the
-            # usual mountain cost of 3. This is not a free shortcut through
-            # mountains; additional steps still require available points.
-            if domain == Domains.GROUND and terrain[next.y][next.x] == "mountain" and current == origin and points > 0 and cost > points:
-                cost = points
-            var total: int = distances[current] + cost
-            if total > points or (distances.has(next) and distances[next] <= total):
+            var cost: int = 1 if road_bonus and kind == "road" else base * scale
+            # A slow unit can climb ONE adjacent mountain, using its whole
+            # move allowance. No chain of mountain shortcuts is permitted.
+            if domain == Domains.GROUND and kind == "mountain" and current == origin and points > 0 and cost > budget:
+                cost = budget
+            var total: int = int(distances[current]) + cost
+            if total > budget or (distances.has(next) and int(distances[next]) <= total):
                 continue
             distances[next] = total
             frontier.append(next)
-    return distances
+    if not road_bonus:
+        return distances
+    var costs: Dictionary = {}
+    for cell in distances:
+        costs[cell] = ceili(float(distances[cell]) / 2.0)
+    return costs
