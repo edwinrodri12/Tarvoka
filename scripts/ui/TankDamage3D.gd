@@ -81,6 +81,10 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.12,0.039,0.07),Color("#5F5950"),Vector3(-32,0,-15))
     _box(light,"RozaduraFaldon",Vector3(1.224,0.72,-0.52),
         Vector3(0.039,0.12,0.26),Color("#302D2C"),Vector3(0,8,0))
+    _box(light,"ImpactoSuperiorGlacis",Vector3(-0.23,1.13,-0.82),
+        Vector3(0.28,0.045,0.22),Color("#2A2C2D"),Vector3(0,-18,9))
+    _box(light,"MetalExpuestoGlacis",Vector3(-0.24,1.165,-0.85),
+        Vector3(0.10,0.02,0.11),Color("#B19C7B"),Vector3(0,-18,9))
     var on_turret_1 := Node3D.new()
     on_turret_1.name = "MarcasEnTorre"
     turret.add_child(on_turret_1)
@@ -166,6 +170,12 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var plate: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if plate != null:
             plate.visible = stage < 2
+    # The final state physically loses its original cannon instead of
+    # simply coloring it black. Broken barrel debris is already in stage 4.
+    for weapon_name in ["Canon120mm","ManguitoTermico","ExtractorGases","BocaCanon"]:
+        var barrel: MeshInstance3D = model.find_child(weapon_name,true,false) as MeshInstance3D
+        if barrel != null:
+            barrel.visible = stage < 4
     for part_name in ["CintaSuperiorOruga1","EslabonTreadSuperior1_07",
             "EslabonTreadSuperior1_08","EslabonTreadSuperior1_09"]:
         var tread: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
