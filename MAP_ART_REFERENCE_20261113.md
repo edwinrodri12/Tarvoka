@@ -33,12 +33,22 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 - `IsoRenderer.gd` inyecta solo conexiones visibles para que el mapa no revele secretos detrás de niebla.
 - Nueva regresión en `test_connected_terrain_art.gd` y paso en `godot-rules.yml`; debe pasar el CI antes de fusionar.
 
+## Segundo incremento (13 de noviembre, rama actual)
+
+- `LandscapeDetailPainter.gd`: nueva capa visual original en Godot de grupos de pinos con profundidad, sombras y variación determinista, y macizos con facetas de roca, mesetas y nieve. La densidad se adapta al nivel de detalle para teléfonos.
+- `TerrainTopology.bridge_axis()`: identifica **solo a partir de carreteras y agua visibles** los cruces de río que deben verse como puentes; no crea terrenos ni reglas nuevos. Los apoyos y barandillas del puente siguen siendo puramente gráficos.
+- `WorldArt.gd` delega la pintura de montaña/bosque y aplica puente cuando corresponde.
+- `IsoRenderer.gd` usa la conectividad de la topología para dibujar masas conectadas y ajusta el nivel de detalle al zoom y al ahorro de batería.
+- `test_connected_terrain_art.gd` amplía comprobaciones para ambos ejes de los puentes, ocultación por niebla y conexión de los macizos/bosques.
+
+**Estado honesto:** esta entrega es arte procedural 2.5D integrado en la partida, no mallas tridimensionales/texturizado PBR ni calidad final equivalente a las láminas. Las referencias siguen siendo el objetivo para la siguiente iteración.
+
 ## Desglose de fases restantes
 
-A. Continuidad de suelo: carreteras en 4 direcciones, riberas de aguas, pruebas de zoom/niebla y miniatura del mapa — **comenzado aquí**.
-B. Elementos elevados: montañas con paredes y mesetas verosímiles; transiciones entre roca, pradera, bosque; cascadas, puentes y cambios de nivel visuales, manteniendo hitboxes. 
+A. Continuidad de suelo: carreteras en cuatro direcciones, riberas de aguas, cruces con puente y pruebas de niebla — **primera iteración en esta rama**.
+B. Elementos elevados: macizos y pinos volumétricos 2.5D ya integrados. **Pendientes:** mallas/atlas con texturizado de alta calidad, acantilados interconectados, cascadas, río más orgánico y transiciones variadas de biomas. 
 C. Arte modular de edificios y ciudades a escala 2.5D/3D; tamaños y niveles por reglas disponibles; sin usar escudos de facción como parte inseparable de la geometría.
-D. Variantes de bioma: templado, desértico, árctico, tropical, urbano y costero; solo introducir nuevos tipos tácticos tras diseño y pruebas de balance, mientras pueden ser variantes exclusivamente estéticas.
+D. Variantes de bioma: templado, desértico, ártico, tropical, urbano y costero; solo introducir nuevos tipos tácticos tras diseño y pruebas de balance, mientras pueden ser variantes exclusivamente estéticas.
 E. Optimización Android (40x30, niveles de detalle, fragmentación de atlas y cámara), QA visual en teléfono/tableta, sin promesas de FPS sin medición real.
 
 ## Nota de diseño: distinguir concepto de mecánica
