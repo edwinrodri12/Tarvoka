@@ -5,6 +5,22 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Terrain3D = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Save = preload("res://scripts/core/SaveCodec.gd")
 
+func _finger(board: Control, index: int, location: Vector2,
+        pressed: bool) -> void:
+    var event := InputEventScreenTouch.new()
+    event.index = index
+    event.position = location
+    event.pressed = pressed
+    board._gui_input(event)
+
+func _drag(board: Control, index: int, position: Vector2,
+        relative: Vector2) -> void:
+    var event := InputEventScreenDrag.new()
+    event.index = index
+    event.position = position
+    event.relative = relative
+    board._gui_input(event)
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -58,6 +74,31 @@ func _run() -> void:
     board.reset_view_camera()
     assert(board.focus_view_cell(unit_cell))
     assert(board.state == untouched)
+    # Real Android two-finger sequence in 3D. The releases must never
+    # select/attack an additional unit or mutate a saved battle.
+    var existing_selection: String = board.selected_id
+    var before_pinch: float = camera.size
+    var center_of_screen: Vector2 = board.size*0.5
+    _finger(board,0,center_of_screen-Vector2(55,0),true)
+    _finger(board,1,center_of_screen+Vector2(55,0),true)
+    _drag(board,1,center_of_screen+Vector2(115,0),Vector2(60,0))
+    _finger(board,1,center_of_screen+Vector2(115,0),false)
+    _finger(board,0,center_of_screen-Vector2(55,0),false)
+    assert(camera.size < before_pinch)
+    assert(board.selected_id == existing_selection)
+    assert(board.state == untouched)
+    # Portrait screen resizes the SubViewport but must preserve accurate
+    # conversion between physical touch pixels and 3D tactical coordinates.
+    board.size = Vector2(440,780)
+    await process_frame
+    assert(viewport.size.x >= 160 and viewport.size.y >= 128)
+    camera = view.get("_camera")
+    viewport_point = camera.unproject_position(center)
+    screen = Vector2(
+        viewport_point.x*board.size.x/float(viewport.size.x),
+        viewport_point.y*board.size.y/float(viewport.size.y))
+    assert(board.screen_cell(screen) == unit_cell)
+    assert(board.state == untouched)
     board.set_3d_view(false)
     assert(not board.three_d_enabled)
     assert(board.iso_enabled)
@@ -80,5 +121,5 @@ func _run() -> void:
     assert(board.state == previous)
     board.set_3d_view(false)
     board.queue_free()
-    print("PASS battle 3D: native camera ray picks tactical units, orders untouched, zoom/reset/fog, safe 2D fallback")
+    print("PASS battle 3D: native camera ray picks tactical units, Android pinch/portrait, orders untouched, zoom/fog, safe 2D fallback")
     quit(0)
