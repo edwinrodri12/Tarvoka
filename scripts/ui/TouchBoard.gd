@@ -2,6 +2,7 @@ extends Control
 class_name TarvokaTouchBoard
 
 const Session = preload("res://scripts/core/BattleSession.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
@@ -98,14 +99,14 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
             unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
-    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster)
+    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
     if is_seeded:
         state["map_seed"] = map_seed
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
-    message = "Selecciona una unidad."
+    message = "Apertura equilibrada: %d ordenes disponibles para quien comienza." % Opening.remaining(state)
     last_enemy_turn_report = ""
     last_economy_report = ""
     combat_effects.clear()
@@ -588,7 +589,7 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     var legal: bool = bool(hints["attacks"].has(cell)) if kind == "attack" else bool(hints["moves"].has(cell))
     if not legal:
         pending_order.clear()
-        message = "Accion no permitida."
+        message = "Apertura completada. Pulsa Terminar turno." if Opening.remaining(state) == 0 else "Accion no permitida."
         return
     var order: Dictionary = {"unit_id": selected_id, "cell": cell, "kind": kind, "target_id": enemy_id}
     if require_order_confirmation and pending_order != order:
@@ -596,7 +597,12 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
         if kind == "attack":
             var damage := int(hints["attacks"][cell]["damage"])
             var response_max: int = int(hints["attacks"][cell].get("counter_damage",0))
-            message = "Atacar %s (-%d). Posible respuesta hasta -%d HP. Toca otra vez o Confirmar orden." % [enemy_id,damage,response_max]
+            var effects: Dictionary = hints["attacks"][cell]
+            var ground_note := " | terreno: ATQ %+d, cobertura rival +%d%s" % [
+                int(effects.get("terrain_attack_bonus",0)),int(effects.get("terrain_defense_cover",0)),
+                ", flanqueo" if bool(effects.get("flanked",false)) else ""
+            ]
+            message = "Atacar %s (-%d). Posible respuesta hasta -%d HP%s. Toca otra vez o Confirmar orden." % [enemy_id,damage,response_max,ground_note]
         else:
             message = "Mover a (%d,%d). Toca otra vez o Confirmar orden." % [cell.x + 1, cell.y + 1]
         return
@@ -661,11 +667,13 @@ func _commit_order(order: Dictionary) -> bool:
         var incoming: int = int(result.get("counter_damage",0))
         var exchange_text := "Ataque: Enemigo -%d HP. Respuesta: -%d HP propios." % [outgoing,incoming]
         message = "Impacto confirmado. Municion de un solo uso consumida. " + exchange_text if not str(result.get("consumed_unit_id", "")).is_empty() else exchange_text
+    if Opening.remaining(state) == 0 and int(state.get("winner",-1)) == -1:
+        message += " Apertura completada: pulsa Terminar turno."
     return true
 
 # A manual supply action spends credits and the selected unit's action.
 func can_resupply_selected() -> bool:
-    return pending_order.is_empty() and not selected_id.is_empty() and (not ai_enabled or int(state.get("faction", -1)) == 0) and Logistics.can_resupply(state, selected_id)
+    return Opening.can_order(state) and pending_order.is_empty() and not selected_id.is_empty() and (not ai_enabled or int(state.get("faction", -1)) == 0) and Logistics.can_resupply(state, selected_id)
 
 func resupply_selected() -> bool:
     if not can_resupply_selected():
@@ -693,7 +701,7 @@ func resupply_selected() -> bool:
 # Purchases come from a selected, currently owned and unoccupied workshop.
 # The definitive decision is validated again by BattleSession.purchase.
 func can_purchase_selected(role: String) -> bool:
-    if selected_factory_pos == Vector2i(-1,-1) or not pending_order.is_empty():
+    if selected_factory_pos == Vector2i(-1,-1) or not pending_order.is_empty() or not Opening.can_order(state):
         return false
     if ai_enabled and int(state.get("faction",-1)) != 0:
         return false
