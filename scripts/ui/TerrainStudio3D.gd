@@ -22,6 +22,10 @@ const MOSS := Color("#648677")
 const ROCK := Color("#647681")
 const ROCK_LIGHT := Color("#9ca8a6")
 const SNOW := Color("#d7dfdc")
+const COAST := Color("#c5b792")
+const DEEP_WATER := Color("#22465e")
+const WATER_LEVEL := -0.17
+const BASE_LEVEL := -0.73
 static var _materials: Dictionary = {}
 
 static func _material(color: Color, rough: float = 0.89) -> StandardMaterial3D:
@@ -92,6 +96,9 @@ static func kind(x: int, z: int, scene: int) -> String:
             if (x <= 3 and z >= 6) or (x >= 6 and x <= 8 and z <= 3):
                 return "forest"
         1:
+            # Narrow causeway links the actual bridge deck in this visual sample.
+            if z == 5 and x in [3,6,7]:
+                return "road"
             var river_left: int = 3 + int(z / 3)
             if z >= 1 and z <= 8 and (x == river_left or x == river_left + 1):
                 return "water"
@@ -125,6 +132,167 @@ static func height_at(x: int, z: int, scene: int) -> float:
 static func _cell_center(x: int, z: int) -> Vector3:
     return Vector3((float(x) - float(WIDTH-1)*0.5)*CELL,0,
         (float(z) - float(HEIGHT-1)*0.5)*CELL)
+
+static func _ground_tint(type: String, scene: int, seed: int) -> Color:
+    var tint: Color = ROCK if type == "mountain" else (
+        ROAD_EDGE if type == "road" else (
+        MOSS if scene == 2 else SAND if scene == 1 else GRASS))
+    if type in ["plain","forest"]:
+        tint = tint.lightened(float(posmod(seed,6))*0.018)
+    if type == "forest":
+        tint = tint.darkened(0.065)
+    return tint
+
+static func _vertex_height(grid_x: int, grid_z: int, scene: int) -> float:
+    # A shared corner function is essential: every neighboring land cell
+    # uses precisely the same vertex and cannot open a crack in the ground.
+    var sum: float = 0.0
+    var neighbors: int = 0
+    var near_road: bool = false
+    for dz in [-1,0]:
+        for dx in [-1,0]:
+            var x: int = grid_x+dx
+            var z: int = grid_z+dz
+            var biome: String = kind(x,z,scene)
+            if biome == "outside" or biome == "water":
+                continue
+            sum += height_at(x,z,scene)
+            neighbors += 1
+            near_road = near_road or biome == "road"
+    if neighbors == 0:
+        return WATER_LEVEL
+    var average: float = sum / float(neighbors)
+    # The road is a flattened cut through the ridge, not a floating slab.
+    return minf(average,0.235) if near_road else average
+
+static func _vertex_tint(grid_x: int, grid_z: int, scene: int) -> Color:
+    var result := Color(0,0,0,0)
+    var neighbors: int = 0
+    for dz in [-1,0]:
+        for dx in [-1,0]:
+            var x: int = grid_x+dx
+            var z: int = grid_z+dz
+            var biome: String = kind(x,z,scene)
+            if biome == "outside" or biome == "water":
+                continue
+            result += _ground_tint(biome,scene,x*29+z*43)
+            neighbors += 1
+    if neighbors == 0:
+        return SAND
+    return result * (1.0 / float(neighbors))
+
+static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
+        c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
+    # Deliberately unindexed: faceted normals describe readable low-poly relief.
+    surface.set_color(ca)
+    surface.set_uv(Vector2(a.x*0.05,a.z*0.05))
+    surface.add_vertex(a)
+    surface.set_color(cb)
+    surface.set_uv(Vector2(b.x*0.05,b.z*0.05))
+    surface.add_vertex(b)
+    surface.set_color(cc)
+    surface.set_uv(Vector2(c.x*0.05,c.z*0.05))
+    surface.add_vertex(c)
+
+static func _continuous_ground(parent: Node3D, scene: int) -> void:
+    var land := SurfaceTool.new()
+    land.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var water := SurfaceTool.new()
+    water.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for z in range(HEIGHT):
+        for x in range(WIDTH):
+            var biome: String = kind(x,z,scene)
+            var center: Vector3 = _cell_center(x,z)
+            var half: float = CELL*0.5
+            if biome == "water":
+                var a := center+Vector3(-half,WATER_LEVEL,-half)
+                var b := center+Vector3(half,WATER_LEVEL,-half)
+                var d := center+Vector3(half,WATER_LEVEL,half)
+                var e := center+Vector3(-half,WATER_LEVEL,half)
+                for triangle in [[a,e,b],[b,e,d]]:
+                    _triangle(water,triangle[0],triangle[1],triangle[2],
+                        WATER,WATER,WATER)
+                continue
+            var corners: Array[Vector3] = [
+                center+Vector3(-half,0,-half),
+                center+Vector3(half,0,-half),
+                center+Vector3(half,0,half),
+                center+Vector3(-half,0,half)]
+            var shades: Array[Color] = []
+            for i in range(4):
+                var dx: int = 1 if i == 1 or i == 2 else 0
+                var dz: int = 1 if i >= 2 else 0
+                corners[i].y = _vertex_height(x+dx,z+dz,scene)
+                shades.append(_vertex_tint(x+dx,z+dz,scene))
+            center.y = height_at(x,z,scene)
+            var face_color: Color = _ground_tint(biome,scene,x*29+z*43)
+            for i in range(4):
+                var nxt: int = (i+1)%4
+                _triangle(land,corners[i],center,corners[nxt],
+                    shades[i],face_color,shades[nxt])
+                var neighbor: Vector2i = [
+                    Vector2i(0,-1),Vector2i(1,0),
+                    Vector2i(0,1),Vector2i(-1,0)][i]
+                if kind(x+neighbor.x,z+neighbor.y,scene) in ["water","outside"]:
+                    # Exposed outer boundary or cliff down to the water.
+                    var below_a: Vector3 = corners[i]
+                    var below_b: Vector3 = corners[nxt]
+                    below_a.y = BASE_LEVEL
+                    below_b.y = BASE_LEVEL
+                    var cliff_tint: Color = face_color.darkened(0.31)
+                    _triangle(land,corners[i],below_a,corners[nxt],
+                        shades[i].darkened(0.17),cliff_tint,shades[nxt].darkened(0.17))
+                    _triangle(land,corners[nxt],below_a,below_b,
+                        shades[nxt].darkened(0.17),cliff_tint,cliff_tint)
+    land.generate_normals()
+    water.generate_normals()
+    var ground := MeshInstance3D.new()
+    ground.name = "SueloContinuoConRelieve"
+    ground.mesh = land.commit()
+    var land_mat := StandardMaterial3D.new()
+    land_mat.vertex_color_use_as_albedo = true
+    land_mat.roughness = 0.92
+    land_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    ground.material_override = land_mat
+    parent.add_child(ground)
+    var water_surface := MeshInstance3D.new()
+    water_surface.name = "LaminaDeAguaContinua"
+    water_surface.mesh = water.commit()
+    water_surface.material_override = _material(WATER,0.28)
+    parent.add_child(water_surface)
+    _box(parent,"LechoSubmarino",Vector3(0,BASE_LEVEL-0.09,0),
+        Vector3(float(WIDTH)*CELL,0.20,float(HEIGHT)*CELL),DEEP_WATER)
+
+static func _bush(parent: Node3D, center: Vector3, seed: int,
+        coastal: bool) -> void:
+    var leaf: Color = Color("#56836b") if coastal else Color("#52794b")
+    var size: float = 0.28 + float(posmod(seed,5))*0.035
+    _cone(parent,"Matorral_%d" % seed,
+        center+Vector3(0,size*0.45,0),size,size*0.9,leaf,6)
+    _cone(parent,"MatorralCopa_%d" % seed,
+        center+Vector3(0,size*0.75,0),size*0.70,size*0.72,
+        leaf.lightened(0.16),6)
+
+static func _bridge(parent: Node3D, origin: Vector3, col: int) -> void:
+    # Visually traversable span above water. No tactical bridge type is added.
+    var deck_y: float = 0.28
+    _box(parent,"PuenteElevado_%d" % col,
+        origin+Vector3(0,deck_y,0),Vector3(CELL*1.008,0.18,1.38),ROAD)
+    for side in [-1.0,1.0]:
+        _box(parent,"BarandalPuente",
+            origin+Vector3(0,deck_y+0.43,side*0.79),
+            Vector3(CELL*1.008,0.085,0.10),ROAD_EDGE)
+        for post in [-0.88,0.88]:
+            _box(parent,"PostePuente",
+                origin+Vector3(post,deck_y+0.22,side*0.79),
+                Vector3(0.11,0.48,0.11),ROCK_LIGHT)
+    for mark in [-0.66,0.66]:
+        _box(parent,"MarcaPuente",
+            origin+Vector3(mark,deck_y+0.104,0),
+            Vector3(0.49,0.024,0.065),MARKER)
+    _box(parent,"PilarPuente",
+        origin+Vector3(0,-0.16,0),Vector3(0.34,0.70,1.04),
+        ROCK_LIGHT.darkened(0.12))
 
 static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> void:
     var size: float = 0.75 + float(posmod(seed,5))*0.085
