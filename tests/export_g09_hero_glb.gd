@@ -22,6 +22,32 @@ static func _group_for(node: Node) -> String:
         current = current.get_parent()
     return "Chassis_Tracks"
 
+static func _texture_id(tex: Texture2D) -> int:
+    return tex.get_instance_id() if tex != null else -1
+
+static func _shared_export_material(mat: Material, cache: Dictionary) -> Material:
+    # GLTF duplicates a unique texture set for every otherwise-identical
+    # StandardMaterial. Consolidating instances ONLY in the source export
+    # makes the editable 3D file much easier to work with in Blender; the
+    # live Android/HTML5 material and its node hierarchy remain unchanged.
+    if not mat is StandardMaterial3D:
+        return mat
+    var m: StandardMaterial3D = mat as StandardMaterial3D
+    var key: String = str([
+        m.albedo_color,m.metallic,m.roughness,
+        m.normal_enabled,m.normal_scale,m.emission_enabled,
+        m.emission,m.emission_energy_multiplier,
+        m.uv1_scale,m.uv1_offset,m.cull_mode,m.transparency,
+        m.texture_filter,_texture_id(m.albedo_texture),
+        _texture_id(m.normal_texture),
+        _texture_id(m.roughness_texture),
+        _texture_id(m.metallic_texture),
+        _texture_id(m.emission_texture)
+    ])
+    if not cache.has(key):
+        cache[key] = mat
+    return cache[key]
+
 func _run() -> void:
     var source: Node3D = Models.build("tank",0)
     assert(source != null and source.get_meta("tarvoka_mbt_sculpted_v10",false))
@@ -44,6 +70,7 @@ func _run() -> void:
     }
     var count: int = 0
     var baked: int = 0
+    var material_cache: Dictionary = {}
     for node in source.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D = node as MeshInstance3D
         if not part.is_visible_in_tree() or part.mesh == null:
@@ -52,7 +79,7 @@ func _run() -> void:
         var clone := MeshInstance3D.new()
         clone.name = str(part.name)
         clone.mesh = part.mesh
-        clone.material_override = part.material_override
+        clone.material_override = _shared_export_material(part.material_override,material_cache)
         clone.transform = target.global_transform.affine_inverse()*part.global_transform
         target.add_child(clone)
         count += 1
@@ -65,7 +92,7 @@ func _run() -> void:
             var instance := MeshInstance3D.new()
             instance.name = "%s_%03d" % [batch.name,i]
             instance.mesh = batch.multimesh.mesh
-            instance.material_override = batch.material_override
+            instance.material_override = _shared_export_material(batch.material_override,material_cache)
             var local: Transform3D = batch.multimesh.get_instance_transform(i)
             instance.transform = group.global_transform.affine_inverse()*batch.global_transform*local
             group.add_child(instance)
@@ -89,7 +116,7 @@ func _run() -> void:
     assert(source_glb != null and source_glb.get_length() > 10000)
     var length: int = source_glb.get_length()
     source_glb.close()
-    print("PASS G09 V10 GLB export: %d true meshes, %d baked running-gear parts, %d bytes, 3 editable mechanical groups" % [count,baked,length])
+    print("PASS G09 V10 GLB export: %d true meshes, %d baked running-gear parts, %d bytes, %d shared authored materials, 3 editable mechanical groups" % [count,baked,length,material_cache.size()])
     artist.queue_free()
     source.queue_free()
     quit(0)
