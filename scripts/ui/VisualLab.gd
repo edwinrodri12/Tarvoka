@@ -448,6 +448,10 @@ func demo_move() -> void:
     if best.x < 0:
         feedback_label.text = "Sin movimiento legal para esta unidad y este terreno."
         return
+    # BattleSession intentionally strips movement metadata from its public
+    # response. Use the SAME authoritative Rules.reachable cost just used
+    # to choose the legal destination; never report an invented zero.
+    var travel_cost: int = int(reachable[best])
     var result: Dictionary = Session.move(state_before,"LAB-A",best)
     if not bool(result.get("valid",false)):
         feedback_label.text = "Movimiento rechazado por las reglas del juego."
@@ -457,7 +461,7 @@ func demo_move() -> void:
     lab_board.queue_redraw()
     _recent_action = "move"
     feedback_label.text = "MOVIMIENTO REAL: %s · %d puntos de recorrido. Movimiento animado por casillas." % [
-        Roles.label(_selected_role(attacker_picker)),int(result.get("cost",0))]
+        Roles.label(_selected_role(attacker_picker)),travel_cost]
 
 func repeat_action() -> void:
     match _recent_action:
