@@ -215,6 +215,8 @@ jobs:
           path: |
             build/web/
             artifacts/tarvoka_web_3d_studio.png
+            artifacts/tarvoka_terrain_studio_3d.png
+            artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
