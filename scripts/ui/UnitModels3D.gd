@@ -19,6 +19,27 @@ const WATER := Color("#568596")
 static func supports(role: String) -> bool:
     return role in ROLES
 
+static func production_asset_path(role: String) -> String:
+    # Production-ready GLB files replace native blockouts without touching
+    # battles, UI, faction rules or the shared rendering cache.
+    return "res://assets/units3d/" + role + ".glb" if supports(role) else ""
+
+static func _imported_model(role: String) -> Node3D:
+    var path: String = production_asset_path(role)
+    if path.is_empty() or not ResourceLoader.exists(path):
+        return null
+    var packed: PackedScene = load(path) as PackedScene
+    if packed == null:
+        push_warning("TARVOKA: invalid 3D scene " + path)
+        return null
+    var imported: Node = packed.instantiate()
+    if imported is Node3D:
+        imported.name = "Modelo3D_" + role
+        return imported as Node3D
+    imported.free()
+    push_warning("TARVOKA: 3D model root must be Node3D: " + path)
+    return null
+
 static func _material(color: Color, metal: float = 0.15) -> StandardMaterial3D:
     var mat := StandardMaterial3D.new()
     mat.albedo_color = color
@@ -405,6 +426,10 @@ static func _destroyer(root: Node3D) -> void:
 static func build(role: String) -> Node3D:
     if not supports(role):
         return null
+    var imported: Node3D = _imported_model(role)
+    if imported != null:
+        return imported
+    # Authored native 3D mesh fallback, never a fake 2D illustration.
     var model := Node3D.new()
     model.name = "Modelo3D_" + role
     match role:
