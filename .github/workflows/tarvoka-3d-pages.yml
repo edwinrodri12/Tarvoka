@@ -18,12 +18,13 @@ permissions:
   id-token: write
 
 concurrency:
-  group: tarvoka-production-3d-pages
+  # Failed/PR checks must not cancel a valid native 3D studio publication.
+  group: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && 'publish' || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
