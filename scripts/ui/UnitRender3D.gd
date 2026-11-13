@@ -264,7 +264,7 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             var elapsed: float = float(effect.get("elapsed",0))
             var duration: float = float(effect.get("duration",UnitMotionVFX.DEFAULT_DURATION))
             desired[unit_id] = {
-                "faction": int(unit["faction"]), "kind":"move",
+                "faction": int(unit.get("display_faction",unit["faction"])), "kind":"move",
                 "progress":elapsed/maxf(duration,0.01),
                 "heading":UnitMotionVFX.heading(route,elapsed,duration)
             }
@@ -282,7 +282,7 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             if fog_enabled and int(unit.get("faction",1)) != 0 and not visible_cells.has(origin):
                 break
             desired[str(unit["id"])] = {
-                "faction":int(unit["faction"]), "kind":"attack",
+                "faction":int(unit.get("display_faction",unit["faction"])), "kind":"attack",
                 "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
                 "heading":target-origin
             }
@@ -303,7 +303,7 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             var victim_id: String = str(unit["id"])
             if not desired.has(victim_id):
                 desired[victim_id] = {
-                    "faction":int(unit["faction"]), "kind":"damaged",
+                    "faction":int(unit.get("display_faction",unit["faction"])), "kind":"damaged",
                     "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
                     "heading":Vector2i.ZERO
                 }
