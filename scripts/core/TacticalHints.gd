@@ -240,8 +240,9 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                     var move_cost: int = Rules.movement_cost_for(kind, Domains.domain(unit))
                     if move_cost >= 0:
                         var role: String = Roles.label(str(unit.get("role", ""))) if unit.has("role") else ("Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado")
-                        text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [
-                            role, terrain_name(kind), move_cost, int(unit.get("cover", 0))
+                        var cost_label: String = "0.5" if kind == "road" and Logistics.road_fast(unit) else str(move_cost)
+                        text += "\nRol: %s | Terreno: %s (entrar cuesta %s) | Cobertura unidad: %d" % [
+                            role, terrain_name(kind), cost_label, int(unit.get("cover", 0))
                         ]
                         if kind == "road" and Logistics.road_fast(unit):
                             text += " | Vehiculo motorizado: 2 casillas por punto en carretera"
