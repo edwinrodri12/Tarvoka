@@ -104,8 +104,29 @@ static func _mountain_peak(canvas: CanvasItem, center: Vector2,
         _line(canvas,left.lerp(tip,0.22),left.lerp(middle,0.43),
             Color("#5A6975"),hw*0.017)
 
+static func _rock_spur(canvas: CanvasItem, c: Vector2, hw: float,
+        index: int, detail: int) -> void:
+    # The spur ends exactly at the cardinal shared edge, matching a
+    # corresponding spur in the neighboring known mountain tile.
+    var exits: Array = [
+        Vector2(0.5,0.25),Vector2(-0.5,-0.25),
+        Vector2(-0.5,0.25),Vector2(0.5,-0.25)
+    ]
+    var edge: Vector2 = exits[index]*hw
+    var perpendicular := Vector2(-edge.y,edge.x).normalized()
+    var start_width: float = hw*0.22
+    var edge_width: float = hw*0.11
+    _polygon(canvas,[
+        c+perpendicular*start_width,c-perpendicular*start_width,
+        c+edge-perpendicular*edge_width,c+edge+perpendicular*edge_width
+    ],Color("#657681") if detail >= 2 else Color("#61717C"))
+    if detail >= 2:
+        _line(canvas,c+edge*0.23,c+edge*0.79,
+            Color("#87959A"),hw*0.014)
+
 static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
-        seed: int, neighbor_mask: int, detail: int) -> void:
+        seed: int, neighbor_mask: int, detail: int,
+        exposed_edges: int = 0) -> void:
     # Natural rock bed set inside its cell. A few faceted mountains
     # build elevation without changing the real Vector2i map.
     var rock_ground := Color("#596B66")
@@ -113,14 +134,18 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
         c+Vector2(0,-hw*0.43),c+Vector2(hw*0.84,0),
         c+Vector2(0,hw*0.40),c+Vector2(-hw*0.84,0)
     ],rock_ground)
-    # Exposed cliff edges are drawn only where the neighboring known
-    # cell is not mountain. No walls over an unknown fog cell.
-    if (neighbor_mask & EAST) == 0:
+    # Build ridgeline shoulders all the way to known mountain neighbors.
+    for direction_index in range(4):
+        if (neighbor_mask & (1 << direction_index)) != 0:
+            _rock_spur(canvas,c,hw,direction_index,detail)
+    # An exposed cliff is drawn only where an OBSERVED, different
+    # neighboring tile exists. Unknown fog neighbors cannot trigger one.
+    if (exposed_edges & EAST) != 0:
         _polygon(canvas,[
             c+Vector2(hw*0.84,0),c+Vector2(0,hw*0.40),
             c+Vector2(0,hw*0.52),c+Vector2(hw*0.84,hw*0.12)
         ],Color("#344954"))
-    if (neighbor_mask & SOUTH) == 0:
+    if (exposed_edges & SOUTH) != 0:
         _polygon(canvas,[
             c+Vector2(-hw*0.84,0),c+Vector2(0,hw*0.40),
             c+Vector2(0,hw*0.52),c+Vector2(-hw*0.84,hw*0.12)
