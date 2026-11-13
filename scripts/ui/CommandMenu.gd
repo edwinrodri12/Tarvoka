@@ -25,6 +25,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
+const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -54,6 +55,9 @@ func _ready() -> void:
     background.content_margin_top = 10
     background.content_margin_bottom = 10
     add_theme_stylebox_override("panel",background)
+    var backdrop := Backplate.new()
+    backdrop.mode = "command"
+    add_child(backdrop)
     var column := VBoxContainer.new()
     column.size_flags_vertical = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation",9)
