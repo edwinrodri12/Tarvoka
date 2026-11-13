@@ -12,6 +12,8 @@ var level_picker: OptionButton
 var building_state_picker: OptionButton
 var building_controls: VBoxContainer
 var _unit_only_controls: Array[Control] = []
+var hq_compare_button: Button
+var _hq_show_v2 := true
 
 func _ready() -> void:
     super._ready()
@@ -60,6 +62,10 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_controls.add_child(building_picker)
+    hq_compare_button = _button(building_controls,
+        "Comparar con diseño anterior (V1)",_toggle_hq_finish)
+    hq_compare_button.name = "CompararAcabadoDeEdificio"
+    hq_compare_button.custom_minimum_size.y = 49
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -89,6 +95,14 @@ func _add_building_mode() -> void:
     var index: int = column.get_children().find(faction_picker)
     column.move_child(building_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
+
+func _toggle_hq_finish() -> void:
+    _hq_show_v2 = not _hq_show_v2
+    hq_compare_button.text = (
+        "Volver al diseño arquitectónico V2" if not _hq_show_v2
+        else "Comparar con diseño anterior (V1)")
+    if _role == "headquarters":
+        _display_headquarters()
 
 func _switch_category(index: int) -> void:
     if index < 0 or index > 1:
@@ -127,7 +141,7 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition)
+    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2)
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
@@ -156,7 +170,8 @@ func _update_details() -> void:
     var faction: int = int(model_root.get_meta("visual_faction",0))
     var condition: String = str(model_root.get_meta("visual_condition","operativo"))
     var meshes: int = Models.inspect_meshes(model_root)
-    detail_label.text = "Cuartel General · Nivel %d · %d mallas 3D" % [level,meshes]
+    detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
+        "ARQUITECTURA V2" if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
     status_label.text = "%s · %s · Piezas de color: %d" % [
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),
