@@ -1037,7 +1037,8 @@ func _open_command_menu() -> void:
 
 func _focus_command_unit(unit_id: String) -> void:
     for unit in board.state.get("units",[]):
-        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != int(board.state.get("faction",-1)):
+        var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",-1))
+        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != viewer:
             continue
         board.cancel_selection()
         board.selected_id = unit_id
