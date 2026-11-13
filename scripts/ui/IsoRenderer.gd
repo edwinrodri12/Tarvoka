@@ -16,6 +16,8 @@ const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
+const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
+const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 static var last_frame_stats: Dictionary = {}
 
 static func _projected_center(cell: Vector2i, base: Vector2, hw: float) -> Vector2:
@@ -47,7 +49,8 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, di
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
-        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "") -> void:
+        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
+        site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1)) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -125,19 +128,20 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             canvas.draw_polyline(_ring(badge), tint.darkened(0.15), maxf(1.0, hw * 0.025), true)
 
     if state.has("economy"):
-        for site in state["economy"]["sites"]:
-            var cell: Vector2i = site["pos"]
-            if (fog and not explored.has(cell)) or not bounds.has_point(cell):
+        # Direct painter callers may omit the board's cached snapshot.
+        var draw_markers: Array = site_markers if not site_markers.is_empty() else SiteOverlayData.snapshots(state,0)
+        for marker in draw_markers:
+            var cell: Vector2i = marker["pos"]
+            if not bounds.has_point(cell):
                 continue
-            var owner: int = int(site["owner"]) if not fog or visible.has(cell) or int(site["owner"]) == 0 else -1
-            var tint := Color("#E5C57D")
-            if owner in [0,1]:
-                tint = VisualStyle.faction_color(owner)
-            var c: Vector2 = _center(cell, canvas, zoom, pan, dims)
-            WorldArt.draw_site(canvas, str(site["kind"]), c, hw*0.46, tint, phase)
-            if cell == selected_factory_pos:
-                canvas.draw_polyline(_ring(_poly(cell, canvas, zoom, pan, dims)),
-                    Color("#FFE451"), maxf(2.0, hw * 0.055), true)
+            var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
+            var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
+            WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
+            var selected: bool = cell == selected_factory_pos or cell == inspected_cell
+            SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver)
+            if selected:
+                canvas.draw_polyline(_ring(_poly(cell,canvas,zoom,pan,dims)),
+                    Color("#FFE451"),maxf(2.0,hw*0.055),true)
 
     # Read-only enemy inspection and friendly move+weapon envelopes. Orange
     # marks a possible shot AFTER a separate legal move, never an instant shot.

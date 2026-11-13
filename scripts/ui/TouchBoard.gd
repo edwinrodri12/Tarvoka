@@ -19,6 +19,8 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
+const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
@@ -41,6 +43,8 @@ var require_order_confirmation := false # Main enables safer two-stage taps; leg
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
 var inspected_cell := Vector2i(-1,-1) # UI-only terrain/building inspection; not saved.
+var _site_overlay_key := -1
+var _site_overlay_snapshot: Array = []
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var last_economy_report := ""
@@ -263,10 +267,23 @@ func _board_origin() -> Vector2:
 static func fog_cover_color(has_explored: bool) -> Color:
     return Color(0.025, 0.035, 0.05, 0.73) if has_explored else Color(0.015, 0.025, 0.04, 1.0)
 
+func site_overlay_snapshots() -> Array:
+    if not state.has("economy"):
+        return []
+    # Derive only when battle data or sight changes, never on every idle frame.
+    # UI-only selection is passed to painters, not stored in the snapshot.
+    var key: int = hash([state.get("units",[]),state.get("economy",{}),state.get("faction",-1),
+        state.get("winner",-1),state.get("fog_enabled",false),state.get("explored",{})])
+    if key != _site_overlay_key:
+        _site_overlay_key = key
+        _site_overlay_snapshot = SiteOverlayData.snapshots(state,0)
+    return _site_overlay_snapshot
+
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
-            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id)
+            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
+            inspected_enemy_id,site_overlay_snapshots(),inspected_cell)
         _draw_campaign_markers()
         return
     var tile := _cell_size()
@@ -331,31 +348,26 @@ func _draw() -> void:
             ])
             marker.append(marker[0])
             draw_polyline(marker, signal_color, maxf(2.0, tile * 0.055), true)
-    # Urban installations use distinct shapes and letters. Sites not yet
-    # explored stay hidden; the current owner stays unknown outside sight.
+    # Decorative overlays reuse one fog-safe snapshot on classic and iso maps.
+    # Enemy property changes outside sight remain visually unconfirmed.
     if state.has("economy"):
-        for site in state["economy"]["sites"]:
-            var city_cell: Vector2i = site["pos"]
-            if fog and not explored.has(city_cell):
-                continue
-            var known_owner: int = int(site["owner"]) if not fog or visible.has(city_cell) or int(site["owner"]) == 0 else -1
-            var city_tint := Color(0.94, 0.79, 0.39)
-            if known_owner == 0:
-                city_tint = Color(0.35, 0.73, 0.99)
-            elif known_owner == 1:
-                city_tint = Color(1.0, 0.45, 0.39)
+        for marker in site_overlay_snapshots():
+            var city_cell: Vector2i = marker["pos"]
+            var city_tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
             var top_left := origin + Vector2(city_cell) * tile
             var center := top_left + Vector2.ONE * (tile * 0.5)
-            var is_town: bool = str(site["kind"]) == "city"
+            var is_town: bool = str(marker["kind"]) == "city"
             var half: float = tile * (0.30 if is_town else 0.35)
-            draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), Color(0.03,0.07,0.10,0.82))
-            draw_rect(Rect2(center-Vector2.ONE*half, Vector2.ONE*(half*2)), city_tint, false, maxf(2.0,tile*0.065))
+            draw_rect(Rect2(center-Vector2.ONE*half,Vector2.ONE*(half*2)),Color(0.03,0.07,0.10,0.82))
+            draw_rect(Rect2(center-Vector2.ONE*half,Vector2.ONE*(half*2)),city_tint,false,maxf(2.0,tile*0.065))
             if tile >= 20.0:
                 var markers := {"city":"C","factory":"F","armor_plant":"B","artillery_depot":"A","drone_center":"D","airbase":"H","shipyard":"P"}
-                var symbol: String = str(markers.get(str(site["kind"]), "?"))
-                draw_string(font, center+Vector2(-tile*0.14,tile*0.12), symbol, HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(11.0,tile*0.27)), city_tint)
-            if city_cell == selected_factory_pos:
-                draw_rect(Rect2(top_left,Vector2.ONE*tile),Color.YELLOW,false,3.0)
+                var symbol: String = str(markers.get(str(marker["kind"]),"?"))
+                draw_string(font,center+Vector2(-tile*0.14,tile*0.12),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,int(max(11.0,tile*0.27)),city_tint)
+            var selected: bool = city_cell == selected_factory_pos or city_cell == inspected_cell
+            SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected)
+            if selected:
+                draw_rect(Rect2(top_left,Vector2.ONE*tile),Color("#FFE451"),false,maxf(2.0,tile*0.045))
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
