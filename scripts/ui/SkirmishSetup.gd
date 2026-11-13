@@ -6,6 +6,7 @@ signal back_requested
 signal advanced_requested
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -27,7 +28,9 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var bg := StyleBoxFlat.new()
-    bg.bg_color = Color("#091520")
+    bg.bg_color = Color("#081824")
+    bg.border_color = Chrome.EDGE_BRIGHT
+    bg.border_width_top = 3
     bg.content_margin_left = 12
     bg.content_margin_right = 12
     bg.content_margin_top = 8
@@ -44,13 +47,14 @@ func _ready() -> void:
     heading.text = "PREPARAR ESCARAMUZA"
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_theme_color_override("font_color",Color("#F1D58C"))
-    heading.add_theme_font_size_override("font_size",21)
+    heading.add_theme_font_size_override("font_size",24)
     header.add_child(heading)
     var back := Button.new()
     back.text = "Volver"
     back.custom_minimum_size = Vector2(90,46)
     back.pressed.connect(func(): back_requested.emit())
     header.add_child(back)
+    Chrome.emphasize(back,"secondary")
 
     var scroller := ScrollContainer.new()
     scroller.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -112,9 +116,12 @@ func _ready() -> void:
     _section(content,"4  ·  Resumen de preparacion")
     summary = Label.new()
     summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    summary.add_theme_font_size_override("font_size",15)
-    summary.add_theme_color_override("font_color",Color("#E2E8E9"))
-    content.add_child(summary)
+    summary.add_theme_font_size_override("font_size",16)
+    summary.add_theme_color_override("font_color",Chrome.TEXT)
+    var summary_card := PanelContainer.new()
+    summary_card.add_theme_stylebox_override("panel",Chrome.box_style(Color("#122B3D"),Chrome.EDGE_BRIGHT,10,12))
+    content.add_child(summary_card)
+    summary_card.add_child(summary)
 
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",6)
@@ -131,14 +138,15 @@ func _ready() -> void:
     start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     start_button.pressed.connect(func(): start_requested.emit(options()))
     actions.add_child(start_button)
+    Chrome.emphasize(start_button,"success")
+    Chrome.emphasize(advanced,"secondary")
     apply_preset(1)
     hide()
 
 func _section(parent: VBoxContainer, text_value: String) -> void:
     var item := Label.new()
     item.text = text_value
-    item.add_theme_font_size_override("font_size",17)
-    item.add_theme_color_override("font_color",Color("#F1D58C"))
+    Chrome.section(item)
     parent.add_child(item)
 
 func _picker(parent: VBoxContainer, caption: String, items: Array) -> OptionButton:
@@ -165,6 +173,7 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.pressed.connect(func(): apply_preset(index))
     row.add_child(button)
+    Chrome.emphasize(button,"primary" if index == 1 else "secondary")
 
 func apply_preset(index: int) -> void:
     match index:
