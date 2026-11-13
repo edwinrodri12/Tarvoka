@@ -370,6 +370,57 @@ static func slide_tracks(model: Node3D, phase: float) -> void:
             belt.multimesh.set_instance_transform(i,_track_transform(
                 side,float(i)/float(TRACK_COUNT)+phase))
 
+static func _sprockets(hull: Node3D) -> void:
+    # Actual visible drive sprockets and idler discs behind both ends of
+    # each revolving track. One tooth MultiMesh preserves the phone budget.
+    var teeth: Array = []
+    for side in [-1,1]:
+        var sign: float = float(side)
+        for end in [-1,1]:
+            var z: float = float(end)*TRACK_HALF_STRAIGHT
+            var drum := MeshInstance3D.new()
+            drum.name = "RuedaMotrizG09_%s_%s" % [side,end]
+            var cylinder := CylinderMesh.new()
+            cylinder.top_radius = 0.232
+            cylinder.bottom_radius = 0.232
+            cylinder.height = 0.087
+            cylinder.radial_segments = 32
+            drum.mesh = cylinder
+            drum.material_override = _army_material(METAL,false)
+            drum.position = Vector3(sign*1.303,0.327,z)
+            drum.rotation_degrees.z = 90.0
+            hull.add_child(drum)
+            var hub := MeshInstance3D.new()
+            hub.name = "EjeMotrizG09_%s_%s" % [side,end]
+            var hub_mesh := CylinderMesh.new()
+            hub_mesh.top_radius = 0.095
+            hub_mesh.bottom_radius = 0.095
+            hub_mesh.height = 0.018
+            hub_mesh.radial_segments = 24
+            hub.mesh = hub_mesh
+            hub.material_override = _army_material(WEAR,false)
+            hub.position = Vector3(sign*1.355,0.327,z)
+            hub.rotation_degrees.z = 90.0
+            hull.add_child(hub)
+            for n in range(12):
+                var angle: float = TAU*float(n)/12.0
+                var center := Vector3(sign*1.357,
+                    0.327+0.23*cos(angle),z+0.23*sin(angle))
+                teeth.append(Transform3D(Basis(Vector3.RIGHT,angle),center))
+    var teeth_node := MultiMeshInstance3D.new()
+    teeth_node.name = "DientesCoronasMotricesG09"
+    var steel_tooth := BoxMesh.new()
+    steel_tooth.size = Vector3(0.024,0.046,0.037)
+    var mm := MultiMesh.new()
+    mm.transform_format = MultiMesh.TRANSFORM_3D
+    mm.mesh = steel_tooth
+    mm.instance_count = teeth.size()
+    for i in range(teeth.size()):
+        mm.set_instance_transform(i,teeth[i])
+    teeth_node.multimesh = mm
+    teeth_node.material_override = _army_material(METAL,false)
+    hull.add_child(teeth_node)
+
 static func apply_final_materials(model: Node3D) -> void:
     # Called AFTER TankSurface.apply_finish because generic PBR processing
     # installs another albedo texture. This guarantees the actual original
@@ -536,6 +587,8 @@ static func apply(model: Node3D) -> bool:
         var antenna: Node3D = model.find_child("AntenaTorre%s" % side,true,false) as Node3D
         if antenna != null:
             antenna.visible = false
+
+    _sprockets(hull)
 
     # Low faceted turret whose silhouette is produced by the *actual hull*
     # rather than a rectangular core covered by isolated cubes.
