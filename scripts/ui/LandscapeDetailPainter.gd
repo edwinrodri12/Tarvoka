@@ -8,6 +8,7 @@ const EAST := 1
 const WEST := 2
 const SOUTH := 4
 const NORTH := 8
+const TextureAtlas = preload("res://scripts/ui/TerrainTextureAtlas.gd")
 
 static func _polygon(canvas: CanvasItem, vertices: Array, tint: Color) -> void:
     var points := PackedVector2Array()
@@ -68,13 +69,13 @@ static func draw_forest(canvas: CanvasItem, c: Vector2, hw: float,
         var edge: Vector2 = c+joins[i]*hw
         canvas.draw_circle(edge,hw*0.15,Color("#1A4B36"))
     # Understory and stones are deterministic, without per-frame RNG.
-    var count: int = 7 if detail >= 2 else 4
+    var count: int = 6 if detail >= 2 else 4
     for i in range(count):
         var jitter: int = posmod(seed*31+i*47,97)
         var horizontal: float = float(posmod(seed*7+i*31,29)-14)/20.0
         var vertical: float = float(posmod(seed*11+i*13,23)-11)/40.0
         var at := c+Vector2(horizontal*hw*0.79,vertical*hw*0.61)
-        var height: float = hw*(0.37+float(jitter%5)*0.039)
+        var height: float = hw*(0.43+float(jitter%7)*0.042)
         # draw farthest trees first; lower row overlaps naturally
         _pine(canvas,at,height,jitter,detail >= 2)
     if detail >= 2:
@@ -94,6 +95,12 @@ static func _mountain_peak(canvas: CanvasItem, center: Vector2,
     var right_face := Color("#465967") if variant%2==0 else Color("#57636B")
     _polygon(canvas,[left,tip,middle],left_face)
     _polygon(canvas,[tip,right,middle],right_face)
+    # Textured slope triangles preserve the original volume/silhouette.
+    if detail >= 2:
+        TextureAtlas.draw_facet(canvas,
+            PackedVector2Array([left,tip,middle]),detail,variant)
+        TextureAtlas.draw_facet(canvas,
+            PackedVector2Array([tip,right,middle]),detail,variant+7)
     var snow_left := tip.lerp(left,0.26)
     var snow_right := tip.lerp(right,0.25)
     if detail >= 2:
@@ -150,18 +157,24 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
             c+Vector2(-hw*0.84,0),c+Vector2(0,hw*0.40),
             c+Vector2(0,hw*0.52),c+Vector2(-hw*0.84,hw*0.12)
         ],Color("#67746C"))
+    # Differing dominant peaks (rather than the same 3 triangles per
+    # tile) make the ridge appear less mechanically repetitive.
+    var style: int = posmod(seed*73+19,5)
+    var primary_reach: float = 0.77+0.045*float(style)
+    var primary_at := c+Vector2(
+        (float(style)-2.0)*hw*0.036,-hw*0.078)
+    _mountain_peak(canvas,primary_at,hw,primary_reach,seed,detail)
     if detail >= 2:
-        _mountain_peak(canvas,c+Vector2(hw*0.18,-hw*0.10),
-            hw,0.64,seed,detail)
-        _mountain_peak(canvas,c+Vector2(-hw*0.23,hw*0.065),
-            hw,0.51,seed+5,detail)
-        _mountain_peak(canvas,c+Vector2(hw*0.30,hw*0.18),
-            hw,0.34,seed+11,detail)
-    else:
-        _mountain_peak(canvas,c+Vector2(-hw*0.11,-hw*0.045),
-            hw,0.70,seed,detail)
-        _mountain_peak(canvas,c+Vector2(hw*0.23,hw*0.12),
-            hw,0.45,seed+7,detail)
+        var secondary_at := c+Vector2(
+            (-0.23+float(style%3)*0.06)*hw,hw*0.11)
+        _mountain_peak(canvas,secondary_at,hw,
+            0.39+0.04*float(style%3),seed+5,detail)
+        if style == 0 or style == 3:
+            _mountain_peak(canvas,c+Vector2(hw*0.31,hw*0.17),
+                hw,0.27+float(style)*0.013,seed+11,detail)
+    elif style >= 2:
+        _mountain_peak(canvas,c+Vector2(hw*0.21,hw*0.14),
+            hw,0.38,seed+7,detail)
 
 static func draw_bridge(canvas: CanvasItem, c: Vector2, hw: float,
         axis: int, detail: int) -> void:
