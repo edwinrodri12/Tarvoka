@@ -12,6 +12,7 @@ const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
+const TankArt = preload("res://scripts/ui/TankArtV6.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -733,6 +734,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true) 
             # Shape overhaul: truly sealed armored hull and turret from all
             # angles, not accessory detail layered over the first blockout.
             TankSilhouette.apply(model)
+            TankArt.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         TankDamage.prepare(model)
