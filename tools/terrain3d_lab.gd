@@ -5,6 +5,7 @@ class_name TarvokaTerrain3DLab
 # terrain grid via set_terrain(), but never writes gameplay state.
 # Native 3D textures/lighting and mesh resources; NOT a screenshot mock-up.
 const TerrainMesh = preload("res://scripts/ui/Terrain3DMesh.gd")
+const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 var terrain: Array = []
 var observed: Dictionary = {}
 var restrict_to_observed := false
@@ -13,6 +14,7 @@ var _ground: MeshInstance3D
 var _water: MeshInstance3D
 var _canopies: MultiMeshInstance3D
 var _trunks: MultiMeshInstance3D
+var _bridges: Node3D
 var _camera: Camera3D
 
 static func sample_terrain() -> Array:
@@ -30,7 +32,7 @@ static func sample_terrain() -> Array:
                 kind = "forest"
             if (y < 5 and x in [8,9]) or (
                     y == 5 and x in [9,10]) or (
-                    y == 6 and x in [10,11]) or (
+                    y == 6 and x in [9,10,11]) or (
                     y >= 7 and x >= 11):
                 kind = "water"
             if y == 5 and x >= 2 and x <= 14:
@@ -53,6 +55,9 @@ func _ready() -> void:
     _trunks = MultiMeshInstance3D.new()
     _trunks.name = "ForestTrunks"
     add_child(_trunks)
+    _bridges = Node3D.new()
+    _bridges.name = "RiverBridgeStructures"
+    add_child(_bridges)
     if terrain.is_empty():
         terrain = sample_terrain()
     rebuild()
@@ -118,6 +123,7 @@ func rebuild() -> void:
         terrain,observed,restrict_to_observed,
         maxi(6,divisions*2))
     _generate_forest()
+    _generate_bridges()
     _fit_camera()
 
 func _generate_forest() -> void:
@@ -193,3 +199,69 @@ func _generate_forest() -> void:
             trunk_basis,p+Vector3(0,scale*0.23,0)))
     _canopies.multimesh = leaf_instances
     _trunks.multimesh = trunk_instances
+
+func _box(parent: Node3D, name: String, dimensions: Vector3,
+        position: Vector3, material: Material) -> void:
+    var visual := MeshInstance3D.new()
+    visual.name = name
+    var shape := BoxMesh.new()
+    shape.size = dimensions
+    shape.material = material
+    visual.mesh = shape
+    visual.position = position
+    parent.add_child(visual)
+
+func _generate_bridges() -> void:
+    if _bridges == null:
+        return
+    for child in _bridges.get_children():
+        child.queue_free()
+    var asphalt := StandardMaterial3D.new()
+    asphalt.albedo_color = Color("#6A7377")
+    asphalt.roughness = 0.92
+    var edge_metal := StandardMaterial3D.new()
+    edge_metal.albedo_color = Color("#B3BDBD")
+    edge_metal.metallic = 0.42
+    edge_metal.roughness = 0.62
+    for y in range(terrain.size()):
+        if not (terrain[y] is Array):
+            continue
+        for x in range((terrain[y] as Array).size()):
+            var cell := Vector2i(x,y)
+            if not TerrainMesh.observed_cell(
+                    terrain,cell,observed,restrict_to_observed):
+                continue
+            var axis: int = Topology.bridge_axis(
+                terrain,cell,observed,restrict_to_observed)
+            if axis == 0:
+                continue
+            # Decorative and read-only: the existing 'road' cell is
+            # authoritative for unit movement and terrain costs.
+            var center := Vector3(float(x)+0.5,
+                maxf(TerrainMesh.height_at(terrain,cell,0.5,0.5,
+                    observed,restrict_to_observed),
+                    TerrainMesh.WATER_LEVEL+0.42),
+                float(y)+0.5)
+            var group := Node3D.new()
+            group.name = "Bridge_%s_%s" % [x,y]
+            _bridges.add_child(group)
+            var deck_size := Vector3(1.16,0.13,0.34) if axis == 1 else (
+                Vector3(0.34,0.13,1.16))
+            _box(group,"Deck",deck_size,center,asphalt)
+            for side in [-1,1]:
+                var rail_pos: Vector3 = center+(
+                    Vector3(0,0.20,float(side)*0.17) if axis == 1 else (
+                    Vector3(float(side)*0.17,0.20,0)))
+                var rail_size := Vector3(1.15,0.07,0.055) if axis == 1 else (
+                    Vector3(0.055,0.07,1.15))
+                _box(group,"Rail_%s" % side,rail_size,rail_pos,edge_metal)
+            for place in [-1,1]:
+                var support_pos := center + (
+                    Vector3(float(place)*0.28,0,0) if axis == 1 else (
+                    Vector3(0,0,float(place)*0.28)))
+                var height: float = maxf(0.15,center.y-
+                    TerrainMesh.WATER_LEVEL+0.18)
+                _box(group,"Support_%s" % place,
+                    Vector3(0.09,height,0.10),
+                    Vector3(support_pos.x,center.y-height*0.53,
+                        support_pos.z),edge_metal)
