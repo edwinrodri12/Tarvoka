@@ -47,7 +47,7 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, di
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
-        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "") -> void:
+        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "", three_d_models: Node = null) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -229,7 +229,17 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 pose = "attack"
                 visual_heading = effect["target"] - cell
                 break
-        var sprite: Texture2D = null if detail == VisualBudget.DETAIL_COMPACT else UnitSprites.frame_texture(role,pose)
+        # The authored Godot 3D meshes are captured to reusable orthographic
+        # textures once and used here by real battle units. Existing 2D
+        # combat/damage poses remain the deterministic fallback until every
+        # 3D animation has been modeled and validated on Android.
+        var sprite: Texture2D = null
+        var from_3d := false
+        if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null and pose in ["idle","move"]:
+            sprite = three_d_models.call("texture_for",role) as Texture2D
+            from_3d = sprite != null
+        if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
+            sprite = UnitSprites.frame_texture(role,pose)
         if detail == VisualBudget.DETAIL_COMPACT:
             # Screen-space, high-contrast military markers stay legible where
             # a full 96px original sprite would become an indistinct 8px blur.
@@ -243,13 +253,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 canvas.draw_line(c+Vector2(0,-marker_radius),c+Vector2(0,marker_radius),
                     Color("#BDF2F3"),maxf(1.0,hw*0.09),true)
         elif sprite != null:
-            var sprite_size := hw * (0.94 if is_air else 0.88)
-            var rotation: float = BattleVFX.sprite_rotation(role,
+            var sprite_size := hw * (1.34 if from_3d else (0.94 if is_air else 0.88))
+            var rotation: float = 0.0 if from_3d else BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
             canvas.draw_set_transform(c,rotation)
             canvas.draw_texture_rect(sprite,
                 Rect2(Vector2(-sprite_size*0.5,-sprite_size*0.56),Vector2.ONE*sprite_size),
-                false,face)
+                false,(Color.WHITE if bool(unit.get("acted",false)) == false else Color(0.72,0.72,0.72)) if from_3d else face)
             canvas.draw_set_transform(Vector2.ZERO)
         elif UnitArt.has_role(role):
             # Existing procedural silhouette is retained as a safe fallback.
