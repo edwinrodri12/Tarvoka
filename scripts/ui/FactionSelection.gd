@@ -28,6 +28,11 @@ var commander_notice: Label
 var band_color: ColorRect
 var confirm_button: Button
 var scroll: ScrollContainer
+var chooser_card: PanelContainer
+var dossier_card: PanelContainer
+var emblem_display_box: Control
+var commander_display_box: Control
+var is_portrait_layout := false
 
 # Official faction IDs, names, palettes and motifs are read ONLY from
 # VisualStyle. Artwork is loaded if genuinely present, never fabricated.
@@ -97,6 +102,7 @@ func _ready() -> void:
     chooser.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#102736"),Chrome.EDGE,9,11))
     content_rail.add_child(chooser)
+    chooser_card = chooser
     var chooser_col := VBoxContainer.new()
     chooser_col.add_theme_constant_override("separation",7)
     chooser.add_child(chooser_col)
@@ -141,6 +147,7 @@ func _ready() -> void:
     dossier.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0C2030"),Chrome.EDGE_BRIGHT,10,13))
     content_rail.add_child(dossier)
+    dossier_card = dossier
     var dossier_col := VBoxContainer.new()
     dossier_col.add_theme_constant_override("separation",9)
     dossier.add_child(dossier_col)
@@ -170,6 +177,7 @@ func _ready() -> void:
     var portrait_box := Control.new()
     portrait_box.custom_minimum_size = Vector2(122,122)
     portrait_center.add_child(portrait_box)
+    emblem_display_box = portrait_box
     portrait_fallback = ColorRect.new()
     portrait_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     portrait_fallback.color = Chrome.SURFACE_RAISED
@@ -201,6 +209,7 @@ func _ready() -> void:
     var commander_box := Control.new()
     commander_box.custom_minimum_size = Vector2(122,122)
     commander_center.add_child(commander_box)
+    commander_display_box = commander_box
     commander_fallback = ColorRect.new()
     commander_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     commander_fallback.color = Chrome.SURFACE_RAISED
@@ -279,6 +288,11 @@ func _choose_faction(index: int) -> void:
         selected[other] = selected[own]
     selected[own] = key
     _refresh()
+    # In phone portrait the dossier is above the long list; after a
+    # selection, reveal the actual commander portrait without requiring
+    # the user to scroll upward manually.
+    if is_portrait_layout and scroll != null:
+        scroll.scroll_vertical = 0
 
 func _refresh() -> void:
     if preview_title == null:
@@ -313,7 +327,7 @@ func _refresh() -> void:
         commander_fallback.color = color.darkened(0.78)
     preview_commander.text = ("COMANDANTE\nRetrato oficial de esta facción" if approved_commander != null else
         "COMANDANTE\nRetrato aprobado pendiente de incorporar al proyecto.")
-    selection_status.text = "BANDO %s  /  %s" % ["AZUL" if active_side == 0 else "ROJO",str(data.get("name",""))]
+    selection_status.text = "BANDO %d  /  %s" % [active_side+1,str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
 
 func _confirm() -> void:
@@ -324,10 +338,23 @@ func _reflow() -> void:
     if content_rail == null:
         return
     var viewport: Vector2 = get_viewport_rect().size
-    content_rail.vertical = viewport.x < 880.0
+    # Physical Android phones can be 1080px wide yet still be portrait.
+    # Use aspect ratio as well as width, not a fixed desktop breakpoint.
+    is_portrait_layout = viewport.y > viewport.x * 1.12 or viewport.x < 880.0
+    content_rail.vertical = is_portrait_layout
+    if chooser_card != null and dossier_card != null:
+        if is_portrait_layout:
+            content_rail.move_child(dossier_card,0)
+        else:
+            content_rail.move_child(chooser_card,0)
     for child in content_rail.get_children():
         if child is Control:
-            child.custom_minimum_size.x = 0 if content_rail.vertical else 310
+            child.custom_minimum_size.x = 0 if is_portrait_layout else 310
+    var art_width: float = 96.0 if is_portrait_layout and viewport.x < 460.0 else 122.0
+    if emblem_display_box != null:
+        emblem_display_box.custom_minimum_size = Vector2(art_width,art_width)
+    if commander_display_box != null:
+        commander_display_box.custom_minimum_size = Vector2(art_width,art_width)
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
