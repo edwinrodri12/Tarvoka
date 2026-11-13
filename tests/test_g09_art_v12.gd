@@ -86,6 +86,23 @@ func _run() -> void:
     sheet.blit_rect(refined,Rect2i(0,0,480,330),Vector2i(480,0))
     assert(sheet.save_png("res://artifacts/tarvoka_g09_v11_v12_same_camera.png") == OK)
 
+    # A tighter shared camera is the most honest way to review ceramic
+    # edges, side skirt seams and the cannon cradle, not hide them at 170px.
+    studio._reset_camera()
+    studio._change_zoom(1)
+    studio._change_zoom(1)
+    studio._change_zoom(1)
+    var finished_close: Image = await _capture(studio)
+    studio._toggle_v12()
+    assert(not studio._v12_preview and studio._v11_preview)
+    var previous_close: Image = await _capture(studio)
+    var close_sheet: Image = Image.create(960,330,false,Image.FORMAT_RGBA8)
+    close_sheet.blit_rect(previous_close,Rect2i(0,0,480,330),Vector2i(0,0))
+    close_sheet.blit_rect(finished_close,Rect2i(0,0,480,330),Vector2i(480,0))
+    assert(close_sheet.save_png("res://artifacts/tarvoka_g09_v11_v12_closeup.png") == OK)
+    studio._toggle_v12()
+    assert(studio._v12_preview)
+
     var four_angles: Image = Image.create(1920,330,false,Image.FORMAT_RGBA8)
     four_angles.fill(Color("#14232D"))
     for n in range(4):
