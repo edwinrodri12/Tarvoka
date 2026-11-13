@@ -229,6 +229,7 @@ jobs:
           grep -q "PASS G09 V12:" /tmp/g09-v12-art.log
           test -s artifacts/tarvoka_g09_v11_v12_same_camera.png
           test -s artifacts/tarvoka_g09_v12_four_angles.png
+          test -s artifacts/tarvoka_g09_v11_v12_closeup.png
       - name: Export fully editable V12 production model to glTF
         shell: bash
         run: |
@@ -278,6 +279,7 @@ jobs:
             artifacts/tarvoka_g09_v11_four_angles.png
             artifacts/tarvoka_g09_v11_v12_same_camera.png
             artifacts/tarvoka_g09_v12_four_angles.png
+            artifacts/tarvoka_g09_v11_v12_closeup.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
