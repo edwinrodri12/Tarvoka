@@ -14,6 +14,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
@@ -97,7 +98,14 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
                         maxf(1.0,hw*0.025),true)
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
-                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
+                    # Determine continuity only from observable neighbors:
+                    # no shoreline or road shape may reveal an unseen tile.
+                    var road_links: int = Topology.road_mask(
+                        state["terrain"],cell,visible,fog) if terrain == "road" else 0
+                    var shoreline: int = Topology.shore_mask(
+                        state["terrain"],cell,visible,fog) if terrain == "water" else 0
+                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
+                        road_links,shoreline)
                     decorated += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
