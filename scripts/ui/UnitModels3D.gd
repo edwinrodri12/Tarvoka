@@ -263,6 +263,23 @@ static func _apc(root: Node3D) -> void:
     _box(root,"LuzIzq",Vector3(-0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
     _box(root,"LuzDer",Vector3(0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
 
+# Small alpha-blended 3D effects belong to the rig. They are only shown
+# during real tactical actions, not as permanently glowing weapons.
+static func _tank_effect_mesh(parent: Node3D, label: String,
+        pos: Vector3, volume: Vector3, tint: Color,
+        emissive: bool = false) -> MeshInstance3D:
+    var mesh: MeshInstance3D = _sphere(parent,label,pos,volume,tint)
+    var material := StandardMaterial3D.new()
+    material.albedo_color = tint
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    if emissive:
+        material.emission_enabled = true
+        material.emission = Color("#FDC675")
+    mesh.material_override = material
+    return mesh
+
 # MBT v2: recognizable modern low-profile armor, compound sloped glacis, turret,
 # side skirt ERA, optic/cupola detail and an articulated long smoothbore cannon.
 # This is in-game editable 3D geometry; no insignias, decals or faction crests.
@@ -452,6 +469,42 @@ static func _tank(root: Node3D) -> void:
         Vector3(0.16,0.22,0.23),DARK)
     _box(rws,"CamaraArma",Vector3(-0.12,0.27,-0.15),
         Vector3(0.12,0.12,0.15),GLASS)
+    var muzzle_flash := Node3D.new()
+    muzzle_flash.name = "EfectoFogonazoCanon"
+    gun.add_child(muzzle_flash)
+    muzzle_flash.position = Vector3(0.0,0.0,-2.53)
+    _tank_effect_mesh(muzzle_flash,"NucleoLuminoso",Vector3(0,0,-0.12),
+        Vector3(0.42,0.37,0.74),Color(1,0.72,0.21,0.9),true)
+    _tank_effect_mesh(muzzle_flash,"LuzFogonazo",Vector3(0,0,-0.34),
+        Vector3(0.19,0.25,0.88),Color(1,0.91,0.58,0.95),true)
+    muzzle_flash.visible = false
+
+    var smoke := Node3D.new()
+    smoke.name = "EfectoHumoCanon"
+    gun.add_child(smoke)
+    smoke.position = Vector3(0.0,0.11,-2.67)
+    _tank_effect_mesh(smoke,"NubeHumo",Vector3(0,0,-0.12),
+        Vector3(0.52,0.37,0.54),Color(0.55,0.60,0.64,0.43))
+    _tank_effect_mesh(smoke,"VahoHumo",Vector3(0.15,0.24,-0.21),
+        Vector3(0.36,0.42,0.40),Color(0.70,0.75,0.78,0.26))
+    smoke.visible = false
+
+    var dust := Node3D.new()
+    dust.name = "EfectoPolvoOrugas"
+    root.add_child(dust)
+    for side in [-1,1]:
+        _tank_effect_mesh(dust,"NubePolvo%s" % side,
+            Vector3(float(side)*1.15,0.17,1.42),
+            Vector3(0.59,0.39,0.63),Color(0.55,0.52,0.44,0.34))
+    dust.visible = false
+
+    var battle_damage := Node3D.new()
+    battle_damage.name = "EfectoImpactoBlindaje"
+    turret.add_child(battle_damage)
+    _tank_effect_mesh(battle_damage,"EscarchaHumo",
+        Vector3(0.46,0.68,-0.35),
+        Vector3(0.68,0.45,0.51),Color(0.12,0.14,0.16,0.48))
+    battle_damage.visible = false
     # No shields or faction logos anywhere in the model.
 
 static func _mlrs(root: Node3D) -> void:
