@@ -920,7 +920,7 @@ func _process(_delta: float) -> void:
         # rather than consuming a third of the map with duplicate details.
         compact_info_body.visible = not compact_dossier.visible
         if objectives_panel != null and objectives_panel.visible:
-            objectives_panel.refresh_from_state(board.state,0)
+            objectives_panel.refresh_from_state(board.state,_radar_viewer())
         var field_text: String = BattleReport.field_summary(board.state)
         if board.state.has("opening"):
             var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
@@ -1221,17 +1221,21 @@ func _close_objectives_radar() -> void:
     objectives_panel.hide()
     objectives_scrim.hide()
 
+func _radar_viewer() -> int:
+    # Local hotseat uses the active human side; single player always blue.
+    return 0 if board.ai_enabled else int(board.state.get("faction",0))
+
 func _open_objectives_radar() -> void:
     if objectives_panel == null or board == null:
         return
     command_menu.hide()
     objectives_scrim.show()
-    objectives_panel.open_with_state(board.state,0)
+    objectives_panel.open_with_state(board.state,_radar_viewer())
 
 func _locate_objective_site(cell: Vector2i, category: String) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
         return
-    var snapshot: Dictionary = ObjectivesData.build(board.state,0)
+    var snapshot: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
     var known := false
     var choices: Array = snapshot.get("relays",[]) if category == "relay" else snapshot.get("sites",[])
     for item in choices:
@@ -1250,7 +1254,7 @@ func _locate_objective_site(cell: Vector2i, category: String) -> void:
 func _locate_objective_unit(unit_id: String) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
         return
-    var snapshot: Dictionary = ObjectivesData.build(board.state,0)
+    var snapshot: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
     var allowed := false
     for item in snapshot.get("alerts",[]):
         if item is Dictionary and str(item.get("id","")) == unit_id:
@@ -1259,7 +1263,7 @@ func _locate_objective_unit(unit_id: String) -> void:
     if not allowed:
         return
     for unit in board.state.get("units",[]):
-        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != 0 or int(unit.get("hp",0)) <= 0:
+        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != _radar_viewer() or int(unit.get("hp",0)) <= 0:
             continue
         board.cancel_selection()
         board.selected_id = unit_id
