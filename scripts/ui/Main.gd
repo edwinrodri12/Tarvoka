@@ -651,6 +651,7 @@ func _ready() -> void:
     command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
     command_menu.minimap_requested.connect(func(): _toggle_minimap(); command_menu.refresh())
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
+    command_menu.inspect_selection_requested.connect(_open_context_detail)
     command_menu.purchase_requested.connect(_purchase_command_unit)
     command_menu.home_requested.connect(_show_home_menu)
     command_menu.objectives_requested.connect(_open_objectives_radar)
