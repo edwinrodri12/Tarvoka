@@ -43,6 +43,25 @@ El motor `UnitRender3D` genera ocho capturas ortográficas de tanque en sus colo
 
 La interfaz de inspección permite seleccionar cualquiera de las ocho pinturas; cambiar la pintura en el visor no cambia la facción de una tropa ni las reglas de batalla.
 
+## Segunda etapa implementada: materiales, animación y rendimiento Android
+
+`TankSurface3D.gd` produce de forma reproducible pequeñas texturas PBR de albedo y normales tangenciales (96×96) para **blindaje, metal, orugas, ópticas y pintura de facción**. Los polígonos inclinados del casco incluyen coordenadas UV; el material regula brillo metálico, rugosidad y relieve por familia. Esto aporta detalle real a la malla, aunque **no equivale a un set artesanal definitivo de texturas fotográficas**.
+
+`TankVisualRig3D.gd` controla con nodos separados:
+- `TorretaGiratoria`: giro horizontal orientado al objetivo.
+- `ElevacionCanon`: elevación, retroceso y recuperación.
+- Ruedas, zapatas y bandas: giro/avance simulado y balanceo de suspensión.
+- FX de acción: fogonazo breve, humo de disparo, polvo de marcha y sacudida/humo de impacto. Se activan solo con los eventos correspondientes.
+- `restore()`: vuelve a reposo sin modificar HP, daño, munición ni resultados de combate.
+
+`UnitRender3D.gd` mantiene **máximo dos cámaras efímeras de acción** en combate con efectos 3D (movimiento, ataque, daño visible). Al finalizar la acción conserva la orientación de hasta **cuatro unidades** mediante capturas dormidas sin actualizaciones continuas de GPU, y libera la representación del enemigo al desaparecer bajo la niebla de guerra. El modo de ahorro de batería destruye estas cámaras y vuelve a las capturas estáticas.
+
+Las 15 vistas originales de 3D (siete clases neutras más ocho pinturas del tanque) se convierten a `ImageTexture` al inicio. Sus cámaras, luces y modelos estáticos se liberan para que Android no mantenga miles de piezas renderizándose ocultas. La imagen queda en memoria como sprite estático compatible con el motor táctico actual.
+
+En el **visor Android**, los botones `Orugas`, `Disparo` y `Detener` ejecutan las mismas articulaciones reales que utiliza la batalla. El usuario puede observar la torreta, el cañón, la suspensión y el efecto de disparo desde otros ángulos, además de cambiar pintura.
+
+Se añadió `tests/test_mbt_finishing_animation.gd` a la ejecución OpenGL real de GitHub Actions: verifica materiales PBR, UV, rotación del cañón, ruedas, FX, orientación conservada, limpieza por batería y visibilidad con niebla; publica `tarvoka_mbt_live_animation_frames.png` como evidencia. El resto de la batería de reglas, turnos, IA, mapa y guardados permanece activo.
+
 ## Pruebas y pendientes
 
 La prueba real con software OpenGL crea y revisa las 8 pinturas, valida que se vean distintas, verifica que todas tengan paneles pintables, que el casco neutral no cambie, que girar la torre y elevar el cañón sea posible, y genera `artifacts/tarvoka_mbt_8_faction_colors.png` para inspección. También ejecuta las pruebas previas de sprites, batallas, ahorro de batería, visibilidad y Android.
