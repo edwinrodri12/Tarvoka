@@ -1059,6 +1059,13 @@ func layout_for_size(view_size: Vector2) -> void:
     if main_layout == null or sidebar == null or board_holder == null:
         return
     var portrait := view_size.y > view_size.x * 1.12
+    # Five-command action rail belongs to the large-screen battlefield only.
+    # The phone's compact HUD has its own touch-sized controls; never cram a
+    # five-button desktop rail into 320–700px portrait board widths.
+    if expanded_actions != null:
+        expanded_actions.visible = not battle_hud_compact and view_size.x >= 760.0
+    if expanded_header != null:
+        expanded_header.visible = not battle_hud_compact and view_size.x >= 760.0
     main_layout.vertical = portrait
     if portrait:
         sidebar.custom_minimum_size = Vector2(0, 220)
