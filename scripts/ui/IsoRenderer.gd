@@ -230,13 +230,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 pose = "attack"
                 visual_heading = effect["target"] - cell
                 break
-        # The authored Godot 3D meshes are captured to reusable orthographic
-        # textures once and used here by real battle units. Existing 2D
-        # combat/damage poses remain the deterministic fallback until every
-        # 3D animation has been modeled and validated on Android.
+        # Keep the same 3D silhouette during idle, movement, attack and damage.
+        # BattleVFX renders the transient shot/impact effects separately.
+        # Abrupt switches back to the legacy 2D "damaged" or "attack" sprites
+        # were confusing during mobile play; unfinished roles still use 2D.
         var sprite: Texture2D = null
         var from_3d := false
-        if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null and pose in ["idle","move"]:
+        if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null:
             sprite = three_d_models.call("texture_for",role) as Texture2D
             from_3d = sprite != null
         if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
@@ -264,6 +264,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 # game's approved faction palette without eight GPU cameras
                 # for every role (one colorized draw and a clear team ring).
                 unit_tint = Color.WHITE.lerp(tint,0.26)
+                if pose == "damaged":
+                    unit_tint = unit_tint.lerp(Color("#E67465"),0.26)
                 if bool(unit.get("acted",false)):
                     unit_tint = unit_tint.darkened(0.27)
                 canvas.draw_arc(c+Vector2(0,hw*0.10),hw*0.33,
