@@ -19,7 +19,15 @@ func _check() -> void:
     assert(Campaign.valid_meta(start))
     assert(Campaign.available_unlocks(start).is_empty())
     assert(Codec.decode(Codec.encode(start["battle"])) == start["battle"])
-    assert(Campaign.decode(Campaign.encode(start)) == start)
+    var encoded: String = Campaign.encode(start)
+    var decoded: Dictionary = Campaign.decode(encoded)
+    if decoded != start:
+        print("CAMPAIGN_ROUNDTRIP_DEBUG text_len=",encoded.length()," result_keys=",decoded.keys())
+        if not decoded.is_empty():
+            print("CAMPAIGN_ROUNDTRIP_DEBUG meta=",decoded.get("status")," beacons=",decoded.get("beacons")," battle_equal=",decoded.get("battle") == start.get("battle"))
+        else:
+            print("CAMPAIGN_ROUNDTRIP_DEBUG raw_meta=",JSON.parse_string(encoded).get("campaign"))
+    assert(decoded == start)
 
     # Normal offline skirmish has NO campaign metadata, remains intact.
     var skirmish: Dictionary = Session.start(
