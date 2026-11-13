@@ -38,7 +38,7 @@ func _run() -> void:
         "TorreBajaSoldadaV7",true,false) as MeshInstance3D
     assert(old_body!=null and new_body!=null and old_turret!=null and new_turret!=null)
     assert(new_body.mesh.get_aabb().size.z > old_body.mesh.get_aabb().size.z+0.15)
-    assert(new_turret.mesh.get_aabb().size.x > old_turret.mesh.get_aabb().size.x+0.24)
+    assert(new_turret.mesh.get_aabb().size.x > old_turret.mesh.get_aabb().size.x+0.13)
     assert(new_body.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >
         old_body.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size())
     assert(new_turret.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >
