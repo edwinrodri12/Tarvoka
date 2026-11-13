@@ -979,7 +979,6 @@ func _process(_delta: float) -> void:
     # Never bypass pending-order confirmation or turn ownership.
     compact_confirm.disabled = board.pending_order.is_empty() and int(board.state.get("winner",-1)) == -1
     compact_confirm.text = "Resultados" if int(board.state.get("winner",-1)) != -1 else ("Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar")
-    compact_confirm.text = "Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar"
     compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
     compact_end_turn.disabled = int(board.state.get("winner",-1)) != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction",0)) != 0)
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
