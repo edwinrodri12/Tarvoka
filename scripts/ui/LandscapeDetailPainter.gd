@@ -9,6 +9,7 @@ const WEST := 2
 const SOUTH := 4
 const NORTH := 8
 const TextureAtlas = preload("res://scripts/ui/TerrainTextureAtlas.gd")
+const Continuity = preload("res://scripts/ui/LandscapeContinuity.gd")
 
 static func _polygon(canvas: CanvasItem, vertices: Array, tint: Color) -> void:
     var points := PackedVector2Array()
@@ -185,7 +186,7 @@ static func _rock_spur(canvas: CanvasItem, c: Vector2, hw: float,
 
 static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
         seed: int, neighbor_mask: int, detail: int,
-        exposed_edges: int = 0) -> void:
+        exposed_edges: int = 0, cell: Vector2i = Vector2i.ZERO) -> void:
     # Natural rock bed set inside its cell. A few faceted mountains
     # build elevation without changing the real Vector2i map.
     var rock_ground := Color("#596B66")
@@ -197,6 +198,9 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
     for direction_index in range(4):
         if (neighbor_mask & (1 << direction_index)) != 0:
             _rock_spur(canvas,c,hw,direction_index,detail)
+    # Seam-aligned ridges meet exactly at the neighbor midpoint, even
+    # when the two mountain silhouettes use different variant seeds.
+    Continuity.draw_ridge_spine(canvas,c,hw,neighbor_mask,cell,detail)
     # An exposed cliff is drawn only where an OBSERVED, different
     # neighboring tile exists. Unknown fog neighbors cannot trigger one.
     if (exposed_edges & EAST) != 0:
