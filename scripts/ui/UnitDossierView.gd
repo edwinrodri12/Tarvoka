@@ -67,7 +67,7 @@ func bind_dossier(data: Dictionary) -> void:
     _name.text = str(data.get("name",""))
     _status.text = str(data.get("status",data.get("owner","")))
     if is_unit:
-        _icon.configure(str(data.get("role","line")),VisualStyle.faction_color(0 if kind == "friendly" else 1))
+        _icon.call("configure",str(data.get("role","line")),VisualStyle.faction_color(0 if kind == "friendly" else 1))
         var current: int = maxi(0,int(data.get("hp",0)))
         var full: int = maxi(1,int(data.get("max_hp",current)))
         _health.max_value = full
