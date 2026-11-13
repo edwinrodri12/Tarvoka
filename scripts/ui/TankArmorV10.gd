@@ -279,6 +279,25 @@ static func _upgrade_turret(turret: Node3D) -> void:
         Vector3(-0.17,0.707,0.859),
         Vector3(0.17,0.707,0.859),0.011,WEAR)
 
+static func _mobile_microdetail_lod(model: Node3D) -> void:
+    # Save actual mobile fill/draw time at long camera distances: tiny
+    # fasteners and weld beads fade out only when they are sub-pixel small.
+    # Full 3D remains inspectable when the phone/browser camera is close.
+    var affected: int = 0
+    for pattern in ["G09TornillosRuedasV9","RemachesBujesRodaje",
+            "PernosFaldones","PernosCorazaTorre",
+            "G09V10CosturaBlindaje_*",
+            "G09V10SoldaduraMotor_*","G09V10UnionGlacis_*",
+            "G09V10AnclajeLateral_*","G09V10BisagraPanelTecho"]:
+        for part in model.find_children(pattern,"GeometryInstance3D",true,false):
+            var geo: GeometryInstance3D = part as GeometryInstance3D
+            if geo == null:
+                continue
+            geo.visibility_range_end = 23.0
+            geo.visibility_range_end_margin = 3.0
+            affected += 1
+    model.set_meta("tarvoka_mbt_sculpted_v10_micro_lod_count",affected)
+
 static func apply(model: Node3D) -> bool:
     if model == null or model.find_child(ROOT,true,false) != null:
         return false
@@ -308,6 +327,7 @@ static func apply(model: Node3D) -> bool:
         "CubiertaMotorRectificadaV7"])
     _upgrade_hull(hull)
     _upgrade_turret(turret)
+    _mobile_microdetail_lod(model)
     model.set_meta("tarvoka_mbt_sculpted_v10",true)
     return true
 
