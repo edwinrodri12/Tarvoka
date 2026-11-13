@@ -21,6 +21,9 @@ func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     assert(column != null)
+    for node in column.get_children():
+        if node is Label and (node as Label).text.begins_with("El mismo modelo de Godot"):
+            (node as Label).text = "Visor 3D del motor Godot: las unidades se usan en Android; los edificios son prototipos visuales independientes. Arrastra para girar y pellizca para acercar."
     category_picker = OptionButton.new()
     category_picker.name = "CategoriaEstudio3D"
     category_picker.custom_minimum_size.y = 52.0
