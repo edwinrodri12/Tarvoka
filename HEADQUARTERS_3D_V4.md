@@ -34,3 +34,12 @@ El workflow `.github/workflows/web-art-studio.yml` ejecuta estos casos, exporta 
 - `scripts/ui/CombinedArtStudioWeb.gd`: selector único y encuadre.
 - `tests/test_headquarters_premium_v2.gd`, `tests/test_headquarters_v3.gd`: versiones previas inmovilizadas para comparación real.
 - `tests/test_headquarters_v4.gd` y workflow web: QA.
+
+## Pases de control final dentro de V4
+- **Corrección del radar**: su plato parabólico utiliza ambas caras del material para que el reflejante sea visible desde la cámara, no solo el aro exterior.
+- **Composición**: torre de comunicaciones a la derecha, helipuerto al frente izquierdo en la perspectiva oficial. La cúpula del nivel 3 se sitúa detrás del radar, sin taparlo.
+- **Materiales más profundos**: texturas procedurales compartidas de albedo, normal y rugosidad; UV corregidas en paredes verticales y generación de tangentes en mallas de geometría personalizada.
+- **Identidad arquitectónica**: paño central de la facción y cubiertas de ambas alas pintables por separado, dejando ventanas y hormigón neutrales.
+- **Iluminación de laboratorio**: piso neutral oscuro sin bordes visibles y una sombra direccional solo para el edificio; al regresar al tanque se conserva la iluminación anterior.
+- **Archivo editable**: `tests/export_headquarters_hero_glb.gd` produce `artifacts/TARVOKA_CuartelGeneral_V4_Nivel3_Editable.glb` con grupos de fachada, elementos de facción, radar/comunicaciones y patio. Los remaches instanciados se desdoblan para edición en Blender; en el visor permanecen agrupados.
+- **Performance**: el asset de estudio aún tiene cientos de mallas individuales; las pocas decenas de remaches agrupados no sustituyen un LOD/mesh-baking completo. Es imprescindible medir tiempo de render y FPS en Android con varios edificios en pantalla antes de comercializarlo.
