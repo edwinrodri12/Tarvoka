@@ -24,6 +24,8 @@ const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
+const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
+const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -45,12 +47,17 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var background := StyleBoxFlat.new()
-    background.bg_color = Color("#09131E")
+    background.bg_color = Color("#0A1928")
+    background.border_color = Chrome.EDGE_BRIGHT
+    background.border_width_top = 3
     background.content_margin_left = 14
     background.content_margin_right = 14
     background.content_margin_top = 10
     background.content_margin_bottom = 10
     add_theme_stylebox_override("panel",background)
+    var backdrop := Backplate.new()
+    backdrop.mode = "command"
+    add_child(backdrop)
     var column := VBoxContainer.new()
     column.size_flags_vertical = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation",9)
@@ -61,7 +68,7 @@ func _ready() -> void:
     var title := Label.new()
     title.text = "TARVOKA  /  CENTRO DE MANDO"
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    title.add_theme_font_size_override("font_size",21)
+    title.add_theme_font_size_override("font_size",25)
     title.add_theme_color_override("font_color",Color("#F1D58C"))
     header.add_child(title)
     var close := Button.new()
@@ -69,12 +76,16 @@ func _ready() -> void:
     close.custom_minimum_size = Vector2(130,48)
     close.pressed.connect(func(): close_requested.emit())
     header.add_child(close)
+    Chrome.emphasize(close,"secondary")
 
     info_label = Label.new()
     info_label.add_theme_color_override("font_color",Color("#BED2DF"))
     info_label.add_theme_font_size_override("font_size",15)
     info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    column.add_child(info_label)
+    var status_card := PanelContainer.new()
+    status_card.add_theme_stylebox_override("panel",Chrome.box_style(Color("#152D3F"),Chrome.EDGE,8,9))
+    column.add_child(status_card)
+    status_card.add_child(info_label)
 
     tabs = TabContainer.new()
     tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -113,8 +124,7 @@ func _heading(body: VBoxContainer, content: String) -> void:
     var label := Label.new()
     label.text = content
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    label.add_theme_font_size_override("font_size",19)
-    label.add_theme_color_override("font_color",Color("#F1D58C"))
+    Chrome.section(label)
     body.add_child(label)
 
 func _description(body: VBoxContainer, content: String) -> void:
@@ -134,6 +144,10 @@ func _action(body: Container, name: String, callable: Callable, enabled: bool = 
     button.disabled = not enabled
     button.pressed.connect(callable)
     body.add_child(button)
+    if name.begins_with("Radar") or name.begins_with("Comprar") or name.begins_with("Volver al mapa"):
+        Chrome.emphasize(button,"primary")
+    elif name.begins_with("Preparar escaramuza"):
+        Chrome.emphasize(button,"success")
     return button
 
 func _unit_action(body: VBoxContainer, role: String, label_text: String, action: Callable, enabled: bool = true, faction: int = 0) -> void:
