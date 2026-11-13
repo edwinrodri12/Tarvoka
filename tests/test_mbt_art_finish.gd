@@ -40,7 +40,7 @@ func _run() -> void:
     var new_cheek: MeshInstance3D = tank.find_child("MejillaPrincipalV5_1",true,false) as MeshInstance3D
     assert(sealed_hull != null and sealed_turret != null and closed_back != null)
     assert(mantlet != null and new_cheek != null)
-    assert(not sealed_hull.visible and not sealed_turret.visible and closed_back.visible)
+    assert(not sealed_hull.visible and not sealed_turret.visible and not closed_back.visible)
     assert(sealed_hull.mesh is ArrayMesh and sealed_turret.mesh is ArrayMesh)
     assert(sealed_hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 120)
     assert(sealed_turret.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 120)
