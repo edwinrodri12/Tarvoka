@@ -38,6 +38,9 @@ func _run() -> void:
     await process_frame
     var state := Identity.defaults()
     screen.open_for(state)
+    assert(screen.faction_card_emblems.size() == 8)
+    for slot in screen.faction_card_emblems:
+        assert(slot.texture != null and slot.visible)
     for i in range(8):
         screen._choose_side(0)
         screen._choose_faction(i)
