@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudio3D
 # tactical height, fog-of-war, map saves or Android battle rendering.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const Scatter = preload("res://scripts/ui/TerrainStudioScatter3D.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -450,7 +451,7 @@ static func _water_details(parent: Node3D, origin: Vector3, x: int,
 
 static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
-        continuous: bool = true) -> Node3D:
+        continuous: bool = true, show_scatter: bool = true) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -458,6 +459,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_grid",show_grid)
     root.set_meta("terrain_studio_samples",show_samples)
     root.set_meta("terrain_studio_continuous",continuous)
+    root.set_meta("terrain_studio_scatter",continuous and show_scatter)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -467,6 +469,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.add_child(props)
     if continuous:
         _continuous_ground(tiles,preset)
+    var detail_cells: Array[Dictionary] = []
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
@@ -474,6 +477,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
             var p: Vector3 = _cell_center(x,z)
             var seed: int = x*29+z*43
             counts[type] = int(counts[type])+1
+            if continuous and show_scatter:
+                var shore_edges: Array[Vector2i] = []
+                for side in [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]:
+                    if kind(x+side.x,z+side.y,preset) == "water":
+                        shore_edges.append(side)
+                detail_cells.append({
+                    "x":x,"z":z,"kind":type,"center":p,
+                    "top":top,"water_edges":shore_edges})
             var tint: Color = WATER if type == "water" else _ground_tint(type,preset,seed)
             if not continuous:
                 # Opt-in baseline for same-camera comparison against the
@@ -516,6 +527,11 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                 _box(props,"GuiaCasillaO",
                     p+Vector3(-CELL*0.49,top+0.025,0),
                     Vector3(0.026,0.026,CELL*0.985),grid_tint)
+    var scatter_stats: Dictionary = {
+        "grass":0,"reeds":0,"gravel":0,"batches":0}
+    if continuous and show_scatter:
+        scatter_stats = Scatter.populate(props,detail_cells,preset)
+    root.set_meta("terrain_scatter_counts",scatter_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
