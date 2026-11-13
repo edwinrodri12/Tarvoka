@@ -111,10 +111,15 @@ func _run() -> void:
         assert(int(counts.get("mountain",0)) > 0)
         assert(int(counts.get("forest",0)) > 0)
         assert(Terrain.kind(-1,0,preset) == "outside")
+        if preset == 0:
+            assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)
         if preset == 1:
             assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
             assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
             assert(studio.model_root.find_child("PilarPuente",true,false) != null)
+        if preset == 2:
+            assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or
+                studio.model_root.find_child("CopaFrondosa_43",true,false) != null)
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
