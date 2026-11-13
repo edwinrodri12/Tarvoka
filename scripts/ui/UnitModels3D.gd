@@ -17,6 +17,7 @@ const TankHero = preload("res://scripts/ui/TankHeroV7.gd")
 const TankProductionV9 = preload("res://scripts/ui/TankProductionV9.gd")
 const TankArmorV10 = preload("res://scripts/ui/TankArmorV10.gd")
 const TankSilhouetteV11 = preload("res://scripts/ui/TankSilhouetteV11.gd")
+const TankArtV12 = preload("res://scripts/ui/TankArtV12.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -328,7 +329,10 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     # instances; recoloring a tank cannot modify any other unit.
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
-    return _paint_panels(model,faction_paint_color(faction))
+    var painted: int = _paint_panels(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_refined_v12",false):
+        TankArtV12.refine_faction_paint(model)
+    return painted
 
 static func paintable_count(model: Node) -> int:
     if model == null:
@@ -747,6 +751,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                         TankArmorV10.apply(model)
                         if art_level >= 11:
                             TankSilhouetteV11.apply(model)
+                            if art_level >= 12:
+                                TankArtV12.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         if finish_enabled and art_level >= 7:
@@ -759,6 +765,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     TankArmorV10.finish_materials(model)
                     if art_level >= 11:
                         TankSilhouetteV11.finish_materials(model)
+                        if art_level >= 12:
+                            TankArtV12.finish_materials(model)
         TankDamage.prepare(model)
     return model
 

@@ -24,7 +24,9 @@ var _role := "tank"
 var _final_detail := true
 var _previous_version := false
 var _v11_preview := false
+var _v12_preview := false
 var v11_button: Button
+var v12_button: Button
 var comparison_button: Button
 var previous_version_button: Button
 var _faction := 0
@@ -144,6 +146,7 @@ func _construct() -> void:
 
     _title(column,"MODELO",12)
     v11_button = _button(column,"NUEVO G09 V11 · Escultura angular",_toggle_v11)
+    v12_button = _button(column,"V12 · Blindaje y materiales refinados",_toggle_v12)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
     previous_version_button = _button(column,"COMPARAR: V9 anterior / V10 nuevo",_toggle_previous)
     role_picker = OptionButton.new()
@@ -203,7 +206,7 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
     _role = role
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
-        _final_detail,11 if _v11_preview else (9 if _previous_version else 10))
+        _final_detail,12 if _v12_preview else (11 if _v11_preview else (9 if _previous_version else 10)))
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
@@ -216,6 +219,8 @@ func _display_role(role: String) -> void:
     comparison_button.visible = (_role == "tank")
     previous_version_button.visible = (_role == "tank")
     v11_button.visible = (_role == "tank")
+    v12_button.visible = (_role == "tank")
+    v12_button.text = "COMPARAR: Volver a V11" if _v12_preview else "V12 · Blindaje y materiales refinados"
     v11_button.text = "COMPARAR: Volver al G09 V10" if _v11_preview else "NUEVO G09 V11 · Escultura angular"
     comparison_button.text = "COMPARAR: Ver modelo base" if _final_detail else "COMPARAR: Ver acabado nuevo"
     previous_version_button.text = "COMPARAR: Volver al acabado V10" if _previous_version else "COMPARAR: Ver acabado V9 anterior"
@@ -230,7 +235,7 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     status_label.text = "G09 · %s · %s · %s" % [
-        ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL")) if _final_detail else "MODELO BASE",
+        ("REFINAMIENTO V12" if _v12_preview else ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL"))) if _final_detail else "MODELO BASE",
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])] if _role == "tank" else "Modelo técnico 3D · misma librería de TARVOKA"
 
@@ -245,6 +250,7 @@ func _toggle_previous() -> void:
         return
     _previous_version = not _previous_version
     _v11_preview = false
+    _v12_preview = false
     _final_detail = true
     _reload_tank_same_camera()
 
@@ -252,6 +258,16 @@ func _toggle_v11() -> void:
     if _role != "tank":
         return
     _v11_preview = not _v11_preview
+    _v12_preview = false
+    _previous_version = false
+    _final_detail = true
+    _reload_tank_same_camera()
+
+func _toggle_v12() -> void:
+    if _role != "tank":
+        return
+    _v12_preview = not _v12_preview
+    _v11_preview = not _v12_preview
     _previous_version = false
     _final_detail = true
     _reload_tank_same_camera()

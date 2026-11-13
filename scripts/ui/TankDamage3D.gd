@@ -349,6 +349,19 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var v11_rear: Node3D = model.find_child(part_name,true,false) as Node3D
         if v11_rear != null:
             v11_rear.visible = stage < 4
+    # Cosmetic V12 panels break independently; restoring full HP returns
+    # each original transform and material without destroying scene nodes.
+    for part_name in ["G09V12DefensaOrugaAngular_1",
+            "G09V12RetenFaldonDelantero_1",
+            "G09V12CubiertaMotorLateral_1"]:
+        var v12_side: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v12_side != null:
+            v12_side.visible = stage < 3
+    for part_name in ["G09V12AlmacenBlindadoPosterior",
+            "G09V12MantoTermicoIntegrado","G09V12EscudoDeReculada"]:
+        var v12_upper: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v12_upper != null:
+            v12_upper.visible = stage < 4
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
