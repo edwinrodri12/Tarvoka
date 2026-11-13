@@ -6,6 +6,7 @@ signal locate_site_requested(cell: Vector2i, category: String)
 signal locate_unit_requested(unit_id: String)
 
 const Data = preload("res://scripts/ui/ObjectivesRadarData.gd")
+const TacticalUI = preload("res://scripts/ui/TacticalUITheme.gd")
 
 var tabs: TabContainer
 var overview_body: VBoxContainer
@@ -20,15 +21,11 @@ var _data: Dictionary = {}
 # visible to the left. The panel is opened explicitly; no overlay at idle.
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
-    var style := StyleBoxFlat.new()
-    style.bg_color = Color("#091725")
-    style.border_color = Color("#39586C")
-    style.set_border_width_all(2)
-    style.set_corner_radius_all(9)
-    style.content_margin_left = 12
-    style.content_margin_right = 12
-    style.content_margin_top = 10
-    style.content_margin_bottom = 10
+    var style: StyleBoxFlat = TacticalUI.frame("hero")
+    style.content_margin_left = 15
+    style.content_margin_right = 15
+    style.content_margin_top = 12
+    style.content_margin_bottom = 12
     add_theme_stylebox_override("panel",style)
 
     var column := VBoxContainer.new()
@@ -110,12 +107,11 @@ func _info(body: VBoxContainer, text_value: String) -> void:
 
 func _location_row(body: VBoxContainer, title: String, subtitle: String, cell: Vector2i, category: String) -> void:
     var card := PanelContainer.new()
-    var bg := StyleBoxFlat.new()
-    bg.bg_color = Color("#142738")
-    bg.content_margin_left = 8
-    bg.content_margin_right = 8
-    bg.content_margin_top = 6
-    bg.content_margin_bottom = 6
+    var bg: StyleBoxFlat = TacticalUI.frame("subtle")
+    bg.content_margin_left = 10
+    bg.content_margin_right = 10
+    bg.content_margin_top = 8
+    bg.content_margin_bottom = 8
     card.add_theme_stylebox_override("panel",bg)
     body.add_child(card)
     var row := HBoxContainer.new()
@@ -132,6 +128,7 @@ func _location_row(body: VBoxContainer, title: String, subtitle: String, cell: V
     action.custom_minimum_size = Vector2(53,48)
     action.pressed.connect(func(): locate_site_requested.emit(cell,category))
     row.add_child(action)
+    TacticalUI.accent(action,false)
 
 func _unit_row(body: VBoxContainer, item: Dictionary) -> void:
     var row := HBoxContainer.new()
