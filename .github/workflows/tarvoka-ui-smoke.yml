@@ -6,6 +6,7 @@ on:
       - 'scripts/ui/**'
       - 'assets/factions/**'
       - 'tests/test_commander_presentation.gd'
+      - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -15,6 +16,7 @@ on:
       - 'scripts/ui/**'
       - 'assets/factions/**'
       - 'tests/test_commander_presentation.gd'
+      - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_official_faction_art.gd'
       - 'tests/test_postbattle_results.gd'
       - '.github/workflows/tarvoka-ui-smoke.yml'
@@ -34,12 +36,13 @@ jobs:
             https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
-      - name: Run quick commander and UI tests without installing an APK
+      - name: Run quick battle HUD, commander and UI tests without installing an APK
         shell: bash
         run: |
           set -euo pipefail
           for test in \
             test_official_faction_art \
+            test_battle_focus_hud \
             test_commander_presentation \
             test_eight_faction_selection \
             test_postbattle_results \
