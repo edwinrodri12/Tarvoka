@@ -34,9 +34,10 @@ func _run() -> void:
     setup.faction_button.pressed.emit()
     assert(chooser.visible and not setup.visible)
     assert(chooser.selected == Identity.defaults())
-    assert(chooser.portrait.texture == null) # Official emblem art not in repo.
-    assert(chooser.commander_portrait.texture == null) # Official commander art not in repo.
-    assert(chooser.commander_notice.visible)
+    # Four original crests and portraits are now in the app's atlas.
+    assert(chooser.portrait.texture != null)
+    assert(chooser.commander_portrait.texture != null)
+    assert(not chooser.commander_notice.visible)
     assert(Style.commander_path(7) == "res://assets/commanders/orden_onix.png")
     chooser._choose_faction(3)
     assert(chooser.selected["0"] == "confederacion_solar")
@@ -45,6 +46,7 @@ func _run() -> void:
     assert(chooser.selected["1"] == "orden_onix")
     assert(chooser.preview_title.text == "Orden Ónix")
     assert(chooser.preview_motif.text.contains("Insignia"))
+    assert(chooser.portrait.texture == null and chooser.commander_portrait.texture == null)
     assert(chooser.preview_commander.text.contains("pendiente"))
     assert(board.state == starting) # Merely choosing is never a battle order.
     chooser.back_requested.emit()
