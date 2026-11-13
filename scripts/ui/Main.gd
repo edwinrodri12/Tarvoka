@@ -1039,11 +1039,13 @@ func _build_battle_hud() -> void:
     compact_terrain_button.text = "Mapa"
     compact_terrain_button.tooltip_text = "Capa táctica: cobertura o movilidad (tres estados)"
     compact_terrain_button.custom_minimum_size = Vector2(65,42)
-    compact_terrain_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    compact_terrain_button.offset_left = -375
-    compact_terrain_button.offset_right = -310
-    compact_terrain_button.offset_top = 7
-    compact_terrain_button.offset_bottom = 49
+    # A small button beneath the header avoids crowding the three existing
+    # top-right controls on narrow Android portrait screens.
+    compact_terrain_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+    compact_terrain_button.offset_left = 12
+    compact_terrain_button.offset_right = 78
+    compact_terrain_button.offset_top = 70
+    compact_terrain_button.offset_bottom = 112
     compact_terrain_button.pressed.connect(_toggle_terrain_overlay)
     battle_hud_overlay.add_child(compact_terrain_button)
     battle_hud_commands.hide()
