@@ -6,6 +6,8 @@ class_name TarvokaUnitModels3D
 # Tuned to existing approved category silhouettes; no tactical stats live here.
 const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
+const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -114,7 +116,9 @@ static func _hull(parent: Node3D, label: String, points: Array,
     for face in faces:
         for k in range(1,face.size()-1):
             for index in [face[0],face[k],face[k+1]]:
-                surface.add_vertex(points[index])
+                var point: Vector3 = points[index]
+                surface.set_uv(Vector2(point.x*0.34+0.5,point.z*0.30+0.5))
+                surface.add_vertex(point)
     surface.generate_normals()
     var item := MeshInstance3D.new()
     item.name = label
@@ -638,6 +642,7 @@ static func build(role: String, faction: int = -1) -> Node3D:
         model.position.y = -0.27
     if role == "tank":
         apply_faction_palette(model,faction)
+        TankSurface.apply_finish(model)
     return model
 
 static func inspect_meshes(model: Node) -> int:
