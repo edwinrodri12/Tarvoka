@@ -118,6 +118,10 @@ func _run() -> void:
     var app: Control = scene.instantiate()
     root.add_child(app)
     var ui_board: Control = app.get("board")
+    # Display options now persist between Godot processes. The map-camera
+    # geometry test explicitly starts in classic mode regardless of a prior
+    # user's isometric preference, without editing that preference.
+    ui_board.set_isometric(false)
     assert(app.get("battle_minimap") != null)
     assert(app.get("unit_art_gallery") != null)
     var sizes: OptionButton = app.get("map_size_picker")
