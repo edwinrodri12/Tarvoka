@@ -49,6 +49,60 @@ static func _texture(style: String) -> ImageTexture:
     _textures[style] = texture
     return texture
 
+static func _height_sample(style: String,x: int,y: int) -> float:
+    var noise: float = float(posmod(x*73+y*127+x*y*11+x*x*19+y*y*23,251))/251.0
+    var height: float = (noise-0.5)*0.14
+    if style == "concrete":
+        height *= 0.85
+        if posmod(x,64) <= 1 or posmod(y,48) <= 1:
+            height -= 0.24
+        if posmod(x*19+y*7,113) <= 1:
+            height -= 0.07
+    elif style == "steel":
+        height *= 0.52
+        if posmod(x,32) == 0:
+            height -= 0.11
+    elif style == "roof":
+        height *= 0.40
+        if posmod(x,12) == 0:
+            height -= 0.12
+    else:
+        height *= 0.18
+    return height
+
+static func _normal_texture(style: String) -> ImageTexture:
+    var key: String = style+"_normal"
+    if _textures.has(key):
+        return _textures[key]
+    var image := Image.create(128,128,false,Image.FORMAT_RGBA8)
+    for y in range(128):
+        for x in range(128):
+            var dx: float = _height_sample(style,x+1,y)-_height_sample(style,x-1,y)
+            var dy: float = _height_sample(style,x,y+1)-_height_sample(style,x,y-1)
+            var n: Vector3 = Vector3(-dx*1.6,-dy*1.6,1.0).normalized()
+            image.set_pixel(x,y,Color(n.x*0.5+0.5,n.y*0.5+0.5,n.z*0.5+0.5,1.0))
+    var texture := ImageTexture.create_from_image(image)
+    _textures[key] = texture
+    return texture
+
+static func _roughness_texture(style: String) -> ImageTexture:
+    var key: String = style+"_roughness"
+    if _textures.has(key):
+        return _textures[key]
+    var image := Image.create(128,128,false,Image.FORMAT_RGBA8)
+    for y in range(128):
+        for x in range(128):
+            var n: float = float(posmod(x*41+y*71+x*y*3,197))/197.0
+            var value: float = 0.66+n*0.27
+            if style == "glass":
+                value = 0.63+n*0.16
+            elif style == "roof":
+                value = 0.71+n*0.22
+            image.set_pixel(x,y,Color(value,value,value,1.0))
+    var texture := ImageTexture.create_from_image(image)
+    _textures[key] = texture
+    return texture
+
 static func _mat(color: Color, style: String = "steel") -> StandardMaterial3D:
     var key: String = color.to_html(true)+"_"+style
     if _materials.has(key):
@@ -59,6 +113,11 @@ static func _mat(color: Color, style: String = "steel") -> StandardMaterial3D:
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     material.metallic = 0.58 if style == "steel" or style == "roof" else 0.08
     material.roughness = 0.52 if style == "steel" else (0.31 if style == "glass" else 0.81)
+    material.roughness_texture = _roughness_texture(style)
+    if style != "glass":
+        material.normal_enabled = true
+        material.normal_scale = 0.42 if style == "concrete" else 0.29
+        material.normal_texture = _normal_texture(style)
     _materials[key] = material
     return material
 
@@ -109,6 +168,15 @@ static func _tri(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
         tool.set_uv(Vector2(point.x*0.28+0.5,point.z*0.28+0.5))
         tool.add_vertex(point)
 
+static func _tri_uv(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3,
+        ua: Vector2, ub: Vector2, uc: Vector2) -> void:
+    tool.set_uv(ua)
+    tool.add_vertex(a)
+    tool.set_uv(ub)
+    tool.add_vertex(b)
+    tool.set_uv(uc)
+    tool.add_vertex(c)
+
 static func _chamfer(parent: Node3D, name: String, at: Vector3,
         dims: Vector3, cut: float, color: Color,
         style: String = "concrete", paint: bool = false) -> MeshInstance3D:
@@ -132,9 +200,16 @@ static func _chamfer(parent: Node3D, name: String, at: Vector3,
         var tb: Vector3 = Vector3(b.x,cy,b.z)
         _tri(st,ta,Vector3(0,cy,0),tb)
         _tri(st,a,b,Vector3(0,-cy,0))
-        _tri(st,a,ta,b)
-        _tri(st,b,ta,tb)
+        var distance: float = a.distance_to(b)*0.43
+        var elevation: float = dims.y*0.43
+        # Previously the vertical walls sampled only X/Z, making the
+        # textured facades appear almost uniformly flat. Real side UVs.
+        _tri_uv(st,a,ta,b,Vector2(0,0),
+            Vector2(0,elevation),Vector2(distance,0))
+        _tri_uv(st,b,ta,tb,Vector2(distance,0),
+            Vector2(0,elevation),Vector2(distance,elevation))
     st.generate_normals()
+    st.generate_tangents()
     var item := MeshInstance3D.new()
     item.name = name
     item.mesh = st.commit()
@@ -238,6 +313,7 @@ static func _radar_dish(parent: Node3D, roof_y: float, level: int,
             _tri(st,p0,q1,p1)
             _tri(st,p0,q0,q1)
     st.generate_normals()
+    st.generate_tangents()
     var bowl := MeshInstance3D.new()
     bowl.name = "PlatoParabolicoConcavo"
     bowl.mesh = st.commit()
