@@ -14,6 +14,14 @@ const FACTIONS = [
     {"key":"dominio_turquesa","name":"Dominio Turquesa","color":"#19BDD3","motif":"Tridente y olas"},
     {"key":"orden_onix","name":"Orden Ónix","color":"#AEB5C2","motif":"Insignia alada plateada"}
 ]
+# Optimized original-art atlas: top row four approved crests (160x160),
+# bottom row the four approved commander crops (160x113). From the
+# original approved sheets, not generated substitutes.
+const FIRST_FOUR_ATLAS := "res://assets/factions/official_first_four_atlas.webp"
+const FIRST_FOUR_COUNT := 4
+const CREST_SIZE := 160
+const COMMANDER_HEIGHT := 113
+
 const TERRAIN_COLORS = {
     "plain":"#3C5D46",
     "forest":"#1E4931",
@@ -45,9 +53,12 @@ static func emblem_path(index: int) -> String:
 
 static func emblem_texture(index: int) -> Texture2D:
     var path: String = emblem_path(index)
-    if path.is_empty() or not ResourceLoader.exists(path):
+    if path.is_empty():
         return null
-    return ResourceLoader.load(path) as Texture2D
+    # Individual master assets override the compact Android atlas if added.
+    if ResourceLoader.exists(path):
+        return ResourceLoader.load(path) as Texture2D
+    return _first_four_texture(index,false)
 
 # Approved commander portraits will be imported at this predictable path.
 # The missing asset is handled explicitly; no generated stand-ins masquerade
@@ -59,9 +70,38 @@ static func commander_path(index: int) -> String:
 
 static func commander_texture(index: int) -> Texture2D:
     var path: String = commander_path(index)
-    if path.is_empty() or not ResourceLoader.exists(path):
+    if path.is_empty():
         return null
-    return ResourceLoader.load(path) as Texture2D
+    if ResourceLoader.exists(path):
+        return ResourceLoader.load(path) as Texture2D
+    return _first_four_texture(index,true)
+
+# AtlasTexture exposes exact source regions without duplicating image memory
+# for each faction. The raw-file fallback lets headless tests run before the
+# editor import; Android production builds prefer the normal imported texture.
+static func _first_four_texture(index: int, commander: bool) -> Texture2D:
+    if index < 0 or index >= FIRST_FOUR_COUNT:
+        return null
+    var sheet: Texture2D = null
+    if ResourceLoader.exists(FIRST_FOUR_ATLAS):
+        sheet = ResourceLoader.load(FIRST_FOUR_ATLAS) as Texture2D
+    if sheet == null:
+        var raw := Image.new()
+        if raw.load(FIRST_FOUR_ATLAS) != OK:
+            return null
+        sheet = ImageTexture.create_from_image(raw)
+    if sheet.get_width() != CREST_SIZE * FIRST_FOUR_COUNT:
+        return null
+    if sheet.get_height() != CREST_SIZE + COMMANDER_HEIGHT:
+        return null
+    var cut := AtlasTexture.new()
+    cut.atlas = sheet
+    cut.region = Rect2(index * CREST_SIZE,
+        CREST_SIZE if commander else 0,
+        CREST_SIZE,
+        COMMANDER_HEIGHT if commander else CREST_SIZE)
+    cut.filter_clip = true
+    return cut
 
 static func terrain_color(kind: String, x: int, y: int) -> Color:
     var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))
