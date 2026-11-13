@@ -13,6 +13,7 @@ const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
 const TankArt = preload("res://scripts/ui/TankArtV6.gd")
+const TankHero = preload("res://scripts/ui/TankHeroV7.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -735,8 +736,13 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true) 
             # angles, not accessory detail layered over the first blockout.
             TankSilhouette.apply(model)
             TankArt.apply(model)
+            TankHero.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
+        if finish_enabled:
+            # Reapply the authored high-resolution military UV armor coat after
+            # the generic five-family PBR pass; battle/Android/Web share it.
+            TankHero.apply_final_materials(model)
         TankDamage.prepare(model)
     return model
 
