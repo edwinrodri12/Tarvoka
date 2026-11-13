@@ -38,7 +38,8 @@ const MAX_ZOOM := 2.4
 func _ready() -> void:
     title = "TARVOKA · Inspección real de modelos 3D"
     ok_button_text = "Volver a la batalla"
-    min_size = Vector2i(340,430)
+    var screen_width: float = get_viewport().get_visible_rect().size.x
+    min_size = Vector2i(int(clampf(screen_width*0.84,620.0,1120.0)),430)
     # A native AcceptDialog expands to the minimum height of its direct child.
     # Constrain that child and scroll its contents instead of extending
     # the SubViewport beyond the phone's visible landscape height.
@@ -228,18 +229,26 @@ func _ready() -> void:
     presentation.add_theme_constant_override("separation",14)
     presentation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     controls.add_child(presentation)
+    var sidebar_scroll := ScrollContainer.new()
+    sidebar_scroll.name = "DesplazarControlesDelModelo"
+    sidebar_scroll.custom_minimum_size = Vector2(
+        clampf(visible_width*0.21,220.0,330.0),
+        clampf(visible_height*0.57,270.0,455.0))
+    sidebar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    sidebar_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    sidebar_scroll.size_flags_vertical = Control.SIZE_FILL
     var action_side := VBoxContainer.new()
     action_side.name = "ControlesDelModelo"
-    action_side.custom_minimum_size.x = clampf(visible_width*0.21,220.0,330.0)
     action_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     action_side.add_theme_constant_override("separation",8)
     viewport_holder.reparent(presentation)
-    presentation.add_child(action_side)
+    presentation.add_child(sidebar_scroll)
+    sidebar_scroll.add_child(action_side)
     for control in [intro,picker,faction_paint_picker,animation_controls,
             damage_caption,tank_damage_picker,damage_actions,tank_repair_button,
             controls_row,zoom_row,info]:
         control.reparent(action_side)
-    viewport_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    viewport_holder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 func _on_select(index: int) -> void:
     if index < 0 or index >= Models.ROLES.size():
