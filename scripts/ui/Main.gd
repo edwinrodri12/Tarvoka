@@ -14,6 +14,8 @@ const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
 const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
+const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
+const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
@@ -35,6 +37,8 @@ var inspection_title: Label
 var inspection_detail: Label
 var sidebar_dossier: Control
 var compact_dossier: Control
+var sidebar_site_actions: Control
+var compact_site_actions: Control
 var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
@@ -307,6 +311,10 @@ func _ready() -> void:
     sidebar_dossier = DossierView.new()
     sidebar_dossier.compact = false
     panel.add_child(sidebar_dossier)
+    sidebar_site_actions = SiteActions.new()
+    sidebar_site_actions.capturer_requested.connect(_locate_capture_unit)
+    sidebar_site_actions.production_requested.connect(_open_site_production)
+    panel.add_child(sidebar_site_actions)
     inspection_detail = Label.new()
     inspection_detail.visible = false
     inspection_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -693,6 +701,10 @@ func _build_battle_hud() -> void:
     compact_dossier = DossierView.new()
     compact_dossier.compact = true
     info_column.add_child(compact_dossier)
+    compact_site_actions = SiteActions.new()
+    compact_site_actions.capturer_requested.connect(_locate_capture_unit)
+    compact_site_actions.production_requested.connect(_open_site_production)
+    info_column.add_child(compact_site_actions)
     compact_info_body = Label.new()
     compact_info_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
     compact_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -857,6 +869,18 @@ func _process(_delta: float) -> void:
             board.selected_factory_pos,board.inspected_cell,0)
         sidebar_dossier.bind_dossier(dossier)
         compact_dossier.bind_dossier(dossier)
+        var site_info: Dictionary = {}
+        if str(dossier.get("kind","")) == "building" and board.pending_order.is_empty():
+            var site_cell: Vector2i = board.selected_factory_pos if board.selected_factory_pos != Vector2i(-1,-1) else board.inspected_cell
+            site_info = SiteInteraction.describe(board.state,site_cell,0)
+        sidebar_site_actions.bind_site(site_info)
+        compact_site_actions.bind_site(site_info)
+        # A context action receives taps; all unrelated map regions continue
+        # forwarding touch/pinch to the tactical board.
+        compact_info_panel.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
+        var info_container: Control = compact_info_panel.get_child(0) as Control
+        if info_container != null:
+            info_container.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
         # Terrain and unknown cells keep the familiar descriptive text.
         # For units and buildings the graphical compact card replaces it,
         # rather than consuming a third of the map with duplicate details.
@@ -1160,6 +1184,48 @@ func _open_settings_from_home() -> void:
 func _open_command_menu() -> void:
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
     command_menu.open_for(board,section)
+
+func _locate_capture_unit(unit_id: String, site_pos: Vector2i) -> void:
+    if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
+        return
+    if board.ai_enabled and int(board.state.get("faction",-1)) != 0:
+        return
+    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,0)
+    var authorized := false
+    var can_move := false
+    for candidate in view.get("capturers",[]):
+        if str(candidate.get("id","")) == unit_id:
+            authorized = true
+            can_move = bool(candidate.get("ready",false))
+            break
+    if not authorized:
+        return
+    for unit in board.state.get("units",[]):
+        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != 0 or int(unit.get("hp",0)) <= 0:
+            continue
+        board.cancel_selection()
+        board.selected_id = unit_id
+        board.inspected_cell = unit["pos"]
+        board.focus_view_cell(unit["pos"])
+        board.message = ("Capturador localizado. Selecciona la instalación para planear movimiento." if can_move
+            else "Capturador localizado. No tiene movimiento disponible este turno.")
+        board.queue_redraw()
+        return
+
+func _open_site_production(site_pos: Vector2i) -> void:
+    if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
+        return
+    if board.ai_enabled and int(board.state.get("faction",-1)) != 0:
+        return
+    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,0)
+    if not bool(view.get("production",false)):
+        return
+    board.cancel_selection()
+    board.selected_factory_pos = site_pos
+    board.inspected_cell = site_pos
+    board.focus_view_cell(site_pos)
+    board.queue_redraw()
+    command_menu.open_for(board,"Produccion")
 
 func _focus_command_unit(unit_id: String) -> void:
     for unit in board.state.get("units",[]):
