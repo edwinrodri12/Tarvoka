@@ -254,7 +254,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 canvas.draw_line(c+Vector2(0,-marker_radius),c+Vector2(0,marker_radius),
                     Color("#BDF2F3"),maxf(1.0,hw*0.09),true)
         elif sprite != null:
-            var sprite_size := hw * (1.34 if from_3d else (0.94 if is_air else 0.88))
+            var sprite_size := hw * ((1.70 if from_3d else (0.94 if is_air else 0.88)))
             var rotation: float = 0.0 if from_3d else BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
             var unit_tint: Color = face
