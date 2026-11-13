@@ -5,6 +5,7 @@ extends SceneTree
 # triangle edges so that Android and WebGL cannot see through their bodies.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Damage = preload("res://scripts/ui/TankDamage3D.gd")
+const Rig = preload("res://scripts/ui/TankVisualRig3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -54,40 +55,55 @@ func _run() -> void:
     assert(not base.get_meta("tarvoka_mbt_silhouette_v5",false))
     assert(finished.get_meta("tarvoka_mbt_silhouette_v5",false))
     assert(finished.get_meta("tarvoka_mbt_art_v6",false))
-    var hull: MeshInstance3D = finished.find_child("CascoHermeticoV5",true,false) as MeshInstance3D
-    var turret: MeshInstance3D = finished.find_child("TorreHermeticaV5",true,false) as MeshInstance3D
-    var stern: MeshInstance3D = finished.find_child("PortonTraseroHermeticoV5",true,false) as MeshInstance3D
-    var mantlet: MeshInstance3D = finished.find_child("MantleteMonoliticoV5",true,false) as MeshInstance3D
-    assert(hull != null and turret != null and stern != null and mantlet != null)
+    assert(finished.get_meta("tarvoka_mbt_hero_v7",false))
+    assert(int(finished.get_meta("tarvoka_mbt_hero_v7_textured",0)) >= 14)
+    var hull: MeshInstance3D = finished.find_child("CorazaSoldadaHermeticaV7",true,false) as MeshInstance3D
+    var turret: MeshInstance3D = finished.find_child("TorreBajaSoldadaV7",true,false) as MeshInstance3D
+    var mantlet: MeshInstance3D = finished.find_child("MantleteConjuntoV7",true,false) as MeshInstance3D
+    var glacis: MeshInstance3D = finished.find_child("GlacisCeramicoV7_1",true,false) as MeshInstance3D
+    var cheek: MeshInstance3D = finished.find_child("ModuloBlindajeCeramicoV7_1",true,false) as MeshInstance3D
+    assert(hull != null and turret != null and glacis != null and cheek != null and mantlet != null)
+    # The actual hero geometry (not old hidden prototypes) has no open edges.
     assert(_watertight(hull.mesh))
     assert(_watertight(turret.mesh))
-    assert(hull.material_override.normal_enabled)
-    assert(turret.material_override.normal_enabled)
+    assert(hull.visible and turret.visible and cheek.visible and mantlet.visible)
+    assert(not finished.find_child("CascoHermeticoV5",true,false).visible)
+    assert(not finished.find_child("TorreHermeticaV5",true,false).visible)
+    assert(not finished.find_child("MejillaMonoliticaV6_1",true,false).visible)
     assert(mantlet.get_parent().name == Models.TANK_BARREL_PIVOT)
+    var coat: StandardMaterial3D = hull.material_override as StandardMaterial3D
+    var turret_coat: StandardMaterial3D = turret.material_override as StandardMaterial3D
+    assert(coat != null and turret_coat != null)
+    assert(coat.albedo_texture != null)
+    assert(coat.albedo_texture.get_size() == Vector2(256,256))
+    assert(coat.albedo_texture == turret_coat.albedo_texture)
     assert(Models.paintable_count(finished) == 14)
     assert(Models.inspect_meshes(finished) > Models.inspect_meshes(base))
-    var old_cheek: MeshInstance3D = finished.find_child("MejillaCeramicaBiselada1",true,false) as MeshInstance3D
-    var new_cheek: MeshInstance3D = finished.find_child("MejillaPrincipalV5_1",true,false) as MeshInstance3D
-    assert(old_cheek != null and new_cheek != null)
-    assert(not old_cheek.visible and not new_cheek.visible)
-    var ceramic: MeshInstance3D = finished.find_child("MejillaMonoliticaV6_1",true,false) as MeshInstance3D
-    var optical: MeshInstance3D = finished.find_child("VentanaOpticaPanoramicaV6",true,false) as MeshInstance3D
-    var new_mantlet: MeshInstance3D = finished.find_child("BastidorCanonIntegradoV6",true,false) as MeshInstance3D
-    assert(ceramic != null and optical != null and new_mantlet != null)
-    assert(_watertight(ceramic.mesh))
-    assert(ceramic.visible and optical.visible and new_mantlet.visible)
-    assert(not finished.find_child("MantleteMonoliticoV5",true,false).visible)
+    for side in [-1,1]:
+        var track: MultiMeshInstance3D = finished.find_child(
+            "OrugaArticuladaG09V7_%s" % side,true,false) as MultiMeshInstance3D
+        assert(track != null and track.multimesh != null)
+        assert(track.multimesh.instance_count == 84)
+        for wheel in range(7):
+            assert(finished.find_child("RuedaG09V7_%s_%02d" % [side,wheel],true,false) != null)
+    var wheel: MeshInstance3D = finished.find_child("RuedaG09V7_1_0",true,false) as MeshInstance3D
+    var rest: Basis = wheel.transform.basis
+    assert(Rig.pose(finished,"move",0.27,Vector2i(1,0)))
+    assert(not rest.is_equal_approx(wheel.transform.basis))
+    Rig.restore(finished)
+    # Five physical damage stages are still reversible, with superseded
+    # armor permanently hidden even after full repair.
     assert(Damage.apply_stage(finished,3))
-    assert(not ceramic.visible and not new_cheek.visible)
-    assert(Damage.apply_stage(finished,0))
-    assert(not old_cheek.visible and not new_cheek.visible and ceramic.visible)
+    assert(not cheek.visible)
     assert(Damage.apply_stage(finished,4))
-    assert(not new_mantlet.visible and not optical.visible)
-    assert(not finished.find_child("AroSelladoCanonV5",true,false).visible)
+    assert(not mantlet.visible)
     assert(Damage.apply_stage(finished,0))
-    assert(new_mantlet.visible and optical.visible)
-    assert(not finished.find_child("AroSelladoCanonV5",true,false).visible)
+    assert(cheek.visible and mantlet.visible)
+    assert(not finished.find_child("MejillaMonoliticaV6_1",true,false).visible)
+    assert(not finished.find_child("BastidorCanonIntegradoV6",true,false).visible)
+    for faction in range(8):
+        assert(Models.apply_faction_palette(finished,faction) == 14)
     base.free()
     finished.free()
-    print("PASS G09 V5: closed hull turret and V6 ceramic cheeks, no restored old optics or mantlet, faction and damage compatibility")
+    print("PASS G09 V7: watertight hero hull and turret, 256px shared PBR, 168 linked track shoes, wheels, all 8 factions and 5 HP states")
     quit(0)
