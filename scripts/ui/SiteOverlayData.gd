@@ -40,7 +40,8 @@ static func snapshots(state: Dictionary, viewer: int = 0) -> Array:
         }
         # Only a friendly occupying capturer can create a capture hint. Capture
         # happens on end_turn, not gradually and not on the first tap.
-        if kind == "city" and real_owner != viewer:
+        if real_owner != viewer:
+            # Infantry captures both cities AND military production sites.
             for unit in state.get("units",[]):
                 if unit is Dictionary and int(unit.get("hp",0)) > 0 and int(unit.get("faction",-1)) == viewer and unit.get("pos") == cell and Economy.can_capture(unit):
                     item["capture_pending"] = true
