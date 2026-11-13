@@ -23,11 +23,11 @@ const MAX_ZOOM := 2.4
 func _ready() -> void:
     title = "TARVOKA · Inspección real de modelos 3D"
     ok_button_text = "Volver a la batalla"
-    min_size = Vector2i(400,470)
+    min_size = Vector2i(340,455)
     var controls := VBoxContainer.new()
-    controls.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    controls.size_flags_vertical = Control.SIZE_FILL
     controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    controls.add_theme_constant_override("separation",8)
+    controls.add_theme_constant_override("separation",5)
     add_child(controls)
     var intro := Label.new()
     intro.text = "Modelos editables de Godot · Gira con el dedo"
@@ -41,9 +41,9 @@ func _ready() -> void:
     controls.add_child(picker)
 
     viewport_holder = SubViewportContainer.new()
-    viewport_holder.custom_minimum_size = Vector2(320,310)
+    viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport_rect().size.y*0.355,205.0,310.0))
     viewport_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    viewport_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    viewport_holder.size_flags_vertical = Control.SIZE_FILL
     viewport_holder.stretch = true
     viewport_holder.mouse_filter = Control.MOUSE_FILTER_STOP
     controls.add_child(viewport_holder)
@@ -147,7 +147,7 @@ func show_role(role: String) -> void:
 func open_viewer() -> void:
     if not Models.supports(_current_role):
         show_role(str(Models.ROLES[0]))
-    popup_centered_ratio(0.9)
+    popup_centered_ratio(0.86)
 
 func _update_camera_size() -> void:
     if camera == null or not Models.supports(_current_role):
