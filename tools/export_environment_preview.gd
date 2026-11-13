@@ -32,8 +32,12 @@ class PreviewCanvas:
                         x >= 2 and x <= 5 and y >= 6) or (
                         x >= 9 and x <= 12 and y <= 2):
                     kind = "forest"
-                if x in [6,7] and y != 4 or (
-                        y >= 7 and x >= 8):
+                # River meanders toward a wider southern estuary.
+                # The existing road overlays y=4 as a real bridge.
+                if (y <= 5 and x in [6,7]) or (
+                        y == 6 and x in [7,8]) or (
+                        y == 7 and x in [8,9]) or (
+                        y == 8 and x >= 8):
                     kind = "water"
                 if y == 4 and x >= 1:
                     kind = "road"
