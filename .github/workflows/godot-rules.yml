@@ -65,6 +65,7 @@ jobs:
           fi
           test -s artifacts/tarvoka_3d_first8.png
           test -s artifacts/tarvoka_3d_inspector_android.png
+          test -s artifacts/tarvoka_mbt_8_faction_colors.png
 
       - name: Archive genuine Godot 3D renders for visual review
         uses: actions/upload-artifact@v4
@@ -73,6 +74,7 @@ jobs:
           path: |
             artifacts/tarvoka_3d_first8.png
             artifacts/tarvoka_3d_inspector_android.png
+            artifacts/tarvoka_mbt_8_faction_colors.png
           if-no-files-found: error
           retention-days: 30
 
