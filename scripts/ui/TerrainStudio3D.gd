@@ -182,6 +182,17 @@ static func _vertex_tint(grid_x: int, grid_z: int, scene: int) -> Color:
         return SAND
     return result * (1.0 / float(neighbors))
 
+static func _water_corner_tint(x: int, z: int, scene: int) -> Color:
+    # Deterministic shallow turquoise at shores, dark blue farther away.
+    var near_shore: int = 0
+    for dz in [-1,0]:
+        for dx in [-1,0]:
+            var terrain: String = kind(x+dx,z+dz,scene)
+            if terrain != "water" and terrain != "outside":
+                near_shore += 1
+    var depth_mix: float = 1.0 - float(near_shore)/4.0
+    return Color("#4b91a3").lerp(Color("#25536f"),depth_mix)
+
 static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
     # Deliberately unindexed: faceted normals describe readable low-poly relief.
@@ -210,9 +221,12 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
                 var b := center+Vector3(half,WATER_LEVEL,-half)
                 var d := center+Vector3(half,WATER_LEVEL,half)
                 var e := center+Vector3(-half,WATER_LEVEL,half)
-                for triangle in [[a,e,b],[b,e,d]]:
-                    _triangle(water,triangle[0],triangle[1],triangle[2],
-                        WATER,WATER,WATER)
+                var nw: Color = _water_corner_tint(x,z,scene)
+                var ne: Color = _water_corner_tint(x+1,z,scene)
+                var se: Color = _water_corner_tint(x+1,z+1,scene)
+                var sw: Color = _water_corner_tint(x,z+1,scene)
+                _triangle(water,a,e,b,nw,sw,ne)
+                _triangle(water,b,e,d,ne,sw,se)
                 continue
             var corners: Array[Vector3] = [
                 center+Vector3(-half,0,-half),
@@ -261,7 +275,12 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
     var water_surface := MeshInstance3D.new()
     water_surface.name = "LaminaDeAguaContinua"
     water_surface.mesh = water.commit()
-    water_surface.material_override = _material(WATER,0.28)
+    var water_mat := StandardMaterial3D.new()
+    water_mat.vertex_color_use_as_albedo = true
+    water_mat.roughness = 0.32
+    water_mat.metallic = 0.05
+    water_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    water_surface.material_override = water_mat
     parent.add_child(water_surface)
     _box(parent,"LechoSubmarino",Vector3(0,BASE_LEVEL-0.09,0),
         Vector3(float(WIDTH)*CELL,0.20,float(HEIGHT)*CELL),DEEP_WATER)
