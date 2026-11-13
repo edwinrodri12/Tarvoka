@@ -68,6 +68,18 @@ func _run() -> void:
     assert(captured["valid"])
     assert(Economy.site_at(captured["state"]["economy"],city)["owner"] == 0)
     assert(not bool(_at(SiteData.snapshots(captured["state"]),city)["capture_pending"]))
+    var enemy_factory := Vector2i(9,3)
+    var factory_capture: Dictionary = Session.start([
+        Roles.make_unit("A",0,enemy_factory,"line"),
+        Roles.make_unit("X",1,Vector2i(8,5),"line")
+    ],terrain,0,false,false,true)
+    var factory_marker: Dictionary = _at(SiteData.snapshots(factory_capture),enemy_factory)
+    assert(factory_marker["capture_pending"] and factory_marker["status"] == "capture")
+    var dossier: Dictionary = Dossier.inspect(factory_capture,"","",Vector2i(-1,-1),enemy_factory)
+    assert(str(dossier["stats"][0]["value"]) == "Al fin de turno")
+    var completed: Dictionary = Session.end_turn(factory_capture)
+    assert(completed["valid"])
+    assert(int(Economy.site_at(completed["state"]["economy"],enemy_factory)["owner"]) == 0)
 
     # Enemy production state and ownership must not be leaked from a
     # previously explored (but now unobserved) city or enemy factory.
