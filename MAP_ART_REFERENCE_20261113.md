@@ -53,6 +53,25 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 
 **Pendientes para lograr paridad con el concepto aprobado:** modelos 3D/mallas de relieve, textura de roca/suelo/vegetación y materiales, curvas orgánicas de ríos en vez de canales siempre celulares, cascadas con altitud explícita, y capturas reales en Android de distintas escalas. Evitar dibujar cascadas sin datos de elevación, porque implicaría un relieve inventado que no existe en las reglas.
 
+## Cuarto incremento — texturas procedurales y visor de comparación sin APK
+
+- `TerrainSurfaceMaterials.gd`: microdetalle original en hierba, bosque, roca, agua y asfalto; distribución determinista, comprimida dentro de cada diamante. Dos perfiles de detalle en el render; ahorro de batería/mínimo omite microtexturas.
+- `IsoRenderer.gd`: incluye esas marcas **solamente en celdas actualmente visibles**, bajo el mismo control de niebla, zoom y mapa táctico. Ninguna de ellas modifica terreno, reglas o guardados.
+- `test_landscape_materials.gd`: verifica estabilidad del sembrado y que las marcas no sobrepasen los límites geométricos; se dibujan tanto a calidad media como completa.
+- `tools/export_environment_preview.gd`: crea dos capturas reales del mismo pintor gráfico Godot 4.3 usado en la partida, sobre un escenario de exhibición fijo con montañas, bosques, río y carretera con puente; no simula una partida ni reemplaza las pruebas de reglas.
+- `.github/workflows/map-art-previews.yml`: automatiza con Xvfb/Mesa la exportación de ambas capturas a un artefacto `tarvoka-environment-preview`. No hay que instalar Android para verlas.
+- `tools/environment-preview-gallery.html`: galería local y responsiva; abre `index.html` del ZIP del artefacto de GitHub Actions. Permite alternar perfiles y cargar localmente una lámina aprobada como referencia al lado derecho. No envía la imagen a ningún servicio.
+
+### Procedimiento de revisión sin APK
+
+1. Abrir el pull request del entorno en GitHub, entrar a la ejecución más reciente de `TARVOKA map art preview (no APK)`.
+2. Descargar el artefacto `tarvoka-environment-preview`, descomprimirlo y abrir `index.html` con cualquier navegador.
+3. Alternar `Detalle completo` y `Detalle medio / móvil`. Seleccionar una de las imágenes originales de `Advanced wars` desde el campo `Elegir referencia PNG/JPG`.
+4. Comparar **elementos equivalentes**, no exigir que el mapa de demostración reproduzca la composición exacta de la lámina. Registrar capturas de discrepancias de costa, bosque, altiplano, contraste y legibilidad.
+5. Después de validar por capturas, revisar en una APK real la cámara, la niebla de guerra y el rendimiento en móvil; las imágenes no sustituyen la prueba táctil.
+
+**Límite:** se trata de materiales procedurales pintados por CanvasItem en 2.5D. Todavía no son materiales 3D PBR, modelos de suelo texturizados ni fotogrametría. El producto comercial debe evaluarse con capturas reales y evitar prometer paridad total hasta mejorar geometría, iluminación y detalle.
+
 ## Desglose de fases restantes
 
 A. Continuidad de suelo: carreteras en cuatro direcciones, riberas de aguas, cruces con puente y pruebas de niebla — **primera iteración en esta rama**.
