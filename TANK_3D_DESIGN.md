@@ -92,3 +92,24 @@ La solicitud es dejar de usar el tanque como maqueta gris con cubos. Esta nueva 
 Las nuevas pruebas `tests/test_mbt_art_finish.gd` generan `artifacts/tarvoka_mbt_detail_turntable.png` desde Godot para revisión de los cuatro ángulos y validan los pernos agrupados, 14 paneles, materiales PBR y reversión de daños.
 
 **Estado honesto:** este pase mejora de forma material los acabados 3D integrados, pero aprobar un arte comercial definitivo exige **ver las capturas y la APK en el teléfono**. Faltan mapas UV y texturas de producción pintados manualmente, LOD validados en Android y evaluación estética del usuario antes de marcar el MBT como final.
+
+
+## Cierre del detallado técnico G09 — revisión del video físico `242323.mp4`
+
+En esta ejecución se completa una pasada de detalle y articulaciones compatible con las 8 facciones y el render real del juego. El video físico mostró que el tanque era reconocible, pero tenía grandes placas de color, accesorios demasiado cúbicos y humo de daño con esferas opacas que ocultaban el sobreblindaje.
+
+**Geometría integrada — `TankProduction3D.gd` (pasada V4):**
+
+- Cañón con aro de boca independiente, ánima oscura, dos abrazaderas térmicas y marca de alza. Todo se ancla al pivote **`ElevacionCanon`**, por lo que elevación y retroceso siguen funcionando.
+- Costados con tres piezas de blindaje compuesto facetado por lado, rodaje con aros de rueda motriz, canal de suspensión, guardabarros, protección de faros y remaches de bujes.
+- Torre con objetivo láser de carrocería, nuevos lentes individuales, visor térmico blindado, escotilla con aro y tiradores, rejillas y canastillas de estiba con soportes y bolsas independientes. Los componentes giran sobre **`TorretaGiratoria`**.
+- Casco con relieve antideslizante, aletas de ventilación de motor, manijas de mantenimiento y paneles de faldón que conservan **14 zonas** de color, ahora como franjas sobre una base neutral de acero.
+- Agrupación de **118 detalles físicos** en solo **3 MultiMesh** (48 relieves + 28 lamas + 42 remaches) para limitar costes en Android, además de las dos agrupaciones de tornillos existentes.
+- Todo el detalle se construye una vez por instancia del tanque y puede ser inspeccionado como 3D auténtico desde 0°, 90°, 180° y 270°. El motor vuelve a capturas cacheadas y máximo dos modelos animados en combate.
+
+**Cinco fases visuales preservadas y afinadas:** marcas y rozaduras del faldón en el primer impacto; rejilla fracturada, placa suelta y humo leve en el segundo; desaparición real de protección lateral, sensores y segmentos de orugas en daño crítico; cañón perdido, ópticas desprendidas, motor quemado, escombros y fuego inclinado en destrucción. El humo dejó de ser una secuencia de bolas sólidas: se construye a partir de una textura RGBA suave compartida de 96 px colocada en planos que miran a la cámara, con transparencia baja. Su movimiento solo se calcula cuando el inspector está abierto. La reparación revierte todas las ocultaciones físicas, sin alterar HP ni reglas.
+
+**Pruebas de aceptación en CI:**
+`tests/test_mbt_art_finish.gd` valida geometría, grupos MultiMesh, colores de ocho facciones, ópticas, cañón y restauración del estado destruido. `tests/test_tank_damage_laboratory.gd` exige QuadMesh transparente con textura suave y un desplazamiento de humo reproducible. Las pruebas existentes continúan protegiendo animación de orugas, disparo, retroceso, inspector en Android, render de cuatro ángulos y cinco fases de destrucción. El render `artifacts/tarvoka_mbt_detail_turntable.png` es un render real de Godot, no un concepto.
+
+**Alcance honesto del cierre:** es un modelo 3D detallado, animable y utilizable en Android, elaborado proceduralmente. Aún no se puede certificar como arte comercial final sin una aceptación estética del usuario de la APK más reciente y sin presupuesto medido de FPS/temperatura en su teléfono. Tampoco se debe confundir este acabado con un paquete externo de GLB/UV y texturas 2K de estudio; el proyecto mantiene su sistema PBR reproducible actual. No bloquear la jugabilidad ni el trabajo sobre otros modelos por pendientes visuales de este tipo, pero conservarlos como checklist de pulido artístico opcional.
