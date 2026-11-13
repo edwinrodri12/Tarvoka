@@ -161,6 +161,38 @@ func set_isometric(enabled: bool) -> void:
     _pinch_midpoint = Vector2.ZERO
     queue_redraw()
 
+# The 3D viewport is an opt-in read-only presentation of this battle.
+# Activating it never changes turns, orders, save data or fallback projection.
+func set_3d_view(enabled: bool) -> void:
+    if enabled == three_d_enabled:
+        return
+    if enabled:
+        iso_enabled = true
+        if _battle_3d == null:
+            _battle_3d = Battle3D.new()
+            _battle_3d.name = "Experimental3DTacticalView"
+            _battle_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            add_child(_battle_3d)
+            _battle_3d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        _battle_3d.show()
+        _battle_3d.call("set_rendering",true)
+        three_d_enabled = true
+        _reset_touch_gesture()
+        _3d_sync_interval = 0.0
+        _battle_3d.call("sync_battle",state,selected_id,battery_saver)
+        frame_player_force()
+    else:
+        three_d_enabled = false
+        if _battle_3d != null:
+            _battle_3d.call("set_rendering",false)
+            _battle_3d.hide()
+        _reset_touch_gesture()
+    queue_redraw()
+
+func _sync_3d_visual() -> void:
+    if three_d_enabled and _battle_3d != null:
+        _battle_3d.call("sync_battle",state,selected_id,battery_saver)
+
 func change_iso_zoom(direction: int) -> void:
     if not iso_enabled or direction == 0:
         return
@@ -259,6 +291,10 @@ func frame_player_force() -> bool:
     location /= float(count)
     var cell := Vector2i(clampi(roundi(location.x),0,dimensions.x-1),
         clampi(roundi(location.y),0,dimensions.y-1))
+    if three_d_enabled and _battle_3d != null:
+        _battle_3d.call("focus_cell",cell,2.5 if dimensions.x >= 40 else (
+            1.8 if dimensions.x >= 24 else 1.05))
+        return true
     if iso_enabled:
         iso_zoom = 2.6 if dimensions.x >= 40 else (2.05 if dimensions.x >= 24 else 1.0)
         iso_zoom = clampf(iso_zoom,IsoProjection.MIN_ZOOM,IsoProjection.MAX_ZOOM)
