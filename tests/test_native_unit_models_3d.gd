@@ -18,6 +18,7 @@ func _run() -> void:
     for role in Models.ROLES:
         assert(Roles.valid(str(role)))
         assert(Models.supports(str(role)))
+        assert(Models.production_asset_path(str(role)) == "res://assets/units3d/" + str(role) + ".glb")
         var model: Node3D = Models.build(str(role))
         assert(model != null and model is Node3D)
         assert(model.name == "Modelo3D_" + str(role))
