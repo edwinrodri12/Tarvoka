@@ -8,6 +8,7 @@ on:
       - ".github/workflows/map-art-previews.yml"
       - "scripts/ui/WorldArt.gd"
       - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeContinuity.gd"
       - "scripts/ui/LandscapeTransitions.gd"
       - "scripts/ui/TerrainTextureAtlas.gd"
       - "tools/export_environment_preview.gd"
@@ -17,6 +18,7 @@ on:
       - "scripts/ui/WorldArt.gd"
       - "scripts/ui/IsoRenderer.gd"
       - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeContinuity.gd"
       - "scripts/ui/LandscapeTransitions.gd"
       - "scripts/ui/TerrainSurfaceMaterials.gd"
       - "scripts/ui/TerrainTextureAtlas.gd"
@@ -51,6 +53,21 @@ jobs:
             sudo apt-get update -qq
             sudo apt-get install -y xvfb
           fi
+      - name: Verify river ridges and coast seamlessly meet neighboring tiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_continuous_world_seams.gd \
+            2>&1 | tee /tmp/tarvoka-world-seams.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-world-seams.log; then
+            echo 'Seam continuity failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS continuous world seams:' /tmp/tarvoka-world-seams.log
+
       - name: Rasterize environment at full and medium mobile detail
         shell: bash
         run: |
