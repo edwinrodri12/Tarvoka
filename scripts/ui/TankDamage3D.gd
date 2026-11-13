@@ -5,6 +5,23 @@ class_name TarvokaTankDamage3D
 # intact, marked, damaged, critical and destroyed. No combat state, saved HP,
 # rules or destructive changes to the source geometry.
 const STAGES := ["Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"]
+
+# Cosmetic bridge from authoritative HP to the five art-only MBT damage layers.
+# Does not alter stats, damage or save schema. A defeated unit is shown only
+# in the inspector; the tactical engine removes it as before.
+static func stage_for_hp(hp: int, maximum_hp: int) -> int:
+    if hp <= 0:
+        return 4
+    if maximum_hp <= 0:
+        return 0
+    var fraction: float = clampf(float(hp) / float(maximum_hp),0.0,1.0)
+    if fraction >= 0.90:
+        return 0
+    if fraction >= 0.65:
+        return 1
+    if fraction >= 0.40:
+        return 2
+    return 3
 const ROOT := "EtapasDestruccion3D"
 const TURRET := "TorretaGiratoria"
 const GUN := "ElevacionCanon"
