@@ -136,6 +136,10 @@ static func build_ground(grid: Array, observed: Dictionary = {},
     var material := StandardMaterial3D.new()
     material.vertex_color_use_as_albedo = true
     material.roughness = 0.96
+    # Godot treats the top-down grid face winding differently from a
+    # conventional right-handed x/z heightfield. Two-sided shading avoids
+    # dropping the entire flat landscape while keeping smooth +Y normals.
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
     mesh.surface_set_material(0,material)
     return mesh
 
