@@ -12,6 +12,7 @@ signal change_view_requested
 signal battery_requested
 signal minimap_requested
 signal inspect_unit_requested(unit_id: String)
+signal inspect_selection_requested
 signal purchase_requested(role: String)
 
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
@@ -258,6 +259,9 @@ func refresh() -> void:
     _clear(army_body)
     _heading(army_body,"Unidades propias")
     _description(army_body,"Toca una unidad para centrar el mapa y consultar sus datos; no ejecuta una orden.")
+    var selected_context: bool = not str(board.selected_id).is_empty() or not str(board.inspected_enemy_id).is_empty() or board.selected_factory_pos != Vector2i(-1,-1) or board.inspected_cell != Vector2i(-1,-1)
+    _action(army_body,"ABRIR FICHA DE SELECCIÓN · COMBATE / MOVIMIENTO / LOGÍSTICA",
+        func(): inspect_selection_requested.emit(),selected_context)
     var owned: int = 0
     var visible_count: int = 0
     for unit in state.get("units",[]):

@@ -14,6 +14,7 @@ const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
 const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
+const BattleContextPanel = preload("res://scripts/ui/BattleContextPanel.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
@@ -49,6 +50,9 @@ var compact_menu_button: Button
 var inspection_title: Label
 var inspection_detail: Label
 var sidebar_dossier: Control
+var sidebar_details_button: Button
+var compact_details_button: Button
+var context_panel: Control
 var compact_dossier: Control
 var sidebar_site_actions: Control
 var compact_site_actions: Control
@@ -362,6 +366,14 @@ func _ready() -> void:
     inspection_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     inspection_detail.add_theme_font_size_override("font_size",16)
     panel.add_child(inspection_detail)
+    sidebar_details_button = Button.new()
+    sidebar_details_button.text = "ABRIR FICHA TÁCTICA  ▸"
+    sidebar_details_button.tooltip_text = "Ver submenús de combate, movilidad, logística y acciones sin emitir órdenes"
+    sidebar_details_button.custom_minimum_size.y = 49
+    sidebar_details_button.visible = false
+    sidebar_details_button.pressed.connect(_open_context_detail)
+    GameUiTheme.emphasize(sidebar_details_button,"secondary")
+    panel.add_child(sidebar_details_button)
 
     unit_label = Label.new()
     unit_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -639,6 +651,7 @@ func _ready() -> void:
     command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
     command_menu.minimap_requested.connect(func(): _toggle_minimap(); command_menu.refresh())
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
+    command_menu.inspect_selection_requested.connect(_open_context_detail)
     command_menu.purchase_requested.connect(_purchase_command_unit)
     command_menu.home_requested.connect(_show_home_menu)
     command_menu.objectives_requested.connect(_open_objectives_radar)
@@ -682,6 +695,16 @@ func _ready() -> void:
     skirmish_setup.back_requested.connect(_back_from_skirmish)
     skirmish_setup.advanced_requested.connect(_show_advanced_skirmish)
     skirmish_setup.start_requested.connect(_start_skirmish_setup)
+
+    # Opens only when the player explicitly asks for details; merely tapping
+    # the battlefield continues to reveal the quick card without blocking it.
+    context_panel = BattleContextPanel.new()
+    add_child(context_panel)
+    context_panel.close_requested.connect(_close_context_detail)
+    context_panel.map_requested.connect(_close_context_detail)
+    context_panel.locate_requested.connect(_context_locate)
+    context_panel.production_requested.connect(_context_open_production)
+    context_panel.supply_requested.connect(_context_resupply)
 
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
@@ -747,7 +770,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     var dossier_column := VBoxContainer.new()
     dossier_column.add_theme_constant_override("separation",6)
     polished_unit_card.add_child(dossier_column)
-    for widget in [unit_heading,inspection_title,sidebar_dossier,sidebar_site_actions,inspection_detail,unit_label,order_preview_label,sidebar_combat_preview]:
+    for widget in [unit_heading,inspection_title,sidebar_dossier,sidebar_site_actions,inspection_detail,sidebar_details_button,unit_label,order_preview_label,sidebar_combat_preview]:
         widget.reparent(dossier_column,false)
     GameUiTheme.section(unit_heading)
     unit_heading.text = "INSPECCIÓN Y ÓRDENES"
@@ -1023,9 +1046,23 @@ func _build_battle_hud() -> void:
     compact_iso.offset_bottom = 49
     compact_iso.pressed.connect(_toggle_isometric_view)
     battle_hud_overlay.add_child(compact_iso)
+    compact_details_button = Button.new()
+    compact_details_button.text = "FICHA"
+    compact_details_button.tooltip_text = "Abrir ficha con secciones de combate, movimiento y logística"
+    compact_details_button.custom_minimum_size = Vector2(92,42)
+    compact_details_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+    compact_details_button.offset_left = 12
+    compact_details_button.offset_right = 104
+    # Deliberately below the terrain overlay's future 70–112 px slot.
+    compact_details_button.offset_top = 120
+    compact_details_button.offset_bottom = 162
+    compact_details_button.pressed.connect(_open_context_detail)
+    GameUiTheme.emphasize(compact_details_button,"secondary")
+    battle_hud_overlay.add_child(compact_details_button)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
+    compact_details_button.hide()
     expanded_header.show()
     expanded_actions.show()
 
@@ -1035,6 +1072,7 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    compact_details_button.visible = compact and sidebar_details_button.visible
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
@@ -1100,6 +1138,8 @@ func _process(_delta: float) -> void:
         inspection_title.visible = show_info
         inspection_detail.visible = show_info
         compact_info_panel.visible = show_info
+        sidebar_details_button.visible = show_info and board.pending_order.is_empty()
+        compact_details_button.visible = sidebar_details_button.visible and battle_hud_compact
         _update_text(inspection_title,str(info.get("title","")))
         _update_text(inspection_detail,str(info.get("body","")))
         _update_text(compact_info_title,str(info.get("title","")))
@@ -1462,6 +1502,7 @@ func _open_arsenal_from_home() -> void:
     _open_unit_art_gallery()
 
 func _open_settings_from_home() -> void:
+    _close_context_detail()
     home_menu.hide()
     command_menu.open_for(board,"Ajustes")
 
@@ -1474,6 +1515,7 @@ func _radar_viewer() -> int:
     return 0 if board.ai_enabled else int(board.state.get("faction",0))
 
 func _open_objectives_radar() -> void:
+    _close_context_detail()
     if objectives_panel == null or board == null:
         return
     command_menu.hide()
@@ -1529,6 +1571,7 @@ func _close_results_screen() -> void:
         results_scrim.hide()
 
 func _open_results_screen() -> void:
+    _close_context_detail()
     if results_panel == null or not bool(ResultsData.report(board.state).get("valid",false)):
         return
     if objectives_panel != null and objectives_panel.visible:
@@ -1544,6 +1587,35 @@ func _results_new_battle() -> void:
 func _results_to_home() -> void:
     _close_results_screen()
     _show_home_menu()
+
+func _open_context_detail() -> void:
+    if board == null or not board.pending_order.is_empty():
+        return
+    if int(board.state.get("winner",-1)) != -1 or (results_panel != null and results_panel.visible):
+        return
+    command_menu.hide()
+    if objectives_panel != null and objectives_panel.visible:
+        _close_objectives_radar()
+    context_panel.open_for(board.state,board.selected_id,board.inspected_enemy_id,
+        board.selected_factory_pos,board.inspected_cell,_radar_viewer(),board.can_resupply_selected())
+
+func _close_context_detail() -> void:
+    if context_panel != null:
+        context_panel.hide()
+
+func _context_locate(cell: Vector2i) -> void:
+    if Rules.inside(cell,board.state.get("terrain",[])):
+        board.focus_view_cell(cell)
+    _close_context_detail()
+
+func _context_open_production(cell: Vector2i) -> void:
+    _close_context_detail()
+    _open_site_production(cell)
+
+func _context_resupply() -> void:
+    _close_context_detail()
+    if board.can_resupply_selected():
+        _resupply_unit()
 
 func _open_command_menu() -> void:
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
