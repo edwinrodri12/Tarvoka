@@ -41,7 +41,7 @@ func _ready() -> void:
     controls.add_child(picker)
 
     viewport_holder = SubViewportContainer.new()
-    viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport_rect().size.y*0.355,205.0,310.0))
+    viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport().get_visible_rect().size.y*0.355,205.0,310.0))
     viewport_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     viewport_holder.size_flags_vertical = Control.SIZE_FILL
     viewport_holder.stretch = true
