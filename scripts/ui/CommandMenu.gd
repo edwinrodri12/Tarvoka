@@ -10,6 +10,7 @@ signal home_requested
 signal objectives_requested
 signal change_view_requested
 signal battery_requested
+signal minimap_requested
 signal inspect_unit_requested(unit_id: String)
 signal purchase_requested(role: String)
 
@@ -25,6 +26,7 @@ const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 
 var board: Control
+var minimap_enabled := false
 var tabs: TabContainer
 var info_label: Label
 var battle_body: VBoxContainer
@@ -307,8 +309,10 @@ func refresh() -> void:
     _clear(settings_body)
     _heading(settings_body,"Controles y visualizacion")
     _description(settings_body,"Las opciones visuales no cambian las estadisticas ni el resultado de batalla.")
-    _action(settings_body,"Cambiar vista isometrica / clasica",func(): change_view_requested.emit())
-    _action(settings_body,"Alternar ahorro de bateria",func(): battery_requested.emit())
+    _action(settings_body,"Vista: %s" % ("isométrica" if bool(board.iso_enabled) else "clásica"),func(): change_view_requested.emit())
+    _action(settings_body,"Ahorro de batería: %s" % ("activado" if bool(board.battery_saver) else "desactivado"),func(): battery_requested.emit())
+    _action(settings_body,"Minimapa: %s" % ("visible" if minimap_enabled else "oculto"),func(): minimap_requested.emit())
+    _description(settings_body,"Se guardan en este dispositivo automáticamente. El minimapa solo se muestra en vista isométrica.")
     _description(settings_body,"Gestos: pellizca con dos dedos para acercar y alejar; desliza para mover la camara. Toca una unidad para consultar y despues confirma las ordenes.")
     _heading(settings_body,"Terreno y ventajas")
     _description(settings_body,"Carretera: vehiculos terrestres motorizados recorren 2 casillas por punto de movimiento. Infanteria: 1 casilla por punto. Bosque: cobertura +1; montana +2 y bonificacion por altura; ciudad: +1 cobertura.")
