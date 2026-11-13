@@ -153,7 +153,14 @@ func _run() -> void:
     board.state["faction"] = 1
     assert(screen._radar_viewer() == 1)
     screen._open_objectives_radar()
-    assert(screen.objectives_panel._data["alert_count"] == 0)
+    var hotseat_data: Dictionary = Radar.build(board.state,1)
+    assert(screen.objectives_panel._data["alert_count"] == hotseat_data["alert_count"])
+    for candidate in screen.objectives_panel._data["alerts"]:
+        var found_own := false
+        for member in board.state["units"]:
+            if str(member.get("id","")) == str(candidate.get("id","")):
+                found_own = int(member.get("faction",-1)) == 1
+        assert(found_own)
     screen._close_objectives_radar()
     screen.queue_free()
     for suffix in ["",".bak"]:
