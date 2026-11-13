@@ -1,0 +1,118 @@
+name: TARVOKA Browser 3D Art Studio
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/Tank*.gd"
+      - "scenes/UnitArtStudioWeb.tscn"
+      - "export_presets.cfg"
+      - ".github/workflows/web-art-studio.yml"
+      - "tests/test_web_art_studio.gd"
+  push:
+    branches:
+      - feat/browser-3d-model-lab-20261113
+      - main
+    paths:
+      - "scripts/ui/**"
+      - "scenes/UnitArtStudioWeb.tscn"
+      - "export_presets.cfg"
+      - ".github/workflows/web-art-studio.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-art-studio:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3 and web export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/tpl.tpz
+          mkdir -p /tmp/tpl
+          unzip -q /tmp/tpl.tpz -d /tmp/tpl
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/tpl/templates/web_debug.zip /tmp/tpl/templates/web_release.zip "$T/"
+          printf '4.3.stable\n' > "$T/version.txt"
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Mark exact Git revision in browser viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Validate native Godot 3D art studio interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_art_studio.gd 2>&1 | tee /tmp/studio-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-check.log; then
+            echo "Model studio parsing, scene or functional test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS native web studio:" /tmp/studio-check.log
+          test -s artifacts/tarvoka_web_3d_studio.png
+      - name: Export actual Godot 3D studio to WebGL 2.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-export.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-export.log; then
+            echo "Godot web export failed" >&2
+            exit 1
+          fi
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.js
+          test -s build/web/index.pck
+          touch build/web/.nojekyll
+          du -h build/web/*
+      - name: Archive live browser viewer and source render
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Native-3D-Web-Studio
+          path: |
+            build/web/
+            artifacts/tarvoka_web_3d_studio.png
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload GitHub Pages publishing payload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web/
+
+  deploy-preview:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build-art-studio
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+    steps:
+      # The owner must first choose Settings -> Pages -> Build source:
+      # GitHub Actions. GITHUB_TOKEN cannot auto-enable disabled Pages.
+      - name: Deploy native model viewer to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
