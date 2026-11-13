@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TARVOKA · Laboratorio de entorno</title>
+<style>
+:root{color-scheme:dark;--bg:#091923;--panel:#122a39;--line:#35607a;--ink:#e9f3ef;--muted:#a2bec6;--gold:#ffc35a;--blue:#55b6fa}
+*{box-sizing:border-box}
+body{font:16px system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);margin:0;background:linear-gradient(#153047,var(--bg) 35%)}
+main{max-width:1540px;margin:0 auto;padding:24px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:clamp(26px,4vw,42px);line-height:1.1;margin:0 0 10px;letter-spacing:.03em}
+h2{margin:0 0 12px;font-size:18px;color:var(--gold)}
+p{line-height:1.55;color:var(--muted)}
+.small{font-size:14px}
+kbd{font:inherit;color:var(--gold)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.panel img{width:100%;height:auto;aspect-ratio:5/3;object-fit:contain;background:#081520;border-radius:8px;display:block}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}
+button,.upload{background:#1c4963;border:1px solid #5181a2;border-radius:10px;padding:10px 15px;color:white;font:inherit;cursor:pointer}
+button[aria-pressed=true]{background:#ffc35a;color:#18232d;border-color:#ffc35a;font-weight:700}
+.upload{position:relative;overflow:hidden;display:inline-flex}
+.upload input{position:absolute;opacity:0;inset:0;width:100%;cursor:pointer}
+.reference-placeholder{border:1px dashed #52809a;color:#aec0c9;border-radius:8px;min-height:210px;display:grid;place-items:center;padding:24px;text-align:center}
+.note{border-left:3px solid var(--gold);padding:8px 16px;margin:22px 0;background:#162b38}
+footer{margin-top:24px;color:var(--muted);font-size:13px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}main{padding:16px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div>
+<p style="color:var(--gold);margin-bottom:8px;letter-spacing:.12em;font-weight:bold">TARVOKA / ART REVIEW</p>
+<h1>Laboratorio visual del entorno</h1>
+<p>Capturas creadas por <strong>Godot</strong> con los mismos pintores de terreno utilizados en la batalla.</p>
+</div>
+<div style="color:var(--muted)">Revisión de paisajes · 2.5D · sin instalar APK</div>
+</header>
+<div class="controls" role="group" aria-label="Calidad del entorno">
+<button id="full" type="button" aria-pressed="true">Detalle completo</button>
+<button id="medium" type="button" aria-pressed="false">Detalle medio / móvil</button>
+<a id="save" href="terrain-full.png" download style="color:var(--gold);margin-left:8px">Abrir imagen completa</a>
+</div>
+<div class="grid">
+<section class="panel">
+<h2>Resultado real del motor</h2>
+<img id="render" src="terrain-full.png" alt="Mapa de muestra renderizado por Godot: montañas, bosque, río y camino con puente">
+<p class="small">Escenario de prueba fijo. El dibujo procede de <kbd>WorldArt.gd</kbd>, <kbd>TerrainSurfaceMaterials.gd</kbd> y sus dependencias reales. No es una partida jugable ni una imagen generada para simular la app.</p>
+</section>
+<section class="panel">
+<h2>Referencia de arte aprobada</h2>
+<div id="empty" class="reference-placeholder">Selecciona desde tu equipo la referencia original de Operación Río Azul o la guía de terrenos para verla junto al render del juego.</div>
+<img id="reference" alt="Referencia cargada por el usuario" hidden>
+<p style="margin:16px 0 0">
+<label class="upload">Elegir referencia PNG/JPG
+<input id="pick" type="file" accept="image/png,image/jpeg,image/webp">
+</label>
+</p>
+<p class="small">El archivo permanece en este navegador. No se sube a un servidor ni queda guardado en el proyecto.</p>
+</section>
+</div>
+<div class="note"><strong>Qué revisar:</strong> continuidad de carreteras, bordes del agua, legibilidad de bosques y montañas, contraste de texturas, calidad al alejar el zoom y separación entre decoración y cuadrícula táctica.</div>
+<footer>Si quieres comparar arte conceptual y render final, carga la imagen aprobada en el panel derecho. Los números tácticos de las infografías no se importan a la jugabilidad.</footer>
+</main>
+<script>
+const full=document.querySelector('#full'),medium=document.querySelector('#medium'),render=document.querySelector('#render'),save=document.querySelector('#save');
+let blobUrl;
+function selectMode(isFull){
+  const path=isFull?'terrain-full.png':'terrain-medium.png';
+  render.src=path;save.href=path;
+  full.setAttribute('aria-pressed',String(isFull));
+  medium.setAttribute('aria-pressed',String(!isFull));
+}
+full.addEventListener('click',()=>selectMode(true));
+medium.addEventListener('click',()=>selectMode(false));
+document.querySelector('#pick').addEventListener('change',event=>{
+  const file=event.target.files&&event.target.files[0];
+  if(!file || !['image/png','image/jpeg','image/webp'].includes(file.type))return;
+  if(blobUrl)URL.revokeObjectURL(blobUrl);
+  blobUrl=URL.createObjectURL(file);
+  const image=document.querySelector('#reference');
+  image.src=blobUrl;image.hidden=false;
+  document.querySelector('#empty').hidden=true;
+});
+</script>
+</body>
+</html>
