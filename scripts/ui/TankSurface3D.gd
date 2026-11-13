@@ -110,6 +110,10 @@ static func apply_finish(model: Node3D) -> Dictionary:
     return stats
 
 static func _finish_node(node: Node, maps: Dictionary, stats: Dictionary) -> void:
+    if node.name.begins_with("Efecto"):
+        # Animated transparent/unshaded visual effects must retain their
+        # original material; do not apply opaque armor PBR to smoke or flash.
+        return
     if node is MeshInstance3D:
         var shape: MeshInstance3D = node as MeshInstance3D
         var finish: String = material_family(node.name)
