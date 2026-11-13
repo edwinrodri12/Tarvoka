@@ -280,6 +280,34 @@ static func _radar_upgrade(model: Node3D,level: int) -> void:
         _beam(rack,"SoporteRadial_%s" % side,
             base+Vector3(s*0.43,0.24,0),
             base+Vector3(s*0.15,1.21,0),0.072,ARMOR)
+    # The level-three radome is a SECOND distinct communications system.
+    # Place it behind/right of the reflective dish, never directly in front.
+    if level == 3:
+        var roof_y: float = 2.87+float(level-1)*0.91
+        var dome: Node3D = model.find_child("RadomoSuperior",true,false) as Node3D
+        var dome_base: Node3D = model.find_child("BaseDeRadomo",true,false) as Node3D
+        if dome != null:
+            dome.position = Vector3(1.72,roof_y+1.87,1.56)
+        if dome_base != null:
+            dome_base.position = Vector3(1.72,roof_y+1.10,1.56)
+        for i in range(8):
+            var original: Node = model.find_child("RefuerzoRadomo_%d" % i,true,false)
+            if original is Node3D:
+                (original as Node3D).visible = false
+        var old_base: Node = model.find_child("SoporteRadomoOctogonal",true,false)
+        if old_base is Node3D:
+            (old_base as Node3D).visible = false
+        var new_base := _group(structure,"RadomoReposicionadoV4")
+        _shell(new_base,"BaseBlindadaDelRadomo",
+            Vector3(1.72,roof_y+1.08,1.56),
+            Vector3(1.69,0.37,1.68),0.19,ARMOR,"roof")
+        for i in range(8):
+            var angle: float = TAU*float(i)/8.0
+            _beam(new_base,"NervioNuevoRadomo_%d" % i,
+                Vector3(1.72+0.65*cos(angle),roof_y+1.24,
+                    1.56+0.65*sin(angle)),
+                Vector3(1.72+0.38*cos(angle),roof_y+2.27,
+                    1.56+0.38*sin(angle)),0.027,WHITE)
     # Existing V1 flat plate remains hidden behind the new curved dish.
 
 static func _move_helipad(model: Node3D,level: int,tint: Color) -> void:
