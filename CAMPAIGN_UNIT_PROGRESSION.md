@@ -1,125 +1,101 @@
-# TARVOKA — Progresión de unidades del modo historia
+# TARVOKA — Progresión de campaña: 24 familias y mejoras (v0.2, propuesta)
 
-**Decisión aprobada por el usuario:** 2026-11-12. **Estado:** diseño de campaña [PLAN], no implementación demostrada.  
-**Documentos:** [CAMPAIGN_STORY_50.md](CAMPAIGN_STORY_50.md), [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md), [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md).
+**Fecha:** 2026-11-12. **Estado:** diseño revisado para 50 capítulos; reemplaza en esta rama el calendario v0.1 de 32 clases redundantes; **no está programado**. La versión original permanece en historial de GitHub y sus IDs se conservan en [MILITARY_UNIT_CATALOG.md](MILITARY_UNIT_CATALOG.md).  
+**Referencia de auditoría:** [UNIT_ROSTER_AUDIT_V02.md](UNIT_ROSTER_AUDIT_V02.md). **Niveles:** [CAMPAIGN_TECH_LEVELS_V1.md](CAMPAIGN_TECH_LEVELS_V1.md). **Guion completo del mundo:** [CAMPAIGN_STORY_50.md](CAMPAIGN_STORY_50.md).
 
-## Principio rector
+## Regla de campaña
 
-En las 50 misiones de *La Red de Meridian* el jugador aprende y desbloquea **progresivamente** las 32 clases del catálogo militar moderno v0.1. Cada desbloqueo debe estar justificado por un acontecimiento militar o una necesidad táctica, no por un nivel de experiencia artificial. No se cambian estadísticas, ventajas permanentes, poderes ni colores de facciones.
+Hay **24 familias base** propuestas: **10 terrestres, 7 aéreas y 7 navales**, con **3 niveles tecnológicos por familia** y ramas excluyentes donde tenga sentido. El objetivo no es dar clase nueva en cada capítulo: episodios sin estreno de familia enseñan equipos, mejoran habilidades o exigen dominio de lo aprendido.
 
-**Límite imprescindible:** este progreso es **exclusivo de la campaña**. Ni las batallas contra IA con mapas aleatorios ni las batallas online exigen jugar capítulos, ganar medallas o comprar clases. En esos modos todas las clases que estén técnicamente incorporadas al juego estarán disponibles según las reglas/mutadores elegidos para la partida, con coste económico normal e igualdad competitiva.
+**Conteos de familias nuevas tras los actos:** C10 = **8**; C20 = **13**; C30 = **19**; C40 = **24**; C50 = **24**. Total **24 introducciones únicas**. La familia naval `M09` queda **condicionada a pruebas**; si se descarta serán 23 familias y se adapta el C27 sin afectar las 50 misiones.
 
-**No confundir:**
-1. **Descubrimiento/tutorial**: presentar un rol en briefing, diálogo, unidad precolocada o producción guiada; la primera aparición puede ser enemiga/aliada y enseñar cómo contrarrestarla.
-2. **Desbloqueo de campaña**: desde el capítulo indicado, el tipo se añade al **registro de unidades aprendidas**; el jugador puede producirlo o recibirlo **si** el escenario lo contempla y dispone de infraestructura, créditos y suministro.
-3. **Disponibilidad real por misión**: condicionada por dominios terrestres/aéreos/navales, fábricas, mapas y rol de facción; no convertir un astillero de mar en fabricante de blindados ni obligar a introducir aeronaves donde no caben.
-4. **Implementación técnica**: solo marcar una unidad como jugable cuando exista su lógica, IA, UX, compatibilidad de guardado y pruebas. El catálogo de diseño no significa 32 clases terminadas.
+Una familia descubierta por el jugador no implica que todas las facciones históricas de TARVOKA compartan planos secretos: **el desbloqueo es un sistema de aprendizaje del jugador**, no una transferencia automática de tecnología dentro de la ficción. Su disponibilidad en cada batalla depende del ejército controlado, instalaciones, época, mapa, unidades iniciales, créditos, munición, combustible y nivel de tech autorizado.
 
-## Calendario de descubrimiento — 32 clases, 50 capítulos
+**Importante:** las campañas pueden ser completadas offline, nunca exigen compras. Ni escaramuza contra IA ni multijugador online dependen de estos desbloqueos. En competitivos todos se rigen por tecnología/presupuesto simétricos, acordados al crear la partida; no hay bonus heredados de historia ni pago real por niveles.
 
-Se reservan **los capítulos 41–50 para dominio del arsenal completo**, combinaciones, decisiones y clímax; no añadir nuevas clases allí para no distraer del desenlace.
+## Plan de capítulos: familia nueva, evolución y función narrativa
 
-### Acto I — Las primeras 72 horas (1–10): nueve clases
-| Capítulo | ID | Clase que se presenta/desbloquea | Motivo narrativo/tutorial |
-|---:|---|---|---|
-| 01 | G01 | Guardia | Movimiento, ataque cercano, captura solo de infantería |
-| 02 | G03 | Rastreador | Exploración, visión y niebla de guerra |
-| 03 | G05 | Ingeniero de combate | Restauración de infraestructura y ocupación de instalaciones |
-| 04 | G04 | Rompedor | Infantería antiblindaje y contramedidas |
-| 05 | G02 | Asaltante | Combate urbano y defensa de corredores |
-| 06 | G16 | Vehículo logístico | Combustible, munición y escolta; no puede capturar |
-| 07 | M01 | Patrullero | Primer contacto con navegación costera y buques |
-| 08 | G06 | Baluarte | Blindaje defensivo, vulnerabilidad a antiblindaje |
-| 09 | G11 | Lanzador | Diferencia entre movimiento y alcance de ataque, no dispara adyacente |
-| 10 | — | Sin clase nueva | Examen táctico sin más reglas: cerrar el acto emocionalmente |
+| Capítulo | Título de la historia | Familia nueva | Perfil/mejora o práctica | Función de aprendizaje |
+|---:|---|---|---|---|
+| 01 | Escudo compartido | G01 Guardia | — | Captura, movimiento y ataque en ejercicio conjunto |
+| 02 | Dos minutos de silencio | G03 Rastreador | — | Exploración y niebla durante un apagón |
+| 03 | Nudo Siete | G05 Ingeniero | — | Reparar nodos y rutas de salida |
+| 04 | Convoy perdido | G04 Rompedor | — | Infantería antiblindaje evita escalada |
+| 05 | Los primeros evacuados | — | G01 perfil urbano (G02) | Escoger cobertura urbana o movilidad de campo |
+| 06 | Informe incompleto | G16 Vehículo logístico | — | Asegurar suministros sin generar recursos |
+| 07 | Un puerto cerrado | M01 Patrullero | — | Control naval inicial y puertos |
+| 08 | La orden | G06 Baluarte | — | Blindaje defensivo y contramedida de G04 |
+| 09 | Setenta y dos horas | G11 Lanzador | — | Alcance indirecto 2, incapacidad de atacar adyacente |
+| 10 | El primer disparo oficial | — | Ejercicio combinado de acto | Cierra el tutorial y abre guerra |
+| 11 | Un puente para nadie | G07 Transporte blindado | — | Desembarco de infantería que sí puede capturar |
+| 12 | Las reservas del valle | — | G07 perfil VCI G08 | Transporte armado a cambio de carga útil |
+| 13 | Suelo de ceniza | — | G06 perfil tanque G09 | Golpe blindado ofensivo con combustible caro |
+| 14 | Turno de noche | — | G11 perfil autopropulsado G10 | Fuego indirecto, distancia mínima y protección |
+| 15 | Mar de separación | M07 Buque desembarco | — | Operación anfibia y ocupación por infantería |
+| 16 | Posiciones imposibles | — | G11 perfil cohetes G12 | Rango alto y recarga onerosa |
+| 17 | Las voces del apagón | A01 Dron reconocimiento | — | Exploración aérea bajo niebla |
+| 18 | No cruzar la línea | G13 Antiaéreo móvil | — | Contras de aeronaves y drones |
+| 19 | El invierno en ruta | — | G16 mejoras de inventario | Economía de convoy y logística perseverante |
+| 20 | El estrecho vacío | M03 Corbeta | M01 perfil lancha misilera M02 | Diferenciar patrulla veloz y escolta de convoy |
+| 21 | Una guerra rentable | G15 Guerra electrónica | — | La información tiene coste táctico y límites |
+| 22 | La ciudad que se negó | A02 Dron FPV consumible | — | Ataque único y reglas de protección de ciudad |
+| 23 | Agua por combustible | A06 Helicóptero transporte | — | Movilidad aérea para operaciones humanitarias |
+| 24 | El relevo no llegó | — | G13 perfil SAM G14 | Cobertura lejana, vulnerabilidad a cercana |
+| 25 | Alas sobre las cenizas | A05 Helicóptero ataque | — | Apoyo aéreo cercano frente a antiaéreos |
+| 26 | Los que no tienen bandera | — | A02 perfil merodeadora A03 | Ataque consumible con paciencia y reconocimiento |
+| 27 | Silencio en cubierta | M09 Buque logístico (condicional) | — | Reabastecer flota en mar; requiere mapa suficientemente grande |
+| 28 | Dos órdenes contrarias | — | G15 rama interferencia / protección | Habilidad EW contextual, decisiones con costes |
+| 29 | Las cifras del enemigo | A04 Dron combate reutilizable | — | Distinguir ISR persistente de ataque consumible |
+| 30 | La victoria que nos separó | — | Simulación combinada | Armas no sustituyen decisiones políticas |
+| 31 | Nueve minutos | — | A01 sensores nivel II | Buscar pruebas sin visión omnisciente |
+| 32 | El proyectil ausente | A07 Caza multifunción | — | Intercepción aérea y escolta limitada |
+| 33 | Piezas de otro origen | M06 Submarino | — | Variante costera e inteligencia naval; mapa debe justificarlo |
+| 34 | Certificados | — | G05 ingenieros nivel III | Defender infraestructuras y evidencia |
+| 35 | Una grabación auténtica | — | G03 exploración nivel III | Recuperación de información sin superioridad absoluta |
+| 36 | La ruta de los testigos | — | A06 evacuación nivel II | Transportar y proteger sin captura aérea |
+| 37 | Puertos para una tregua | — | M03 perfil fragata M04 | Sonar y defensa antisubmarina en una ruta de ayuda |
+| 38 | El enemigo al lado | A08 Bombardero táctico | — | Poder aéreo pesado con restricciones y contras |
+| 39 | Consecuencias de la verdad | M05 Destructor | — | Buque aliado sólo en variante costera de coalición; validar protagonismo Ámbar |
+| 40 | El expediente completo | M08 Dron naval USV | — | Alternativa de misión costera: uso único con consecuencias |
+| 41 | Nadie da el primer paso | — | G01 defensa/urbano rama final | Contención con fuerzas económicas |
+| 42 | Cuentas pendientes | — | G16 logística nivel III | Reabastecer en lugar de conquistar |
+| 43 | La marcha del regreso | — | G07 transporte nivel III | Retirada y rescate bajo persecución |
+| 44 | Los últimos barcos | — | M03 escolta nivel III | Preservar convoy civil frente a submarinos |
+| 45 | La fortaleza vacía | — | G06 blindado nivel III | Defender o ceder base estratégica |
+| 46 | El mapa de los ausentes | — | A04 ISR vs ataque nivel III | Salvar energía pese a costes militares |
+| 47 | La última orden | — | G11 fuego indirecto nivel III | Detener ofensiva con restricciones claras |
+| 48 | Siete puentes | — | G05 ingeniería/G15 EW nivel III | Combinar infraestructura y comunicaciones |
+| 49 | Meridian resiste | — | Armas combinadas por dominios | Gran final táctico con adversario justo |
+| 50 | El precio de la paz | — | Sin nuevos desbloqueos | Tres desenlaces por variables y decisiones |
 
-**Nota:** G04 Rompedor se especifica para la campaña como **infantería antiblindaje** a pie; conforme a la regla de diseño aprobada, **todo tipo de infantería** (G01–G05, incluidos exploradores, antiblindaje e ingenieros) puede capturar si está físicamente en la casilla, mientras que **ningún vehículo terrestre, aéreo o naval** captura. Los transportes solo facilitan llegar; deben desembarcar a la infantería. Comprobar/ajustar la clasificación técnica al integrar esta regla sin alterar los atributos militares v0.1.
+## Reglas de desbloqueo y veteranía
 
-### Acto II — Fronteras en llamas (11–20): nueve clases, acumulado 18
-| Capítulo | ID | Clase | Contexto |
-|---:|---|---|---|
-| 11 | G07 | Transporte blindado | Transportar escuadras para tomar el puente, solo la infantería desembarcada captura |
-| 12 | G08 | Vehículo de combate de infantería | Apoyo mecanizado y protección de corredores |
-| 13 | G09 | Tanque de combate principal | Blindaje pesado y dependencia de combustible |
-| 14 | G10 | Artillería autopropulsada | Defensa con rango indirecto y munición limitada |
-| 15 | M07 | Buque de desembarco | Desembarco e infantería que ocupa el puerto |
-| 16 | G12 | Lanzacohetes múltiple | Fuego de largo alcance con consumo alto |
-| 17 | A01 | Dron de reconocimiento | Reconocimiento aéreo sujeto a niebla y contramedidas |
-| 18 | G13 | Antiaéreo móvil | Defensa frente a drones/helicópteros |
-| 19 | — | Sin clase nueva | Escolta de alimento y gestión de recursos aprendidos |
-| 20 | M02 | Lancha misilera | Amenaza naval rápida en batalla del estrecho |
+1. **Clase vs configuración:** G09 tanque no es otra compra separada de G06 Baluarte: es una **configuración/etapa de producción** con costo y enfoque distinto. G02/G08/G10/G12/G14/A03/M02/M04 son perfiles heredados de la misma familia; conservar sus IDs para compatibilidad hasta migración probada.
+2. **Investigación con efecto local, no magia:** desbloquear nivel II/III habilita comprar/fabricar dicho perfil en una instalación adecuada; reconvertir una unidad existente requiere taller/astillero/base, créditos y acciones, y no convierte instantáneamente un transporte ligero en blindado pesado sin equipo.
+3. **Veteranía distinta:** experiencia de unidades sobrevivientes puede aumentar una pequeña capacidad si se desarrolla, pero no da libremente otra categoría de arma ni permite trasladar bonificaciones a partidas competitivas.
+4. **Captura:** solamente unidades de **infantería** en casilla pueden capturar; transporte, blindado, avión, dron y barco no. El ingeniero cuenta como infantería.
+5. **Logística:** conservar consumo/capacidad física de combustible/munición por unidad, pago por recarga y camiones con stock según [LOGISTICS_DESIGN.md](LOGISTICS_DESIGN.md). Buque logístico M09 requerirá stock naval, regla de entrega y contrajuego probado, jamás recarga infinita.
+6. **Progreso:** terminar C01 no fuerza seguir historia para jugar mapas libres; al cambiar de protagonista los aprendizajes del jugador no se borran. Las misiones muestran sólo unidades relevantes y avisan si algo es «nuevo», «sólo del enemigo» o «fabricable».
+7. **Escenas:** 1 tarjeta opcional breve por familia, con rol y contramedida; no videos forzosos largos. Niveles son un panel secundario, no unidades duplicadas en lista de fábrica.
 
-### Acto III — La guerra que alimentamos (21–30): ocho clases, acumulado 26
-| Capítulo | ID | Clase | Contexto |
-|---:|---|---|---|
-| 21 | G15 | Vehículo de guerra electrónica | Manipulación/detección limitada de enlaces, no magia ni visión total |
-| 22 | A02 | Dron FPV de ataque | Arma consumible; enseñarle coste y contramedidas |
-| 23 | A06 | Helicóptero de transporte | Traslado y evacuación; infantería desembarcada captura |
-| 24 | G14 | Batería SAM móvil | Defensa de retaguardia y cobertura de retirada |
-| 25 | A05 | Helicóptero de ataque | Apoyo aéreo y amenaza antiaérea |
-| 26 | A03 | Munición merodeadora | Ataque consumible para detener amenaza militar que bloquea corredor |
-| 27 | M03 | Corbeta | Protección naval y búsqueda de convoyes |
-| 28 | — | Sin clase nueva | Dilema político y coordinación con arsenal conocido |
-| 29 | A04 | Dron aéreo de combate reutilizable | Contrastar aparato recuperable con drones consumibles |
-| 30 | — | Sin clase nueva | Gran batalla y ruptura de alianza |
+## Revisión específica de continuidad narrativa
 
-### Acto IV — Expediente Nudo Siete (31–40): seis clases, acumulado 32
-| Capítulo | ID | Clase | Contexto / condición de diseño del mapa |
-|---:|---|---|---|
-| 31 | — | Sin clase nueva | Deducción y reconocimiento con sistema conocido |
-| 32 | A07 | Caza multifunción | Proteger extracción de archivos desde el aire |
-| 33 | M06 | Submarino | Variante costera: rescate/prueba desde zona marítima, con detección antisubmarina anunciada |
-| 34 | — | Sin clase nueva | Defensa de archivos y revelación |
-| 35 | — | Sin clase nueva | Recuperación de emisión y evidencia |
-| 36 | — | Sin clase nueva | Escolta y rescate de testigos |
-| 37 | M04 | Fragata | Asegurar rutas de ayuda y contrarrestar submarinos |
-| 38 | A08 | Bombardero táctico | Poder destructivo contrastado con riesgo de escalada; misión cooperativa |
-| 39 | M05 | Destructor | Apoyo marítimo de coalición, si el escenario incorpora costa, flota aliada y acceso justificado |
-| 40 | M08 | Dron naval de superficie (USV) | Operación costera con pruebas; unidad consumible sin regreso después del impacto |
+- **C01** es ejercicio cooperativo con la Alianza Norte, sólo G01; el entrenamiento no debe revelar culpables antes del incidente.
+- **C03** Ingeniero muestra reparación de la red Meridian, vinculado al nudo.
+- **C07** Patrullero permite primer dominio naval con mapa navegable.
+- **C13** el perfil tanque G09 debe ser fabricable/reacondicionado con coste; no transformación instantánea de G06 ya existente.
+- **C15** un buque de desembarco no captura: carga infantería para capturar en tierra.
+- **C21–29** se aborda EW, drones consumibles, evacuación y reconocimiento de larga duración, todos con contramedidas visibles.
+- **C27** M09 es nuevo y **condicional**, el mapa de convoy de C27 debe mostrar necesidad real de abastecer naves; sino no introducir esta clase.
+- **C33** debe ser costero o adaptar la introducción de submarino a otra misión adecuada.
+- **C39** la Legión Ámbar es protagonista; un destructor aliado se justifica sólo en mapa marítimo de coalición. No convertir su crisis interna en un tutorial naval artificial.
+- **C40** el USV requiere zona costera y una operación naviera verosímil para obtener pruebas; si perjudica el clímax de revelación, mover su introducción a C37 y usar C40 sin nueva clase.
 
-Las misiones 33, 39 y 40 deberán tener mapas **costeros/mixtos coherentes** o mover esos desbloqueos a otra misión naval del mismo acto **antes de cerrar guion**. En el caso 39, la Legión Ámbar controla la misión mientras un aliado presta el buque; no se inventa supremacía naval permanente para la facción.
+## Aceptación / QA previo a implementación
 
-### Acto V — El precio de detenerse (41–50): dominio total, 32 acumuladas
-
-No se presentan clases obligatorias nuevas. El drama y la dificultad proceden de **combinarlas** con objetivos conflictivos, cooperación entre facciones, reabastecimiento, economía y restricciones de escenario transparentes. El capítulo 49 es la gran prueba de estrategia combinada y el 50 su desenlace variable. La disponibilidad en cada episodio depende del mapa y la situación narrativa, **no de olvidar desbloqueos**.
-
-## UX — desbloqueo breve, claro, memorable
-
-- Pantalla de desbloqueo **opcional y saltable** al principio o al concluir una misión: nombre, icono, rol, contrarespuesta, coste y 1 recomendación práctica.
-- Si la clase es enemiga/aliada primero, registrar que fue **descubierta**, pero distinguir claramente cuándo puede producirse por el jugador.
-- El árbol/registro de arsenal muestra **9/32 → 18/32 → 26/32 → 32/32** al concluir los actos respectivos.
-- Los capítulos se guardan con su lista de unidades autorizadas; los mapas ya superados no cambian sorpresivamente por desbloqueos posteriores. Repetición libre usa los parámetros originales o un modo reto explícito separado.
-- Si el jugador pierde, **no retira** desbloqueos anteriores, créditos de tienda real ni progreso; la progresión no se monetiza.
-
-## Dependencias técnicas recomendadas
-
-Datos por episodio, no reglas dispersas en UI:
-```json
-{
-  "chapter_id": 13,
-  "story_title": "Suelo de ceniza",
-  "unlocks": ["G09"],
-  "player_faction": "confederacion_solar",
-  "required_roles": ["infantry", "armored"],
-  "allowed_domain": ["ground", "air"],
-  "production_facilities": ["barracks", "armor_factory"],
-  "mission_flags": [],
-  "introductions_shown": [],
-  "save_schema_version": 1
-}
-```
-
-El guardado de campaña persiste IDs de capítulos completados, clases descubiertas/desbloqueadas, decisiones, tres tipos de final y estado de misión en curso; el modo escaramuza/online **ignora este bloqueo de campaña** y usa solo disponibilidad técnica, reglas del servidor y costes de producción. El motor compartido determina capturas legales por `role == infantry`, no por facción ni por versión de historia.
-
-### Pruebas que deben existir antes de habilitar progreso
-1. Campaña C01 inicia solo con clases autorizadas de C01; C02 revela G03; C10 cierra con exactamente nueve clases conocidas, C20 con 18, C30 con 26, C40 con 32.
-2. Ningún desbloqueo de historia modifica partidas aleatorias u online, ni estadísticas v0.1.
-3. Cambiar de protagonista/facción no borra progreso del jugador ni permite fabricar en edificios incorrectos.
-4. Todos los tipos de infantería pueden capturar, vehículos/barcos/drones no; el transporte sin desembarco tampoco.
-5. Se muestra clase «descubierta» si se ve en el rival sin que se autorice a fabricarla antes de su misión de desbloqueo.
-6. Guardar/cargar conserva progresión y no salta misiones ni duplica recompensas.
-7. Victoria en una misión y repetición de capítulo no reescriben la ruta narrativa principal inadvertidamente.
-8. Los capítulos acuáticos/aéreos incluyen mapas y amenazas que prueban roles y contramedidas sin sorpresas irresolubles.
-9. La progresión no exige conexión ni bloquea modos libres por no terminar la campaña.
-
-**Definición de avance:** este es un plan detallado de desbloqueos, no una afirmación de que el motor de Godot, los capítulos o las 32 unidades estén ya programados.
+- Un validador de datos debe comprobar exactamente 50 capítulos consecutivos, 24 ID nuevos sin repetición y conteos 8/13/19/24.
+- Un nivel desbloqueado **no implica** acceso a toda unidad ni a producción gratis en cualquier mapa.
+- Las 5 unidades previamente programadas (G01, G03, G04, G06 y G11) no cambian atributos sin pruebas.
+- Se deben poder cargar guardados de campaña antiguos conservando `legacy_id`, y el modo libre nunca consulta campañas para restringir selecciones.
+- Completar y rejugar capítulo no duplica medallas ni desbloqueos; tres finales siguen alcanzables y reproducibles.
+- No prometer que un capítulo o el árbol de tecnología es jugable hasta que exista código probado en Godot y Android.
