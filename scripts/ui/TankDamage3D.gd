@@ -388,6 +388,16 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var aft: Node3D = model.find_child(name,true,false) as Node3D
             if aft != null:
                 aft.visible = stage < 4
+    # Larger V14 silhouette pieces visibly break away while wheel hubs
+    # remain on the wreck. Repairing returns every original transform.
+    if model.get_meta("tarvoka_mbt_silhouette_v14",false):
+        for piece in model.find_children("G09V14*",
+                "MeshInstance3D",true,false):
+            var starboard_hit: bool = str(piece.name).ends_with("_1") and (
+                "AlaBlindadaFrontal" in piece.name or
+                "CarrilleraEscalonada" in piece.name or
+                "CantoProa" in piece.name)
+            piece.visible = stage < 4 and not (stage >= 3 and starboard_hit)
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
