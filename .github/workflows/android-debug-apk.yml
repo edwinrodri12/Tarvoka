@@ -8,6 +8,13 @@ on:
       - "project.godot"
       - "scripts/**"
       - "scenes/**"
+      - "assets/**"
+      - "tools/**"
+      - "shaders/**"
+      - "addons/**"
+      - "**/*.gdshader"
+      - "**/*.tres"
+      - "**/*.res"
       - "tests/**"
   workflow_dispatch:
 
