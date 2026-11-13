@@ -109,8 +109,24 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                         ) if terrain == "mountain" or terrain == "forest" else 0
                     var crossing: int = Topology.bridge_axis(
                         state["terrain"],cell,visible,fog) if terrain == "road" else 0
+                    # All environmental transition masks use the SAME
+                    # visibility rules as roads and shorelines. This is
+                    # render data only; nothing is written into the battle.
+                    var environment: Dictionary = {}
+                    if terrain == "water":
+                        environment["water_connections"] = Topology.neighbor_mask(
+                            state["terrain"],cell,"water",true,visible,fog)
+                    else:
+                        environment["water_edges"] = Topology.neighbor_mask(
+                            state["terrain"],cell,"water",true,visible,fog)
+                        if terrain == "mountain":
+                            environment["exposed_edges"] = Topology.neighbor_mask(
+                                state["terrain"],cell,"mountain",false,visible,fog)
+                        elif detail == VisualBudget.DETAIL_FULL:
+                            environment["mountain_edges"] = Topology.neighbor_mask(
+                                state["terrain"],cell,"mountain",true,visible,fog)
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
-                        road_links,shoreline,terrain_links,crossing,detail)
+                        road_links,shoreline,terrain_links,crossing,detail,environment)
                     decorated += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
