@@ -366,8 +366,8 @@ func _draw() -> void:
                 draw_string(font,center+Vector2(-tile*0.14,tile*0.12),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,int(max(11.0,tile*0.27)),city_tint)
             var selected: bool = city_cell == selected_factory_pos or city_cell == inspected_cell
             SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected)
-            if city_cell == selected_factory_pos:
-                draw_rect(Rect2(top_left,Vector2.ONE*tile),Color.YELLOW,false,3.0)
+            if selected:
+                draw_rect(Rect2(top_left,Vector2.ONE*tile),Color("#FFE451"),false,maxf(2.0,tile*0.045))
     # Legal destinations in green, adjacent attack targets in red.
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
