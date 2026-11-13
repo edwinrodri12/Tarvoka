@@ -23,6 +23,21 @@ static func observed_cell(grid: Array, cell: Vector2i,
         observed: Dictionary = {}, restricted: bool = false) -> bool:
     return inside(grid,cell) and (not restricted or observed.has(cell))
 
+# Reserved for the future camera ray hit-test. Every 3D ground position
+# resolves to the SAME logical grid tile as the existing tactical engine.
+# Camera, lighting and decorative elevation never change these indices.
+static func tactical_cell_from_world(grid: Array, world: Vector3) -> Vector2i:
+    var cell := Vector2i(floori(world.x),floori(world.z))
+    return cell if inside(grid,cell) else Vector2i(-1,-1)
+
+static func tactical_cell_center(grid: Array, cell: Vector2i,
+        observed: Dictionary = {}, restricted: bool = false) -> Vector3:
+    if not observed_cell(grid,cell,observed,restricted):
+        return Vector3(-1,-1,-1)
+    return Vector3(float(cell.x)+0.5,
+        height_at(grid,cell,0.5,0.5,observed,restricted),
+        float(cell.y)+0.5)
+
 static func base_height(kind: String) -> float:
     return float(BASE_HEIGHTS.get(kind,0.20))
 
