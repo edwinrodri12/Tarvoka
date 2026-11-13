@@ -106,7 +106,7 @@ func _reflow() -> void:
         if bool(_data.get("has_economy",false)):
             metric_count += 4
         var panel_height: float = minf(size_rect.y*0.76,
-            clampf(410.0 + metric_count*45.0,545.0,680.0))
+            clampf(440.0 + metric_count*55.0,605.0,680.0))
         set_anchor(SIDE_TOP,0.5)
         set_anchor(SIDE_BOTTOM,0.5)
         offset_top = -panel_height*0.5
