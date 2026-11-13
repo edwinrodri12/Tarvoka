@@ -1,6 +1,12 @@
 name: TARVOKA Android debug APK
 
 on:
+  push:
+    branches:
+      - feat/connected-environment-map-20261113
+    paths:
+      - ".github/workflows/android-debug-apk.yml"
+      - "scripts/ui/**"
   pull_request:
     paths:
       - "export_presets.cfg"

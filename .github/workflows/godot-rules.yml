@@ -1,7 +1,7 @@
 name: Godot 4 headless rules
 on:
   push:
-    branches: [main]
+    branches: [main, feat/connected-environment-map-20261113]
   pull_request:
   workflow_dispatch:
 
@@ -179,6 +179,36 @@ jobs:
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-art-test.log; then
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
+
+      - name: Verify seamless river ridge and organic shore geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_continuous_world_seams.gd 2>&1 | tee /tmp/tarvoka-continuous-seams.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-continuous-seams.log; then
+            echo 'World seam regression'; exit 1
+          fi
+          grep -F 'PASS continuous world seams:' /tmp/tarvoka-continuous-seams.log
+
+      - name: Verify continuous isometric roads, shorelines, fog privacy and all map sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_connected_terrain_art.gd 2>&1 | tee /tmp/tarvoka-connected-terrain.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-connected-terrain.log; then
+            echo 'Connected map art regression'; exit 1
+          fi
+          grep -F 'PASS connected environment' /tmp/tarvoka-connected-terrain.log
+
+      - name: Render every coastline and cliff combination without malformed Godot polygons
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_landscape_materials.gd 2>&1 | tee /tmp/tarvoka-landscape-materials.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-landscape-materials.log; then
+            echo 'Landscape geometry regression'; exit 1
+          fi
+          grep -F 'PASS landscape materials' /tmp/tarvoka-landscape-materials.log
 
       - name: Validate isometric projection touch gestures and unchanged battle rules
         shell: bash

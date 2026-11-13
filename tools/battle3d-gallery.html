@@ -1,0 +1,28 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TARVOKA — Comparador de batalla 3D y vista anterior</title>
+<style>
+:root{color-scheme:dark;--bg:#0a1b29;--p:#142d40;--border:#40667d;--muted:#aac2cd;--gold:#efc267}
+*{box-sizing:border-box}body{background:linear-gradient(#18364b,var(--bg) 40%);color:#f3f7f3;font:16px system-ui,-apple-system,sans-serif;margin:0}
+main{max-width:1600px;margin:auto;padding:23px}
+h1{font-size:clamp(24px,4vw,40px);margin:0 0 8px}h2{font-size:19px;color:var(--gold)}
+p{color:var(--muted);line-height:1.5}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+article{background:var(--p);border:1px solid var(--border);border-radius:13px;padding:16px}
+img{width:100%;aspect-ratio:5/3;object-fit:contain;background:#06121c;border-radius:8px;display:block}
+a{color:var(--gold)}footer{margin-top:24px;border-left:3px solid var(--gold);padding:14px;background:var(--p)}
+@media(max-width:900px){.grid{grid-template-columns:1fr}main{padding:13px}}
+</style></head><body><main><p style="color:var(--gold);letter-spacing:.12em">TARVOKA / PRUEBA REAL GODOT</p>
+<h1>Una batalla, dos vistas</h1>
+<p>Ambas capturas proceden del mismo <strong>TouchBoard</strong> y exactamente el mismo estado táctico. Solo cambia la presentación; el motor de combate no se duplica.</p>
+<section class="grid">
+<article><h2>Vista 3D experimental</h2>
+<a href="battle-native-3d.png"><img src="battle-native-3d.png" alt="Mapa 3D verdadero con marcadores de unidades, agua y bosques"></a>
+<p>Malla 3D, cámara ortográfica, pinos, agua, puentes y marcadores temporales de unidades. El toque sobre el relieve se convierte en una casilla táctica real.</p>
+</article>
+<article><h2>Vista isométrica anterior</h2>
+<a href="battle-2d-fallback.png"><img src="battle-2d-fallback.png" alt="Misma batalla en la vista isométrica original de TARVOKA"></a>
+<p>Presentación 2.5D original, conservada como alternativa segura. Las órdenes, unidades y partidas guardadas siguen siendo las mismas.</p>
+</article>
+</section>
+<footer><strong>Prototipo en revisión:</strong> los cuerpos de las unidades 3D son marcadores de color, no sus modelos artísticos finales. Faltan selección resaltada, rangos de movimiento/ataque superpuestos en 3D y medición de FPS en móviles reales. Los controles de confirmación y el HUD auténticos están en la app principal, no reproducidos en este comparador.</footer>
+</main></body></html>

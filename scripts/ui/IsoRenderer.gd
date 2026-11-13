@@ -15,6 +15,9 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+const SurfaceMaterials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
+const TextureAtlas = preload("res://scripts/ui/TerrainTextureAtlas.gd")
+const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
@@ -39,7 +42,10 @@ static func _ring(vertices: PackedVector2Array) -> PackedVector2Array:
 
 static func _tile(canvas: Control, vertices: PackedVector2Array, tint: Color) -> void:
     canvas.draw_colored_polygon(vertices, tint)
-    canvas.draw_polyline(_ring(vertices), Color(0.05, 0.09, 0.12, 0.72), 1.2, true)
+    # The invisible tactical cells remain selectable, but the normal map
+    # should not resemble a dark, separated checkerboard of tiles.
+    canvas.draw_polyline(_ring(vertices),
+        Color(0.05,0.09,0.12,0.24),0.85,true)
 
 static func _center(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, dims: Vector2i = Vector2i(10,8)) -> Vector2:
     return IsoTransform.center(cell, canvas.size, zoom, pan, dims)
@@ -98,7 +104,55 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
                         maxf(1.0,hw*0.025),true)
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
-                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
+                    # Determine continuity only from observable neighbors:
+                    # no shoreline or road shape may reveal an unseen tile.
+                    var road_links: int = Topology.road_mask(
+                        state["terrain"],cell,visible,fog) if terrain == "road" else 0
+                    var shoreline: int = Topology.shore_mask(
+                        state["terrain"],cell,visible,fog) if terrain == "water" else 0
+                    var terrain_links: int = Topology.neighbor_mask(
+                        state["terrain"],cell,terrain,true,visible,fog
+                        ) if terrain == "mountain" or terrain == "forest" else 0
+                    var crossing: int = Topology.bridge_axis(
+                        state["terrain"],cell,visible,fog) if terrain == "road" else 0
+                    # All environmental transition masks use the SAME
+                    # visibility rules as roads and shorelines. This is
+                    # render data only; nothing is written into the battle.
+                    var environment: Dictionary = {"cell":cell}
+                    if terrain == "water":
+                        environment["water_connections"] = Topology.neighbor_mask(
+                            state["terrain"],cell,"water",true,visible,fog)
+                        var bank_colors: Dictionary = {}
+                        for side in range(4):
+                            if (shoreline & (1 << side)) == 0:
+                                continue
+                            var land_cell: Vector2i = cell+Topology.DIRECTIONS[side]
+                            if land_cell.x < 0 or land_cell.y < 0 or (
+                                    land_cell.x >= dims.x or land_cell.y >= dims.y):
+                                continue
+                            if fog and not visible.has(land_cell):
+                                continue
+                            var land_kind: String = str(
+                                state["terrain"][land_cell.y][land_cell.x])
+                            bank_colors[side] = VisualStyle.terrain_color(
+                                land_kind,land_cell.x,land_cell.y)
+                        environment["shore_colors"] = bank_colors
+                    else:
+                        environment["water_edges"] = Topology.neighbor_mask(
+                            state["terrain"],cell,"water",true,visible,fog)
+                        if terrain == "mountain":
+                            environment["exposed_edges"] = Topology.neighbor_mask(
+                                state["terrain"],cell,"mountain",false,visible,fog)
+                        elif detail == VisualBudget.DETAIL_FULL:
+                            environment["mountain_edges"] = Topology.neighbor_mask(
+                                state["terrain"],cell,"mountain",true,visible,fog)
+                    TextureAtlas.draw_ground(canvas,terrain,c,hw,cell,detail)
+                    SurfaceMaterials.draw_surface(canvas,terrain,c,hw,cell,detail)
+                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
+                        road_links,shoreline,terrain_links,crossing,detail,environment)
+                    if terrain == "road":
+                        SurfaceMaterials.draw_road_wear(canvas,c,hw,cell,detail,
+                            crossing != 0)
                     decorated += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))

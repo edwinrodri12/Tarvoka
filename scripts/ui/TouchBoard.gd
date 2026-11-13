@@ -25,6 +25,7 @@ const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
+const Battle3D = preload("res://scripts/ui/Battle3DView.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -62,6 +63,10 @@ var _pinch_midpoint := Vector2.ZERO
 var view_zoom := 1.0
 var view_pan := Vector2.ZERO
 var iso_enabled := false
+# Experimental real 3D presentation: OFF by default and never serialized.
+var three_d_enabled := false
+var _battle_3d: TextureRect
+var _3d_sync_interval := 0.0
 var battery_saver := false
 var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
@@ -148,6 +153,8 @@ func set_battery_saver(enabled: bool) -> void:
     queue_redraw()
 
 func set_isometric(enabled: bool) -> void:
+    if three_d_enabled:
+        set_3d_view(false)
     iso_enabled = enabled
     _ambient_accum = 0.0
     touch_active = false
@@ -157,6 +164,38 @@ func set_isometric(enabled: bool) -> void:
     _pinch_distance = 0.0
     _pinch_midpoint = Vector2.ZERO
     queue_redraw()
+
+# The 3D viewport is an opt-in read-only presentation of this battle.
+# Activating it never changes turns, orders, save data or fallback projection.
+func set_3d_view(enabled: bool) -> void:
+    if enabled == three_d_enabled:
+        return
+    if enabled:
+        iso_enabled = true
+        if _battle_3d == null:
+            _battle_3d = Battle3D.new()
+            _battle_3d.name = "Experimental3DTacticalView"
+            _battle_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            add_child(_battle_3d)
+            _battle_3d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        _battle_3d.show()
+        _battle_3d.call("set_rendering",true)
+        three_d_enabled = true
+        _reset_touch_gesture()
+        _3d_sync_interval = 0.0
+        _battle_3d.call("sync_battle",state,selected_id,battery_saver)
+        frame_player_force()
+    else:
+        three_d_enabled = false
+        if _battle_3d != null:
+            _battle_3d.call("set_rendering",false)
+            _battle_3d.hide()
+        _reset_touch_gesture()
+    queue_redraw()
+
+func _sync_3d_visual() -> void:
+    if three_d_enabled and _battle_3d != null:
+        _battle_3d.call("sync_battle",state,selected_id,battery_saver)
 
 func change_iso_zoom(direction: int) -> void:
     if not iso_enabled or direction == 0:
@@ -178,6 +217,8 @@ func focus_iso_cell(cell: Vector2i) -> bool:
     return true
 
 func screen_cell(point: Vector2) -> Vector2i:
+    if three_d_enabled and _battle_3d != null:
+        return _battle_3d.call("cell_at_screen",point)
     if iso_enabled:
         return IsoProjection.screen_to_cell(point,size,iso_zoom,iso_pan,map_dimensions())
     var tile: float = _cell_size()
@@ -193,6 +234,10 @@ func map_dimensions() -> Vector2i:
     return Rules.map_size(state.get("terrain",[])) if state.get("terrain") is Array else Vector2i(WIDTH,HEIGHT)
 
 func change_view_zoom(direction: int) -> void:
+    if three_d_enabled:
+        if direction != 0 and _battle_3d != null:
+            _battle_3d.call("zoom_anchored",1.2 if direction > 0 else 1.0/1.2,size*0.5,size*0.5)
+        return
     if iso_enabled:
         change_iso_zoom(direction)
         return
@@ -202,6 +247,10 @@ func change_view_zoom(direction: int) -> void:
     queue_redraw()
 
 func reset_view_camera() -> void:
+    if three_d_enabled:
+        if _battle_3d != null:
+            _battle_3d.call("reset_camera")
+        return
     if iso_enabled:
         reset_iso_camera()
         return
@@ -210,6 +259,8 @@ func reset_view_camera() -> void:
     queue_redraw()
 
 func focus_view_cell(cell: Vector2i) -> bool:
+    if three_d_enabled:
+        return bool(_battle_3d.call("focus_cell",cell)) if _battle_3d != null else false
     if iso_enabled:
         return focus_iso_cell(cell)
     var dims: Vector2i = map_dimensions()
@@ -244,6 +295,10 @@ func frame_player_force() -> bool:
     location /= float(count)
     var cell := Vector2i(clampi(roundi(location.x),0,dimensions.x-1),
         clampi(roundi(location.y),0,dimensions.y-1))
+    if three_d_enabled and _battle_3d != null:
+        _battle_3d.call("focus_cell",cell,2.5 if dimensions.x >= 40 else (
+            1.8 if dimensions.x >= 24 else 1.05))
+        return true
     if iso_enabled:
         iso_zoom = 2.6 if dimensions.x >= 40 else (2.05 if dimensions.x >= 24 else 1.0)
         iso_zoom = clampf(iso_zoom,IsoProjection.MIN_ZOOM,IsoProjection.MAX_ZOOM)
@@ -284,6 +339,8 @@ func site_overlay_snapshots() -> Array:
     return _site_overlay_snapshot
 
 func _draw() -> void:
+    if three_d_enabled:
+        return # The 3D viewport child handles the terrain drawing.
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
@@ -540,6 +597,11 @@ func _draw_campaign_markers() -> void:
 
 func _process(delta: float) -> void:
     var dt: float = maxf(0.0, delta)
+    if three_d_enabled:
+        _3d_sync_interval += dt
+        if _3d_sync_interval >= (0.32 if battery_saver else 0.16):
+            _3d_sync_interval = 0.0
+            _sync_3d_visual()
     var needs_redraw := false
     if iso_enabled:
         art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)
@@ -867,6 +929,10 @@ func selected_weapon_coverage() -> Dictionary:
 func zoom_camera_anchored(scale: float, old_anchor: Vector2, new_anchor: Vector2) -> void:
     if scale <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
         return
+    if three_d_enabled:
+        if _battle_3d != null:
+            _battle_3d.call("zoom_anchored",scale,old_anchor,new_anchor)
+        return
     var previous: float = iso_zoom if iso_enabled else view_zoom
     var minimum: float = IsoProjection.MIN_ZOOM if iso_enabled else 1.0
     var maximum: float = IsoProjection.MAX_ZOOM if iso_enabled else 4.0
@@ -957,7 +1023,9 @@ func _gui_input(event: InputEvent) -> void:
                 if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
                     touch_cancelled = true
                 if touch_cancelled:
-                    if iso_enabled:
+                    if three_d_enabled and _battle_3d != null:
+                        _battle_3d.call("pan_pixels",event.relative)
+                    elif iso_enabled:
                         iso_pan += event.relative
                     else:
                         view_pan += event.relative
