@@ -1,0 +1,42 @@
+name: Headquarters 3D smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/Headquarters3D.gd'
+      - 'scripts/ui/HeadquartersShowroom.gd'
+      - 'scenes/HeadquartersShowroom.tscn'
+      - 'tests/test_headquarters_3d.gd'
+      - '.github/workflows/headquarters-3d-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  headquarters:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate headquarters levels, factions, damage and showroom
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_headquarters_3d.gd > /tmp/headquarters-test.log 2>&1
+          # Godot 4.3's dummy headless renderer emits mesh_get_surface_count
+          # "Parameter m is null" when MeshInstance3D enters SceneTree. It has
+          # no actual GPU resources and this warning cannot validate an image.
+          # Reject every other ERROR, including all parser/runtime failures.
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/headquarters-test.log | grep -v -F 'ERROR: Parameter "m" is null.'; then
+            echo 'Headquarters geometry or showroom regression'
+            tail -n 50 /tmp/headquarters-test.log
+            exit 1
+          fi
+          grep -F 'PASS headquarters3d' /tmp/headquarters-test.log
+          echo 'Headless mesh-renderer warnings: '$(grep -c 'ERROR: Parameter "m" is null.' /tmp/headquarters-test.log || true)
+          echo 'GPU image quality, Android FPS and touch remain separate manual QA.'
