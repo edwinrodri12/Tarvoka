@@ -123,6 +123,7 @@ jobs:
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
+          test -s artifacts/tarvoka_g09_v9_closeup_engine.png
       - name: Export actual G09 V7 to portable Blender-compatible GLB
         shell: bash
         run: |
@@ -165,6 +166,7 @@ jobs:
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
+            artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V7_Hero_Editable.glb
           include-hidden-files: true
