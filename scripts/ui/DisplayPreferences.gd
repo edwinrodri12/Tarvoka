@@ -8,7 +8,7 @@ const FIELDS := ["isometric","battery_saver","minimap_enabled"]
 # These settings are deliberately separate from SaveStore and SaveCodec;
 # changing a visual preference cannot affect AI, fog, economy or battle saves.
 static func defaults(mobile: bool = false) -> Dictionary:
-    return {"isometric":mobile,"battery_saver":false,"minimap_enabled":mobile}
+    return {"isometric":mobile,"battery_saver":false,"minimap_enabled":true}
 
 static func load_config(mobile: bool = false, path: String = FILE_PATH) -> Dictionary:
     var values: Dictionary = defaults(mobile)
