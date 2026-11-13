@@ -10,6 +10,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const Unit3DInspector = preload("res://scripts/ui/Unit3DInspector.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
@@ -23,6 +24,8 @@ var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
 var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
+var unit_3d_inspector: AcceptDialog
+var unit_3d_inspector_button: Button
 var iso_view_button: Button
 var models_3d_button: Button
 var battery_saver_button: Button
@@ -203,6 +206,13 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
+    unit_3d_inspector_button = Button.new()
+    unit_3d_inspector_button.text = "Inspeccionar 8 modelos 3D"
+    unit_3d_inspector_button.custom_minimum_size.y = 46
+    unit_3d_inspector_button.pressed.connect(_open_unit_3d_inspector)
+    panel.add_child(unit_3d_inspector_button)
+    unit_3d_inspector = Unit3DInspector.new()
+    add_child(unit_3d_inspector)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -966,6 +976,10 @@ func _toggle_isometric_view() -> void:
     _minimap_view_key = -1
     if board.iso_enabled:
         battle_minimap.queue_redraw()
+
+func _open_unit_3d_inspector() -> void:
+    if unit_3d_inspector != null:
+        unit_3d_inspector.call("open_viewer")
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
