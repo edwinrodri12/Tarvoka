@@ -344,7 +344,7 @@ func reflow_for_size(viewport: Vector2) -> void:
         return
     # Physical Android phones can be 1080px wide yet still be portrait.
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
-    is_portrait_layout = viewport.y > viewport.x * 1.12 or viewport.x < 880.0
+    is_portrait_layout = viewport.y > viewport.x * 1.12
     content_rail.vertical = is_portrait_layout
     # Portrait headers and long real faction names cannot fit side-by-side.
     # Stack them instead of allowing "Volver" and "Rival" off-screen.
@@ -359,8 +359,8 @@ func reflow_for_size(viewport: Vector2) -> void:
             content_rail.move_child(chooser_card,0)
     for child in content_rail.get_children():
         if child is Control:
-            child.custom_minimum_size.x = 0 if is_portrait_layout else 310
-    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else 122.0
+            child.custom_minimum_size.x = 0 if is_portrait_layout or viewport.x < 1000.0 else 310
+    var art_width: float = 92.0 if viewport.x < 1000.0 else 122.0
     if selection_status != null:
         selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
