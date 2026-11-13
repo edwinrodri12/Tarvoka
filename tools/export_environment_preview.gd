@@ -11,6 +11,7 @@ class PreviewCanvas:
     extends Control
     const WorldArt = preload("res://scripts/ui/WorldArt.gd")
     const Materials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
+    const Textures = preload("res://scripts/ui/TerrainTextureAtlas.gd")
     const Topology = preload("res://scripts/ui/TerrainTopology.gd")
     const Style = preload("res://scripts/ui/VisualStyle.gd")
     const GRID_SIZE := Vector2i(13,9)
@@ -89,6 +90,7 @@ class PreviewCanvas:
                     else:
                         environment["mountain_edges"] = Topology.neighbor_mask(
                             grid,cell,"mountain")
+                Textures.draw_ground(self,kind,c,hw,cell,detail)
                 Materials.draw_surface(self,kind,c,hw,cell,detail)
                 WorldArt.draw_terrain(self,kind,c,hw,1.1,depth*17+x,
                     road_links,shore,neigh,crossing,detail,environment)
