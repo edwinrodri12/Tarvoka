@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaLogistics
 
+const Rules = preload("res://scripts/core/Rules.gd")
+
 # Opt-in supplies for modern battles. Legacy roles and saves without ammo/fuel
 # remain unchanged until a new modern battle explicitly equips them.
 # Ammo is counted in attacks; fuel is counted in terrain movement-cost points.
@@ -150,6 +152,18 @@ static func alert(unit: Dictionary) -> String:
             messages.append("Carga logistica baja")
     return " | ".join(messages)
 
+# Small helicopters and light reconnaissance drones can land briefly beside
+# a truck on open ground. Fighters, bombers, UCAVs and expendable drones require
+# dedicated facilities; no midair refueling or landing on water/mountains.
+static func field_air_service_allowed(state: Dictionary, unit: Dictionary) -> bool:
+    if str(unit.get("role", "")) not in ["attack_heli", "transport_heli", "uav_recon"]:
+        return false
+    var terrain: Array = state.get("terrain", [])
+    var pos = unit.get("pos", null)
+    if not pos is Vector2i or not Rules.valid_terrain(terrain) or not Rules.inside(pos, terrain):
+        return false
+    return str(terrain[pos.y][pos.x]) in ["plain", "road"]
+
 # Source-aware quote: base stocks are unlimited but ALWAYS paid, while field
 # trucks have finite ammunition/fuel and can supply only once per friendly turn.
 # Partial orders are allowed when funds or truck stocks cannot cover full demand.
@@ -183,7 +197,9 @@ static func quote(state: Dictionary, unit_id: String) -> Dictionary:
         appropriate = appropriate or (domain == "naval" and kind == "shipyard")
         if appropriate and credits >= MIN_SERVICE_PRICE:
             return _calculate_quote(recipient, credits, "base", "", 1000, 1000)
-    if domain != "ground":
+    # A field truck can support land forces and landing-capable rotorcraft
+    # or reconnaissance drones. All other aerial units need a real airbase.
+    if domain != "ground" and not (domain == "air" and field_air_service_allowed(state, recipient)):
         return invalid
     var best: Dictionary = invalid
     var best_units := 0

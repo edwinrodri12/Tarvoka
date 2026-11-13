@@ -95,8 +95,9 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
             best_distance = total
     return best
 
-# Dispatch a field truck to a needy allied ground unit, rather than forcing
-# that unit to travel back to a distant workshop. Both actions use real turns.
+# Dispatch a field truck to a needy allied ground or landing-capable air
+# unit, rather than forcing it to travel to a distant installation.
+# Both actions use real turns and finite cargo.
 # The truck stops in a free adjacent tile and can then deliver prepaid cargo.
 static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: Dictionary) -> Dictionary:
     var none := {"valid":false}
@@ -133,7 +134,9 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
     for recipient in observed["units"]:
         if not recipient is Dictionary or str(recipient.get("id","")) == str(truck.get("id","")) or int(recipient.get("hp",0)) <= 0:
             continue
-        if int(recipient.get("faction",-1)) != side or bool(recipient.get("acted",true)) or Domains.domain(recipient) != Domains.GROUND:
+        if int(recipient.get("faction",-1)) != side or bool(recipient.get("acted",true)):
+            continue
+        if Domains.domain(recipient) != Domains.GROUND and not (Domains.domain(recipient) == Domains.AIR and Logistics.field_air_service_allowed(observed, recipient)):
             continue
         if not recipient.has("ammo") or str(recipient.get("role","")) == "logistics":
             continue

@@ -113,6 +113,41 @@ func _initialize() -> void:
     end = Session.end_turn(coast)
     assert(end["state"]["units"][0]["fuel"] == Logistics.fuel_capacity("frigate") - 1)
 
+    # Mobile field refueling of helicopters and light reconnaissance drones:
+    # they land on plain/road, spend an action and consume real truck cargo.
+    heli = Roles.make_unit("H",0,Vector2i(1,2),"attack_heli")
+    truck = Roles.make_unit("L",0,Vector2i(1,3),"logistics")
+    var forward: Dictionary = Session.start([heli,truck,enemy],map,0,false,false,true,true)
+    forward["units"][0]["fuel"] = 2
+    forward["units"][0]["ammo"] = 1
+    assert(Logistics.field_air_service_allowed(forward,forward["units"][0]))
+    var forward_quote: Dictionary = Logistics.quote(forward,"H")
+    assert(forward_quote["valid"] and forward_quote["source_kind"] == "truck")
+    var forward_refill: Dictionary = Session.resupply(forward,"H")
+    assert(forward_refill["valid"] and forward_refill["source_kind"] == "truck")
+    assert(forward_refill["state"]["units"][0]["fuel"] > 2)
+    assert(forward_refill["state"]["units"][0]["ammo"] > 1)
+    assert(forward_refill["state"]["units"][1]["supply_fuel"] < Logistics.TRUCK_FUEL_CAP)
+    assert(forward_refill["state"]["units"][1]["acted"] and forward_refill["state"]["units"][0]["acted"])
+    assert(Codec.decode(Codec.encode(forward_refill["state"])) == forward_refill["state"])
+    var separated: Dictionary = forward.duplicate(true)
+    separated["units"][1]["pos"] = Vector2i(4,3)
+    assert(not Logistics.can_resupply(separated,"H"))
+    var jet: Dictionary = Roles.make_unit("F",0,Vector2i(1,2),"fighter")
+    var fixed_wing: Dictionary = Session.start([jet,truck,enemy],map,0,false,false,true,true)
+    fixed_wing["units"][0]["fuel"] = 0
+    assert(not Logistics.can_resupply(fixed_wing,"F"))
+    var drone: Dictionary = Roles.make_unit("U",0,Vector2i(1,2),"uav_recon")
+    var light_uav: Dictionary = Session.start([drone,truck,enemy],map,0,false,false,true,true)
+    light_uav["units"][0]["fuel"] = 0
+    assert(Logistics.can_resupply(light_uav,"U"))
+    heli = Roles.make_unit("H",0,Vector2i(4,0),"attack_heli")
+    truck = Roles.make_unit("L",0,Vector2i(4,1),"logistics")
+    var hill: Dictionary = Session.start([heli,truck,enemy],Scenarios.terrain(1),0,false,false,true,true)
+    hill["units"][0]["fuel"] = 0
+    assert(not Logistics.field_air_service_allowed(hill,hill["units"][0]))
+    assert(not Logistics.can_resupply(hill,"H"))
+
     # Save validation rejects forged stock, partial stock fields and cargo on tanks.
     var corrupted: Dictionary = field.duplicate(true)
     corrupted["units"][1]["supply_ammo"] = 999

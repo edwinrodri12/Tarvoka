@@ -220,7 +220,12 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 text += "\nATENCION: " + warning
             var supply_order: Dictionary = Logistics.quote(state, unit_id)
             if not supply_order.get("valid", false) and (Logistics.ammo_capacity(role_key) > 0 or Logistics.fuel_capacity(role_key) > 0):
-                text += "\nRecarga: instalacion aliada compatible o camion logistico adyacente (terrestres)."
+                if Logistics.field_air_service_allowed(state, unit):
+                    text += "\nRecarga: base aerea o camion logistico cercano sobre terreno plano/carretera."
+                elif Domains.domain(unit) == Domains.GROUND:
+                    text += "\nRecarga: instalacion aliada compatible o camion logistico adyacente."
+                else:
+                    text += "\nRecarga: instalacion aerea o naval compatible."
             if supply_order.get("valid", false):
                 text += "\nRecarga desde %s: +%d municion, +%d combustible (%s)" % [
                     "camion" if str(supply_order["source_kind"]) == "truck" else "base",
