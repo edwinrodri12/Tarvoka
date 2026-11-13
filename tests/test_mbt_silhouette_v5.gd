@@ -50,7 +50,7 @@ static func _watertight(mesh: Mesh) -> bool:
 
 func _run() -> void:
     var base: Node3D = Models.build("tank",0,false)
-    var finished: Node3D = Models.build("tank",0,true)
+    var finished: Node3D = Models.build("tank",0,true,9)
     assert(base != null and finished != null)
     assert(not base.get_meta("tarvoka_mbt_silhouette_v5",false))
     assert(finished.get_meta("tarvoka_mbt_silhouette_v5",false))
