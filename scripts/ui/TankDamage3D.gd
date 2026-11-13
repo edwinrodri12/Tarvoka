@@ -56,21 +56,64 @@ static func _box(parent: Node3D, label: String, at: Vector3, size: Vector3,
     parent.add_child(piece)
     return piece
 
+# Single shared 96-pixel soft-edge mask replaces the giant opaque spheres
+# seen on Android in 242323.mp4. Only cosmetic smoke/fire uses billboards;
+# all vehicle armor and wreckage remain true 3D, independently lit.
+static var _smoke_mask: ImageTexture
+
+static func _soft_cloud_mask() -> ImageTexture:
+    if _smoke_mask != null:
+        return _smoke_mask
+    const SIZE := 96
+    var image := Image.create(SIZE,SIZE,false,Image.FORMAT_RGBA8)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            var p := Vector2((float(x)+0.5)/float(SIZE)-0.5,
+                (float(y)+0.5)/float(SIZE)-0.5)
+            var theta: float = atan2(p.y,p.x)
+            var edge: float = 0.425 + 0.043*sin(theta*5.0+0.6) + 0.029*cos(theta*9.0-0.8)
+            var radius: float = p.length()/maxf(0.1,edge)
+            var fringe: float = clampf((1.0-radius)/0.52,0.0,1.0)
+            var grain: float = 0.86 + 0.14*sin(float(x)*0.43+cos(float(y)*0.24)*2.0) * cos(float(y)*0.39)
+            var alpha: float = fringe*fringe*(3.0-2.0*fringe)*grain
+            image.set_pixel(x,y,Color(1.0,1.0,1.0,alpha))
+    _smoke_mask = ImageTexture.create_from_image(image)
+    return _smoke_mask
+
 static func _cloud(parent: Node3D, label: String, at: Vector3,
         dimensions: Vector3, color: Color, glow: bool = false) -> MeshInstance3D:
     var piece := MeshInstance3D.new()
     piece.name = label
-    var shape := SphereMesh.new()
-    shape.radius = 0.5
-    shape.height = 1.0
-    shape.radial_segments = 12
-    shape.rings = 6
+    var shape := QuadMesh.new()
+    shape.size = Vector2(dimensions.x,dimensions.y)
     piece.mesh = shape
-    piece.material_override = _material(color,glow)
+    var material := _material(color,glow)
+    material.albedo_texture = _soft_cloud_mask()
+    material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    piece.material_override = material
     piece.position = at
-    piece.scale = dimensions
+    piece.set_meta("tarvoka_smoke_rest_y",at.y)
     parent.add_child(piece)
     return piece
+
+static func animate_smoke(model: Node3D, elapsed: float) -> void:
+    # Small floating motion is shown only by the visible Android inspector.
+    # Battle HP, deterministic cached unit portraits and saves stay untouched.
+    if model == null or current_stage(model) < 2:
+        return
+    var names := ["HumoGrisMotor","VahoMotor","HumoNegroCritico",
+        "HumoElevado","ColumnaHumo","HumoSuperior"]
+    for index in range(names.size()):
+        var node: Node3D = model.find_child(str(names[index]),true,false) as Node3D
+        if node == null or not node.visible:
+            continue
+        var phase: float = elapsed*1.35+float(index)*1.31
+        node.position.y = float(node.get_meta("tarvoka_smoke_rest_y",node.position.y)) + 0.055*sin(phase)
+        var breath: float = 1.0+0.055*sin(phase*0.64+0.5)
+        node.scale = Vector3.ONE * breath
 
 # Angled, light-emitting flame tongues instead of a fire effect made
 # entirely of round spheres. Kept under 8 segments for Android OpenGL.
