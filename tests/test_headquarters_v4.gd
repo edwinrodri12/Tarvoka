@@ -46,7 +46,7 @@ func _run() -> void:
         assert(v4.find_child("TorreDeRedesTrianguladaV4",true,false) != null)
         assert(v4.find_child("PlatoParabolicoConcavo",true,false) != null)
         var pad: Node3D = v4.find_child("Helipuerto",true,false) as Node3D
-        assert(pad != null and pad.position.x < -3.5 and pad.position.z < -2.5)
+        assert(pad != null and pad.position.x > 3.5 and pad.position.z < -2.5)
         assert(pad.position.y < -1.0)
         var radar: Node3D = v4.find_child("RadarPremium3D",true,false) as Node3D
         assert(radar != null and radar.scale.x > 1.5)
