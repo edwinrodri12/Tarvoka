@@ -1,0 +1,45 @@
+name: TARVOKA playable story chapter
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/CampaignStore.gd'
+      - 'scripts/ui/CampaignChapter01.gd'
+      - 'scripts/ui/TouchBoard.gd'
+      - 'scripts/ui/Main.gd'
+      - 'scenes/CampaignChapter01.tscn'
+      - 'tests/test_playable_campaign_ui.gd'
+      - '.github/workflows/playable-campaign.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/core/CampaignStore.gd'
+      - 'scripts/ui/CampaignChapter01.gd'
+      - 'scripts/ui/TouchBoard.gd'
+      - 'scripts/ui/Main.gd'
+      - 'scenes/CampaignChapter01.tscn'
+      - 'tests/test_playable_campaign_ui.gd'
+      - '.github/workflows/playable-campaign.yml'
+  workflow_dispatch:
+jobs:
+  chapter01:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3 stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify playable campaign screen and checkpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_playable_campaign_ui.gd 2>&1 | tee /tmp/c01-playable.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/c01-playable.log; then
+            echo 'Playable campaign integration failed'; exit 1
+          fi
+          grep -F 'Playable Campaign C01: UI, turn bridge, dialogue, victory and isolated save PASS.' /tmp/c01-playable.log
