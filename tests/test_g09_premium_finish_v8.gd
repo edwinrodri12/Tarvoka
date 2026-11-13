@@ -4,6 +4,7 @@ extends SceneTree
 # This script runs under Godot OpenGL3, not a conceptual image generator.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Damage = preload("res://scripts/ui/TankDamage3D.gd")
+const Rig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const Inspector = preload("res://scripts/ui/Unit3DInspector.gd")
 
 func _initialize() -> void:
@@ -26,12 +27,20 @@ func _run() -> void:
     assert(hull_mat.roughness_texture != null)
     assert(hull_mat.albedo_texture == ceramic_mat.albedo_texture)
     assert(hull_mat.albedo_color != ceramic_mat.albedo_color)
+    assert(hull_mat.albedo_color.b >= hull_mat.albedo_color.g)
     assert(hull_mat.roughness >= 0.65 and hull_mat.metallic <= 0.35)
     for side in [-1,1]:
         var track := model.find_child("OrugaArticuladaG09V7_%s" % side,true,false) as MultiMeshInstance3D
         assert(track != null and track.multimesh.instance_count == 84)
         assert(track.multimesh.mesh is ArrayMesh)
         assert(track.multimesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() > 120)
+        var rest_track: Transform3D = track.multimesh.get_instance_transform(0)
+        assert(Rig.pose(model,"move",0.37,Vector2i(1,0)))
+        var active_track: Transform3D = track.multimesh.get_instance_transform(0)
+        assert(rest_track.origin.distance_to(active_track.origin) > 0.04)
+        Rig.restore(model)
+        assert(rest_track.origin.distance_to(
+            track.multimesh.get_instance_transform(0).origin) < 0.001)
         var front := model.find_child("LuzFrontalG09_%s" % side,true,false) as MeshInstance3D
         var rear := model.find_child("LuzTraseraG09_%s" % side,true,false) as MeshInstance3D
         assert(front != null and rear != null)
