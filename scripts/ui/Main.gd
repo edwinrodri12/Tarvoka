@@ -275,7 +275,8 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
-    unit_art_gallery.popup_hide.connect(_return_home_from_arsenal)
+    unit_art_gallery.confirmed.connect(_return_home_from_arsenal)
+    unit_art_gallery.canceled.connect(_return_home_from_arsenal)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
