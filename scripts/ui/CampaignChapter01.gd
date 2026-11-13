@@ -189,7 +189,8 @@ func _set_board(data: Dictionary) -> void:
     board.ai_enabled = true
     board.autosave_enabled = false
     board.campaign_locked = str(data["status"]) in ["completed","failed"]
-    board.campaign_markers = [Vector2i(4,2),Vector2i(5,5)]
+    var markers: Array[Vector2i] = [Vector2i(4,2),Vector2i(5,5)]
+    board.campaign_markers = markers
     board.selected_id = ""
     board.inspected_enemy_id = ""
     board.pending_order.clear()
