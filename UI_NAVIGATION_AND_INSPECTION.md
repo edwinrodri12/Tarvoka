@@ -2,11 +2,13 @@
 
 Este documento es la guía de interfaz de batalla para Godot 4.3/Android. **No sustituye** los modelos 3D ni modifica la campaña de 50 capítulos, que avanzan por separado. Las ocho facciones conservan sus nombres, insignias, comandantes y colores aprobados. El tablero actual sigue siendo **cuadrado**; los escudos/emblemas no implican cambiar a casillas hexagonales.
 
-## Implementado hasta v0.2
+## Implementado hasta v0.3
 
 - **Carretera motorizada (v0.2):** dos casillas de carretera por punto de movimiento para vehículos terrestres motorizados; infantería terrestre a 1 casilla por punto; aire y naval sin bonificación. El cálculo usa medias unidades internamente y redondea el coste final de movimiento/combustible hacia arriba. El mismo cálculo se utiliza en movimientos legales, IA, exploración, suministro y alcance mostrado, sin regalar puntos por entrar y salir de carretera.
 - **Terreno jugable:** los ejércitos terrestres con 1 o 2 puntos de movimiento pueden entrar directamente en una montaña adyacente y gastan todo el movimiento. Con 3 o más puntos rige el coste ordinario de 3. La navegación conserva el bloqueo y la aviación el coste 1. El coste efectivo para combustible es el del desplazamiento legal.
 - **Ventajas de combate reales ya integradas en el motor:** bosque +1 cobertura, montaña +2 cobertura, ciudad +1 cobertura para tropas terrestres; desnivel +1/-1 al atacar tierra contra tierra, flanqueo +1 cuando se cumplen sus condiciones; la defensa y altura también intervienen en el contraataque. No se alteran perfiles de unidades ni la iniciativa.
+- **Preparación de escaramuza (v0.3):** pantalla exclusiva antes del combate, tres presets («Clásica», «Moderna» y «Territorio»), mapa/semilla, 3 tamaños, ejército, niebla, ciudades/fábricas, objetivo, equilibrio e iniciativa; normaliza combinación inválida ejército clásico/economía. La partida actual no cambia hasta la confirmación existente. «Avanzado» mantiene los ajustes antiguos accesibles.
+- **Pronóstico de combate (v0.3):** tarjeta visual con barras HP, pérdida prevista enemiga, posible daño máximo por contraataque, cobertura del defensor, bonificación neta de ataque y flanqueo. Fichas extraen cifras desde el motor legal y no consultan datos secretos del enemigo bajo niebla. No sustituye la confirmación de órdenes y desaparece al cancelar.
 - **Pantalla de inicio v0.2:** Continuar, Modo historia C01, Escaramuza, Arsenal y Ajustes funcionan mediante las rutas reales del juego; el multijugador aparece deshabilitado porque todavía no está disponible. La portada se abre al iniciar en Android y no destruye el autoguardado al regresar al mapa.
 - **Centro de mando v0.2:** cuatro pestañas independientes (Batalla, Ejército, Producción y Ajustes), accesibles desde el HUD compacto y el panel completo sin ocultar permanentemente el mapa. Ejército permite localizar una tropa sin dar órdenes; Producción se limita a la fábrica propia seleccionada y verifica precio/turno/espacio; Opciones comparte controles reales de cámara, batería y guardado.
 - **Ficha contextual en panel ampliado y HUD móvil:** al tocar unidad propia, enemigo visible, edificio conocido o terreno explorado se muestra el contexto desde datos reales del estado. Contiene HP, ATQ, DEF, MOV, rango de arma, cobertura, combustible/munición propia, propietario y funcionalidad de instalación, o restricciones del terreno.
@@ -42,8 +44,8 @@ Este documento es la guía de interfaz de batalla para Godot 4.3/Android. **No s
 
 - **v0.1 presente:** movilidad de montaña, fichas contextuales y regresión de niebla.
 - **v0.2 presente:** centro de mando móvil por pestañas (Batalla, Ejército, Producción, Ajustes); producción contextual autorizada, velocidad de carretera específica para vehículos, HUD y pruebas Godot.
-- **v0.3:** configurador de batalla más sencillo y portada refinada; retratos de comandantes, insignias de facción, animación ligera de fichas, emblemas y modelos 3D definitivos cuando estén aprobados en su rama.
-- **v0.4:** pantalla principal, preparación completa de escaramuza y selector de campaña; conectar online solo cuando esté disponible.
+- **v0.3 presente:** configurador de escaramuza por presets y previsualización gráfica del intercambio de combate; retratos de comandantes, insignias de facción, animación ligera de fichas, emblemas y modelos 3D definitivos cuando estén aprobados en su rama.
+- **v0.4:** pulir portada, selector de campaña C01–C50 conforme se implementen realmente y retratos/modelos 3D definitivos; conectar online solo cuando esté disponible.
 - **v1.0:** accesibilidad (tamaño de letra, color/texto, pantalla pequeña), navegación Android de regreso, pruebas táctiles y QA físico.
 
 ## Pendientes de validación
