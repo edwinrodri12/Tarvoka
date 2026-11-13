@@ -12,6 +12,8 @@ const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
+const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
+const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
@@ -31,6 +33,8 @@ var command_menu_button: Button
 var compact_menu_button: Button
 var inspection_title: Label
 var inspection_detail: Label
+var sidebar_dossier: Control
+var compact_dossier: Control
 var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
@@ -299,6 +303,9 @@ func _ready() -> void:
     inspection_title.add_theme_font_size_override("font_size",20)
     inspection_title.add_theme_color_override("font_color",Color("#F5D982"))
     panel.add_child(inspection_title)
+    sidebar_dossier = DossierView.new()
+    sidebar_dossier.compact = false
+    panel.add_child(sidebar_dossier)
     inspection_detail = Label.new()
     inspection_detail.visible = false
     inspection_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -682,6 +689,9 @@ func _build_battle_hud() -> void:
     compact_info_title.add_theme_font_size_override("font_size",16)
     compact_info_title.add_theme_color_override("font_color",Color("#F5D982"))
     info_column.add_child(compact_info_title)
+    compact_dossier = DossierView.new()
+    compact_dossier.compact = true
+    info_column.add_child(compact_dossier)
     compact_info_body = Label.new()
     compact_info_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
     compact_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -833,6 +843,14 @@ func _process(_delta: float) -> void:
         _update_text(inspection_detail,str(info.get("body","")))
         _update_text(compact_info_title,str(info.get("title","")))
         _update_text(compact_info_body,str(info.get("body","")))
+        var dossier: Dictionary = DossierData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
+            board.selected_factory_pos,board.inspected_cell,0)
+        sidebar_dossier.bind_dossier(dossier)
+        compact_dossier.bind_dossier(dossier)
+        # Terrain and unknown cells keep the familiar descriptive text.
+        # For units and buildings the graphical compact card replaces it,
+        # rather than consuming a third of the map with duplicate details.
+        compact_info_body.visible = not compact_dossier.visible
         var field_text: String = BattleReport.field_summary(board.state)
         if board.state.has("opening"):
             var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
