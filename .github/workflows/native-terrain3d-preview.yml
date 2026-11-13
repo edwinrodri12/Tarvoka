@@ -1,0 +1,117 @@
+name: TARVOKA native terrain 3D lab (no APK)
+
+on:
+  push:
+    branches:
+      - feat/connected-environment-map-20261113
+    paths:
+      - ".github/workflows/native-terrain3d-preview.yml"
+      - "scripts/ui/Terrain3DMesh.gd"
+      - "tools/terrain3d_lab.gd"
+      - "tools/export_terrain3d_preview.gd"
+      - "tools/terrain3d-gallery.html"
+      - "scenes/Terrain3DLab.tscn"
+      - "tests/test_native_terrain3d.gd"
+  pull_request:
+    paths:
+      - ".github/workflows/native-terrain3d-preview.yml"
+      - "scripts/ui/Terrain3DMesh.gd"
+      - "tools/terrain3d_lab.gd"
+      - "tools/export_terrain3d_preview.gd"
+      - "tools/terrain3d-gallery.html"
+      - "scenes/Terrain3DLab.tscn"
+      - "tests/test_native_terrain3d.gd"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-native-terrain:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official Linux editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+          if ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb
+          fi
+      - name: Verify mesh continuity, 3D fog privacy and all map sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_native_terrain3d.gd \
+            2>&1 | tee /tmp/tarvoka-terrain3d-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-terrain3d-test.log; then
+            echo 'Native 3D terrain rules regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS native terrain 3D:' /tmp/tarvoka-terrain3d-test.log
+      - name: Render native 3D scene into two real Godot screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s "-screen 0 1600x960x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/export_terrain3d_preview.gd \
+            2>&1 | tee /tmp/tarvoka-terrain3d-preview.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-terrain3d-preview.log; then
+            echo 'Native 3D terrain rendering failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS exported native 3D terrain: terrain3d-full.png' /tmp/tarvoka-terrain3d-preview.log
+          grep -F 'PASS exported native 3D terrain: terrain3d-medium.png' /tmp/tarvoka-terrain3d-preview.log
+          cp tools/terrain3d-gallery.html build/map3d-previews/index.html
+      - name: Validate screenshots and detail variation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct,hashlib
+          signatures=[]
+          for level in ('full','medium'):
+              path=Path(f'build/map3d-previews/terrain3d-{level}.png')
+              content=path.read_bytes()
+              assert content[:8] == b'\x89PNG\r\n\x1a\n'
+              dims=struct.unpack('>II',content[16:24])
+              assert dims==(1600,960), (path,dims)
+              assert len(content)>25000, (path,len(content))
+              signatures.append(hashlib.sha256(content).digest())
+              print(level,len(content),dims)
+          assert signatures[0] != signatures[1], '3D mobile LOD and full quality rendered identically'
+          assert Path('build/map3d-previews/index.html').is_file()
+          PY
+      - name: Upload native 3D gallery (no Android installation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-native-terrain3d-preview
+          path: build/map3d-previews/
+          if-no-files-found: error
+          retention-days: 21
+      - name: Explain how to review the 3D environment
+        run: |
+          {
+            echo '## TARVOKA — Native Godot 3D Terrain'
+            echo 'Download the **tarvoka-native-terrain3d-preview** artifact.'
+            echo 'Unzip and open **index.html** in your browser to compare full vs medium 3D.'
+            echo 'Open an approved Rio Azul concept reference alongside the actual engine render.'
+            echo 'This scene is a visual 3D module, **not yet** the interactive battle renderer.'
+          } >> "$GITHUB_STEP_SUMMARY"
