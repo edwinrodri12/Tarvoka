@@ -43,6 +43,16 @@ Referencias de máxima prioridad, **archivos existentes en Biblioteca**, no se p
 
 **Estado honesto:** esta entrega es arte procedural 2.5D integrado en la partida, no mallas tridimensionales/texturizado PBR ni calidad final equivalente a las láminas. Las referencias siguen siendo el objetivo para la siguiente iteración.
 
+## Tercer incremento — transiciones y relieve continuo (13 de noviembre)
+
+- `LandscapeTransitions.gd`: costas dibujadas del lado terrestre mediante franjas de tierra/piedra y pequeños guijarros; pedreras y sedimentos en el pie de las montañas; corrientes alineadas con la forma observable de cada tramo de agua.
+- `LandscapeDetailPainter.gd`: las cumbres pertenecientes al mismo macizo comparten espolones rocosos hasta sus bordes; los acantilados se pintan exclusivamente si el vecino de terreno distinto es visible, evitando sugerir información bajo niebla.
+- `IsoRenderer.gd` calcula separadamente conexiones de agua, bordes marítimos, piedemontes y acantilados con filtros de visibilidad; deja el estado de combate y las partidas guardadas intocados. La cuadrícula de fondo es más discreta para que el terreno no parezca un tablero de losetas.
+- `VisualStyle.gd` usa variación cromática de baja frecuencia en lugar del damero de colores claros/oscuros y una gama natural templada más próxima a la dirección original.
+- `test_landscape_materials.gd` rasteriza en Godot las 16 combinaciones cardinales de orillas y acantilados, en detalle medio y alto; el nuevo paso de CI falla ante errores de geometría. Los tests existentes siguen comprobando niebla, batalla inmutable y mapas grandes.
+
+**Pendientes para lograr paridad con el concepto aprobado:** modelos 3D/mallas de relieve, textura de roca/suelo/vegetación y materiales, curvas orgánicas de ríos en vez de canales siempre celulares, cascadas con altitud explícita, y capturas reales en Android de distintas escalas. Evitar dibujar cascadas sin datos de elevación, porque implicaría un relieve inventado que no existe en las reglas.
+
 ## Desglose de fases restantes
 
 A. Continuidad de suelo: carreteras en cuatro direcciones, riberas de aguas, cruces con puente y pruebas de niebla — **primera iteración en esta rama**.
