@@ -39,7 +39,10 @@ static func _ring(vertices: PackedVector2Array) -> PackedVector2Array:
 
 static func _tile(canvas: Control, vertices: PackedVector2Array, tint: Color) -> void:
     canvas.draw_colored_polygon(vertices, tint)
-    canvas.draw_polyline(_ring(vertices), Color(0.05, 0.09, 0.12, 0.72), 1.2, true)
+    # The invisible tactical cells remain selectable, but the normal map
+    # should not resemble a dark, separated checkerboard of tiles.
+    canvas.draw_polyline(_ring(vertices),
+        Color(0.05,0.09,0.12,0.24),0.85,true)
 
 static func _center(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, dims: Vector2i = Vector2i(10,8)) -> Vector2:
     return IsoTransform.center(cell, canvas.size, zoom, pan, dims)
