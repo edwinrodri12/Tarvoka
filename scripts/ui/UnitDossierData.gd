@@ -60,6 +60,9 @@ static func inspect(state: Dictionary, friendly_id: String, enemy_id: String,
             ]
             if pending:
                 data["note"] = "Captura pendiente: se resuelve al terminar este turno, no al entrar en la ciudad."
+        elif bool(overlay.get("capture_pending",false)):
+            data["stats"] = [{"name":"CAPTURA","value":"Al fin de turno"}]
+            data["note"] = "Captura de base pendiente. La producción pasará a tu bando después de finalizar este turno."
         elif known_owner and owner == viewer:
             var production_state: String = str(overlay.get("status","unknown"))
             var status_text := {
