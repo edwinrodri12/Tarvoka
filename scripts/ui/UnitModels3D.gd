@@ -5,6 +5,10 @@ class_name TarvokaUnitModels3D
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
 const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const TANK_PAINT_META := "tarvoka_paint_zone"
+const TANK_TURRET := "TorretaGiratoria"
+const TANK_BARREL_PIVOT := "ElevacionCanon"
 # Orthographic visual footprint, shared by in-game sprite captures and
 # the inspection viewer. Each value leaves enough room for hull/rotors.
 const PREVIEW_FRAME := {
@@ -255,33 +259,190 @@ static func _apc(root: Node3D) -> void:
     _box(root,"LuzIzq",Vector3(-0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
     _box(root,"LuzDer",Vector3(0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
 
+# MBT v2: recognizable modern low-profile armor, compound sloped glacis, turret,
+# side skirt ERA, optic/cupola detail and an articulated long smoothbore cannon.
+# This is in-game editable 3D geometry; no insignias, decals or faction crests.
+static func _paint_box(parent: Node3D, label: String, pos: Vector3,
+        dimensions: Vector3, zone: String = "accent",
+        rotation: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+    var item: MeshInstance3D = _box(parent,label,pos,dimensions,ARMOR,rotation)
+    item.set_meta(TANK_PAINT_META,zone)
+    return item
+
+static func _paint_panels(node: Node, color: Color) -> int:
+    var count := 0
+    if node is MeshInstance3D and node.has_meta(TANK_PAINT_META):
+        var material: StandardMaterial3D = (node as MeshInstance3D).material_override as StandardMaterial3D
+        if material != null:
+            var zone: String = str(node.get_meta(TANK_PAINT_META))
+            material.albedo_color = color.darkened(0.31) if zone == "dark" else color
+            count += 1
+    for child in node.get_children():
+        count += _paint_panels(child,color)
+    return count
+
+static func faction_paint_color(faction: int) -> Color:
+    # Muted military enamel: official faction hue, reserved for a handful
+    # of replaceable panels, never an all-over body tint.
+    var source: Color = VisualStyle.faction_color(faction)
+    return Color("#364955").lerp(source,0.86) if faction >= 0 and faction < VisualStyle.FACTIONS.size() else ARMOR
+
+static func apply_faction_palette(model: Node3D, faction: int) -> int:
+    # Independently generated models receive independent StandardMaterial3D
+    # instances; recoloring a tank cannot modify any other unit.
+    if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
+        return 0
+    return _paint_panels(model,faction_paint_color(faction))
+
+static func paintable_count(model: Node) -> int:
+    if model == null:
+        return 0
+    var total := 1 if model is MeshInstance3D and model.has_meta(TANK_PAINT_META) else 0
+    for child in model.get_children():
+        total += paintable_count(child)
+    return total
+
 static func _tank(root: Node3D) -> void:
-    _body(root,"BlindajeCompuesto",0.92,1.45,1.38,0.32,0.92,STEEL)
-    _tracks(root,0.92,2.65,6)
+    # Hull footprint stays within old model bounds so 24x18/40x30 maps and
+    # the existing orthographic camera still display the complete silhouette.
+    var hull := Node3D.new()
+    hull.name = "ChasisBlindado"
+    root.add_child(hull)
+    _body(hull,"MonocascoBlindajeCompuesto",0.86,1.47,1.45,0.36,0.96,STEEL)
+    _body(hull,"PlacaGlacisInclinada",0.75,1.47,-0.12,0.84,1.06,ARMOR)
+    _box(hull,"NervioProa",Vector3(0.0,0.68,-1.35),
+        Vector3(1.30,0.18,0.12),DARK)
+    _box(hull,"PlacaBasalFrontal",Vector3(0,0.46,-1.33),
+        Vector3(1.36,0.17,0.12),ARMOR,Vector3(26,0,0))
+    _box(hull,"CubiertaMotor",Vector3(0,0.99,0.89),
+        Vector3(1.36,0.10,0.80),DARK)
+    for n in range(8):
+        _box(hull,"RejillaMotor_%02d" % n,Vector3(-0.49+float(n%4)*0.33,1.055,
+            0.61+float(int(n/4))*0.32),Vector3(0.21,0.024,0.23),BLACK)
+    for n in range(3):
+        _box(hull,"LamasRefrigeracion_%02d" % n,
+            Vector3(-0.38+float(n)*0.38,1.055,1.26),
+            Vector3(0.24,0.02,0.08),METAL)
+    _box(hull,"TapaConductor",Vector3(-0.40,1.04,-0.78),
+        Vector3(0.31,0.07,0.38),DARK)
+    _box(hull,"PeriscopioConductor",Vector3(-0.40,1.11,-1.02),
+        Vector3(0.24,0.13,0.10),GLASS)
     for side in [-1,1]:
-        _box(root,"FaldaLateral%s" % side,
-            Vector3(float(side)*0.94,0.64,0),
-            Vector3(0.30,0.29,2.27),ARMOR)
+        var sign: float = float(side)
+        var x: float = sign*0.94
+        _box(hull,"BandaOruga%s" % side,Vector3(x,0.32,0),
+            Vector3(0.37,0.47,2.84),RUBBER)
+        _box(hull,"GuiaOruga%s" % side,Vector3(sign*0.91,0.51,0),
+            Vector3(0.42,0.14,2.70),DARK)
+        for n in range(7):
+            var z: float = -1.13+float(n)*0.38
+            _cylinder(hull,"Rodillo%s_%02d" % [side,n],
+                Vector3(sign*1.14,0.29,z),0.16,0.065,METAL,
+                Vector3(0,0,90),12)
+            _cylinder(hull,"BujeOscuro%s_%02d" % [side,n],
+                Vector3(sign*1.18,0.29,z),0.07,0.035,BLACK,
+                Vector3(0,0,90),10)
+        for n in range(10):
+            var z: float = -1.24+float(n)*0.277
+            _box(hull,"ZapataOruga%s_%02d" % [side,n],
+                Vector3(sign*1.158,0.11,z),Vector3(0.038,0.08,0.24),DARK)
+        # Painted replaceable upper skirt modules, not full hull camouflage.
+        for n in range(5):
+            var z: float = -1.07+float(n)*0.54
+            _paint_box(hull,"FaccionFaldon%s_%02d" % [side,n],
+                Vector3(sign*1.177,0.69,z),Vector3(0.065,0.34,0.49))
+            _box(hull,"SeparadorFaldon%s_%02d" % [side,n],
+                Vector3(sign*1.22,0.69,z+0.255),
+                Vector3(0.071,0.38,0.022),BLACK)
         for n in range(4):
-            _box(root,"PlacaERA%s_%d" % [side,n],
-                Vector3(float(side)*0.73,0.93,-0.86+float(n)*0.57),
-                Vector3(0.30,0.09,0.46),DARK)
-    _cylinder(root,"AnilloTorre",Vector3(0,1.00,0),
-        0.56,0.15,BLACK,Vector3.ZERO,14)
-    _body(root,"TorrePrincipal",0.69,0.91,0.59,1.04,1.46,ARMOR)
-    _cylinder(root,"CanonPrincipal",Vector3(0,1.28,-1.26),
-        0.125,2.45,DARK,Vector3(90,0,0),16)
-    _cylinder(root,"ManguitoCanon",Vector3(0,1.28,-0.52),
-        0.19,0.48,METAL,Vector3(90,0,0),12)
-    _box(root,"BlindajeFrontal",Vector3(0,1.27,-0.76),
-        Vector3(0.86,0.30,0.32),STEEL)
-    _box(root,"SensorTorre",Vector3(0.42,1.62,0.15),
-        Vector3(0.24,0.25,0.26),DARK)
-    _sphere(root,"OpticaTorre",Vector3(0.42,1.63,-0.03),
-        Vector3(0.18,0.14,0.09),GLASS)
-    _cylinder(root,"Escotilla",Vector3(-0.28,1.54,0.12),
-        0.22,0.10,DARK)
-    _antenna(root,"Antena",Vector3(0.48,1.50,0.43),0.67)
+            var z: float = -1.00+float(n)*0.58
+            _box(hull,"ModuloERAChasis%s_%02d" % [side,n],
+                Vector3(sign*0.755,1.013,z),
+                Vector3(0.26,0.12,0.43),ARMOR)
+        _box(hull,"GuardabarrosFrontal%s" % side,
+            Vector3(sign*1.13,0.69,-1.39),
+            Vector3(0.42,0.16,0.29),DARK)
+        _box(hull,"EscapePosterior%s" % side,
+            Vector3(sign*0.79,0.81,1.38),
+            Vector3(0.22,0.17,0.13),BLACK)
+
+    var turret := Node3D.new()
+    turret.name = TANK_TURRET
+    turret.position = Vector3(0,1.11,-0.15)
+    root.add_child(turret)
+    _cylinder(root,"AnilloDeGiro",Vector3(0,1.045,-0.15),
+        0.64,0.18,BLACK,Vector3.ZERO,16)
+    # Low, sloped turret and composite front cheeks; center is turret-local.
+    _body(turret,"TorreBlindada",0.69,0.92,0.71,0.0,0.43,ARMOR)
+    _body(turret,"SobreblindajeTorre",0.57,0.67,0.45,0.39,0.53,STEEL)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(turret,"MejillaBlindada%s" % side,
+            Vector3(sign*0.45,0.23,-0.70),
+            Vector3(0.37,0.37,0.42),STEEL,
+            Vector3(-13,sign*19,0))
+        for n in range(3):
+            _box(turret,"ProteccionERA%s_%d" % [side,n],
+                Vector3(sign*0.675,0.245,-0.45+float(n)*0.39),
+                Vector3(0.10,0.25,0.31),DARK)
+        # Short accent strips and the roof identification panels can be
+        # colored without requiring eight separate tank meshes.
+        _paint_box(turret,"FaccionFranjaTorre%s" % side,
+            Vector3(sign*0.72,0.407,0.12),
+            Vector3(0.063,0.075,0.63),"dark")
+        _paint_box(turret,"FaccionPlacaSuperior%s" % side,
+            Vector3(sign*0.37,0.547,0.04),
+            Vector3(0.29,0.027,0.31))
+        _box(turret,"CestaEquipamiento%s" % side,
+            Vector3(sign*0.57,0.23,0.67),
+            Vector3(0.27,0.24,0.32),DARK)
+        for smoke in range(3):
+            _cylinder(turret,"LanzaFumigenas%s_%d" % [side,smoke],
+                Vector3(sign*(0.71+float(smoke)*0.055),0.38,-0.38+float(smoke)*0.13),
+                0.051,0.22,BLACK,Vector3(0,0,69),8)
+        _antenna(turret,"AntenaTorre%s" % side,
+            Vector3(sign*0.52,0.52,0.54),0.52 if side<0 else 0.67)
+
+    var gun := Node3D.new()
+    gun.name = TANK_BARREL_PIVOT
+    gun.position = Vector3(0.0,0.235,-0.56)
+    turret.add_child(gun)
+    _cylinder(gun,"Canon120mm",Vector3(0.0,0,-1.18),
+        0.103,2.54,DARK,Vector3(90,0,0),16)
+    _cylinder(gun,"ManguitoTermico",Vector3(0.0,0,-0.82),
+        0.146,0.76,STEEL,Vector3(90,0,0),14)
+    _cylinder(gun,"ExtractorGases",Vector3(0.0,0,-1.12),
+        0.17,0.30,ARMOR,Vector3(90,0,0),14)
+    _cylinder(gun,"BocaCanon",Vector3(0.0,0,-2.46),
+        0.139,0.08,BLACK,Vector3(90,0,0),14)
+    _box(gun,"EscudoMantlete",Vector3(0,0.025,-0.28),
+        Vector3(0.48,0.37,0.22),ARMOR)
+    _box(turret,"PantallaTermica",Vector3(0.47,0.62,-0.41),
+        Vector3(0.27,0.25,0.34),DARK)
+    _box(turret,"CristalTermico",Vector3(0.47,0.63,-0.602),
+        Vector3(0.21,0.12,0.025),GLASS)
+    _cylinder(turret,"BaseEscotillaComandante",Vector3(-0.37,0.55,0.12),
+        0.26,0.12,BLACK,Vector3.ZERO,14)
+    _cylinder(turret,"EscotillaComandante",Vector3(-0.37,0.628,0.12),
+        0.24,0.07,STEEL,Vector3.ZERO,14)
+    for n in range(6):
+        var a: float = float(n)*TAU/6.0
+        _box(turret,"VisorComandante_%d" % n,
+            Vector3(-0.37+cos(a)*0.23,0.61,0.12+sin(a)*0.23),
+            Vector3(0.075,0.11,0.08),GLASS)
+    var rws := Node3D.new()
+    rws.name = "ArmaSecundariaEstabilizada"
+    rws.position = Vector3(-0.37,0.72,0.12)
+    turret.add_child(rws)
+    _box(rws,"ReceptorAmetralladora",Vector3(0,0.15,-0.09),
+        Vector3(0.23,0.20,0.33),BLACK)
+    _cylinder(rws,"CanonAmetralladora",Vector3(0,0.145,-0.39),
+        0.029,0.68,BLACK,Vector3(90,0,0),10)
+    _box(rws,"MunicionAmetralladora",Vector3(0.18,0.15,0.04),
+        Vector3(0.16,0.22,0.23),DARK)
+    _box(rws,"CamaraArma",Vector3(-0.12,0.27,-0.15),
+        Vector3(0.12,0.12,0.15),GLASS)
+    # No shields or faction logos anywhere in the model.
 
 static func _mlrs(root: Node3D) -> void:
     _body(root,"ChasisLanzacohetes",0.83,1.45,1.35,0.28,0.88,STEEL)
