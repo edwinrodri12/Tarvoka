@@ -31,14 +31,14 @@ static func report(state: Dictionary) -> Dictionary:
             surviving_roles[side][role] = int(surviving_roles[side].get(role,0))+1
     var control: Dictionary = state.get("control",{})
     var win_by_relay := false
-    var signal := [0,0]
+    var signal_scores := [0,0]
     var signal_target := 0
     if not control.is_empty():
         var scores: Array = control.get("scores",[])
         if scores.size() == 2:
-            signal = [int(scores[0]),int(scores[1])]
+            signal_scores = [int(scores[0]),int(scores[1])]
             signal_target = int(control.get("target",0))
-            win_by_relay = signal_target > 0 and signal[winner] >= signal_target
+            win_by_relay = signal_target > 0 and signal_scores[winner] >= signal_target
     var city_counts := [0,0]
     var base_counts := [0,0]
     var credits := [0,0]
@@ -71,7 +71,7 @@ static func report(state: Dictionary) -> Dictionary:
         "survivors":survivors,"hp":remaining_hp,
         "recorded_losses":recorded_losses,
         "surviving_roles":surviving_roles,
-        "signal":signal,"signal_target":signal_target,"relay_victory":win_by_relay,
+        "signal":signal_scores,"signal_target":signal_target,"relay_victory":win_by_relay,
         "has_relay":not control.is_empty(),"has_economy":not economy.is_empty(),
         "cities":city_counts,"bases":base_counts,"credits":credits,"income":income
     }
