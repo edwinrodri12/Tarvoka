@@ -82,7 +82,7 @@ class PreviewCanvas:
                 var shore: int = Topology.shore_mask(grid,cell)
                 var neigh: int = Topology.neighbor_mask(grid,cell,kind)
                 var crossing: int = Topology.bridge_axis(grid,cell)
-                var environment: Dictionary = {}
+                var environment: Dictionary = {"cell":cell}
                 if kind == "water":
                     environment["water_connections"] = neigh
                 else:
