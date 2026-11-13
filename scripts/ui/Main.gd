@@ -21,6 +21,7 @@ const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const SavedMatchesMenu = preload("res://scripts/ui/SavedMatchesMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
 const FactionSelection = preload("res://scripts/ui/FactionSelection.gd")
+const CommanderIdentityStrip = preload("res://scripts/ui/CommanderIdentityStrip.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
@@ -120,6 +121,8 @@ var battle_hud_toggle: Button
 var battle_hud_commands: VBoxContainer
 var compact_status: Label
 var compact_detail: Label
+var commander_sidebar_strip: Control
+var commander_compact_strip: Control
 var compact_info_panel: PanelContainer
 var compact_info_title: Label
 var compact_info_body: Label
@@ -202,6 +205,9 @@ func _ready() -> void:
     heading.add_theme_font_size_override("font_size", 27)
     heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
     panel.add_child(heading)
+    commander_sidebar_strip = CommanderIdentityStrip.new()
+    commander_sidebar_strip.name = "ComandantesEnCentroTactico"
+    panel.add_child(commander_sidebar_strip)
     campaign_button = Button.new()
     campaign_button.text = "MODO HISTORIA · CAPÍTULO 01"
     campaign_button.custom_minimum_size.y = 55
@@ -798,7 +804,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # Frontload actual battle intelligence. Campaign, galleries and advanced
     # scenario controls remain accessible farther down the scroll but no
     # longer displace combat status and unit actions from the first viewport.
-    var priority: Array = [heading,polished_status_card,command_menu_button,objectives_button,
+    var priority: Array = [heading,commander_sidebar_strip,polished_status_card,command_menu_button,objectives_button,
         minimap_shell,polished_unit_card,polished_actions_card,result_banner,
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
@@ -835,6 +841,10 @@ func _build_battle_hud() -> void:
     compact_status.add_theme_color_override("font_color",Color("#F5E6B1"))
     compact_status.clip_text = true
     title_row.add_child(compact_status)
+    commander_compact_strip = CommanderIdentityStrip.new()
+    commander_compact_strip.compact = true
+    commander_compact_strip.name = "ComandantesEnPantallaMovil"
+    title_row.add_child(commander_compact_strip)
     compact_detail = Label.new()
     compact_detail.add_theme_font_size_override("font_size",14)
     compact_detail.add_theme_color_override("font_color",Color("#D9E6ED"))
@@ -1106,7 +1116,7 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order])
+    var summary_key: int = hash([board.state, board.ai_enabled, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order])
     var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,
         board.view_zoom,board.view_pan,board.size,board.map_dimensions()])
     if battle_minimap != null and minimap_key != _minimap_view_key:
@@ -1116,6 +1126,10 @@ func _process(_delta: float) -> void:
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
+        # Source of truth is the current match, including restored saves.
+        # Portrait ribbons remain presentation-only and fog-safe.
+        commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
+        commander_compact_strip.bind_state(board.state,board.ai_enabled)
         _update_text(unit_label, board.selected_unit_summary())
         var info: Dictionary = InspectorData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
             board.selected_factory_pos,board.inspected_cell,0)
