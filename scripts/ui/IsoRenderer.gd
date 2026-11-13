@@ -47,7 +47,7 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, di
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
-        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "") -> void:
+        unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "", three_d_models: Node = null) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -192,6 +192,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         return str(a["id"]) < str(b["id"])
     )
     var units_drawn := 0
+    var real_3d_units_drawn := 0
     for unit in draw_units:
         if int(unit.get("hp", 0)) <= 0:
             continue
@@ -229,7 +230,17 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 pose = "attack"
                 visual_heading = effect["target"] - cell
                 break
-        var sprite: Texture2D = null if detail == VisualBudget.DETAIL_COMPACT else UnitSprites.frame_texture(role,pose)
+        # Keep the same 3D silhouette during idle, movement, attack and damage.
+        # BattleVFX renders the transient shot/impact effects separately.
+        # Abrupt switches back to the legacy 2D "damaged" or "attack" sprites
+        # were confusing during mobile play; unfinished roles still use 2D.
+        var sprite: Texture2D = null
+        var from_3d := false
+        if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null:
+            sprite = three_d_models.call("texture_for",role) as Texture2D
+            from_3d = sprite != null
+        if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
+            sprite = UnitSprites.frame_texture(role,pose)
         if detail == VisualBudget.DETAIL_COMPACT:
             # Screen-space, high-contrast military markers stay legible where
             # a full 96px original sprite would become an indistinct 8px blur.
@@ -243,13 +254,26 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 canvas.draw_line(c+Vector2(0,-marker_radius),c+Vector2(0,marker_radius),
                     Color("#BDF2F3"),maxf(1.0,hw*0.09),true)
         elif sprite != null:
-            var sprite_size := hw * (0.94 if is_air else 0.88)
-            var rotation: float = BattleVFX.sprite_rotation(role,
+            var sprite_size := hw * ((1.70 if from_3d else (0.94 if is_air else 0.88)))
+            var rotation: float = 0.0 if from_3d else BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
+            var unit_tint: Color = face
+            if from_3d:
+                real_3d_units_drawn += 1
+                # Real 3D mesh captures have neutral materials; preserve the
+                # game's approved faction palette without eight GPU cameras
+                # for every role (one colorized draw and a clear team ring).
+                unit_tint = Color.WHITE.lerp(tint,0.26)
+                if pose == "damaged":
+                    unit_tint = unit_tint.lerp(Color("#E67465"),0.26)
+                if bool(unit.get("acted",false)):
+                    unit_tint = unit_tint.darkened(0.27)
+                canvas.draw_arc(c+Vector2(0,hw*0.10),hw*0.33,
+                    0.0,TAU,24,tint,maxf(1.5,hw*0.055))
             canvas.draw_set_transform(c,rotation)
             canvas.draw_texture_rect(sprite,
                 Rect2(Vector2(-sprite_size*0.5,-sprite_size*0.56),Vector2.ONE*sprite_size),
-                false,face)
+                false,unit_tint)
             canvas.draw_set_transform(Vector2.ZERO)
         elif UnitArt.has_role(role):
             # Existing procedural silhouette is retained as a safe fallback.
@@ -287,6 +311,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     int(maxf(10.0,hw*0.19)),Color("#FFD15A"))
 
     last_frame_stats["units_drawn"] = units_drawn
+    last_frame_stats["real_3d_units_drawn"] = real_3d_units_drawn
     if fog:
         var stale_contacts: Dictionary = Visibility.last_known_contacts(state, 0)
         for enemy_id in stale_contacts:

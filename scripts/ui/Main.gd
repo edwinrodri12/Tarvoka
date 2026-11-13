@@ -10,6 +10,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const Unit3DInspector = preload("res://scripts/ui/Unit3DInspector.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
@@ -23,7 +24,10 @@ var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
 var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
+var unit_3d_inspector: AcceptDialog
+var unit_3d_inspector_button: Button
 var iso_view_button: Button
+var models_3d_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -146,6 +150,12 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    models_3d_button = Button.new()
+    models_3d_button.text = "Modelos 3D (8 clases): activados"
+    models_3d_button.custom_minimum_size.y = 42
+    models_3d_button.tooltip_text = "Comparar modelos 3D del juego con el atlas provisional 2D"
+    models_3d_button.pressed.connect(_toggle_unit_models_3d)
+    panel.add_child(models_3d_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -196,6 +206,13 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
+    unit_3d_inspector_button = Button.new()
+    unit_3d_inspector_button.text = "Inspeccionar 8 modelos 3D"
+    unit_3d_inspector_button.custom_minimum_size.y = 46
+    unit_3d_inspector_button.pressed.connect(_open_unit_3d_inspector)
+    panel.add_child(unit_3d_inspector_button)
+    unit_3d_inspector = Unit3DInspector.new()
+    add_child(unit_3d_inspector)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -939,6 +956,11 @@ func _refresh_production_catalog() -> void:
     if production_picker.item_count > 0:
         production_picker.select(0)
 
+func _toggle_unit_models_3d() -> void:
+    board.set_3d_models_enabled(not board.models_3d_enabled)
+    models_3d_button.text = ("Modelos 3D (8 clases): activados"
+        if board.models_3d_enabled else "Modelos 3D (8 clases): desactivados")
+
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
     battery_saver_button.text = ("Ahorro de batería: activado"
@@ -954,6 +976,10 @@ func _toggle_isometric_view() -> void:
     _minimap_view_key = -1
     if board.iso_enabled:
         battle_minimap.queue_redraw()
+
+func _open_unit_3d_inspector() -> void:
+    if unit_3d_inspector != null:
+        unit_3d_inspector.call("open_viewer")
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:

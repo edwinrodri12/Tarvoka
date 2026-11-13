@@ -17,6 +17,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
+const UnitRender3D = preload("res://scripts/ui/UnitRender3D.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -50,6 +51,8 @@ var _pinch_midpoint := Vector2.ZERO
 var view_zoom := 1.0
 var view_pan := Vector2.ZERO
 var iso_enabled := false
+var models_3d_enabled := true
+var _models_3d: Node = null
 var battery_saver := false
 var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
@@ -129,8 +132,32 @@ func set_battery_saver(enabled: bool) -> void:
     _ambient_accum = 0.0
     queue_redraw()
 
+func _prepare_3d_models() -> void:
+    if not models_3d_enabled or not is_inside_tree():
+        return
+    # Godot --headless CI has no GPU to paint SubViewport textures; geometry
+    # is still validated independently via UnitModels3D tests.
+    if DisplayServer.get_name() == "headless":
+        return
+    if _models_3d != null:
+        return
+    var cache: Node = UnitRender3D.new()
+    cache.name = "Modelos3D_Unidades"
+    add_child(cache)
+    _models_3d = cache
+    cache.connect("textures_ready",Callable(self,"queue_redraw"))
+    cache.call("prepare")
+
+func set_3d_models_enabled(enabled: bool) -> void:
+    models_3d_enabled = enabled
+    if enabled and iso_enabled:
+        _prepare_3d_models()
+    queue_redraw()
+
 func set_isometric(enabled: bool) -> void:
     iso_enabled = enabled
+    if enabled:
+        _prepare_3d_models()
     _ambient_accum = 0.0
     touch_active = false
     touch_finger_index = -1
@@ -256,7 +283,7 @@ static func fog_cover_color(has_explored: bool) -> Color:
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
-            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id)
+            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id,(_models_3d if models_3d_enabled else null))
         return
     var tile := _cell_size()
     var origin := _board_origin()
