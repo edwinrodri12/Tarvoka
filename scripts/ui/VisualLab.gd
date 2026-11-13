@@ -321,6 +321,7 @@ func rebuild_stage() -> void:
     if lab_board._models_3d != null:
         lab_board._models_3d.call("clear_live_tanks")
     lab_board.state = new_state
+    damage_stage_picker.select(0) # A new experiment starts with an intact model.
     lab_board.selected_id = ""
     lab_board.inspected_enemy_id = ""
     lab_board.pending_order.clear()
@@ -334,6 +335,25 @@ func rebuild_stage() -> void:
     _build_count += 1
     _refresh_details()
     feedback_label.text = "Escenario restablecido. Selecciona movimiento, combate real o disparo visual."
+
+# After a REAL exchange, align the inspector's damage selector with the HP
+# actually left on a tank. The preview still never changes battle HP or rules.
+func _sync_real_tank_damage_stage() -> bool:
+    var tank_id := ""
+    if _selected_role(defender_picker) == "tank":
+        tank_id = "LAB-B"
+    elif _selected_role(attacker_picker) == "tank":
+        tank_id = "LAB-A"
+    if tank_id.is_empty():
+        return false
+    var hp := 0 # Eliminated tanks are absent from the authoritative unit list.
+    for unit in lab_board.state.get("units",[]):
+        if str(unit.get("id","")) == tank_id:
+            hp = int(unit.get("hp",0))
+            break
+    var maximum_hp: int = int(Arsenal.profile("tank").get("hp",14))
+    damage_stage_picker.select(TankDamage.stage_for_hp(hp,maximum_hp))
+    return true
 
 func _refresh_details() -> void:
     var a_role := _selected_role(attacker_picker)
@@ -368,11 +388,13 @@ func demo_attack() -> void:
         feedback_label.text = "Ataque NO permitido por las reglas actuales. Utiliza «Disparo visual» para revisar únicamente la animación."
         return
     lab_board.state = result["state"]
+    var has_tank: bool = _sync_real_tank_damage_stage()
     lab_board._record_attack_effect(before,result,"LAB-A","LAB-B")
     lab_board.queue_redraw()
     _recent_action = "attack"
-    feedback_label.text = "COMBATE REAL: enemigo -%d HP · contraataque -%d HP. Pulsa Repetir para compararlo." % [
-        int(result.get("damage",0)),int(result.get("counter_damage",0))]
+    var damage_note := " · Tanque: %s (Ver daños 3D)" % str(TankDamage.STAGES[damage_stage_picker.selected]) if has_tank else ""
+    feedback_label.text = "COMBATE REAL: enemigo -%d HP · contraataque -%d HP%s. Pulsa Repetir para compararlo." % [
+        int(result.get("damage",0)),int(result.get("counter_damage",0)),damage_note]
 
 func demo_fx() -> void:
     rebuild_stage()

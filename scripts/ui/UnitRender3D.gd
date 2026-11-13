@@ -7,6 +7,8 @@ class_name TarvokaUnitRender3D
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const UnitMotionVFX = preload("res://scripts/ui/UnitMotionVFX.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const SIZE := Vector2i(224,224)
 const ORBIT := Vector3(5.1,4.1,6.0)
 
@@ -225,6 +227,8 @@ func _park_live_tank(unit_id: String, keep: bool) -> void:
             if turret != null:
                 var heading: Vector2i = last.get("heading",Vector2i.ZERO)
                 turret.rotation_degrees.y = wrapf(TankRig.heading_yaw(heading)-original_yaw,-180.0,180.0)
+        # Restore the HP-derived scars after resetting temporary recoil/track poses.
+        TankDamage.apply_stage(model,int(last.get("damage_stage",0)))
         # A single final GPU frame locks a real 3D heading (no flat sprite
         # rotation). Keep at most four; all others use neutral cached texture.
         viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -244,6 +248,12 @@ func _park_live_tank(unit_id: String, keep: bool) -> void:
 
 func parked_tank_count() -> int:
     return parked_tank_viewports.size()
+
+func _damage_stage_from_unit(unit: Dictionary) -> int:
+    # Read only HP the board has already made visible. The five cosmetic
+    # layers never affect the tactical state or reveal fogged opponents.
+    var maximum: int = int(Arsenal.profile("tank").get("hp",14))
+    return TankDamage.stage_for_hp(int(unit.get("hp",maximum)),maximum)
 
 func update_tank_actions(units: Array, motion: Array, combat: Array,
         fog_enabled: bool, visible_cells: Dictionary, battery_saver: bool = false) -> void:
@@ -266,7 +276,8 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             desired[unit_id] = {
                 "faction": int(unit.get("display_faction",unit["faction"])), "kind":"move",
                 "progress":elapsed/maxf(duration,0.01),
-                "heading":UnitMotionVFX.heading(route,elapsed,duration)
+                "heading":UnitMotionVFX.heading(route,elapsed,duration),
+                "damage_stage":_damage_stage_from_unit(unit)
             }
             break
     for effect in combat:
@@ -284,7 +295,8 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             desired[str(unit["id"])] = {
                 "faction":int(unit.get("display_faction",unit["faction"])), "kind":"attack",
                 "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
-                "heading":target-origin
+                "heading":target-origin,
+                "damage_stage":_damage_stage_from_unit(unit)
             }
             break
     # Damage to a surviving MBT also animates its soot and chassis shake.
@@ -305,7 +317,8 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
                 desired[victim_id] = {
                     "faction":int(unit.get("display_faction",unit["faction"])), "kind":"damaged",
                     "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
-                    "heading":Vector2i.ZERO
+                    "heading":Vector2i.ZERO,
+                    "damage_stage":_damage_stage_from_unit(unit)
                 }
             break
     for unit_id in live_tank_viewports.keys():
@@ -335,6 +348,13 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
         else:
             model.rotation_degrees.y = 0.0
         if TankRig.pose(model,kind,float(task["progress"]),heading):
+            # Pose first, then apply lasting physical damage. Preserve the
+            # temporary gun elevation, so damage decals cannot cancel recoil.
+            var gun: Node3D = model.find_child("ElevacionCanon",true,false) as Node3D
+            var animated_pitch: float = gun.rotation_degrees.x if gun != null else 0.0
+            TankDamage.apply_stage(model,int(task.get("damage_stage",0)))
+            if gun != null and kind in ["attack","damaged"]:
+                gun.rotation_degrees.x += animated_pitch
             live_tank_tasks[unit_id] = task.duplicate(true)
             var active_view: SubViewport = live_tank_viewports[unit_id] as SubViewport
             active_view.render_target_update_mode = SubViewport.UPDATE_ONCE
