@@ -91,12 +91,22 @@ func _reflow() -> void:
     var portrait: bool = size_rect.y > size_rect.x
     set_anchor(SIDE_LEFT,0.04 if portrait else 0.24)
     set_anchor(SIDE_RIGHT,0.96 if portrait else 0.76)
-    set_anchor(SIDE_TOP,0.12 if portrait else 0.07)
-    set_anchor(SIDE_BOTTOM,0.91 if portrait else 0.92)
     offset_left = 0
     offset_right = 0
-    offset_top = 0
-    offset_bottom = 0
+    if portrait:
+        # On tall Android screens, the old 79%-height sheet left a long
+        # empty lower half when the battle had just three result metrics.
+        # Limit its size while keeping the metric list scrollable.
+        var panel_height: float = minf(size_rect.y*0.76,680.0)
+        set_anchor(SIDE_TOP,0.5)
+        set_anchor(SIDE_BOTTOM,0.5)
+        offset_top = -panel_height*0.5
+        offset_bottom = panel_height*0.5
+    else:
+        set_anchor(SIDE_TOP,0.07)
+        set_anchor(SIDE_BOTTOM,0.92)
+        offset_top = 0
+        offset_bottom = 0
 
 func _line(label_text: String,blue: String,red: String) -> void:
     var panel := PanelContainer.new()
