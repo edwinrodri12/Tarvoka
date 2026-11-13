@@ -63,6 +63,19 @@ var result_banner: PanelContainer
 var result_title: Label
 var result_detail: Label
 var _result_style: StyleBoxFlat
+# Android battle mode keeps essential commands on the map; creation settings,
+# the minimap and full economics remain available by opening the sidebar.
+var battle_hud_compact := false
+var battle_hud_overlay: Control
+var battle_hud_toggle: Button
+var battle_hud_commands: VBoxContainer
+var compact_status: Label
+var compact_detail: Label
+var compact_confirm: Button
+var compact_cancel: Button
+var compact_end_turn: Button
+var compact_center: Button
+var compact_iso: Button
 
 func _ready() -> void:
     var backdrop := ColorRect.new()
@@ -93,6 +106,7 @@ func _ready() -> void:
     # Only the real scene restores saved progress. Detached board tests start fresh.
     board.autosave_enabled = true
     board.resume_autosave()
+    _build_battle_hud()
 
     sidebar = PanelContainer.new()
     sidebar.size_flags_horizontal = Control.SIZE_FILL
@@ -515,8 +529,147 @@ func _ready() -> void:
 
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
+    _set_compact_hud(OS.has_feature("mobile"))
+    call_deferred("_frame_camera_after_layout")
     set_process(true)
     _process(0.0)
+
+# The overlay is a separate input layer on the board, never an overlay
+# inside TouchBoard. Empty space passes through to the terrain below.
+func _build_battle_hud() -> void:
+    battle_hud_overlay = Control.new()
+    battle_hud_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    battle_hud_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    board_holder.add_child(battle_hud_overlay)
+
+    battle_hud_commands = VBoxContainer.new()
+    battle_hud_commands.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    battle_hud_commands.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    battle_hud_commands.add_theme_constant_override("separation",6)
+    battle_hud_overlay.add_child(battle_hud_commands)
+
+    var top_panel := PanelContainer.new()
+    top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var top_style := StyleBoxFlat.new()
+    top_style.bg_color = Color(0.035,0.060,0.083,0.88)
+    top_style.content_margin_left = 9
+    top_style.content_margin_right = 145 # Reserve room for the panel button.
+    top_style.content_margin_top = 5
+    top_style.content_margin_bottom = 5
+    top_panel.add_theme_stylebox_override("panel",top_style)
+    battle_hud_commands.add_child(top_panel)
+    var title_row := VBoxContainer.new()
+    title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    top_panel.add_child(title_row)
+    compact_status = Label.new()
+    compact_status.add_theme_font_size_override("font_size",16)
+    compact_status.add_theme_color_override("font_color",Color("#F5E6B1"))
+    compact_status.clip_text = true
+    title_row.add_child(compact_status)
+    compact_detail = Label.new()
+    compact_detail.add_theme_font_size_override("font_size",14)
+    compact_detail.add_theme_color_override("font_color",Color("#D9E6ED"))
+    compact_detail.clip_text = true
+    title_row.add_child(compact_detail)
+
+    var spacer := Control.new()
+    spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    battle_hud_commands.add_child(spacer)
+
+    var bottom_panel := PanelContainer.new()
+    bottom_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var bottom_style := StyleBoxFlat.new()
+    bottom_style.bg_color = Color(0.035,0.060,0.083,0.90)
+    bottom_style.content_margin_left = 6
+    bottom_style.content_margin_right = 6
+    bottom_style.content_margin_top = 6
+    bottom_style.content_margin_bottom = 6
+    bottom_panel.add_theme_stylebox_override("panel",bottom_style)
+    battle_hud_commands.add_child(bottom_panel)
+    var actions := HBoxContainer.new()
+    actions.add_theme_constant_override("separation",5)
+    actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    bottom_panel.add_child(actions)
+
+    compact_cancel = Button.new()
+    compact_cancel.text = "Cancelar"
+    compact_cancel.custom_minimum_size.y = 48
+    compact_cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_cancel.pressed.connect(_cancel_selection)
+    actions.add_child(compact_cancel)
+
+    compact_confirm = Button.new()
+    compact_confirm.text = "Confirmar"
+    compact_confirm.custom_minimum_size.y = 48
+    compact_confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_confirm.pressed.connect(_confirm_order)
+    actions.add_child(compact_confirm)
+
+    compact_end_turn = Button.new()
+    compact_end_turn.text = "Fin turno"
+    compact_end_turn.custom_minimum_size.y = 48
+    compact_end_turn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_end_turn.pressed.connect(_end_turn)
+    actions.add_child(compact_end_turn)
+
+    battle_hud_toggle = Button.new()
+    battle_hud_toggle.text = "Ampliar mapa"
+    battle_hud_toggle.custom_minimum_size = Vector2(130,46)
+    battle_hud_toggle.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    battle_hud_toggle.offset_left = -140
+    battle_hud_toggle.offset_right = -6
+    battle_hud_toggle.offset_top = 7
+    battle_hud_toggle.offset_bottom = 53
+    battle_hud_toggle.pressed.connect(_toggle_battle_hud)
+    battle_hud_overlay.add_child(battle_hud_toggle)
+
+    # Independent camera shortcuts in full-map mode for non-gesture users.
+    compact_center = Button.new()
+    compact_center.text = "Ejército"
+    compact_center.custom_minimum_size = Vector2(85,42)
+    compact_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    compact_center.offset_left = -230
+    compact_center.offset_right = -145
+    compact_center.offset_top = 7
+    compact_center.offset_bottom = 49
+    compact_center.pressed.connect(func(): board.frame_player_force())
+    battle_hud_overlay.add_child(compact_center)
+    compact_iso = Button.new()
+    compact_iso.text = "Vista"
+    compact_iso.custom_minimum_size = Vector2(68,42)
+    compact_iso.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    compact_iso.offset_left = -305
+    compact_iso.offset_right = -235
+    compact_iso.offset_top = 7
+    compact_iso.offset_bottom = 49
+    compact_iso.pressed.connect(_toggle_isometric_view)
+    battle_hud_overlay.add_child(compact_iso)
+    battle_hud_commands.hide()
+    compact_center.hide()
+    compact_iso.hide()
+
+func _set_compact_hud(compact: bool) -> void:
+    battle_hud_compact = compact
+    sidebar.visible = not compact
+    battle_hud_commands.visible = compact
+    compact_center.visible = compact
+    compact_iso.visible = compact
+    battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
+    layout_for_size(get_viewport_rect().size())
+
+func _toggle_battle_hud() -> void:
+    var current_cell: Vector2i = board.screen_cell(board.size * 0.5)
+    _set_compact_hud(not battle_hud_compact)
+    call_deferred("_recenter_camera_after_layout",current_cell)
+
+func _recenter_camera_after_layout(cell: Vector2i) -> void:
+    if not board.focus_view_cell(cell):
+        board.frame_player_force()
+
+func _frame_camera_after_layout() -> void:
+    if board != null:
+        board.frame_player_force()
 
 # The pure sizing entry point is called on both initial layout and resize.
 # It also enables reproducible portrait/landscape checks in headless Godot CI.
@@ -580,6 +733,14 @@ func _process(_delta: float) -> void:
             elif blue_signal == red_signal and blue_signal >= int(control["target"]):
                 relay_text += " | Empate: sigue el combate"
         _update_text(relay_status, relay_text)
+    # Compact controls mirror exactly the same guards as the full sidebar.
+    # Never bypass pending-order confirmation or turn ownership.
+    compact_status.text = status_label.text
+    compact_detail.text = unit_label.text.replace("\n","  ")
+    compact_confirm.disabled = board.pending_order.is_empty()
+    compact_confirm.text = "Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar"
+    compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
+    compact_end_turn.disabled = int(board.state.get("winner",-1)) != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction",0)) != 0)
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
     if not resupply_button.disabled:
@@ -683,6 +844,7 @@ func _load_game() -> void:
             map_seed_picker.value = int(board.state["map_seed"])
         if board.state.has("control") and board.state["control"].has("first_faction"):
             first_picker.select(int(board.state["control"]["first_faction"]))
+        call_deferred("_frame_camera_after_layout")
 
 func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
@@ -713,6 +875,7 @@ func _confirm_new_game() -> void:
         return
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size())
+    call_deferred("_frame_camera_after_layout")
 
 func _selected_map_size() -> Vector2i:
     match map_size_picker.get_selected_id():
@@ -777,6 +940,7 @@ func _toggle_battery_saver() -> void:
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
+    board.frame_player_force()
     iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
     battle_minimap.visible = board.iso_enabled
     minimap_caption.visible = board.iso_enabled
