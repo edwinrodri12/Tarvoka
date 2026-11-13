@@ -6,6 +6,8 @@ on:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/Headquarters3D.gd"
+      - "scripts/ui/HeadquartersFinish3D.gd"
+      - "tests/test_headquarters_premium_v2.gd"
       - "tests/test_web_building_studio.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/Tank*.gd"
@@ -120,6 +122,16 @@ jobs:
           fi
           grep -q "PASS unified web studio:" /tmp/studio-buildings-check.log
           test -s artifacts/tarvoka_headquarters_web_studio.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_premium_v2.gd 2>&1 | tee /tmp/hq-premium-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-premium-check.log; then
+            echo "Headquarters V2 architecture regression" >&2
+            exit 1
+          fi
+          grep -q "PASS headquarters premium V2:" /tmp/hq-premium-check.log
+          test -s artifacts/tarvoka_headquarters_v1_v2_comparison.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
@@ -164,6 +176,7 @@ jobs:
             build/web/
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_headquarters_web_studio.png
+            artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
