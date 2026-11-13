@@ -39,9 +39,9 @@ func _ready() -> void:
     var visible_height: float = get_viewport().get_visible_rect().size.y
     var outer := ScrollContainer.new()
     outer.name = "InspectorScroll"
-    outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.67,300.0,490.0))
+    outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.77,330.0,600.0))
     outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    outer.size_flags_vertical = Control.SIZE_FILL
+    outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
     outer.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     add_child(outer)
     var controls := VBoxContainer.new()
@@ -90,7 +90,11 @@ func _ready() -> void:
     animation_controls.visible = false
 
     viewport_holder = SubViewportContainer.new()
-    viewport_holder.custom_minimum_size = Vector2(280,clampf(get_viewport().get_visible_rect().size.y*0.355,205.0,310.0))
+    # Wider landscape canvas for close inspection, keeping a compact sidebar.
+    var visible_width: float = get_viewport().get_visible_rect().size.x
+    viewport_holder.custom_minimum_size = Vector2(
+        clampf(visible_width*0.49,330.0,820.0),
+        clampf(visible_height*0.57,270.0,455.0))
     viewport_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     viewport_holder.size_flags_vertical = Control.SIZE_FILL
     viewport_holder.stretch = true
@@ -100,7 +104,7 @@ func _ready() -> void:
 
     preview = SubViewport.new()
     preview.name = "Vista3D_Editable"
-    preview.size = Vector2i(384,344)
+    preview.size = Vector2i(768,480)
     preview.transparent_bg = false
     preview.own_world_3d = true
     preview.gui_disable_input = true
@@ -170,6 +174,25 @@ func _ready() -> void:
     info.text = "Elige una unidad para explorar su modelo."
     info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     controls.add_child(info)
+
+    # Real video 242259.mp4 showed a full-width 3D strip and a mostly empty
+    # dialog below. Make the model the main left column and place actions in
+    # a compact right sidebar. All controls are still Android touch targets.
+    var presentation := HBoxContainer.new()
+    presentation.name = "ModeloYControles"
+    presentation.add_theme_constant_override("separation",14)
+    presentation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    controls.add_child(presentation)
+    var action_side := VBoxContainer.new()
+    action_side.name = "ControlesDelModelo"
+    action_side.custom_minimum_size.x = clampf(visible_width*0.21,220.0,330.0)
+    action_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    action_side.add_theme_constant_override("separation",8)
+    viewport_holder.reparent(presentation)
+    presentation.add_child(action_side)
+    for control in [intro,picker,faction_paint_picker,animation_controls,controls_row,zoom_row,info]:
+        control.reparent(action_side)
+    viewport_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 func _on_select(index: int) -> void:
     if index < 0 or index >= Models.ROLES.size():
