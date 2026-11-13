@@ -144,7 +144,15 @@ func _inside_viewport(control: Control, resolution: Vector2i) -> bool:
     if control == null or not control.is_visible_in_tree():
         push_error("Important Android control is hidden or missing.")
         return false
-    var rect: Rect2 = control.get_global_rect()
+    # canvas_items stretch draws a 1280x720 logical scene into a 960x540
+    # capture. Control.get_global_rect() stays in logical coordinates, so
+    # compare both sides in the same pixel space.
+    var logical_base := Vector2(
+        float(ProjectSettings.get_setting("display/window/size/viewport_width",1280)),
+        float(ProjectSettings.get_setting("display/window/size/viewport_height",720)))
+    var scale: Vector2 = Vector2(resolution) / logical_base
+    var local: Rect2 = control.get_global_rect()
+    var rect := Rect2(local.position * scale,local.size * scale)
     var safe: Rect2 = Rect2(Vector2.ZERO,Vector2(resolution))
     if rect.size.x < 24.0 or rect.size.y < 24.0:
         push_error("Touch control is too small: "+str(control.name))
