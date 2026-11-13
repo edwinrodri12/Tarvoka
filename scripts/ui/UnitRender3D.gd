@@ -291,12 +291,16 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
             break
     for unit_id in live_tank_viewports.keys():
         if not desired.has(unit_id):
-            var still_exists := false
+            var retain_snapshot := false
             for unit in units:
-                if str(unit.get("id","")) == str(unit_id) and int(unit.get("hp",0)) > 0:
-                    still_exists = true
-                    break
-            _park_live_tank(str(unit_id),still_exists)
+                if str(unit.get("id","")) != str(unit_id) or int(unit.get("hp",0)) <= 0:
+                    continue
+                # A tank that disappears under fog must not retain a hidden
+                # unit-specific preview in memory.
+                var own: bool = int(unit.get("faction",-1)) == 0
+                retain_snapshot = own or not fog_enabled or visible_cells.has(unit.get("pos"))
+                break
+            _park_live_tank(str(unit_id),retain_snapshot)
     for unit_id in desired:
         var task: Dictionary = desired[unit_id]
         var faction: int = int(task["faction"])
