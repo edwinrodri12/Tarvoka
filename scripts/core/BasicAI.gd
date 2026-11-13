@@ -11,6 +11,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -20,7 +21,7 @@ static func step(state: Dictionary) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     if not state.has("units") or not state["units"] is Array or not state.has("terrain"):
         return idle
-    if int(state.get("winner", -1)) != -1:
+    if int(state.get("winner", -1)) != -1 or not Opening.can_order(state):
         return idle
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
@@ -60,7 +61,7 @@ static func step(state: Dictionary) -> Dictionary:
             # Use the same exchange model as the combat action, but assume
             # the visible enemy MAY still have ammo/reaction. Never inspect
             # its private stock or readiness to make a planning decision.
-            var preview: Dictionary = BattleActions.public_preview_exchange(unit, enemy)
+            var preview: Dictionary = BattleActions.public_preview_exchange(unit, enemy, knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
             if not preview.get("valid", false):
                 continue
             var damage := int(preview["damage"])
@@ -498,9 +499,6 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
         for enemy in enemies:
             if not Logistics.can_fire(ally):
                 continue
-            var preview: Dictionary = Roles.resolve(ally, enemy)
-            if not preview.get("valid", false) or not preview.get("defeated", false):
-                continue
             for y in range(Rules.map_size(knowledge["terrain"]).y):
                 for x in range(Rules.map_size(knowledge["terrain"]).x):
                     var cell := Vector2i(x, y)
@@ -509,6 +507,9 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     var attacker: Dictionary = ally.duplicate(true)
                     attacker["pos"] = cell
                     if not Turns.in_attack_range(attacker, enemy):
+                        continue
+                    var simulated: Dictionary = BattleActions.public_preview_exchange(attacker,enemy,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
+                    if not simulated.get("valid",false) or not simulated.get("defeated",false):
                         continue
                     var score: int = 100000 + int(enemy.get("attack", 0)) * 10 - int(reachable[cell])
                     if score < best_score or (score == best_score and not _prefer_cell(cell,best_cell,faction)):
@@ -554,7 +555,7 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
         for enemy in enemies:
             if not Turns.in_attack_range(enemy, ally):
                 continue
-            var incoming: Dictionary = Roles.resolve(enemy, ally)
+            var incoming: Dictionary = BattleActions.public_preview_exchange(enemy,ally,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
             if incoming.get("valid", false) and incoming.get("defeated", false):
                 threatened = true
                 break
