@@ -86,9 +86,9 @@ static func income_for(economy: Dictionary, faction: int) -> int:
     return count * (MODERN_CITY_INCOME if economy.get("modern", false) else CITY_INCOME)
 
 static func can_capture(unit: Dictionary) -> bool:
-    # Scouts and guards must commit to a tile until end of turn; armored
+    # Only living infantry (including antitank Rompedor) can occupy and capture at end of turn; armored
     # platforms and ranged weapons cannot capture urban installations.
-    return int(unit.get("hp", 0)) > 0 and Domains.domain(unit) == Domains.GROUND and str(unit.get("role", "")) in ["line", "scout", "assault", "engineer"]
+    return int(unit.get("hp", 0)) > 0 and Domains.domain(unit) == Domains.GROUND and str(unit.get("role", "")) in ["line", "scout", "piercer", "assault", "engineer"]
 
 static func finish_turn(state: Dictionary) -> Dictionary:
     var next: Dictionary = state.duplicate(true)
