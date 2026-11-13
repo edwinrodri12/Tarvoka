@@ -9,7 +9,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
-const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
+const UnitArtGallery = preload("res://scripts/ui/ArsenalHomeScreen.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
@@ -65,7 +65,7 @@ var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
 var faction_gallery_button: Button
-var unit_art_gallery: AcceptDialog
+var unit_art_gallery: Control
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
@@ -287,8 +287,7 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
-    unit_art_gallery.confirmed.connect(_return_home_from_arsenal)
-    unit_art_gallery.canceled.connect(_return_home_from_arsenal)
+    unit_art_gallery.close_requested.connect(_close_arsenal_screen)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1593,6 +1592,10 @@ func _open_arsenal_from_home() -> void:
     _gallery_from_home = true
     _open_unit_art_gallery()
 
+func _close_arsenal_screen() -> void:
+    unit_art_gallery.hide()
+    _return_home_from_arsenal()
+
 func _return_home_from_arsenal() -> void:
     if _gallery_from_home:
         _gallery_from_home = false
@@ -1796,7 +1799,7 @@ func _toggle_isometric_view() -> void:
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
-        unit_art_gallery.popup_centered_ratio(0.85)
+        unit_art_gallery.open_for()
 
 func _open_campaign() -> void:
     # Main keeps the existing skirmish autosave unchanged. Campaign resumes
