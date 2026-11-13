@@ -10,6 +10,7 @@ signal saves_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 
 # A faithful use of the approved identity, NOT a redesigned logo.
 # The 64-pixel repository preview is deliberately kept near native size.
@@ -25,6 +26,8 @@ var action_card: PanelContainer
 var _brand_image: TextureRect
 var _menu_caption: Label
 var _hero_subtitle: Label
+var faction_showcase: PanelContainer
+var showcase_emblems: Array[TextureRect] = []
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -128,6 +131,44 @@ func _ready() -> void:
     _hero_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     hero_stack.add_child(_hero_subtitle)
 
+    # The broad landscape brand panel should feel like the game's
+    # eight-faction universe, not an empty placeholder. These are the
+    # original approved shield textures, never invented stock imagery.
+    # In portrait this panel stays hidden so the four primary actions
+    # remain reachable before the first scroll.
+    faction_showcase = PanelContainer.new()
+    faction_showcase.name = "OchoEscudosOficiales"
+    faction_showcase.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#0F2638"),Chrome.EDGE,9,8))
+    hero_stack.add_child(faction_showcase)
+    var showcase_column := VBoxContainer.new()
+    showcase_column.add_theme_constant_override("separation",6)
+    faction_showcase.add_child(showcase_column)
+    var showcase_title := Label.new()
+    showcase_title.text = "OCHO FACCIONES · UN MUNDO EN DISPUTA"
+    showcase_title.add_theme_color_override("font_color",Chrome.GOLD)
+    showcase_title.add_theme_font_size_override("font_size",12)
+    showcase_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    showcase_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    showcase_column.add_child(showcase_title)
+    for row_id in range(2):
+        var crest_row := HBoxContainer.new()
+        crest_row.alignment = BoxContainer.ALIGNMENT_CENTER
+        crest_row.add_theme_constant_override("separation",8)
+        showcase_column.add_child(crest_row)
+        for col_id in range(4):
+            var index: int = row_id*4+col_id
+            var crest := TextureRect.new()
+            crest.name = "FaccionEscudo%d" % index
+            crest.texture = VisualStyle.emblem_texture(index)
+            crest.custom_minimum_size = Vector2(66,66)
+            crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+            crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+            crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            crest.tooltip_text = str(VisualStyle.FACTIONS[index]["name"])
+            crest_row.add_child(crest)
+            showcase_emblems.append(crest)
+
     var hero_spacer := Control.new()
     hero_spacer.custom_minimum_size.y = 2
     hero_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -182,6 +223,7 @@ func _reflow() -> void:
     action_card.custom_minimum_size = Vector2(0 if portrait else 385,0)
     home_scroll.custom_minimum_size.x = 300
     _brand_image.custom_minimum_size = Vector2(64,64) if portrait else Vector2(116,116)
+    faction_showcase.visible = not portrait
 
 func _section(parent: VBoxContainer, title_text: String) -> void:
     var label := Label.new()
