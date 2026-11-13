@@ -51,26 +51,6 @@ static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float, conn
         canvas.draw_line(center+exit*hw*0.36,center+exit*hw*0.79,
             line_tint,maxf(1.0,hw*0.025),true)
 
-static func _water_banks(canvas: CanvasItem, center: Vector2, hw: float,
-        shore_mask: int) -> void:
-    if shore_mask == 0:
-        return
-    var corners := PackedVector2Array([
-        center+Vector2(0,-hw*0.5),center+Vector2(hw,0),
-        center+Vector2(0,hw*0.5),center+Vector2(-hw,0)
-    ])
-    # +x right-bottom, -x left-top, +y bottom-left, -y top-right.
-    var edges: Array = [[1,2],[3,0],[2,3],[0,1]]
-    for i in range(4):
-        if (shore_mask & (1 << i)) == 0:
-            continue
-        var a: Vector2 = corners[edges[i][0]]
-        var b: Vector2 = corners[edges[i][1]]
-        canvas.draw_line(a,b,Color("#DBD6AC"),maxf(1.1,hw*0.050),true)
-        # Foamy shallow-water band remains INSIDE the water tile.
-        canvas.draw_line(a.lerp(center,0.12),b.lerp(center,0.12),
-            Color("#8FE1DF"),maxf(1.0,hw*0.037),true)
-
 static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
         hw: float, phase: float, seed: int, road_connections: int = 0,
         shore_mask: int = 0, terrain_neighbors: int = 0, bridge_axis: int = 0,
@@ -82,7 +62,7 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
     # tile. Masks are provided by fog-filtered topology in IsoRenderer.
     if kind != "water":
         Transitions.draw_land_shore(canvas,c,hw,
-            int(context.get("water_edges",0)),kind,detail)
+            int(context.get("water_edges",0)),kind,detail,seed)
         if kind == "plain" or kind == "road" or kind == "forest":
             Transitions.draw_talus(canvas,c,hw,
                 int(context.get("mountain_edges",0)),detail)
@@ -100,7 +80,7 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
             # Flow direction is derived from known neighboring water tiles.
             Transitions.draw_river_current(canvas,c,hw,
                 int(context.get("water_connections",0)),seed,phase,detail)
-            _water_banks(canvas,c,hw,shore_mask)
+            Transitions.draw_water_shore(canvas,c,hw,shore_mask,detail,seed)
         _:
             # Plains remain readable at a glance but get fine vegetation
             # only in full zoom. All decorations are render-only.
