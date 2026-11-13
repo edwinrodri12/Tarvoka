@@ -34,7 +34,7 @@ func _run() -> void:
     setup.faction_button.pressed.emit()
     assert(chooser.visible and not setup.visible)
     assert(chooser.selected == Identity.defaults())
-    # Four original crests and portraits are now in the app's atlas.
+    # Eight original crests and portraits now load from the two official atlases.
     assert(chooser.portrait.texture != null)
     assert(chooser.commander_portrait.texture != null)
     assert(not chooser.commander_notice.visible)
@@ -46,8 +46,9 @@ func _run() -> void:
     assert(chooser.selected["1"] == "orden_onix")
     assert(chooser.preview_title.text == "Orden Ónix")
     assert(chooser.preview_motif.text.contains("Insignia"))
-    assert(chooser.portrait.texture == null and chooser.commander_portrait.texture == null)
-    assert(chooser.preview_commander.text.contains("pendiente"))
+    assert(chooser.portrait.texture != null and chooser.commander_portrait.texture != null)
+    assert(chooser.preview_commander.text.contains("Retrato oficial"))
+    assert(not chooser.commander_notice.visible)
     assert(board.state == starting) # Merely choosing is never a battle order.
     chooser.back_requested.emit()
     assert(setup.visible and not chooser.visible)
