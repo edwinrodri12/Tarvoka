@@ -24,6 +24,7 @@ var faction_gallery_button: Button
 var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
 var iso_view_button: Button
+var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
 var _minimap_view_key := -1
@@ -129,8 +130,14 @@ func _ready() -> void:
     iso_view_button.custom_minimum_size.y = 46
     iso_view_button.tooltip_text = "Alternar el tablero clásico y el mapa isométrico"
     iso_view_button.pressed.connect(_toggle_isometric_view)
-    # Put the view toggle on its own row so 300px-wide Android sidebars do not overflow.
+    # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    battery_saver_button = Button.new()
+    battery_saver_button.text = "Ahorro de batería: desactivado"
+    battery_saver_button.custom_minimum_size.y = 43
+    battery_saver_button.tooltip_text = "Reduce animación ambiental; las órdenes y ataques mantienen sus efectos"
+    battery_saver_button.pressed.connect(_toggle_battery_saver)
+    panel.add_child(battery_saver_button)
     camera_zoom_out = Button.new()
     camera_zoom_out.text = "−"
     camera_zoom_out.tooltip_text = "Alejar mapa táctico"
@@ -755,6 +762,11 @@ func _refresh_production_catalog() -> void:
         production_picker.set_item_metadata(n,str(role))
     if production_picker.item_count > 0:
         production_picker.select(0)
+
+func _toggle_battery_saver() -> void:
+    board.set_battery_saver(not board.battery_saver)
+    battery_saver_button.text = ("Ahorro de batería: activado"
+        if board.battery_saver else "Ahorro de batería: desactivado")
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
