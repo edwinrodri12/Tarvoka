@@ -193,6 +193,27 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
                 "heading":target-origin
             }
             break
+    # Damage to a surviving MBT also animates its soot and chassis shake.
+    # Defeated/removed targets use BattleVFX destruction, never a ghost unit.
+    for effect in combat:
+        if str(effect.get("defender_role","")) != "tank":
+            continue
+        var target: Vector2i = effect.get("target",Vector2i(-1,-1))
+        if target.x < 0:
+            continue
+        for unit in units:
+            if str(unit.get("role","")) != "tank" or unit.get("pos") != target:
+                continue
+            if fog_enabled and int(unit.get("faction",1)) != 0 and not visible_cells.has(target):
+                break
+            var victim_id: String = str(unit["id"])
+            if not desired.has(victim_id):
+                desired[victim_id] = {
+                    "faction":int(unit["faction"]), "kind":"damaged",
+                    "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
+                    "heading":Vector2i.ZERO
+                }
+            break
     for unit_id in live_tank_viewports.keys():
         if not desired.has(unit_id):
             var view: SubViewport = live_tank_viewports[unit_id] as SubViewport
