@@ -77,6 +77,7 @@ static func _badge_mesh(parent: Node3D, tint: Color, name: String,
             surf.set_uv(Vector2(p.x+0.5,p.y+0.7))
             surf.add_vertex(p)
     surf.generate_normals()
+    surf.generate_tangents()
     var item := MeshInstance3D.new()
     item.name = name
     item.mesh = surf.commit()
