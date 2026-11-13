@@ -148,9 +148,22 @@ func _run() -> void:
     assert(capture.call("live_tank_count") == 1) # Hidden enemy is never animated.
     capture.call("update_tank_actions",units,[],[],true,vision,false)
     assert(capture.call("live_tank_count") == 0)
-    assert(capture.call("texture_for","tank",0,"T-01") == capture.call("texture_for","tank",0))
+    assert(capture.call("parked_tank_count") == 1)
+    var frozen: Texture2D = capture.call("texture_for","tank",0,"T-01") as Texture2D
+    assert(frozen != null and frozen != capture.call("texture_for","tank",0))
+    for settle in range(3):
+        await process_frame
+    var parked_model: Node3D = capture.parked_tank_models["T-01"] as Node3D
+    assert(parked_model != null and Rig.has_rig(parked_model))
+    assert(capture.parked_tank_viewports["T-01"].render_target_update_mode != SubViewport.UPDATE_ALWAYS)
+    # A new move reuses the same viewport and its expensive 3D mesh.
+    capture.call("update_tank_actions",units,movement,[],true,vision,false)
+    assert(capture.call("live_tank_count") == 1)
+    assert(capture.live_tank_viewports["T-01"] == frozen.get_viewport() if frozen is SubViewportTexture else true)
     capture.call("update_tank_actions",units,movement,[],true,vision,true)
     assert(capture.call("live_tank_count") == 0)
+    assert(capture.call("parked_tank_count") == 0)
+    assert(capture.call("texture_for","tank",0,"T-01") == capture.call("texture_for","tank",0))
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
     assert(rendered.save_png("res://artifacts/tarvoka_mbt_live_animation_frames.png") == OK)
     capture.queue_free()
