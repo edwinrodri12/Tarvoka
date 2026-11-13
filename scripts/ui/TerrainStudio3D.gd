@@ -262,12 +262,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         var tank := Models.build("tank",clampi(faction,0,7),true,10)
         tank.name = "TanqueDeReferencia"
         tank.scale = Vector3.ONE*0.64
-        tank.position = _cell_center(5,5)+Vector3(0,height_at(5,5,preset)+0.06,0)
+        var tank_cell: Vector2i = Vector2i(8,8) if preset == 1 else Vector2i(5,7) if preset == 2 else Vector2i(5,5)
+        tank.position = _cell_center(tank_cell.x,tank_cell.y) + Vector3(0,height_at(tank_cell.x,tank_cell.y,preset)+0.06,0)
         samples.add_child(tank)
         var hq := Headquarters.build(1,clampi(faction,0,7),"operativo",true,true)
         hq.name = "CuartelDeReferencia"
         hq.scale = Vector3.ONE*0.27
-        hq.position = _cell_center(6,8)+Vector3(0,height_at(6,8,preset),0)
+        var hq_cell: Vector2i = Vector2i(10,8) if preset == 1 else Vector2i(6,8)
+        hq.position = _cell_center(hq_cell.x,hq_cell.y) + Vector3(0,height_at(hq_cell.x,hq_cell.y,preset),0)
         samples.add_child(hq)
     root.set_meta("terrain_counts",counts)
     root.set_meta("terrain_tile_count",WIDTH*HEIGHT)
