@@ -50,14 +50,28 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
-      - name: Validate first eight genuine Godot 3D unit models and in-game fallback
+      - name: Render and verify eight actual 3D military meshes with software OpenGL
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_native_unit_models_3d.gd 2>&1 | tee /tmp/tarvoka-3d-units.log
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+          fi
+          mkdir -p artifacts
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --script res://tests/test_native_unit_models_3d.gd 2>&1 | tee /tmp/tarvoka-3d-units.log
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-3d-units.log; then
             echo "3D military unit model regression"; exit 1
           fi
+          test -s artifacts/tarvoka_3d_first8.png
+
+      - name: Archive genuine Godot 3D renders for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-3D-first-eight-preview
+          path: artifacts/tarvoka_3d_first8.png
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Validate isometric projection touch gestures and unchanged battle rules
         shell: bash
