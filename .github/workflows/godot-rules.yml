@@ -50,6 +50,16 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
+      - name: Validate standalone Android visual laboratory and real-vs-FX battle tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_visual_laboratory.gd 2>&1 | tee /tmp/tarvoka-lab.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-lab.log; then
+            echo "Visual laboratory regression"; exit 1
+          fi
+          grep -q "PASS visual laboratory:" /tmp/tarvoka-lab.log
+
       - name: Validate recorded Android tank movement and counterfire feedback
         shell: bash
         run: |
