@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate unit/building dossiers, factory comparison and fog-safe stat visibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_dossier_comparison.gd 2>&1 | tee /tmp/tarvoka-dossier-compare.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-dossier-compare.log; then
+            echo 'Dossier or comparison regression'; exit 1
+          fi
+          grep -F 'PASS unit dossiers and production comparison' /tmp/tarvoka-dossier-compare.log
+
       - name: Verify skirmish preparation and fog-safe attack/defense forecast
         shell: bash
         run: |
