@@ -198,7 +198,13 @@ static func _suppress_prototype(model: Node3D) -> void:
             "ModuloCeramicoLateralV6_1_0","ModuloCeramicoLateralV6_1_1",
             "VisorComandante_0","VisorComandante_1","VisorComandante_2",
             "VisorComandante_3","VisorComandante_4","VisorComandante_5",
-            "AntenaTorre1","AntenaTorre-1"]:
+            "AntenaTorre1","AntenaTorre-1",
+            "AroRuedaMotriz-1_0","AroRuedaMotriz-1_1",
+            "AroRuedaMotriz1_0","AroRuedaMotriz1_1",
+            "ArgollaRemolque-1","ArgollaRemolque1",
+            "LanzaFumigenas-1_0","LanzaFumigenas-1_1",
+            "LanzaFumigenas-1_2","LanzaFumigenas1_0",
+            "LanzaFumigenas1_1","LanzaFumigenas1_2"]:
         var old: Node3D = model.find_child(name,true,false) as Node3D
         if old != null:
             old.visible = false
@@ -427,6 +433,29 @@ static func apply(model: Node3D) -> bool:
         _dark_box(turret,"CristalVisionIntegradoV7_%s" % side,
             Vector3(sign*0.47,0.703,optic_z-0.119),
             Vector3(0.155,0.078,0.014),GLASS)
+    # Integrated smoke dischargers are mounted on armored side cheeks,
+    # pointing outward/forward. Replace the six random-looking bare barrels.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _bevel(turret,"BancadaFumigenasV7_%s" % side,
+            Vector3(sign*0.805,0.44,0.12),
+            Vector3(0.15,0.18,0.43),0.035,METAL,
+            Vector3(0,sign*8.0,0))
+        for n in range(3):
+            _rod(turret,"LanzadorFumigenoRealV7_%s_%d" % [side,n],
+                Vector3(sign*0.88,0.46,-0.04+float(n)*0.145),
+                Vector3(sign*1.08,0.58,-0.20+float(n)*0.145),
+                0.044,SEAM)
+    # Fine welds around the hatch and upper armor: these follow the real
+    # tapered roof and remain visible in close-up without looking blocky.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _rod(turret,"UnionSoldaduraTechoV7_%s" % side,
+            Vector3(sign*0.49,0.672,-0.53),
+            Vector3(sign*0.53,0.666,0.56),0.010,SEAM)
+        _rod(turret,"CordoncilloParapetoV7_%s" % side,
+            Vector3(sign*0.57,0.582,-0.93),
+            Vector3(sign*0.73,0.586,-0.44),0.010,WEAR)
     # Crew hatch circles are capped and angled to sit flush with roof.
     for hatch in range(2):
         var sign: float = -1.0 if hatch == 0 else 1.0
@@ -468,6 +497,13 @@ static func apply(model: Node3D) -> bool:
         _bevel(turret,"BaseAntenaG09V7_%s" % side,
             Vector3(sign*0.59,0.646,0.72),Vector3(0.095,0.070,0.095),
             0.022,METAL)
+    # Low-profile panoramic command sensor; optical glass is actually
+    # recessed and has a dark gasket, not a glowing white cube.
+    _bevel(turret,"CabezalPanoramicoG09V7",
+        Vector3(0.42,0.742,-0.43),Vector3(0.225,0.13,0.212),
+        0.052,METAL)
+    _dark_box(turret,"CristalCabezalPanoramicoG09V7",
+        Vector3(0.42,0.741,-0.553),Vector3(0.148,0.067,0.013),GLASS)
     # Angular engine-independent bustle has proper rear slope and a rigid
     # steel frame, but no exposed toy bars or loose floating ammunition.
     _bevel(turret,"EstibaBlindadaTraseraV7",
