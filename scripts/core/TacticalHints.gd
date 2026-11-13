@@ -59,7 +59,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
     blockers.erase(origin)
     var moves: Dictionary = {}
     if Turns.can_move(unit, faction):
-        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit))
+        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit), Logistics.road_fast(unit))
         moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
@@ -288,7 +288,7 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
         if Domains.layer(unit) == Domains.layer(enemy):
             same_layer.append(unit["pos"])
     var base_move: int = maxi(0,int(enemy.get("move_points",0)))
-    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], same_layer, Domains.domain(enemy))
+    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], same_layer, Domains.domain(enemy), Logistics.road_fast(enemy))
     moves.erase(origin)
     if fogged:
         for cell in moves.keys():
