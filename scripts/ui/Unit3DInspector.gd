@@ -39,7 +39,7 @@ func _ready() -> void:
     var visible_height: float = get_viewport().get_visible_rect().size.y
     var outer := ScrollContainer.new()
     outer.name = "InspectorScroll"
-    outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.77,330.0,600.0))
+    outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.52,325.0,470.0))
     outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
     outer.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -265,7 +265,11 @@ func _process(delta: float) -> void:
 func open_viewer() -> void:
     if not Models.supports(_current_role):
         show_role(str(Models.ROLES[0]))
-    popup_centered_ratio(0.86)
+    var screen: Vector2 = get_viewport().get_visible_rect().size
+    # Android video review: avoid a huge blank gray area below the model.
+    # Give the 3D canvas the space it needs without forcing 86% screen height.
+    var desired_height: int = int(clampf(screen.y*0.52+96.0,430.0,590.0))
+    popup_centered(Vector2i(int(screen.x*0.86),desired_height))
 
 func _update_camera_size() -> void:
     if camera == null or not Models.supports(_current_role):
