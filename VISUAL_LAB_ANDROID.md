@@ -31,6 +31,8 @@ El selector **Etapa del vehículo** permite inspeccionar 5 fases acumulativas:
 
 Estos cinco diseños son implementaciones de **geometría tridimensional real en Godot**, pero aún necesitan acabado artístico final, UV/texturas PBR creadas por artista y revisión de efectos en dispositivos físicos. Su selección es **solo visual**, no una falsificación de combate o de estadísticas.
 
+**Sincronización con combate real (rama de revisión)**: cuando «Ataque real» afecta a un tanque, el selector de destrucción toma la etapa correspondiente a su HP autorizado: ≥90 % intacto, 65–89 % impactos leves, 40–64 % daño moderado, 1–39 % crítico y 0 HP destruido. Se prioriza el tanque defensor; si solo el atacante es tanque, se refleja el daño recibido en la respuesta. «Ver daños 3D» enseña el estado resultante, sin modificar HP. Durante las animaciones en el tablero los tanques 3D conservan las marcas y piezas rotas en el fotograma estacionado después del ataque; las capturas estáticas originales siguen neutrales hasta que hay una animación visible, para evitar renderizar constantemente modelos en móviles. La vista de unidades ocultas sigue protegida por niebla.
+
 ## Datos y arquitectura
 - `VisualLab.gd`: pantalla separada con estado efímero de `BattleSession`.
 - `Unit3DInspector.gd`: vista orbital 3D con controles táctiles y estados.
