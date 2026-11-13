@@ -152,7 +152,12 @@ static func encode(mission: Dictionary) -> String:
 static func decode(raw_text: String) -> Dictionary:
     if raw_text.is_empty() or raw_text.length() > 262144:
         return {}
-    var raw: Variant = JSON.parse_string(raw_text)
+    # JSON.parse_string emits an engine ERROR for expected corrupt saves.
+    # JSON.parse reports an error code instead, letting us reject safely.
+    var parser := JSON.new()
+    if parser.parse(raw_text) != OK:
+        return {}
+    var raw: Variant = parser.data
     if not (raw is Dictionary):
         return {}
     if not (raw.get("campaign") is Dictionary) or not (raw.get("battle") is Dictionary):
