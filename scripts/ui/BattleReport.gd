@@ -76,8 +76,11 @@ static func pending_preview(state: Dictionary, pending: Dictionary) -> String:
         var target: Dictionary = hints["attacks"][cell]
         if str(target.get("id", "")) != str(pending.get("target_id", "")):
             return "El objetivo cambio. Cancela la seleccion."
-        return "ATAQUE PREPARADO: %s contra %s | dano previsto %d HP al enemigo | respuesta posible hasta -%d HP propios.\nConfirma o toca el objetivo otra vez." % [
-            unit_id, str(target["id"]), int(target["damage"]), int(target.get("counter_damage",0))
+        var bonus: int = int(target.get("terrain_attack_bonus",0))
+        var cover: int = int(target.get("terrain_defense_cover",0))
+        var position_note := " | terreno ATQ %+d, cobertura +%d%s" % [bonus, cover, ", flanqueo" if bool(target.get("flanked",false)) else ""]
+        return "ATAQUE PREPARADO: %s contra %s | dano previsto %d HP al enemigo | respuesta posible hasta -%d HP propios%s.\nConfirma o toca el objetivo otra vez." % [
+            unit_id, str(target["id"]), int(target["damage"]), int(target.get("counter_damage",0)), position_note
         ]
     if str(pending.get("kind", "")) == "move" and hints["moves"].has(cell):
         return "MOVIMIENTO PREPARADO: %s a (%d,%d) | costo %d.\nConfirma o toca el destino otra vez." % [
