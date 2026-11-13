@@ -203,6 +203,7 @@ func _display_role(role: String) -> void:
     _effect_time = 0.0
     model_root.rotation_degrees.y = _yaw
     role_picker.select(Models.ROLES.find(role))
+    faction_picker.select(_faction)
     faction_picker.visible = (_role == "tank")
     damage_picker.visible = (_role == "tank")
     comparison_button.visible = (_role == "tank")
