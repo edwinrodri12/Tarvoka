@@ -129,6 +129,37 @@ static func _roof_details(turret: Node3D) -> void:
             Vector3(sign*0.905,0.524,0.430),
             Vector3(0.014,0.058,0.157),GLASS)
 
+static func _replace_roof_optics(turret: Node3D) -> void:
+    # In the actual high-zoom Godot render, two isolated rounded roof
+    # housings still read like toy plastic. Replace those shapes in-place
+    # with low, flush hardened steel modules with inset blue-black glass.
+    for name in ["CabezalPanoramicoG09V7","CristalCabezalPanoramicoG09V7"]:
+        var old: Node3D = turret.find_child(name,true,false) as Node3D
+        if old != null:
+            old.visible = false
+    _armor(turret,"G09CabezalPanoramicoCompactoV9",
+        Vector3(0.42,0.720,-0.429),
+        Vector3(0.262,0.090,0.284),0.026,GREY)
+    _metal(turret,"G09PanoramicoCristalRebajadoV9",
+        Vector3(0.42,0.722,-0.584),
+        Vector3(0.178,0.050,0.013),GLASS)
+    var remote: Node3D = turret.find_child("ArmaSecundariaEstabilizada",true,false) as Node3D
+    if remote == null:
+        return
+    for name in ["EstacionRemotaBlindadaV7","LenteArmaEstabilizadaV7"]:
+        var old: Node3D = remote.find_child(name,true,false) as Node3D
+        if old != null:
+            old.visible = false
+    _armor(remote,"G09EstacionArmaRasanteV9",
+        Vector3(0,0.103,-0.083),
+        Vector3(0.292,0.107,0.301),0.023,GREY)
+    _metal(remote,"G09CamaraArmaCompactaV9",
+        Vector3(-0.098,0.114,-0.244),
+        Vector3(0.069,0.046,0.013),GLASS)
+    _seam(remote,"G09JuntaArmaV9",
+        Vector3(-0.125,0.164,0.017),
+        Vector3(0.125,0.164,0.017),0.009,EDGE)
+
 static func _hull_details(hull: Node3D) -> void:
     # Rear exhaust manifolds and service panel seams sit *inside* the roof
     # silhouette, giving recognizable engine systems from elevated camera.
@@ -176,6 +207,7 @@ static func apply(model: Node3D) -> bool:
     model.add_child(marker)
     _wheel_trim(hull)
     _roof_details(turret)
+    _replace_roof_optics(turret)
     _hull_details(hull)
     model.set_meta("tarvoka_mbt_production_v9",true)
     return true
