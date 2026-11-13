@@ -43,6 +43,8 @@ var objectives_button: Button
 var compact_objectives_button: Button
 var home_menu: Control
 var saved_matches_menu: Control
+var _command_from_home := false
+var _gallery_from_home := false
 var skirmish_setup: Control
 var compact_combat_preview: Control
 var sidebar_combat_preview: Control
@@ -273,6 +275,7 @@ func _ready() -> void:
     panel.add_child(unit_art_gallery_button)
     unit_art_gallery = UnitArtGallery.new()
     add_child(unit_art_gallery)
+    unit_art_gallery.popup_hide.connect(_return_home_from_arsenal)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -632,7 +635,7 @@ func _ready() -> void:
 
     command_menu = CommandMenu.new()
     add_child(command_menu)
-    command_menu.close_requested.connect(func(): command_menu.hide())
+    command_menu.close_requested.connect(_close_command_menu)
     command_menu.save_requested.connect(func(): _save_game(); command_menu.refresh())
     command_menu.load_requested.connect(func(): _load_game(); command_menu.refresh())
     command_menu.new_battle_requested.connect(_prepare_skirmish)
@@ -1424,6 +1427,7 @@ func _refresh_production_catalog() -> void:
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
+    _command_from_home = false
     _close_results_screen()
     command_menu.hide()
     skirmish_setup.hide()
@@ -1494,11 +1498,23 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
 
 func _open_arsenal_from_home() -> void:
     home_menu.hide()
+    _gallery_from_home = true
     _open_unit_art_gallery()
+
+func _return_home_from_arsenal() -> void:
+    if _gallery_from_home:
+        _gallery_from_home = false
+        _show_home_menu()
 
 func _open_settings_from_home() -> void:
     home_menu.hide()
+    _command_from_home = true
     command_menu.open_for(board,"Ajustes")
+
+func _close_command_menu() -> void:
+    command_menu.hide()
+    if _command_from_home:
+        _show_home_menu()
 
 func _close_objectives_radar() -> void:
     objectives_panel.hide()
@@ -1581,6 +1597,7 @@ func _results_to_home() -> void:
     _show_home_menu()
 
 func _open_command_menu() -> void:
+    _command_from_home = false
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
     command_menu.open_for(board,section)
 
