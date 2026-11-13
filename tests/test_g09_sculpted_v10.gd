@@ -82,6 +82,11 @@ func _run() -> void:
         "G09TornillosRuedasV9",true,false) as GeometryInstance3D
     assert(wheel_fasteners != null)
     assert(is_equal_approx(wheel_fasteners.visibility_range_end,23.0))
+    var rooftop_screws: MultiMeshInstance3D = new_model.find_child(
+        "G09V10TornillosTecho",true,false) as MultiMeshInstance3D
+    assert(rooftop_screws != null and rooftop_screws.multimesh != null)
+    assert(rooftop_screws.multimesh.instance_count == 24)
+    assert(is_equal_approx(rooftop_screws.visibility_range_end,23.0))
     assert(Models.paintable_count(new_model) == 14)
     assert(Models.paintable_count(old) == 14)
     for side in [-1,1]:
@@ -105,8 +110,9 @@ func _run() -> void:
     assert(not damage_cheek.visible and turret_service.visible)
     assert(Damage.apply_stage(new_model,4))
     assert(not turret_service.visible and new_body.visible and new_turret.visible)
+    assert(not rooftop_screws.visible)
     assert(Damage.apply_stage(new_model,0))
-    assert(damage_cheek.visible and turret_service.visible)
+    assert(damage_cheek.visible and turret_service.visible and rooftop_screws.visible)
     assert(not new_model.find_child("ModuloBlindajeCeramicoV7_1",true,false).visible)
     for faction in range(8):
         assert(Models.apply_faction_palette(new_model,faction) == 14)
