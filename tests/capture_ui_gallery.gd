@@ -53,8 +53,7 @@ func _run_gallery() -> void:
         _failed = true
     if not await _capture_landscape("04-escaramuza-960x540",Vector2i(960,540),"Escaramuza · horizontal compacto"):
         _failed = true
-    if main.skirmish_setup.preflight_columns.vertical or
-            main.skirmish_setup.preflight_columns.get_child_count() != 2:
+    if main.skirmish_setup.preflight_columns.vertical or main.skirmish_setup.preflight_columns.get_child_count() != 2:
         push_error("Escaramuza is not split into two landscape columns.")
         _failed = true
     for action in [main.skirmish_setup.footer_faction_button,
