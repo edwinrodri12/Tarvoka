@@ -64,12 +64,15 @@ jobs:
             echo "3D military unit model regression"; exit 1
           fi
           test -s artifacts/tarvoka_3d_first8.png
+          test -s artifacts/tarvoka_3d_inspector_android.png
 
       - name: Archive genuine Godot 3D renders for visual review
         uses: actions/upload-artifact@v4
         with:
           name: TARVOKA-3D-first-eight-preview
-          path: artifacts/tarvoka_3d_first8.png
+          path: |
+            artifacts/tarvoka_3d_first8.png
+            artifacts/tarvoka_3d_inspector_android.png
           if-no-files-found: error
           retention-days: 30
 
