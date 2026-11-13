@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify city/factory ownership, income and capture badges on both maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_map_site_overlays.gd 2>&1 | tee /tmp/tarvoka-site-overlays.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-site-overlays.log; then
+            echo 'Map site overlay regression'; exit 1
+          fi
+          grep -F 'PASS map site overlays' /tmp/tarvoka-site-overlays.log
+
       - name: Validate unit/building dossiers, factory comparison and fog-safe stat visibility
         shell: bash
         run: |
