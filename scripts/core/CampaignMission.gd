@@ -161,8 +161,18 @@ static func decode(raw_text: String) -> Dictionary:
     if battle.is_empty() or not _compatible_battle(battle):
         return {}
     var mission: Dictionary = (raw["campaign"] as Dictionary).duplicate(true)
+    # Godot JSON decodes all numeric literals as float. Rehydrate the three
+    # bounded integer metadata fields without accepting fractional or text.
+    for key in ["version","last_completed_side","phase_count"]:
+        var value: Variant = mission.get(key)
+        if not (value is float or value is int) or float(value) != float(int(value)):
+            return {}
+        mission[key] = int(value)
     mission["battle"] = battle
-    return mission if valid_meta(mission) else {}
+    if not valid_meta(mission):
+        return {}
+    mission["beacons"] = BEACONS.duplicate(true)
+    return mission
 
 static func valid_meta(mission: Dictionary) -> bool:
     if str(mission.get("id","")) != CHAPTER_ID or int(mission.get("version",-1)) != SAVE_VERSION:
