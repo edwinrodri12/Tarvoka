@@ -237,7 +237,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var sprite: Texture2D = null
         var from_3d := false
         if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null:
-            sprite = three_d_models.call("texture_for",role,int(unit["faction"])) as Texture2D
+            sprite = three_d_models.call("texture_for",role,int(unit["faction"]),str(unit["id"])) as Texture2D
             from_3d = sprite != null
         if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
             sprite = UnitSprites.frame_texture(role,pose)
