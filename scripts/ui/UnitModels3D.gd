@@ -8,6 +8,7 @@ const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","dest
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -681,6 +682,7 @@ static func build(role: String, faction: int = -1) -> Node3D:
     if imported != null:
         if role == "tank":
             apply_faction_palette(imported,faction)
+            TankDamage.prepare(imported)
         return imported
     # Authored native 3D mesh fallback, never a fake 2D illustration.
     var model := Node3D.new()
@@ -714,6 +716,7 @@ static func build(role: String, faction: int = -1) -> Node3D:
     if role == "tank":
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
+        TankDamage.prepare(model)
     return model
 
 static func inspect_meshes(model: Node) -> int:

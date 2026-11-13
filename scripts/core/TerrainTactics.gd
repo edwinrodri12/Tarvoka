@@ -16,11 +16,15 @@ const CITY_COVER := 1
 static func tile_at(terrain: Array, cell: Vector2i) -> String:
     # Terrain bonuses must work at every coordinate in 10x8, 24x18
     # and 40x30 maps, not only within the legacy compact board.
-    if not Rules.inside(cell,terrain):
+    # Some evaluation/preview callers provide incomplete terrain arrays.
+    # Check the real row count before subscripting: Rules.inside checks
+    # bounds inferred from the nominal map shape, not every ragged row.
+    if cell.x < 0 or cell.y < 0 or cell.y >= terrain.size():
         return ""
-    if not terrain[cell.y] is Array or cell.x >= terrain[cell.y].size():
+    var row = terrain[cell.y]
+    if not row is Array or cell.x >= row.size():
         return ""
-    return str(terrain[cell.y][cell.x])
+    return str(row[cell.x])
 
 static func height_of(kind: String) -> int:
     return 1 if kind == "mountain" else 0

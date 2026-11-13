@@ -223,7 +223,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 break
         if is_air:
             c += Vector2(hw * 0.23, -hh * 0.48 + sin(phase*2.5) * hh*0.08)
-        var tint: Color = VisualStyle.faction_color(int(unit["faction"]))
+        var tint: Color = VisualStyle.faction_color(int(unit.get("display_faction",unit["faction"])))
         var face: Color = tint.darkened(0.46) if bool(unit.get("acted", false)) else (tint.darkened(0.18) if bool(unit.get("moved", false)) else tint)
         var role: String = str(unit.get("role",""))
         var radius: float = hw * (0.29 if is_air else 0.33)
@@ -243,7 +243,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var sprite: Texture2D = null
         var from_3d := false
         if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null:
-            sprite = three_d_models.call("texture_for",role,int(unit["faction"]),str(unit["id"])) as Texture2D
+            sprite = three_d_models.call("texture_for",role,int(unit.get("display_faction",unit["faction"])),str(unit["id"])) as Texture2D
             from_3d = sprite != null
         if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
             sprite = UnitSprites.frame_texture(role,pose)

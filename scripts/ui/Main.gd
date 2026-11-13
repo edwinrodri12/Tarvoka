@@ -11,6 +11,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 const Unit3DInspector = preload("res://scripts/ui/Unit3DInspector.gd")
+const VisualLab = preload("res://scripts/ui/VisualLab.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
@@ -26,6 +27,9 @@ var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
 var unit_3d_inspector: AcceptDialog
 var unit_3d_inspector_button: Button
+var visual_laboratory: Control
+var visual_laboratory_button: Button
+var visual_laboratory_quick: Button
 var iso_view_button: Button
 var models_3d_button: Button
 var battery_saver_button: Button
@@ -213,6 +217,17 @@ func _ready() -> void:
     panel.add_child(unit_3d_inspector_button)
     unit_3d_inspector = Unit3DInspector.new()
     add_child(unit_3d_inspector)
+    visual_laboratory_button = Button.new()
+    visual_laboratory_button.text = "Laboratorio visual · 32 unidades"
+    visual_laboratory_button.custom_minimum_size.y = 52
+    visual_laboratory_button.tooltip_text = "Comparar modelos, terreno, movilidad, disparo y contraataque sin tocar la partida"
+    visual_laboratory_button.pressed.connect(_open_visual_lab)
+    panel.add_child(visual_laboratory_button)
+    # Fullscreen overlay appears above the complete game HUD, but its
+    # disposable test board has no access to the live board or save path.
+    visual_laboratory = VisualLab.new()
+    visual_laboratory.name = "LaboratorioVisual"
+    add_child(visual_laboratory)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -668,9 +683,21 @@ func _build_battle_hud() -> void:
     compact_iso.offset_bottom = 49
     compact_iso.pressed.connect(_toggle_isometric_view)
     battle_hud_overlay.add_child(compact_iso)
+    visual_laboratory_quick = Button.new()
+    visual_laboratory_quick.text = "Lab"
+    visual_laboratory_quick.tooltip_text = "Abrir laboratorio visual"
+    visual_laboratory_quick.custom_minimum_size = Vector2(61,42)
+    visual_laboratory_quick.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    visual_laboratory_quick.offset_left = -372
+    visual_laboratory_quick.offset_right = -311
+    visual_laboratory_quick.offset_top = 7
+    visual_laboratory_quick.offset_bottom = 49
+    visual_laboratory_quick.pressed.connect(_open_visual_lab)
+    battle_hud_overlay.add_child(visual_laboratory_quick)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
+    visual_laboratory_quick.hide()
 
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
@@ -678,6 +705,7 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    visual_laboratory_quick.visible = compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
     layout_for_size(get_viewport_rect().size)
 
@@ -976,6 +1004,10 @@ func _toggle_isometric_view() -> void:
     _minimap_view_key = -1
     if board.iso_enabled:
         battle_minimap.queue_redraw()
+
+func _open_visual_lab() -> void:
+    if visual_laboratory != null:
+        visual_laboratory.call("open_lab")
 
 func _open_unit_3d_inspector() -> void:
     if unit_3d_inspector != null:

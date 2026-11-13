@@ -50,6 +50,26 @@ jobs:
             echo "Unit artwork or animations emitted a Godot error"; exit 1
           fi
 
+      - name: Validate standalone Android visual laboratory and real-vs-FX battle tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_visual_laboratory.gd 2>&1 | tee /tmp/tarvoka-lab.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-lab.log; then
+            echo "Visual laboratory regression"; exit 1
+          fi
+          grep -q "PASS visual laboratory:" /tmp/tarvoka-lab.log
+
+      - name: Validate five reversible 3D tank damage stages and hit simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_tank_damage_laboratory.gd 2>&1 | tee /tmp/tarvoka-tank-damage.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-tank-damage.log; then
+            echo "Tank destruction visual regression"; exit 1
+          fi
+          grep -q "PASS tank damage lab:" /tmp/tarvoka-tank-damage.log
+
       - name: Validate recorded Android tank movement and counterfire feedback
         shell: bash
         run: |
@@ -76,6 +96,29 @@ jobs:
           test -s artifacts/tarvoka_3d_inspector_android.png
           test -s artifacts/tarvoka_mbt_8_faction_colors.png
 
+      - name: Render five unique tank wreck states and destruction inspector
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_tank_damage_render.gd 2>&1 | tee /tmp/tarvoka-tank-destruction-render.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-tank-destruction-render.log; then
+            echo "Tank destruction art preview regression"; exit 1
+          fi
+          grep -q "PASS 5 actual Godot 3D tank damage stages" /tmp/tarvoka-tank-destruction-render.log
+          test -s artifacts/tarvoka_tank_5_destruction_stages.png
+          test -s artifacts/tarvoka_damage_inspector_android.png
+
+      - name: Capture actual Visual Laboratory Android landscape screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_visual_lab_render.gd 2>&1 | tee /tmp/tarvoka-lab-render.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-lab-render.log; then
+            echo "Visual Lab on-screen layout or render regression"; exit 1
+          fi
+          grep -q "PASS visual laboratory real OpenGL screenshot" /tmp/tarvoka-lab-render.log
+          test -s artifacts/tarvoka_visual_lab_android.png
+
       - name: Validate MBT UV/PBR material, turret recoil, treads and live combat capture
         shell: bash
         run: |
@@ -95,6 +138,9 @@ jobs:
             artifacts/tarvoka_3d_inspector_android.png
             artifacts/tarvoka_mbt_8_faction_colors.png
             artifacts/tarvoka_mbt_live_animation_frames.png
+            artifacts/tarvoka_visual_lab_android.png
+            artifacts/tarvoka_tank_5_destruction_stages.png
+            artifacts/tarvoka_damage_inspector_android.png
           if-no-files-found: error
           retention-days: 30
 

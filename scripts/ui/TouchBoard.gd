@@ -56,6 +56,7 @@ var iso_enabled := false
 var models_3d_enabled := true
 var _models_3d: Node = null
 var battery_saver := false
+var visual_playback_speed := 1.0 # Laboratory only; game rules run at normal speed.
 var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
 var iso_pan := Vector2.ZERO
@@ -518,7 +519,7 @@ func _draw() -> void:
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
 
 func _process(delta: float) -> void:
-    var dt: float = maxf(0.0, delta)
+    var dt: float = maxf(0.0, delta) * clampf(visual_playback_speed,0.25,2.0)
     var needs_redraw := false
     if iso_enabled:
         art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)

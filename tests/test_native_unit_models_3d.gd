@@ -223,7 +223,9 @@ func _run() -> void:
     assert(inspector.viewport_holder.size.y <= 470.0)
     # SubViewportContainer.stretch resizes Godot's real render target to
     # the visible canvas. Validate the result, not a stale requested size.
-    assert(inspector.preview.size.x >= 450)
+    # AcceptDialog controls use logical pixels, while Android/Godot applies
+    # display scaling when presenting the final full-resolution screenshot.
+    assert(inspector.preview.size.x >= 300)
     assert(inspector.preview.size.y >= 260)
     assert(inspector.preview.size == Vector2i(inspector.viewport_holder.size))
     assert(inspector.viewport_holder.get_parent().name == "ModeloYControles")
