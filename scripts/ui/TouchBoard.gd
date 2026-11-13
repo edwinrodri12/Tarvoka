@@ -202,6 +202,42 @@ func focus_view_cell(cell: Vector2i) -> bool:
     queue_redraw()
     return true
 
+# Only the camera changes. Frame the player's visible army near the
+# middle of the screen instead of opening a 40x30 map as tiny tiles.
+# This is called on first layout, loading a match and changing projection,
+# not from _process (so user panning/zooming is never overridden).
+func frame_player_force() -> bool:
+    if size.x < 10.0 or size.y < 10.0 or not state.has("units"):
+        return false
+    var count := 0
+    var location := Vector2.ZERO
+    for unit in state["units"]:
+        if not unit is Dictionary or int(unit.get("faction",-1)) != 0 or int(unit.get("hp",0)) <= 0:
+            continue
+        if not unit.get("pos",null) is Vector2i:
+            continue
+        location += Vector2(unit["pos"])
+        count += 1
+    if count == 0:
+        return false
+    var dimensions: Vector2i = map_dimensions()
+    if dimensions.x <= 0 or dimensions.y <= 0:
+        return false
+    location /= float(count)
+    var cell := Vector2i(clampi(roundi(location.x),0,dimensions.x-1),
+        clampi(roundi(location.y),0,dimensions.y-1))
+    if iso_enabled:
+        iso_zoom = 2.6 if dimensions.x >= 40 else (2.05 if dimensions.x >= 24 else 1.0)
+        iso_zoom = clampf(iso_zoom,IsoProjection.MIN_ZOOM,IsoProjection.MAX_ZOOM)
+        iso_pan = size * 0.5 - IsoProjection.center(cell,size,iso_zoom,Vector2.ZERO,dimensions)
+    else:
+        view_zoom = 2.15 if dimensions.x >= 40 else (1.65 if dimensions.x >= 24 else 1.0)
+        var tile: float = _cell_size()
+        view_pan = size * 0.5 - ((size - Vector2(dimensions)*tile)*0.5 +
+            (Vector2(cell)+Vector2(0.5,0.5))*tile)
+    queue_redraw()
+    return true
+
 func _cell_size() -> float:
     var dims: Vector2i = map_dimensions()
     if dims.x <= 0 or dims.y <= 0:
