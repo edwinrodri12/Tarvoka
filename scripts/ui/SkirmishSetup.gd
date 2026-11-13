@@ -238,8 +238,20 @@ func _ready() -> void:
     actions.add_child(start_button)
     Chrome.emphasize(start_button,"success")
     Chrome.emphasize(advanced,"secondary")
+    get_viewport().size_changed.connect(_reflow)
+    call_deferred("_reflow")
     apply_preset(1)
     hide()
+
+func _reflow() -> void:
+    if map_preview == null:
+        return
+    # A shorter reconnaissance preview on narrow Android phones keeps the
+    # real commander choices closer to the first screenful. Landscape still
+    # displays the full tactical map.
+    var viewport: Vector2 = get_viewport_rect().size
+    var portrait: bool = viewport.y > viewport.x * 1.12 or viewport.x < 520.0
+    map_preview.custom_minimum_size = Vector2(250,148 if portrait else 196)
 
 func _section(parent: VBoxContainer, text_value: String) -> void:
     var item := Label.new()
