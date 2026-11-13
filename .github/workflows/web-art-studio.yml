@@ -199,6 +199,20 @@ jobs:
           grep -q "PASS G09 V11:" /tmp/tarvoka-g09-v11.log
           test -s artifacts/tarvoka_g09_v10_vs_v11_same_camera.png
           test -s artifacts/tarvoka_g09_v11_four_angles.png
+      - name: Export editable G09 V11 GLB geometry for desktop QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v11_glb.gd 2>&1 | tee /tmp/g09-v11-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v11-glb.log; then
+            echo "V11 editable GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V11 GLB export:" /tmp/g09-v11-glb.log
+          test -s artifacts/TARVOKA_G09_V11_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -235,6 +249,7 @@ jobs:
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V11_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
