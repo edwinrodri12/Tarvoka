@@ -359,4 +359,24 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var grille: Node3D = model.find_child("CerrojoPortonV5_1",true,false) as Node3D
         if grille != null:
             grille.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_art_v6",false):
+        # The V6 ceramic nose permanently replaces V5 cheek and mantlet.
+        # Never resurrect the earlier pieces during a repair cycle.
+        for obsolete_name in ["MejillaPrincipalV5_-1","MejillaPrincipalV5_1",
+                "MantleteMonoliticoV5","AroSelladoCanonV5"]:
+            var prototype: Node3D = model.find_child(obsolete_name,true,false) as Node3D
+            if prototype != null:
+                prototype.visible = false
+        for armor_name in ["MejillaMonoliticaV6_1","CantoBlindajeMejillaV6_1",
+                "ModuloCeramicoLateralV6_1_0","ModuloCeramicoLateralV6_1_1"]:
+            var armor: Node3D = model.find_child(armor_name,true,false) as Node3D
+            if armor != null:
+                armor.visible = stage < 3
+        for optics_name in ["ModuloOpticoPanoramicoV6",
+                "VentanaOpticaPanoramicaV6","SensorDeApuntamientoV6",
+                "LenteDeApuntamientoV6","BordeMantleteCeramicoV6",
+                "BastidorCanonIntegradoV6"]:
+            var broken: Node3D = model.find_child(optics_name,true,false) as Node3D
+            if broken != null:
+                broken.visible = stage < 4
     return true
