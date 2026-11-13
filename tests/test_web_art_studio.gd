@@ -23,12 +23,37 @@ func _run() -> void:
     assert(studio.damage_picker.item_count == 5)
     var finished_meshes: int = Models.inspect_meshes(studio.model_root)
     assert(finished_meshes > 175)
-    # Browser users can immediately compare genuine old/new Godot geometry,
-    # not two mock screenshots, without rebuilding or installing an APK.
+    for tick in range(3):
+        await process_frame
+    var finished: Image = studio.preview.get_texture().get_image()
+    assert(finished != null and not finished.is_empty())
+    # Users reported "no visible change" in 242346.mp4. Preserve a strict
+    # same-camera screenshot of BEFORE vs AFTER for actual artistic review.
     studio._toggle_details()
     assert(not studio._final_detail)
     assert(not studio.model_root.get_meta("tarvoka_mbt_production_v4",false))
     assert(Models.inspect_meshes(studio.model_root) < finished_meshes)
+    for tick in range(4):
+        await process_frame
+    var baseline: Image = studio.preview.get_texture().get_image()
+    assert(baseline != null and not baseline.is_empty())
+    var width: int = 480
+    var height: int = 330
+    finished.resize(width,height,Image.INTERPOLATE_LANCZOS)
+    baseline.resize(width,height,Image.INTERPOLATE_LANCZOS)
+    var different_pixels: int = 0
+    for py in range(0,height,3):
+        for px in range(0,width,3):
+            var old: Color = baseline.get_pixel(px,py)
+            var refined: Color = finished.get_pixel(px,py)
+            if absf(old.r-refined.r)+absf(old.g-refined.g)+absf(old.b-refined.b) > 0.18:
+                different_pixels += 1
+    assert(different_pixels > 100)
+    var sheet: Image = Image.create(width*2,height,false,Image.FORMAT_RGBA8)
+    sheet.blit_rect(baseline,Rect2i(0,0,width,height),Vector2i.ZERO)
+    sheet.blit_rect(finished,Rect2i(0,0,width,height),Vector2i(width,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(sheet.save_png("res://artifacts/tarvoka_mbt_before_after_same_camera.png") == OK)
     studio._toggle_details()
     assert(studio._final_detail)
     assert(studio.model_root.get_meta("tarvoka_mbt_production_v4",false))
