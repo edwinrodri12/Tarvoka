@@ -57,6 +57,9 @@ func _run_gallery() -> void:
         _failed = true
     if not _inside_viewport(main.skirmish_setup.heading,Vector2i(412,915)):
         _failed = true
+    if main.skirmish_setup.map_preview.custom_minimum_size.y > 152.0:
+        push_error("Terrain reconnaissance card is too tall for Android portrait.")
+        _failed = true
     for portrait in main.skirmish_setup.faction_portraits:
         if portrait.texture == null:
             push_error("Skirmish preparation still lacks approved commander art.")
@@ -120,7 +123,7 @@ func _run_gallery() -> void:
     main._process(0.0)
     if not await _capture("09-results-portrait",Vector2i(412,915),"Resultados · teléfono vertical"):
         _failed = true
-    if main.results_panel.get_global_rect().size.y > 685.0:
+    if main.results_panel.get_global_rect().size.y > 560.0:
         push_error("Result sheet wastes excessive height in portrait.")
         _failed = true
     if not await _capture("10-results-landscape",Vector2i(1280,720),"Resultados · horizontal"):
