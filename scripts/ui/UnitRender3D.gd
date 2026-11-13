@@ -97,6 +97,8 @@ func _finish_captures() -> void:
             var frozen: ImageTexture = ImageTexture.create_from_image(image)
             if frozen != null:
                 previews[role] = frozen
+                if str(role) == "tank#0":
+                    previews["tank"] = frozen
                 baked_static_captures += 1
                 viewport.queue_free()
     if baked_static_captures == viewports.size():
