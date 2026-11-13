@@ -17,6 +17,8 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
+const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 
 var board: Control
 var tabs: TabContainer
@@ -113,7 +115,7 @@ func _description(body: VBoxContainer, content: String) -> void:
     label.add_theme_color_override("font_color",Color("#D5E0E7"))
     body.add_child(label)
 
-func _action(body: VBoxContainer, name: String, callable: Callable, enabled: bool = true) -> Button:
+func _action(body: Container, name: String, callable: Callable, enabled: bool = true) -> Button:
     var button := Button.new()
     button.text = name
     button.custom_minimum_size.y = 48
@@ -123,6 +125,17 @@ func _action(body: VBoxContainer, name: String, callable: Callable, enabled: boo
     button.pressed.connect(callable)
     body.add_child(button)
     return button
+
+func _unit_action(body: VBoxContainer, role: String, label_text: String, action: Callable, enabled: bool = true, faction: int = 0) -> void:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation",8)
+    row.custom_minimum_size.y = 66
+    body.add_child(row)
+    var portrait := UnitIcon.new()
+    portrait.custom_minimum_size = Vector2(62,62)
+    row.add_child(portrait)
+    portrait.configure(role,VisualStyle.faction_color(clampi(faction,0,7)))
+    _action(row,label_text,action,enabled)
 
 func open_for(source: Control, section: String = "") -> void:
     board = source
@@ -174,8 +187,8 @@ func refresh() -> void:
         var uid: String = str(unit.get("id",""))
         var role: String = str(unit.get("role",""))
         var state_text: String = " · lista" if not bool(unit.get("acted",false)) else " · usada"
-        _action(army_body,"%s  ·  %s  ·  %d HP%s" % [uid,Roles.label(role),int(unit.get("hp",0)),state_text],
-            func(): inspect_unit_requested.emit(uid))
+        _unit_action(army_body,role,"%s  ·  %s  ·  %d HP%s" % [uid,Roles.label(role),int(unit.get("hp",0)),state_text],
+            func(): inspect_unit_requested.emit(uid),true,viewer)
     if owned == 0:
         _description(army_body,"No hay unidades aliadas activas.")
     elif owned > visible_count:
@@ -205,7 +218,7 @@ func refresh() -> void:
                 available += 1
                 var can_build: bool = Economy.can_purchase(state,board.selected_factory_pos,role)
                 var text_value: String = "%s  ·  %d cr. %s" % [Roles.label(role),Economy.cost(role),"✓" if can_build else "· No disponible"]
-                _action(production_body,text_value,func(): purchase_requested.emit(role),can_build)
+                _unit_action(production_body,role,text_value,func(): purchase_requested.emit(role),can_build,viewer)
             if available == 0:
                 _description(production_body,"No hay unidades disponibles para esta instalacion.")
 
