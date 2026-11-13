@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaTankSilhouetteV5
 
+const Finish = preload("res://scripts/ui/TankFinish3D.gd")
+
 # Actual structural redesign of G09. This is NOT a collection of extra
 # cosmetic cubes: continuous, capped armored volumes close the exposed
 # interior, replace the former turret/body silhouette and retain the native
@@ -67,18 +69,18 @@ static func _solid_ring(parent: Node3D, label: String, bottom: Array,
 static func _bevel(parent: Node3D, label: String, position: Vector3,
         dimensions: Vector3, bevel: float, tint: Color,
         rotation: Vector3 = Vector3.ZERO) -> MeshInstance3D:
-    var obj: MeshInstance3D = TarvokaTankFinish3D._bevel(
+    var obj: MeshInstance3D = Finish._bevel(
         parent,label,position,dimensions,bevel,tint)
     obj.rotation_degrees = rotation
     return obj
 
 static func _box(parent: Node3D, label: String, at: Vector3,
         size: Vector3, tint: Color) -> MeshInstance3D:
-    return TarvokaTankFinish3D._box(parent,label,at,size,tint)
+    return Finish._box(parent,label,at,size,tint)
 
 static func _rod(parent: Node3D, label: String, start: Vector3,
         finish: Vector3, radius: float, tint: Color) -> MeshInstance3D:
-    return TarvokaTankFinish3D._rod(parent,label,start,finish,radius,tint)
+    return Finish._rod(parent,label,start,finish,radius,tint)
 
 static func _hide(parent: Node3D, names: Array) -> void:
     for name in names:
