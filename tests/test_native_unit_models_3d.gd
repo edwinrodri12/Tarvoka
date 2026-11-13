@@ -221,7 +221,11 @@ func _run() -> void:
         " preview=",inspector.viewport_holder.size," camera=",inspector.camera.size)
     assert(inspector.viewport_holder.size.y >= 260.0)
     assert(inspector.viewport_holder.size.y <= 470.0)
-    assert(inspector.preview.size == Vector2i(768,480))
+    # SubViewportContainer.stretch resizes Godot's real render target to
+    # the visible canvas. Validate the result, not a stale requested size.
+    assert(inspector.preview.size.x >= 450)
+    assert(inspector.preview.size.y >= 260)
+    assert(inspector.preview.size == Vector2i(inspector.viewport_holder.size))
     assert(inspector.viewport_holder.get_parent().name == "ModeloYControles")
     assert(inspector.picker.get_parent().name == "ControlesDelModelo")
     assert(inspector.position.y >= -2)
