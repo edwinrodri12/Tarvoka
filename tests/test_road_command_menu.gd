@@ -5,6 +5,7 @@ const Session = preload("res://scripts/core/BattleSession.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Inspector = preload("res://scripts/ui/InspectionData.gd")
 const Command = preload("res://scripts/ui/CommandMenu.gd")
 
@@ -101,6 +102,19 @@ func _run() -> void:
     assert(menu.production_body.get_child_count() > 2)
     assert(board.state == state_before)
     menu.close_requested.emit()
+    # In Android's full-map HUD, a playable supply order is visible without
+    # opening the desktop sidebar and reaches the authoritative session.
+    var tank: Dictionary = Roles.make_unit("T",0,Vector2i(0,1),"tank")
+    var foe: Dictionary = Roles.make_unit("X",1,Vector2i(8,4),"line")
+    board.state = Session.start([tank,foe],Scenarios.terrain(0),0,false,false,true,true)
+    board.state["units"][0]["ammo"] = 0
+    board.state["units"][0]["fuel"] = 1
+    board.selected_id = "T"
+    scene._set_compact_hud(true)
+    scene._process(0.0)
+    assert(scene.compact_resupply.visible and not scene.compact_resupply.disabled)
+    scene.compact_resupply.pressed.emit()
+    assert(board.state["units"][0]["fuel"] > 1 and board.state["units"][0]["ammo"] > 0)
     scene.queue_free()
-    print("PASS motorized roads and command menu: vehicle bonus, infantry separation, fuel, AI preview, battle navigation and production")
+    print("PASS motorized roads, command menu and compact mobile resupply action")
     quit(0)

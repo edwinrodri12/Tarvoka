@@ -53,7 +53,7 @@ static func movement_cost_for(terrain: String, domain: String = "ground") -> int
 # motorized ground units, while ordinary ground/air/naval rules remain intact.
 # A full movement point therefore covers TWO road cells for a vehicle.
 # Returned costs stay integer (ceil of half-points) for fuel and UI parity.
-static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground", motorized: bool = false) -> Dictionary:
+static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground", motorized: bool = false, transit_only: Array[Vector2i] = []) -> Dictionary:
     var distances := {}
     if not valid_terrain(terrain) or not inside(origin, terrain) or points < 0 or origin in blocked or not Domains.valid_domain(domain):
         return distances
@@ -87,9 +87,11 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
                 continue
             distances[next] = total
             frontier.append(next)
-    if not road_bonus:
-        return distances
-    var costs: Dictionary = {}
+    # Allies are traversable intermediate tiles but never valid destinations.
+    # Filter only AFTER the path search so units can move through a friendly line.
+    var legal_endpoints: Dictionary = {}
     for cell in distances:
-        costs[cell] = ceili(float(distances[cell]) / 2.0)
-    return costs
+        if cell != origin and cell in transit_only:
+            continue
+        legal_endpoints[cell] = ceili(float(distances[cell]) / 2.0) if road_bonus else int(distances[cell])
+    return legal_endpoints

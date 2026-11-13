@@ -92,6 +92,7 @@ var compact_info_body: Label
 var compact_confirm: Button
 var compact_cancel: Button
 var compact_end_turn: Button
+var compact_resupply: Button
 var compact_center: Button
 var compact_iso: Button
 
@@ -724,6 +725,15 @@ func _build_battle_hud() -> void:
     compact_confirm.pressed.connect(_confirm_order)
     actions.add_child(compact_confirm)
 
+    # Mobile supply must be reachable without opening the hidden desktop sidebar.
+    compact_resupply = Button.new()
+    compact_resupply.text = "Cargar"
+    compact_resupply.custom_minimum_size.y = 48
+    compact_resupply.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_resupply.visible = false
+    compact_resupply.pressed.connect(_resupply_unit)
+    actions.add_child(compact_resupply)
+
     compact_end_turn = Button.new()
     compact_end_turn.text = "Fin turno"
     compact_end_turn.custom_minimum_size.y = 48
@@ -882,6 +892,9 @@ func _process(_delta: float) -> void:
             resupply_button.text = "Reponer camion (%d cr.)" % int(supply_order["cost"])
     else:
         resupply_button.text = "Reabastecer unidad"
+    compact_resupply.visible = resupply_button.visible and not board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
+    compact_resupply.disabled = resupply_button.disabled
+    compact_resupply.text = "Cargar" if compact_resupply.disabled else "Cargar M/F"
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")

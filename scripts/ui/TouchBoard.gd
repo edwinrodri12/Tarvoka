@@ -775,8 +775,10 @@ func resupply_selected() -> bool:
         message = "Reabastecimiento rechazado."
         return false
     state = action["state"]
-    message = "Suministros: +%d municion, +%d combustible (-%d creditos)." % [
-        int(action["ammo"]), int(action["fuel"]), int(action["cost"])
+    var source_label := "camion logistico" if str(action.get("source_kind", "")) == "truck" else "instalacion aliada"
+    message = "Recarga desde %s: +%d municion, +%d combustible (%s)." % [
+        source_label, int(action["ammo"]), int(action["fuel"]),
+        "sin costo adicional" if int(action["cost"]) == 0 else "-%d creditos" % int(action["cost"])
     ]
     if int(action["cargo_ammo"]) + int(action["cargo_fuel"]) > 0:
         message += " Camion repuesto: +%d municion, +%d combustible." % [
@@ -1069,7 +1071,7 @@ func _tap(point: Vector2) -> void:
                         owner_text = "neutral"
             if site["kind"] != "city" and int(site["owner"]) == own_side:
                 selected_factory_pos = cell if selected_factory_pos != cell else Vector2i(-1,-1)
-                message = "Taller seleccionado. Elige una unidad y pulsa Producir." if selected_factory_pos == cell else "Taller cancelado."
+                message = "Instalacion aliada: produce unidades y repone municion/combustible de su dominio." if selected_factory_pos == cell else "Instalacion cancelada."
             else:
                 selected_factory_pos = Vector2i(-1,-1)
                 if site["kind"] == "city":

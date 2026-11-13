@@ -19,7 +19,9 @@ func _initialize() -> void:
         assert(Logistics.fuel_capacity(role) >= 0)
     assert(Logistics.fuel_capacity("line") == 0)
     assert(Logistics.ammo_capacity("uav_recon") == 0)
-    assert(Logistics.ammo_capacity("tank") > 0 and Logistics.fuel_capacity("tank") > 0)
+    assert(Logistics.ammo_capacity("tank") > 0 and Logistics.fuel_capacity("tank") >= 40)
+    assert(Logistics.fuel_capacity("attack_heli") >= 45 and Logistics.fuel_capacity("frigate") >= 70)
+    assert(Logistics.TRUCK_FUEL_CAP >= 80)
 
     var map: Array = Scenarios.terrain(0)
     var classic: Dictionary = Session.start(Roles.experimental_armies(),map,0,false,false,true)

@@ -24,8 +24,10 @@ const CAPACITIES := {
 static func ammo_capacity(role: String) -> int:
     return int(CAPACITIES.get(role, [0, 0])[0])
 
+# Longer-lived operational tanks. New units receive three times the old
+# fuel reserve; existing saved quantities remain valid and can be replenished.
 static func fuel_capacity(role: String) -> int:
-    return int(CAPACITIES.get(role, [0, 0])[1])
+    return int(CAPACITIES.get(role, [0, 0])[1]) * 3
 
 # Only motorized *land* vehicles gain road speed. Infantry (no fuel), drones,
 # planes and ships retain their existing map costs. Role is public information.
@@ -34,7 +36,7 @@ static func road_fast(unit: Dictionary) -> bool:
 
 # Each truck carries finite, persistent stocks. Repair/cargo operations are separate.
 const TRUCK_AMMO_CAP := 16
-const TRUCK_FUEL_CAP := 36
+const TRUCK_FUEL_CAP := 90
 const AMMO_PRICE := 12
 const FUEL_PRICE := 4
 const MIN_SERVICE_PRICE := 20
