@@ -6,7 +6,7 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Radar = preload("res://scripts/ui/ObjectivesRadarData.gd")
-const Panel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
+const RadarPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -71,7 +71,7 @@ func _run() -> void:
     site["owner"] = -1
     assert(Radar.build(altered)["sites"] == known["sites"]) # No silent enemy ownership leak.
 
-    var panel = Panel.new()
+    var panel = RadarPanel.new()
     root.add_child(panel)
     panel.open_with_state(battle)
     assert(panel.visible)
