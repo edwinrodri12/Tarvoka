@@ -237,7 +237,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         var sprite: Texture2D = null
         var from_3d := false
         if detail != VisualBudget.DETAIL_COMPACT and three_d_models != null:
-            sprite = three_d_models.call("texture_for",role) as Texture2D
+            sprite = three_d_models.call("texture_for",role,int(unit["faction"]),str(unit["id"])) as Texture2D
             from_3d = sprite != null
         if sprite == null and detail != VisualBudget.DETAIL_COMPACT:
             sprite = UnitSprites.frame_texture(role,pose)
@@ -263,7 +263,10 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 # Real 3D mesh captures have neutral materials; preserve the
                 # game's approved faction palette without eight GPU cameras
                 # for every role (one colorized draw and a clear team ring).
-                unit_tint = Color.WHITE.lerp(tint,0.26)
+                # Tanks already have their own painted armor panels in the
+                # 3D capture; tinting everything would also dye tracks,
+                # optics, gun metal and engine grilles.
+                unit_tint = Color.WHITE if role == "tank" else Color.WHITE.lerp(tint,0.26)
                 if pose == "damaged":
                     unit_tint = unit_tint.lerp(Color("#E67465"),0.26)
                 if bool(unit.get("acted",false)):

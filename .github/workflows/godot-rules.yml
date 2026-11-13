@@ -65,6 +65,17 @@ jobs:
           fi
           test -s artifacts/tarvoka_3d_first8.png
           test -s artifacts/tarvoka_3d_inspector_android.png
+          test -s artifacts/tarvoka_mbt_8_faction_colors.png
+
+      - name: Validate MBT UV/PBR material, turret recoil, treads and live combat capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_mbt_finishing_animation.gd 2>&1 | tee /tmp/tarvoka-mbt-finishing.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-mbt-finishing.log; then
+            echo "MBT PBR or in-game animation regression"; exit 1
+          fi
+          test -s artifacts/tarvoka_mbt_live_animation_frames.png
 
       - name: Archive genuine Godot 3D renders for visual review
         uses: actions/upload-artifact@v4
@@ -73,6 +84,8 @@ jobs:
           path: |
             artifacts/tarvoka_3d_first8.png
             artifacts/tarvoka_3d_inspector_android.png
+            artifacts/tarvoka_mbt_8_faction_colors.png
+            artifacts/tarvoka_mbt_live_animation_frames.png
           if-no-files-found: error
           retention-days: 30
 

@@ -41,6 +41,39 @@ func _run() -> void:
     assert(int(geometry_counts["tank"]) != int(geometry_counts["fighter"]))
     assert(labels["tank"] == "Tanque principal")
     assert(Models.build("nonexistent") == null)
+    var tank_blue: Node3D = Models.build("tank",0)
+    var tank_red: Node3D = Models.build("tank",1)
+    assert(tank_blue != null and tank_red != null)
+    assert(Models.inspect_meshes(tank_blue) >= 100)
+    assert(Models.paintable_count(tank_blue) >= 12)
+    assert(Models.paintable_count(tank_blue) == Models.paintable_count(tank_red))
+    var blue_paint: MeshInstance3D = tank_blue.find_child("FaccionFaldon-1_00",true,false) as MeshInstance3D
+    var red_paint: MeshInstance3D = tank_red.find_child("FaccionFaldon-1_00",true,false) as MeshInstance3D
+    assert(blue_paint != null and red_paint != null)
+    assert(blue_paint.material_override.albedo_color == Models.faction_paint_color(0))
+    assert(red_paint.material_override.albedo_color == Models.faction_paint_color(1))
+    var neutral_hull: MeshInstance3D = tank_blue.find_child("MonocascoBlindajeCompuesto",true,false) as MeshInstance3D
+    var red_hull: MeshInstance3D = tank_red.find_child("MonocascoBlindajeCompuesto",true,false) as MeshInstance3D
+    assert(neutral_hull != null and red_hull != null)
+    assert(neutral_hull.material_override.albedo_color == red_hull.material_override.albedo_color)
+    var turret: Node3D = tank_blue.find_child(Models.TANK_TURRET,true,false) as Node3D
+    var gun: Node3D = tank_blue.find_child(Models.TANK_BARREL_PIVOT,true,false) as Node3D
+    assert(turret != null and gun != null)
+    assert(gun.get_parent() == turret)
+    turret.rotation_degrees.y = 45.0
+    gun.rotation_degrees.x = -6.0
+    assert(is_equal_approx(turret.rotation_degrees.y,45.0))
+    assert(is_equal_approx(gun.rotation_degrees.x,-6.0))
+    var material_before: Color = blue_paint.material_override.albedo_color
+    assert(Models.apply_faction_palette(tank_red,7) == Models.paintable_count(tank_red))
+    assert(blue_paint.material_override.albedo_color == material_before) # No shared resource mutation.
+    for faction in range(8):
+        var tank_sample: Node3D = Models.build("tank",faction)
+        assert(tank_sample != null)
+        assert(Models.paintable_count(tank_sample) >= 12)
+        tank_sample.free()
+    tank_blue.free()
+    tank_red.free()
     for role in Roles.ORDER + Arsenal.ORDER:
         if role not in Models.ROLES:
             assert(not Models.supports(str(role)))
@@ -67,6 +100,8 @@ func _run() -> void:
     for i in range(5):
         await process_frame
     assert(bool(library.get("captures_completed")))
+    assert(int(library.get("baked_static_captures")) == 15)
+    assert((library.get("viewports") as Dictionary).is_empty())
     var sheet := Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,false,Image.FORMAT_RGBA8)
     sheet.fill(Color("#13212c"))
     var nonempty: int = 0
@@ -86,7 +121,23 @@ func _run() -> void:
         var dst := Vector2i((n%4)*Captures.SIZE.x,int(n/4)*Captures.SIZE.y)
         sheet.blit_rect(img,Rect2i(Vector2i.ZERO,Captures.SIZE),dst)
     assert(nonempty == 8) # Every model really has visible 3D pixels.
+    var paint_sheet := Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,false,Image.FORMAT_RGBA8)
+    paint_sheet.fill(Color("#13212c"))
+    var seen: Dictionary = {}
+    for faction in range(8):
+        assert(library.call("is_ready_for","tank",faction))
+        var texture: Texture2D = library.call("texture_for","tank",faction) as Texture2D
+        assert(texture != null)
+        var visual: Image = texture.get_image()
+        assert(visual != null and not visual.is_empty())
+        var signature: int = hash(visual.get_data())
+        assert(not seen.has(signature)) # Distinct genuine rendered materials for every faction.
+        seen[signature] = faction
+        paint_sheet.blit_rect(visual,Rect2i(Vector2i.ZERO,Captures.SIZE),
+            Vector2i((faction%4)*Captures.SIZE.x,int(faction/4)*Captures.SIZE.y))
+    assert(seen.size() == 8)
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(paint_sheet.save_png("res://artifacts/tarvoka_mbt_8_faction_colors.png") == OK)
     assert(sheet.save_png("res://artifacts/tarvoka_3d_first8.png") == OK)
     board.queue_redraw()
     await process_frame
@@ -141,7 +192,16 @@ func _run() -> void:
     assert(is_equal_approx(inspector.model_root.rotation_degrees.y,45.0))
     inspector.show_role("tank")
     assert(inspector._current_role == "tank")
-    assert(Models.inspect_meshes(inspector.model_root) >= 25)
+    assert(Models.inspect_meshes(inspector.model_root) >= 100)
+    assert(inspector.faction_paint_picker.visible)
+    assert(inspector.faction_paint_picker.item_count == 8)
+    inspector.set_faction_paint(4)
+    assert(inspector._selected_faction == 4)
+    var panel: MeshInstance3D = inspector.model_root.find_child("FaccionPlacaSuperior-1",true,false) as MeshInstance3D
+    assert(panel != null and panel.material_override.albedo_color == Models.faction_paint_color(4))
+    inspector.rotate_tank_turret(50.0)
+    var live_turret: Node3D = inspector.model_root.find_child(Models.TANK_TURRET,true,false) as Node3D
+    assert(live_turret != null and is_equal_approx(live_turret.rotation_degrees.y,50.0))
     assert(is_equal_approx(inspector.camera.size,Models.preview_frame_height("tank")))
     var before_zoom: float = inspector.camera.size
     inspector.change_zoom(1)
