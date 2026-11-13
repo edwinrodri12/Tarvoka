@@ -21,6 +21,9 @@ var selection_status: Label
 var portrait: TextureRect
 var portrait_fallback: ColorRect
 var portrait_fallback_label: Label
+var commander_portrait: TextureRect
+var commander_fallback: ColorRect
+var commander_notice: Label
 var band_color: ColorRect
 var confirm_button: Button
 var scroll: ScrollContainer
@@ -147,7 +150,10 @@ func _ready() -> void:
     portrait_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     portrait_shell.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#152B39"),Chrome.EDGE,8,8))
-    dossier_col.add_child(portrait_shell)
+    var art_row := HBoxContainer.new()
+    art_row.add_theme_constant_override("separation",8)
+    dossier_col.add_child(art_row)
+    art_row.add_child(portrait_shell)
     var portrait_center := CenterContainer.new()
     portrait_shell.add_child(portrait_center)
     var portrait_box := Control.new()
@@ -173,6 +179,37 @@ func _ready() -> void:
     portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
     portrait_box.add_child(portrait)
+
+    var commander_shell := PanelContainer.new()
+    commander_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    commander_shell.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#152B39"),Chrome.GOLD,8,8))
+    art_row.add_child(commander_shell)
+    var commander_center := CenterContainer.new()
+    commander_shell.add_child(commander_center)
+    var commander_box := Control.new()
+    commander_box.custom_minimum_size = Vector2(122,122)
+    commander_center.add_child(commander_box)
+    commander_fallback = ColorRect.new()
+    commander_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    commander_fallback.color = Chrome.SURFACE_RAISED
+    commander_fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    commander_box.add_child(commander_fallback)
+    commander_notice = Label.new()
+    commander_notice.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    commander_notice.text = "COMANDANTE\nRETRATO PENDIENTE"
+    commander_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    commander_notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    commander_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    commander_notice.add_theme_color_override("font_color",Chrome.MUTED)
+    commander_notice.add_theme_font_size_override("font_size",12)
+    commander_box.add_child(commander_notice)
+    commander_portrait = TextureRect.new()
+    commander_portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    commander_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    commander_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    commander_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    commander_box.add_child(commander_portrait)
 
     preview_motif = Label.new()
     preview_motif.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -256,6 +293,15 @@ func _refresh() -> void:
     portrait_fallback_label.visible = official == null
     if official == null:
         portrait_fallback.color = color.darkened(0.78)
+    var approved_commander: Texture2D = Style.commander_texture(idx)
+    commander_portrait.texture = approved_commander
+    commander_portrait.visible = approved_commander != null
+    commander_fallback.visible = approved_commander == null
+    commander_notice.visible = approved_commander == null
+    if approved_commander == null:
+        commander_fallback.color = color.darkened(0.78)
+    preview_commander.text = ("COMANDANTE\\nRetrato oficial de esta facción" if approved_commander != null else
+        "COMANDANTE\\nRetrato aprobado pendiente de incorporar al proyecto.")
     selection_status.text = "BANDO %s  /  %s" % ["AZUL" if active_side == 0 else "ROJO",str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
 
