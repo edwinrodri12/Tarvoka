@@ -357,7 +357,7 @@ func _draw() -> void:
     if state.has("economy"):
         for marker in site_overlay_snapshots():
             var city_cell: Vector2i = marker["pos"]
-            var city_tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
+            var city_tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var top_left := origin + Vector2(city_cell) * tile
             var center := top_left + Vector2.ONE * (tile * 0.5)
             var is_town: bool = str(marker["kind"]) == "city"
@@ -369,7 +369,7 @@ func _draw() -> void:
                 var symbol: String = str(markers.get(str(marker["kind"]),"?"))
                 draw_string(font,center+Vector2(-tile*0.14,tile*0.12),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,int(max(11.0,tile*0.27)),city_tint)
             var selected: bool = city_cell == selected_factory_pos or city_cell == inspected_cell
-            SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected)
+            SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected,state)
             if selected:
                 draw_rect(Rect2(top_left,Vector2.ONE*tile),Color("#FFE451"),false,maxf(2.0,tile*0.045))
     # Legal destinations in green, adjacent attack targets in red.
