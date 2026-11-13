@@ -19,7 +19,6 @@ var _touch_active := false
 var _zoom_factor := 1.0
 const MIN_ZOOM := 0.65
 const MAX_ZOOM := 2.4
-const ROLE_FRAME_HEIGHT := {"line": 3.05, "scout": 3.05, "apc": 3.55, "tank": 3.75, "mlrs": 4.05, "attack_heli": 4.6, "fighter": 4.65, "destroyer": 5.1}
 
 func _ready() -> void:
     title = "TARVOKA · Inspección real de modelos 3D"
@@ -153,7 +152,7 @@ func open_viewer() -> void:
 func _update_camera_size() -> void:
     if camera == null or not Models.supports(_current_role):
         return
-    camera.size = float(ROLE_FRAME_HEIGHT[_current_role]) / _zoom_factor
+    camera.size = Models.preview_frame_height(_current_role) / _zoom_factor
 
 func change_zoom(direction: int) -> void:
     if direction == 0:
