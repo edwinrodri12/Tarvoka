@@ -12,7 +12,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var tank: Node3D = Models.build("tank",0)
+    var tank: Node3D = Models.build("tank",0,true,9)
     assert(tank != null)
     assert(tank.get_meta("tarvoka_mbt_finish_v3",false))
     assert(tank.get_meta("tarvoka_mbt_production_v4",false))
