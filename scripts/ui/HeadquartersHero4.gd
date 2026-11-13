@@ -253,6 +253,19 @@ static func _radar_upgrade(model: Node3D,level: int) -> void:
         main.position = Vector3(-1.86,y+2.05,0.76)
         main.rotation_degrees = Vector3(-46,21,0)
         main.scale = Vector3(1.56,1.56,1.56)
+    # The prior dish looked like a bare ring from the front camera because
+    # Godot culled its concave face. The reflective surface must be double-sided.
+    var reflector: MeshInstance3D = model.find_child(
+        "PlatoParabolicoConcavo",true,false) as MeshInstance3D
+    if reflector != null:
+        var front_material: StandardMaterial3D = (
+            reflector.material_override as StandardMaterial3D).duplicate()
+        front_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+        front_material.albedo_color = Color("#e9e7dc")
+        front_material.metallic = 0.32
+        front_material.roughness = 0.46
+        reflector.material_override = front_material
+        reflector.set_meta("tarvoka_reflector_double_sided",true)
     var structure: Node3D = model.find_child("EstructuraPrincipal",true,false) as Node3D
     if structure == null:
         return
@@ -325,6 +338,25 @@ static func _front_cladding(parent: Node3D,level: int,tint: Color) -> void:
     _box(walls,"AristaDeSeguridadOro",
         Vector3(0,y-0.36,-2.82),
         Vector3(4.85,0.062,0.072),GOLD)
+    # Three deep colour masses repeat the architecture in the approved art:
+    # tactical naval cladding flanks the glass instead of tinting all concrete.
+    for side in [-1,1]:
+        var sx: float = float(side)
+        _shell(walls,"PilastroDeFaccionHero_%s" % side,
+            Vector3(sx*2.76,y*0.55,-2.85),
+            Vector3(0.35,y*0.73,0.29),0.045,
+            tint.darkened(0.20),"steel",true)
+        _shell(walls,"PanelDeFaccionLateralHero_%s" % side,
+            Vector3(sx*3.28,1.75,-2.09),
+            Vector3(0.34,1.17,0.11),0.035,
+            tint.darkened(0.22),"steel",true)
+        _box(walls,"RibeteAmbarDeFaccion_%s" % side,
+            Vector3(sx*2.95,y*0.65,-3.05),
+            Vector3(0.059,0.63,0.05),GOLD)
+    _shell(walls,"CoronaAzulDeMando",
+        Vector3(0,y+0.12,-2.71),
+        Vector3(5.31,0.25,0.26),0.065,
+        tint.darkened(0.20),"roof",true)
 
 static func _bolts_batch(parent: Node3D,name: String,
         positions: Array[Vector3],size: float = 0.055) -> MultiMeshInstance3D:
