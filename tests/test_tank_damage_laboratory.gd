@@ -17,10 +17,10 @@ func _run() -> void:
     assert(Models.paintable_count(model) == 14)
     assert(Damage.prepare(model) == false) # Idempotent, no duplicated layers.
     assert(Models.inspect_meshes(model) >= 160)
-    var root: Node3D = model.find_child(Damage.ROOT,true,false) as Node3D
-    assert(root != null and root.get_child_count() == 4)
+    var damage_root: Node3D = model.find_child(Damage.ROOT,true,false) as Node3D
+    assert(damage_root != null and damage_root.get_child_count() == 4)
     for i in range(1,5):
-        assert(not root.find_child("DesgasteEtapa%d" % i,false,false).visible)
+        assert(not damage_root.find_child("DesgasteEtapa%d" % i,false,false).visible)
 
     var plate: MeshInstance3D = model.find_child("FaccionFaldon1_02",true,false) as MeshInstance3D
     var tread: MeshInstance3D = model.find_child("CintaSuperiorOruga1",true,false) as MeshInstance3D
@@ -32,14 +32,14 @@ func _run() -> void:
         assert(Damage.apply_stage(model,stage))
         assert(Damage.current_stage(model) == stage)
         for i in range(1,5):
-            assert(root.find_child("DesgasteEtapa%d" % i,false,false).visible == (stage >= i))
+            assert(damage_root.find_child("DesgasteEtapa%d" % i,false,false).visible == (stage >= i))
         assert(plate.visible == (stage < 2))
         assert(tread.visible == (stage < 3))
         assert(is_equal_approx(turret.rotation_degrees.z,22.0 if stage == 4 else (6.0 if stage == 3 else 0.0)))
         if stage == 4:
             assert(is_equal_approx(gun.rotation_degrees.x,-18.0))
-            assert(root.find_child("DesgasteEtapa4",false,false).find_child("FuegoBase",true,false) != null)
-            assert(root.find_child("DesgasteEtapa4",false,false).find_child("ColumnaHumo",true,false) != null)
+            assert(damage_root.find_child("DesgasteEtapa4",false,false).find_child("FuegoBase",true,false) != null)
+            assert(damage_root.find_child("DesgasteEtapa4",false,false).find_child("ColumnaHumo",true,false) != null)
     assert(not Damage.apply_stage(model,-1))
     assert(not Damage.apply_stage(model,5))
     assert(Damage.apply_stage(model,0))
@@ -49,7 +49,7 @@ func _run() -> void:
     assert(Damage.apply_stage(model,3))
     assert(Rig.pose(model,"damaged",0.38,Vector2i(1,0)))
     assert(Damage.apply_stage(model,3))
-    assert(root.find_child("DesgasteEtapa3",false,false).visible)
+    assert(damage_root.find_child("DesgasteEtapa3",false,false).visible)
     Rig.restore(model)
     assert(Damage.apply_stage(model,3))
     assert(is_equal_approx(turret.rotation_degrees.z,6.0))
