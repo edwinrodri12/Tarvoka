@@ -48,7 +48,9 @@ func _run() -> void:
     assert(view.battle_hud_compact)
     assert(not view.sidebar.visible)
     assert(view.battle_hud_commands.visible)
-    assert(view.battle_hud_toggle.visible)
+    assert(view.compact_options_button.visible)
+    assert(not view.battle_hud_toggle.visible)
+    assert(view.compact_top_shortcuts.visible)
     view._process(0.0)
     assert(view.compact_end_turn.disabled == view.end_button.disabled)
     assert(view.compact_confirm.disabled == view.confirm_button.disabled)
@@ -82,9 +84,10 @@ func _run() -> void:
     # The player can reopen the complete setup, save and factory panel,
     # and return to full-map mode without changing units or fog information.
     var saved: Dictionary = game.state.duplicate(true)
-    view.battle_hud_toggle.pressed.emit()
+    view.compact_options_button.pressed.emit()
     await process_frame
     assert(not view.battle_hud_compact)
+    assert(view.battle_hud_toggle.visible)
     assert(view.sidebar.visible)
     assert(view.scenario_picker != null and view.map_size_picker != null)
     assert(view.production_picker != null and view.produce_button != null)
