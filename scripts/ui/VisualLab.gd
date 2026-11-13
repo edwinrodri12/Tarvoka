@@ -13,6 +13,7 @@ const Session = preload("res://scripts/core/BattleSession.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 
 signal laboratory_closed
 
@@ -44,6 +45,10 @@ var move_button: Button
 var fx_button: Button
 var repeat_button: Button
 var close_button: Button
+var damage_stage_picker: OptionButton
+var damage_preview_button: Button
+var receive_hit_button: Button
+var inspect_defender_button: Button
 var preview_viewer: AcceptDialog
 var _recent_action := ""
 var _build_count := 0
@@ -198,8 +203,23 @@ func _ready() -> void:
     zoom_out.pressed.connect(func(): lab_board.change_view_zoom(-1))
     var zoom_in := _action_button(zoom_row,"+ Zoom")
     zoom_in.pressed.connect(func(): lab_board.change_view_zoom(1))
-    var inspect := _action_button(controls,"Examinar modelo 3D")
+    var inspect := _action_button(controls,"Examinar atacante en 3D")
     inspect.pressed.connect(_inspect_selected_model)
+    inspect_defender_button = _action_button(controls,"Examinar defensor en 3D")
+    inspect_defender_button.pressed.connect(_inspect_defender_model)
+    var damage_caption := Label.new()
+    damage_caption.text = "TANQUE · IMPACTOS Y DESTRUCCIÓN"
+    damage_caption.add_theme_font_size_override("font_size",13)
+    damage_caption.add_theme_color_override("font_color",Color("#FFB88D"))
+    controls.add_child(damage_caption)
+    damage_stage_picker = _picker(controls,"ETAPA DEL VEHÍCULO",TankDamage.STAGES,false)
+    var damage_row := HBoxContainer.new()
+    damage_row.add_theme_constant_override("separation",5)
+    controls.add_child(damage_row)
+    damage_preview_button = _action_button(damage_row,"Ver daños 3D")
+    damage_preview_button.pressed.connect(preview_damage_stage)
+    receive_hit_button = _action_button(damage_row,"Recibir impacto")
+    receive_hit_button.pressed.connect(preview_received_hit)
 
     details_label = Label.new()
     details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -428,14 +448,49 @@ func _set_render_mode(index: int) -> void:
     lab_board.set_3d_models_enabled(index == 0)
     _refresh_details()
 
-func _inspect_selected_model() -> void:
-    var role: String = _selected_role(attacker_picker)
+func _open_model(role: String, palette: int) -> bool:
     if not Models.supports(role):
-        feedback_label.text = "Esta clase todavía usa sprite 2D. El visor 3D solo admite las ocho clases modeladas."
-        return
-    preview_viewer.call("set_faction_paint",attacker_faction_picker.selected)
+        feedback_label.text = "Esta clase todavía usa sprite 2D provisional. Actualmente hay 8 modelos 3D."
+        return false
+    preview_viewer.call("set_faction_paint",palette)
     preview_viewer.call("show_role",role)
     preview_viewer.call("open_viewer")
+    return true
+
+func _inspect_selected_model() -> void:
+    _open_model(_selected_role(attacker_picker),attacker_faction_picker.selected)
+
+func _inspect_defender_model() -> void:
+    _open_model(_selected_role(defender_picker),defender_faction_picker.selected)
+
+func _damage_target() -> Dictionary:
+    # Prefer to show a vehicle receiving hits; an attacking tank can also be
+    # inspected. This remains entirely cosmetic, never battle damage.
+    if _selected_role(defender_picker) == "tank":
+        return {"role":"tank","faction":defender_faction_picker.selected}
+    if _selected_role(attacker_picker) == "tank":
+        return {"role":"tank","faction":attacker_faction_picker.selected}
+    return {}
+
+func preview_damage_stage() -> void:
+    var target: Dictionary = _damage_target()
+    if target.is_empty():
+        feedback_label.text = "Estas fases de destrucción están diseñadas primero para el tanque principal. Selecciona un tanque."
+        return
+    if _open_model(str(target["role"]),int(target["faction"])):
+        preview_viewer.call("set_damage_stage",damage_stage_picker.selected)
+        feedback_label.text = "Daño visual · %s. El HP de prueba no cambia." % str(TankDamage.STAGES[damage_stage_picker.selected])
+
+func preview_received_hit() -> void:
+    var target: Dictionary = _damage_target()
+    if target.is_empty():
+        feedback_label.text = "El impacto 3D progresivo está disponible para el tanque principal."
+        return
+    if _open_model(str(target["role"]),int(target["faction"])):
+        preview_viewer.call("set_damage_stage",damage_stage_picker.selected)
+        preview_viewer.call("simulate_tank_hit")
+        damage_stage_picker.select(mini(4,damage_stage_picker.selected+1))
+        feedback_label.text = "Impacto recibido: %s. Daño solo artístico; sin modificar HP ni resultado de combate." % str(TankDamage.STAGES[damage_stage_picker.selected])
 
 func open_lab() -> void:
     visible = true
