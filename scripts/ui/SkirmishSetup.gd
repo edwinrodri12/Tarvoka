@@ -30,6 +30,7 @@ var _preset_label: Label
 var selected_factions: Dictionary = Identity.defaults()
 var faction_summary: Label
 var faction_button: Button
+var footer_faction_button: Button
 var faction_portraits: Array[TextureRect] = []
 var faction_names: Array[Label] = []
 var heading: Label
@@ -224,6 +225,15 @@ func _ready() -> void:
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",6)
     layout.add_child(actions)
+    # Keep faction selection reachable at all times on a phone. The
+    # scrollable dossier still contains the detailed button for context.
+    footer_faction_button = Button.new()
+    footer_faction_button.text = "Facciones"
+    footer_faction_button.custom_minimum_size.y = 54
+    footer_faction_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    footer_faction_button.pressed.connect(func(): factions_requested.emit())
+    actions.add_child(footer_faction_button)
+    Chrome.emphasize(footer_faction_button,"secondary")
     var advanced := Button.new()
     advanced.text = "Avanzado"
     advanced.custom_minimum_size.y = 54
