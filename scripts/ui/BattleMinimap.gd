@@ -9,15 +9,23 @@ const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 
 var board: Control = null
 var last_state_hash := -1
+var cached_snapshot: Dictionary = {}
+var terrain_texture: Texture2D = null
+var cache_rebuild_count := 0
+var cache_reuse_count := 0
 
 func _ready() -> void:
     custom_minimum_size = Vector2(220, 138)
     mouse_filter = Control.MOUSE_FILTER_STOP
     clip_contents = true
+    texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     tooltip_text = "Toca el minimapa para centrar la cámara. No mueve unidades."
 
 func set_board(target: Control) -> void:
     board = target
+    last_state_hash = -1
+    terrain_texture = null
+    cached_snapshot = {}
     queue_redraw()
 
 static func dimensions(state: Dictionary) -> Vector2i:
@@ -111,11 +119,41 @@ static func viewport_corners(canvas_size: Vector2, state: Dictionary,
     result.append(result[0])
     return result
 
+static func _rasterize_terrain(data: Dictionary) -> Texture2D:
+    var dims: Vector2i = data.get("size",Vector2i.ZERO)
+    if dims.x <= 0 or dims.y <= 0:
+        return null
+    var image: Image = Image.create(dims.x,dims.y,false,Image.FORMAT_RGBA8)
+    image.fill(Color("#09101C"))
+    for item in data.get("tiles",[]):
+        var cell: Vector2i = item["pos"]
+        var color := Color("#09101C")
+        if bool(item["explored"]):
+            color = VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y)
+            if not bool(item["visible"]):
+                color = color.darkened(0.70)
+        image.set_pixel(cell.x,cell.y,color)
+    return ImageTexture.create_from_image(image)
+
+func _snapshot_for_state(state: Dictionary) -> Dictionary:
+    # Hashing a map is cheaper than recreating 1,200 tile dictionaries and
+    # all its draw commands every time the camera moves. Rebuild on any change
+    # to authoritative content, including externally loaded/save-restored data.
+    var key: int = hash(state)
+    if terrain_texture != null and key == last_state_hash:
+        cache_reuse_count += 1
+        return cached_snapshot
+    cached_snapshot = safe_snapshot(state)
+    terrain_texture = _rasterize_terrain(cached_snapshot)
+    last_state_hash = key
+    cache_rebuild_count += 1
+    return cached_snapshot
+
 func _draw() -> void:
     if board == null:
         return
     var state: Dictionary = board.get("state")
-    var data: Dictionary = safe_snapshot(state)
+    var data: Dictionary = _snapshot_for_state(state)
     var dims: Vector2i = data["size"]
     if dims.x <= 0 or dims.y <= 0:
         return
@@ -124,15 +162,10 @@ func _draw() -> void:
         return
     var tile := bounds.size / Vector2(dims)
     draw_rect(Rect2(Vector2.ZERO,size),Color("#0B1821"))
-    for item in data["tiles"]:
-        var cell: Vector2i = item["pos"]
-        var color := Color("#09101C")
-        if bool(item["explored"]):
-            color = VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y)
-            if not bool(item["visible"]):
-                color = color.darkened(0.70)
-        var rect := Rect2(bounds.position+Vector2(cell)*tile,tile-Vector2.ONE*0.75)
-        draw_rect(rect,color)
+    if terrain_texture != null:
+        # One draw command instead of up to 1,200 tiled rectangles; camera
+        # movement only changes the viewport outline and existing markers.
+        draw_texture_rect(terrain_texture,bounds,false)
     for site in data["sites"]:
         var pos: Vector2 = bounds.position+(Vector2(site["pos"])+Vector2(0.5,0.5))*tile
         var owner: int = int(site["owner"])
