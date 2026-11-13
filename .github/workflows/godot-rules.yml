@@ -150,6 +150,16 @@ jobs:
           fi
           grep -F 'PASS connected environment' /tmp/tarvoka-connected-terrain.log
 
+      - name: Render every coastline and cliff combination without malformed Godot polygons
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_landscape_materials.gd 2>&1 | tee /tmp/tarvoka-landscape-materials.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-landscape-materials.log; then
+            echo 'Landscape geometry regression'; exit 1
+          fi
+          grep -F 'PASS landscape materials' /tmp/tarvoka-landscape-materials.log
+
       - name: Validate isometric projection touch gestures and unchanged battle rules
         shell: bash
         run: |
