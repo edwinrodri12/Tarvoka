@@ -15,6 +15,7 @@ const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const SurfaceMaterials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
+const TextureAtlas = preload("res://scripts/ui/TerrainTextureAtlas.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
@@ -129,6 +130,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                         elif detail == VisualBudget.DETAIL_FULL:
                             environment["mountain_edges"] = Topology.neighbor_mask(
                                 state["terrain"],cell,"mountain",true,visible,fog)
+                    TextureAtlas.draw_ground(canvas,terrain,c,hw,cell,detail)
                     SurfaceMaterials.draw_surface(canvas,terrain,c,hw,cell,detail)
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
                         road_links,shoreline,terrain_links,crossing,detail,environment)
