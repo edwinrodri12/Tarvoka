@@ -1106,7 +1106,7 @@ func _recenter_camera_after_layout(cell: Vector2i) -> void:
         board.frame_player_force()
 
 func _frame_camera_after_layout() -> void:
-    if board != null:
+    if board != null and not board.frame_small_map():
         board.frame_player_force()
 
 # The pure sizing entry point is called on both initial layout and resize.
@@ -1136,7 +1136,10 @@ func _on_viewport_resized() -> void:
     var previous_center: Vector2i = board.screen_cell(board.size * 0.5) if board != null else Vector2i(-1,-1)
     layout_for_size(get_viewport_rect().size)
     if board != null:
-        call_deferred("_recenter_camera_after_layout",previous_center)
+        if board.map_dimensions().x <= 12 and board.map_dimensions().y <= 10:
+            call_deferred("_frame_camera_after_layout")
+        else:
+            call_deferred("_recenter_camera_after_layout",previous_center)
 
 func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
