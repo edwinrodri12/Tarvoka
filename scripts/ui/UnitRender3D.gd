@@ -5,6 +5,7 @@ class_name TarvokaUnitRender3D
 # The models ARE real 3D meshes and the capture is done by Godot's renderer.
 # Reuse textures across all armies, never instantiate per combat unit.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const SIZE := Vector2i(224,224)
 const ORBIT := Vector3(5.1,4.1,6.0)
 
@@ -14,6 +15,12 @@ var previews: Dictionary = {} # Role -> SubViewportTexture
 var viewports: Dictionary = {} # Role -> SubViewport
 var prepared := false
 var captures_completed := false
+const MAX_LIVE_TANKS := 2
+const LIVE_CAPTURE_SIZE := Vector2i(192,192)
+var live_tank_viewports: Dictionary = {}
+var live_tank_models: Dictionary = {}
+var live_tank_factions: Dictionary = {}
+var live_tank_render_updates := 0
 
 func prepare() -> void:
     if prepared:
@@ -78,9 +85,14 @@ func _finish_captures() -> void:
     captures_completed = true
     textures_ready.emit()
 
-func texture_for(role: String, faction: int = -1) -> Texture2D:
+func texture_for(role: String, faction: int = -1, unit_id: String = "") -> Texture2D:
     if not prepared or not captures_completed:
         return null
+    if role == "tank" and not unit_id.is_empty() and live_tank_viewports.has(unit_id):
+        if int(live_tank_factions.get(unit_id,-1)) == faction:
+            var live_viewport: SubViewport = live_tank_viewports[unit_id] as SubViewport
+            if live_viewport != null:
+                return live_viewport.get_texture()
     var key: String = role
     if role == "tank" and faction >= 0 and faction < 8:
         key = "tank#%d" % faction
@@ -95,7 +107,122 @@ func is_ready_for(role: String, faction: int = -1) -> bool:
     var key: String = "tank#%d" % faction if role == "tank" and faction >= 0 and faction < 8 else role
     return previews.has(key)
 
+func live_tank_count() -> int:
+    return live_tank_viewports.size()
+
+func _create_live_tank(unit_id: String, faction: int) -> void:
+    if live_tank_viewports.has(unit_id) or live_tank_viewports.size() >= MAX_LIVE_TANKS:
+        return
+    var viewport := SubViewport.new()
+    viewport.name = "LiveMBT_" + unit_id
+    viewport.size = LIVE_CAPTURE_SIZE
+    viewport.transparent_bg = true
+    viewport.own_world_3d = true
+    viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+    add_child(viewport)
+    var model: Node3D = Models.build("tank",faction)
+    viewport.add_child(model)
+    var camera := Camera3D.new()
+    camera.name = "LiveMBTCamera"
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = Models.preview_frame_height("tank")
+    camera.near = 0.1
+    camera.far = 50.0
+    camera.position = ORBIT
+    viewport.add_child(camera)
+    camera.look_at(Vector3(0,0.30,0),Vector3.UP)
+    camera.current = true
+    var light := DirectionalLight3D.new()
+    light.rotation_degrees = Vector3(-49,-35,0)
+    light.light_energy = 1.3
+    viewport.add_child(light)
+    var fill := DirectionalLight3D.new()
+    fill.rotation_degrees = Vector3(-20,135,0)
+    fill.light_energy = 0.45
+    viewport.add_child(fill)
+    live_tank_viewports[unit_id] = viewport
+    live_tank_models[unit_id] = model
+    live_tank_factions[unit_id] = faction
+
+func clear_live_tanks() -> void:
+    for unit_id in live_tank_viewports.keys():
+        var viewport: SubViewport = live_tank_viewports[unit_id] as SubViewport
+        if viewport != null:
+            viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+            viewport.queue_free()
+    live_tank_viewports.clear()
+    live_tank_models.clear()
+    live_tank_factions.clear()
+
+func update_tank_actions(units: Array, motion: Array, combat: Array,
+        fog_enabled: bool, visible_cells: Dictionary, battery_saver: bool = false) -> void:
+    # Only animate actually visible MBTs. Fog never reveals a hidden enemy
+    # by allocating its model or updating the texture cache.
+    if not captures_completed or battery_saver:
+        clear_live_tanks()
+        return
+    var desired: Dictionary = {}
+    for effect in motion:
+        var unit_id: String = str(effect.get("id",""))
+        for unit in units:
+            if str(unit.get("id","")) != unit_id or str(unit.get("role","")) != "tank":
+                continue
+            if fog_enabled and int(unit.get("faction",1)) != 0 and not visible_cells.has(unit.get("pos")):
+                break
+            desired[unit_id] = {
+                "faction": int(unit["faction"]), "kind":"move",
+                "progress":float(effect.get("elapsed",0))/TankRig.MOVE_DURATION,
+                "heading":effect.get("to",Vector2i.ZERO)-effect.get("from",Vector2i.ZERO)
+            }
+            break
+    for effect in combat:
+        if str(effect.get("attacker_role","")) != "tank":
+            continue
+        var origin: Vector2i = effect.get("origin",Vector2i(-1,-1))
+        var target: Vector2i = effect.get("target",Vector2i(-1,-1))
+        if origin.x < 0 or target.x < 0:
+            continue
+        for unit in units:
+            if str(unit.get("role","")) != "tank" or unit.get("pos") != origin:
+                continue
+            if fog_enabled and int(unit.get("faction",1)) != 0 and not visible_cells.has(origin):
+                break
+            desired[str(unit["id"])] = {
+                "faction":int(unit["faction"]), "kind":"attack",
+                "progress":float(effect.get("elapsed",0))/TankRig.SHOT_DURATION,
+                "heading":target-origin
+            }
+            break
+    for unit_id in live_tank_viewports.keys():
+        if not desired.has(unit_id):
+            var view: SubViewport = live_tank_viewports[unit_id] as SubViewport
+            if view != null:
+                view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+                view.queue_free()
+            live_tank_viewports.erase(unit_id)
+            live_tank_models.erase(unit_id)
+            live_tank_factions.erase(unit_id)
+    for unit_id in desired:
+        var task: Dictionary = desired[unit_id]
+        var faction: int = int(task["faction"])
+        if not live_tank_viewports.has(unit_id):
+            _create_live_tank(str(unit_id),faction)
+        if not live_tank_models.has(unit_id):
+            continue
+        var model: Node3D = live_tank_models[unit_id] as Node3D
+        var heading: Vector2i = task["heading"]
+        var kind: String = str(task["kind"])
+        if kind == "move":
+            model.rotation_degrees.y = TankRig.heading_yaw(heading)
+        else:
+            model.rotation_degrees.y = 0.0
+        if TankRig.pose(model,kind,float(task["progress"]),heading):
+            var active_view: SubViewport = live_tank_viewports[unit_id] as SubViewport
+            active_view.render_target_update_mode = SubViewport.UPDATE_ONCE
+            live_tank_render_updates += 1
+
 func disable_3d_previews() -> void:
     # If device resources become constrained, the board can switch back to
     # the original validated 2D atlas without losing tactical progress.
     captures_completed = false
+    clear_live_tanks()
