@@ -97,11 +97,24 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 var terrain: String = str(state["terrain"][y][x])
                 var tint: Color = VisualStyle.terrain_color(terrain,x,y)
                 _tile(canvas,vertices,tint)
-                if detail == VisualBudget.DETAIL_FULL:
-                    canvas.draw_line(vertices[0],vertices[1],tint.lightened(0.20),
-                        maxf(1.0,hw*0.025),true)
-                    canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
-                        maxf(1.0,hw*0.025),true)
+                if detail == VisualBudget.DETAIL_FULL and (
+                        not fog or visible.has(cell)):
+                    # No decorative tile seams inside a continuous biome.
+                    # The tactical grid still exists for all touches and
+                    # highlights. Draw only low-contrast material boundaries,
+                    # never inspecting unobserved terrain behind fog.
+                    var same_kind: int = Topology.neighbor_mask(
+                        state["terrain"],cell,terrain,true,visible,fog)
+                    if (same_kind & Topology.NORTH) == 0:
+                        var northern_edge: Color = tint.lightened(0.13)
+                        northern_edge.a = 0.17
+                        canvas.draw_line(vertices[0],vertices[1],northern_edge,
+                            maxf(1.0,hw*0.012),true)
+                    if (same_kind & Topology.SOUTH) == 0:
+                        var southern_edge: Color = tint.darkened(0.21)
+                        southern_edge.a = 0.14
+                        canvas.draw_line(vertices[2],vertices[3],southern_edge,
+                            maxf(1.0,hw*0.012),true)
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
                     # Determine continuity only from observable neighbors:
                     # no shoreline or road shape may reveal an unseen tile.
