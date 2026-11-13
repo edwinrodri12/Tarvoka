@@ -8,18 +8,20 @@ class_name TarvokaTankHeroV7
 # Use one coherent matte material family across every new armored surface.
 const ROOT := "G09HERO7"
 const Finish = preload("res://scripts/ui/TankFinish3D.gd")
-const ARMOR := Color("#69776A")
-const CERAMIC := Color("#77847A")
-const METAL := Color("#424F50")
-const RUBBER := Color("#202C30")
-const GLASS := Color("#214857")
-const WEAR := Color("#818982")
-const SEAM := Color("#2A383B")
-const DIRT := Color("#656459")
+const ARMOR := Color("#596a75")
+const CERAMIC := Color("#818d99")
+const METAL := Color("#424f5a")
+const RUBBER := Color("#1c252d")
+const GLASS := Color("#174b62")
+const WEAR := Color("#929b9c")
+const SEAM := Color("#18242c")
+const DIRT := Color("#625d55")
 const TRACK_COUNT := 156
 
 static var _paint_map: ImageTexture
 static var _metal_map: ImageTexture
+static var _micro_normal: ImageTexture
+static var _micro_roughness: ImageTexture
 
 static func _hash(x: int, y: int) -> float:
     return float(posmod(posmod(x*9283+y*5393+491,104729)*13+73,104729))/104728.0
@@ -37,43 +39,74 @@ static func _smooth_hash(x: float,y: float, period: float) -> float:
         lerpf(_hash(px,py+1),_hash(px+1,py+1),u),v)
 
 static func _army_texture() -> ImageTexture:
+    # Neutral roughness-ready ENAMEL modulation. Color resides in each
+    # independently tintable armor material; gone is the V7 problem of every
+    # ceramic/steel part sharing the same bright green camouflage.
     if _paint_map != null:
         return _paint_map
     const SIDE := 256
     var img := Image.create(SIDE,SIDE,false,Image.FORMAT_RGBA8)
-    # Commercial-safe original paint masks, no photography or purchased art.
-    # Large camouflage islands, sprayed transitions, dust and hairline chips.
     for y in range(SIDE):
         for x in range(SIDE):
-            var broad: float = _smooth_hash(float(x),float(y),78.0)
-            var medium: float = _smooth_hash(float(x),float(y),27.0)
-            var detail: float = _smooth_hash(float(x),float(y),6.0)
+            var broad: float = _smooth_hash(float(x),float(y),72.0)
+            var medium: float = _smooth_hash(float(x),float(y),21.0)
+            var fine: float = _smooth_hash(float(x),float(y),4.0)
             var grit: float = _hash(x,y)
-            var pattern: float = broad*0.56+medium*0.44
-            # Broad gradients rather than thresholded polygons: the tank
-            # reads as sprayed matte military enamel, not camouflage tiles.
-            var transition: float = clampf((pattern-0.29)/0.43,0.0,1.0)
-            transition = transition*transition*(3.0-2.0*transition)
-            var base: Color = Color("#536157").lerp(
-                Color("#758071"),transition)
-            var darkened: float = 0.97+0.055*(medium-0.5)+0.07*(detail-0.5)
-            var dusty: float = maxf(0.0,1.0-float(y)/float(SIDE))*0.062
-            var color: Color = base*darkened
-            color = color.lerp(Color("#A3997F"),dusty)
-            if grit > 0.989 and detail < 0.40:
-                color = color.lerp(Color("#ACABA0"),0.44)
-            img.set_pixel(x,y,Color(color.r,color.g,color.b,1.0))
+            var dusty: float = (1.0-float(y)/255.0) * 0.028
+            var value: float = 0.88 + 0.13*(broad-0.5) + \
+                0.066*(medium-0.5)+0.018*(fine-0.5)+dusty
+            if grit > 0.994 and fine < 0.40:
+                value = minf(1.0,value+0.08)
+            value = clampf(value,0.75,1.0)
+            img.set_pixel(x,y,Color(value,value,value,1))
     _paint_map = ImageTexture.create_from_image(img)
     return _paint_map
+
+static func _army_micro_normal() -> ImageTexture:
+    if _micro_normal != null:
+        return _micro_normal
+    const SIDE := 256
+    var img := Image.create(SIDE,SIDE,false,Image.FORMAT_RGBA8)
+    for y in range(SIDE):
+        for x in range(SIDE):
+            var x1: float = _smooth_hash(float(x+1),float(y),5.0)
+            var x0: float = _smooth_hash(float(x-1),float(y),5.0)
+            var y1: float = _smooth_hash(float(x),float(y+1),5.0)
+            var y0: float = _smooth_hash(float(x),float(y-1),5.0)
+            var dx: float = (x1-x0)*0.29
+            var dy: float = (y1-y0)*0.29
+            var normal: Vector3 = Vector3(-dx,-dy,1.0).normalized()
+            img.set_pixel(x,y,Color(
+                normal.x*0.5+0.5,normal.y*0.5+0.5,normal.z*0.5+0.5))
+    _micro_normal = ImageTexture.create_from_image(img)
+    return _micro_normal
+
+static func _army_micro_roughness() -> ImageTexture:
+    if _micro_roughness != null:
+        return _micro_roughness
+    const SIDE := 256
+    var img := Image.create(SIDE,SIDE,false,Image.FORMAT_RGBA8)
+    for y in range(SIDE):
+        for x in range(SIDE):
+            var patch: float = _smooth_hash(float(x),float(y),26.0)
+            var grit: float = _hash(x,y)
+            var value: float = clampf(0.73+0.15*(patch-0.5)+0.06*(grit-0.5),0.59,0.87)
+            img.set_pixel(x,y,Color(value,value,value,1))
+    _micro_roughness = ImageTexture.create_from_image(img)
+    return _micro_roughness
 
 static func _army_material(color: Color = ARMOR,
         embedded_paint: bool = true) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
-    m.albedo_color = Color.WHITE if embedded_paint else color
-    m.albedo_texture = _army_texture() if embedded_paint else null
-    m.uv1_scale = Vector3.ONE
-    m.roughness = 0.83 if embedded_paint else 0.68
-    m.metallic = 0.13 if embedded_paint else 0.39
+    m.albedo_color = color
+    if embedded_paint:
+        m.albedo_texture = _army_texture()
+        m.normal_enabled = true
+        m.normal_texture = _army_micro_normal()
+        m.normal_scale = 0.38
+        m.roughness_texture = _army_micro_roughness()
+    m.roughness = 0.77 if embedded_paint else 0.61
+    m.metallic = 0.19 if embedded_paint else 0.42
     m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     m.cull_mode = BaseMaterial3D.CULL_DISABLED
     return m
@@ -291,10 +324,18 @@ static func apply_final_materials(model: Node3D) -> void:
             continue
         var old: StandardMaterial3D = mesh.material_override as StandardMaterial3D
         var mat: StandardMaterial3D = old.duplicate(true) as StandardMaterial3D if old != null else _army_material()
-        mat.albedo_color = Color.WHITE
+        # Body, ceramic blocks and engine plates have separate pigments,
+        # not the same flat olive atlas multiplied by white.
+        var is_ceramic: bool = name.begins_with("GlacisCeramico") or             name.begins_with("ModuloBlindajeCeramico")
+        var is_trim: bool = name.begins_with("EscotillaCircular")
+        mat.albedo_color = CERAMIC if is_ceramic else (METAL if is_trim else ARMOR)
         mat.albedo_texture = _army_texture()
-        mat.roughness = 0.83
-        mat.metallic = 0.15
+        mat.normal_enabled = true
+        mat.normal_texture = _army_micro_normal()
+        mat.normal_scale = 0.38
+        mat.roughness_texture = _army_micro_roughness()
+        mat.roughness = 0.76
+        mat.metallic = 0.20
         mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
         mat.cull_mode = BaseMaterial3D.CULL_DISABLED
         mesh.material_override = mat
