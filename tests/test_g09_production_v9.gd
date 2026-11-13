@@ -10,7 +10,7 @@ func _initialize() -> void:
 
 func _run() -> void:
     var old_model: Node3D = Models.build("tank",0,true,8)
-    var tank: Node3D = Models.build("tank",0)
+    var tank: Node3D = Models.build("tank",0,true,9)
     assert(old_model != null and tank != null)
     assert(not old_model.get_meta("tarvoka_mbt_production_v9",false))
     assert(tank.get_meta("tarvoka_mbt_production_v9",false))
