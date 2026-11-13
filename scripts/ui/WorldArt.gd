@@ -43,11 +43,15 @@ static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float,
     var asphalt := Color("#414950")
     var shoulder := Color("#978F7B")
     var stripe := Color("#E3D1A0")
-    # This central junction covers the meeting of branch strips. It stays
-    # inside the tile even when a road has no visible links under fog.
-    _shape(canvas,center,hw,[
-        [-0.28,0],[0,-0.16],[0.28,0],[0,0.16]
-    ],shoulder)
+    # Straight roads must NOT get the same fat junction patch in every
+    # tile: that repeated 'box' was turning long highways into train tracks.
+    # Keep a junction apron only where traffic actually turns, branches or
+    # dead-ends. Opposite-edge strips meet naturally at the shared center.
+    var straight: bool = connections == 3 or connections == 12
+    if not straight:
+        _shape(canvas,center,hw,[
+            [-0.28,0],[0,-0.16],[0.28,0],[0,0.16]
+        ],shoulder)
     for side_index in range(4):
         if (connections & (1 << side_index)) == 0:
             continue
@@ -70,9 +74,10 @@ static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float,
             var spot: Vector2 = curve[mini(wear_index,curve.size()-2)]
             canvas.draw_circle(spot,maxf(1.0,hw*0.017),
                 Color(0.15,0.17,0.18,0.36))
-    _shape(canvas,center,hw,[
-        [-0.247,0],[0,-0.135],[0.247,0],[0,0.135]
-    ],asphalt)
+    if not straight:
+        _shape(canvas,center,hw,[
+            [-0.247,0],[0,-0.135],[0.247,0],[0,0.135]
+        ],asphalt)
     # Junctions use a subtle road-center highlight. An isolated road
     # remains a distinguishable pavement patch.
     if detail >= 2 and connections == 0:
