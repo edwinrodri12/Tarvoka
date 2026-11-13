@@ -19,7 +19,9 @@ Esta referencia **sustituye las versiones anteriores con el planeta Tierra**. El
 
 `assets/branding/tarvoka_icon_fictional_planet_64.png`: **previsualización de 64 px reducida del icono aprobado con planeta ficticio**; sirve para identificar la referencia sin sustituir el arte maestro. No usar como raster de publicación ni escalarlo a icono 512/1024.
 
-El arte maestro de 1254 × 1254 px de la conversación fue preservado como referencia. **El archivo binario maestro todavía debe añadirse a GitHub** antes de activar la integración definitiva en `project.godot`, los presets de Android y las pantallas de inicio. No sustituirlo por un render distinto.
+`assets/branding/tarvoka_emblem_fictional_planet_512.webp`: **versión optimizada de 512 × 512 px (WebP ~67 KB) del emblema de 1254 × 1254 px aprobado en esta conversación**, con el planeta ficticio. Ya se usa en la portada mediante `HomeMenu.gd`, conservando la miniatura de 64 px como alternativa. No se ha redibujado ni sustituido el símbolo.
+
+El **PNG maestro original de 1254 × 1254 px** permanece disponible entre los materiales de la conversación y todavía debe almacenarse como original sin pérdidas antes del lanzamiento comercial. También queda pendiente ajustar con ese maestro los iconos adaptativos de Android, los presets y el recurso de tienda; la versión WebP es para visualización dentro del juego, **no** una entrega de identidad comercial final.
 
 ## Siguiente fase de interfaz
 
