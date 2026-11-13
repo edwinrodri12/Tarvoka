@@ -151,9 +151,14 @@ func _generate_forest() -> void:
                     float(x)+u,height,float(y)+v),
                     "scale":scale,"seed":seed})
     if trees.is_empty():
-        _canopies.multimesh = null
-        _trunks.multimesh = null
+        # Keep the MultiMesh resources allocated while a forest is entirely
+        # behind fog. Clearing a live MultiMeshInstance3D.mesh to null can
+        # issue mesh_get_surface_count(null) on the headless renderer.
+        _canopies.visible = false
+        _trunks.visible = false
         return
+    _canopies.visible = true
+    _trunks.visible = true
     var leaf_mesh := CylinderMesh.new()
     leaf_mesh.top_radius = 0.035
     leaf_mesh.bottom_radius = 0.27
