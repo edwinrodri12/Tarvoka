@@ -337,6 +337,18 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if upper_piece != null:
             upper_piece.visible = stage < 4
+    # V11 closed armored wedges physically break with critical damage.
+    # The same visibility restoration works for stages 0-2 and legacy V10.
+    for part_name in ["G09V11MordazaAngular_1",
+            "G09V11HombreraFlanco_1","G09V11PuntaGlacis_1"]:
+        var v11_piece: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v11_piece != null:
+            v11_piece.visible = stage < 3
+    for part_name in ["G09V11BastionPosterior_-1",
+            "G09V11BastionPosterior_1"]:
+        var v11_rear: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v11_rear != null:
+            v11_rear.visible = stage < 4
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
