@@ -1178,9 +1178,9 @@ func _process(_delta: float) -> void:
                 header_text += "   |   %d CR" % int(credits[viewer])
         if board.state.has("control"):
             var relay: Dictionary = board.state["control"]
-            var signal: Array = relay.get("scores",[])
-            if signal.size() == 2:
-                header_text += "   |   SEÑAL %d–%d" % [int(signal[0]),int(signal[1])]
+            var relay_scores: Array = relay.get("scores",[])
+            if relay_scores.size() == 2:
+                header_text += "   |   SEÑAL %d–%d" % [int(relay_scores[0]),int(relay_scores[1])]
         expanded_summary.text = header_text
         expanded_confirm.text = "RESULTADOS" if winner != -1 else ("CONFIRMAR" if board.pending_order.is_empty() else str(confirm_button.text).to_upper())
         expanded_confirm.disabled = confirm_button.disabled
