@@ -25,6 +25,7 @@ const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
+const TacticalUI = preload("res://scripts/ui/TacticalUITheme.gd")
 
 var board: Control
 var status_label: Label
@@ -116,10 +117,17 @@ var compact_end_turn: Button
 var compact_resupply: Button
 var compact_center: Button
 var compact_iso: Button
+var expanded_header: PanelContainer
+var expanded_summary: Label
+var expanded_actions: PanelContainer
+var expanded_confirm: Button
+var expanded_cancel: Button
+var expanded_end_turn: Button
 
 func _ready() -> void:
+    theme = TacticalUI.make_theme()
     var backdrop := ColorRect.new()
-    backdrop.color = Color(0.065, 0.082, 0.101)
+    backdrop.color = TacticalUI.BG
     backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
     backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     add_child(backdrop)
@@ -151,12 +159,11 @@ func _ready() -> void:
     sidebar = PanelContainer.new()
     sidebar.size_flags_horizontal = Control.SIZE_FILL
     sidebar.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    var side_style := StyleBoxFlat.new()
-    side_style.bg_color = Color(0.105, 0.143, 0.171)
-    side_style.content_margin_left = 18
-    side_style.content_margin_right = 18
-    side_style.content_margin_top = 14
-    side_style.content_margin_bottom = 14
+    var side_style: StyleBoxFlat = TacticalUI.frame("side")
+    side_style.content_margin_left = 16
+    side_style.content_margin_right = 16
+    side_style.content_margin_top = 12
+    side_style.content_margin_bottom = 12
     sidebar.add_theme_stylebox_override("panel", side_style)
     main_layout.add_child(sidebar)
 
@@ -172,9 +179,9 @@ func _ready() -> void:
     scroll.add_child(panel)
 
     var heading := Label.new()
-    heading.text = "TARVOKA"
-    heading.add_theme_font_size_override("font_size", 27)
-    heading.add_theme_color_override("font_color", Color(0.95, 0.91, 0.71))
+    heading.text = "TARVOKA  /  CENTRO TÁCTICO"
+    heading.add_theme_font_size_override("font_size", 25)
+    heading.add_theme_color_override("font_color", TacticalUI.GOLD)
     panel.add_child(heading)
     campaign_button = Button.new()
     campaign_button.text = "MODO HISTORIA · CAPÍTULO 01"
@@ -182,17 +189,20 @@ func _ready() -> void:
     campaign_button.tooltip_text = "Jugar o continuar Escudo compartido. Guardado separado de las batallas libres."
     campaign_button.pressed.connect(_open_campaign)
     panel.add_child(campaign_button)
+    TacticalUI.accent(campaign_button,false)
     command_menu_button = Button.new()
     command_menu_button.text = "CENTRO DE MANDO"
     command_menu_button.custom_minimum_size.y = 54
     command_menu_button.pressed.connect(_open_command_menu)
     panel.add_child(command_menu_button)
+    TacticalUI.accent(command_menu_button,true)
     objectives_button = Button.new()
     objectives_button.text = "OBJETIVOS Y ALERTAS"
     objectives_button.custom_minimum_size.y = 50
     objectives_button.tooltip_text = "Mostrar puntos estratégicos y unidades que requieren atención"
     objectives_button.pressed.connect(_open_objectives_radar)
     panel.add_child(objectives_button)
+    TacticalUI.accent(objectives_button,false)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -323,9 +333,10 @@ func _ready() -> void:
     result_column.add_child(details_button)
 
     var unit_heading := Label.new()
-    unit_heading.text = "UNIDAD Y ACCIONES"
+    unit_heading.text = "UNIDAD  /  ÓRDENES"
     unit_heading.add_theme_font_size_override("font_size", 17)
     panel.add_child(unit_heading)
+    TacticalUI.section(unit_heading,true)
 
     inspection_title = Label.new()
     inspection_title.visible = false
@@ -371,6 +382,7 @@ func _ready() -> void:
     end_button.add_theme_font_size_override("font_size", 20)
     end_button.pressed.connect(_end_turn)
     panel.add_child(end_button)
+    TacticalUI.accent(end_button,true)
 
     resupply_button = Button.new()
     resupply_button.text = "Reabastecer unidad"
@@ -393,6 +405,7 @@ func _ready() -> void:
     confirm_button.add_theme_font_size_override("font_size", 20)
     confirm_button.pressed.connect(_confirm_order)
     panel.add_child(confirm_button)
+    TacticalUI.accent(confirm_button,true)
     # Prevent accidental turn endings: confirm/cancel the pending order first.
     panel.move_child(confirm_button, end_button.get_index())
     panel.move_child(cancel_button, end_button.get_index())
@@ -700,7 +713,9 @@ func _build_battle_hud() -> void:
     var top_panel := PanelContainer.new()
     top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var top_style := StyleBoxFlat.new()
-    top_style.bg_color = Color(0.035,0.060,0.083,0.88)
+    top_style.bg_color = Color(0.028,0.075,0.12,0.94)
+    top_style.border_color = TacticalUI.CYAN
+    top_style.set_border_width_all(2)
     top_style.content_margin_left = 9
     top_style.content_margin_right = 145 # Reserve room for the panel button.
     top_style.content_margin_top = 5
@@ -738,7 +753,9 @@ func _build_battle_hud() -> void:
     compact_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     compact_info_panel.visible = false
     var info_style := StyleBoxFlat.new()
-    info_style.bg_color = Color(0.035,0.060,0.083,0.90)
+    info_style.bg_color = Color(0.028,0.075,0.12,0.94)
+    info_style.border_color = TacticalUI.CYAN
+    info_style.set_border_width_all(2)
     info_style.content_margin_left = 10
     info_style.content_margin_right = 10
     info_style.content_margin_top = 6
@@ -770,7 +787,11 @@ func _build_battle_hud() -> void:
     var bottom_panel := PanelContainer.new()
     bottom_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var bottom_style := StyleBoxFlat.new()
-    bottom_style.bg_color = Color(0.035,0.060,0.083,0.90)
+    bottom_style.bg_color = Color(0.028,0.075,0.12,0.94)
+    bottom_style.border_color = TacticalUI.CYAN
+    bottom_style.set_border_width_all(2)
+    bottom_style.shadow_color = Color(0.06,0.55,0.9,0.28)
+    bottom_style.shadow_size = 4
     bottom_style.content_margin_left = 6
     bottom_style.content_margin_right = 6
     bottom_style.content_margin_top = 6
@@ -809,6 +830,7 @@ func _build_battle_hud() -> void:
     compact_confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_confirm.pressed.connect(_confirm_order)
     actions.add_child(compact_confirm)
+    TacticalUI.accent(compact_confirm,true)
 
     # Mobile supply must be reachable without opening the hidden desktop sidebar.
     compact_resupply = Button.new()
@@ -825,6 +847,7 @@ func _build_battle_hud() -> void:
     compact_end_turn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_end_turn.pressed.connect(_end_turn)
     actions.add_child(compact_end_turn)
+    TacticalUI.accent(compact_end_turn,true)
 
     battle_hud_toggle = Button.new()
     battle_hud_toggle.text = "Ampliar mapa"
