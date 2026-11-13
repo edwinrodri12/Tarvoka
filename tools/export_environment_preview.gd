@@ -85,6 +85,18 @@ class PreviewCanvas:
                 var environment: Dictionary = {"cell":cell}
                 if kind == "water":
                     environment["water_connections"] = neigh
+                    var bank_colors: Dictionary = {}
+                    for side in range(4):
+                        if (shore & (1 << side)) == 0:
+                            continue
+                        var next: Vector2i = cell+Topology.DIRECTIONS[side]
+                        if next.x < 0 or next.y < 0 or (
+                                next.x >= GRID_SIZE.x or next.y >= GRID_SIZE.y):
+                            continue
+                        var land_kind: String = str(grid[next.y][next.x])
+                        bank_colors[side] = Style.terrain_color(
+                            land_kind,next.x,next.y)
+                    environment["shore_colors"] = bank_colors
                 else:
                     environment["water_edges"] = Topology.neighbor_mask(
                         grid,cell,"water")
