@@ -7,6 +7,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 
 var picker: OptionButton
 var faction_paint_picker: OptionButton
@@ -26,6 +27,10 @@ var tank_animation_elapsed := 0.0
 var tank_animation_button: Button
 var tank_move_button: Button
 var tank_stop_button: Button
+var tank_damage_picker: OptionButton
+var tank_hit_button: Button
+var tank_destroy_button: Button
+var tank_repair_button: Button
 const MIN_ZOOM := 0.65
 const MAX_ZOOM := 2.4
 
@@ -88,6 +93,44 @@ func _ready() -> void:
     tank_stop_button.pressed.connect(stop_tank_animation)
     animation_controls.add_child(tank_stop_button)
     animation_controls.visible = false
+
+    var damage_caption := Label.new()
+    damage_caption.name = "TituloDanio"
+    damage_caption.text = "ESTADO DEL TANQUE · DESTRUCCIÓN 3D"
+    damage_caption.add_theme_font_size_override("font_size",13)
+    damage_caption.add_theme_color_override("font_color",Color("#F6BF86"))
+    controls.add_child(damage_caption)
+    tank_damage_picker = OptionButton.new()
+    tank_damage_picker.name = "CincoEtapasDeDanio"
+    tank_damage_picker.custom_minimum_size.y = 44
+    for stage_name in TankDamage.STAGES:
+        tank_damage_picker.add_item(str(stage_name))
+    tank_damage_picker.select(0)
+    tank_damage_picker.item_selected.connect(set_damage_stage)
+    controls.add_child(tank_damage_picker)
+    var damage_actions := HBoxContainer.new()
+    damage_actions.name = "AccionesDanio"
+    damage_actions.add_theme_constant_override("separation",5)
+    controls.add_child(damage_actions)
+    tank_hit_button = Button.new()
+    tank_hit_button.text = "Recibir impacto"
+    tank_hit_button.custom_minimum_size.y = 44
+    tank_hit_button.pressed.connect(simulate_tank_hit)
+    damage_actions.add_child(tank_hit_button)
+    tank_destroy_button = Button.new()
+    tank_destroy_button.text = "Destruir"
+    tank_destroy_button.custom_minimum_size.y = 44
+    tank_destroy_button.pressed.connect(func(): set_damage_stage(4))
+    damage_actions.add_child(tank_destroy_button)
+    tank_repair_button = Button.new()
+    tank_repair_button.text = "Reparar / intacto"
+    tank_repair_button.custom_minimum_size.y = 44
+    tank_repair_button.pressed.connect(func(): set_damage_stage(0))
+    controls.add_child(tank_repair_button)
+    damage_caption.visible = false
+    tank_damage_picker.visible = false
+    damage_actions.visible = false
+    tank_repair_button.visible = false
 
     viewport_holder = SubViewportContainer.new()
     # Wider landscape canvas for close inspection, keeping a compact sidebar.
@@ -190,7 +233,9 @@ func _ready() -> void:
     action_side.add_theme_constant_override("separation",8)
     viewport_holder.reparent(presentation)
     presentation.add_child(action_side)
-    for control in [intro,picker,faction_paint_picker,animation_controls,controls_row,zoom_row,info]:
+    for control in [intro,picker,faction_paint_picker,animation_controls,
+            damage_caption,tank_damage_picker,damage_actions,tank_repair_button,
+            controls_row,zoom_row,info]:
         control.reparent(action_side)
     viewport_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -209,6 +254,11 @@ func show_role(role: String) -> void:
     preview.add_child(model_root)
     faction_paint_picker.visible = (role == "tank")
     tank_move_button.get_parent().visible = (role == "tank")
+    tank_damage_picker.visible = (role == "tank")
+    tank_damage_picker.get_parent().find_child("TituloDanio",false,false).visible = (role == "tank")
+    tank_hit_button.get_parent().visible = (role == "tank")
+    tank_repair_button.visible = (role == "tank")
+    tank_damage_picker.select(0)
     tank_animation_mode = ""
     tank_animation_elapsed = 0.0
     _current_role = role
@@ -237,20 +287,41 @@ func rotate_tank_turret(degrees: float) -> void:
     if turret != null:
         turret.rotation_degrees.y = fposmod(turret.rotation_degrees.y+degrees,360.0)
 
+func set_damage_stage(stage: int) -> void:
+    if _current_role != "tank" or model_root == null:
+        return
+    if stage < 0 or stage >= TankDamage.STAGES.size():
+        return
+    stop_tank_animation()
+    if TankDamage.apply_stage(model_root,stage):
+        tank_damage_picker.select(stage)
+        info.text = "Tanque principal · " + str(TankDamage.STAGES[stage]) +             " · Estado artístico de prueba (sin afectar puntos de vida)."
+
+func simulate_tank_hit() -> void:
+    if _current_role != "tank" or model_root == null:
+        return
+    var stage: int = mini(4,TankDamage.current_stage(model_root)+1)
+    set_damage_stage(stage)
+    preview_tank_animation("damaged")
+
 func preview_tank_animation(kind: String) -> void:
     if _current_role != "tank" or model_root == null or not TankRig.has_rig(model_root):
         return
-    if kind not in ["move","attack"]:
+    if kind not in ["move","attack","damaged"]:
         return
     tank_animation_mode = kind
     tank_animation_elapsed = 0.0
     TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
+    if kind == "damaged":
+        TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
 
 func stop_tank_animation() -> void:
     tank_animation_mode = ""
     tank_animation_elapsed = 0.0
     if _current_role == "tank" and model_root != null:
+        var stage: int = TankDamage.current_stage(model_root)
         TankRig.restore(model_root)
+        TankDamage.apply_stage(model_root,stage)
 
 func _process(delta: float) -> void:
     if not visible or tank_animation_mode.is_empty() or model_root == null:
@@ -259,6 +330,8 @@ func _process(delta: float) -> void:
     var duration: float = TankRig.MOVE_DURATION if tank_animation_mode == "move" else TankRig.SHOT_DURATION
     var progress: float = clampf(tank_animation_elapsed/duration,0.0,1.0)
     TankRig.pose(model_root,tank_animation_mode,progress,Vector2i(1,-1))
+    if tank_animation_mode == "damaged":
+        TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
     if progress >= 1.0:
         stop_tank_animation()
 
