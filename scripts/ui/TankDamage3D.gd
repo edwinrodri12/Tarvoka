@@ -72,6 +72,24 @@ static func _cloud(parent: Node3D, label: String, at: Vector3,
     parent.add_child(piece)
     return piece
 
+# Angled, light-emitting flame tongues instead of a fire effect made
+# entirely of round spheres. Kept under 8 segments for Android OpenGL.
+static func _flame(parent: Node3D, label: String, at: Vector3,
+        height: float, radius: float, color: Color, tilt: Vector3) -> MeshInstance3D:
+    var item := MeshInstance3D.new()
+    item.name = label
+    var shape := CylinderMesh.new()
+    shape.top_radius = 0.012
+    shape.bottom_radius = radius
+    shape.height = height
+    shape.radial_segments = 7
+    item.mesh = shape
+    item.material_override = _material(color,true)
+    item.position = at
+    item.rotation_degrees = tilt
+    parent.add_child(item)
+    return item
+
 static func _stage_node(root: Node3D, stage: int) -> Node3D:
     var layer := Node3D.new()
     layer.name = "DesgasteEtapa%d" % stage
@@ -161,6 +179,21 @@ static func prepare(model: Node3D) -> bool:
         Vector3(1.04,1.45,0.92),Color(0.08,0.09,0.11,0.59))
     _cloud(destroyed,"HumoSuperior",Vector3(0.36,2.91,-0.04),
         Vector3(1.23,1.03,1.04),Color(0.13,0.14,0.17,0.38))
+    # Broken hardware remains visible even when flame/smoke fades.
+    _box(destroyed,"BastidorTorrePartido",Vector3(-0.83,1.04,0.68),
+        Vector3(0.09,0.57,0.71),Color("#22282B"),Vector3(16,-26,42))
+    _box(destroyed,"OpticaArrancada",Vector3(0.82,0.28,-0.62),
+        Vector3(0.31,0.16,0.19),Color("#2C3A3D"),Vector3(25,21,-15))
+    _box(destroyed,"BlindajeSeparadoProa",Vector3(0.63,0.19,-1.74),
+        Vector3(0.51,0.13,0.47),Color("#4B5557"),Vector3(-8,20,27))
+    _box(destroyed,"MotorCarbonizado",Vector3(0.0,1.076,0.94),
+        Vector3(1.17,0.035,0.48),Color("#22272B"))
+    _flame(destroyed,"LenguaFuegoIzquierda",Vector3(-0.13,1.47,0.09),
+        0.87,0.19,Color(1.00,0.43,0.08,0.81),Vector3(0,0,-18))
+    _flame(destroyed,"LenguaFuegoCentro",Vector3(0.17,1.58,-0.02),
+        1.05,0.25,Color(1.00,0.69,0.12,0.84),Vector3(9,0,12))
+    _flame(destroyed,"LenguaFuegoAlta",Vector3(0.41,1.77,0.22),
+        0.90,0.14,Color(0.95,0.30,0.04,0.67),Vector3(-12,0,23))
     model.set_meta(STAGE_META,0)
     return true
 
@@ -198,6 +231,18 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var tread: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if tread != null:
             tread.visible = stage < 3
+    # Finishing pieces become physically broken, not just hidden by smoke.
+    # Every change is reversible by returning the viewer to stage 0.
+    for part_name in ["MejillaCeramicaBiselada1","GuardiaOpticaLateral1",
+            "LenteSensorLateral1","BlindajeRuedaExtremo1_-1"]:
+        var finish_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
+        if finish_piece != null:
+            finish_piece.visible = stage < 3
+    for part_name in ["CristalPanoramicoFrontal","ModuloVisionPanoramica",
+            "CristalPanoramicoLateral","BastidorTrasero-1"]:
+        var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
+        if upper_piece != null:
+            upper_piece.visible = stage < 4
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
