@@ -86,7 +86,9 @@ func _run() -> void:
     touch_up.position = Vector2(120, 200)
     gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "")
-    # Secondary fingers must not steal or release the primary tap.
+    # Any simultaneous second finger is a camera gesture, never an order.
+    # After the second finger lifts, the remaining finger must also release
+    # without tapping (otherwise a pinch could attack or move a unit).
     var other_down := InputEventScreenTouch.new()
     other_down.index = 1
     other_down.pressed = true
@@ -102,8 +104,11 @@ func _run() -> void:
     assert(gesture_board.selected_id == "")
     touch_up.position = Vector2(120, 200)
     gesture_board._gui_input(touch_up)
-    assert(gesture_board.selected_id == "A")
+    assert(gesture_board.selected_id == "")
     gesture_board._gui_input(other_up)
+    assert(gesture_board.selected_id == "")
+    gesture_board._gui_input(touch_down)
+    gesture_board._gui_input(touch_up)
     assert(gesture_board.selected_id == "A")
     gesture_board._gui_input(touch_down)
     gesture_board._gui_input(touch_up)
