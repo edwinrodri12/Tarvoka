@@ -63,7 +63,8 @@ func _run() -> void:
     assert(ruins.find_child("VigaRetorcida_00",true,false) != null)
     assert(ruins.find_child("MandoBiseladoPrincipal",true,false) == null)
     ruins.free()
-    assert(FINISH._textures.size() <= 5)
+    # Four surface families share color/normal/roughness maps, even across 8 factions.
+    assert(FINISH._textures.size() <= 15)
 
     root.content_scale_size = Vector2i(1200,740)
     var scene: PackedScene = load("res://scenes/UnitArtStudioWeb.tscn")
