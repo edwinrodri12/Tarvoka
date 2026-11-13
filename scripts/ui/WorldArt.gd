@@ -87,7 +87,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
                 int(context.get("water_connections",0)),
                 context.get("cell",Vector2i.ZERO),detail,phase)
             Transitions.draw_water_shore(canvas,c,hw,shore_mask,detail,seed,
-                context.get("cell",Vector2i(-1,-1)))
+                context.get("cell",Vector2i(-1,-1)),
+                context.get("shore_colors",{}))
         _:
             # Plains remain readable at a glance but get fine vegetation
             # only in full zoom. All decorations are render-only.
