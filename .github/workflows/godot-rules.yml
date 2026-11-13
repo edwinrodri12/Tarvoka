@@ -59,6 +59,15 @@ jobs:
             echo "Isometric renderer or regression emitted a Godot error"; exit 1
           fi
 
+      - name: Validate two-finger pinch zoom and safe camera gestures on Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_android_pinch_zoom.gd 2>&1 | tee /tmp/tarvoka-pinch-zoom.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-pinch-zoom.log; then
+            echo "Android pinch/camera gesture regression"; exit 1
+          fi
+
       - name: Benchmark large-map viewport, minimap texture cache and Android battery toggle
         shell: bash
         run: |

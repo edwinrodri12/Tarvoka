@@ -1,12 +1,12 @@
 extends RefCounted
 class_name TarvokaIsoProjection
 
-# Pure visual transform: grid coordinates, game rules and saved turns stay 10x8.
+# Pure visual transform for all supported maps; game rules and saved turns never depend on camera zoom.
 # Pixel-space diamond cells have width 2*half_width and height half_width.
 const WIDTH := 10
 const HEIGHT := 8
 const MIN_ZOOM := 0.70
-const MAX_ZOOM := 2.0
+const MAX_ZOOM := 4.0
 
 static func half_width(view_size: Vector2, zoom: float = 1.0,
         grid_size: Vector2i = Vector2i(10,8)) -> float:
