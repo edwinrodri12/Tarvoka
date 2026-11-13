@@ -219,8 +219,8 @@ static func _comms_lattice(parent: Node3D,level: int,tint: Color) -> void:
     _shell(structure,"BaseDeTorre",Vector3(0,0.12,0),
         Vector3(1.26,0.24,1.29),0.17,ARMOR_DARK,"roof")
     for side in [-1,1]:
+        var sx: float = float(side)
         for depth in [-1,1]:
-            var sx: float = float(side)
             var sz: float = float(depth)
             _beam(structure,"ColumnaEnCelosia_%s_%s" % [side,depth],
                 Vector3(sx*0.52,0.15,sz*0.53),
