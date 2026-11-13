@@ -270,7 +270,8 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         cheek.visible = stage >= 1
     # Use mesh visibility rather than deleting/copying meshes. The original
     # unit stays reusable and is restored 100% when returning to "Intacto".
-    for part_name in ["FaccionFaldon1_02","FaccionFaldon1_03"]:
+    for part_name in ["FaccionFaldon1_02","FaccionFaldon1_03",
+            "FaldonBase1_02","FaldonBase1_03"]:
         var plate: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if plate != null:
             plate.visible = stage < 2
@@ -288,12 +289,17 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
     # Finishing pieces become physically broken, not just hidden by smoke.
     # Every change is reversible by returning the viewer to stage 0.
     for part_name in ["MejillaCeramicaBiselada1","GuardiaOpticaLateral1",
-            "LenteSensorLateral1","BlindajeRuedaExtremo1_-1"]:
+            "LenteSensorLateral1","BlindajeRuedaExtremo1_-1",
+            "ERACompuestaBiselada1_1","ERACompuestaBiselada1_2",
+            "ModuloLASERBlindado1","CristalTelescopio1"]:
         var finish_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if finish_piece != null:
             finish_piece.visible = stage < 3
     for part_name in ["CristalPanoramicoFrontal","ModuloVisionPanoramica",
-            "CristalPanoramicoLateral","BastidorTrasero-1"]:
+            "CristalPanoramicoLateral","BastidorTrasero-1",
+            "VisorTermicoProtegido","LenteTermicoPrincipal",
+            "BarraCestaSuperior1","BolsaLonaEstiba1",
+            "AroBocaPrincipal","InteriorOscuroCanon"]:
         var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if upper_piece != null:
             upper_piece.visible = stage < 4
