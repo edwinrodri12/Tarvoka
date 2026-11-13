@@ -296,28 +296,98 @@ static func _bridge(parent: Node3D, origin: Vector3, col: int) -> void:
         origin+Vector3(0,-0.16,0),Vector3(0.34,0.70,1.04),
         ROCK_LIGHT.darkened(0.12))
 
+static func _ellipsoid(parent: Node3D, label: String, center: Vector3,
+        extent: Vector3, tint: Color) -> MeshInstance3D:
+    var mesh := SphereMesh.new()
+    mesh.radius = 0.50
+    mesh.height = 1.0
+    mesh.radial_segments = 10
+    mesh.rings = 6
+    var leaf := MeshInstance3D.new()
+    leaf.name = label
+    leaf.mesh = mesh
+    leaf.position = center
+    leaf.scale = extent
+    leaf.material_override = _material(tint)
+    parent.add_child(leaf)
+    return leaf
+
 static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> void:
     var size: float = 0.75 + float(posmod(seed,5))*0.085
     _cylinder(parent,"Tronco_%d" % seed,center + Vector3(0,size*0.34,0),
         0.095*size,size*0.68,Color("#665746"))
     var leaf: Color = Color("#326456") if coastal else Color("#365f48")
-    _cone(parent,"CopaInferior_%d" % seed,
-        center+Vector3(0,size*0.91,0),0.50*size,0.92*size,leaf,7)
-    _cone(parent,"CopaSuperior_%d" % seed,
-        center+Vector3(0,size*1.32,0),0.38*size,0.75*size,
-        leaf.lightened(0.14),7)
+    if coastal:
+        # Coastal broadleaf canopy: avoid pine forests in the warm river delta.
+        _ellipsoid(parent,"CopaFrondosa_%d" % seed,
+            center+Vector3(0,size*1.15,0),Vector3(0.96,0.82,0.94)*size,
+            leaf)
+        _ellipsoid(parent,"CopaFrondosaLuz_%d" % seed,
+            center+Vector3(-0.19*size,size*1.43,0.12*size),
+            Vector3(0.70,0.60,0.65)*size,leaf.lightened(0.17))
+    else:
+        _cone(parent,"CopaInferior_%d" % seed,
+            center+Vector3(0,size*0.91,0),0.50*size,0.92*size,leaf,7)
+        _cone(parent,"CopaSuperior_%d" % seed,
+            center+Vector3(0,size*1.32,0),0.38*size,0.75*size,
+            leaf.lightened(0.14),7)
+
+static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
+        radius: float, height: float, seed: int, tint: Color,
+        snow: bool = true) -> MeshInstance3D:
+    # Geometric mountain with irregular radial silhouette and two sculpted
+    # elevation rings. Replaces recognizable repeated cone primitives.
+    var segments: int = 7
+    var rock_surface := SurfaceTool.new()
+    rock_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var low: Array[Vector3] = []
+    var ridge: Array[Vector3] = []
+    for i in range(segments):
+        var angle: float = TAU*float(i)/float(segments) + float(posmod(seed,11))*0.027
+        var variation: float = 0.77+float(posmod(seed*3+i*7,9))*0.043
+        var r: float = radius*variation
+        var lower: Vector3 = Vector3(cos(angle)*r,0.0,sin(angle)*r)
+        low.append(lower)
+        ridge.append(Vector3(
+            cos(angle)*r*0.47,
+            height*(0.48+float(posmod(seed+i*13,7))*0.031),
+            sin(angle)*r*0.47))
+    var apex := Vector3(
+        (float(posmod(seed,5))-2.0)*radius*0.08,height,
+        (float(posmod(seed*3,5))-2.0)*radius*0.08)
+    for i in range(segments):
+        var nxt: int = (i+1)%segments
+        var face_tint: Color = tint.lightened(0.065) if i%3 == 0 else (
+            tint.darkened(0.18) if i%3 == 1 else tint)
+        _triangle(rock_surface,low[i],ridge[i],low[nxt],
+            face_tint.darkened(0.13),face_tint,face_tint.darkened(0.06))
+        _triangle(rock_surface,low[nxt],ridge[i],ridge[nxt],
+            face_tint.darkened(0.08),face_tint,face_tint.lightened(0.08))
+        _triangle(rock_surface,ridge[i],apex,ridge[nxt],
+            face_tint.lightened(0.02),SNOW if snow else face_tint.lightened(0.17),
+            face_tint.lightened(0.08))
+    rock_surface.generate_normals()
+    var mountain := MeshInstance3D.new()
+    mountain.name = name
+    mountain.mesh = rock_surface.commit()
+    mountain.position = origin
+    var material := StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.roughness = 0.92
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mountain.material_override = material
+    parent.add_child(mountain)
+    return mountain
 
 static func _mountain(parent: Node3D, origin: Vector3, top: float,
         seed: int, scene: int) -> void:
-    var peak_h: float = 1.35 + float(posmod(seed,4))*0.19
-    var tint: Color = ROCK.lightened(0.09) if scene == 2 else ROCK
-    _cone(parent,"Macizo_%d" % seed,origin+Vector3(0,top+peak_h*0.5,0),
-        1.00,peak_h,tint,6)
-    _cone(parent,"Cresta_%d" % seed,
-        origin+Vector3(-0.29,top+peak_h*0.66,0.24),0.60,peak_h*0.64,
-        ROCK_LIGHT,5)
-    _cone(parent,"Cumbre_%d" % seed,
-        origin+Vector3(0,top+peak_h*0.90,0),0.32,peak_h*0.35,SNOW,6)
+    var peak_h: float = 1.28 + float(posmod(seed,6))*0.18
+    var tint: Color = ROCK.lightened(0.06) if scene == 2 else ROCK
+    _rock_spire(parent,"MacizoTallado_%d" % seed,
+        origin+Vector3(-0.07,top,-0.09),1.17,peak_h,seed,tint)
+    _rock_spire(parent,"CrestaSecundaria_%d" % seed,
+        origin+Vector3(-0.44,top,0.47),0.64,peak_h*0.63,
+        seed+37,ROCK_LIGHT.darkened(0.05),false)
     _box(parent,"RocaLateral_%d" % seed,
         origin+Vector3(0.71,top+0.18,-0.44),Vector3(0.53,0.35,0.59),
         tint.darkened(0.17))
