@@ -903,16 +903,22 @@ func _process(_delta: float) -> void:
     resupply_button.disabled = not board.can_resupply_selected()
     if not resupply_button.disabled:
         var supply_order: Dictionary = Logistics.quote(board.state, board.selected_id)
-        resupply_button.text = "Recargar M+%d F+%d (%d cr.)" % [
-            int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
-        ]
+        if int(supply_order["fuel"]) > 0:
+            resupply_button.text = "Recargar M+%d F+%d (%d cr.)" % [
+                int(supply_order["ammo"]), int(supply_order["fuel"]), int(supply_order["cost"])
+            ]
+        else:
+            resupply_button.text = "Recargar municion +%d (%d cr.)" % [int(supply_order["ammo"]), int(supply_order["cost"])]
         if int(supply_order["cargo_ammo"]) + int(supply_order["cargo_fuel"]) > 0:
             resupply_button.text = "Reponer camion (%d cr.)" % int(supply_order["cost"])
     else:
         resupply_button.text = "Reabastecer unidad"
     compact_resupply.visible = resupply_button.visible and not board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
     compact_resupply.disabled = resupply_button.disabled
-    compact_resupply.text = "Cargar" if compact_resupply.disabled else "Cargar M/F"
+    compact_resupply.text = "Cargar"
+    if not compact_resupply.disabled:
+        var compact_order: Dictionary = Logistics.quote(board.state, board.selected_id)
+        compact_resupply.text = "Cargar M/F" if int(compact_order.get("fuel", 0)) + int(compact_order.get("cargo_fuel", 0)) > 0 else "Cargar mun."
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")

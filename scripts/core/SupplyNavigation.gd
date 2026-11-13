@@ -17,14 +17,16 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
         return none
     if not bool(observed["economy"].get("modern", false)):
         return none
-    if not unit.has("fuel") or not unit.has("ammo") or not Turns.can_move(unit, faction):
+    if not unit.has("ammo") or not Turns.can_move(unit, faction):
         return none
     var role: String = str(unit.get("role", ""))
+    if Logistics.fuel_capacity(role) > 0 and not unit.has("fuel"):
+        return none
     if role in ["fpv", "loitering", "usv"]:
         return none # These are expendable missiles, not returnable aircraft.
     var domain: String = Domains.domain(unit)
     var fuel_cap: int = Logistics.fuel_capacity(role)
-    var current_fuel: int = int(unit["fuel"])
+    var current_fuel: int = int(unit.get("fuel", 0))
     var ammo_cap: int = Logistics.ammo_capacity(role)
     var ammo_low: bool = ammo_cap > 0 and int(unit["ammo"]) <= 1
     var fuel_low: bool = fuel_cap > 0 and current_fuel <= maxi(4, int(fuel_cap / 3))

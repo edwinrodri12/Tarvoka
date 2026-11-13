@@ -62,9 +62,12 @@ static func _simulate(fog: bool, first: int) -> Dictionary:
                     bought += 1
                     assert(next["units"].size() == state["units"].size()+1)
                     var unit: Dictionary = next["units"].back()
-                    assert(unit.has("ammo") and unit.has("fuel"))
+                    assert(unit.has("ammo"))
                     assert(int(unit["ammo"]) == Logistics.ammo_capacity(str(unit["role"])))
-                    assert(int(unit["fuel"]) == Logistics.fuel_capacity(str(unit["role"])))
+                    if Logistics.fuel_capacity(str(unit["role"])) > 0:
+                        assert(unit.has("fuel") and int(unit["fuel"]) == Logistics.fuel_capacity(str(unit["role"])))
+                    else:
+                        assert(not unit.has("fuel"))
                 "move":
                     assert(next["units"].size() == state["units"].size())
                 "attack":

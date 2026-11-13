@@ -21,9 +21,11 @@ static func assess(knowledge: Dictionary, side: int) -> Dictionary:
     for unit in knowledge.get("units", []):
         if not unit is Dictionary or int(unit.get("faction",-1)) != side or int(unit.get("hp",0)) <= 0:
             continue
-        if not unit.has("ammo") or not unit.has("fuel"):
+        if not unit.has("ammo"):
             continue
         var role: String = str(unit.get("role", ""))
+        if Logistics.fuel_capacity(role) > 0 and not unit.has("fuel"):
+            continue
         if int(unit.get("attack", 0)) > 0:
             status["friendly_combat"] += 1
             if int(unit.get("ammo",0)) > 1 and (Logistics.fuel_capacity(role) == 0 or int(unit.get("fuel",0)) > 3):
@@ -125,9 +127,11 @@ static func best_resupply(state: Dictionary, knowledge: Dictionary, side: int) -
     for unit in knowledge.get("units", []):
         if not unit is Dictionary or int(unit.get("faction",-1)) != side or int(unit.get("hp",0)) <= 0:
             continue
-        if bool(unit.get("acted", true)) or not unit.has("ammo") or not unit.has("fuel"):
+        if bool(unit.get("acted", true)) or not unit.has("ammo"):
             continue
         var role: String = str(unit.get("role", ""))
+        if Logistics.fuel_capacity(role) > 0 and not unit.has("fuel"):
+            continue
         if role in ["fpv", "loitering", "usv"]:
             continue # Disposable drones should not return to rearm.
         var quote: Dictionary = Logistics.quote(state, str(unit["id"]))
@@ -136,7 +140,7 @@ static func best_resupply(state: Dictionary, knowledge: Dictionary, side: int) -
         var ammo_max: int = Logistics.ammo_capacity(role)
         var fuel_max: int = Logistics.fuel_capacity(role)
         var ammo: int = int(unit["ammo"])
-        var fuel: int = int(unit["fuel"])
+        var fuel: int = int(unit.get("fuel", 0))
         var missing_ammo: int = maxi(0, ammo_max - ammo)
         var missing_fuel: int = maxi(0, fuel_max - fuel)
         var load_needed: bool = role == "logistics" and (
