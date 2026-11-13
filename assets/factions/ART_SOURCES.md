@@ -20,7 +20,22 @@ Recursos **recortados de dos láminas aprobadas previamente por el usuario**, si
 
 Usar `VisualStyle.emblem_texture(index)` y `VisualStyle.commander_texture(index)` para mostrar el arte. Si algún día se añaden imágenes maestras individuales `assets/factions/<key>.png` y `assets/commanders/<key>.png`, éstas tienen prioridad sobre el atlas; el contrato de `emblem_path`/`commander_path` permanece compatible.
 
-Las facciones 4–7 conservan sus referencias del catálogo y los indicadores claros de **arte pendiente**, hasta que sus recursos aprobados se incorporen; no dibujar ni generar nuevos personajes para reemplazarlos.
+### Segunda tanda: las cuatro facciones restantes (integrada)
+
+`official_last_four_atlas.webp`: atlas WEBP de **640 × 273 px, calidad 80**, ~33 KiB. Misma distribución y coordenadas locales del primero (fila superior: cuatro escudos de 160×160; fila inferior: cuatro retratos de 160×113), pero corresponde a los índices **4, 5, 6 y 7** del catálogo. Los recortes se realizaron **sin rediseñar** las artes aprobadas:
+
+- Escudos: segunda fila de «Emblemas de facciones futuristas luminosas.png» (1536×1024), índice local `j = índice - 4`, rectángulo `x = 384×j, y = 535, w = 384, h = 384`.
+- Retratos: misma lámina oficial de comandantes `241959.png` (1536×864), índice total `i`, recorte `x = 192×i + 8, y = 329, w = 176, h = 124`.
+- El sistema carga automáticamente ambos archivos desde `VisualStyle.emblem_texture(i)` y `VisualStyle.commander_texture(i)`; `i` va de 0 a 7. El selector muestra el escudo en **cada opción** y, al seleccionarla, muestra el escudo grande y el retrato correspondiente.
+
+| ID | Facción | Escudo | Retrato original |
+| --- | --- | --- | --- |
+| 4 | Sindicato Violeta | Tres hexágonos | Comandante mujer de cabello violeta y gafas |
+| 5 | Legión Ámbar | Dragón blanco | Comandante veterano de barba gris y parche ocular |
+| 6 | Dominio Turquesa | Tridente sobre olas | Comandante mujer con gorra naval |
+| 7 | Orden Ónix | Insignia alada plateada | Comandante enmascarado de uniforme negro |
+
+**Estado actual: 8 escudos y 8 retratos aprobados integrados.** No hay placeholders de arte en las ocho fichas, salvo que fallen los recursos. Estas texturas están optimizadas para la pantalla del juego y no sustituyen los originales maestros para marketing o impresión.
 
 ### Alcance y calidad
 

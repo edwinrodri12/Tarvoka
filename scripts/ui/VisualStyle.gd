@@ -14,10 +14,11 @@ const FACTIONS = [
     {"key":"dominio_turquesa","name":"Dominio Turquesa","color":"#19BDD3","motif":"Tridente y olas"},
     {"key":"orden_onix","name":"Orden Ónix","color":"#AEB5C2","motif":"Insignia alada plateada"}
 ]
-# Optimized original-art atlas: top row four approved crests (160x160),
-# bottom row the four approved commander crops (160x113). From the
-# original approved sheets, not generated substitutes.
+# Eight approved crests + commander crops, in two small original-art atlases.
+# Each contains four 160x160 shields above four 160x113 portraits.
+# Both sources are the official, previously approved TARVOKA art sheets.
 const FIRST_FOUR_ATLAS := "res://assets/factions/official_first_four_atlas.webp"
+const LAST_FOUR_ATLAS := "res://assets/factions/official_last_four_atlas.webp"
 const FIRST_FOUR_COUNT := 4
 const CREST_SIZE := 160
 const COMMANDER_HEIGHT := 113
@@ -58,7 +59,7 @@ static func emblem_texture(index: int) -> Texture2D:
     # Individual master assets override the compact Android atlas if added.
     if ResourceLoader.exists(path):
         return ResourceLoader.load(path) as Texture2D
-    return _first_four_texture(index,false)
+    return _approved_atlas_texture(index,false)
 
 # Approved commander portraits will be imported at this predictable path.
 # The missing asset is handled explicitly; no generated stand-ins masquerade
@@ -74,20 +75,23 @@ static func commander_texture(index: int) -> Texture2D:
         return null
     if ResourceLoader.exists(path):
         return ResourceLoader.load(path) as Texture2D
-    return _first_four_texture(index,true)
+    return _approved_atlas_texture(index,true)
 
 # AtlasTexture exposes exact source regions without duplicating image memory
 # for each faction. The raw-file fallback lets headless tests run before the
 # editor import; Android production builds prefer the normal imported texture.
-static func _first_four_texture(index: int, commander: bool) -> Texture2D:
-    if index < 0 or index >= FIRST_FOUR_COUNT:
+static func _approved_atlas_texture(index: int, commander: bool) -> Texture2D:
+    if index < 0 or index >= FACTIONS.size():
         return null
+    var path: String = FIRST_FOUR_ATLAS if index < FIRST_FOUR_COUNT else LAST_FOUR_ATLAS
+    var local_index: int = index % FIRST_FOUR_COUNT
     var sheet: Texture2D = null
-    if ResourceLoader.exists(FIRST_FOUR_ATLAS):
-        sheet = ResourceLoader.load(FIRST_FOUR_ATLAS) as Texture2D
+    if ResourceLoader.exists(path):
+        sheet = ResourceLoader.load(path) as Texture2D
     if sheet == null:
+        # Keep headless/editor tests reliable before Godot's importer runs.
         var raw := Image.new()
-        if raw.load(FIRST_FOUR_ATLAS) != OK:
+        if raw.load(path) != OK:
             return null
         sheet = ImageTexture.create_from_image(raw)
     if sheet.get_width() != CREST_SIZE * FIRST_FOUR_COUNT:
@@ -96,7 +100,7 @@ static func _first_four_texture(index: int, commander: bool) -> Texture2D:
         return null
     var cut := AtlasTexture.new()
     cut.atlas = sheet
-    cut.region = Rect2(index * CREST_SIZE,
+    cut.region = Rect2(local_index * CREST_SIZE,
         CREST_SIZE if commander else 0,
         CREST_SIZE,
         COMMANDER_HEIGHT if commander else CREST_SIZE)
