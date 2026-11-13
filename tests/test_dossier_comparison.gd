@@ -28,7 +28,11 @@ func _run() -> void:
     var against_ifv: Dictionary = Compare.compare(modern,armor,"tank","ifv")
     assert(int(against_ifv["left"]["hp"]) > int(against_ifv["right"]["hp"]))
     assert(int(against_ifv["left"]["price"]) > int(against_ifv["right"]["price"]))
-    assert(against_ifv["rows"].size() == 7)
+    assert(against_ifv["rows"].size() == 8)
+    assert(not bool(tank["can_capture"]))
+    assert(bool(tank["road_fast"]))
+    assert(int(tank["fuel_capacity"]) > 0)
+    assert(bool(Compare.candidate(modern,my_factory,"scout")["can_capture"]))
     assert(Compare.candidate(modern,my_factory,"scout")["available"])
     assert(modern == saved) # Comparing doesn't buy.
 
