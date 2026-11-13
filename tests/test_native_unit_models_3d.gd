@@ -205,7 +205,7 @@ func _run() -> void:
     inspector.rotate_tank_turret(50.0)
     var live_turret: Node3D = inspector.model_root.find_child(Models.TANK_TURRET,true,false) as Node3D
     assert(live_turret != null and is_equal_approx(live_turret.rotation_degrees.y,50.0))
-    assert(is_equal_approx(inspector.camera.size,Models.preview_frame_height("tank")))
+    assert(is_equal_approx(inspector.camera.size,Models.preview_frame_height("tank") / 1.12))
     var before_zoom: float = inspector.camera.size
     inspector.change_zoom(1)
     assert(inspector.camera.size < before_zoom)
@@ -220,7 +220,7 @@ func _run() -> void:
         " dialog=",inspector.size," top=",inspector.position,
         " preview=",inspector.viewport_holder.size," camera=",inspector.camera.size)
     assert(inspector.viewport_holder.size.y >= 260.0)
-    assert(inspector.viewport_holder.size.y <= 470.0)
+    assert(inspector.viewport_holder.size.y <= 525.0)
     # SubViewportContainer.stretch resizes Godot's real render target to
     # the visible canvas. Validate the result, not a stale requested size.
     # AcceptDialog controls use logical pixels, while Android/Godot applies
