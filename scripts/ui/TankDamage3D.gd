@@ -382,4 +382,28 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var broken: Node3D = model.find_child(optics_name,true,false) as Node3D
             if broken != null:
                 broken.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_hero_v7",false):
+        # V7 armor permanently supersedes V5/V6. Never revive the original
+        # prototype on hit, destroy or repair. Keep the actual V7 model as the
+        # only visible hull and turret for every hit-point band.
+        for name in ["CascoHermeticoV5","TorreHermeticaV5",
+                "MejillaMonoliticaV6_-1","MejillaMonoliticaV6_1",
+                "BastidorCanonIntegradoV6","BordeMantleteCeramicoV6",
+                "ModuloOpticoPanoramicoV6","VentanaOpticaPanoramicaV6",
+                "SensorDeApuntamientoV6","LenteDeApuntamientoV6"]:
+            var old_part: Node3D = model.find_child(name,true,false) as Node3D
+            if old_part != null:
+                old_part.visible = false
+        for name in ["ModuloBlindajeCeramicoV7_1",
+                "HombroBastidorV7_1","FaldonBlindadoIntegradoV7_1"]:
+            var armor: Node3D = model.find_child(name,true,false) as Node3D
+            if armor != null:
+                armor.visible = stage < 3
+        for name in ["MantleteConjuntoV7","CollarBlindajeCanonV7",
+                "AnilloAceroCanonV7_0","AnilloAceroCanonV7_1",
+                "AnilloAceroCanonV7_2",
+                "ModuloVisionIntegradoV7_1","CristalVisionIntegradoV7_1"]:
+            var destroyed: Node3D = model.find_child(name,true,false) as Node3D
+            if destroyed != null:
+                destroyed.visible = stage < 4
     return true
