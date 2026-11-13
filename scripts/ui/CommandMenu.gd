@@ -20,6 +20,8 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
 const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
+const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 
 var board: Control
 var tabs: TabContainer
@@ -29,6 +31,10 @@ var army_body: VBoxContainer
 var production_body: VBoxContainer
 var settings_body: VBoxContainer
 var _cached_signature := -1
+var selected_catalog_role := ""
+var comparison_catalog_role := ""
+var production_site_key := ""
+var comparison_preview: Control
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
 # the map receives all touches until the player explicitly opens the drawer.
@@ -138,6 +144,63 @@ func _unit_action(body: VBoxContainer, role: String, label_text: String, action:
     portrait.configure(role,VisualStyle.faction_color(clampi(faction,0,7)))
     _action(row,label_text,action,enabled)
 
+func _production_unit_row(role: String, viewer: int) -> void:
+    var record: Dictionary = CompareData.candidate(board.state,board.selected_factory_pos,role,viewer)
+    if record.is_empty():
+        return
+    var card := PanelContainer.new()
+    var background := StyleBoxFlat.new()
+    background.bg_color = Color("#122332")
+    background.content_margin_left = 7
+    background.content_margin_right = 7
+    background.content_margin_top = 5
+    background.content_margin_bottom = 5
+    card.add_theme_stylebox_override("panel",background)
+    production_body.add_child(card)
+    var stack := VBoxContainer.new()
+    card.add_child(stack)
+    var top := HBoxContainer.new()
+    stack.add_child(top)
+    var portrait := UnitIcon.new()
+    portrait.custom_minimum_size = Vector2(52,52)
+    top.add_child(portrait)
+    portrait.configure(role,VisualStyle.faction_color(clampi(viewer,0,7)))
+    var details := VBoxContainer.new()
+    details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(details)
+    _description(details,"%s · %d créditos" % [str(record["name"]),int(record["price"])])
+    _description(details,"ATQ %d · DEF %d · MOV %d · RANGO %d-%d" % [
+        int(record["attack"]),int(record["defense"]),int(record["move"]),
+        int(record["range_min"]),int(record["range_max"])
+    ])
+    var commands := HBoxContainer.new()
+    commands.add_theme_constant_override("separation",5)
+    stack.add_child(commands)
+    _action(commands,"Ficha",func(): _select_production_role(role))
+    _action(commands,"Comparar",func(): _compare_production_role(role))
+    var buy: Button = _action(commands,"Comprar",func(): purchase_requested.emit(role),bool(record.get("available",false)))
+    buy.tooltip_text = str(record.get("reason",""))
+
+func _select_production_role(role: String) -> void:
+    selected_catalog_role = role
+    if comparison_catalog_role == role:
+        comparison_catalog_role = ""
+    _update_comparison_preview()
+
+func _compare_production_role(role: String) -> void:
+    if selected_catalog_role.is_empty():
+        selected_catalog_role = role
+    else:
+        comparison_catalog_role = "" if role == selected_catalog_role else role
+    _update_comparison_preview()
+
+func _update_comparison_preview() -> void:
+    if comparison_preview == null or board == null:
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",0))
+    comparison_preview.show_comparison(CompareData.compare(
+        board.state,board.selected_factory_pos,selected_catalog_role,comparison_catalog_role,viewer))
+
 func open_for(source: Control, section: String = "") -> void:
     board = source
     refresh()
@@ -198,6 +261,7 @@ func refresh() -> void:
 
     _clear(production_body)
     _heading(production_body,"Produccion de unidades")
+    comparison_preview = null
     var economy: Dictionary = state.get("economy",{})
     if economy.is_empty():
         _description(production_body,"La economia no esta activada en esta batalla.")
@@ -207,20 +271,34 @@ func refresh() -> void:
             _description(production_body,"Selecciona primero una base propia en el mapa. Aqui apareceran solo las unidades que esa instalacion puede fabricar.")
         else:
             var kind: String = str(site.get("kind",""))
-            _description(production_body,"Instalacion: %s  ·  (%d,%d)" % [kind,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1])
+            var next_key: String = "%s:%s" % [str(board.selected_factory_pos),kind]
+            if next_key != production_site_key:
+                production_site_key = next_key
+                selected_catalog_role = ""
+                comparison_catalog_role = ""
+            _description(production_body,"Instalación: %s · (%d,%d)" % [kind,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1])
             var modern: bool = bool(economy.get("modern",false))
             var roles: Array = Roles.ORDER.duplicate()
             if modern:
                 roles.append_array(Arsenal.ORDER)
             var available := 0
+            var filtered: Array[String] = []
             for candidate in roles:
                 var role: String = str(candidate)
                 if Economy.producer_for(role,modern) != kind:
                     continue
                 available += 1
-                var can_build: bool = Economy.can_purchase(state,board.selected_factory_pos,role)
-                var text_value: String = "%s  ·  %d cr. %s" % [Roles.label(role),Economy.cost(role),"✓" if can_build else "· No disponible"]
-                _unit_action(production_body,role,text_value,func(): purchase_requested.emit(role),can_build,viewer)
+                filtered.append(role)
+            if selected_catalog_role not in filtered:
+                selected_catalog_role = str(filtered[0]) if not filtered.is_empty() else ""
+            if comparison_catalog_role not in filtered or comparison_catalog_role == selected_catalog_role:
+                comparison_catalog_role = str(filtered[1]) if filtered.size() > 1 and selected_catalog_role == str(filtered[0]) else ""
+            comparison_preview = CompareView.new()
+            production_body.add_child(comparison_preview)
+            _update_comparison_preview()
+            _description(production_body,"Pulsa Ficha para seleccionar A o Comparar para elegir B. Comprar es independiente.")
+            for role in filtered:
+                _production_unit_row(role,viewer)
             if available == 0:
                 _description(production_body,"No hay unidades disponibles para esta instalacion.")
 
