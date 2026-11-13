@@ -24,6 +24,15 @@ func _run() -> void:
     assert(hull != null and turret != null and finish_root != null)
     assert(hull.find_child("AcabadoChasis",false,false) != null)
     assert(turret.find_child("AcabadoTorreta",false,false) != null)
+    var angular_hull: MeshInstance3D = tank.find_child("CorazaCascoAngular",true,false) as MeshInstance3D
+    var angular_turret: MeshInstance3D = tank.find_child("CorazaTorreFacetada",true,false) as MeshInstance3D
+    assert(angular_hull != null and angular_turret != null)
+    assert(angular_hull.mesh is ArrayMesh and angular_turret.mesh is ArrayMesh)
+    assert(angular_hull.visible and angular_turret.visible)
+    var prototype_hull: MeshInstance3D = tank.find_child("MonocascoBlindajeCompuesto",true,false) as MeshInstance3D
+    var prototype_turret: MeshInstance3D = tank.find_child("TorreBlindada",true,false) as MeshInstance3D
+    assert(prototype_hull != null and prototype_turret != null)
+    assert(not prototype_hull.visible and not prototype_turret.visible)
     assert(not Finish.apply(tank)) # No accidental duplicate draw calls.
     var cheek: MeshInstance3D = tank.find_child("MejillaCeramicaBiselada1",true,false) as MeshInstance3D
     var glacis: MeshInstance3D = tank.find_child("ModuloGlacisBiselado-1",true,false) as MeshInstance3D
