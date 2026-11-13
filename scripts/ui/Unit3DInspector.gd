@@ -28,6 +28,7 @@ var tank_animation_button: Button
 var tank_move_button: Button
 var tank_stop_button: Button
 var tank_damage_picker: OptionButton
+var tank_damage_label: Label
 var tank_hit_button: Button
 var tank_destroy_button: Button
 var tank_repair_button: Button
@@ -94,7 +95,8 @@ func _ready() -> void:
     animation_controls.add_child(tank_stop_button)
     animation_controls.visible = false
 
-    var damage_caption := Label.new()
+    tank_damage_label = Label.new()
+    var damage_caption: Label = tank_damage_label
     damage_caption.name = "TituloDanio"
     damage_caption.text = "ESTADO DEL TANQUE · DESTRUCCIÓN 3D"
     damage_caption.add_theme_font_size_override("font_size",13)
@@ -255,7 +257,7 @@ func show_role(role: String) -> void:
     faction_paint_picker.visible = (role == "tank")
     tank_move_button.get_parent().visible = (role == "tank")
     tank_damage_picker.visible = (role == "tank")
-    tank_damage_picker.get_parent().find_child("TituloDanio",false,false).visible = (role == "tank")
+    tank_damage_label.visible = (role == "tank")
     tank_hit_button.get_parent().visible = (role == "tank")
     tank_repair_button.visible = (role == "tank")
     tank_damage_picker.select(0)
@@ -295,7 +297,7 @@ func set_damage_stage(stage: int) -> void:
     stop_tank_animation()
     if TankDamage.apply_stage(model_root,stage):
         tank_damage_picker.select(stage)
-        info.text = "Tanque principal · " + str(TankDamage.STAGES[stage]) +             " · Estado artístico de prueba (sin afectar puntos de vida)."
+        info.text = "Tanque principal · %s · Destrucción visual de prueba (sin alterar HP)." % str(TankDamage.STAGES[stage])
 
 func simulate_tank_hit() -> void:
     if _current_role != "tank" or model_root == null:
