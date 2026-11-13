@@ -15,6 +15,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -35,6 +36,8 @@ static func encode(state: Dictionary) -> String:
         "terrain": state["terrain"],
         "units": units
     }
+    if state.has(Identity.STATE_FIELD):
+        snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
     if state.has("map_seed"):
         snapshot["map_seed"] = int(state["map_seed"])
     if state.has("opening"):
@@ -220,6 +223,8 @@ static func decode(raw: String) -> Dictionary:
     return state
 
 static func _valid_state(state: Dictionary) -> bool:
+    if state.has(Identity.STATE_FIELD) and not Identity.is_valid(state[Identity.STATE_FIELD]):
+        return false
     if not state.get("terrain") is Array or not Rules.valid_terrain(state["terrain"]):
         return false
     var dimensions: Vector2i = Rules.map_size(state["terrain"])

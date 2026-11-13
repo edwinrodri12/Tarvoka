@@ -2,14 +2,15 @@ extends RefCounted
 class_name TarvokaSiteOverlayPainter
 
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 # Map-first graphic affordances. Small badges indicate ownership and current
 # ACTIONABLE status, not progress or made-up income ticks. No hitboxes, no
 # textures or repeated labels on zoomed-out maps; touches keep their tiles.
 
-static func owner_tint(owner: int) -> Color:
+static func owner_tint(owner: int, state: Dictionary = {}) -> Color:
     if owner in [0,1]:
-        return VisualStyle.faction_color(owner)
+        return Identity.color_for(state,owner)
     if owner == -1:
         return Color("#DECA81") # Confirmed neutral.
     return Color("#778895") # Unconfirmed owner under fog.
@@ -59,10 +60,10 @@ static func selected_caption(marker: Dictionary) -> String:
         return "Instalación"
     return caption
 
-static func draw_classic(canvas: CanvasItem, marker: Dictionary, top_left: Vector2, tile: float, selected: bool) -> void:
+static func draw_classic(canvas: CanvasItem, marker: Dictionary, top_left: Vector2, tile: float, selected: bool, state: Dictionary = {}) -> void:
     if tile < 16.0:
         return
-    var tint: Color = owner_tint(int(marker.get("owner",-2)))
+    var tint: Color = owner_tint(int(marker.get("owner",-2)),state)
     # Small owner flag is always in a consistent corner; separate from
     # player unit's ammo badges and from the symbol at tile center.
     var flag := Rect2(top_left+Vector2(tile*0.07,tile*0.07),
@@ -88,10 +89,10 @@ static func draw_classic(canvas: CanvasItem, marker: Dictionary, top_left: Vecto
         canvas.draw_string(ThemeDB.fallback_font,text_position,
             label,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size,Color("#FFE7AB"))
 
-static func draw_iso(canvas: CanvasItem, marker: Dictionary, center: Vector2, hw: float, selected: bool, battery_saver: bool = false) -> void:
+static func draw_iso(canvas: CanvasItem, marker: Dictionary, center: Vector2, hw: float, selected: bool, battery_saver: bool = false, state: Dictionary = {}) -> void:
     if hw < 9.0:
         return
-    var tint: Color = owner_tint(int(marker.get("owner",-2)))
+    var tint: Color = owner_tint(int(marker.get("owner",-2)),state)
     var anchor: Vector2 = center+Vector2(-hw*0.32,-hw*0.23)
     var flag_len: float = clampf(hw*0.30,4.0,16.0)
     canvas.draw_line(anchor,anchor+Vector2(flag_len,0),Color("#08131D"),maxf(3.0,hw*0.12))

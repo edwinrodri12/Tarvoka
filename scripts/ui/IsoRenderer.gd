@@ -6,6 +6,7 @@ class_name TarvokaIsoRenderer
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -116,9 +117,9 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var owner: int = int(objective["owner"]) if not fog or visible.has(cell) else -1
             var tint := Color("#F2C04C")
             if owner == 0:
-                tint = VisualStyle.faction_color(0)
+                tint = Identity.color_for(state,0)
             elif owner == 1:
-                tint = VisualStyle.faction_color(1)
+                tint = Identity.color_for(state,1)
             var c: Vector2 = _center(cell, canvas, zoom, pan, dims)
             var badge: PackedVector2Array = PackedVector2Array([
                 c + Vector2(0, -hh * 0.64), c + Vector2(hw * 0.26, 0),
@@ -134,11 +135,11 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var cell: Vector2i = marker["pos"]
             if not bounds.has_point(cell):
                 continue
-            var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
+            var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
             WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
             var selected: bool = cell == selected_factory_pos or cell == inspected_cell
-            SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver)
+            SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver,state)
             if selected:
                 canvas.draw_polyline(_ring(_poly(cell,canvas,zoom,pan,dims)),
                     Color("#FFE451"),maxf(2.0,hw*0.055),true)
@@ -220,7 +221,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 break
         if is_air:
             c += Vector2(hw * 0.23, -hh * 0.48 + sin(phase*2.5) * hh*0.08)
-        var tint: Color = VisualStyle.faction_color(int(unit["faction"]))
+        var tint: Color = Identity.color_for(state,int(unit["faction"]))
         var face: Color = tint.darkened(0.46) if bool(unit.get("acted", false)) else (tint.darkened(0.18) if bool(unit.get("moved", false)) else tint)
         var role: String = str(unit.get("role",""))
         var radius: float = hw * (0.29 if is_air else 0.33)

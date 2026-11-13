@@ -20,6 +20,8 @@ const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const SavedMatchesMenu = preload("res://scripts/ui/SavedMatchesMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
+const FactionSelection = preload("res://scripts/ui/FactionSelection.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
 const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
@@ -46,6 +48,8 @@ var saved_matches_menu: Control
 var _command_from_home := false
 var _gallery_from_home := false
 var skirmish_setup: Control
+var faction_selector: Control
+var _pending_visual_factions: Dictionary = {}
 var compact_combat_preview: Control
 var sidebar_combat_preview: Control
 var command_menu_button: Button
@@ -632,6 +636,7 @@ func _ready() -> void:
     new_game_dialog.dialog_text = "Se reemplazara el progreso guardado automaticamente. El guardado manual no se borrara. Continuar?"
     new_game_dialog.ok_button_text = "Confirmar"
     new_game_dialog.confirmed.connect(_confirm_new_game)
+    new_game_dialog.canceled.connect(func(): _pending_visual_factions.clear())
     add_child(new_game_dialog)
 
     command_menu = CommandMenu.new()
@@ -694,6 +699,12 @@ func _ready() -> void:
     skirmish_setup.back_requested.connect(_back_from_skirmish)
     skirmish_setup.advanced_requested.connect(_show_advanced_skirmish)
     skirmish_setup.start_requested.connect(_start_skirmish_setup)
+    skirmish_setup.factions_requested.connect(_open_faction_selection)
+
+    faction_selector = FactionSelection.new()
+    add_child(faction_selector)
+    faction_selector.back_requested.connect(_cancel_faction_selection)
+    faction_selector.confirmed.connect(_confirm_faction_selection)
 
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
@@ -1249,14 +1260,20 @@ func _process(_delta: float) -> void:
         _update_text(result_detail, defeat_mode + "\n" + _battle_summary() + "\nIntenta una estrategia diferente.")
         _update_text(status_label, "Batalla terminada")
     else:
-        _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
+        var team_id: int = int(board.state.get("faction",0))
+        var team_label := "Faccion %d" % (team_id+1)
+        if board.state.has(Identity.STATE_FIELD):
+            team_label = "%s · Bando %d" % [Identity.name_for(board.state,team_id),team_id+1]
+        _update_text(status_label, "%s | %s" % [team_label,board.message])
     compact_status.text = status_label.text
     compact_detail.text = unit_label.text.replace("\n","  ")
     if expanded_header != null:
         var side: int = int(board.state.get("faction",0))
         var header_text: String = ("ALIANZA AZUL" if side == 0 else "PACTO ROJO")
+        if board.state.has(Identity.STATE_FIELD):
+            header_text = Identity.name_for(board.state,side).to_upper()
         if board.ai_enabled and side == 1:
-            header_text = "TURNO DEL RIVAL"
+            header_text = "TURNO DEL RIVAL · %s" % Identity.name_for(board.state,side).to_upper() if board.state.has(Identity.STATE_FIELD) else "TURNO DEL RIVAL"
         header_text = "TARVOKA   ◈   %s   |   %s" % [header_text,
             ("BATALLA FINALIZADA" if winner != -1 else "OPERACIÓN EN CURSO")]
         if board.state.has("economy"):
@@ -1348,6 +1365,11 @@ func _new_game() -> void:
     if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, objective_name, starter_name]
+    var match_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else Identity.from_state(board.state)
+    if Identity.is_valid(match_identity):
+        new_game_dialog.dialog_text += "\nBandos: %s contra %s (identidad visual)." % [
+            Identity.name_for({Identity.STATE_FIELD:match_identity},0),
+            Identity.name_for({Identity.STATE_FIELD:match_identity},1)]
     # Avoid opening a native modal in the headless test runner.
     if DisplayServer.get_name() != "headless":
         new_game_dialog.popup_centered()
@@ -1360,7 +1382,9 @@ func _confirm_new_game() -> void:
         board.message = "La economia requiere formacion experimental."
         return
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size())
+    var next_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else (Identity.from_state(board.state) if board.state.has(Identity.STATE_FIELD) else {})
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity)
+    _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
         skirmish_setup.hide()
@@ -1428,6 +1452,9 @@ func _refresh_production_catalog() -> void:
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
+    _pending_visual_factions.clear()
+    if faction_selector != null:
+        faction_selector.hide()
     _command_from_home = false
     _close_results_screen()
     command_menu.hide()
@@ -1468,7 +1495,9 @@ func _prepare_skirmish() -> void:
     home_menu.hide()
     saved_matches_menu.hide()
     command_menu.hide()
+    faction_selector.hide()
     skirmish_setup.load_choices({
+        "factions":Identity.from_state(board.state),
         "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(), "fog":fog_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
@@ -1477,7 +1506,23 @@ func _prepare_skirmish() -> void:
     })
     skirmish_setup.show()
 
+func _open_faction_selection() -> void:
+    skirmish_setup.hide()
+    faction_selector.open_for(skirmish_setup.selected_factions)
+
+func _cancel_faction_selection() -> void:
+    faction_selector.hide()
+    skirmish_setup.show()
+
+func _confirm_faction_selection(values: Dictionary) -> void:
+    if not Identity.is_valid(values):
+        return
+    skirmish_setup.set_factions(values)
+    faction_selector.hide()
+    skirmish_setup.show()
+
 func _back_from_skirmish() -> void:
+    _pending_visual_factions.clear()
     skirmish_setup.hide()
     home_menu.show()
 
@@ -1495,6 +1540,7 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     balance_picker.select(int(configuration["balance"]))
     first_picker.select(int(configuration["first"]))
     map_seed_picker.value = int(configuration["seed"])
+    _pending_visual_factions = Identity.resolved(configuration.get("factions",{}))
     _new_game() # Same confirmation, permissions and autosave guards.
 
 func _open_arsenal_from_home() -> void:

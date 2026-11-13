@@ -30,6 +30,16 @@ jobs:
           fi
           grep -F 'PASS concept rail' /tmp/tarvoka-concept-battle-rail.log
 
+      - name: Validate eight official faction identities, commander slot and save-safe skirmish selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_eight_faction_selection.gd 2>&1 | tee /tmp/tarvoka-faction-selection.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-faction-selection.log; then
+            echo 'Faction selection visual/state regression'; exit 1
+          fi
+          grep -F 'PASS eight faction skirmish selection' /tmp/tarvoka-faction-selection.log
+
       - name: Validate official TARVOKA home, real saved matches and map preview
         shell: bash
         run: |

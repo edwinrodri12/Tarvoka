@@ -19,6 +19,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
@@ -78,7 +79,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8)) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}) -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -119,6 +120,9 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
+    if Identity.is_valid(chosen_factions):
+        # Cosmetic team presentation only; no new engine faction values.
+        state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
     inspected_cell = Vector2i(-1,-1)
     if is_seeded:
         state["map_seed"] = map_seed
@@ -353,7 +357,7 @@ func _draw() -> void:
     if state.has("economy"):
         for marker in site_overlay_snapshots():
             var city_cell: Vector2i = marker["pos"]
-            var city_tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]))
+            var city_tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var top_left := origin + Vector2(city_cell) * tile
             var center := top_left + Vector2.ONE * (tile * 0.5)
             var is_town: bool = str(marker["kind"]) == "city"
@@ -365,7 +369,7 @@ func _draw() -> void:
                 var symbol: String = str(markers.get(str(marker["kind"]),"?"))
                 draw_string(font,center+Vector2(-tile*0.14,tile*0.12),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,int(max(11.0,tile*0.27)),city_tint)
             var selected: bool = city_cell == selected_factory_pos or city_cell == inspected_cell
-            SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected)
+            SiteOverlayPainter.draw_classic(self,marker,top_left,tile,selected,state)
             if selected:
                 draw_rect(Rect2(top_left,Vector2.ONE*tile),Color("#FFE451"),false,maxf(2.0,tile*0.045))
     # Legal destinations in green, adjacent attack targets in red.
@@ -422,7 +426,7 @@ func _draw() -> void:
         if airborne:
             center += Vector2(tile * 0.24, -tile * 0.22)
         var is_player := int(unit["faction"]) == 0
-        var color: Color = VisualStyle.faction_color(0 if is_player else 1)
+        var color: Color = Identity.color_for(state,0 if is_player else 1)
         var face: Color = color.darkened(0.45) if unit.get("acted", false) else (color.darkened(0.18) if unit.get("moved", false) else color)
         # Circle vs square still indicates faction. Smaller airborne symbols
         # have an independent light ring and wing cross, not a borrowed asset.
