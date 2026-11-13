@@ -16,6 +16,8 @@ on:
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
+      - "tools/export_battle3d_preview.gd"
+      - "tools/battle3d-gallery.html"
   pull_request:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
@@ -29,6 +31,8 @@ on:
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
+      - "tools/export_battle3d_preview.gd"
+      - "tools/battle3d-gallery.html"
   workflow_dispatch:
 
 permissions:
@@ -103,6 +107,24 @@ jobs:
           grep -F 'PASS exported native 3D terrain: terrain3d-full.png' /tmp/tarvoka-terrain3d-preview.log
           grep -F 'PASS exported native 3D terrain: terrain3d-medium.png' /tmp/tarvoka-terrain3d-preview.log
           cp tools/terrain3d-gallery.html build/map3d-previews/index.html
+      - name: Capture same tactical battle in playable 3D and isometric fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s "-screen 0 1600x960x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/export_battle3d_preview.gd \
+            2>&1 | tee /tmp/tarvoka-live-3d-battle-frames.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-live-3d-battle-frames.log; then
+            echo 'Battle 3D screenshot export failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS battle view preview: battle-native-3d.png' /tmp/tarvoka-live-3d-battle-frames.log
+          grep -F 'PASS battle view preview: battle-2d-fallback.png' /tmp/tarvoka-live-3d-battle-frames.log
+          cp tools/battle3d-gallery.html build/battle3d-previews/index.html
+
       - name: Validate screenshots and detail variation
         shell: bash
         run: |
@@ -130,6 +152,13 @@ jobs:
           path: build/map3d-previews/
           if-no-files-found: error
           retention-days: 21
+      - name: Upload real tactical 3D vs 2D fallback screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-battle3d-vs-2d-preview
+          path: build/battle3d-previews/
+          if-no-files-found: error
+          retention-days: 21
       - name: Explain how to review the 3D environment
         run: |
           {
@@ -137,5 +166,6 @@ jobs:
             echo 'Download the **tarvoka-native-terrain3d-preview** artifact.'
             echo 'Unzip and open **index.html** in your browser to compare full vs medium 3D.'
             echo 'Open an approved Rio Azul concept reference alongside the actual engine render.'
-            echo 'This scene is a visual 3D module, **not yet** the interactive battle renderer.'
+            echo 'The tactical battle now has an opt-in 3D viewport; normal isometric view remains the fallback.'
+            echo 'Download **tarvoka-battle3d-vs-2d-preview** to inspect the SAME TouchBoard battle in both modes.'
           } >> "$GITHUB_STEP_SUMMARY"
