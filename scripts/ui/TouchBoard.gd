@@ -34,6 +34,7 @@ var inspected_enemy_id := "" # Only currently visible enemy, never saved.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
+var inspected_cell := Vector2i(-1,-1) # UI-only terrain/building inspection; not saved.
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var last_economy_report := ""
@@ -106,6 +107,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
+    inspected_cell = Vector2i(-1,-1)
     if is_seeded:
         state["map_seed"] = map_seed
     selected_factory_pos = Vector2i(-1,-1)
@@ -610,11 +612,12 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
                     Color(1.0, 0.28, 0.18, alpha), maxf(2.0, tile * 0.04))
 
 func cancel_selection() -> void:
-    if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1):
+    if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1) and inspected_cell == Vector2i(-1,-1):
         return
     selected_id = ""
     inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
+    inspected_cell = Vector2i(-1,-1)
     pending_order.clear()
     message = "Seleccion cancelada."
     queue_redraw()
@@ -919,6 +922,7 @@ func _tap(point: Vector2) -> void:
     var cell: Vector2i = screen_cell(point)
     if cell.x < 0 or cell.y < 0:
         return
+    inspected_cell = cell # Any revealed tile may show contextual info.
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
     var units_here: Array = []
@@ -1161,6 +1165,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     unit_headings.clear()
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
+    inspected_cell = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
@@ -1205,6 +1210,7 @@ func resume_autosave() -> bool:
     unit_headings.clear()
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
+    inspected_cell = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
