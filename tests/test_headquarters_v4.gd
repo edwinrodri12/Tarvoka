@@ -50,6 +50,9 @@ func _run() -> void:
         assert(pad.position.y < -1.0)
         var radar: Node3D = v4.find_child("RadarPremium3D",true,false) as Node3D
         assert(radar != null and radar.scale.x > 1.5)
+        var reflector: MeshInstance3D = v4.find_child("PlatoParabolicoConcavo",true,false) as MeshInstance3D
+        assert(reflector != null and reflector.get_meta("tarvoka_reflector_double_sided",false))
+        assert((reflector.material_override as StandardMaterial3D).cull_mode == BaseMaterial3D.CULL_DISABLED)
         var cloth: MeshInstance3D = v4.find_child("TelaBanderaOndulada",true,false) as MeshInstance3D
         assert(cloth != null and cloth.mesh is ArrayMesh)
         assert(cloth.has_meta("tarvoka_faction_panel"))
@@ -99,6 +102,7 @@ func _run() -> void:
     studio._reset_camera()
     for i in range(9):
         await process_frame
+    assert(studio.camera.position.x < 0.0)
     assert(studio.hq_version_picker.item_count == 4)
     assert(studio.hq_version_picker.selected == 0)
     assert(studio._hq_show_v4)
