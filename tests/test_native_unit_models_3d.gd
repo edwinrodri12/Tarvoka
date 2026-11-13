@@ -134,8 +134,22 @@ func _run() -> void:
     inspector.show_role("tank")
     assert(inspector._current_role == "tank")
     assert(Models.inspect_meshes(inspector.model_root) >= 25)
+    assert(is_equal_approx(inspector.camera.size,Models.preview_frame_height("tank")))
+    var before_zoom: float = inspector.camera.size
+    inspector.change_zoom(1)
+    assert(inspector.camera.size < before_zoom)
+    inspector.rotate_model(30.0)
+    assert(inspector.model_root.rotation_degrees.y > 60.0)
     inspector.reset_rotation()
     assert(is_zero_approx(inspector.model_root.rotation_degrees.y))
+    assert(is_equal_approx(inspector.camera.size,before_zoom))
+    await process_frame
+    assert(inspector.viewport_holder.size.y >= 300.0)
+    var inspector_image: Image = app.get_viewport().get_texture().get_image()
+    assert(inspector_image != null and not inspector_image.is_empty())
+    assert(inspector_image.save_png("res://artifacts/tarvoka_3d_inspector_android.png") == OK)
+    print("VISOR3D: dialog=",inspector.size," preview=",inspector.viewport_holder.size,
+        " model_camera=",inspector.camera.size)
     assert(live_board.state == save_state)
     inspector.hide()
     app.queue_free()
