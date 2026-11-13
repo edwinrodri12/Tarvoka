@@ -68,6 +68,15 @@ jobs:
             echo "Android pinch/camera gesture regression"; exit 1
           fi
 
+      - name: Validate fullscreen Android battle HUD and focused large-map camera
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_battle_focus_hud.gd 2>&1 | tee /tmp/tarvoka-battle-hud.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-battle-hud.log; then
+            echo "Fullscreen battle HUD, campaign camera or order safety regression"; exit 1
+          fi
+
       - name: Benchmark large-map viewport, minimap texture cache and Android battery toggle
         shell: bash
         run: |
