@@ -335,9 +335,11 @@ func _confirm() -> void:
         confirmed.emit(selected.duplicate(true))
 
 func _reflow() -> void:
+    reflow_for_size(get_viewport_rect().size)
+
+func reflow_for_size(viewport: Vector2) -> void:
     if content_rail == null:
         return
-    var viewport: Vector2 = get_viewport_rect().size
     # Physical Android phones can be 1080px wide yet still be portrait.
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
     is_portrait_layout = viewport.y > viewport.x * 1.12 or viewport.x < 880.0
