@@ -72,7 +72,7 @@ func _run() -> void:
     var scene: PackedScene = load("res://scenes/HeadquartersShowroom.tscn")
     assert(scene != null)
     var showroom: Control = scene.instantiate()
-    assert(showroom is UI)
+    assert(showroom.get_script() == UI)
     root.add_child(showroom)
     assert(showroom.get("model") != null)
     assert(showroom.show_spec(3,7,"danado"))
