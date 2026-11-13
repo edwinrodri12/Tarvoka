@@ -312,6 +312,62 @@ static func _ellipsoid(parent: Node3D, label: String, center: Vector3,
     parent.add_child(leaf)
     return leaf
 
+static func _scatter_grass(parent: Node3D, scene: int) -> void:
+    # Efficient visible texture for large battlefields: hundreds of blades,
+    # but exactly ONE MultiMesh draw group instead of many Godot nodes.
+    var grass_mesh_tool := SurfaceTool.new()
+    grass_mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for blade_index in range(3):
+        var angle: float = float(blade_index)*TAU/3.0
+        var dx: float = cos(angle)*0.115
+        var dz: float = sin(angle)*0.115
+        var height: float = 0.24 if blade_index == 0 else 0.17
+        var triangle: Array[Vector3] = [
+            Vector3(-dx,0,-dz), Vector3(dx,0,dz),
+            Vector3(-dz*0.15,height,dx*0.15)]
+        # Both faces are rendered with CULL_DISABLED, so no doubles.
+        for vertex in triangle:
+            grass_mesh_tool.add_vertex(vertex)
+    grass_mesh_tool.generate_normals()
+    var mesh: ArrayMesh = grass_mesh_tool.commit()
+    var mat: StandardMaterial3D = _material(
+        Color("#527a46") if scene == 0 else (
+        Color("#99885e") if scene == 1 else Color("#3c7765"))
+    var grass_material := mat.duplicate() as StandardMaterial3D
+    grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    grass_material.roughness = 0.98
+    mesh.surface_set_material(0,grass_material)
+    var candidates: Array[Transform3D] = []
+    for z in range(HEIGHT):
+        for x in range(WIDTH):
+            if kind(x,z,scene) not in ["plain","forest"]:
+                continue
+            var origin: Vector3 = _cell_center(x,z)
+            var seed: int = x*83+z*127
+            for index in range(7):
+                var a: float = float(posmod(seed*3 + index*29,360))*PI/180.0
+                var r: float = 0.35+float(posmod(seed+index*17,19))*0.038
+                var offset := Vector3(cos(a)*r,0,sin(a)*r)
+                var pos: Vector3 = origin+offset
+                pos.y = height_at(x,z,scene)+0.012
+                var yaw: float = float(posmod(seed*7+index*13,360))*PI/180.0
+                var scale_factor: float = 0.69+float(posmod(seed+index*5,11))*0.055
+                var transform := Transform3D(Basis(Vector3.UP,yaw),pos)
+                transform.basis = transform.basis.scaled(Vector3.ONE*scale_factor)
+                candidates.append(transform)
+    if candidates.is_empty():
+        return
+    var multi := MultiMesh.new()
+    multi.transform_format = MultiMesh.TRANSFORM_3D
+    multi.mesh = mesh
+    multi.instance_count = candidates.size()
+    for index in range(candidates.size()):
+        multi.set_instance_transform(index,candidates[index])
+    var group := MultiMeshInstance3D.new()
+    group.name = "HierbaInstanciadaEnUnaMalla"
+    group.multimesh = multi
+    parent.add_child(group)
+
 static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> void:
     var size: float = 0.75 + float(posmod(seed,5))*0.085
     _cylinder(parent,"Tronco_%d" % seed,center + Vector3(0,size*0.34,0),
@@ -467,6 +523,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.add_child(props)
     if continuous:
         _continuous_ground(tiles,preset)
+        _scatter_grass(props,preset)
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
