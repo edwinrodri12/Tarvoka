@@ -30,6 +30,7 @@ var order_preview_label: Label
 var unit_label: Label
 var command_menu: Control
 var objectives_panel: Control
+var objectives_scrim: ColorRect
 var objectives_button: Button
 var compact_objectives_button: Button
 var home_menu: Control
@@ -610,9 +611,17 @@ func _ready() -> void:
     command_menu.home_requested.connect(_show_home_menu)
     command_menu.objectives_requested.connect(_open_objectives_radar)
 
+    # The backdrop is translucent so the map remains visible, but it stops
+    # battlefield taps and end-turn shortcuts while the drawer is open.
+    objectives_scrim = ColorRect.new()
+    objectives_scrim.color = Color(0.0,0.015,0.035,0.20)
+    objectives_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+    objectives_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(objectives_scrim)
+    objectives_scrim.hide()
     objectives_panel = ObjectivesPanel.new()
     add_child(objectives_panel)
-    objectives_panel.close_requested.connect(func(): objectives_panel.hide())
+    objectives_panel.close_requested.connect(_close_objectives_radar)
     objectives_panel.locate_site_requested.connect(_locate_objective_site)
     objectives_panel.locate_unit_requested.connect(_locate_objective_unit)
 
@@ -1208,10 +1217,15 @@ func _open_settings_from_home() -> void:
     home_menu.hide()
     command_menu.open_for(board,"Ajustes")
 
+func _close_objectives_radar() -> void:
+    objectives_panel.hide()
+    objectives_scrim.hide()
+
 func _open_objectives_radar() -> void:
     if objectives_panel == null or board == null:
         return
     command_menu.hide()
+    objectives_scrim.show()
     objectives_panel.open_with_state(board.state,0)
 
 func _locate_objective_site(cell: Vector2i, category: String) -> void:
@@ -1231,7 +1245,7 @@ func _locate_objective_site(cell: Vector2i, category: String) -> void:
     board.focus_view_cell(cell)
     board.message = "Objetivo localizado. Las órdenes tácticas siguen necesitando confirmación."
     board.queue_redraw()
-    objectives_panel.hide()
+    _close_objectives_radar()
 
 func _locate_objective_unit(unit_id: String) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
@@ -1253,7 +1267,7 @@ func _locate_objective_unit(unit_id: String) -> void:
         board.focus_view_cell(unit["pos"])
         board.message = "Unidad localizada. Comprueba sus estadísticas antes de ordenar."
         board.queue_redraw()
-        objectives_panel.hide()
+        _close_objectives_radar()
         return
 
 func _open_command_menu() -> void:
