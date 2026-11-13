@@ -59,6 +59,15 @@ jobs:
             echo "Isometric renderer or regression emitted a Godot error"; exit 1
           fi
 
+      - name: Benchmark large-map viewport, minimap texture cache and Android battery toggle
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_mobile_visual_performance.gd 2>&1 | tee /tmp/tarvoka-visual-performance.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-visual-performance.log; then
+            echo "Mobile map performance regression"; exit 1
+          fi
+
       - name: Validate playable 10x8 24x18 and 40x30 isometric battle and fog minimap
         shell: bash
         run: |
