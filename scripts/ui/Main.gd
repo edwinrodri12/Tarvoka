@@ -24,6 +24,7 @@ var faction_gallery_button: Button
 var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
 var iso_view_button: Button
+var models_3d_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -146,6 +147,12 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    models_3d_button = Button.new()
+    models_3d_button.text = "Modelos 3D (8 clases): activados"
+    models_3d_button.custom_minimum_size.y = 42
+    models_3d_button.tooltip_text = "Comparar modelos 3D del juego con el atlas provisional 2D"
+    models_3d_button.pressed.connect(_toggle_unit_models_3d)
+    panel.add_child(models_3d_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -938,6 +945,11 @@ func _refresh_production_catalog() -> void:
         production_picker.set_item_metadata(n,str(role))
     if production_picker.item_count > 0:
         production_picker.select(0)
+
+func _toggle_unit_models_3d() -> void:
+    board.set_3d_models_enabled(not board.models_3d_enabled)
+    models_3d_button.text = ("Modelos 3D (8 clases): activados"
+        if board.models_3d_enabled else "Modelos 3D (8 clases): desactivados")
 
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
