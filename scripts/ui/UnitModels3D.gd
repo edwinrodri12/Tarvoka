@@ -271,12 +271,18 @@ static func _paint_box(parent: Node3D, label: String, pos: Vector3,
 
 static func _paint_panels(node: Node, color: Color) -> int:
     var count := 0
-    if node is MeshInstance3D and node.has_meta(TANK_PAINT_META):
-        var material: StandardMaterial3D = (node as MeshInstance3D).material_override as StandardMaterial3D
-        if material != null:
-            var zone: String = str(node.get_meta(TANK_PAINT_META))
-            material.albedo_color = color.darkened(0.31) if zone == "dark" else color
-            count += 1
+    if node is MeshInstance3D and (node.has_meta(TANK_PAINT_META) or node.name.begins_with("Faccion")):
+        var shape: MeshInstance3D = node as MeshInstance3D
+        # The "Faccion*" naming convention survives glTF import; meshes may
+        # also mark a more explicit zone using metadata in native Godot models.
+        var zone: String = str(node.get_meta(TANK_PAINT_META,"dark" if node.name.contains("Franja") else "accent"))
+        var original: StandardMaterial3D = shape.material_override as StandardMaterial3D
+        var material: StandardMaterial3D = original.duplicate(true) as StandardMaterial3D if original != null else StandardMaterial3D.new()
+        material.albedo_color = color.darkened(0.31) if zone == "dark" else color
+        material.metallic = 0.16
+        material.roughness = 0.68
+        shape.material_override = material
+        count += 1
     for child in node.get_children():
         count += _paint_panels(child,color)
     return count
@@ -297,7 +303,7 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
 static func paintable_count(model: Node) -> int:
     if model == null:
         return 0
-    var total := 1 if model is MeshInstance3D and model.has_meta(TANK_PAINT_META) else 0
+    var total := 1 if model is MeshInstance3D and (model.has_meta(TANK_PAINT_META) or model.name.begins_with("Faccion")) else 0
     for child in model.get_children():
         total += paintable_count(child)
     return total
@@ -593,11 +599,13 @@ static func _destroyer(root: Node3D) -> void:
     _box(root,"EstelaEspuma",Vector3(0,0.07,1.71),
         Vector3(1.43,0.04,0.37),WATER)
 
-static func build(role: String) -> Node3D:
+static func build(role: String, faction: int = -1) -> Node3D:
     if not supports(role):
         return null
     var imported: Node3D = _imported_model(role)
     if imported != null:
+        if role == "tank":
+            apply_faction_palette(imported,faction)
         return imported
     # Authored native 3D mesh fallback, never a fake 2D illustration.
     var model := Node3D.new()
@@ -628,6 +636,8 @@ static func build(role: String) -> Node3D:
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
+    if role == "tank":
+        apply_faction_palette(model,faction)
     return model
 
 static func inspect_meshes(model: Node) -> int:
