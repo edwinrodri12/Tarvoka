@@ -18,6 +18,7 @@ const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
+const TerrainIntelOverlay = preload("res://scripts/ui/TerrainIntelOverlay.gd")
 static var last_frame_stats: Dictionary = {}
 
 static func _projected_center(cell: Vector2i, base: Vector2, hw: float) -> Vector2:
@@ -50,7 +51,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
         unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
-        site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1)) -> void:
+        site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1),
+        terrain_overlay_mode: int = TerrainIntelOverlay.OFF) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -62,6 +64,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
+    var terrain_intel_context: Dictionary = TerrainIntelOverlay.context_for(state,selected_id) if terrain_overlay_mode != TerrainIntelOverlay.OFF else {}
     var detail: int = VisualBudget.detail_level(hw,battery_saver)
     var bounds: Rect2i = VisualBudget.visible_grid_bounds(canvas.size,zoom,pan,dims)
     var base_origin: Vector2 = IsoTransform.origin(canvas.size,zoom,pan,dims)
@@ -101,6 +104,10 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     decorated += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
+                if terrain_overlay_mode != TerrainIntelOverlay.OFF and TerrainIntelOverlay.can_show_cell(fog,explored,cell):
+                    var intel: Dictionary = TerrainIntelOverlay.badge(terrain,cell,terrain_overlay_mode,
+                        terrain_intel_context,fog and not visible.has(cell))
+                    TerrainIntelOverlay.draw_iso(canvas,vertices,c,hw,intel)
     last_frame_stats = {
         "size":dims,"candidate_tiles":bounds.size.x*bounds.size.y,
         "tiles_drawn":drawn,"unknown_tiles":unknown,

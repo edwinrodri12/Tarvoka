@@ -23,6 +23,7 @@ const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
+const TerrainIntelOverlay = preload("res://scripts/ui/TerrainIntelOverlay.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const WIDTH := 10
 const HEIGHT := 8
@@ -62,6 +63,7 @@ var view_zoom := 1.0
 var view_pan := Vector2.ZERO
 var iso_enabled := false
 var battery_saver := false
+var terrain_overlay_mode := TerrainIntelOverlay.OFF # UI-only; never serialized.
 var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
 var iso_pan := Vector2.ZERO
@@ -142,6 +144,13 @@ func set_battery_saver(enabled: bool) -> void:
     battery_saver = enabled
     _ambient_accum = 0.0
     queue_redraw()
+
+func set_terrain_overlay_mode(mode: int) -> void:
+    terrain_overlay_mode = clampi(mode,TerrainIntelOverlay.OFF,TerrainIntelOverlay.MOBILITY)
+    queue_redraw()
+
+func cycle_terrain_overlay() -> void:
+    set_terrain_overlay_mode((terrain_overlay_mode + 1) % 3)
 
 func set_isometric(enabled: bool) -> void:
     iso_enabled = enabled
@@ -283,7 +292,7 @@ func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
-            inspected_enemy_id,site_overlay_snapshots(),inspected_cell)
+            inspected_enemy_id,site_overlay_snapshots(),inspected_cell,terrain_overlay_mode)
         _draw_campaign_markers()
         return
     var tile := _cell_size()
@@ -293,6 +302,7 @@ func _draw() -> void:
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var dimensions: Vector2i = map_dimensions()
+    var terrain_intel_context: Dictionary = TerrainIntelOverlay.context_for(state,selected_id) if terrain_overlay_mode != TerrainIntelOverlay.OFF else {}
     for y in range(dimensions.y):
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
@@ -325,6 +335,12 @@ func _draw() -> void:
                     # Previously seen terrain remains dim; unknown areas are dark.
                     var shade: Color = fog_cover_color(explored.has(spot))
                     draw_rect(Rect2(pos, Vector2.ONE * tile), shade)
+            # Known terrain only: never paint costs or cover on fog-unknown tiles.
+            var intel_cell := Vector2i(x,y)
+            if terrain_overlay_mode != TerrainIntelOverlay.OFF and TerrainIntelOverlay.can_show_cell(fog,explored,intel_cell):
+                var intel: Dictionary = TerrainIntelOverlay.badge(terrain_type,intel_cell,terrain_overlay_mode,
+                    terrain_intel_context,fog and not visible.has(intel_cell))
+                TerrainIntelOverlay.draw_classic(self,Rect2(pos,Vector2.ONE*tile),intel)
     # Mission markers are objectives, not selectable enemy units. Under fog,
     # unknown objectives are concealed, while already explored objectives
     # remain marked without revealing their CURRENT owner until visible.

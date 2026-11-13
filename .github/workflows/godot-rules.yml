@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify fog-safe terrain intelligence overlay and mobile controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_terrain_intelligence_overlay.gd 2>&1 | tee /tmp/tarvoka-terrain-intel.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-terrain-intel.log; then
+            echo 'Terrain overlay UI regression'; exit 1
+          fi
+          grep -F 'PASS tactical terrain layer' /tmp/tarvoka-terrain-intel.log
+
       - name: Validate approved concept battle rail and glowing unit dossiers
         shell: bash
         run: |

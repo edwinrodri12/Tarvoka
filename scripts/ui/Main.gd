@@ -60,6 +60,7 @@ var unit_art_gallery: AcceptDialog
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
+var terrain_overlay_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -121,6 +122,8 @@ var compact_end_turn: Button
 var compact_resupply: Button
 var compact_center: Button
 var compact_iso: Button
+var compact_terrain_button: Button
+var expanded_terrain_button: Button
 var expanded_header: PanelContainer
 var expanded_summary: Label
 var expanded_actions: PanelContainer
@@ -221,6 +224,12 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    terrain_overlay_button = Button.new()
+    terrain_overlay_button.text = "Capa táctica: desactivada"
+    terrain_overlay_button.tooltip_text = "Alternar cobertura defensiva, coste de movimiento y mapa limpio. No modifica órdenes ni combate."
+    terrain_overlay_button.custom_minimum_size.y = 44
+    terrain_overlay_button.pressed.connect(_toggle_terrain_overlay)
+    panel.add_child(terrain_overlay_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -369,7 +378,7 @@ func _ready() -> void:
     panel.add_child(unit_label)
 
     var legend := Label.new()
-    legend.text = "AZUL: movimiento y costo\nROJO: objetivo y daño previsto\nBOSQUE 2 | MONTAÑA 3 | CARRETERA: vehículos 0.5 / infantería 1\nEDIFICIOS: color=propietario | $ ciudad | ! captura al fin de turno\nFÁBRICAS: + lista | - usada | $ sin fondos | x bloqueada"
+    legend.text = "AZUL: movimiento y costo\nROJO: objetivo y daño previsto\nCAPA TERRENO: DEF = cobertura de tierra; MOV = costo de entrada (3* = ascenso lento adyacente consume todo el turno)\nBOSQUE 2 | MONTAÑA 3 | CARRETERA: vehículos 0.5 / infantería 1\nEDIFICIOS: color=propietario | $ ciudad | ! captura al fin de turno\nFÁBRICAS: + lista | - usada | $ sin fondos | x bloqueada"
     legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
@@ -777,7 +786,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,polished_status_card,command_menu_button,objectives_button,
         minimap_shell,polished_unit_card,polished_actions_card,result_banner,
-        camera_row,iso_view_button,battery_saver_button]
+        camera_row,iso_view_button,terrain_overlay_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
     minimap_shell.hide() # Main restores actual saved preference after menus exist.
@@ -962,7 +971,8 @@ func _build_battle_hud() -> void:
     expanded_actions.add_child(tactical_rail)
     for definition in [
         ["≡  MANDO",Callable(self,"_open_command_menu")],
-        ["⌖  OBJETIVOS",Callable(self,"_open_objectives_radar")]
+        ["⌖  OBJETIVOS",Callable(self,"_open_objectives_radar")],
+        ["▤  TERRENO",Callable(self,"_toggle_terrain_overlay")]
     ]:
         var shortcut := Button.new()
         shortcut.text = str(definition[0])
@@ -970,6 +980,8 @@ func _build_battle_hud() -> void:
         shortcut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         shortcut.pressed.connect(definition[1])
         tactical_rail.add_child(shortcut)
+        if str(definition[0]).contains("TERRENO"):
+            expanded_terrain_button = shortcut
     expanded_cancel = Button.new()
     expanded_cancel.text = "CANCELAR"
     expanded_cancel.custom_minimum_size.y = 48
@@ -1023,9 +1035,23 @@ func _build_battle_hud() -> void:
     compact_iso.offset_bottom = 49
     compact_iso.pressed.connect(_toggle_isometric_view)
     battle_hud_overlay.add_child(compact_iso)
+    compact_terrain_button = Button.new()
+    compact_terrain_button.text = "Mapa"
+    compact_terrain_button.tooltip_text = "Capa táctica: cobertura o movilidad (tres estados)"
+    compact_terrain_button.custom_minimum_size = Vector2(65,42)
+    # A small button beneath the header avoids crowding the three existing
+    # top-right controls on narrow Android portrait screens.
+    compact_terrain_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+    compact_terrain_button.offset_left = 12
+    compact_terrain_button.offset_right = 78
+    compact_terrain_button.offset_top = 70
+    compact_terrain_button.offset_bottom = 112
+    compact_terrain_button.pressed.connect(_toggle_terrain_overlay)
+    battle_hud_overlay.add_child(compact_terrain_button)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
+    compact_terrain_button.hide()
     expanded_header.show()
     expanded_actions.show()
 
@@ -1035,6 +1061,7 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    compact_terrain_button.visible = compact
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
@@ -1635,6 +1662,14 @@ func _toggle_minimap() -> void:
     _minimap_preference = not _minimap_preference
     _apply_minimap_visibility()
     _save_display_preferences()
+
+func _toggle_terrain_overlay() -> void:
+    # Read-only; changing this view does not alter the board's state/saves.
+    board.cycle_terrain_overlay()
+    var mode: int = board.terrain_overlay_mode
+    terrain_overlay_button.text = "Capa táctica: " + (["desactivada","defensa","movilidad"][mode])
+    compact_terrain_button.text = ["Mapa","DEF","MOV"][mode]
+    expanded_terrain_button.text = ["▤  TERRENO","▤  DEFENSA","▤  MOVILIDAD"][mode]
 
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
