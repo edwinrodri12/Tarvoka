@@ -1,6 +1,10 @@
 extends Control
 class_name TarvokaTouchBoard
 
+# Campaign scene listeners are opt-in; normal skirmishes are unaffected.
+signal tactical_action_committed(facts: Dictionary)
+signal tactical_phase_completed(completed_side: int)
+
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
@@ -29,6 +33,8 @@ var ai_enabled := true # Faction 1 is computer-controlled; disable for local two
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
 var autosave_warning := ""
+var campaign_locked := false
+var campaign_markers: Array[Vector2i] = []
 var selected_id := ""
 var inspected_enemy_id := "" # Only currently visible enemy, never saved.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
@@ -68,6 +74,8 @@ func _ready() -> void:
     new_game()
 
 func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8)) -> void:
+    campaign_locked = false
+    campaign_markers.clear()
     symmetric_setup = symmetric
     specialized_roster = specialized or modern
     modern_roster = modern
@@ -257,6 +265,7 @@ func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id)
+        _draw_campaign_markers()
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -479,6 +488,37 @@ func _draw() -> void:
             draw_string(font, target_pos + Vector2(tile * 0.52, tile * 0.89),
                 "-%d" % dmg, HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
+    _draw_campaign_markers()
+
+# Overlay objective markers on the existing classic and isometric battlefield.
+# Markers are never fake units or attack targets.
+func _draw_campaign_markers() -> void:
+    if campaign_markers.is_empty() or not state.has("terrain"):
+        return
+    var fog: bool = Visibility.enabled(state)
+    var known: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
+    var font: Font = ThemeDB.fallback_font
+    for i in range(campaign_markers.size()):
+        var cell: Vector2i = campaign_markers[i]
+        if not Rules.inside(cell,state["terrain"]) or (fog and not known.has(cell)):
+            continue
+        var held := false
+        for unit in state.get("units",[]):
+            if unit is Dictionary and int(unit.get("hp",0)) > 0 and int(unit.get("faction",-1)) == 0 and unit.get("pos") == cell:
+                held = true
+                break
+        var tint := Color("#5BE1A4") if held else Color("#F7C55B")
+        if iso_enabled:
+            var polygon: PackedVector2Array = IsoProjection.diamond(cell,size,iso_zoom,iso_pan,map_dimensions())
+            polygon.append(polygon[0])
+            draw_polyline(polygon,tint,3.0,true)
+            var center: Vector2 = IsoProjection.center(cell,size,iso_zoom,iso_pan,map_dimensions())
+            draw_string(font,center+Vector2(4,-6),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,17,tint)
+        else:
+            var tile: float = _cell_size()
+            var point: Vector2 = _board_origin() + Vector2(cell)*tile
+            draw_rect(Rect2(point+Vector2.ONE*2,Vector2.ONE*(tile-4)),tint,false,3.0)
+            draw_string(font,point+Vector2(tile*0.60,tile*0.30),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,17,tint)
 
 func _process(delta: float) -> void:
     var dt: float = maxf(0.0, delta)
@@ -654,6 +694,8 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     _commit_order(order)
 
 func _commit_order(order: Dictionary) -> bool:
+    if campaign_locked:
+        return false
     # State can change between preview and confirmation; never trust a stale hint.
     var unit_id := str(order.get("unit_id", ""))
     var cell = order.get("cell", null)
@@ -691,6 +733,7 @@ func _commit_order(order: Dictionary) -> bool:
     elif kind == "move":
         _record_move_effect(prior_state, state, unit_id)
     selected_factory_pos = Vector2i(-1,-1)
+    tactical_action_committed.emit({"kind":kind,"unit_id":unit_id,"result":result})
     _write_autosave()
     var winner := int(state.get("winner", -1))
     if winner != -1:
@@ -912,6 +955,8 @@ func _gui_input(event: InputEvent) -> void:
             accept_event()
 
 func _tap(point: Vector2) -> void:
+    if campaign_locked:
+        return
     if ai_enabled and int(state.get("faction", -1)) != 0:
         return
     if int(state.get("winner",-1)) != -1:
@@ -1034,6 +1079,8 @@ func _tap(point: Vector2) -> void:
     queue_redraw()
 
 func finish_turn() -> void:
+    if campaign_locked:
+        return
     # Human cannot manually skip the computer faction.
     if ai_enabled and int(state.get("faction", -1)) != 0:
         return
@@ -1042,6 +1089,7 @@ func finish_turn() -> void:
     if not result.get("valid", false):
         return
     state = result["state"]
+    tactical_phase_completed.emit(int(previous["faction"]))
     selected_id = ""
     inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
@@ -1077,7 +1125,7 @@ func finish_turn() -> void:
 
 func _play_ai_turn() -> void:
     # Never advance the computer from a human or terminal state.
-    if not ai_enabled or int(state.get("faction", -1)) != 1 or int(state.get("winner", -1)) != -1:
+    if campaign_locked or not ai_enabled or int(state.get("faction", -1)) != 1 or int(state.get("winner", -1)) != -1:
         return
     # A unit may move and attack; each factory may additionally produce at
     # most once this phase. Bound all possibilities even after recruitment.
@@ -1089,13 +1137,14 @@ func _play_ai_turn() -> void:
     var produced := 0
     var resupplied := 0
     for i in range(max_actions):
-        if int(state.get("winner", -1)) != -1:
+        if campaign_locked or int(state.get("winner", -1)) != -1:
             break
         var prior_state: Dictionary = state
         var result: Dictionary = BasicAI.step(state)
         if not result.get("valid", false):
             break
         state = result["state"]
+        tactical_action_committed.emit({"kind":str(result.get("action","")),"unit_id":str(result.get("unit_id",result.get("attacker_id",""))),"result":result})
         if str(result.get("action","")) == "attack":
             _record_attack_effect(prior_state, result, str(result.get("attacker_id", "")), str(result.get("defender_id", "")))
         elif str(result.get("action","")) == "move":
@@ -1116,13 +1165,14 @@ func _play_ai_turn() -> void:
         last_enemy_turn_report += " %d reabastecimientos." % resupplied
     if movements + attacks + produced + resupplied == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
-    if int(state.get("winner", -1)) != -1:
-        message = "Victoria de faccion %d." % (int(state["winner"]) + 1)
+    if campaign_locked or int(state.get("winner", -1)) != -1:
+        message = "Ejercicio finalizado." if campaign_locked else "Victoria de faccion %d." % (int(state["winner"]) + 1)
         return
     var before_score: Dictionary = state.duplicate(true)
     var next: Dictionary = Session.end_turn(state)
     if next.get("valid", false):
         state = next["state"]
+        tactical_phase_completed.emit(1)
         if state.has("control"):
             last_enemy_turn_report += " " + _relay_turn_report(before_score, state, 1)
         message = "Victoria de faccion %d." % (int(state["winner"]) + 1) if int(state.get("winner", -1)) != -1 else "Tu turno: faccion 1."
