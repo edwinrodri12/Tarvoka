@@ -133,6 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_terrain_tactics.gd
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_large_map_terrain_combat.gd
 
       - name: Enforce three symmetric first-turn orders, legal production, AI and backwards-compatible saves
         shell: bash
