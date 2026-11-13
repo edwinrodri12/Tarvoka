@@ -18,7 +18,60 @@ static func _shape(canvas: CanvasItem, center: Vector2, scale: float, coordinate
 static func _line(canvas: CanvasItem, c: Vector2, s: float, a: Vector2, b: Vector2, color: Color, width: float=0.07) -> void:
     canvas.draw_line(c+a*s,c+b*s,color,maxf(1.0,s*width),true)
 
-static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2, hw: float, phase: float, seed: int) -> void:
+# Map-art continuity: central asphalt joins the exact shared edges of
+# adjacent isometric tiles. Each exit is a half-cell vector in screen space;
+# road width is constant on either side of the shared edge.
+static func _connected_road(canvas: CanvasItem, center: Vector2, hw: float, connections: int) -> void:
+    var exits: Array = [
+        Vector2(0.50,0.25), Vector2(-0.50,-0.25),
+        Vector2(-0.50,0.25), Vector2(0.50,-0.25)
+    ]
+    var asphalt := Color("#465057")
+    var shoulder := Color("#A7A086")
+    var line_tint := Color("#F2DE95")
+    # A standalone road tile remains recognizable instead of disappearing.
+    _shape(canvas,center,hw,[[-0.28,0],[0,-0.155],[0.28,0],[0,0.155]],shoulder)
+    _shape(canvas,center,hw,[[-0.25,0],[0,-0.135],[0.25,0],[0,0.135]],asphalt)
+    for i in range(exits.size()):
+        if (connections & (1 << i)) == 0:
+            continue
+        var exit: Vector2 = exits[i]
+        var side: Vector2 = Vector2(-exit.y,exit.x).normalized()
+        var a: Vector2 = side * hw * 0.096
+        var b: Vector2 = exit * hw
+        var outer: Vector2 = side * hw * 0.124
+        canvas.draw_colored_polygon(PackedVector2Array([
+            center+outer,center-outer,center+b-outer,center+b+outer
+        ]),shoulder)
+        canvas.draw_colored_polygon(PackedVector2Array([
+            center+a,center-a,center+b-a,center+b+a
+        ]),asphalt)
+        canvas.draw_line(center+exit*hw*0.36,center+exit*hw*0.79,
+            line_tint,maxf(1.0,hw*0.025),true)
+
+static func _water_banks(canvas: CanvasItem, center: Vector2, hw: float,
+        shore_mask: int) -> void:
+    if shore_mask == 0:
+        return
+    var corners := PackedVector2Array([
+        center+Vector2(0,-hw*0.5),center+Vector2(hw,0),
+        center+Vector2(0,hw*0.5),center+Vector2(-hw,0)
+    ])
+    # +x right-bottom, -x left-top, +y bottom-left, -y top-right.
+    var edges: Array = [[1,2],[3,0],[2,3],[0,1]]
+    for i in range(4):
+        if (shore_mask & (1 << i)) == 0:
+            continue
+        var a: Vector2 = corners[edges[i][0]]
+        var b: Vector2 = corners[edges[i][1]]
+        canvas.draw_line(a,b,Color("#DBD6AC"),maxf(1.1,hw*0.050),true)
+        # Foamy shallow-water band remains INSIDE the water tile.
+        canvas.draw_line(a.lerp(center,0.12),b.lerp(center,0.12),
+            Color("#8FE1DF"),maxf(1.0,hw*0.037),true)
+
+static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
+        hw: float, phase: float, seed: int, road_connections: int = 0,
+        shore_mask: int = 0) -> void:
     if hw <= 0.0:
         return
     var s: float = hw * 0.58
@@ -40,16 +93,14 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2, hw: float
             _shape(canvas,c,s,[[0.47,-0.97],[0.98,0.57],[0.41,0.57]],Color("#3B4D60"))
             _shape(canvas,c,s,[[0.27,-0.45],[0.47,-0.97],[0.67,-0.45]],Color("#D8E3E8"))
         "road":
-            _line(canvas,c,s,Vector2(-1.02,-0.33),Vector2(1.04,0.29),Color("#4A4743"),0.35)
-            _line(canvas,c,s,Vector2(-0.92,-0.25),Vector2(0.97,0.32),Color("#BEAA7E"),0.045)
-            for x in [-0.65,0.06,0.72]:
-                _line(canvas,c,s,Vector2(x,-0.09+x*0.24),Vector2(x+0.28,-0.02+x*0.24),Color("#EEE0AE"),0.065)
+            _connected_road(canvas,c,hw,road_connections)
         "water":
             for j in range(3):
                 var x: float = -0.74 + j * 0.36
                 var wave: float = 0.09 * sin(phase*2.2+j*1.7+seed)
                 _line(canvas,c,s,Vector2(x+wave,-0.25+j*0.22),Vector2(x+0.42+wave,-0.25+j*0.22),Color("#69B9DA"),0.052)
                 _line(canvas,c,s,Vector2(x+0.07+wave,-0.18+j*0.22),Vector2(x+0.27+wave,-0.18+j*0.22),Color("#A9E6EF"),0.035)
+            _water_banks(canvas,c,hw,shore_mask)
         _:
             # Plains: grass blades, not anonymous flat-color tiles.
             for j in range(3):
