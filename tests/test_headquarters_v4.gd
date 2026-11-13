@@ -41,6 +41,11 @@ func _run() -> void:
         assert(v4.get_meta("tarvoka_hq_visual_v4",false))
         assert(v4.get_meta("tarvoka_hq_reference") == "approved-hq-20261112")
         assert(_meshes(v4) > _meshes(v3)+100)
+        var structural: MeshInstance3D = v4.find_child("MandoBiseladoPrincipal",true,false) as MeshInstance3D
+        assert(structural != null)
+        var pbr: StandardMaterial3D = structural.material_override as StandardMaterial3D
+        assert(pbr != null and pbr.normal_enabled)
+        assert(pbr.normal_texture != null and pbr.roughness_texture != null)
         assert(v4.find_child("NucleoVerticalDeMandoV4",true,false) != null)
         assert(v4.find_child("EscudoDeFaccionModular",true,false) != null)
         assert(v4.find_child("TorreDeRedesTrianguladaV4",true,false) != null)
