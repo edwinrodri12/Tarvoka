@@ -8,11 +8,13 @@ class_name TarvokaBattle3DView
 const LabScene = preload("res://scenes/Terrain3DLab.tscn")
 const Terrain3D = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 
 var _viewport: SubViewport
 var _lab
 var _camera: Camera3D
 var _markers: Node3D
+var _tactical_highlights: MeshInstance3D
 var _terrain_signature := -1
 var _unit_signature := -1
 var _last_size := Vector2i.ZERO
@@ -35,6 +37,9 @@ func _ready() -> void:
     _markers = Node3D.new()
     _markers.name = "VisibleTacticalMarkers"
     _lab.add_child(_markers)
+    _tactical_highlights = MeshInstance3D.new()
+    _tactical_highlights.name = "LegalTacticalHighlights"
+    _lab.add_child(_tactical_highlights)
     texture = _viewport.get_texture()
     resized.connect(_resize_viewport)
     _resize_viewport()
@@ -248,7 +253,79 @@ func sync_battle(state: Dictionary, selected: String,
         _lab.set_quality(2 if battery_saver else 4)
         _lab.set_terrain(state["terrain"],visible,fog)
         _unit_signature = -1
-    var unit_key: int = hash([state.get("units",[]),selected,visible,fog])
+    var unit_key: int = hash([state.get("units",[]),selected,visible,fog,state.get("faction",-1)])
     if unit_key != _unit_signature:
         _unit_signature = unit_key
         _refresh_markers(state,selected,visible,fog)
+        _refresh_tactical_highlights(state,selected,visible,fog)
+
+# Legal movement and attack previews are READ ONLY and come from the
+# same TacticalHints used by the isometric board. Every quadrilateral
+# is projected onto the actual 3D heightfield to avoid z-fighting.
+func _highlight_cell(surface: SurfaceTool, cell: Vector2i,
+        tint: Color) -> void:
+    var grid: Array = _lab.terrain
+    if not Terrain3D.observed_cell(grid,cell,
+            _lab.observed,_lab.restrict_to_observed):
+        return
+    const SEGMENTS := 3
+    for iy in range(SEGMENTS):
+        for ix in range(SEGMENTS):
+            var u0: float = float(ix)/float(SEGMENTS)
+            var u1: float = float(ix+1)/float(SEGMENTS)
+            var v0: float = float(iy)/float(SEGMENTS)
+            var v1: float = float(iy+1)/float(SEGMENTS)
+            var p00 := Vector3(float(cell.x)+u0,Terrain3D.height_at(
+                grid,cell,u0,v0,_lab.observed,_lab.restrict_to_observed)+0.09,
+                float(cell.y)+v0)
+            var p01 := Vector3(float(cell.x)+u0,Terrain3D.height_at(
+                grid,cell,u0,v1,_lab.observed,_lab.restrict_to_observed)+0.09,
+                float(cell.y)+v1)
+            var p10 := Vector3(float(cell.x)+u1,Terrain3D.height_at(
+                grid,cell,u1,v0,_lab.observed,_lab.restrict_to_observed)+0.09,
+                float(cell.y)+v0)
+            var p11 := Vector3(float(cell.x)+u1,Terrain3D.height_at(
+                grid,cell,u1,v1,_lab.observed,_lab.restrict_to_observed)+0.09,
+                float(cell.y)+v1)
+            for p in [p00,p01,p10,p10,p01,p11]:
+                surface.set_color(tint)
+                surface.add_vertex(p)
+
+func _refresh_tactical_highlights(state: Dictionary,
+        selected: String, visible: Dictionary, fog: bool) -> void:
+    if _tactical_highlights == null:
+        return
+    if selected.is_empty():
+        _tactical_highlights.visible = false
+        return
+    var hints: Dictionary = TacticalHints.for_unit(state,selected)
+    var moves: Dictionary = hints.get("moves",{})
+    var attacks: Dictionary = hints.get("attacks",{})
+    var total := 0
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for cell in moves:
+        if not cell is Vector2i or (
+                fog and not visible.has(cell)) or total >= 130:
+            continue
+        _highlight_cell(st,cell,Color(0.19,0.78,0.94,0.24))
+        total += 1
+    for cell in attacks:
+        if not cell is Vector2i or (
+                fog and not visible.has(cell)) or total >= 160:
+            continue
+        _highlight_cell(st,cell,Color(1.0,0.31,0.28,0.35))
+        total += 1
+    if total == 0:
+        _tactical_highlights.visible = false
+        return
+    st.generate_normals()
+    var mesh := st.commit()
+    var material := StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mesh.surface_set_material(0,material)
+    _tactical_highlights.mesh = mesh
+    _tactical_highlights.visible = true
