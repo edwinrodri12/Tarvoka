@@ -34,7 +34,8 @@ func _run() -> void:
     var original: Dictionary = state.duplicate(true)
     var climbed: Dictionary = Session.move(state,"A",summit)
     assert(climbed["valid"])
-    assert(int(climbed["cost"]) == 2)
+    # Session.move returns authoritative state, while Rules.reachable carries the path cost.
+    assert(int(slow[summit]) == 2)
     assert(climbed["state"]["units"][0]["pos"] == summit)
     assert(state == original)
     assert(Codec.decode(Codec.encode(climbed["state"])) == climbed["state"])
