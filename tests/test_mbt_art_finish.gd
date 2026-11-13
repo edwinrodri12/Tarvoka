@@ -15,6 +15,7 @@ func _run() -> void:
     var tank: Node3D = Models.build("tank",0)
     assert(tank != null)
     assert(tank.get_meta("tarvoka_mbt_finish_v3",false))
+    assert(tank.get_meta("tarvoka_mbt_production_v4",false))
     assert(tank.get_meta("tarvoka_pbr_applied",false))
     assert(Models.paintable_count(tank) == 14)
     assert(Models.inspect_meshes(tank) >= 190)
@@ -47,6 +48,21 @@ func _run() -> void:
     assert(bolts != null and rivets != null)
     assert(bolts.multimesh.instance_count == 20)
     assert(rivets.multimesh.instance_count == 12)
+    # Validate the final mechanical pass and its three cheap draw batches.
+    var airduct: MultiMeshInstance3D = tank.find_child("AletasRejillaMotor",true,false) as MultiMeshInstance3D
+    var anti_slip: MultiMeshInstance3D = tank.find_child("RelieveAntideslizanteCasco",true,false) as MultiMeshInstance3D
+    var hubs: MultiMeshInstance3D = tank.find_child("RemachesBujesRodaje",true,false) as MultiMeshInstance3D
+    assert(airduct != null and anti_slip != null and hubs != null)
+    assert(airduct.multimesh.instance_count == 28)
+    assert(anti_slip.multimesh.instance_count == 48)
+    assert(hubs.multimesh.instance_count == 42)
+    var bore: MeshInstance3D = tank.find_child("InteriorOscuroCanon",true,false) as MeshInstance3D
+    var lens: MeshInstance3D = tank.find_child("LenteTermicoPrincipal",true,false) as MeshInstance3D
+    var era: MeshInstance3D = tank.find_child("ERACompuestaBiselada1_1",true,false) as MeshInstance3D
+    assert(bore != null and lens != null and era != null)
+    assert(bore.get_parent().name == Models.TANK_BARREL_PIVOT)
+    assert(lens.material_override.normal_enabled)
+    assert(era.mesh is ArrayMesh)
     for f in range(8):
         assert(Models.apply_faction_palette(tank,f) == 14)
         assert(Models.paintable_count(tank) == 14)
@@ -54,8 +70,10 @@ func _run() -> void:
     # Damage still detaches and restores actual chassis/track/barrel meshes.
     assert(Damage.apply_stage(tank,4))
     assert(Damage.current_stage(tank) == 4)
+    assert(not bore.visible and not lens.visible and not era.visible)
     assert(Damage.apply_stage(tank,0))
     assert(Damage.current_stage(tank) == 0)
+    assert(bore.visible and lens.visible and era.visible)
     assert(cheek.visible and sight.visible)
     tank.free()
 
