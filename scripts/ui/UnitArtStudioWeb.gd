@@ -142,7 +142,7 @@ func _construct() -> void:
 
     _title(column,"MODELO",12)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
-    previous_version_button = _button(column,"COMPARAR: V8 anterior / V9 nuevo",_toggle_previous)
+    previous_version_button = _button(column,"COMPARAR: V9 anterior / V10 nuevo",_toggle_previous)
     role_picker = OptionButton.new()
     role_picker.custom_minimum_size.y = 44
     for role in Models.ROLES:
@@ -200,7 +200,7 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
     _role = role
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
-        _final_detail,8 if _previous_version else 9)
+        _final_detail,9 if _previous_version else 10)
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
@@ -213,7 +213,7 @@ func _display_role(role: String) -> void:
     comparison_button.visible = (_role == "tank")
     previous_version_button.visible = (_role == "tank")
     comparison_button.text = "COMPARAR: Ver modelo base" if _final_detail else "COMPARAR: Ver acabado nuevo"
-    previous_version_button.text = "COMPARAR: Volver al acabado V9" if _previous_version else "COMPARAR: Ver acabado V8 anterior"
+    previous_version_button.text = "COMPARAR: Volver al acabado V10" if _previous_version else "COMPARAR: Ver acabado V9 anterior"
     if _role == "tank":
         damage_picker.select(0)
     _update_camera()
@@ -225,7 +225,7 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     status_label.text = "G09 · %s · %s · %s" % [
-        ("ACABADO V8 ANTERIOR" if _previous_version else "ACABADO V9 ACTUAL") if _final_detail else "MODELO BASE",
+        ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL") if _final_detail else "MODELO BASE",
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])] if _role == "tank" else "Modelo técnico 3D · misma librería de TARVOKA"
 
