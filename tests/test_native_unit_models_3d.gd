@@ -91,6 +91,19 @@ func _run() -> void:
     board.queue_redraw()
     await process_frame
     assert(board.state == original)
+    # The key release criterion: an actual modern-army battle consumes the
+    # captured Godot 3D textures instead of silently falling back to 2D.
+    board.new_game(0,true,false,false,true,false,true)
+    board.set_isometric(true)
+    board.queue_redraw()
+    await process_frame
+    assert(int(IsoRenderer.last_frame_stats.get("real_3d_units_drawn",0)) >= 2)
+    var real_battle: Dictionary = board.state.duplicate(true)
+    board.set_3d_models_enabled(false)
+    board.queue_redraw()
+    await process_frame
+    assert(int(IsoRenderer.last_frame_stats.get("real_3d_units_drawn",0)) == 0)
+    assert(board.state == real_battle)
     board.queue_free()
 
     var scene: PackedScene = load("res://scenes/Main.tscn")
