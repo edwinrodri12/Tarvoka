@@ -9,6 +9,7 @@ on:
       - "scripts/ui/LandscapeDetailPainter.gd"
       - "scripts/ui/LandscapeTransitions.gd"
       - "scripts/ui/TerrainSurfaceMaterials.gd"
+      - "scripts/ui/TerrainTextureAtlas.gd"
       - "scripts/ui/VisualStyle.gd"
       - "scripts/ui/TerrainTopology.gd"
       - "tools/export_environment_preview.gd"
