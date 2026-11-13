@@ -154,6 +154,14 @@ func _unit_row(body: VBoxContainer, item: Dictionary) -> void:
     var line := HSeparator.new()
     body.add_child(line)
 
+func refresh_from_state(state: Dictionary, viewer: int = 0) -> void:
+    # Preserve the active tab across battle updates; never reset the player's
+    # exploration to Objetivos just because a turn or alert changed.
+    var tab: int = tabs.current_tab
+    _data = Data.build(state,viewer)
+    render()
+    tabs.current_tab = tab
+
 func open_with_state(state: Dictionary, viewer: int = 0) -> void:
     _data = Data.build(state,viewer)
     render()
