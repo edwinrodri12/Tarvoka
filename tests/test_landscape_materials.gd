@@ -8,6 +8,7 @@ const Style = preload("res://scripts/ui/VisualStyle.gd")
 class TerrainMaterialCanvas:
     extends Control
     const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+    const Materials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
     var detail: int = 2
 
     func _draw() -> void:
@@ -19,6 +20,14 @@ class TerrainMaterialCanvas:
             var hw: float = 42.0
             # Exercise every coast, scree, and exposed-cliff topology in
             # medium and full detail, including all four-bit intersections.
+            # Exercise the same material painter used by real battles.
+            for kind_index in range(5):
+                var kind: String = ["mountain","forest","road","water","plain"][kind_index]
+                var material_c: Vector2 = c+Vector2(0,340*kind_index)
+                Materials.draw_surface(self,kind,material_c,hw,
+                    Vector2i(mask,kind_index),detail)
+            Materials.draw_road_wear(self,c+Vector2(0,680),hw,
+                Vector2i(mask,3),detail,false)
             WorldArt.draw_terrain(self,"mountain",c,hw,0.2,mask,
                 0,0,mask,0,detail,
                 {"water_edges":mask,"exposed_edges":mask})
@@ -67,6 +76,15 @@ func _run() -> void:
         assert(a != Style.terrain_color(terrain_kind,3,3))
         assert(Style.terrain_color(terrain_kind,0,0) != (
             Style.terrain_color(terrain_kind,1,0)))
+    const Materials = preload("res://scripts/ui/TerrainSurfaceMaterials.gd")
+    assert(Materials.sample_count("plain",0) == 0)
+    assert(Materials.sample_count("forest",1) <= Materials.sample_count("forest",2))
+    assert(Materials.material_seed(Vector2i(10,5),4) == (
+        Materials.material_seed(Vector2i(10,5),4)))
+    for terrain_cell in [Vector2i(0,0),Vector2i(4,7),Vector2i(16,17)]:
+        for mark in range(24):
+            var local: Vector2 = Materials.material_position(terrain_cell,mark)
+            assert(absf(local.x)+2.0*absf(local.y) <= 0.745)
     for detail in [1,2]:
         var probe := TerrainMaterialCanvas.new()
         probe.size = Vector2(1300,1700)
@@ -75,5 +93,5 @@ func _run() -> void:
         probe.queue_redraw()
         await process_frame
         probe.queue_free()
-    print("PASS landscape materials: all 16 shore/cliff masks, deterministic smooth palette and real Godot draw")
+    print("PASS landscape materials: rock grass water asphalt, masks, deterministic smooth palette and Godot draw")
     quit(0)
