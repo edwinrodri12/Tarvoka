@@ -16,6 +16,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
+const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -43,6 +44,8 @@ var touch_cancelled := false
 var view_zoom := 1.0
 var view_pan := Vector2.ZERO
 var iso_enabled := false
+var battery_saver := false
+var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
 var iso_pan := Vector2.ZERO
 var motion_effects: Array[Dictionary] = []
@@ -114,8 +117,14 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _write_autosave(false)
     queue_redraw()
 
+func set_battery_saver(enabled: bool) -> void:
+    battery_saver = enabled
+    _ambient_accum = 0.0
+    queue_redraw()
+
 func set_isometric(enabled: bool) -> void:
     iso_enabled = enabled
+    _ambient_accum = 0.0
     touch_active = false
     touch_finger_index = -1
     touch_cancelled = false
@@ -201,7 +210,7 @@ static func fog_cover_color(has_explored: bool) -> Color:
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
-            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings)
+            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver)
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -431,8 +440,10 @@ func _process(delta: float) -> void:
     if iso_enabled:
         art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)
         _ambient_accum += dt
-        if _ambient_accum >= 0.12:
-            _ambient_accum = 0.0
+        var cadence: float = VisualBudget.ambient_interval(map_dimensions(),battery_saver)
+        if _ambient_accum >= cadence:
+            _ambient_accum = fmod(_ambient_accum,cadence)
+            ambient_redraw_count += 1
             needs_redraw = true
     if not combat_effects.is_empty():
         for effect in combat_effects:
