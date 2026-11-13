@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify final battle results, mobile actions and non-destructive navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_postbattle_results.gd 2>&1 | tee /tmp/tarvoka-postbattle-results.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-postbattle-results.log; then
+            echo 'Results screen regression'; exit 1
+          fi
+          grep -F 'PASS postbattle results' /tmp/tarvoka-postbattle-results.log
+
       - name: Validate real objectives radar, unit alerts and fog-safe strategic map navigation
         shell: bash
         run: |
