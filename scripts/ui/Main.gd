@@ -22,6 +22,8 @@ const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
 const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
+const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
+const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 
 var board: Control
 var status_label: Label
@@ -30,6 +32,9 @@ var order_preview_label: Label
 var unit_label: Label
 var command_menu: Control
 var objectives_panel: Control
+var results_panel: Control
+var results_scrim: ColorRect
+var _results_seen_signature := -1
 var objectives_scrim: ColorRect
 var objectives_button: Button
 var compact_objectives_button: Button
@@ -309,6 +314,11 @@ func _ready() -> void:
     result_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     result_detail.add_theme_font_size_override("font_size", 17)
     result_column.add_child(result_detail)
+    var details_button := Button.new()
+    details_button.text = "Ver resultados completos"
+    details_button.custom_minimum_size.y = 49
+    details_button.pressed.connect(_open_results_screen)
+    result_column.add_child(details_button)
 
     var unit_heading := Label.new()
     unit_heading.text = "UNIDAD Y ACCIONES"
@@ -624,6 +634,18 @@ func _ready() -> void:
     objectives_panel.close_requested.connect(_close_objectives_radar)
     objectives_panel.locate_site_requested.connect(_locate_objective_site)
     objectives_panel.locate_unit_requested.connect(_locate_objective_unit)
+
+    results_scrim = ColorRect.new()
+    results_scrim.color = Color(0.005,0.015,0.025,0.48)
+    results_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+    results_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(results_scrim)
+    results_scrim.hide()
+    results_panel = ResultsPanel.new()
+    add_child(results_panel)
+    results_panel.map_requested.connect(_close_results_screen)
+    results_panel.new_battle_requested.connect(_results_new_battle)
+    results_panel.home_requested.connect(_results_to_home)
 
     home_menu = HomeMenu.new()
     add_child(home_menu)
@@ -955,7 +977,8 @@ func _process(_delta: float) -> void:
         _update_text(relay_status, relay_text)
     # Compact controls mirror exactly the same guards as the full sidebar.
     # Never bypass pending-order confirmation or turn ownership.
-    compact_confirm.disabled = board.pending_order.is_empty()
+    compact_confirm.disabled = board.pending_order.is_empty() and int(board.state.get("winner",-1)) == -1
+    compact_confirm.text = "Resultados" if int(board.state.get("winner",-1)) != -1 else ("Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar")
     compact_confirm.text = "Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar"
     compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
     compact_end_turn.disabled = int(board.state.get("winner",-1)) != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction",0)) != 0)
@@ -1014,7 +1037,8 @@ func _process(_delta: float) -> void:
     order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
     end_button.disabled = winner != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
     cancel_button.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
-    confirm_button.disabled = board.pending_order.is_empty()
+    confirm_button.disabled = board.pending_order.is_empty() and winner == -1
+    confirm_button.text = "Ver resultados" if winner != -1 else ("Confirmar ataque" if str(board.pending_order.get("kind","")) == "attack" else ("Confirmar movimiento" if str(board.pending_order.get("kind","")) == "move" else "Confirmar orden"))
     result_banner.visible = winner != -1
     # A defeat must not appear inside the same green victory panel.
     var result_tint := Color(0.44, 0.14, 0.16) if winner == 1 else Color(0.10, 0.32, 0.20)
@@ -1034,6 +1058,19 @@ func _process(_delta: float) -> void:
         _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
     compact_status.text = status_label.text
     compact_detail.text = unit_label.text.replace("\n","  ")
+    # Show final results only once per terminal state. Closing the panel to
+    # inspect the field must never auto-open it again on subsequent frames.
+    if results_panel != null:
+        if winner == -1:
+            _results_seen_signature = -1
+            if results_panel.visible:
+                _close_results_screen()
+        else:
+            var signature: int = hash([winner,board.state.get("units",[]),
+                board.state.get("economy",{}),board.state.get("control",{})])
+            if signature != _results_seen_signature:
+                _results_seen_signature = signature
+                _open_results_screen()
 
 func _is_relay_win(winner: int) -> bool:
     if winner not in [0, 1] or not board.state.has("control"):
@@ -1097,6 +1134,7 @@ func _new_game() -> void:
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
+    _close_results_screen()
     if roster_picker.get_selected_id() == 2:
         economy_picker.select(1)
     if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
@@ -1129,6 +1167,9 @@ func _cancel_selection() -> void:
     board.cancel_selection()
 
 func _confirm_order() -> void:
+    if int(board.state.get("winner",-1)) != -1:
+        _open_results_screen()
+        return
     board.confirm_pending_order()
 
 func _resupply_unit() -> void:
@@ -1168,6 +1209,7 @@ func _refresh_production_catalog() -> void:
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
+    _close_results_screen()
     command_menu.hide()
     skirmish_setup.hide()
     home_menu.show()
@@ -1178,6 +1220,7 @@ func _continue_from_home() -> void:
         _set_compact_hud(true)
 
 func _prepare_skirmish() -> void:
+    _close_results_screen()
     home_menu.hide()
     command_menu.hide()
     skirmish_setup.load_choices({
@@ -1273,6 +1316,29 @@ func _locate_objective_unit(unit_id: String) -> void:
         board.queue_redraw()
         _close_objectives_radar()
         return
+
+func _close_results_screen() -> void:
+    if results_panel != null:
+        results_panel.hide()
+    if results_scrim != null:
+        results_scrim.hide()
+
+func _open_results_screen() -> void:
+    if results_panel == null or not bool(ResultsData.report(board.state).get("valid",false)):
+        return
+    if objectives_panel != null and objectives_panel.visible:
+        _close_objectives_radar()
+    command_menu.hide()
+    results_scrim.show()
+    results_panel.open_for(board.state,_radar_viewer())
+
+func _results_new_battle() -> void:
+    _close_results_screen()
+    _prepare_skirmish()
+
+func _results_to_home() -> void:
+    _close_results_screen()
+    _show_home_menu()
 
 func _open_command_menu() -> void:
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
