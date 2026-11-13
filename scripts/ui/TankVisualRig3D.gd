@@ -39,6 +39,15 @@ static func pose(model: Node3D, kind: String, progress: float,
     turret.rotation_degrees.y = 0.0
     gun.rotation_degrees.x = 0.0
     gun.position.z = -0.56
+    # All effects are off by default. Only the active pose makes them visible.
+    var muzzle: Node3D = model.find_child("EfectoFogonazoCanon",true,false) as Node3D
+    var smoke: Node3D = model.find_child("EfectoHumoCanon",true,false) as Node3D
+    var dust: Node3D = model.find_child("EfectoPolvoOrugas",true,false) as Node3D
+    var impact: Node3D = model.find_child("EfectoImpactoBlindaje",true,false) as Node3D
+    for effect in [muzzle,smoke,dust,impact]:
+        if effect != null:
+            effect.visible = false
+            effect.scale = Vector3.ONE
 
     match kind:
         "move":
@@ -62,6 +71,9 @@ static func pose(model: Node3D, kind: String, progress: float,
                     if mat != null:
                         mat.uv1_offset = Vector3(0,fmod(t*1.9,1.0),0)
             turret.rotation_degrees.y = 0.0
+            if dust != null:
+                dust.visible = t > 0.05 and t < 0.95
+                dust.scale = Vector3.ONE * (0.83+0.38*t)
         "attack":
             # Rotate the turret independently, then animate elevation and
             # visible breech recoil. No fake movement of the entire chassis.
@@ -71,10 +83,19 @@ static func pose(model: Node3D, kind: String, progress: float,
             var recoil: float = pow(1.0-t,4.0) * 0.35
             gun.position.z = -0.56+recoil
             turret.position.y = 1.11 - sin(t*PI)*0.012
+            if muzzle != null:
+                muzzle.visible = t < 0.30
+                muzzle.scale = Vector3.ONE * (1.10-0.50*t)
+            if smoke != null:
+                smoke.visible = t >= 0.11 and t < 0.90
+                smoke.scale = Vector3.ONE * (0.72+0.75*t)
         "damaged":
             model.rotation_degrees.z = sin(t*PI*2.0)*2.1*(1.0-t)
             gun.rotation_degrees.x = 2.0
             turret.position.y = 1.11 - 0.03*sin(t*PI)
+            if impact != null:
+                impact.visible = t < 0.94
+                impact.scale = Vector3.ONE*(0.88+0.40*t)
         _:
             pass
     return true
