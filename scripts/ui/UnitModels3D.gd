@@ -336,7 +336,7 @@ static func _tank(root: Node3D) -> void:
     hull.name = "ChasisBlindado"
     root.add_child(hull)
     _body(hull,"MonocascoBlindajeCompuesto",0.86,1.47,1.45,0.36,0.96,STEEL)
-    _body(hull,"PlacaGlacisInclinada",0.75,1.47,-0.12,0.84,1.06,ARMOR)
+    _body(hull,"PlacaGlacisInclinada",0.75,1.47,-0.12,0.84,1.06,STEEL.darkened(0.06))
     _box(hull,"NervioProa",Vector3(0.0,0.68,-1.35),
         Vector3(1.30,0.18,0.12),DARK)
     _box(hull,"PlacaBasalFrontal",Vector3(0,0.46,-1.33),
@@ -361,10 +361,28 @@ static func _tank(root: Node3D) -> void:
             Vector3(0.37,0.47,2.84),RUBBER)
         _box(hull,"GuiaOruga%s" % side,Vector3(sign*0.91,0.51,0),
             Vector3(0.42,0.14,2.70),DARK)
+        # Continuous visible tread edges, not seven isolated wheels. Their
+        # closed dark profile is independent of the faction-colored skirts.
+        _box(hull,"CintaSuperiorOruga%s" % side,Vector3(sign*1.213,0.52,0),
+            Vector3(0.12,0.135,2.50),RUBBER)
+        _box(hull,"CintaInferiorOruga%s" % side,Vector3(sign*1.213,0.09,0),
+            Vector3(0.12,0.13,2.50),RUBBER)
+        for end in [-1,1]:
+            _cylinder(hull,"ExtremoCinta%s_%s" % [side,end],
+                Vector3(sign*1.225,0.305,float(end)*1.23),
+                0.28,0.075,RUBBER,Vector3(0,0,90),18)
+        for t in range(15):
+            var offset: float = -1.21 + float(t)*0.173
+            _box(hull,"EslabonTreadSuperior%s_%02d" % [side,t],
+                Vector3(sign*1.281,0.58,offset),
+                Vector3(0.075,0.045,0.105),DARK)
+            _box(hull,"EslabonTreadInferior%s_%02d" % [side,t],
+                Vector3(sign*1.281,0.05,offset),
+                Vector3(0.075,0.045,0.105),DARK)
         for n in range(7):
             var z: float = -1.13+float(n)*0.38
             _cylinder(hull,"Rodillo%s_%02d" % [side,n],
-                Vector3(sign*1.14,0.29,z),0.16,0.065,METAL,
+                Vector3(sign*1.14,0.29,z),0.16,0.065,STEEL.darkened(0.19),
                 Vector3(0,0,90),12)
             _cylinder(hull,"BujeOscuro%s_%02d" % [side,n],
                 Vector3(sign*1.18,0.29,z),0.07,0.035,BLACK,
@@ -400,8 +418,8 @@ static func _tank(root: Node3D) -> void:
     _cylinder(root,"AnilloDeGiro",Vector3(0,1.045,-0.15),
         0.64,0.18,BLACK,Vector3.ZERO,16)
     # Low, sloped turret and composite front cheeks; center is turret-local.
-    _body(turret,"TorreBlindada",0.69,0.92,0.71,0.0,0.43,ARMOR)
-    _body(turret,"SobreblindajeTorre",0.57,0.67,0.45,0.39,0.53,STEEL)
+    _body(turret,"TorreBlindada",0.69,0.92,0.71,0.0,0.43,STEEL)
+    _body(turret,"SobreblindajeTorre",0.57,0.67,0.45,0.39,0.53,STEEL.darkened(0.10))
     for side in [-1,1]:
         var sign: float = float(side)
         _box(turret,"MejillaBlindada%s" % side,

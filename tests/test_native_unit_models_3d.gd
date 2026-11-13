@@ -44,7 +44,10 @@ func _run() -> void:
     var tank_blue: Node3D = Models.build("tank",0)
     var tank_red: Node3D = Models.build("tank",1)
     assert(tank_blue != null and tank_red != null)
-    assert(Models.inspect_meshes(tank_blue) >= 100)
+    assert(Models.inspect_meshes(tank_blue) >= 140)
+    assert(tank_blue.find_child("CintaSuperiorOruga-1",true,false) != null)
+    assert(tank_blue.find_child("CintaInferiorOruga1",true,false) != null)
+    assert(tank_blue.find_child("EslabonTreadSuperior-1_00",true,false) != null)
     assert(Models.paintable_count(tank_blue) >= 12)
     assert(Models.paintable_count(tank_blue) == Models.paintable_count(tank_red))
     var blue_paint: MeshInstance3D = tank_blue.find_child("FaccionFaldon-1_00",true,false) as MeshInstance3D
@@ -216,8 +219,15 @@ func _run() -> void:
     print("VISOR3D screen=",app.get_viewport().get_visible_rect().size,
         " dialog=",inspector.size," top=",inspector.position,
         " preview=",inspector.viewport_holder.size," camera=",inspector.camera.size)
-    assert(inspector.viewport_holder.size.y >= 200.0)
-    assert(inspector.viewport_holder.size.y <= 335.0)
+    assert(inspector.viewport_holder.size.y >= 260.0)
+    assert(inspector.viewport_holder.size.y <= 470.0)
+    # SubViewportContainer.stretch resizes Godot's real render target to
+    # the visible canvas. Validate the result, not a stale requested size.
+    assert(inspector.preview.size.x >= 450)
+    assert(inspector.preview.size.y >= 260)
+    assert(inspector.preview.size == Vector2i(inspector.viewport_holder.size))
+    assert(inspector.viewport_holder.get_parent().name == "ModeloYControles")
+    assert(inspector.picker.get_parent().name == "ControlesDelModelo")
     assert(inspector.position.y >= -2)
     assert(inspector.position.y + inspector.size.y <= app.get_viewport().get_visible_rect().size.y + 4)
     var inspector_image: Image = app.get_viewport().get_texture().get_image()
