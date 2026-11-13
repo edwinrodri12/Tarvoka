@@ -129,6 +129,17 @@ jobs:
           fi
           test -s artifacts/tarvoka_mbt_live_animation_frames.png
 
+      - name: Render and audit final-style MBT armor, sensors, eight factions and 4-angle detail
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_mbt_art_finish.gd 2>&1 | tee /tmp/tarvoka-mbt-detail.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-mbt-detail.log; then
+            echo "MBT art pass/render regression"; exit 1
+          fi
+          grep -q "PASS MBT art detail:" /tmp/tarvoka-mbt-detail.log
+          test -s artifacts/tarvoka_mbt_detail_turntable.png
+
       - name: Archive genuine Godot 3D renders for visual review
         uses: actions/upload-artifact@v4
         with:
@@ -138,6 +149,7 @@ jobs:
             artifacts/tarvoka_3d_inspector_android.png
             artifacts/tarvoka_mbt_8_faction_colors.png
             artifacts/tarvoka_mbt_live_animation_frames.png
+            artifacts/tarvoka_mbt_detail_turntable.png
             artifacts/tarvoka_visual_lab_android.png
             artifacts/tarvoka_tank_5_destruction_stages.png
             artifacts/tarvoka_damage_inspector_android.png

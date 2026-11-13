@@ -53,6 +53,17 @@ func _run() -> void:
             assert(is_equal_approx(gun.rotation_degrees.x,-18.0))
             assert(damage_root.find_child("DesgasteEtapa4",false,false).find_child("FuegoBase",true,false) != null)
             assert(damage_root.find_child("DesgasteEtapa4",false,false).find_child("ColumnaHumo",true,false) != null)
+    # 242323.mp4: persistent damaged smoke must use soft alpha sprites,
+    # not the former opaque SphereMesh objects hiding the whole turret.
+    var haze: MeshInstance3D = model.find_child("HumoGrisMotor",true,false) as MeshInstance3D
+    assert(haze != null and haze.mesh is QuadMesh)
+    assert(haze.material_override.albedo_texture != null)
+    assert(haze.material_override.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA)
+    assert(haze.material_override.billboard_mode == BaseMaterial3D.BILLBOARD_ENABLED)
+    var original_haze_y: float = haze.position.y
+    assert(Damage.apply_stage(model,2))
+    Damage.animate_smoke(model,0.8)
+    assert(absf(haze.position.y-original_haze_y) > 0.001)
     assert(not Damage.apply_stage(model,-1))
     assert(not Damage.apply_stage(model,5))
     assert(Damage.apply_stage(model,0))

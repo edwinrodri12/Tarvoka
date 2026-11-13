@@ -9,6 +9,8 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
+const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
+const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -395,10 +397,18 @@ static func _tank(root: Node3D) -> void:
         # Painted replaceable upper skirt modules, not full hull camouflage.
         for n in range(5):
             var z: float = -1.07+float(n)*0.54
+            # On the physical 242323 capture the broad enamel rectangles
+            # looked like bright passenger-bus side panels. Keep all fourteen
+            # original paint zones, but make color an armored identification
+            # stripe over a dark removable steel skirt, not the whole skirt.
+            _box(hull,"FaldonBase%s_%02d" % [side,n],
+                Vector3(sign*1.180,0.69,z),
+                Vector3(0.087,0.34,0.49),DARK)
             _paint_box(hull,"FaccionFaldon%s_%02d" % [side,n],
-                Vector3(sign*1.177,0.69,z),Vector3(0.065,0.34,0.49))
+                Vector3(sign*1.235,0.72,z),
+                Vector3(0.024,0.135,0.433))
             _box(hull,"SeparadorFaldon%s_%02d" % [side,n],
-                Vector3(sign*1.22,0.69,z+0.255),
+                Vector3(sign*1.223,0.69,z+0.255),
                 Vector3(0.071,0.38,0.022),BLACK)
         for n in range(4):
             var z: float = -1.00+float(n)*0.58
@@ -714,6 +724,10 @@ static func build(role: String, faction: int = -1) -> Node3D:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
     if role == "tank":
+        # Physical finish is authored on the neutral geometry BEFORE PBR and
+        # strictly independent of the fourteen faction-color mesh panels.
+        TankFinish.apply(model)
+        TankProduction.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         TankDamage.prepare(model)
