@@ -15,6 +15,8 @@ var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
 var hq_version_picker: OptionButton
+var hq_ground: MeshInstance3D
+var hq_key_light: DirectionalLight3D
 var _hq_show_v2 := true
 var _hq_show_v3 := true
 var _hq_show_v4 := true
@@ -22,6 +24,29 @@ var _hq_show_v4 := true
 func _ready() -> void:
     super._ready()
     _add_building_mode()
+    _setup_architecture_stage()
+
+func _setup_architecture_stage() -> void:
+    # Only the laboratory gets a ground plane and true shadows. The actual
+    # building geometry and tactical terrain remain separate.
+    var ground_mesh := PlaneMesh.new()
+    ground_mesh.size = Vector2(34.0,34.0)
+    var ground_material := StandardMaterial3D.new()
+    ground_material.albedo_color = Color("#49615a")
+    ground_material.metallic = 0.04
+    ground_material.roughness = 0.98
+    hq_ground = MeshInstance3D.new()
+    hq_ground.name = "SueloNeutroDeEstudio3D"
+    hq_ground.mesh = ground_mesh
+    hq_ground.material_override = ground_material
+    hq_ground.position = Vector3(0,-0.28,0)
+    hq_ground.visible = false
+    preview.add_child(hq_ground)
+    for child in preview.get_children():
+        if child is DirectionalLight3D:
+            hq_key_light = child as DirectionalLight3D
+            hq_key_light.shadow_enabled = false
+            break
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -158,6 +183,10 @@ func _switch_category(index: int) -> void:
         return
     var building: bool = index == 1
     building_controls.visible = building
+    if hq_ground != null:
+        hq_ground.visible = building
+    if hq_key_light != null:
+        hq_key_light.shadow_enabled = building
     for widget in _unit_only_controls:
         widget.visible = not building
     if building:
