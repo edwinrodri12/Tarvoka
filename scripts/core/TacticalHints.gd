@@ -163,7 +163,7 @@ static func terrain_name(kind: String) -> String:
         "forest":
             return "Bosque"
         "road":
-            return "Camino"
+            return "Carretera"
         "mountain":
             return "Montana"
         "water":
@@ -243,6 +243,8 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                         text += "\nRol: %s | Terreno: %s (entrar cuesta %d) | Cobertura unidad: %d" % [
                             role, terrain_name(kind), move_cost, int(unit.get("cover", 0))
                         ]
+                        if kind == "road" and Logistics.road_fast(unit):
+                            text += " | Vehiculo motorizado: 2 casillas por punto en carretera"
                         text += "\n" + TerrainTactics.defensive_description(unit,terrain,state.get("economy",{}))
         if Roles.valid(str(unit.get("role", ""))):
             text += "\n" + Roles.counter_description(str(unit["role"]))
@@ -318,6 +320,8 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
         description += "\nAlcance de ataque: %d-%d casillas | Ataca: %s" % [minimum,maximum,", ".join(targets)]
     else:
         description += "\nSin ataque convencional"
+    if Logistics.road_fast(enemy):
+        description += "\nMovilidad de carretera: 2 casillas por punto (vehiculo motorizado)"
     description += "\nAzul: movimiento posible | Naranja: amenaza teorica tras mover y atacar."
     if fogged:
         description += " Solo area visible."
