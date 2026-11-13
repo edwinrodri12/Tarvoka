@@ -72,6 +72,9 @@ func _run() -> void:
         assert(HQ.paintable_count(v4) > HQ.paintable_count(v3))
         if level == 3:
             assert(v4.find_child("ArcoSuperiorNivel3_1",true,false) != null)
+            var radome: Node3D = v4.find_child("RadomoSuperior",true,false) as Node3D
+            assert(radome != null and radome.position.x > 1.0)
+            assert(v4.find_child("RadomoReposicionadoV4",true,false) != null)
         v3.free()
         v4.free()
     for faction in range(8):
@@ -109,6 +112,7 @@ func _run() -> void:
         await process_frame
     assert(studio.camera.position.x < 0.0)
     assert(studio.hq_ground != null and studio.hq_ground.visible)
+    assert((studio.hq_ground.mesh as PlaneMesh).size.x >= 100.0)
     assert(studio.hq_key_light != null and studio.hq_key_light.shadow_enabled)
     assert(studio.hq_version_picker.item_count == 4)
     assert(studio.hq_version_picker.selected == 0)
