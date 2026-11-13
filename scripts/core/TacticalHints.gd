@@ -163,7 +163,7 @@ static func terrain_name(kind: String) -> String:
         "forest":
             return "Bosque"
         "road":
-            return "Carretera"
+            return "Camino"
         "mountain":
             return "Montana"
         "water":
