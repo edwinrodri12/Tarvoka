@@ -8,7 +8,7 @@ Implementada el 13 de noviembre de 2026 para el flujo de **Escaramuza**.
 
 El mundo y la partida siguen teniendo **dos bandos tácticos**. El selector presenta las **ocho identidades visuales** como opciones para esos bandos, no simula combates simultáneos de ocho facciones. No añade poderes, comandantes activos, IA especial ni modificadores de balance (los valores v0.1 definidos permanecen congelados).
 
-Los **primeros cuatro escudos y retratos oficiales** (Alianza Norte, Pacto Escarlata, Unión Verde y Confederación Solar) ya están integrados como un atlas optimizado `assets/factions/official_first_four_atlas.webp`, recortado de las dos imágenes aprobadas. Véase `assets/factions/ART_SOURCES.md` para procedencia y coordenadas. Los otros cuatro muestran **INSIGNIA PENDIENTE** y **Retrato aprobado pendiente de incorporar**; no se inventan retratos. Si aparecen imágenes individuales `assets/factions/<clave>.png` o `assets/commanders/<clave>.png`, tienen prioridad.
+Los **ocho escudos y ocho retratos oficiales** se han integrado desde las dos láminas previamente aprobadas, como dos atlas pequeños: `assets/factions/official_first_four_atlas.webp` y `assets/factions/official_last_four_atlas.webp`. En la pantalla de elección, las ocho opciones muestran su escudo y la ficha seleccionada muestra la insignia grande y su comandante auténtico. Véase `assets/factions/ART_SOURCES.md` para fuentes, coordenadas y trazabilidad. Si se incorporan más adelante PNG maestros individuales `assets/factions/<clave>.png` y `assets/commanders/<clave>.png`, éstos tienen prioridad.
 
 ## Persistencia y compatibilidad
 
@@ -25,7 +25,7 @@ Los **primeros cuatro escudos y retratos oficiales** (Alianza Norte, Pacto Escar
 
 ## Pendiente para paridad visual con las artes aprobadas
 
-1. Separar e integrar los cuatro escudos y retratos restantes de las láminas aprobadas. Los primeros cuatro ya están implementados en atlas WEBP.
-2. Opcionalmente agregar los archivos maestros individuales de máxima resolución para portadas y marketing. El atlas actual está optimizado para Android; no sustituye al maestro.
+1. **Completado:** las ocho insignias y los ocho retratos están integrados desde los diseños aprobados. Los atlas WEBP están optimizados para selección Android, sin inventar personajes.
+2. Opcionalmente incorporar los archivos maestros individuales de máxima resolución para portadas y marketing. Los atlas actuales no sustituyen al maestro.
 3. Conectar las habilidades/ventajas v0.1 al motor **sólo después de confirmar su implementación y probarlas**. El selector actual es visual y funcional, pero todavía no activa bonificaciones.
 4. Verificación de la pantalla en teléfono Android real y su legibilidad vertical.
