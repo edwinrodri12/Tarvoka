@@ -16,6 +16,11 @@ func _run() -> void:
     var home: Control = main.home_menu
     main._show_home_menu()
     assert(home.primary_buttons.size() == 7)
+    var master_preview := Image.new()
+    assert(master_preview.load(home.OFFICIAL_ICON_HD) == OK)
+    assert(master_preview.get_width() == 512)
+    assert(master_preview.get_height() == 512)
+    assert(home._brand_image.texture.get_width() == 512)
     assert(home.primary_buttons["Continuar"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Escaramuza"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Multijugador"].disabled)
