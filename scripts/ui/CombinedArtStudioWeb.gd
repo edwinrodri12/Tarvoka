@@ -194,14 +194,24 @@ func _display_headquarters() -> void:
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
-        _yaw = -32.0
+        _yaw = 32.0
         _zoom = 1.0
     model_root.rotation_degrees.y = _yaw
     # Front-right camera reveals the command entrance, insignia, and helipad.
-    camera.position = Vector3(18.0,16.5,-19.0)
+    camera.position = Vector3(-18.0,16.5,-19.0)
     camera.look_at(Vector3(0,2.3,0),Vector3.UP)
     _update_camera()
     _update_details()
+
+func _reset_camera() -> void:
+    if _role == "headquarters":
+        _yaw = 32.0
+        _zoom = 1.0
+        if model_root != null:
+            model_root.rotation_degrees.y = _yaw
+        _update_camera()
+        return
+    super._reset_camera()
 
 func _update_camera() -> void:
     if _role == "headquarters":
