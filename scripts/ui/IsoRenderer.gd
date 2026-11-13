@@ -256,10 +256,20 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var sprite_size := hw * (1.34 if from_3d else (0.94 if is_air else 0.88))
             var rotation: float = 0.0 if from_3d else BattleVFX.sprite_rotation(role,
                 BattleVFX.projected_heading(Vector2i.ZERO,visual_heading))
+            var unit_tint: Color = face
+            if from_3d:
+                # Real 3D mesh captures have neutral materials; preserve the
+                # game's approved faction palette without eight GPU cameras
+                # for every role (one colorized draw and a clear team ring).
+                unit_tint = Color.WHITE.lerp(tint,0.26)
+                if bool(unit.get("acted",false)):
+                    unit_tint = unit_tint.darkened(0.27)
+                canvas.draw_arc(c+Vector2(0,hw*0.10),hw*0.33,
+                    0.0,TAU,24,tint,maxf(1.5,hw*0.055))
             canvas.draw_set_transform(c,rotation)
             canvas.draw_texture_rect(sprite,
                 Rect2(Vector2(-sprite_size*0.5,-sprite_size*0.56),Vector2.ONE*sprite_size),
-                false,(Color.WHITE if bool(unit.get("acted",false)) == false else Color(0.72,0.72,0.72)) if from_3d else face)
+                false,unit_tint)
             canvas.draw_set_transform(Vector2.ZERO)
         elif UnitArt.has_role(role):
             # Existing procedural silhouette is retained as a safe fallback.
