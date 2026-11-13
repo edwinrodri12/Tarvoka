@@ -72,7 +72,7 @@ jobs:
             echo "G09 body topology or visual damage restoration failed" >&2
             exit 1
           fi
-          grep -q "PASS G09 V5:" /tmp/watertight-check.log
+          grep -q "PASS G09 V7:" /tmp/watertight-check.log
           timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
