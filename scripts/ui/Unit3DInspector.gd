@@ -14,6 +14,8 @@ var faction_paint_picker: OptionButton
 var _selected_faction := 0
 var preview: SubViewport
 var viewport_holder: SubViewportContainer
+var inspector_outer: ScrollContainer
+var inspector_sidebar_scroll: ScrollContainer
 var camera: Camera3D
 var model_root: Node3D
 var info: Label
@@ -44,7 +46,8 @@ func _ready() -> void:
     # Constrain that child and scroll its contents instead of extending
     # the SubViewport beyond the phone's visible landscape height.
     var visible_height: float = get_viewport().get_visible_rect().size.y
-    var outer := ScrollContainer.new()
+    inspector_outer = ScrollContainer.new()
+    var outer: ScrollContainer = inspector_outer
     outer.name = "InspectorScroll"
     outer.custom_minimum_size = Vector2(300,clampf(visible_height*0.52,325.0,470.0))
     outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -229,7 +232,8 @@ func _ready() -> void:
     presentation.add_theme_constant_override("separation",14)
     presentation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     controls.add_child(presentation)
-    var sidebar_scroll := ScrollContainer.new()
+    inspector_sidebar_scroll = ScrollContainer.new()
+    var sidebar_scroll: ScrollContainer = inspector_sidebar_scroll
     sidebar_scroll.name = "DesplazarControlesDelModelo"
     sidebar_scroll.custom_minimum_size = Vector2(
         clampf(visible_width*0.21,220.0,330.0),
@@ -349,11 +353,25 @@ func _process(delta: float) -> void:
 func open_viewer() -> void:
     if not Models.supports(_current_role):
         show_role(str(Models.ROLES[0]))
+    # On Android the Window/AcceptDialog logical size can differ from the
+    # embedded viewport dimensions because of UI scaling. Size from the
+    # actual full-screen parent control rather than a sub-viewport.
     var screen: Vector2 = get_viewport().get_visible_rect().size
-    # Android video review: avoid a huge blank gray area below the model.
-    # Give the 3D canvas the space it needs without forcing 86% screen height.
-    var desired_height: int = int(clampf(screen.y*0.52+96.0,430.0,590.0))
-    popup_centered(Vector2i(int(screen.x*0.86),desired_height))
+    var parent_control: Control = get_parent() as Control
+    if parent_control != null and parent_control.size.x > screen.x*0.6:
+        screen = parent_control.size
+    var panel_height: float = clampf(screen.y*0.54,280.0,445.0)
+    var panel_width: float = clampf(screen.x*0.53,370.0,770.0)
+    viewport_holder.custom_minimum_size = Vector2(panel_width,panel_height)
+    if inspector_sidebar_scroll != null:
+        inspector_sidebar_scroll.custom_minimum_size = Vector2(
+            clampf(screen.x*0.22,220.0,345.0),panel_height)
+    if inspector_outer != null:
+        inspector_outer.custom_minimum_size.y = clampf(screen.y*0.68,320.0,490.0)
+    var desired_width: int = int(clampf(screen.x*0.90,640.0,1220.0))
+    var desired_height: int = int(clampf(screen.y*0.73,390.0,570.0))
+    min_size = Vector2i(desired_width,desired_height)
+    popup_centered(Vector2i(desired_width,desired_height))
 
 func _update_camera_size() -> void:
     if camera == null or not Models.supports(_current_role):
