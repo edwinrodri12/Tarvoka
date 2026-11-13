@@ -12,6 +12,10 @@ on:
       - "tools/terrain3d-gallery.html"
       - "scenes/Terrain3DLab.tscn"
       - "tests/test_native_terrain3d.gd"
+      - "tests/test_battle_3d_view.gd"
+      - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/Main.gd"
   pull_request:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
@@ -21,6 +25,10 @@ on:
       - "tools/terrain3d-gallery.html"
       - "scenes/Terrain3DLab.tscn"
       - "tests/test_native_terrain3d.gd"
+      - "tests/test_battle_3d_view.gd"
+      - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/Main.gd"
   workflow_dispatch:
 
 permissions:
@@ -62,6 +70,22 @@ jobs:
             exit 1
           fi
           grep -F 'PASS native terrain 3D:' /tmp/tarvoka-terrain3d-test.log
+      - name: Verify battle 3D camera ray picks tactical cells using real OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tests/test_battle_3d_view.gd \
+            2>&1 | tee /tmp/tarvoka-real-3d-battle-input.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-real-3d-battle-input.log; then
+            echo 'Real 3D battle input regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS battle 3D:' /tmp/tarvoka-real-3d-battle-input.log
+
       - name: Render native 3D scene into two real Godot screenshots
         shell: bash
         run: |
