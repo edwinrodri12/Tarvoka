@@ -155,6 +155,32 @@ static func _stage_node(root: Node3D, stage: int) -> Node3D:
 static func prepare(model: Node3D) -> bool:
     if model == null or model.find_child(ROOT,true,false) != null:
         return false
+    # V13 replaces the uninterrupted V12 side plates and old bustle.
+    # Enforce this across ALL five stages; legacy V12 restore code above
+    # must not resurrect geometry concealed by the newer optional sculpt.
+    if model.get_meta("tarvoka_mbt_segmented_v13",false):
+        for old_name in ["G09V12DefensaOrugaAngular_-1",
+                "G09V12DefensaOrugaAngular_1",
+                "G09V12AlmacenBlindadoPosterior"]:
+            var concealed: Node3D = model.find_child(old_name,true,false) as Node3D
+            if concealed != null:
+                concealed.visible = false
+        for part in model.find_children("G09V13FaldonSegmentado_*",
+                "MeshInstance3D",true,false):
+            var is_rear_hit: bool = str(part.name).ends_with("_1_03") or \
+                str(part.name).ends_with("_1_04")
+            part.visible = stage < 4 and not (stage >= 3 and is_rear_hit)
+        for seam in model.find_children("G09V13RibeteFaldon_*",
+                "MeshInstance3D",true,false):
+            var torn: bool = str(seam.name).ends_with("_1_03") or \
+                str(seam.name).ends_with("_1_04")
+            seam.visible = stage < 4 and not (stage >= 3 and torn)
+        for name in ["G09V13BastionMunicionesContinuo",
+                "G09V13RejillaPosterior","G09V13VigaBastion_-1",
+                "G09V13VigaBastion_1"]:
+            var aft: Node3D = model.find_child(name,true,false) as Node3D
+            if aft != null:
+                aft.visible = stage < 4
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret == null or gun == null:
