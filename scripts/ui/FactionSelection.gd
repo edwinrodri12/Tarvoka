@@ -360,7 +360,7 @@ func reflow_for_size(viewport: Vector2) -> void:
     for child in content_rail.get_children():
         if child is Control:
             child.custom_minimum_size.x = 0 if is_portrait_layout or viewport.x < 1000.0 else 310
-    var art_width: float = 92.0 if viewport.x < 1000.0 else 122.0
+    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else (92.0 if viewport.x < 1000.0 else 122.0)
     if selection_status != null:
         selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
