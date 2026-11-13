@@ -127,6 +127,9 @@ func _run() -> void:
         if preset == 1:
             assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
             assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
+            assert(studio.model_root.find_child("PuenteElevado_6",true,false) != null)
+            assert(Terrain.kind(3,0,preset) == "water")
+            assert(Terrain.kind(6,9,preset) == "water")
             assert(studio.model_root.find_child("PilarPuente",true,false) != null)
         if preset == 2:
             assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or
