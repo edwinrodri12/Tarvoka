@@ -21,7 +21,17 @@ func _run() -> void:
     assert(studio.role_picker.item_count == Models.ROLES.size())
     assert(studio.faction_picker.item_count == 8)
     assert(studio.damage_picker.item_count == 5)
-    assert(Models.inspect_meshes(studio.model_root) > 175)
+    var finished_meshes: int = Models.inspect_meshes(studio.model_root)
+    assert(finished_meshes > 175)
+    # Browser users can immediately compare genuine old/new Godot geometry,
+    # not two mock screenshots, without rebuilding or installing an APK.
+    studio._toggle_details()
+    assert(not studio._final_detail)
+    assert(not studio.model_root.get_meta("tarvoka_mbt_production_v4",false))
+    assert(Models.inspect_meshes(studio.model_root) < finished_meshes)
+    studio._toggle_details()
+    assert(studio._final_detail)
+    assert(studio.model_root.get_meta("tarvoka_mbt_production_v4",false))
     var initial_zoom: float = studio.camera.size
     studio._change_zoom(1)
     assert(studio.camera.size < initial_zoom)
