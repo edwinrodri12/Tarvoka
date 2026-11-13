@@ -83,7 +83,7 @@ func _ready() -> void:
     frame.add_child(sides_row)
     for side in range(2):
         var side_button := Button.new()
-        side_button.custom_minimum_size.y = 53
+        side_button.custom_minimum_size.y = 47
         side_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         side_button.pressed.connect(_choose_side.bind(side))
         sides_row.add_child(side_button)
@@ -151,7 +151,7 @@ func _ready() -> void:
     content_rail.add_child(dossier)
     dossier_card = dossier
     var dossier_col := VBoxContainer.new()
-    dossier_col.add_theme_constant_override("separation",9)
+    dossier_col.add_theme_constant_override("separation",5)
     dossier.add_child(dossier_col)
     var dossier_kicker := Label.new()
     dossier_kicker.text = "DOSSIER DE MANDO"
@@ -160,7 +160,7 @@ func _ready() -> void:
     dossier_col.add_child(dossier_kicker)
     preview_title = Label.new()
     preview_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    preview_title.add_theme_font_size_override("font_size",23)
+    preview_title.add_theme_font_size_override("font_size",21)
     dossier_col.add_child(preview_title)
     band_color = ColorRect.new()
     band_color.custom_minimum_size = Vector2(0,10)
@@ -248,10 +248,10 @@ func _ready() -> void:
     selection_status.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_col.add_child(selection_status)
     var balance := Label.new()
-    balance.text = "En esta fase la elección modifica identificación y colores. No modifica estadísticas ni activa poderes de comandante."
+    balance.text = "Identidad y colores oficiales. Los poderes de comandante se integrarán por separado."
     balance.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     balance.add_theme_color_override("font_color",Chrome.MUTED)
-    balance.add_theme_font_size_override("font_size",13)
+    balance.add_theme_font_size_override("font_size",12)
     dossier_col.add_child(balance)
 
     confirm_button = Button.new()
@@ -312,7 +312,7 @@ func _refresh() -> void:
     preview_title.text = str(data.get("name",""))
     preview_title.add_theme_color_override("font_color",color.lightened(0.23))
     band_color.color = color
-    preview_motif.text = "EMBLEMA OFICIAL\n" + str(data.get("motif",""))
+    preview_motif.text = "EMBLEMA OFICIAL · " + str(data.get("motif",""))
     var official: Texture2D = Style.emblem_texture(idx)
     portrait.texture = official
     portrait.visible = official != null
@@ -327,8 +327,8 @@ func _refresh() -> void:
     commander_notice.visible = approved_commander == null
     if approved_commander == null:
         commander_fallback.color = color.darkened(0.78)
-    preview_commander.text = ("COMANDANTE\nRetrato oficial de esta facción" if approved_commander != null else
-        "COMANDANTE\nRetrato aprobado pendiente de incorporar al proyecto.")
+    preview_commander.text = ("COMANDANTE · Retrato oficial" if approved_commander != null else
+        "COMANDANTE · Retrato pendiente")
     selection_status.text = "BANDO %d  /  %s" % [active_side+1,str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
 
@@ -360,7 +360,9 @@ func reflow_for_size(viewport: Vector2) -> void:
     for child in content_rail.get_children():
         if child is Control:
             child.custom_minimum_size.x = 0 if is_portrait_layout else 310
-    var art_width: float = 96.0 if is_portrait_layout and viewport.x < 460.0 else 122.0
+    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else 122.0
+    if selection_status != null:
+        selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
         emblem_display_box.custom_minimum_size = Vector2(art_width,art_width)
     if commander_display_box != null:
