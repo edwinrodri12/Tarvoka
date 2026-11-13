@@ -11,12 +11,15 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
+const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 
 var board: Control
 var status_label: Label
 var battlefield_status: Label
 var order_preview_label: Label
 var unit_label: Label
+var inspection_title: Label
+var inspection_detail: Label
 var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
@@ -71,6 +74,9 @@ var battle_hud_toggle: Button
 var battle_hud_commands: VBoxContainer
 var compact_status: Label
 var compact_detail: Label
+var compact_info_panel: PanelContainer
+var compact_info_title: Label
+var compact_info_body: Label
 var compact_confirm: Button
 var compact_cancel: Button
 var compact_end_turn: Button
@@ -264,6 +270,17 @@ func _ready() -> void:
     unit_heading.text = "UNIDAD Y ACCIONES"
     unit_heading.add_theme_font_size_override("font_size", 17)
     panel.add_child(unit_heading)
+
+    inspection_title = Label.new()
+    inspection_title.visible = false
+    inspection_title.add_theme_font_size_override("font_size",20)
+    inspection_title.add_theme_color_override("font_color",Color("#F5D982"))
+    panel.add_child(inspection_title)
+    inspection_detail = Label.new()
+    inspection_detail.visible = false
+    inspection_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    inspection_detail.add_theme_font_size_override("font_size",16)
+    panel.add_child(inspection_detail)
 
     unit_label = Label.new()
     unit_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -583,6 +600,34 @@ func _build_battle_hud() -> void:
     spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
     battle_hud_commands.add_child(spacer)
 
+    # Read-only context card: always below the battlefield and above actions.
+    # Mouse events pass through it so pinch-zoom and map taps still work.
+    compact_info_panel = PanelContainer.new()
+    compact_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_info_panel.visible = false
+    var info_style := StyleBoxFlat.new()
+    info_style.bg_color = Color(0.035,0.060,0.083,0.90)
+    info_style.content_margin_left = 10
+    info_style.content_margin_right = 10
+    info_style.content_margin_top = 6
+    info_style.content_margin_bottom = 6
+    compact_info_panel.add_theme_stylebox_override("panel",info_style)
+    battle_hud_commands.add_child(compact_info_panel)
+    var info_column := VBoxContainer.new()
+    info_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    info_column.add_theme_constant_override("separation",3)
+    compact_info_panel.add_child(info_column)
+    compact_info_title = Label.new()
+    compact_info_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_info_title.add_theme_font_size_override("font_size",16)
+    compact_info_title.add_theme_color_override("font_color",Color("#F5D982"))
+    info_column.add_child(compact_info_title)
+    compact_info_body = Label.new()
+    compact_info_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    compact_info_body.add_theme_font_size_override("font_size",14)
+    info_column.add_child(compact_info_body)
+
     var bottom_panel := PanelContainer.new()
     bottom_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var bottom_style := StyleBoxFlat.new()
@@ -700,7 +745,7 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.pending_order])
+    var summary_key: int = hash([board.state, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order])
     var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,
         board.view_zoom,board.view_pan,board.size,board.map_dimensions()])
     if battle_minimap != null and minimap_key != _minimap_view_key:
@@ -711,6 +756,16 @@ func _process(_delta: float) -> void:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
         _update_text(unit_label, board.selected_unit_summary())
+        var info: Dictionary = InspectorData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
+            board.selected_factory_pos,board.inspected_cell,0)
+        var show_info: bool = str(info.get("kind","none")) != "none"
+        inspection_title.visible = show_info
+        inspection_detail.visible = show_info
+        compact_info_panel.visible = show_info
+        _update_text(inspection_title,str(info.get("title","")))
+        _update_text(inspection_detail,str(info.get("body","")))
+        _update_text(compact_info_title,str(info.get("title","")))
+        _update_text(compact_info_body,str(info.get("body","")))
         var field_text: String = BattleReport.field_summary(board.state)
         if board.state.has("opening"):
             var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
