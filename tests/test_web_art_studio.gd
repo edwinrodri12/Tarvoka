@@ -27,12 +27,12 @@ func _run() -> void:
         await process_frame
     var finished: Image = studio.preview.get_texture().get_image()
     assert(finished != null and not finished.is_empty())
-    # The comparison now distinguishes the original prototype, earlier V6
-    # and the actual G09 V7 hero hull. Preserve V6/V7 at the exact camera.
+    # A/B compares the in-game V8 with the upgraded V9 at EXACTLY
+    # the same camera and faction; no misleading separately generated art.
     studio._toggle_previous()
     assert(studio._previous_version and studio._final_detail)
-    assert(studio.model_root.get_meta("tarvoka_mbt_art_v6",false))
-    assert(not studio.model_root.get_meta("tarvoka_mbt_hero_v7",false))
+    assert(studio.model_root.get_meta("tarvoka_mbt_hero_v7",false))
+    assert(not studio.model_root.get_meta("tarvoka_mbt_production_v9",false))
     for tick in range(4):
         await process_frame
     var previous: Image = studio.preview.get_texture().get_image()
@@ -53,10 +53,10 @@ func _run() -> void:
     history.blit_rect(old_finish,Rect2i(0,0,480,330),Vector2i.ZERO)
     history.blit_rect(new_finish,Rect2i(0,0,480,330),Vector2i(480,0))
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
-    assert(history.save_png("res://artifacts/tarvoka_mbt_v6_vs_v7_same_camera.png") == OK)
+    assert(history.save_png("res://artifacts/tarvoka_mbt_v8_vs_v9_same_camera.png") == OK)
     studio._toggle_previous()
     assert(not studio._previous_version and studio._final_detail)
-    assert(studio.model_root.get_meta("tarvoka_mbt_hero_v7",false))
+    assert(studio.model_root.get_meta("tarvoka_mbt_production_v9",false))
     # Users reported "no visible change" in 242346.mp4. Preserve a strict
     # same-camera screenshot of BEFORE vs AFTER for actual artistic review.
     studio._toggle_details()
