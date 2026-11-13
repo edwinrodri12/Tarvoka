@@ -14,7 +14,11 @@ const LABELS := [
 
 # All starting armies remain on passable ground in each scenario. These are
 # intentionally small, balanced prototype maps, NOT a campaign/map generator.
-static func terrain(scenario_id: int = 0) -> Array:
+static func terrain(scenario_id: int = 0, grid_size: Vector2i = Vector2i(10,8)) -> Array:
+    if not Rules.supported_size(grid_size):
+        return []
+    if grid_size != Vector2i(Rules.WIDTH, Rules.HEIGHT):
+        return _large_terrain(scenario_id, grid_size)
     var map: Array = []
     for y in range(Rules.HEIGHT):
         var row: Array = []
@@ -73,9 +77,11 @@ static func valid_seed(seed: int) -> bool:
 static func seeded_template(seed: int) -> int:
     return seed % LABELS.size() if valid_seed(seed) else -1
 
-static func seeded_terrain(seed: int) -> Array:
-    if not valid_seed(seed):
+static func seeded_terrain(seed: int, grid_size: Vector2i = Vector2i(10,8)) -> Array:
+    if not valid_seed(seed) or not Rules.supported_size(grid_size):
         return []
+    if grid_size != Vector2i(Rules.WIDTH, Rules.HEIGHT):
+        return _large_seeded_terrain(seed, grid_size)
     var map: Array = terrain(seeded_template(seed))
     var rng := RandomNumberGenerator.new()
     rng.seed = seed
@@ -116,6 +122,135 @@ static func _protected_random_cell(x: int, y: int) -> bool:
         return true
     return false
 
+# The original 10x8 layouts remain byte-for-byte unchanged.
+# Explicit projection of old strategic anchors to larger symmetric arenas.
+static func scale_x(legacy_x: int, grid_size: Vector2i) -> int:
+    if grid_size == Vector2i(10,8):
+        return legacy_x
+    match legacy_x:
+        0:
+            return 0
+        1:
+            return 1
+        2:
+            return maxi(3, int(round(float(grid_size.x-1) * 0.23)))
+        3:
+            return int(round(float(grid_size.x-1)*0.35))
+        4:
+            return int(grid_size.x / 2) - 2
+        5:
+            return int(grid_size.x / 2) + 1
+        6:
+            return grid_size.x-1-scale_x(3,grid_size)
+        7:
+            return grid_size.x-1-scale_x(2,grid_size)
+        8:
+            return grid_size.x-2
+        9:
+            return grid_size.x-1
+    return clampi(legacy_x,0,grid_size.x-1)
+
+static func scale_y(legacy_y: int, grid_size: Vector2i) -> int:
+    if grid_size == Vector2i(10,8):
+        return legacy_y
+    return clampi(int(round(float(legacy_y)*float(grid_size.y-1)/7.0)),0,grid_size.y-1)
+
+static func _large_terrain(scenario_id: int, grid_size: Vector2i) -> Array:
+    var w: int = grid_size.x
+    var h: int = grid_size.y
+    var map: Array = []
+    for y in range(h):
+        var row: Array = []
+        for x in range(w):
+            row.append("plain")
+        map.append(row)
+    if scenario_id == 0:
+        return map
+    var middle: int = int(w/2)
+    if scenario_id == 1:
+        for y in range(2,h-2):
+            if y % 5 in [0,1,3]:
+                for x in range(3,middle-3):
+                    if x % 4 in [1,2]:
+                        map[y][x] = "forest"
+                        map[y][w-1-x] = "forest"
+        for y in [int(h/2)-1,int(h/2)]:
+            for x in range(w):
+                map[y][x] = "road"
+        for x in range(middle-2,middle+2):
+            map[0][x] = "mountain"
+            map[h-1][x] = "mountain"
+    elif scenario_id == 2:
+        for y in range(h):
+            map[y][middle-1] = "water"
+            map[y][middle] = "water"
+        for y in [scale_y(2,grid_size),scale_y(5,grid_size)]:
+            for x in range(w):
+                map[y][x] = "road"
+        for x in range(3,middle-2):
+            if x % 5 == 0:
+                for y in [scale_y(1,grid_size),scale_y(6,grid_size)]:
+                    map[y][x] = "forest"
+                    map[y][w-1-x] = "forest"
+    elif scenario_id == 3:
+        for x in range(w):
+            map[0][x] = "water"
+            map[h-1][x] = "water"
+            map[scale_y(3,grid_size)][x] = "road"
+        for x in range(3,middle-2):
+            if x % 4 == 0:
+                for y in [scale_y(2,grid_size),scale_y(5,grid_size)]:
+                    map[y][x] = "forest"
+                    map[y][w-1-x] = "forest"
+    # All stations, starting armies, cities and communications nodes must
+    # exist on walkable cells. Keep paired coasts as true water.
+    _protect_large_anchors(map,grid_size,scenario_id)
+    return map
+
+static func _large_anchor_cells(grid_size: Vector2i) -> Array:
+    var anchors: Array = []
+    for x in [0,1,2,3,4,5,6,7,8,9]:
+        if x in [0,1,8,9]:
+            for legacy_y in range(1,7):
+                anchors.append(Vector2i(scale_x(x,grid_size),scale_y(legacy_y,grid_size)))
+    for pair in [
+        Vector2i(2,1),Vector2i(7,1),Vector2i(3,4),Vector2i(6,4),
+        Vector2i(4,2),Vector2i(5,2),Vector2i(4,5),Vector2i(5,5)
+    ]:
+        anchors.append(Vector2i(scale_x(pair.x,grid_size),scale_y(pair.y,grid_size)))
+    return anchors
+
+static func _protect_large_anchors(map: Array, grid_size: Vector2i, scenario_id: int) -> void:
+    for cell in _large_anchor_cells(grid_size):
+        if cell.y == 0 or cell.y == grid_size.y-1:
+            continue
+        map[cell.y][cell.x] = "road" if scenario_id == 2 and cell.x in [scale_x(4,grid_size),scale_x(5,grid_size)] else "plain"
+
+static func _large_seeded_terrain(seed: int, grid_size: Vector2i) -> Array:
+    var template: int = seeded_template(seed)
+    var map: Array = _large_terrain(template,grid_size)
+    var rng := RandomNumberGenerator.new()
+    rng.seed = seed
+    var anchors: Dictionary = {}
+    for cell in _large_anchor_cells(grid_size):
+        anchors[cell] = true
+    for y in range(1,grid_size.y-1):
+        for x in range(2,int(grid_size.x/2)):
+            var other: int = grid_size.x-1-x
+            if anchors.has(Vector2i(x,y)) or anchors.has(Vector2i(other,y)):
+                continue
+            if str(map[y][x]) in ["water","road"] or str(map[y][other]) in ["water","road"]:
+                continue
+            var value: int = rng.randi_range(0,99)
+            var kind := "plain"
+            if value < 23:
+                kind = "forest"
+            elif value < 32:
+                kind = "mountain"
+            map[y][x] = kind
+            map[y][other] = kind
+    return map
+
 static func label(scenario_id: int) -> String:
     if scenario_id == RANDOM_SCENARIO_ID:
         return "Escaramuza aleatoria"
@@ -124,7 +259,10 @@ static func label(scenario_id: int) -> String:
     return LABELS[scenario_id]
 
 static func identify(map: Array) -> int:
+    var size: Vector2i = Rules.map_size(map)
+    if not Rules.valid_terrain(map):
+        return 0
     for id in range(LABELS.size()):
-        if map == terrain(id):
+        if map == terrain(id,size):
             return id
     return 0

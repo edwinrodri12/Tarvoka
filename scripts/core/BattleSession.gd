@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaBattleSession
 
 const MoveActions = preload("res://scripts/core/MoveActions.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
@@ -53,7 +54,7 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
     # sight. The shot may reveal combat effects, but never unlocks omniscience.
     var defender_side: int = 1 - int(state["faction"])
     var counter_visible: bool = not Visibility.enabled(state) or Visibility.is_unit_visible(state,defender_side,attacker_id)
-    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible,state["terrain"],state.get("economy",{}))
+    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible,Rules.map_size(state["terrain"]),state["terrain"],state.get("economy",{}))
     var applied: Dictionary = _apply(state, action)
     if applied.get("valid", false):
         applied["attacker_id"] = attacker_id
@@ -109,7 +110,7 @@ static func end_turn(state: Dictionary) -> Dictionary:
     return {"valid": true, "state": next}
 
 static func _active(state: Dictionary) -> bool:
-    return state.has("units") and state["units"] is Array and state.has("terrain") and state["terrain"] is Array and state.has("faction") and state["faction"] in [0, 1] and int(state.get("winner", -1)) == -1
+    return state.has("units") and state["units"] is Array and state.has("terrain") and state["terrain"] is Array and Rules.valid_terrain(state["terrain"]) and state.has("faction") and state["faction"] in [0, 1] and int(state.get("winner", -1)) == -1
 
 static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     if not action.get("valid", false):

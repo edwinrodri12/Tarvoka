@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaRelayControl
 
 const Rules = preload("res://scripts/core/Rules.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const DEFAULT_TARGET := 5
 const MAX_TARGET := 20
@@ -13,11 +14,8 @@ const MAX_FAIR_SCORE := 100000
 # Each relay owned after that capture earns one signal point per completed turn.
 # No extra actions, economy, production, buffs, or hidden RNG.
 static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: bool = false, first_faction: int = 0) -> Dictionary:
-    if target < 2 or target > MAX_TARGET or terrain.size() != Rules.HEIGHT:
+    if target < 2 or target > MAX_TARGET or not Rules.valid_terrain(terrain):
         return {}
-    for row in terrain:
-        if not row is Array or row.size() != Rules.WIDTH:
-            return {}
     # Classic games keep the original two diagonal relays. Modern tactical
     # battles use two mirrored pairs: neither side gains a nearer *capturable*
     # signal from the fixed opening line/scout formation.
@@ -27,6 +25,11 @@ static func create(terrain: Array, target: int = DEFAULT_TARGET, fair_round: boo
             Vector2i(4, 2), Vector2i(5, 2),
             Vector2i(4, 5), Vector2i(5, 5)
         ]
+    var dims: Vector2i = Rules.map_size(terrain)
+    if dims != Vector2i(10,8):
+        for i in range(locations.size()):
+            var old: Vector2i = locations[i]
+            locations[i] = Vector2i(Scenarios.scale_x(old.x,dims),Scenarios.scale_y(old.y,dims))
     var nodes: Array = []
     for position in locations:
         if Rules.movement_cost(str(terrain[position.y][position.x])) < 0:
@@ -88,11 +91,8 @@ static func finish_turn(state: Dictionary) -> Dictionary:
     return result
 
 static func valid(control: Dictionary, terrain: Array) -> bool:
-    if terrain.size() != Rules.HEIGHT:
+    if not Rules.valid_terrain(terrain):
         return false
-    for row in terrain:
-        if not row is Array or row.size() != Rules.WIDTH:
-            return false
     if not control.get("nodes") is Array or control["nodes"].is_empty() or control["nodes"].size() > MAX_NODES:
         return false
     var unique: Dictionary = {}
@@ -100,7 +100,7 @@ static func valid(control: Dictionary, terrain: Array) -> bool:
         if not node is Dictionary or not node.get("pos") is Vector2i or not node.get("owner") is int:
             return false
         var cell: Vector2i = node["pos"]
-        if not Rules.inside(cell) or unique.has(cell) or Rules.movement_cost(str(terrain[cell.y][cell.x])) < 0:
+        if not Rules.inside(cell,terrain) or unique.has(cell) or Rules.movement_cost(str(terrain[cell.y][cell.x])) < 0:
             return false
         if node["owner"] not in [-1, 0, 1]:
             return false

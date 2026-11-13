@@ -7,6 +7,7 @@ const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -14,6 +15,9 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
+const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
+const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const WIDTH := 10
 const HEIGHT := 8
 var state: Dictionary = {}
@@ -37,6 +41,18 @@ var touch_origin := Vector2.ZERO
 var touch_active := false
 var touch_finger_index := -1
 var touch_cancelled := false
+# Display-only camera, never serialized into BattleSession.
+var view_zoom := 1.0
+var view_pan := Vector2.ZERO
+var iso_enabled := false
+var battery_saver := false
+var ambient_redraw_count := 0 # Test diagnostics, no save changes.
+var iso_zoom := 1.0
+var iso_pan := Vector2.ZERO
+var motion_effects: Array[Dictionary] = []
+var unit_headings: Dictionary = {}
+var art_phase := 0.0
+var _ambient_accum := 0.0
 const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
@@ -46,15 +62,23 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8)) -> void:
     symmetric_setup = symmetric
     specialized_roster = specialized or modern
     modern_roster = modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
+    if not Rules.supported_size(map_dimensions):
+        map_dimensions = Vector2i(10,8)
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    motion_effects.clear()
+    unit_headings.clear()
     var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
-    var terrain: Array = Scenarios.seeded_terrain(map_seed) if is_seeded else Scenarios.terrain(current_scenario_id)
+    var terrain: Array = Scenarios.seeded_terrain(map_seed,map_dimensions) if is_seeded else Scenarios.terrain(current_scenario_id,map_dimensions)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -69,6 +93,11 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
+    if map_dimensions != Vector2i(10,8):
+        for unit in units:
+            var old: Vector2i = unit["pos"]
+            unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
+                Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
     if is_seeded:
@@ -89,12 +118,90 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _write_autosave(false)
     queue_redraw()
 
+func set_battery_saver(enabled: bool) -> void:
+    battery_saver = enabled
+    _ambient_accum = 0.0
+    queue_redraw()
+
+func set_isometric(enabled: bool) -> void:
+    iso_enabled = enabled
+    _ambient_accum = 0.0
+    touch_active = false
+    touch_finger_index = -1
+    touch_cancelled = false
+    queue_redraw()
+
+func change_iso_zoom(direction: int) -> void:
+    if not iso_enabled or direction == 0:
+        return
+    iso_zoom = clampf(iso_zoom * (1.2 if direction > 0 else 1.0/1.2),
+        IsoProjection.MIN_ZOOM, IsoProjection.MAX_ZOOM)
+    queue_redraw()
+
+func reset_iso_camera() -> void:
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    queue_redraw()
+
+func focus_iso_cell(cell: Vector2i) -> bool:
+    if not iso_enabled or not Rules.inside(cell,state.get("terrain",[])):
+        return false
+    iso_pan = size*0.5 - IsoProjection.center(cell,size,iso_zoom,Vector2.ZERO,map_dimensions())
+    queue_redraw()
+    return true
+
+func screen_cell(point: Vector2) -> Vector2i:
+    if iso_enabled:
+        return IsoProjection.screen_to_cell(point,size,iso_zoom,iso_pan,map_dimensions())
+    var tile: float = _cell_size()
+    if tile <= 0.0:
+        return Vector2i(-1,-1)
+    var relative: Vector2 = point - _board_origin()
+    var dimensions: Vector2i = map_dimensions()
+    if relative.x < 0.0 or relative.y < 0.0 or relative.x >= dimensions.x*tile or relative.y >= dimensions.y*tile:
+        return Vector2i(-1,-1)
+    return Vector2i(int(relative.x/tile),int(relative.y/tile))
+
+func map_dimensions() -> Vector2i:
+    return Rules.map_size(state.get("terrain",[])) if state.get("terrain") is Array else Vector2i(WIDTH,HEIGHT)
+
+func change_view_zoom(direction: int) -> void:
+    if iso_enabled:
+        change_iso_zoom(direction)
+        return
+    if direction == 0:
+        return
+    view_zoom = clampf(view_zoom * (1.3 if direction > 0 else (1.0/1.3)),1.0,4.0)
+    queue_redraw()
+
+func reset_view_camera() -> void:
+    if iso_enabled:
+        reset_iso_camera()
+        return
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    queue_redraw()
+
+func focus_view_cell(cell: Vector2i) -> bool:
+    if iso_enabled:
+        return focus_iso_cell(cell)
+    var dims: Vector2i = map_dimensions()
+    if cell.x < 0 or cell.y < 0 or cell.x >= dims.x or cell.y >= dims.y:
+        return false
+    var tile: float = _cell_size()
+    view_pan = size*0.5 - ((size-Vector2(dims)*tile)*0.5 + (Vector2(cell)+Vector2(0.5,0.5))*tile)
+    queue_redraw()
+    return true
+
 func _cell_size() -> float:
-    return min(size.x / float(WIDTH), size.y / float(HEIGHT))
+    var dims: Vector2i = map_dimensions()
+    if dims.x <= 0 or dims.y <= 0:
+        return 0.0
+    return minf(size.x / float(dims.x), size.y / float(dims.y)) * view_zoom
 
 func _board_origin() -> Vector2:
-    var tile := _cell_size()
-    return (size - Vector2(WIDTH * tile, HEIGHT * tile)) * 0.5
+    var tile: float = _cell_size()
+    return (size - Vector2(map_dimensions()) * tile) * 0.5 + view_pan
 
 # Completely opaque unknown cells prevent even subtle color-based terrain
 # leaks; previously explored cells retain a dim, recognizable map surface.
@@ -102,14 +209,19 @@ static func fog_cover_color(has_explored: bool) -> Color:
     return Color(0.025, 0.035, 0.05, 0.73) if has_explored else Color(0.015, 0.025, 0.04, 1.0)
 
 func _draw() -> void:
+    if iso_enabled:
+        IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
+            pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,inspected_enemy_id)
+        return
     var tile := _cell_size()
     var origin := _board_origin()
     var font := ThemeDB.fallback_font
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
+    var dimensions: Vector2i = map_dimensions()
+    for y in range(dimensions.y):
+        for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
             var terrain_color: Color = VisualStyle.terrain_color(terrain_type, x, y)
@@ -192,8 +304,8 @@ func _draw() -> void:
     # Reuse the exact movement/combat rules instead of drawing guessed ranges.
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     var inspection: Dictionary = enemy_inspection_hints()
-    # Blue and amber footprints show POSSIBLE enemy movement and fire from
-    # its current position. Neither zone grants visibility or legal orders.
+    # Blue and amber footprints show POSSIBLE enemy movement and fire after
+    # a legal future move or from its present cell. No actions are created.
     for cell in inspection.get("moves",{}):
         var cell_pos: Vector2 = origin + Vector2(cell) * tile
         draw_rect(Rect2(cell_pos,Vector2.ONE*tile),Color(0.23,0.62,0.98,0.26))
@@ -209,9 +321,9 @@ func _draw() -> void:
             draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.20)), Color.WHITE)
-    # Independent amber weapon reach from the current tile. Movement stays
-    # blue, while real, legally attackable enemies remain marked red on top.
-    # This is NOT combined move+fire range and never creates a game action.
+    # Combined amber threat reach (legal move endpoint + weapon range).
+    # Red targets remain attacks executable NOW from the current position.
+    # The player must still move first, then issue a separate attack order.
     var weapon_area: Dictionary = selected_weapon_coverage()
     for covered_cell in weapon_area:
         var covered_pos: Vector2 = origin + Vector2(covered_cell) * tile
@@ -324,13 +436,61 @@ func _draw() -> void:
                 int(max(11.0, tile * 0.22)), Color(1.0, 0.88, 0.60))
 
 func _process(delta: float) -> void:
-    if combat_effects.is_empty():
+    var dt: float = maxf(0.0, delta)
+    var needs_redraw := false
+    if iso_enabled:
+        art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)
+        _ambient_accum += dt
+        var cadence: float = VisualBudget.ambient_interval(map_dimensions(),battery_saver)
+        if _ambient_accum >= cadence:
+            _ambient_accum = fmod(_ambient_accum,cadence)
+            ambient_redraw_count += 1
+            needs_redraw = true
+    if not combat_effects.is_empty():
+        for effect in combat_effects:
+            effect["elapsed"] = float(effect["elapsed"]) + dt
+        for i in range(combat_effects.size()-1,-1,-1):
+            if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
+                combat_effects.remove_at(i)
+        needs_redraw = true
+    if not motion_effects.is_empty():
+        for effect in motion_effects:
+            effect["elapsed"] = float(effect["elapsed"]) + dt
+        for i in range(motion_effects.size()-1,-1,-1):
+            if float(motion_effects[i]["elapsed"]) >= 0.32:
+                motion_effects.remove_at(i)
+        needs_redraw = true
+    if needs_redraw:
+        queue_redraw()
+
+func _record_move_effect(before: Dictionary, after: Dictionary, unit_id: String) -> void:
+    if not iso_enabled or unit_id.is_empty():
         return
-    for effect in combat_effects:
-        effect["elapsed"] = float(effect["elapsed"]) + maxf(0.0, delta)
-    for i in range(combat_effects.size()-1, -1, -1):
-        if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
-            combat_effects.remove_at(i)
+    var old: Dictionary = {}
+    var current: Dictionary = {}
+    for u in before.get("units",[]):
+        if str(u.get("id","")) == unit_id:
+            old = u
+            break
+    for u in after.get("units",[]):
+        if str(u.get("id","")) == unit_id:
+            current = u
+            break
+    if old.is_empty() or current.is_empty() or old["pos"] == current["pos"]:
+        return
+    if int(old.get("faction",-1)) != 0:
+        # Do not animate a hidden enemy path; both endpoints must be known.
+        if Visibility.enabled(before) and not Visibility.visible_cells(before,0).has(old["pos"]):
+            return
+        if Visibility.enabled(after) and not Visibility.visible_cells(after,0).has(current["pos"]):
+            return
+    for i in range(motion_effects.size()-1,-1,-1):
+        if str(motion_effects[i]["id"]) == unit_id:
+            motion_effects.remove_at(i)
+    unit_headings[unit_id] = current["pos"] - old["pos"]
+    motion_effects.append({"id":unit_id,"from":old["pos"],"to":current["pos"],"elapsed":0.0})
+    while motion_effects.size() > 16:
+        motion_effects.pop_front()
     queue_redraw()
 
 func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: String, defender_id: String) -> void:
@@ -339,13 +499,17 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
     var shot_from := Vector2i(-1,-1)
     var target := Vector2i(-1,-1)
     var target_was_alive := false
+    var attacker_role := ""
+    var defender_role := ""
     for unit in before.get("units", []):
         if not unit is Dictionary:
             continue
         if str(unit.get("id","")) == attacker_id:
             shot_from = unit["pos"]
+            attacker_role = str(unit.get("role",""))
         elif str(unit.get("id","")) == defender_id:
             target = unit["pos"]
+            defender_role = str(unit.get("role",""))
             target_was_alive = int(unit.get("hp",0)) > 0
     if target.x < 0 or not target_was_alive:
         return
@@ -355,14 +519,19 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
         return
     if Visibility.enabled(before) and not visible.has(shot_from):
         shot_from = Vector2i(-1,-1)
-    var target_destroyed := false
+    # Destroyed units may be removed entirely from the next state's array.
+    var target_survives := false
     for unit in result.get("state", {}).get("units", []):
-        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) <= 0:
-            target_destroyed = true
+        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) > 0:
+            target_survives = true
             break
+    var target_destroyed := not target_survives
+    if shot_from.x >= 0:
+        unit_headings[attacker_id] = target - shot_from
     combat_effects.append({
         "origin":shot_from, "target":target,
         "elapsed":0.0, "destroyed":target_destroyed,
+        "attacker_role":attacker_role, "defender_role":defender_role,
         "counter_damage":int(result.get("counter_damage",0)),
         "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
     })
@@ -474,6 +643,8 @@ func _commit_order(order: Dictionary) -> bool:
     state = result["state"]
     if kind == "attack":
         _record_attack_effect(prior_state, result, unit_id, enemy_id)
+    elif kind == "move":
+        _record_move_effect(prior_state, state, unit_id)
     selected_factory_pos = Vector2i(-1,-1)
     _write_autosave()
     var winner := int(state.get("winner", -1))
@@ -594,9 +765,16 @@ func _gui_input(event: InputEvent) -> void:
                 _tap(event.position)
         accept_event()
     elif event is InputEventScreenDrag:
-        # Cancel the gesture permanently if its primary finger ever leaves the tap radius.
-        if touch_active and event.index == touch_finger_index and touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
-            touch_cancelled = true
+        # Panning does not select a cell or commit orders on release.
+        if touch_active and event.index == touch_finger_index:
+            if touch_origin.distance_to(event.position) > TAP_DRAG_LIMIT:
+                touch_cancelled = true
+            if touch_cancelled:
+                if iso_enabled:
+                    iso_pan += event.relative
+                else:
+                    view_pan += event.relative
+                queue_redraw()
         accept_event()
     elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
         # Native Buttons need touch-to-mouse emulation on Android, but the board
@@ -610,13 +788,9 @@ func _tap(point: Vector2) -> void:
         return
     if int(state.get("winner",-1)) != -1:
         return
-    var tile := _cell_size()
-    if tile <= 0:
+    var cell: Vector2i = screen_cell(point)
+    if cell.x < 0 or cell.y < 0:
         return
-    var relative := point - _board_origin()
-    if relative.x < 0 or relative.y < 0 or relative.x >= WIDTH * tile or relative.y >= HEIGHT * tile:
-        return
-    var cell := Vector2i(int(relative.x / tile), int(relative.y / tile))
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
     var units_here: Array = []
@@ -796,6 +970,8 @@ func _play_ai_turn() -> void:
         state = result["state"]
         if str(result.get("action","")) == "attack":
             _record_attack_effect(prior_state, result, str(result.get("attacker_id", "")), str(result.get("defender_id", "")))
+        elif str(result.get("action","")) == "move":
+            _record_move_effect(prior_state, state, str(result.get("unit_id", "")))
         match str(result.get("action", "")):
             "move":
                 movements += 1
@@ -849,6 +1025,12 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    motion_effects.clear()
+    unit_headings.clear()
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
@@ -887,6 +1069,12 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    motion_effects.clear()
+    unit_headings.clear()
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
