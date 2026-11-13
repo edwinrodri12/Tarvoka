@@ -396,10 +396,18 @@ static func _tank(root: Node3D) -> void:
         # Painted replaceable upper skirt modules, not full hull camouflage.
         for n in range(5):
             var z: float = -1.07+float(n)*0.54
+            # On the physical 242323 capture the broad enamel rectangles
+            # looked like bright passenger-bus side panels. Keep all fourteen
+            # original paint zones, but make color an armored identification
+            # stripe over a dark removable steel skirt, not the whole skirt.
+            _box(hull,"FaldonBase%s_%02d" % [side,n],
+                Vector3(sign*1.180,0.69,z),
+                Vector3(0.087,0.34,0.49),DARK)
             _paint_box(hull,"FaccionFaldon%s_%02d" % [side,n],
-                Vector3(sign*1.177,0.69,z),Vector3(0.065,0.34,0.49))
+                Vector3(sign*1.235,0.72,z),
+                Vector3(0.024,0.135,0.433))
             _box(hull,"SeparadorFaldon%s_%02d" % [side,n],
-                Vector3(sign*1.22,0.69,z+0.255),
+                Vector3(sign*1.223,0.69,z+0.255),
                 Vector3(0.071,0.38,0.022),BLACK)
         for n in range(4):
             var z: float = -1.00+float(n)*0.58
