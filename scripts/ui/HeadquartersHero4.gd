@@ -190,6 +190,13 @@ static func _wing_cladding(parent: Node3D, level: int,tint: Color) -> void:
         _shell(wing,"BandaDeFaccion_%s" % side,
             Vector3(x,2.43,-1.92),
             Vector3(2.26,0.18,0.14),0.03,tint.darkened(0.17),"steel",true)
+        _shell(wing,"CubiertaFaccionAla_%s" % side,
+            Vector3(x,2.69,0.37),
+            Vector3(2.43,0.12,4.39),0.25,
+            tint.darkened(0.27),"roof",true)
+        _box(wing,"LomoAmbarAla_%s" % side,
+            Vector3(x,2.78,-1.63),
+            Vector3(2.13,0.048,0.085),GOLD,"steel")
         _box(wing,"MolduraDoradaAla_%s" % side,
             Vector3(x,2.29,-1.999),
             Vector3(2.15,0.064,0.063),GOLD)
@@ -386,6 +393,22 @@ static func _front_cladding(parent: Node3D,level: int,tint: Color) -> void:
         Vector3(0,y+0.12,-2.71),
         Vector3(5.31,0.25,0.26),0.065,
         tint.darkened(0.20),"roof",true)
+    # Substantial structural faction cladding in the ONLY safe bay without
+    # windows. The blue/red/green etc. panel is not a tint over all concrete.
+    var panel_height: float = y-0.74
+    var panel_y: float = (y-0.74)*0.5+0.34
+    _shell(walls,"PanelFaccionCentralDeMando",
+        Vector3(0,panel_y,-2.53),
+        Vector3(1.93,panel_height,0.13),0.12,
+        tint.darkened(0.29),"steel",true)
+    for side in [-1,1]:
+        var sx: float = float(side)
+        _box(walls,"RielDoradoCentral_%s" % side,
+            Vector3(sx*0.99,panel_y,-2.635),
+            Vector3(0.064,panel_height-0.16,0.055),GOLD,"steel")
+        _shell(walls,"ConectorMetálicoCentral_%s" % side,
+            Vector3(sx*0.78,y-0.64,-2.64),
+            Vector3(0.34,0.19,0.18),0.044,ARMOR,"roof")
 
 static func _bolts_batch(parent: Node3D,name: String,
         positions: Array[Vector3],size: float = 0.055) -> MultiMeshInstance3D:
