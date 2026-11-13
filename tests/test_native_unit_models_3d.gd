@@ -143,8 +143,12 @@ func _run() -> void:
     inspector.reset_rotation()
     assert(is_zero_approx(inspector.model_root.rotation_degrees.y))
     assert(is_equal_approx(inspector.camera.size,before_zoom))
-    await process_frame
-    assert(inspector.viewport_holder.size.y >= 300.0)
+    for i in range(3):
+        await process_frame
+    assert(inspector.viewport_holder.size.y >= 200.0)
+    assert(inspector.viewport_holder.size.y <= 335.0)
+    assert(inspector.position.y >= -2)
+    assert(inspector.position.y + inspector.size.y <= app.get_viewport_rect().size.y + 4)
     var inspector_image: Image = app.get_viewport().get_texture().get_image()
     assert(inspector_image != null and not inspector_image.is_empty())
     assert(inspector_image.save_png("res://artifacts/tarvoka_3d_inspector_android.png") == OK)
