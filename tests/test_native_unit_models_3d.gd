@@ -139,7 +139,7 @@ func _run() -> void:
     inspector.change_zoom(1)
     assert(inspector.camera.size < before_zoom)
     inspector.rotate_model(30.0)
-    assert(inspector.model_root.rotation_degrees.y > 60.0)
+    assert(is_equal_approx(inspector.model_root.rotation_degrees.y,30.0))
     inspector.reset_rotation()
     assert(is_zero_approx(inspector.model_root.rotation_degrees.y))
     assert(is_equal_approx(inspector.camera.size,before_zoom))
