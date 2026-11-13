@@ -5,6 +5,8 @@ on:
     paths:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/TerrainStudio3D.gd"
+      - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
       - "scripts/ui/HeadquartersDetail3D.gd"
@@ -160,6 +162,20 @@ jobs:
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
           test -s artifacts/tarvoka_g09_v10_four_angles.png
           test -s artifacts/tarvoka_g09_v9_closeup_engine.png
+      - name: Verify native 3D terrain and unified studio scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_3d.gd 2>&1 | tee /tmp/terrain-studio-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-studio-check.log; then
+            echo "Native 3D environment preview failed" >&2
+            exit 1
+          fi
+          grep -q "PASS TARVOKA 3D environment studio:" /tmp/terrain-studio-check.log
+          test -s artifacts/tarvoka_terrain_studio_3d.png
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
         run: |
