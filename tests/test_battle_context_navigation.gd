@@ -23,8 +23,8 @@ func _run() -> void:
     assert(state == unchanged)
 
     # A visible enemy is inspectable, but supplies and private orders stay secret.
-    var observed: Dictionary = Visibility.visible_cells(state,0)
-    assert(not observed.has(Vector2i(8,2)))
+    # With fog disabled, every tile is visible by definition.
+    assert(Visibility.visible_cells(state,0).has(Vector2i(8,2)))
     var hidden_state: Dictionary = Session.start([blue,red],Scenarios.terrain(0),0,true,false,true,true)
     var hidden: Dictionary = ContextData.build(hidden_state,"","X",Vector2i(-1,-1),Vector2i(-1,-1),0)
     assert(hidden.is_empty())
