@@ -7,6 +7,7 @@ signal advanced_requested
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
+const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 
 var scenario_picker: OptionButton
 var size_picker: OptionButton
@@ -36,6 +37,9 @@ func _ready() -> void:
     bg.content_margin_top = 8
     bg.content_margin_bottom = 8
     add_theme_stylebox_override("panel",bg)
+    var backdrop := Backplate.new()
+    backdrop.mode = "command"
+    add_child(backdrop)
 
     var layout := VBoxContainer.new()
     layout.add_theme_constant_override("separation",8)
