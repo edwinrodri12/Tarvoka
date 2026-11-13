@@ -2,6 +2,7 @@ extends SceneTree
 
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Transitions = preload("res://scripts/ui/LandscapeTransitions.gd")
 
 # Force real CanvasItem drawing in headless Godot. A malformed polygon is
 # reported as ERROR by Godot; the GitHub workflow rejects it.
@@ -98,6 +99,23 @@ func _run() -> void:
     assert(Textures.get_material("water",1).get_width() == 96)
     var material_count: int = Textures.texture_count()
     assert(material_count >= 2)
+    # Organic bank vertices never leave the legal diamond or disclose
+    # neighboring tiles: only visible-edge masks call these brushes.
+    for side in range(4):
+        for variant in [0,7,31,73]:
+            var curve: PackedVector2Array = Transitions.shore_curve(
+                Vector2.ZERO,64.0,side,variant,10)
+            var repeated: PackedVector2Array = Transitions.shore_curve(
+                Vector2.ZERO,64.0,side,variant,10)
+            assert(curve.size() == 10)
+            assert(curve == repeated)
+            for point in curve:
+                var radius: float = absf(point.x)/64.0+(
+                    absf(point.y)/32.0)
+                assert(radius < 1.001)
+            assert(curve[0] != curve[9])
+    assert(Transitions.shore_curve(Vector2.ZERO,0.0,0,0).is_empty())
+    assert(Transitions.shore_curve(Vector2.ZERO,64.0,7,0).is_empty())
     for detail in [1,2]:
         var probe := TerrainMaterialCanvas.new()
         probe.size = Vector2(1300,1700)
@@ -106,5 +124,5 @@ func _run() -> void:
         probe.queue_redraw()
         await process_frame
         probe.queue_free()
-    print("PASS landscape materials: cached texture atlas, rock grass water asphalt, deterministic masks and Godot draw")
+    print("PASS landscape materials: organic shores ridges trees, cached atlas, safe topology and Godot draw")
     quit(0)
