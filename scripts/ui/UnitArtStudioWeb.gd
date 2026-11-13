@@ -203,7 +203,7 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
     _role = role
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
-        _final_detail,11 if _v11_preview else (9 if _previous_version else 10)
+        _final_detail,11 if _v11_preview else (9 if _previous_version else 10))
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
