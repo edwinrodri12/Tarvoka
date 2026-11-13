@@ -74,6 +74,7 @@ jobs:
           fi
           grep -q "PASS native web studio:" /tmp/studio-check.log
           test -s artifacts/tarvoka_web_3d_studio.png
+          test -s artifacts/tarvoka_mbt_before_after_same_camera.png
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -99,6 +100,7 @@ jobs:
           path: |
             build/web/
             artifacts/tarvoka_web_3d_studio.png
+            artifacts/tarvoka_mbt_before_after_same_camera.png
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
