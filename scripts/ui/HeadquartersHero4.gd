@@ -214,7 +214,7 @@ static func _wing_cladding(parent: Node3D, level: int,tint: Color) -> void:
 static func _comms_lattice(parent: Node3D,level: int,tint: Color) -> void:
     # Original reference has a recognizable side communications tower.
     var structure: Node3D = _group(parent,"TorreDeRedesTrianguladaV4",
-        Vector3(4.50,2.54,1.38))
+        Vector3(-4.50,2.54,1.38))
     var h: float = 2.47+0.56*float(level-1)
     _shell(structure,"BaseDeTorre",Vector3(0,0.12,0),
         Vector3(1.26,0.24,1.29),0.17,ARMOR_DARK,"roof")
@@ -243,7 +243,7 @@ static func _comms_lattice(parent: Node3D,level: int,tint: Color) -> void:
     _box(structure,"BalizaTorre",Vector3(0,h+1.61,0),
         Vector3(0.17,0.16,0.17),GOLD)
     # A cloth faction pennant forms a clear readable silhouette at distance.
-    _flag(parent,tint,Vector3(5.59,2.48,0.46),level)
+    _flag(parent,tint,Vector3(-5.59,2.48,0.46),level)
 
 static func _radar_upgrade(model: Node3D,level: int) -> void:
     var dish: Node = model.find_child("RadarPremium3D",true,false)
@@ -286,30 +286,30 @@ static func _move_helipad(model: Node3D,level: int,tint: Color) -> void:
     if not (node is Node3D):
         return
     var pad: Node3D = node as Node3D
-    # The original concept shows the landing pad in the FRONT LEFT yard.
+    # The approved perspective places the landing pad at the visible FRONT LEFT.
     # It was previously placed behind and above the building. Reposition it.
-    pad.position = Vector3(-4.85,-2.02,-4.08)
+    pad.position = Vector3(4.85,-2.02,-4.08)
     for name in ["PilaresHelipuerto","AccesoEscalera","SeccionAccesoElevado",
             "PuenteDeAcceso","SeguridadHelipuertoV3"]:
         var part: Node = pad.find_child(name,true,false)
         if part is Node3D:
             (part as Node3D).visible = false
-    for name in ["CasetaControl_-1","TechoCaseta_-1","CristalCaseta_-1",
-            "FarolaIngreso_-1","LuminariaEntrada_-1"]:
+    for name in ["CasetaControl_1","TechoCaseta_1","CristalCaseta_1",
+            "FarolaIngreso_1","LuminariaEntrada_1"]:
         var part: Node = model.find_child(name,true,false)
         if part is Node3D:
             (part as Node3D).visible = false
     var approach: Node3D = _group(model,"AproximacionHelipuertoV4")
     _shell(approach,"PlataformaBaseHelipuerto",
-        Vector3(-4.85,0.10,-4.08),
+        Vector3(4.85,0.10,-4.08),
         Vector3(3.44,0.22,3.34),0.29,PAVEMENT,"roof")
     _box(approach,"PasilloDeAcceso",
-        Vector3(-2.86,0.10,-3.84),
+        Vector3(2.86,0.10,-3.84),
         Vector3(1.25,0.15,0.95),CONCRETE,"concrete")
     for i in range(6):
         var z: float = -4.92+float(i)*0.34
         _box(approach,"AdvertenciaDeSeguridad_%d" % i,
-            Vector3(-3.12,0.20,z),
+            Vector3(3.12,0.20,z),
             Vector3(0.20,0.027,0.15),
             tint.darkened(0.25) if i%2==0 else GOLD,"roof",i%2==0)
     # All original H/ring geometry and visual states remain mounted on the pad.
