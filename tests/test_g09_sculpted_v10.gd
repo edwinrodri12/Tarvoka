@@ -17,7 +17,7 @@ static func _edge(a: Vector3,b: Vector3) -> String:
     var y: String = _key(b)
     return x+"|"+y if x<y else y+"|"+x
 
-static func _closed(mesh: Mesh) -> bool:
+static func _closed(mesh: Mesh, min_vertices: int = 180, min_edges: int = 60) -> bool:
     var faces: Dictionary = {}
     if mesh == null or mesh.get_surface_count() != 1:
         return false
@@ -27,7 +27,7 @@ static func _closed(mesh: Mesh) -> bool:
     if arrays[Mesh.ARRAY_INDEX] is PackedInt32Array:
         indices = arrays[Mesh.ARRAY_INDEX]
     var n: int = indices.size() if indices.size() > 0 else vertices.size()
-    if n < 180 or n % 3 != 0:
+    if n < min_vertices or n % 3 != 0:
         return false
     for i in range(0,n,3):
         var a: Vector3 = vertices[indices[i]] if indices.size()>0 else vertices[i]
@@ -38,7 +38,7 @@ static func _closed(mesh: Mesh) -> bool:
         for e in [[a,b],[b,c],[c,a]]:
             var edge_id: String = _edge(e[0],e[1])
             faces[edge_id] = int(faces.get(edge_id,0))+1
-    if faces.size() < 60:
+    if faces.size() < min_edges:
         return false
     for count in faces.values():
         if int(count) != 2:
@@ -84,6 +84,7 @@ func _run() -> void:
         assert(cheek != null and wing != null and engine != null)
         assert(cheek.visible and wing.visible and engine.visible)
         assert(cheek.mesh is ArrayMesh and wing.mesh is ArrayMesh)
+        assert(_closed(cheek.mesh,72,24))
     assert(not new_model.find_child("ModuloBlindajeCeramicoV7_1",true,false).visible)
     assert(not new_model.find_child("G09PlacaCentralGlacisV9",true,false).visible)
     var damage_cheek: Node3D = new_model.find_child(
