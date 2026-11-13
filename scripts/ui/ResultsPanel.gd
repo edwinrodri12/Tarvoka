@@ -6,6 +6,7 @@ signal new_battle_requested
 signal home_requested
 
 const Data = preload("res://scripts/ui/ResultsData.gd")
+const TacticalUI = preload("res://scripts/ui/TacticalUITheme.gd")
 
 var title_label: Label
 var cause_label: Label
@@ -17,15 +18,11 @@ var _data: Dictionary = {}
 # and returning to the map does NOT start a new turn or delete autosaves.
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
-    var panel_style := StyleBoxFlat.new()
-    panel_style.bg_color = Color("#101E2B")
-    panel_style.border_color = Color("#53748B")
-    panel_style.set_border_width_all(2)
-    panel_style.set_corner_radius_all(12)
-    panel_style.content_margin_left = 15
-    panel_style.content_margin_right = 15
-    panel_style.content_margin_top = 16
-    panel_style.content_margin_bottom = 16
+    var panel_style: StyleBoxFlat = TacticalUI.frame("hero")
+    panel_style.content_margin_left = 17
+    panel_style.content_margin_right = 17
+    panel_style.content_margin_top = 18
+    panel_style.content_margin_bottom = 18
     add_theme_stylebox_override("panel",panel_style)
 
     var main := VBoxContainer.new()
@@ -78,6 +75,8 @@ func _button(parent: HBoxContainer,caption: String,callback: Callable) -> void:
     button.add_theme_font_size_override("font_size",14)
     button.pressed.connect(callback)
     parent.add_child(button)
+    if caption == "Otra batalla":
+        TacticalUI.accent(button,true)
 
 func _reflow() -> void:
     var size_rect: Vector2 = get_viewport_rect().size
@@ -93,12 +92,11 @@ func _reflow() -> void:
 
 func _line(label_text: String,blue: String,red: String) -> void:
     var panel := PanelContainer.new()
-    var style := StyleBoxFlat.new()
-    style.bg_color = Color("#1B2E3D")
-    style.content_margin_left = 9
-    style.content_margin_right = 9
-    style.content_margin_top = 7
-    style.content_margin_bottom = 7
+    var style: StyleBoxFlat = TacticalUI.frame("subtle")
+    style.content_margin_left = 10
+    style.content_margin_right = 10
+    style.content_margin_top = 8
+    style.content_margin_bottom = 8
     panel.add_theme_stylebox_override("panel",style)
     stats_column.add_child(panel)
     var row := VBoxContainer.new()
