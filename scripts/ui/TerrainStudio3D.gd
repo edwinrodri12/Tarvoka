@@ -362,20 +362,32 @@ static func _shore(parent: Node3D, x: int, z: int, scene: int,
         _box(parent,"OrillaNatural",origin+offset,stripe,
             SAND.lightened(0.12) if scene != 1 else SAND)
 
-static func _water_details(parent: Node3D, origin: Vector3, x: int, z: int) -> void:
+static func _water_details(parent: Node3D, origin: Vector3, x: int,
+        z: int, scene: int) -> void:
     for wave in range(2):
-        var at: Vector3 = origin + Vector3(-0.45+wave*0.64,-0.09,
+        var at: Vector3 = origin + Vector3(-0.45+wave*0.64,-0.135,
             -0.28+float(posmod(x+z+wave,3))*0.19)
         _box(parent,"EspumaOla",at,Vector3(0.67,0.014,0.044),FOAM)
+    # Shore foam follows the actual shoreline, including meandering rivers.
+    for direction in [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]:
+        var neighbor: String = kind(x+direction.x,z+direction.y,scene)
+        if neighbor == "water" or neighbor == "outside":
+            continue
+        var size: Vector3 = Vector3(0.10,0.012,CELL-0.14) if direction.x != 0 else Vector3(CELL-0.14,0.012,0.10)
+        _box(parent,"LineaEspumaCosta",
+            origin+Vector3(float(direction.x)*1.04,-0.127,float(direction.y)*1.04),
+            size,FOAM.lightened(0.10))
 
 static func build_demo(scene: int = 0, show_grid: bool = false,
-        show_samples: bool = true, faction: int = 0) -> Node3D:
+        show_samples: bool = true, faction: int = 0,
+        continuous: bool = true) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
     root.set_meta("terrain_studio_scene",preset)
     root.set_meta("terrain_studio_grid",show_grid)
     root.set_meta("terrain_studio_samples",show_samples)
+    root.set_meta("terrain_studio_continuous",continuous)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -383,6 +395,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     var props := Node3D.new()
     props.name = "RelieveVegetacionYDetalles"
     root.add_child(props)
+    if continuous:
+        _continuous_ground(tiles,preset)
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
@@ -390,16 +404,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
             var p: Vector3 = _cell_center(x,z)
             var seed: int = x*29+z*43
             counts[type] = int(counts[type])+1
-            var tint: Color = WATER if type == "water" else (
-                ROCK if type == "mountain" else (
-                ROAD_EDGE if type == "road" else (
-                MOSS if preset == 2 else SAND if preset == 1 else GRASS)))
-            if type == "plain" or type == "forest":
-                tint = tint.lightened(float(posmod(seed,6))*0.015)
-            var thickness: float = top+0.62
-            _box(tiles,"Casilla_%02d_%02d_%s" % [x,z,type],
-                p+Vector3(0,(top-0.62)*0.5,0),
-                Vector3(CELL*0.992,thickness,CELL*0.992),tint)
+            var tint: Color = WATER if type == "water" else _ground_tint(type,preset,seed)
+            if not continuous:
+                # Opt-in baseline for same-camera comparison against the
+                # original separate 3D blocks (V1).
+                var thickness: float = top+0.62
+                _box(tiles,"Casilla_%02d_%02d_%s" % [x,z,type],
+                    p+Vector3(0,(top-0.62)*0.5,0),
+                    Vector3(CELL*0.992,thickness,CELL*0.992),tint)
             match type:
                 "mountain":
                     _mountain(props,p,top,seed,preset)
@@ -410,16 +422,22 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                             -0.28+float(posmod(seed+index*2,5))*0.13)
                         _tree(props,p+displacement,seed+index,preset==2)
                     _shore(props,x,z,preset,p,top)
+                    if continuous and posmod(seed,3) != 0:
+                        _bush(props,p+Vector3(0.51,top,-0.49),seed+103,preset==2)
                 "plain":
                     if posmod(seed,3) == 0:
                         _box(props,"PiedraSuelo",p+Vector3(0.45,top+0.08,-0.32),
                             Vector3(0.28,0.16,0.33),ROCK_LIGHT.darkened(0.13))
                     _shore(props,x,z,preset,p,top)
+                    if continuous and posmod(seed,5) == 2:
+                        _bush(props,p+Vector3(-0.31,top,0.43),seed+211,preset==2)
                 "road":
                     _road(props,x,z,preset,p,top)
                     _shore(props,x,z,preset,p,top)
                 "water":
-                    _water_details(props,p,x,z)
+                    _water_details(props,p,x,z,preset)
+                    if preset == 1 and z == 5 and x in [4,5]:
+                        _bridge(props,p,x)
             if show_grid:
                 var grid_tint: Color = Color("#223842") if type != "water" else Color("#19566d")
                 _box(props,"GuiaCasillaN",
