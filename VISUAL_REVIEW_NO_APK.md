@@ -34,4 +34,4 @@ Los errores de script, capturas vacías, dimensiones incorrectas y controles ese
 
 Esta herramienta es **revisión visual previa**, no un sustituto de la QA en un dispositivo Android: no comprueba gestos multitáctiles, densidad física del panel, notch, rendimiento real, consumo, arrastre de unidades o sistema de archivos del móvil. Solo analiza las pantallas que renderiza, no todas las posibilidades del combate.
 
-Para pruebas funcionales más rápidas existe además `.github/workflows/tarvoka-ui-smoke.yml` con seis pruebas Godot. Mantener el arte original en las capturas es obligatorio.
+Para pruebas funcionales más rápidas existe además `.github/workflows/tarvoka-ui-smoke.yml` con siete pruebas Godot (incluida la barra de órdenes móvil). Mantener el arte original en las capturas es obligatorio.
