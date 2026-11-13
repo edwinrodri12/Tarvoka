@@ -15,6 +15,7 @@ var previews: Dictionary = {} # Role -> SubViewportTexture
 var viewports: Dictionary = {} # Role -> SubViewport
 var prepared := false
 var captures_completed := false
+var baked_static_captures := 0
 const MAX_LIVE_TANKS := 2
 const MAX_PARKED_TANKS := 4
 const LIVE_CAPTURE_SIZE := Vector2i(192,192)
@@ -88,6 +89,18 @@ func _finish_captures() -> void:
     for role in viewports:
         var viewport: SubViewport = viewports[role]
         viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+        # Baked static previews must not hold 15 entire 3D models and
+        # cameras in Android memory for the rest of the match. One guarded
+        # GPU readback per role creates a lightweight permanent ImageTexture.
+        var image: Image = viewport.get_texture().get_image()
+        if image != null and not image.is_empty():
+            var frozen: ImageTexture = ImageTexture.create_from_image(image)
+            if frozen != null:
+                previews[role] = frozen
+                baked_static_captures += 1
+                viewport.queue_free()
+    if baked_static_captures == viewports.size():
+        viewports.clear()
     captures_completed = true
     textures_ready.emit()
 
