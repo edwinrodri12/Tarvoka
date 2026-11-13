@@ -36,7 +36,7 @@ func _run() -> void:
     assert(not moves.has(Vector2i(4,2))) # Not a legal move to occupied target.
     assert(coverage.has(Vector2i(4,2)))
     assert(coverage.has(Vector2i(5,2))) # Empty tile, potential fire only.
-    assert(not coverage.has(Vector2i(2,2))) # Min range = 2.
+    assert(coverage.has(Vector2i(2,2))) # Min range still 2 after repositioning.
     assert(actual_targets.has(Vector2i(4,2)))
     assert(not actual_targets.has(Vector2i(5,2)))
     assert(board.state == before)
