@@ -6,6 +6,7 @@ class_name TarvokaUnitRender3D
 # Reuse textures across all armies, never instantiate per combat unit.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const UnitMotionVFX = preload("res://scripts/ui/UnitMotionVFX.gd")
 const SIZE := Vector2i(224,224)
 const ORBIT := Vector3(5.1,4.1,6.0)
 
@@ -259,10 +260,13 @@ func update_tank_actions(units: Array, motion: Array, combat: Array,
                 continue
             if fog_enabled and int(unit.get("faction",1)) != 0 and not visible_cells.has(unit.get("pos")):
                 break
+            var route: Array = effect.get("route",[effect.get("from",Vector2i.ZERO),effect.get("to",Vector2i.ZERO)])
+            var elapsed: float = float(effect.get("elapsed",0))
+            var duration: float = float(effect.get("duration",UnitMotionVFX.DEFAULT_DURATION))
             desired[unit_id] = {
                 "faction": int(unit["faction"]), "kind":"move",
-                "progress":float(effect.get("elapsed",0))/TankRig.MOVE_DURATION,
-                "heading":effect.get("to",Vector2i.ZERO)-effect.get("from",Vector2i.ZERO)
+                "progress":elapsed/maxf(duration,0.01),
+                "heading":UnitMotionVFX.heading(route,elapsed,duration)
             }
             break
     for effect in combat:
