@@ -24,10 +24,10 @@ func _capture() -> void:
     viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     root.add_child(viewport)
-    var lab := load("res://scenes/Terrain3DLab.tscn").instantiate()
+    var lab: Node3D = load("res://scenes/Terrain3DLab.tscn").instantiate()
     viewport.add_child(lab)
     for quality in [6,3]:
-        lab.set_quality(quality)
+        lab.call("set_quality",quality)
         # Let camera, materials, lights and render thread settle.
         await process_frame
         await process_frame
