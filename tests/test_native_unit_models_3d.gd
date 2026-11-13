@@ -110,7 +110,7 @@ func _run() -> void:
     assert(live_board.models_3d_enabled)
     assert(ui_button.text.contains("activados"))
     assert(live_board.state == save_state)
-    var inspector: AcceptDialog = app.get("unit_3d_inspector")
+    var inspector = app.get("unit_3d_inspector")
     assert(inspector != null and app.get("unit_3d_inspector_button") != null)
     app._open_unit_3d_inspector()
     await process_frame
