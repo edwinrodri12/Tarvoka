@@ -22,6 +22,11 @@ func _run() -> void:
     assert(lab.visible)
     var board: Control = lab.get("lab_board")
     assert(board != null and board.iso_enabled)
+    # Do not allow the isometric artwork to overpaint the top title or
+    # sidebar. Verified against the screen recording 242287.mp4.
+    assert(board.clip_contents)
+    assert(board.get_parent().clip_contents)
+    assert(board.get_parent().get_parent().clip_contents)
     assert(lab.get("attacker_picker").selected == Lab.CATALOG.find("tank"))
     assert(lab.get("defender_picker").selected == Lab.CATALOG.find("ifv"))
     var app_view: Vector2 = root.get_viewport().get_visible_rect().size
