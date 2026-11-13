@@ -146,6 +146,16 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_urban_economy.gd
 
+      - name: Validate motorized road movement and four-section mobile command center
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_road_command_menu.gd 2>&1 | tee /tmp/tarvoka-road-menu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-road-menu.log; then
+            echo 'Road or command-menu regression'; exit 1
+          fi
+          grep -F 'PASS motorized roads and command menu' /tmp/tarvoka-road-menu.log
+
       - name: Validate slow mountain climb and contextual Android unit/building/terrain HUD
         shell: bash
         run: |
