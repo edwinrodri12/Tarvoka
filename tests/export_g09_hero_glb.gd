@@ -5,7 +5,7 @@ extends SceneTree
 # model meshes. MultiMesh/track instances are baked to individual glTF nodes
 # in this authoring export, while the runtime game keeps mobile batching.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
-const TARGET := "res://artifacts/TARVOKA_G09_V9_Produccion_Editable.glb"
+const TARGET := "res://artifacts/TARVOKA_G09_V10_Escultura_Editable.glb"
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -24,10 +24,10 @@ static func _group_for(node: Node) -> String:
 
 func _run() -> void:
     var source: Node3D = Models.build("tank",0)
-    assert(source != null and source.get_meta("tarvoka_mbt_production_v9",false))
+    assert(source != null and source.get_meta("tarvoka_mbt_sculpted_v10",false))
     root.add_child(source)
     var artist := Node3D.new()
-    artist.name = "TARVOKA_G09_PRODUCCION_V9_EDITABLE"
+    artist.name = "TARVOKA_G09_ESCULTURA_V10_EDITABLE"
     root.add_child(artist)
     var chassis := Node3D.new()
     chassis.name = "Chassis_Tracks"
@@ -76,7 +76,7 @@ func _run() -> void:
     var state := GLTFState.new()
     var read_result: Error = doc.append_from_scene(artist,state,0)
     if read_result != OK:
-        push_error("GLB: cannot serialize actual V9 G09 geometry; code=%d" % read_result)
+        push_error("GLB: cannot serialize actual V10 G09 geometry; code=%d" % read_result)
         quit(2)
         return
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
@@ -89,7 +89,7 @@ func _run() -> void:
     assert(source_glb != null and source_glb.get_length() > 10000)
     var length: int = source_glb.get_length()
     source_glb.close()
-    print("PASS G09 V9 GLB export: %d true meshes, %d baked running-gear parts, %d bytes, 3 editable mechanical groups" % [count,baked,length])
+    print("PASS G09 V10 GLB export: %d true meshes, %d baked running-gear parts, %d bytes, 3 editable mechanical groups" % [count,baked,length])
     artist.queue_free()
     source.queue_free()
     quit(0)
