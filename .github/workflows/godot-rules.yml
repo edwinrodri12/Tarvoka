@@ -30,6 +30,16 @@ jobs:
           fi
           grep -F 'PASS concept rail' /tmp/tarvoka-concept-battle-rail.log
 
+      - name: Verify original approved faction crests and commander portrait atlas
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_official_faction_art.gd 2>&1 | tee /tmp/tarvoka-official-faction-art.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-official-faction-art.log; then
+            echo 'Official first-four faction art integration regression'; exit 1
+          fi
+          grep -F 'PASS approved faction assets' /tmp/tarvoka-official-faction-art.log
+
       - name: Validate eight official faction identities, commander slot and save-safe skirmish selection
         shell: bash
         run: |
