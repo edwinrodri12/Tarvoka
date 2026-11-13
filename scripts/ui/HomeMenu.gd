@@ -216,7 +216,7 @@ func _reflow() -> void:
     if home_scroll == null or content_rail == null:
         return
     var viewport: Vector2 = get_viewport_rect().size
-    var portrait: bool = viewport.x < 850.0 or viewport.y > viewport.x*1.12
+    var portrait: bool = viewport.y > viewport.x * 1.12
     content_rail.vertical = portrait
     # In portrait the battle world and the logo stay above large touch targets.
     hero.custom_minimum_size = Vector2(0,0 if portrait else 310)

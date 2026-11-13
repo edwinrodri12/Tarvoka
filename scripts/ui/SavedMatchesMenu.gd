@@ -15,6 +15,8 @@ var slot_buttons: Dictionary = {}
 var slot_summaries: Dictionary = {}
 var status_label: Label
 var slot_scroll: ScrollContainer
+var slot_cards: BoxContainer
+var slots: Array[PanelContainer] = []
 
 # Only the two save formats the engine actually supports are shown.
 # Reading preview metadata never loads/overwrites the battle in Main.
@@ -57,23 +59,37 @@ func _ready() -> void:
     slot_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     slot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     column.add_child(slot_scroll)
-    var cards := VBoxContainer.new()
-    cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    cards.add_theme_constant_override("separation",12)
-    slot_scroll.add_child(cards)
-    _slot(cards,"auto","GUARDADO AUTOMÁTICO","Progreso más reciente registrado durante la batalla.",AUTO_PATH)
-    _slot(cards,"manual","GUARDADO MANUAL","Partida guardada desde el Centro de mando.",MANUAL_PATH)
+    slot_cards = BoxContainer.new()
+    slot_cards.name = "DosGuardadosHorizontales"
+    slot_cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    slot_cards.add_theme_constant_override("separation",16)
+    slot_scroll.add_child(slot_cards)
+    _slot(slot_cards,"auto","GUARDADO AUTOMÁTICO","Progreso más reciente registrado durante la batalla.",AUTO_PATH)
+    _slot(slot_cards,"manual","GUARDADO MANUAL","Partida guardada desde el Centro de mando.",MANUAL_PATH)
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     status_label.add_theme_color_override("font_color",Chrome.MUTED)
     column.add_child(status_label)
+    get_viewport().size_changed.connect(_reflow)
+    call_deferred("_reflow")
     hide()
+
+func _reflow() -> void:
+    if slot_cards == null:
+        return
+    var viewport: Vector2 = get_viewport_rect().size
+    # All Android menus use landscape. Vertical stacking is kept only as an
+    # editor fallback if someone resizes a desktop window very narrowly.
+    slot_cards.vertical = viewport.y > viewport.x * 1.12
 
 func _slot(container: Container, key: String, title: String, help: String, path: String) -> void:
     var card := PanelContainer.new()
     card.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#11293B"),Chrome.EDGE_BRIGHT if key == "auto" else Chrome.EDGE,10,13))
     container.add_child(card)
+    card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    card.size_flags_stretch_ratio = 1.0
+    slots.append(card)
     var body := VBoxContainer.new()
     body.add_theme_constant_override("separation",7)
     card.add_child(body)

@@ -5,6 +5,16 @@ config_version=5
 config/name="TARVOKA"
 run/main_scene="res://scenes/Main.tscn"
 
+[display]
+
+; TARVOKA is a landscape-only tactical game on Android.
+; Godot 4.3 ScreenOrientation: 0 = Landscape (not sensor).
+window/handheld/orientation=0
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
 [rendering]
 ; Android export requires mobile ETC2/ASTC texture import.
 textures/vram_compression/import_etc2_astc=true

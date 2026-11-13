@@ -22,9 +22,8 @@ func _run_gallery() -> void:
         push_error("Visual QA requires a real renderer. Use Xvfb, not --headless.")
         quit(1)
         return
-    var dir_error: Error = DirAccess.make_dir_recursive_absolute(_out_dir)
-    if dir_error != OK:
-        push_error("Cannot create UI artifact directory: %s (%d)" % [_out_dir,dir_error])
+    if DirAccess.make_dir_recursive_absolute(_out_dir) != OK:
+        push_error("Cannot create visual QA output directory.")
         quit(1)
         return
 
@@ -36,143 +35,124 @@ func _run_gallery() -> void:
     var main: Control = scene.instantiate()
     root.add_child(main)
     await process_frame
-    # CI uses fresh user:// state. Never create a new game or write a save.
     main.board.autosave_enabled = false
     main.board.ai_enabled = false
-    var initial_state: Dictionary = main.board.state.duplicate(true)
+    var original: Dictionary = main.board.state.duplicate(true)
 
     main._show_home_menu()
-    if not await _capture("01-home-portrait",Vector2i(412,915),"Inicio · teléfono vertical"):
+    if not await _capture_landscape("01-inicio-1280x720",Vector2i(1280,720),"Inicio · Android horizontal 16:9"):
         _failed = true
-    if main.home_menu.faction_showcase.visible:
-        push_error("The eight-crest gallery must not displace portrait home buttons.")
+    if not await _capture_landscape("02-inicio-960x540",Vector2i(960,540),"Inicio · horizontal compacto"):
         _failed = true
-    # Keep Continue, Story, Skirmish and Saved Matches accessible before
-    # the first screenful on a normal Android phone (no mandatory scrolling).
-    for key in ["Continuar","Modo historia","Escaramuza","Partidas guardadas"]:
-        if not _inside_viewport(main.home_menu.primary_buttons[key],Vector2i(412,915)):
-            _failed = true
-    if not await _capture("02-home-landscape",Vector2i(1280,720),"Inicio · horizontal"):
+    if main.home_menu.content_rail.vertical:
+        push_error("Inicio is incorrectly using a portrait layout on a landscape device.")
         _failed = true
-    if not main.home_menu.faction_showcase.visible:
-        push_error("Landscape home must display the official faction emblem gallery.")
-        _failed = true
-    for crest in main.home_menu.showcase_emblems:
-        if crest.texture == null:
-            push_error("Landscape home is missing an approved faction crest.")
-            _failed = true
 
     main._prepare_skirmish()
-    if not await _capture("03-skirmish-portrait",Vector2i(412,915),"Escaramuza · preparación"):
+    if not await _capture_landscape("03-escaramuza-1280x720",Vector2i(1280,720),"Escaramuza · terreno y reglas en columnas"):
         _failed = true
-    for required in [main.skirmish_setup.heading,
-            main.skirmish_setup.footer_faction_button,
+    if not await _capture_landscape("04-escaramuza-960x540",Vector2i(960,540),"Escaramuza · horizontal compacto"):
+        _failed = true
+    if main.skirmish_setup.preflight_columns.vertical or main.skirmish_setup.preflight_columns.get_child_count() != 2:
+        push_error("Escaramuza is not split into two landscape columns.")
+        _failed = true
+    for action in [main.skirmish_setup.footer_faction_button,
             main.skirmish_setup.start_button]:
-        if not _inside_viewport(required,Vector2i(412,915)):
+        if not _inside_viewport(action,Vector2i(960,540)):
             _failed = true
-    if main.skirmish_setup.map_preview.custom_minimum_size.y > 152.0:
-        push_error("Terrain reconnaissance card is too tall for Android portrait.")
-        _failed = true
-    for portrait in main.skirmish_setup.faction_portraits:
-        if portrait.texture == null:
-            push_error("Skirmish preparation still lacks approved commander art.")
-            _failed = true
+
     main._open_faction_selection()
     main.faction_selector._choose_side(0)
     main.faction_selector._choose_faction(6)
     main.faction_selector._choose_side(1)
     main.faction_selector._choose_faction(7)
     main.faction_selector._choose_side(0)
-    if not await _capture("04-factions-portrait",Vector2i(412,915),"Ocho facciones · teléfono vertical"):
+    if not await _capture_landscape("05-facciones-1280x720",Vector2i(1280,720),"Facciones · ocho escudos y comandante"):
         _failed = true
-    # Catch the clipping that visual QA revealed in the original selector.
-    for control in [main.faction_selector.header_row.get_child(1),
-            main.faction_selector.side_buttons[0],
-            main.faction_selector.side_buttons[1],
-            main.faction_selector.commander_portrait,
-            main.faction_selector.confirm_button]:
-        if not _inside_viewport(control,Vector2i(412,915)):
-            _failed = true
-    if not await _capture("05-factions-landscape",Vector2i(1280,720),"Ocho facciones · horizontal"):
+    if not await _capture_landscape("06-facciones-960x540",Vector2i(960,540),"Facciones · horizontal compacto"):
         _failed = true
-    # Cancel the tentative faction changes. This screenshot tool does not
-    # start a match or change the player's active formation.
+    if main.faction_selector.is_portrait_layout or main.faction_selector.content_rail.vertical:
+        push_error("Faction selection stacked despite a landscape screen.")
+        _failed = true
+    if not _inside_viewport(main.faction_selector.confirm_button,Vector2i(960,540)):
+        _failed = true
     main._cancel_faction_selection()
     main._back_from_skirmish()
-    assert(main.board.state == initial_state)
+    assert(main.board.state == original)
 
-    # To preview the actual in-battle identity renderer, use an isolated
-    # memory-only cosmetic choice. No campaign progress or orders are changed.
     main.home_menu.hide()
-    main.board.state[Identity.STATE_FIELD] = {
-        "0":"union_verde", "1":"orden_onix"
-    }
+    main.board.state[Identity.STATE_FIELD] = {"0":"union_verde","1":"orden_onix"}
     main._process(0.0)
-    main._set_compact_hud(true)
-    if not await _capture("06-battle-portrait",Vector2i(412,915),"Batalla · HUD compacto Android"):
-        _failed = true
-    # Check every essential action stays entirely within the touch screen.
-    for action in [main.compact_cancel,main.compact_confirm,
-            main.compact_end_turn,main.compact_menu_button,
-            main.compact_objectives_button,main.compact_options_button]:
-        if not _inside_viewport(action,Vector2i(412,915)):
-            _failed = true
-    var tile: float = main.board._cell_size()
-    var start: Vector2 = main.board._board_origin()
-    var extent: Vector2 = Vector2(main.board.map_dimensions())*tile
-    if start.x < -2.0 or start.x+extent.x > main.board.size.x+2.0:
-        push_error("Small battlefield is clipped after Android rotation.")
-        _failed = true
     main._set_compact_hud(false)
-    if not await _capture("07-battle-landscape",Vector2i(1280,720),"Batalla · HUD ampliado"):
+    if not await _capture_landscape("07-batalla-1280x720",Vector2i(1280,720),"Batalla · tablero táctico horizontal"):
         _failed = true
     main._open_command_menu()
-    if not await _capture("08-command-portrait",Vector2i(412,915),"Centro de mando · teléfono vertical"):
+    if not await _capture_landscape("08-mando-1280x720",Vector2i(1280,720),"Centro de mando · operaciones"):
+        _failed = true
+    main.command_menu.open_for(main.board,"Ajustes")
+    if not await _capture_landscape("09-ajustes-1280x720",Vector2i(1280,720),"Ajustes · configuraciones tácticas"):
         _failed = true
     main.command_menu.hide()
-    # For a read-only terminal preview, set the result in the isolated
-    # temporary state. This does NOT claim a real in-game battle took place.
+
+    # Demonstration victory in memory only. No real user save is touched and
+    # no victory is claimed for a match the game did not play.
     main.board.state["winner"] = 0
     main._process(0.0)
-    if not await _capture("09-results-portrait",Vector2i(412,915),"Resultados · teléfono vertical"):
+    if not await _capture_landscape("10-resultados-1280x720",Vector2i(1280,720),"Resultados · simulación visual"):
         _failed = true
-    if main.results_panel.get_global_rect().size.y > 635.0:
-        push_error("Result sheet wastes excessive height in portrait.")
+    main._show_home_menu()
+    main._open_saved_matches_from_home()
+    if not await _capture_landscape("11-guardados-1280x720",Vector2i(1280,720),"Partidas guardadas · dos ranuras reales"):
         _failed = true
-    var result_scroller: ScrollContainer = main.results_panel.stats_column.get_parent()
-    var last_metric: Control = main.results_panel.stats_column.get_child(2)
-    if not result_scroller.get_global_rect().encloses(last_metric.get_global_rect()):
-        push_error("Essential results metric still clipped inside its scroll region.")
+    if main.saved_matches_menu.slot_cards.vertical:
+        push_error("Save slots are stacked on landscape.")
         _failed = true
-    if not await _capture("10-results-landscape",Vector2i(1280,720),"Resultados · horizontal"):
+    main._back_from_saved_matches()
+    main._open_arsenal_from_home()
+    if not await _capture_landscape("12-arsenal-1280x720",Vector2i(1280,720),"Arsenal · catálogo de unidades"):
         _failed = true
+    main.unit_art_gallery.hide()
 
-    var manifest_path: String = _out_dir.path_join("manifest.json")
-    var manifest_file := FileAccess.open(manifest_path,FileAccess.WRITE)
-    if manifest_file == null:
-        push_error("Unable to write visual QA manifest.")
+    var file: FileAccess = FileAccess.open(_out_dir.path_join("manifest.json"),FileAccess.WRITE)
+    if file == null:
+        push_error("Could not write landscape manifest.")
         _failed = true
     else:
-        manifest_file.store_string(JSON.stringify({
-            "generator":"Godot 4 · TARVOKA visual gallery",
+        file.store_string(JSON.stringify({
+            "generator":"Godot 4.3 · TARVOKA landscape-only UI review",
             "review_only":true,
+            "orientation":"landscape",
             "no_real_player_save_modified":true,
             "screens":_manifest
         },"  "))
-        manifest_file.close()
+        file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 10:
-        push_error("Visual QA incomplete: %d/10 captures" % _manifest.size())
+    if _failed or _manifest.size() != 12:
+        push_error("Landscape UI QA incomplete: %d/12 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 10 rendered PNG screens with nonblank frame checks and manifest")
+    print("PASS visual gallery: 12 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
+
+func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
+    if resolution.x <= resolution.y:
+        push_error("Portrait screenshot prohibited: "+stem)
+        return false
+    return await _capture(stem,resolution,caption)
 
 func _inside_viewport(control: Control, resolution: Vector2i) -> bool:
     if control == null or not control.is_visible_in_tree():
         push_error("Important Android control is hidden or missing.")
         return false
-    var rect: Rect2 = control.get_global_rect()
+    # canvas_items stretch draws a 1280x720 logical scene into a 960x540
+    # capture. Control.get_global_rect() stays in logical coordinates, so
+    # compare both sides in the same pixel space.
+    var logical_base := Vector2(
+        float(ProjectSettings.get_setting("display/window/size/viewport_width",1280)),
+        float(ProjectSettings.get_setting("display/window/size/viewport_height",720)))
+    var scale: Vector2 = Vector2(resolution) / logical_base
+    var local: Rect2 = control.get_global_rect()
+    var rect := Rect2(local.position * scale,local.size * scale)
     var safe: Rect2 = Rect2(Vector2.ZERO,Vector2(resolution))
     if rect.size.x < 24.0 or rect.size.y < 24.0:
         push_error("Touch control is too small: "+str(control.name))

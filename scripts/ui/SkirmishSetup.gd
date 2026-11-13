@@ -34,6 +34,9 @@ var footer_faction_button: Button
 var faction_portraits: Array[TextureRect] = []
 var faction_names: Array[Label] = []
 var heading: Label
+var preflight_columns: BoxContainer
+var map_scroll: ScrollContainer
+var rules_scroll: ScrollContainer
 
 # Preflight overlay. Changing these widgets NEVER touches game state.
 # Main translates the values into its existing authoritative pickers, then
@@ -73,15 +76,37 @@ func _ready() -> void:
     header.add_child(back)
     Chrome.emphasize(back,"secondary")
 
-    var scroller := ScrollContainer.new()
-    scroller.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    layout.add_child(scroller)
+    # Real landscape composition: terrain and mission on the left; chosen
+    # factions and battle rules on the right. Both columns scroll independently.
+    # This replaces one excessively long vertical preflight on Android.
+    preflight_columns = BoxContainer.new()
+    preflight_columns.name = "ConfiguracionHorizontal"
+    preflight_columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    preflight_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    preflight_columns.add_theme_constant_override("separation",12)
+    layout.add_child(preflight_columns)
+
+    map_scroll = ScrollContainer.new()
+    map_scroll.name = "EscenarioYMapa"
+    map_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    map_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    map_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    preflight_columns.add_child(map_scroll)
     var content := VBoxContainer.new()
     content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content.add_theme_constant_override("separation",8)
-    scroller.add_child(content)
+    map_scroll.add_child(content)
+
+    rules_scroll = ScrollContainer.new()
+    rules_scroll.name = "BandosYReglas"
+    rules_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    rules_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    rules_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    preflight_columns.add_child(rules_scroll)
+    var rules_content := VBoxContainer.new()
+    rules_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    rules_content.add_theme_constant_override("separation",8)
+    rules_scroll.add_child(rules_content)
 
     _section(content,"1  ·  Elige un estilo de batalla")
     var presets := HBoxContainer.new()
@@ -148,6 +173,7 @@ func _ready() -> void:
     seed_picker.value_changed.connect(func(_v: float): _changed())
     seed_row.add_child(seed_picker)
 
+    content = rules_content
     _section(content,"3  ·  Facciones y comandantes")
     var faction_card := PanelContainer.new()
     faction_card.add_theme_stylebox_override("panel",
@@ -254,14 +280,17 @@ func _ready() -> void:
     hide()
 
 func _reflow() -> void:
-    if map_preview == null:
+    if map_preview == null or preflight_columns == null:
         return
-    # A shorter reconnaissance preview on narrow Android phones keeps the
-    # real commander choices closer to the first screenful. Landscape still
-    # displays the full tactical map.
     var viewport: Vector2 = get_viewport_rect().size
-    var portrait: bool = viewport.y > viewport.x * 1.12 or viewport.x < 520.0
-    map_preview.custom_minimum_size = Vector2(250,148 if portrait else 196)
+    # Android is locked to landscape in project.godot. This fallback only
+    # keeps tiny desktop/editor windows usable, never defines a portrait game.
+    var narrow: bool = viewport.y > viewport.x * 1.12
+    preflight_columns.vertical = narrow
+    map_preview.custom_minimum_size = Vector2(250,150 if narrow else
+        (154 if viewport.y < 600.0 else 192))
+    map_scroll.size_flags_stretch_ratio = 1.13
+    rules_scroll.size_flags_stretch_ratio = 1.0
 
 func _section(parent: VBoxContainer, text_value: String) -> void:
     var item := Label.new()
@@ -279,6 +308,7 @@ func _picker(parent: VBoxContainer, caption: String, items: Array) -> OptionButt
     row.add_child(label)
     var field := OptionButton.new()
     field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    field.clip_text = true
     field.custom_minimum_size.y = 45
     for i in range(items.size()):
         field.add_item(str(items[i]),i)

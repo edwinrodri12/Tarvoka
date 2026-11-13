@@ -36,8 +36,12 @@ def main(folder: Path) -> None:
         raise SystemExit("Falta manifest.json: Godot no entregó las capturas.")
     data = json.loads(manifest.read_text(encoding="utf-8"))
     shots = data.get("screens", [])
-    if len(shots) != 10:
-        raise SystemExit(f"Se esperaban 10 capturas, hay {len(shots)}")
+    if len(shots) != 12:
+        raise SystemExit(f"Se esperaban 12 capturas, hay {len(shots)}")
+    if data.get("orientation") != "landscape":
+        raise SystemExit("El manifiesto no declara orientación horizontal.")
+    if any(int(item["width"]) <= int(item["height"]) for item in shots):
+        raise SystemExit("La galería contiene una captura vertical no permitida.")
     cards = []
     for entry in shots:
         filename = str(entry["file"])
@@ -70,7 +74,7 @@ def main(folder: Path) -> None:
         '<title>TARVOKA · Revisión visual</title>'
         f'<style>{CSS}</style></head><body>'
         '<header><h1>TAR<span>VOKA</span> · Revisión visual</h1>'
-        '<p>Diez capturas reales del renderizador Godot en tamaño Android y escritorio.'
+        '<p>Doce capturas reales de TARVOKA, todas en formato horizontal Android y tablet.'
         ' Abre cada imagen para inspeccionar botones, escala, retratos y márgenes.</p>'
         '<p class="notice">Vista de QA generada automáticamente; el resultado terminal'
         ' es una demostración visual simulada. Esto no verifica rendimiento táctil,'

@@ -7,11 +7,11 @@
 Un artefacto descargable llamado **`tarvoka-ui-visual-review`**, que contiene:
 
 - `index.html`: galería navegable offline y adaptable a móvil o PC.
-- Diez PNG de la escena real de Godot: Inicio (vertical/horizontal), preparación de Escaramuza, selección de las ocho facciones (vertical/horizontal), batalla (HUD compacto/expandido), Centro de mando y resultados (vertical/horizontal).
+- Doce PNG reales **exclusivamente horizontales**: Inicio y Escaramuza (1280×720, 960×540), Facciones (ambos tamaños), batalla, Centro de mando, Ajustes, Resultados, Partidas guardadas y Arsenal.
 - `manifest.json`: nombre, tamaño y comprobaciones básicas de contenido por captura.
 - `godot.log`: registro de la captura; útil para depurar avisos de renderizado.
 
-Los tamaños actuales de revisión son **412 × 915** para Android vertical y **1280 × 720** para horizontal. Las capturas de Resultados utilizan una **victoria simulada en la instancia de QA exclusivamente**: no representan una partida jugada o guardada.
+Las revisiones usan **1280×720** y **960×540**, siempre horizontales (16:9). Android se bloquea en esta orientación mediante `project.godot`; una captura vertical no es un objetivo de producto. Las capturas de Resultados utilizan una **victoria simulada en la instancia de QA exclusivamente**: no representan una partida jugada o guardada.
 
 ## Para verlo sin instalar nada
 
@@ -25,13 +25,13 @@ Los errores de script, capturas vacías, dimensiones incorrectas y controles ese
 
 ## Defectos descubiertos y corregidos con esta herramienta
 
-- En vertical, «Volver», la elección del rival y los retratos de la selección quedaban parcialmente fuera de pantalla. Se apilan encabezado y bandos.
+- En versiones previas verticales, «Volver» y los retratos quedaban recortados; ya no son diseños objetivo porque el juego usa exclusivamente horizontal. La elección de facciones y comandantes se presenta en dos columnas.
 - Los accesos rápidos superiores de la batalla tapaban el panel de comandantes; ahora están en su propia fila.
 - En la barra inferior, cinco/seis botones no cabían y «Fin turno» se cortaba. Las acciones se organizan en dos filas conservando los mismos controladores y permisos.
-- Tras rotar el teléfono, la cámara enfocaba solo la fuerza inicial en mapas pequeños y recortaba casi la mitad del terreno. Para mapas de hasta 12 × 10 se recupera el encuadre del mapa completo; los mapas grandes preservan su enfoque táctico.
+- En pantallas horizontales compactas, la escala de controles y el mapa permanecen disponibles; el motor utiliza el canvas 1280×720 adaptable, con encuadre completo para mapas pequeños.
 
 ## Limitaciones
 
 Esta herramienta es **revisión visual previa**, no un sustituto de la QA en un dispositivo Android: no comprueba gestos multitáctiles, densidad física del panel, notch, rendimiento real, consumo, arrastre de unidades o sistema de archivos del móvil. Solo analiza las pantallas que renderiza, no todas las posibilidades del combate.
 
-Para pruebas funcionales más rápidas existe además `.github/workflows/tarvoka-ui-smoke.yml` con siete pruebas Godot (incluida la barra de órdenes móvil). Mantener el arte original en las capturas es obligatorio.
+Para pruebas funcionales más rápidas existe además `.github/workflows/tarvoka-ui-smoke.yml` con ocho pruebas Godot (incluida la orientación horizontal fija). Mantener el arte original en las capturas es obligatorio.
