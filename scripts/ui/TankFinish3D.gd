@@ -106,6 +106,66 @@ static func _bevel(parent: Node3D, label: String, center: Vector3,
     parent.add_child(result)
     return result
 
+# Eight-point, continuously sloped hull/turret shell with flat military
+# facets. Unlike BoxMesh and the prototype's single tapered prism this has
+# distinct prow, shoulders, side cheeks and rear edges. UVs and normals
+# are authored directly, preserving a route to dedicated GLB textures.
+static func _triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+    var normal: Vector3 = (b-a).cross(c-a).normalized()
+    for p in [a,b,c]:
+        st.set_normal(normal)
+        st.set_uv(Vector2(p.x*0.47+p.z*0.13+0.5,p.y*0.63+p.z*0.25+0.5))
+        st.add_vertex(p)
+
+static func _angled_shell(parent: Node3D, label: String, lower: Array,
+        upper: Array, color: Color) -> MeshInstance3D:
+    assert(lower.size() == upper.size() and lower.size() >= 4)
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var centroid_lower := Vector3.ZERO
+    var centroid_upper := Vector3.ZERO
+    for i in range(lower.size()):
+        centroid_lower += lower[i]
+        centroid_upper += upper[i]
+        var j: int = (i+1) % lower.size()
+        _triangle(st,lower[i],upper[j],lower[j])
+        _triangle(st,lower[i],upper[i],upper[j])
+    centroid_lower /= float(lower.size())
+    centroid_upper /= float(upper.size())
+    for i in range(lower.size()):
+        var j: int = (i+1) % lower.size()
+        _triangle(st,centroid_upper,upper[j],upper[i])
+        _triangle(st,centroid_lower,lower[i],lower[j])
+    var result := MeshInstance3D.new()
+    result.name = label
+    result.mesh = st.commit()
+    result.material_override = _mat(color,0.21,0.77)
+    parent.add_child(result)
+    return result
+
+static func _neutral_tone(node: Node) -> void:
+    # Reduce the pale, almost toy-white armor on the original technical rig.
+    # This pass is deliberately MBT-only and never changes official faction
+    # palettes, optical glass, tracks or any other unit class.
+    if node is MeshInstance3D and not node.name.begins_with("Faccion"):
+        var piece: MeshInstance3D = node as MeshInstance3D
+        var material: StandardMaterial3D = piece.material_override as StandardMaterial3D
+        if material != null:
+            var tone: Color = material.albedo_color
+            if tone == Color("#788795"):
+                tone = Color("#637178")
+            elif tone == Color("#A4ADB4"):
+                tone = Color("#808D91")
+            elif tone == Color("#D5DCE0"):
+                tone = Color("#A3ACAD")
+            if tone != material.albedo_color:
+                var instance: StandardMaterial3D = material.duplicate(true) as StandardMaterial3D
+                instance.albedo_color = tone
+                instance.roughness = 0.76
+                piece.material_override = instance
+    for child in node.get_children():
+        _neutral_tone(child)
+
 static func _fasteners(parent: Node3D, label: String, locations: Array,
         radius: float = 0.028) -> MultiMeshInstance3D:
     # Batched mesh: dozens of physical fastening heads, ONE render instance.
@@ -143,6 +203,48 @@ static func apply(model: Node3D) -> bool:
     var crown := Node3D.new()
     crown.name = "AcabadoTorreta"
     turret.add_child(crown)
+
+    # Remove the conspicuous boxy prototype shells while preserving their
+    # nodes for tests, art migration and compatibility with damage logic.
+    # Never remove chassis, gun pivot, painted skirts or running gear.
+    for old_name in ["MonocascoBlindajeCompuesto","PlacaGlacisInclinada"]:
+        var old_hull: MeshInstance3D = hull.find_child(old_name,true,false) as MeshInstance3D
+        if old_hull != null:
+            old_hull.visible = false
+    for old_name in ["TorreBlindada","SobreblindajeTorre",
+            "MejillaBlindada-1","MejillaBlindada1"]:
+        var old_turret: MeshInstance3D = turret.find_child(old_name,true,false) as MeshInstance3D
+        if old_turret != null:
+            old_turret.visible = false
+    var lower_hull := [
+        Vector3(-0.61,0.38,-1.47),Vector3(0.61,0.38,-1.47),
+        Vector3(0.83,0.38,-0.94),Vector3(0.83,0.38,0.91),
+        Vector3(0.72,0.38,1.41),Vector3(-0.72,0.38,1.41),
+        Vector3(-0.83,0.38,0.91),Vector3(-0.83,0.38,-0.94)
+    ]
+    var upper_hull := [
+        Vector3(-0.55,0.83,-1.47),Vector3(0.55,0.83,-1.47),
+        Vector3(0.67,0.97,-0.94),Vector3(0.70,1.02,0.91),
+        Vector3(0.64,1.00,1.37),Vector3(-0.64,1.00,1.37),
+        Vector3(-0.70,1.02,0.91),Vector3(-0.67,0.97,-0.94)
+    ]
+    _angled_shell(lower,"CorazaCascoAngular",lower_hull,upper_hull,
+        Color("#68767C"))
+    var lower_turret := [
+        Vector3(-0.32,0.06,-0.89),Vector3(0.32,0.06,-0.89),
+        Vector3(0.70,0.08,-0.62),Vector3(0.75,0.10,0.17),
+        Vector3(0.61,0.11,0.77),Vector3(-0.61,0.11,0.77),
+        Vector3(-0.75,0.10,0.17),Vector3(-0.70,0.08,-0.62)
+    ]
+    var upper_turret := [
+        Vector3(-0.27,0.40,-0.89),Vector3(0.27,0.40,-0.89),
+        Vector3(0.47,0.55,-0.60),Vector3(0.59,0.55,0.15),
+        Vector3(0.49,0.48,0.68),Vector3(-0.49,0.48,0.68),
+        Vector3(-0.59,0.55,0.15),Vector3(-0.47,0.55,-0.60)
+    ]
+    _angled_shell(crown,"CorazaTorreFacetada",lower_turret,upper_turret,
+        Color("#67767C"))
+    _neutral_tone(model)
 
     # Angled split frontal applique: the wedge silhouette and border seams
     # remain visibly distinct from the broad glacis at 224px and at 3D zoom.
