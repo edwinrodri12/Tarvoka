@@ -9,15 +9,15 @@ En **TARVOKA Estudio 3D**, entra en **ENTORNO Y MAPA 3D**. Cambia entre **Valle 
 - **Suelo continuo V2** (activado por defecto). Desactívalo para comparar el mosaico de bloques V1 con exactamente el mismo ángulo, zoom, facción y bioma.
 - **Mostrar cuadrícula** para comprobar la legibilidad de cada casilla sin convertir las guías en colisiones.
 - **Ver tanque y edificio** para poner la geometría en contexto (las escalas de diorama son provisionales).
-- **Luz**: mediodía, atardecer o nublado.
+- **Luz**: mediodía, atardecer o nublado. **Sombras del relieve** puede alternarse en vivo, y se restablece al volver a unidades o edificios.
 
 ## Qué cambió en V2
 
 1. **Malla continua:** una superficie `SurfaceTool` para todas las casillas de tierra, con vértices compartidos por posición de esquina, colores de material interpolados entre biomas y acantilados en costa/bordes. La altura de cada esquina es determinista, de modo que dos casillas vecinas no se separan.
 2. **Agua y litoral:** superficie continua por regiones de agua, lecho marino inferior, dos niveles de espuma natural y orillas que siguen la topología real de las celdas.
 3. **Caminos:** tramos calculados según vecinos, con carriles, bordes y líneas discontinuas que desaparecen en cruces. V2 agrega un puente elevado **visual** con pilares y barandas en el cañón; no representa todavía una casilla puente navegable en combate.
-4. **Vegetación:** árboles sobre relieve, arbustos secundarios de distribución reproducible, pequeñas rocas e irregularidades suaves del terreno.
-5. **Cámara:** encuadre principal ampliado para que el tablero no quede diminuto en el lienzo.
+4. **Vegetación y rocas:** bosques de coníferas en el valle, árboles frondosos diferenciados en el delta, arbustos secundarios y grandes crestas de roca talladas con anillos irregulares y vértices coloreados; se evita repetir idénticos conos en las montañas.
+5. **Cámara e iluminación:** encuadre principal ampliado para que el tablero no quede diminuto en el lienzo. Iluminación con variaciones de luz solar, sombras opcionales sobre el relieve y fondo de exposición de mayor contraste.
 6. **Comparación verificable:** las pruebas generan imágenes de los tres escenarios y una composición V1/V2 con cámara idéntica. El ZIP de la ejecución de GitHub Actions contiene las capturas nativas `tarvoka_terrain_scene_00.png`, `01.png`, `02.png` y `tarvoka_terrain_v1_v2_same_camera.png`.
 
 ## Archivos
