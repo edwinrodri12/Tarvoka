@@ -108,6 +108,8 @@ func _run() -> void:
     for i in range(9):
         await process_frame
     assert(studio.camera.position.x < 0.0)
+    assert(studio.hq_ground != null and studio.hq_ground.visible)
+    assert(studio.hq_key_light != null and studio.hq_key_light.shadow_enabled)
     assert(studio.hq_version_picker.item_count == 4)
     assert(studio.hq_version_picker.selected == 0)
     assert(studio._hq_show_v4)
@@ -146,6 +148,8 @@ func _run() -> void:
     assert(upgraded != null and not upgraded.is_empty())
     assert(upgraded.save_png("res://artifacts/tarvoka_hq_v4_level3_render.png")==OK)
     studio._switch_category(0)
+    assert(not studio.hq_ground.visible)
+    assert(not studio.hq_key_light.shadow_enabled)
     assert(studio._role == "tank" and studio.model_root != null)
     studio.queue_free()
     print("PASS headquarters V4: heroic 3D silhouette, frontal helipad, command shield, radar, 8 factions, LOD, 4 conditions, V3/V4 GPU comparison")
