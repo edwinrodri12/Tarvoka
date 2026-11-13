@@ -143,3 +143,16 @@ El usuario rechazó renders conceptuales como entregables. Las siguientes modifi
 - Dos grupos de faros delanteros protegidos y emisivos, luces rojas posteriores, ceja frontal de protección y paneles cerámicos de torreta. Las 14 zonas originales de color para ocho facciones y el cañón articulado siguen intactos.
 - Tests/test_g09_premium_finish_v8.gd valida pigmentos, mapas PBR, geometría de orugas, su circulación y restauración, luces, sprockets, facciones y 5 etapas de daño. CI browser obliga a pasar este test antes de crear WebGL o GLB.
 - El único estado aprobado hasta ahora es integración estructural. Faltan valoración artística en el navegador, presupuesto de rendimiento Android y, si corresponde, acabado DCC UV más refinado. CI verde NO equivale a perfecto comercial.
+
+
+## G09 V9 — acabados y revisión de cerca en el juego (13 nov 2026)
+
+**Código de juego y web (no concept art):** `scripts/ui/TankProductionV9.gd` se aplica desde `UnitModels3D.build("tank")` tras construir la carrocería V8 y antes de `TankSurface.apply_finish`. `restore_materials` reinstala los materiales PBR con pigmentación propia después del procesamiento general. La variable `art_level` compara V8 (8) y V9 (9), sin afectar el comportamiento de otras unidades.
+
+**Mejoras modeladas:** torus lateral de goma para cada una de las 14 ruedas, 84 tornillos de buje en una sola instancia `MultiMesh`, cubiertas de mantenimiento del motor, paneles cerámicos del glacis y torreta, escotilla y bisagras de techo, sensores laterales protegidos con lente encastrada, juntas de faldones y cables de remolque, cubierta de escapes. Después de ver la captura ampliada de Godot se ocultaron los dos módulos ópticos sobredimensionados V7 y se sustituyeron por housings bajos de acero y cristales insertados, incluyendo estación del arma remota sobre su mismo pivote animado.
+
+**Rendimiento:** 14 neumáticos y 84 tornillos agrupados en DOS draw submissions; no se añaden 98 nodos individuales. 14 paneles oficiales pintables y ocho facciones se conservan. Los 168 eslabones de oruga siguen circulando en los dos `MultiMesh` V8. Detección de daño y reparación de V9 en `TankDamage3D.gd` sin revivir el prototipo.
+
+**Pruebas verificables:** `tests/test_g09_production_v9.gd` verifica nativamente todas estas mallas, UV/PBR, dos ópticas compactas, material por familia, 5 fases HP y 8 facciones. `tests/test_web_art_studio.gd` genera `tarvoka_mbt_v8_vs_v9_same_camera.png` y `tarvoka_g09_v9_closeup_engine.png` desde la cámara real del visor. La acción `web-art-studio.yml` bloquea publicación si cualquiera de estas comprobaciones falla. El exportador GLB de autoría ahora se llama `TARVOKA_G09_V9_Produccion_Editable.glb` para mantener clara su procedencia.
+
+**Aceptación comercial:** todavía NO aprobado; después de validación de Godot y publicación WebGL falta revisar escala de combate en un teléfono real, textura y rendimiento sostenido, y si corresponde pulido DCC de autor. El usuario pidió explícitamente trabajar **sobre el diseño 3D incorporado al juego**, nunca sustitutos en imagen.
