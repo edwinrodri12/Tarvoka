@@ -24,6 +24,7 @@ const UnitIcon = preload("res://scripts/ui/UnitArtIcon.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
+const TacticalUI = preload("res://scripts/ui/TacticalUITheme.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -44,31 +45,34 @@ var comparison_preview: Control
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    var background := StyleBoxFlat.new()
-    background.bg_color = Color("#09131E")
-    background.content_margin_left = 14
-    background.content_margin_right = 14
-    background.content_margin_top = 10
-    background.content_margin_bottom = 10
+    var background: StyleBoxFlat = TacticalUI.frame("screen")
+    background.content_margin_left = 18
+    background.content_margin_right = 18
+    background.content_margin_top = 13
+    background.content_margin_bottom = 13
     add_theme_stylebox_override("panel",background)
     var column := VBoxContainer.new()
     column.size_flags_vertical = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation",9)
     add_child(column)
 
+    var hero := PanelContainer.new()
+    hero.add_theme_stylebox_override("panel",TacticalUI.frame("hero"))
+    column.add_child(hero)
     var header := HBoxContainer.new()
-    column.add_child(header)
+    hero.add_child(header)
     var title := Label.new()
-    title.text = "TARVOKA  /  CENTRO DE MANDO"
+    title.text = "✦  TARVOKA   /   CENTRO DE MANDO"
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     title.add_theme_font_size_override("font_size",21)
-    title.add_theme_color_override("font_color",Color("#F1D58C"))
+    title.add_theme_color_override("font_color",TacticalUI.GOLD)
     header.add_child(title)
     var close := Button.new()
     close.text = "Volver a batalla"
     close.custom_minimum_size = Vector2(130,48)
     close.pressed.connect(func(): close_requested.emit())
     header.add_child(close)
+    TacticalUI.accent(close,false)
 
     info_label = Label.new()
     info_label.add_theme_color_override("font_color",Color("#BED2DF"))
