@@ -25,6 +25,7 @@ const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
+const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 
 var board: Control
 var status_label: Label
@@ -62,6 +63,10 @@ var iso_view_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
+var minimap_shell: PanelContainer
+var polished_status_card: PanelContainer
+var polished_unit_card: PanelContainer
+var polished_actions_card: PanelContainer
 var _minimap_view_key := -1
 var _minimap_preference := false
 var end_button: Button
@@ -118,6 +123,9 @@ var compact_center: Button
 var compact_iso: Button
 
 func _ready() -> void:
+    # Install the same game-grade visual language on all native Godot menus,
+    # so opening a submenu no longer falls back to developer-theme widgets.
+    theme = GameUiTheme.create_theme()
     var backdrop := ColorRect.new()
     backdrop.color = Color(0.065, 0.082, 0.101)
     backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -152,7 +160,11 @@ func _ready() -> void:
     sidebar.size_flags_horizontal = Control.SIZE_FILL
     sidebar.size_flags_vertical = Control.SIZE_EXPAND_FILL
     var side_style := StyleBoxFlat.new()
-    side_style.bg_color = Color(0.105, 0.143, 0.171)
+    side_style.bg_color = Color("#0B1B2A")
+    side_style.border_color = GameUiTheme.EDGE_BRIGHT
+    side_style.border_width_left = 2
+    side_style.shadow_color = Color(0,0,0,0.35)
+    side_style.shadow_size = 8
     side_style.content_margin_left = 18
     side_style.content_margin_right = 18
     side_style.content_margin_top = 14
@@ -168,7 +180,7 @@ func _ready() -> void:
 
     var panel := VBoxContainer.new()
     panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    panel.add_theme_constant_override("separation", 12)
+    panel.add_theme_constant_override("separation", 9)
     scroll.add_child(panel)
 
     var heading := Label.new()
@@ -601,6 +613,7 @@ func _ready() -> void:
     restart_button.add_theme_font_size_override("font_size", 18)
     restart_button.pressed.connect(_new_game)
     panel.add_child(restart_button)
+    _polish_battle_sidebar(panel,heading,camera_row,unit_heading)
 
     new_game_dialog = ConfirmationDialog.new()
     new_game_dialog.title = "Comenzar nueva partida"
@@ -685,6 +698,84 @@ func _ready() -> void:
 
 # The overlay is a separate input layer on the board, never an overlay
 # inside TouchBoard. Empty space passes through to the terrain below.
+func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HBoxContainer, unit_heading: Label) -> void:
+    # Actual battle controls are grouped into readable instrument cards. All
+    # existing references, permissions, handlers and data bindings are kept;
+    # this is layout only, not a replacement UI that merely looks interactive.
+    heading.text = "TARVOKA  /  CENTRO TÁCTICO"
+    heading.add_theme_color_override("font_color",GameUiTheme.GOLD)
+    heading.add_theme_font_size_override("font_size",24)
+
+    polished_status_card = PanelContainer.new()
+    polished_status_card.name = "SituacionTactica"
+    polished_status_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#122638"),GameUiTheme.EDGE_BRIGHT,10,12))
+    panel.add_child(polished_status_card)
+    var intel := VBoxContainer.new()
+    intel.add_theme_constant_override("separation",5)
+    polished_status_card.add_child(intel)
+    var section := Label.new()
+    section.text = "SITUACIÓN DE BATALLA"
+    GameUiTheme.section(section)
+    intel.add_child(section)
+    for item in [status_label,economy_status,battlefield_status,relay_status,economy_event,enemy_turn_label,autosave_alert]:
+        item.reparent(intel,false)
+    status_label.add_theme_font_size_override("font_size",19)
+    battlefield_status.add_theme_font_size_override("font_size",15)
+    economy_status.add_theme_font_size_override("font_size",16)
+
+    minimap_shell = PanelContainer.new()
+    minimap_shell.name = "NavegacionEstratégica"
+    minimap_shell.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#0F2635"),GameUiTheme.EDGE,10,10))
+    panel.add_child(minimap_shell)
+    var nav := VBoxContainer.new()
+    nav.add_theme_constant_override("separation",5)
+    minimap_shell.add_child(nav)
+    minimap_caption.reparent(nav,false)
+    battle_minimap.reparent(nav,false)
+    minimap_caption.add_theme_color_override("font_color",GameUiTheme.GOLD)
+
+    polished_unit_card = PanelContainer.new()
+    polished_unit_card.name = "FichaDeUnidad"
+    polished_unit_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#102332"),GameUiTheme.EDGE,10,11))
+    panel.add_child(polished_unit_card)
+    var dossier_column := VBoxContainer.new()
+    dossier_column.add_theme_constant_override("separation",6)
+    polished_unit_card.add_child(dossier_column)
+    for widget in [unit_heading,inspection_title,sidebar_dossier,sidebar_site_actions,inspection_detail,unit_label,order_preview_label,sidebar_combat_preview]:
+        widget.reparent(dossier_column,false)
+    GameUiTheme.section(unit_heading)
+    unit_heading.text = "INSPECCIÓN Y ÓRDENES"
+    unit_label.add_theme_font_size_override("font_size",15)
+
+    polished_actions_card = PanelContainer.new()
+    polished_actions_card.name = "AccionesDeTurno"
+    polished_actions_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#101E2E"),GameUiTheme.EDGE,10,10))
+    panel.add_child(polished_actions_card)
+    var orders := VBoxContainer.new()
+    orders.add_theme_constant_override("separation",7)
+    polished_actions_card.add_child(orders)
+    var orders_title := Label.new()
+    orders_title.text = "ACCIONES DISPONIBLES"
+    GameUiTheme.section(orders_title)
+    orders.add_child(orders_title)
+    for widget in [confirm_button,cancel_button,end_button,resupply_button, factory_status,production_picker,produce_button]:
+        widget.reparent(orders,false)
+    GameUiTheme.emphasize(confirm_button,"success")
+    GameUiTheme.emphasize(end_button,"danger")
+    GameUiTheme.emphasize(produce_button,"primary")
+    GameUiTheme.emphasize(command_menu_button,"primary")
+    GameUiTheme.emphasize(objectives_button,"secondary")
+
+    # Frontload actual battle intelligence. Campaign, galleries and advanced
+    # scenario controls remain accessible farther down the scroll but no
+    # longer displace combat status and unit actions from the first viewport.
+    var priority: Array = [heading,polished_status_card,command_menu_button,objectives_button,
+        minimap_shell,polished_unit_card,polished_actions_card,result_banner,
+        camera_row,iso_view_button,battery_saver_button]
+    for index in range(priority.size()):
+        panel.move_child(priority[index],index)
+    _apply_minimap_visibility()
+
 func _build_battle_hud() -> void:
     battle_hud_overlay = Control.new()
     battle_hud_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -825,6 +916,12 @@ func _build_battle_hud() -> void:
     compact_end_turn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_end_turn.pressed.connect(_end_turn)
     actions.add_child(compact_end_turn)
+    # Strong hierarchy: order confirmation is the positive command;
+    # finishing a turn stays distinct and visually cautionary.
+    GameUiTheme.emphasize(compact_confirm,"success")
+    GameUiTheme.emphasize(compact_end_turn,"danger")
+    GameUiTheme.emphasize(compact_menu_button,"secondary")
+    GameUiTheme.emphasize(compact_objectives_button,"primary")
 
     battle_hud_toggle = Button.new()
     battle_hud_toggle.text = "Ampliar mapa"
@@ -1425,6 +1522,8 @@ func _apply_minimap_visibility() -> void:
     var enabled: bool = _minimap_preference and board.iso_enabled
     battle_minimap.visible = enabled
     minimap_caption.visible = enabled
+    if minimap_shell != null:
+        minimap_shell.visible = enabled
     command_menu.minimap_enabled = _minimap_preference
     _minimap_view_key = -1
     if enabled:
