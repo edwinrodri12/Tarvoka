@@ -788,8 +788,9 @@ func resupply_selected() -> bool:
         return false
     state = action["state"]
     var source_label := "camion logistico" if str(action.get("source_kind", "")) == "truck" else "instalacion aliada"
-    message = "Recarga desde %s: +%d municion, +%d combustible (%s)." % [
-        source_label, int(action["ammo"]), int(action["fuel"]),
+    var fuel_message: String = ", +%d combustible" % int(action["fuel"]) if int(action["fuel"]) > 0 else ""
+    message = "Recarga desde %s: +%d municion%s (%s)." % [
+        source_label, int(action["ammo"]), fuel_message,
         "sin costo adicional" if int(action["cost"]) == 0 else "-%d creditos" % int(action["cost"])
     ]
     if int(action["cargo_ammo"]) + int(action["cargo_fuel"]) > 0:

@@ -49,7 +49,12 @@ static func equip(unit: Dictionary) -> void:
     if not CAPACITIES.has(role):
         return
     unit["ammo"] = ammo_capacity(role)
-    unit["fuel"] = fuel_capacity(role)
+    # Foot infantry has ammunition but no fuel resource at all.
+    # Clear stale placeholder fuel when equipping an existing foot unit.
+    if fuel_capacity(role) > 0:
+        unit["fuel"] = fuel_capacity(role)
+    else:
+        unit.erase("fuel")
     if role == "logistics":
         unit["supply_ammo"] = TRUCK_AMMO_CAP
         unit["supply_fuel"] = TRUCK_FUEL_CAP
@@ -64,12 +69,20 @@ static func equip_army(units: Array) -> Array:
 
 static func valid_unit(unit: Dictionary) -> bool:
     var role: String = str(unit.get("role", ""))
-    if unit.has("ammo") != unit.has("fuel"):
+    if unit.has("fuel") and not unit.has("ammo"):
         return false
     if unit.has("ammo"):
-        if not CAPACITIES.has(role) or not unit["ammo"] is int or not unit["fuel"] is int:
+        if not CAPACITIES.has(role) or not unit["ammo"] is int:
             return false
-        if unit["ammo"] < 0 or unit["ammo"] > ammo_capacity(role) or unit["fuel"] < 0 or unit["fuel"] > fuel_capacity(role):
+        if unit["ammo"] < 0 or unit["ammo"] > ammo_capacity(role):
+            return false
+        if fuel_capacity(role) > 0:
+            if not unit.has("fuel") or not unit["fuel"] is int:
+                return false
+            if unit["fuel"] < 0 or unit["fuel"] > fuel_capacity(role):
+                return false
+        # Older saved infantry may still carry a harmless zero-fuel placeholder.
+        elif unit.has("fuel") and (not unit["fuel"] is int or unit["fuel"] != 0):
             return false
     # Old v1 unit saves can omit all supply fields; partial/forged cargo is never accepted.
     if unit.has("supply_ammo") or unit.has("supply_fuel") or unit.has("supply_used"):
@@ -224,7 +237,7 @@ static func _calculate_quote(unit: Dictionary, credits: int, source: String, sou
     var role: String = str(unit.get("role", ""))
     var missing: Dictionary = {
         "ammo": mini(ammo_capacity(role) - int(unit["ammo"]), stock_ammo),
-        "fuel": mini(fuel_capacity(role) - int(unit["fuel"]), stock_fuel),
+        "fuel": mini(fuel_capacity(role) - int(unit.get("fuel", 0)), stock_fuel),
         "cargo_ammo": 0, "cargo_fuel": 0
     }
     if role == "logistics" and source == "base":
@@ -279,7 +292,8 @@ static func resupply(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if str(unit.get("id", "")) == unit_id:
             unit["ammo"] = int(unit["ammo"]) + int(order["ammo"])
-            unit["fuel"] = int(unit["fuel"]) + int(order["fuel"])
+            if unit.has("fuel"):
+                unit["fuel"] = int(unit["fuel"]) + int(order["fuel"])
             if str(unit.get("role", "")) == "logistics" and order["source_kind"] == "base":
                 unit["supply_ammo"] = int(unit.get("supply_ammo", TRUCK_AMMO_CAP)) + int(order["cargo_ammo"])
                 unit["supply_fuel"] = int(unit.get("supply_fuel", TRUCK_FUEL_CAP)) + int(order["cargo_fuel"])

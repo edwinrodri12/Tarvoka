@@ -209,7 +209,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             if Logistics.fuel_capacity(role_key) > 0:
                 text += " | Combustible %d/%d" % [int(unit["fuel"]), Logistics.fuel_capacity(role_key)]
             else:
-                text += " | A pie (sin combustible)"
+                text += " | A pie: no necesita combustible"
             if role_key == "logistics":
                 text += " | Carga del camion: municion %d/%d, combustible %d/%d" % [
                     int(unit.get("supply_ammo", Logistics.TRUCK_AMMO_CAP)), Logistics.TRUCK_AMMO_CAP,
@@ -227,9 +227,12 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 else:
                     text += "\nRecarga: instalacion aerea o naval compatible."
             if supply_order.get("valid", false):
-                text += "\nRecarga desde %s: +%d municion, +%d combustible (%s)" % [
+                var additions: String = "+%d municion" % int(supply_order["ammo"])
+                if Logistics.fuel_capacity(role_key) > 0:
+                    additions += ", +%d combustible" % int(supply_order["fuel"])
+                text += "\nRecarga desde %s: %s (%s)" % [
                     "camion" if str(supply_order["source_kind"]) == "truck" else "base",
-                    int(supply_order["ammo"]), int(supply_order["fuel"]),
+                    additions,
                     "sin costo" if int(supply_order["cost"]) == 0 else "-%d creditos" % int(supply_order["cost"])
                 ]
                 if int(supply_order["cargo_ammo"]) + int(supply_order["cargo_fuel"]) > 0:

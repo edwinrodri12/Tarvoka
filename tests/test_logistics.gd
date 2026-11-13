@@ -29,9 +29,32 @@ func _initialize() -> void:
     assert(Codec.decode(Codec.encode(classic)) == classic)
     var modern: Dictionary = Session.start(Roles.modern_armies(true),map,0,false,false,true,true)
     for unit in modern["units"]:
-        assert(unit.has("ammo") and unit.has("fuel"))
+        assert(unit.has("ammo"))
+        assert(unit.has("fuel") == (Logistics.fuel_capacity(str(unit.get("role", ""))) > 0))
         assert(Logistics.valid_unit(unit))
     assert(Codec.decode(Codec.encode(modern)) == modern)
+
+    # All seven foot infantry roles use movement points, not fuel; they still
+    # consume ammunition and may replenish ammunition from supply vehicles.
+    for foot_role in ["line", "scout", "bulwark", "piercer", "artillery", "assault", "engineer"]:
+        var infantry: Dictionary = Roles.make_unit("I", 0, Vector2i(1,2), foot_role)
+        var rival: Dictionary = Roles.make_unit("E", 1, Vector2i(8,4), "line")
+        var walking: Dictionary = Session.start([infantry, rival], map, 0, false, false, true, true)
+        var walker: Dictionary = walking["units"][0]
+        assert(walker.has("ammo") and not walker.has("fuel"))
+        assert(Logistics.movement_budget(walker) == int(walker["move_points"]))
+        assert(Logistics.valid_unit(walker))
+        var step: Dictionary = Session.move(walking, "I", Vector2i(2,2))
+        assert(step["valid"] and not step["state"]["units"][0].has("fuel"))
+        assert(Codec.decode(Codec.encode(step["state"])) == step["state"])
+        # Legacy saves with fuel=0 remain readable, but forged fuel cannot be added.
+        var old_walking: Dictionary = walking.duplicate(true)
+        old_walking["units"][0]["fuel"] = 0
+        assert(Logistics.valid_unit(old_walking["units"][0]))
+        assert(Codec.decode(Codec.encode(old_walking)) == old_walking)
+        old_walking["units"][0]["fuel"] = 1
+        assert(not Logistics.valid_unit(old_walking["units"][0]))
+        assert(Codec.encode(old_walking).is_empty())
 
     # A tank with one fuel point may traverse one plain, but not two.
     var tank: Dictionary = Roles.make_unit("T",0,Vector2i(1,2),"tank")
@@ -105,6 +128,17 @@ func _initialize() -> void:
     field["units"][0]["fuel"] = 0
     assert(Logistics.can_resupply(field,"T"))
     assert(Session.resupply(field,"T")["valid"])
+
+    # A foot soldier without fuel can still reload ammunition next to a truck.
+    var foot: Dictionary = Roles.make_unit("I",0,Vector2i(1,2),"assault")
+    var foot_field: Dictionary = Session.start([foot, truck, enemy],map,0,false,false,true,true)
+    foot_field["units"][0]["ammo"] = 0
+    assert(Logistics.can_resupply(foot_field,"I"))
+    var rearmed: Dictionary = Session.resupply(foot_field,"I")
+    assert(rearmed["valid"] and int(rearmed["fuel"]) == 0 and int(rearmed["ammo"]) > 0)
+    assert(not rearmed["state"]["units"][0].has("fuel"))
+    assert(rearmed["state"]["units"][0]["ammo"] > 0)
+    assert(Codec.decode(Codec.encode(rearmed["state"])) == rearmed["state"])
 
     # Aerial units require their own appropriate facility for refueling.
     var helicopter: Dictionary = Roles.make_unit("H",0,Vector2i(0,6),"attack_heli")
