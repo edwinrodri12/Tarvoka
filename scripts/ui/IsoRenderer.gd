@@ -15,6 +15,19 @@ const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
+const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
+static var last_frame_stats: Dictionary = {}
+
+static func _projected_center(cell: Vector2i, base: Vector2, hw: float) -> Vector2:
+    return base + Vector2(float(cell.x-cell.y)*hw,float(cell.x+cell.y)*hw*0.5)
+
+static func _diamond_at(center: Vector2, hw: float) -> PackedVector2Array:
+    return PackedVector2Array([
+        center + Vector2(0,-hw*0.5),
+        center + Vector2(hw,0),
+        center + Vector2(0,hw*0.5),
+        center + Vector2(-hw,0)
+    ])
 
 static func _ring(vertices: PackedVector2Array) -> PackedVector2Array:
     var outline: PackedVector2Array = vertices.duplicate()
@@ -34,7 +47,7 @@ static func _poly(cell: Vector2i, canvas: Control, zoom: float, pan: Vector2, di
 static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
-        unit_headings: Dictionary = {}) -> void:
+        unit_headings: Dictionary = {}, battery_saver: bool = false) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -46,28 +59,50 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
-    # Painter order avoids reversed elevation occluding neighboring ground.
-    for depth in range(dims.x + dims.y - 1):
-        for y in range(dims.y):
-            var x: int = depth - y
-            if x < 0 or x >= dims.x:
-                continue
-            var cell := Vector2i(x, y)
-            var vertices: PackedVector2Array = _poly(cell, canvas, zoom, pan, dims)
-            var c: Vector2 = _center(cell, canvas, zoom, pan, dims)
-            # Omit entirely offscreen tiles when the camera is panned or zoomed.
-            if c.x < -hw*1.4 or c.x > canvas.size.x+hw*1.4 or c.y < -hw*1.5 or c.y > canvas.size.y+hw*1.5:
-                continue
-            var terrain: String = str(state["terrain"][y][x])
-            var base: Color = VisualStyle.terrain_color(terrain, x, y)
-            _tile(canvas, vertices, base)
-            canvas.draw_line(vertices[0], vertices[1], base.lightened(0.20), maxf(1.0, hw * 0.025), true)
-            canvas.draw_line(vertices[2], vertices[3], base.darkened(0.32), maxf(1.0, hw * 0.025), true)
-            WorldArt.draw_terrain(canvas, terrain, c, hw, phase, depth * 17 + x)
-            if fog and not visible.has(cell):
-                # Unknown cells stay 100% opaque; explored cells are fogged.
-                _tile(canvas, vertices, Color(0.015, 0.025, 0.04, 1.0) if not explored.has(cell)
-                    else Color(0.025, 0.035, 0.05, 0.73))
+    var detail: int = VisualBudget.detail_level(hw,battery_saver)
+    var bounds: Rect2i = VisualBudget.visible_grid_bounds(canvas.size,zoom,pan,dims)
+    var base_origin: Vector2 = IsoTransform.origin(canvas.size,zoom,pan,dims)
+    var drawn := 0
+    var decorated := 0
+    var unknown := 0
+    # Painter order is retained. Iterate only the conservative screen-facing
+    # rectangle, not every grid cell during zoomed/panned 40x30 battles.
+    if bounds.size.x > 0 and bounds.size.y > 0:
+        for depth in range(bounds.position.x+bounds.position.y,
+                bounds.end.x+bounds.end.y-1):
+            var y_min: int = maxi(bounds.position.y,depth-bounds.end.x+1)
+            var y_max: int = mini(bounds.end.y-1,depth-bounds.position.x)
+            for y in range(y_min,y_max+1):
+                var x: int = depth-y
+                var cell := Vector2i(x,y)
+                var c: Vector2 = _projected_center(cell,base_origin,hw)
+                if not VisualBudget.in_view(c,hw,canvas.size):
+                    continue
+                var vertices: PackedVector2Array = _diamond_at(c,hw)
+                drawn += 1
+                if fog and not explored.has(cell):
+                    # Never render unknown terrain beneath its opaque cover.
+                    _tile(canvas,vertices,Color(0.015,0.025,0.04,1.0))
+                    unknown += 1
+                    continue
+                var terrain: String = str(state["terrain"][y][x])
+                var tint: Color = VisualStyle.terrain_color(terrain,x,y)
+                _tile(canvas,vertices,tint)
+                if detail == VisualBudget.DETAIL_FULL:
+                    canvas.draw_line(vertices[0],vertices[1],tint.lightened(0.20),
+                        maxf(1.0,hw*0.025),true)
+                    canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
+                        maxf(1.0,hw*0.025),true)
+                if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
+                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
+                    decorated += 1
+                if fog and not visible.has(cell):
+                    _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
+    last_frame_stats = {
+        "size":dims,"candidate_tiles":bounds.size.x*bounds.size.y,
+        "tiles_drawn":drawn,"unknown_tiles":unknown,
+        "terrain_detail_cells":decorated,"detail_level":detail
+    }
 
     # Objective and installation overlays must never expose an unseen owner.
     if state.has("control"):
