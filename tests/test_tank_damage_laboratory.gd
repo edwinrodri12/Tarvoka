@@ -26,7 +26,8 @@ func _run() -> void:
     var tread: MeshInstance3D = model.find_child("CintaSuperiorOruga1",true,false) as MeshInstance3D
     var turret: Node3D = model.find_child("TorretaGiratoria",true,false) as Node3D
     var gun: Node3D = model.find_child("ElevacionCanon",true,false) as Node3D
-    assert(plate != null and tread != null and turret != null and gun != null)
+    var cannon: MeshInstance3D = model.find_child("Canon120mm",true,false) as MeshInstance3D
+    assert(plate != null and tread != null and turret != null and gun != null and cannon != null)
     var coat: Color = plate.material_override.albedo_color
     for stage in range(5):
         assert(Damage.apply_stage(model,stage))
@@ -35,6 +36,7 @@ func _run() -> void:
             assert(damage_root.find_child("DesgasteEtapa%d" % i,false,false).visible == (stage >= i))
         assert(plate.visible == (stage < 2))
         assert(tread.visible == (stage < 3))
+        assert(cannon.visible == (stage < 4))
         assert(is_equal_approx(turret.rotation_degrees.z,22.0 if stage == 4 else (6.0 if stage == 3 else 0.0)))
         if stage == 4:
             assert(is_equal_approx(gun.rotation_degrees.x,-18.0))
@@ -43,7 +45,7 @@ func _run() -> void:
     assert(not Damage.apply_stage(model,-1))
     assert(not Damage.apply_stage(model,5))
     assert(Damage.apply_stage(model,0))
-    assert(plate.visible and tread.visible)
+    assert(plate.visible and tread.visible and cannon.visible)
     assert(plate.material_override.albedo_color == coat)
     assert(Damage.current_stage(model) == 0)
     assert(Damage.apply_stage(model,3))
