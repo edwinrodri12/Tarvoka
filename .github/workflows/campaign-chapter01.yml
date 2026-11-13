@@ -1,0 +1,38 @@
+name: TARVOKA campaign mission C01
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/CampaignMission.gd'
+      - 'tests/test_campaign_mission.gd'
+      - '.github/workflows/campaign-chapter01.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/core/CampaignMission.gd'
+      - 'tests/test_campaign_mission.gd'
+      - '.github/workflows/campaign-chapter01.yml'
+  workflow_dispatch:
+
+jobs:
+  campaign:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3 headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot-campaign.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot-campaign.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Campaign objectives, dialogue, and checkpoint integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_campaign_mission.gd 2>&1 | tee /tmp/campaign-c01.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/campaign-c01.log; then
+            echo 'Campaign rules regression'; exit 1
+          fi
+          grep -F 'Campaign C01 objective lifecycle, branching dialogue and checkpoint tests passed.' /tmp/campaign-c01.log
