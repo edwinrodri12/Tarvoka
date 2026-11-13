@@ -63,7 +63,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
     # tile. Masks are provided by fog-filtered topology in IsoRenderer.
     if kind != "water":
         Transitions.draw_land_shore(canvas,c,hw,
-            int(context.get("water_edges",0)),kind,detail,seed)
+            int(context.get("water_edges",0)),kind,detail,seed,
+            context.get("cell",Vector2i(-1,-1)))
         if kind == "plain" or kind == "road" or kind == "forest":
             Transitions.draw_talus(canvas,c,hw,
                 int(context.get("mountain_edges",0)),detail)
@@ -85,7 +86,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
             Continuity.draw_river_spine(canvas,c,hw,
                 int(context.get("water_connections",0)),
                 context.get("cell",Vector2i.ZERO),detail,phase)
-            Transitions.draw_water_shore(canvas,c,hw,shore_mask,detail,seed)
+            Transitions.draw_water_shore(canvas,c,hw,shore_mask,detail,seed,
+                context.get("cell",Vector2i(-1,-1)))
         _:
             # Plains remain readable at a glance but get fine vegetation
             # only in full zoom. All decorations are render-only.
