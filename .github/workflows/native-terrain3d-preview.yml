@@ -16,6 +16,8 @@ on:
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
       - "tools/export_battle3d_preview.gd"
       - "tools/battle3d-gallery.html"
   pull_request:
@@ -31,6 +33,8 @@ on:
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
       - "tools/export_battle3d_preview.gd"
       - "tools/battle3d-gallery.html"
   workflow_dispatch:
