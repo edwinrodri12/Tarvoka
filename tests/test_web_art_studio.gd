@@ -115,6 +115,19 @@ func _run() -> void:
     assert(studio.damage_picker.visible)
     for step in range(3):
         await process_frame
+    # Close-up inspection: no reference painting or external image.
+    # Verify how armor seams and running gear actually look in the WebGL
+    # scene at phone zoom instead of trusting metadata-only tests.
+    studio._reset_camera()
+    studio._rotate(65.0)
+    studio._change_zoom(1)
+    studio._change_zoom(1)
+    studio._change_zoom(1)
+    for tick in range(5):
+        await process_frame
+    var closeup: Image = studio.preview.get_texture().get_image()
+    assert(closeup != null and not closeup.is_empty())
+    assert(closeup.save_png("res://artifacts/tarvoka_g09_v9_closeup_engine.png") == OK)
     var rendered: Image = root.get_viewport().get_texture().get_image()
     assert(rendered != null and not rendered.is_empty())
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
