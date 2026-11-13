@@ -132,6 +132,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
 func set_battery_saver(enabled: bool) -> void:
     battery_saver = enabled
     _ambient_accum = 0.0
+    if enabled and _models_3d != null:
+        _models_3d.call("clear_live_tanks")
     queue_redraw()
 
 func _prepare_3d_models() -> void:
