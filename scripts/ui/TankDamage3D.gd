@@ -406,4 +406,19 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var destroyed: Node3D = model.find_child(name,true,false) as Node3D
             if destroyed != null:
                 destroyed.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_production_v9",false):
+        # The same authored V9 pieces must be truly damaged, and restored
+        # cleanly without exposing obsolete V5/V6 geometry on repair.
+        for label in ["G09PlacaCeramicaMandibulaV9_1",
+                "G09PanelTechoDelanteroV9_1","G09JuntaMejillaV9_1",
+                "G09FundaSensorLateralV9_1","G09LenteSensorLateralV9_1"]:
+            var cheek_part: Node3D = model.find_child(label,true,false) as Node3D
+            if cheek_part != null:
+                cheek_part.visible = stage < 3
+        for label in ["G09PanelServicioTorreV9",
+                "G09PlacaCentralGlacisV9","G09NeumaticosRuedasV9",
+                "G09TornillosRuedasV9"]:
+            var impact_part: Node3D = model.find_child(label,true,false) as Node3D
+            if impact_part != null:
+                impact_part.visible = stage < 4
     return true
