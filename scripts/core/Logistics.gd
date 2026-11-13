@@ -27,6 +27,11 @@ static func ammo_capacity(role: String) -> int:
 static func fuel_capacity(role: String) -> int:
     return int(CAPACITIES.get(role, [0, 0])[1])
 
+# Only motorized *land* vehicles gain road speed. Infantry (no fuel), drones,
+# planes and ships retain their existing map costs. Role is public information.
+static func road_fast(unit: Dictionary) -> bool:
+    return str(unit.get("domain","ground")) == "ground" and fuel_capacity(str(unit.get("role",""))) > 0
+
 # Each truck carries finite, persistent stocks. Repair/cargo operations are separate.
 const TRUCK_AMMO_CAP := 16
 const TRUCK_FUEL_CAP := 36
