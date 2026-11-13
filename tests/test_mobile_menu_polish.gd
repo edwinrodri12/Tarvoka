@@ -28,6 +28,8 @@ func _run() -> void:
     var setup: Control = main.skirmish_setup
     assert(setup.visible and not home.visible)
     assert(setup.heading.text == "ESCARAMUZA")
+    assert(setup.footer_faction_button.text == "Facciones")
+    assert(setup.footer_faction_button.custom_minimum_size.y >= 48)
     assert(setup.faction_portraits.size() == 2)
     assert(setup.faction_names.size() == 2)
     assert(setup.faction_portraits[0].texture != null)
@@ -45,7 +47,7 @@ func _run() -> void:
     assert(setup.faction_summary.text.contains("oficiales"))
     assert(main.board.state == snapshot)
 
-    setup.faction_button.pressed.emit()
+    setup.footer_faction_button.pressed.emit()
     var chooser: Control = main.faction_selector
     assert(chooser.visible)
     chooser.reflow_for_size(Vector2(412,915))
