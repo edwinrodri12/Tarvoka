@@ -20,6 +20,16 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Validate persistent Android visual settings and battle-save isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_display_preferences.gd 2>&1 | tee /tmp/tarvoka-display-prefs.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-display-prefs.log; then
+            echo 'Display preferences regression'; exit 1
+          fi
+          grep -F 'PASS persistent display preferences' /tmp/tarvoka-display-prefs.log
+
       - name: Verify final battle results, mobile actions and non-destructive navigation
         shell: bash
         run: |
