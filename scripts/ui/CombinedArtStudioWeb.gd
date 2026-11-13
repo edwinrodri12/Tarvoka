@@ -298,7 +298,7 @@ func _display_headquarters() -> void:
 func _update_camera() -> void:
     if _role == "terrain":
         if camera != null:
-            camera.size = 43.0 / _zoom
+            camera.size = 30.5 / _zoom
         return
     if _role == "headquarters":
         if camera != null:
