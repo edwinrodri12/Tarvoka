@@ -271,6 +271,45 @@ static func _road_wheel(parent: Node3D, side: int, index: int,
     hub.rotation_degrees.z = 90
     parent.add_child(hub)
 
+static func _tread_mesh() -> ArrayMesh:
+    # Chamfered steel/rubber tread pads, not BoxMesh prototypes. Every pad
+    # carries a raised crossbar, visible at mobile isometric camera distance.
+    var perimeter := [
+        Vector2(-0.073,-0.048),Vector2(0.073,-0.048),
+        Vector2(0.080,-0.034),Vector2(0.080,0.034),
+        Vector2(0.073,0.048),Vector2(-0.073,0.048),
+        Vector2(-0.080,0.034),Vector2(-0.080,-0.034)
+    ]
+    var rings: Array = []
+    for section in [[-0.035,0.88],[-0.024,1.0],[0.023,1.0],[0.035,0.91]]:
+        var outline: Array = []
+        for p in perimeter:
+            outline.append(Vector3(p.x*float(section[1]),float(section[0]),p.y*float(section[1])))
+        rings.append(outline)
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for level in range(rings.size()-1):
+        var low: Array = rings[level]
+        var high: Array = rings[level+1]
+        for i in range(perimeter.size()):
+            var j: int = (i+1)%perimeter.size()
+            _tri(st,low[i],low[j],high[j])
+            _tri(st,low[i],high[j],high[i])
+    for i in range(perimeter.size()):
+        var j: int = (i+1)%perimeter.size()
+        _tri(st,Vector3(0,-0.035,0),rings[0][j],rings[0][i])
+        _tri(st,Vector3(0,0.035,0),rings[3][i],rings[3][j])
+    # Raised rib bonded into the rubber pad (no separate draw call).
+    for side in [-1,1]:
+        var s: float = float(side)
+        var a := Vector3(s*0.010,0.035,-0.016)
+        var b := Vector3(s*0.070,0.035,-0.016)
+        var d := Vector3(s*0.010,0.047,0.016)
+        var e := Vector3(s*0.070,0.047,0.016)
+        _tri(st,a,b,e)
+        _tri(st,a,e,d)
+    return st.commit()
+
 static func _tracks(parent: Node3D, side: int) -> MultiMeshInstance3D:
     var sign: float = float(side)
     var transforms: Array = []
@@ -291,8 +330,7 @@ static func _tracks(parent: Node3D, side: int) -> MultiMeshInstance3D:
             transforms.append(Transform3D(rotation,Vector3(sign*1.335,y,z)))
     var inst := MultiMeshInstance3D.new()
     inst.name = "OrugaArticuladaG09V7_%s" % side
-    var link_mesh := BoxMesh.new()
-    link_mesh.size = Vector3(0.125,0.065,0.102)
+    var link_mesh: ArrayMesh = _tread_mesh()
     var batch := MultiMesh.new()
     batch.transform_format = MultiMesh.TRANSFORM_3D
     batch.mesh = link_mesh
@@ -387,6 +425,28 @@ static func apply(model: Node3D) -> bool:
             Vector3(sign*0.63,0.83,-1.50),0.017)
     _dark_box(hull,"NarizInferiorV7",Vector3(0,0.49,-1.55),
         Vector3(1.15,0.18,0.10),METAL)
+    # Wedge armor is layered into a flush service brow rather than the old
+    # giant empty front slab. Thin white LED housings use actual emissive
+    # PBR materials (night battle readability), not billboard glows.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _bevel(hull,"SoporteFaroBlindadoG09_%s" % side,
+            Vector3(sign*0.58,0.865,-1.521),
+            Vector3(0.24,0.145,0.095),0.028,METAL)
+        var light := _dark_box(hull,"LuzFrontalG09_%s" % side,
+            Vector3(sign*0.58,0.864,-1.578),
+            Vector3(0.165,0.069,0.012),Color("#B5D5DF"))
+        var light_mat := light.material_override as StandardMaterial3D
+        light_mat.roughness = 0.22
+        light_mat.metallic = 0.08
+        light_mat.emission_enabled = true
+        light_mat.emission = Color("#BEDBE9")
+        light_mat.emission_energy_multiplier = 0.62
+        _rod(hull,"CantoFrontalChasisG09_%s" % side,
+            Vector3(sign*0.81,0.945,-1.33),
+            Vector3(sign*0.66,0.805,-1.52),0.022,METAL)
+    _bevel(hull,"RampaBlindajeProaV8",Vector3(0,0.708,-1.565),
+        Vector3(0.76,0.14,0.105),0.044,ARMOR)
     _bevel(hull,"CubiertaMotorRectificadaV7",
         Vector3(0,1.102,1.055),Vector3(1.39,0.066,0.79),0.038,ARMOR)
     # Embedded rear louvers and exhaust appear as dark vents, not blocks.
@@ -406,6 +466,15 @@ static func apply(model: Node3D) -> bool:
         _dark_box(hull,"CerrojoRebajadoPosteriorV7_%s" % side,
             Vector3(rear_sign*0.49,0.71,1.529),
             Vector3(0.12,0.18,0.019),SEAM)
+        var tail := _dark_box(hull,"LuzTraseraG09_%s" % side,
+            Vector3(rear_sign*0.66,0.694,1.558),
+            Vector3(0.165,0.064,0.012),Color("#8C2E33"))
+        var tail_mat := tail.material_override as StandardMaterial3D
+        tail_mat.roughness = 0.27
+        tail_mat.metallic = 0.05
+        tail_mat.emission_enabled = true
+        tail_mat.emission = Color("#BA3540")
+        tail_mat.emission_energy_multiplier = 0.38
     for side in [-1,1]:
         var sign: float = float(side)
         # Actual heavy side composite shoulder and inside tread belt.
@@ -455,6 +524,18 @@ static func apply(model: Node3D) -> bool:
         [0.605,0.92,0.045],[0.665,0.88,0.050]
     ]
     _loft(turret,"TorreBajaSoldadaV7",turret_profile,turret_levels)
+    # These long, flush seams follow the actual multi-level turret geometry.
+    # They articulate together with the turret and provide real close-up
+    # manufactured hard-surface detail without scattered floating cuboids.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _rod(turret,"SoldaduraLongitudinalTorreG09_%s" % side,
+            Vector3(sign*0.67,0.640,-0.54),
+            Vector3(sign*0.64,0.655,0.55),0.012,SEAM)
+        _bevel(turret,"CubiertaCompuestaFrontalG09_%s" % side,
+            Vector3(sign*0.314,0.459,-0.990),
+            Vector3(0.338,0.160,0.330),0.066,CERAMIC,
+            Vector3(-17.0,sign*14.0,-sign*4.0))
     # Integrated armor cheek extensions follow sloped shell; each bevel has
     # chamfered corners and consistent material with the central body.
     for side in [-1,1]:
