@@ -13,7 +13,9 @@ var building_state_picker: OptionButton
 var building_controls: VBoxContainer
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
+var hq_v3_compare_button: Button
 var _hq_show_v2 := true
+var _hq_show_v3 := true
 
 func _ready() -> void:
     super._ready()
@@ -66,6 +68,10 @@ func _add_building_mode() -> void:
         "Comparar con diseño anterior (V1)",_toggle_hq_finish)
     hq_compare_button.name = "CompararAcabadoDeEdificio"
     hq_compare_button.custom_minimum_size.y = 49
+    hq_v3_compare_button = _button(building_controls,
+        "Comparar arquitectura V2 / V3",_toggle_hq_detail)
+    hq_v3_compare_button.name = "ComparadorArquitecturaV3"
+    hq_v3_compare_button.custom_minimum_size.y = 49
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -95,6 +101,16 @@ func _add_building_mode() -> void:
     var index: int = column.get_children().find(faction_picker)
     column.move_child(building_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
+
+func _toggle_hq_detail() -> void:
+    _hq_show_v2 = true
+    _hq_show_v3 = not _hq_show_v3
+    hq_v3_compare_button.text = (
+        "Volver al diseño V3 mejorado" if not _hq_show_v3
+        else "Comparar arquitectura V2 / V3")
+    hq_compare_button.text = "Comparar con diseño anterior (V1)"
+    if _role == "headquarters":
+        _display_headquarters()
 
 func _toggle_hq_finish() -> void:
     _hq_show_v2 = not _hq_show_v2
@@ -141,14 +157,15 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2)
+    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3)
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
         _zoom = 1.0
     model_root.rotation_degrees.y = _yaw
-    camera.position = Vector3(18.0,16.5,19.0)
+    # Front-right camera reveals the command entrance, insignia, and helipad.
+    camera.position = Vector3(18.0,16.5,-19.0)
     camera.look_at(Vector3(0,2.3,0),Vector3.UP)
     _update_camera()
     _update_details()
@@ -171,7 +188,7 @@ func _update_details() -> void:
     var condition: String = str(model_root.get_meta("visual_condition","operativo"))
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
-        "ARQUITECTURA V2" if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
+        ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2") if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
     status_label.text = "%s · %s · Piezas de color: %d" % [
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),
