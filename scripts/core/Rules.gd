@@ -69,6 +69,13 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
             var cost := movement_cost_for(terrain[next.y][next.x], domain)
             if cost < 0:
                 continue
+            # Slow ground units must not be locked out of hills entirely.
+            # A direct climb from the starting tile is always possible with
+            # positive movement: it consumes the WHOLE budget if below the
+            # usual mountain cost of 3. This is not a free shortcut through
+            # mountains; additional steps still require available points.
+            if domain == Domains.GROUND and terrain[next.y][next.x] == "mountain" and current == origin and points > 0 and cost > points:
+                cost = points
             var total: int = distances[current] + cost
             if total > points or (distances.has(next) and distances[next] <= total):
                 continue
