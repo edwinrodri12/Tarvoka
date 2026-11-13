@@ -39,6 +39,8 @@ static func _own_unit(state: Dictionary, unit: Dictionary) -> Dictionary:
     body += "\n%s · cobertura +%d" % [Hints.terrain_name(kind),cover]
     if kind == "mountain" and Domains.domain(unit) == Domains.GROUND:
         body += " · altura: +1 ATQ contra tierra baja"
+    elif kind == "road" and Logistics.road_fast(unit):
+        body += " · carretera: 2 casillas por punto"
     if unit.has("ammo"):
         body += "\nMunicion %d/%d" % [int(unit["ammo"]),Logistics.ammo_capacity(role)]
         if Logistics.fuel_capacity(role) > 0:
@@ -105,7 +107,8 @@ static func _land(kind: String, cell: Vector2i) -> Dictionary:
     elif kind == "forest":
         body += "\nEl bosque reduce el dano recibido; entrar cuesta 2"
     elif kind == "road":
-        body += "\nTransito rapido; sin proteccion adicional"
+        body += "\nVehiculos motorizados: 2 casillas por punto (0.5 cada una)"
+        body += "\nInfanteria: 1 punto por casilla · Sin cobertura adicional"
     elif kind == "water":
         body += "\nSolo unidades navales y aereas"
     return _card("terrain",Hints.terrain_name(kind),body)

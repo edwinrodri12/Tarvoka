@@ -52,7 +52,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     var points := Logistics.movement_budget(mover)
     var origin: Vector2i = mover["pos"]
     blockers.erase(origin)
-    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain)
+    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain, Logistics.road_fast(mover))
     if not reachable.has(destination):
         return rejected
     Logistics.consume_move(mover, int(reachable[destination]))
