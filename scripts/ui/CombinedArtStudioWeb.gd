@@ -18,6 +18,7 @@ var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
+var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
@@ -142,6 +143,13 @@ func _add_building_mode() -> void:
     terrain_continuous_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_continuous_toggle)
 
+    terrain_scatter_toggle = CheckButton.new()
+    terrain_scatter_toggle.name = "VegetacionYOrillasV3"
+    terrain_scatter_toggle.text = "Vegetación y orillas detalladas V3"
+    terrain_scatter_toggle.button_pressed = true
+    terrain_scatter_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_scatter_toggle)
+
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
     terrain_light_picker.name = "LuzDeEntorno"
@@ -265,7 +273,8 @@ func _display_terrain() -> void:
     _role = "terrain"
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
         terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
-        _faction,terrain_continuous_toggle.button_pressed)
+        _faction,terrain_continuous_toggle.button_pressed,
+        terrain_scatter_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -333,9 +342,14 @@ func _update_details() -> void:
             str(TerrainStudio.SCENES[terrain_scene_picker.selected]),
             int(model_root.get_meta("terrain_tile_count",0)),
             Models.inspect_meshes(model_root)]
+        var foliage: Dictionary = model_root.get_meta("terrain_scatter_counts",{})
         status_label.text = "Bosques %d · Montañas %d · Agua %d · Carreteras %d" % [
             int(counts.get("forest",0)),int(counts.get("mountain",0)),
             int(counts.get("water",0)),int(counts.get("road",0))]
+        if bool(model_root.get_meta("terrain_studio_scatter",false)):
+            status_label.text += " · Detalles %d (%d lotes)" % [
+                int(foliage.get("grass",0))+int(foliage.get("reeds",0))
+                +int(foliage.get("gravel",0)),int(foliage.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
