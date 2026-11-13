@@ -121,6 +121,12 @@ var compact_end_turn: Button
 var compact_resupply: Button
 var compact_center: Button
 var compact_iso: Button
+var expanded_header: PanelContainer
+var expanded_summary: Label
+var expanded_actions: PanelContainer
+var expanded_confirm: Button
+var expanded_cancel: Button
+var expanded_end_turn: Button
 
 func _ready() -> void:
     # Install the same game-grade visual language on all native Godot menus,
@@ -923,6 +929,68 @@ func _build_battle_hud() -> void:
     GameUiTheme.emphasize(compact_menu_button,"secondary")
     GameUiTheme.emphasize(compact_objectives_button,"primary")
 
+    # Desktop/tablet battlefield: preserve the map as the protagonist while
+    # exposing a true bottom command rail and a slim intelligence header.
+    # Both surfaces use the SAME existing callbacks and authoritative guards.
+    expanded_header = PanelContainer.new()
+    expanded_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    expanded_header.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+    expanded_header.offset_left = 12
+    expanded_header.offset_right = -145
+    expanded_header.offset_top = 8
+    expanded_header.offset_bottom = 63
+    expanded_header.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#09263F"),GameUiTheme.EDGE_BRIGHT,8,10))
+    battle_hud_overlay.add_child(expanded_header)
+    expanded_summary = Label.new()
+    expanded_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    expanded_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    expanded_summary.add_theme_font_size_override("font_size",18)
+    expanded_summary.add_theme_color_override("font_color",GameUiTheme.TEXT)
+    expanded_header.add_child(expanded_summary)
+
+    expanded_actions = PanelContainer.new()
+    expanded_actions.mouse_filter = Control.MOUSE_FILTER_PASS
+    expanded_actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+    expanded_actions.offset_left = 12
+    expanded_actions.offset_right = -12
+    expanded_actions.offset_top = -73
+    expanded_actions.offset_bottom = -9
+    expanded_actions.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#09263F"),GameUiTheme.EDGE_BRIGHT,8,10))
+    battle_hud_overlay.add_child(expanded_actions)
+    var tactical_rail := HBoxContainer.new()
+    tactical_rail.add_theme_constant_override("separation",6)
+    expanded_actions.add_child(tactical_rail)
+    for definition in [
+        ["≡  MANDO",Callable(self,"_open_command_menu")],
+        ["⌖  OBJETIVOS",Callable(self,"_open_objectives_radar")]
+    ]:
+        var shortcut := Button.new()
+        shortcut.text = str(definition[0])
+        shortcut.custom_minimum_size.y = 48
+        shortcut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        shortcut.pressed.connect(definition[1])
+        tactical_rail.add_child(shortcut)
+    expanded_cancel = Button.new()
+    expanded_cancel.text = "CANCELAR"
+    expanded_cancel.custom_minimum_size.y = 48
+    expanded_cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    expanded_cancel.pressed.connect(_cancel_selection)
+    tactical_rail.add_child(expanded_cancel)
+    expanded_confirm = Button.new()
+    expanded_confirm.text = "CONFIRMAR"
+    expanded_confirm.custom_minimum_size.y = 48
+    expanded_confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    expanded_confirm.pressed.connect(_confirm_order)
+    GameUiTheme.emphasize(expanded_confirm,"success")
+    tactical_rail.add_child(expanded_confirm)
+    expanded_end_turn = Button.new()
+    expanded_end_turn.text = "FIN TURNO  »"
+    expanded_end_turn.custom_minimum_size.y = 48
+    expanded_end_turn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    expanded_end_turn.pressed.connect(_end_turn)
+    GameUiTheme.emphasize(expanded_end_turn,"danger")
+    tactical_rail.add_child(expanded_end_turn)
+
     battle_hud_toggle = Button.new()
     battle_hud_toggle.text = "Ampliar mapa"
     battle_hud_toggle.custom_minimum_size = Vector2(130,46)
@@ -958,6 +1026,8 @@ func _build_battle_hud() -> void:
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
+    expanded_header.show()
+    expanded_actions.show()
 
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
@@ -965,6 +1035,8 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    expanded_header.visible = not compact
+    expanded_actions.visible = not compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
     layout_for_size(get_viewport_rect().size)
 
@@ -1161,6 +1233,29 @@ func _process(_delta: float) -> void:
         _update_text(status_label, "Faccion %d | %s" % [int(board.state.get("faction", 0)) + 1, board.message])
     compact_status.text = status_label.text
     compact_detail.text = unit_label.text.replace("\n","  ")
+    if expanded_header != null:
+        var side: int = int(board.state.get("faction",0))
+        var header_text: String = ("ALIANZA AZUL" if side == 0 else "PACTO ROJO")
+        if board.ai_enabled and side == 1:
+            header_text = "TURNO DEL RIVAL"
+        header_text = "TARVOKA   ◈   %s   |   %s" % [header_text,
+            ("BATALLA FINALIZADA" if winner != -1 else "OPERACIÓN EN CURSO")]
+        if board.state.has("economy"):
+            var economy: Dictionary = board.state["economy"]
+            var viewer: int = 0 if board.ai_enabled else side
+            var credits: Array = economy.get("credits",[])
+            if credits.size() > viewer:
+                header_text += "   |   %d CR" % int(credits[viewer])
+        if board.state.has("control"):
+            var relay: Dictionary = board.state["control"]
+            var relay_scores: Array = relay.get("scores",[])
+            if relay_scores.size() == 2:
+                header_text += "   |   SEÑAL %d–%d" % [int(relay_scores[0]),int(relay_scores[1])]
+        expanded_summary.text = header_text
+        expanded_confirm.text = "RESULTADOS" if winner != -1 else ("CONFIRMAR" if board.pending_order.is_empty() else str(confirm_button.text).to_upper())
+        expanded_confirm.disabled = confirm_button.disabled
+        expanded_cancel.disabled = cancel_button.disabled
+        expanded_end_turn.disabled = end_button.disabled
     # Show final results only once per terminal state. Closing the panel to
     # inspect the field must never auto-open it again on subsequent frames.
     if results_panel != null:
