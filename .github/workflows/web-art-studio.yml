@@ -158,6 +158,7 @@ jobs:
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
+          test -s artifacts/tarvoka_g09_v10_four_angles.png
           test -s artifacts/tarvoka_g09_v9_closeup_engine.png
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
@@ -203,6 +204,7 @@ jobs:
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
+            artifacts/tarvoka_g09_v10_four_angles.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
