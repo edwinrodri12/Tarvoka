@@ -5,6 +5,9 @@ const Damage = preload("res://scripts/ui/TankDamage3D.gd")
 const Rig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const Lab = preload("res://scripts/ui/VisualLab.gd")
 const Inspector = preload("res://scripts/ui/Unit3DInspector.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
+const Renderer = preload("res://scripts/ui/UnitRender3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -13,6 +16,14 @@ func _run() -> void:
     var model: Node3D = Models.build("tank",0)
     assert(model != null)
     assert(Damage.STAGES.size() == 5)
+    assert(Damage.stage_for_hp(14,14) == 0)
+    assert(Damage.stage_for_hp(12,14) == 1)
+    assert(Damage.stage_for_hp(8,14) == 2)
+    assert(Damage.stage_for_hp(3,14) == 3)
+    assert(Damage.stage_for_hp(0,14) == 4)
+    var renderer = Renderer.new()
+    assert(renderer._damage_stage_from_unit({"hp":8}) == 2)
+    renderer.free()
     assert(Damage.current_stage(model) == 0)
     assert(Models.paintable_count(model) == 14)
     assert(Damage.prepare(model) == false) # Idempotent, no duplicated layers.
@@ -98,6 +109,30 @@ func _run() -> void:
     assert(Damage.current_stage(lab.preview_viewer.model_root) == 3)
     assert(lab.damage_stage_picker.selected == 3)
     assert(lab.lab_board.state == before) # Cannot modify HP/fuel/ammo.
+    lab.preview_viewer.hide()
+
+    # The art preview must follow actual HP from a legal mirror tank battle,
+    # not an invented damage percentage or the old manual step selection.
+    lab.attacker_picker.select(lab.CATALOG.find("tank"))
+    lab.defender_picker.select(lab.CATALOG.find("tank"))
+    lab.distance_picker.select(0)
+    lab.rebuild_stage()
+    assert(lab.damage_stage_picker.selected == 0)
+    var mirror: Dictionary = Session.attack(lab.lab_board.state.duplicate(true),"LAB-A","LAB-B")
+    assert(mirror.get("valid",false))
+    lab.demo_attack()
+    assert(lab.lab_board.state == mirror["state"])
+    var defender_hp := 0
+    for unit in lab.lab_board.state["units"]:
+        if str(unit["id"]) == "LAB-B":
+            defender_hp = int(unit["hp"])
+    var tank_max: int = int(Arsenal.profile("tank")["hp"])
+    assert(lab.damage_stage_picker.selected == Damage.stage_for_hp(defender_hp,tank_max))
+    assert(lab.feedback_label.text.contains("Ver daños 3D"))
+    var post_attack: Dictionary = lab.lab_board.state.duplicate(true)
+    lab.preview_damage_stage()
+    assert(Damage.current_stage(lab.preview_viewer.model_root) == lab.damage_stage_picker.selected)
+    assert(lab.lab_board.state == post_attack)
     lab.preview_viewer.hide()
     lab.queue_free()
     print("PASS tank damage lab: 5 progressive 3D wreck states, hit playback, reversible plates and tank-only sandbox HP isolation")
