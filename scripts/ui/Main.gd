@@ -878,7 +878,9 @@ func _process(_delta: float) -> void:
         # A context action receives taps; all unrelated map regions continue
         # forwarding touch/pinch to the tactical board.
         compact_info_panel.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
-        compact_info_panel.get_child(0).mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
+        var info_container: Control = compact_info_panel.get_child(0) as Control
+        if info_container != null:
+            info_container.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
         # Terrain and unknown cells keep the familiar descriptive text.
         # For units and buildings the graphical compact card replaces it,
         # rather than consuming a third of the map with duplicate details.
