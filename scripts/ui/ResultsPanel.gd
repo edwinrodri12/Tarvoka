@@ -89,8 +89,9 @@ func _button(parent: HBoxContainer,caption: String,callback: Callable) -> void:
 func _reflow() -> void:
     var size_rect: Vector2 = get_viewport_rect().size
     var portrait: bool = size_rect.y > size_rect.x
-    set_anchor(SIDE_LEFT,0.04 if portrait else 0.24)
-    set_anchor(SIDE_RIGHT,0.96 if portrait else 0.76)
+    var landscape_compact: bool = not portrait and size_rect.y < 570.0
+    set_anchor(SIDE_LEFT,0.04 if portrait else (0.07 if landscape_compact else 0.24))
+    set_anchor(SIDE_RIGHT,0.96 if portrait else (0.93 if landscape_compact else 0.76))
     offset_left = 0
     offset_right = 0
     if portrait:
