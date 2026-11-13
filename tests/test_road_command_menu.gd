@@ -116,5 +116,5 @@ func _run() -> void:
     scene.compact_resupply.pressed.emit()
     assert(board.state["units"][0]["fuel"] > 1 and board.state["units"][0]["ammo"] > 0)
     scene.queue_free()
-    print("PASS motorized roads, command menu and compact mobile resupply action")
+    print("PASS motorized roads and command menu: vehicle bonus, infantry separation, fuel, AI preview, battle navigation, production and compact mobile resupply")
     quit(0)
