@@ -5,6 +5,7 @@ const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
+const SitePainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -93,9 +94,9 @@ func _run() -> void:
     assert(next["state"]["visual_factions"] == actual["visual_factions"])
     assert(Identity.color_for(next["state"],0) == Style.faction_color(3))
     # Unit and base flags use the same selectable visual faction colors.
-    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(0,actual) == Style.faction_color(3))
-    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(1,actual) == Style.faction_color(7))
-    assert(load("res://scripts/ui/SiteOverlayPainter.gd").owner_tint(-1,actual) != Style.faction_color(3))
+    assert(SitePainter.owner_tint(0,actual) == Style.faction_color(3))
+    assert(SitePainter.owner_tint(1,actual) == Style.faction_color(7))
+    assert(SitePainter.owner_tint(-1,actual) != Style.faction_color(3))
 
     assert(board.save_game())
     board.new_game()
