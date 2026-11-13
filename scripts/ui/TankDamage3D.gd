@@ -363,7 +363,10 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         # The V6 ceramic nose permanently replaces V5 cheek and mantlet.
         # Never resurrect the earlier pieces during a repair cycle.
         for obsolete_name in ["MejillaPrincipalV5_-1","MejillaPrincipalV5_1",
-                "MantleteMonoliticoV5","AroSelladoCanonV5"]:
+                "MantleteMonoliticoV5","AroSelladoCanonV5",
+                "CristalPanoramicoFrontal","CristalPanoramicoLateral",
+                "ModuloVisionPanoramica","VisorTermicoProtegido",
+                "LenteTermicoPrincipal"]:
             var prototype: Node3D = model.find_child(obsolete_name,true,false) as Node3D
             if prototype != null:
                 prototype.visible = false
