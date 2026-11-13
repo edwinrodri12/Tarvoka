@@ -6,6 +6,10 @@ const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 
 func _initialize() -> void:
+    _check()
+    quit()
+
+func _check() -> void:
     var start: Dictionary = Campaign.start_c01()
     assert(start["id"] == "C01")
     assert(start["status"] == "active")
@@ -117,4 +121,3 @@ func _initialize() -> void:
     assert(Campaign.decode(JSON.stringify(payload)).is_empty())
 
     print("Campaign C01 objective lifecycle, branching dialogue and checkpoint tests passed.")
-    quit()
