@@ -117,7 +117,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     # All environmental transition masks use the SAME
                     # visibility rules as roads and shorelines. This is
                     # render data only; nothing is written into the battle.
-                    var environment: Dictionary = {}
+                    var environment: Dictionary = {"cell":cell}
                     if terrain == "water":
                         environment["water_connections"] = Topology.neighbor_mask(
                             state["terrain"],cell,"water",true,visible,fog)
