@@ -5,6 +5,15 @@ class_name TarvokaUnitModels3D
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
 const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]
+# Orthographic visual footprint, shared by in-game sprite captures and
+# the inspection viewer. Each value leaves enough room for hull/rotors.
+const PREVIEW_FRAME := {
+    "line":3.05,"scout":3.05,"apc":3.55,"tank":3.75,
+    "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10
+}
+
+static func preview_frame_height(role: String) -> float:
+    return float(PREVIEW_FRAME.get(role,4.50))
 const STEEL := Color("#788795")
 const ARMOR := Color("#a4adb4")
 const DARK := Color("#293a47")
