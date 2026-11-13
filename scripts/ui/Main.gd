@@ -319,7 +319,7 @@ func _ready() -> void:
     panel.add_child(unit_label)
 
     var legend := Label.new()
-    legend.text = "AZUL: movimiento y costo\nROJO: objetivo y dano estimado\nALIADAS circulo | ENEMIGAS cuadrado\nBOSQUE 2 | MONTANA 3 | CAMINO 1 | AGUA bloqueada"
+    legend.text = "AZUL: movimiento y costo\nROJO: objetivo y daño previsto\nBOSQUE 2 | MONTAÑA 3 | CARRETERA: vehículos 0.5 / infantería 1\nEDIFICIOS: color=propietario | $ ciudad | ! captura al fin de turno\nFÁBRICAS: + lista | - usada | $ sin fondos | x bloqueada"
     legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     legend.add_theme_font_size_override("font_size", 16)
     panel.add_child(legend)
