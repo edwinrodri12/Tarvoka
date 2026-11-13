@@ -21,6 +21,10 @@ func _run() -> void:
     assert(master_preview.get_width() == 512)
     assert(master_preview.get_height() == 512)
     assert(home._brand_image.texture.get_width() == 512)
+    assert(home.showcase_emblems.size() == 8)
+    for emblem in home.showcase_emblems:
+        assert(emblem.texture != null)
+        assert(emblem.texture is AtlasTexture)
     assert(home.primary_buttons["Continuar"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Escaramuza"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Multijugador"].disabled)
