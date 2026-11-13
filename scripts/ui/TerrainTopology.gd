@@ -46,6 +46,25 @@ static func shore_mask(grid: Array, cell: Vector2i,
         return 0
     return neighbor_mask(grid,cell,"water",false,observed,restrict_to_observed)
 
+# Locate a road raised above a river. A crossing is decoration, not a
+# new tactical terrain: only the existing road cell remains authoritative.
+# The two banks must be connected by visible road in the crossing axis,
+# with visible water on opposite sides.
+static func bridge_axis(grid: Array, cell: Vector2i,
+        observed: Dictionary = {}, restrict_to_observed: bool = false) -> int:
+    if not _inside(grid,cell) or str(grid[cell.y][cell.x]) != "road":
+        return 0
+    var roads: int = road_mask(grid,cell,observed,restrict_to_observed)
+    var water: int = neighbor_mask(grid,cell,"water",true,
+        observed,restrict_to_observed)
+    if (roads & (EAST | WEST)) == (EAST | WEST) and (
+            water & (NORTH | SOUTH)) == (NORTH | SOUTH):
+        return 1
+    if (roads & (NORTH | SOUTH)) == (NORTH | SOUTH) and (
+            water & (EAST | WEST)) == (EAST | WEST):
+        return 2
+    return 0
+
 static func connection_count(mask: int) -> int:
     var count := 0
     for i in range(DIRECTIONS.size()):
