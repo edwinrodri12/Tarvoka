@@ -16,6 +16,47 @@ const SEAM := Color("#202F37")
 const WEAR := Color("#8E9695")
 const VISION := Color("#174A60")
 
+static var _steel_enamel_mask: ImageTexture
+static var _ceramic_enamel_mask: ImageTexture
+
+static func _enamel_mask(ceramic: bool) -> ImageTexture:
+    # Two original, distinct PBR albedo masks. Neither copies real tank
+    # markings, photographs nor texture-pack assets. Highly constrained
+    # variation: matte sprayed armor with brushed metallic grain and sparse
+    # battle scuffs, not obvious cartoon camouflage squares.
+    if ceramic and _ceramic_enamel_mask != null:
+        return _ceramic_enamel_mask
+    if not ceramic and _steel_enamel_mask != null:
+        return _steel_enamel_mask
+    const N := 256
+    var img := Image.create(N,N,false,Image.FORMAT_RGBA8)
+    for y in range(N):
+        for x in range(N):
+            var large: float = Hero._smooth_hash(float(x),float(y),73.0)
+            var micro: float = Hero._smooth_hash(float(x),float(y),13.0)
+            var abrasion: float = Hero._hash(x,y)
+            var streak: float = Hero._smooth_hash(
+                float(x)*0.77,float(y)*1.85,31.0)
+            var brightness: float
+            if ceramic:
+                brightness = 0.945+0.046*(large-0.5)+0.035*(micro-0.5)
+            else:
+                brightness = 0.913+0.076*(large-0.5)+0.052*(streak-0.5)
+            # Chipped edge flecks and hairline micro scratches are masked by
+            # surface variation, not a set of hard square camouflage blobs.
+            if abrasion > 0.994 and micro < 0.43:
+                brightness = minf(1.0,brightness+0.095)
+            elif abrasion < 0.009 and streak < 0.42:
+                brightness *= 0.84
+            brightness = clampf(brightness,0.76,1.0)
+            img.set_pixel(x,y,Color(brightness,brightness,brightness,1))
+    var atlas := ImageTexture.create_from_image(img)
+    if ceramic:
+        _ceramic_enamel_mask = atlas
+    else:
+        _steel_enamel_mask = atlas
+    return atlas
+
 static func _solid_replace(parent: Node3D, original_name: String,
         outline: Array, levels: Array) -> bool:
     var original: MeshInstance3D = parent.find_child(
@@ -296,11 +337,20 @@ static func finish_materials(model: Node3D) -> int:
             tint = GUNMETAL
         cloned.albedo_color = tint
         if tint != GUNMETAL and tint != SEAM and tint != WEAR:
-            cloned.albedo_texture = Hero._army_texture()
+            var ceramic_surface: bool = "Mejilla" in str(node.name) or                 "Glacis" in str(node.name) or "Compuesta" in str(node.name)
+            cloned.albedo_texture = _enamel_mask(ceramic_surface)
             cloned.normal_enabled = true
             cloned.normal_texture = Hero._army_micro_normal()
-            cloned.normal_scale = 0.38
+            cloned.normal_scale = 0.38 if ceramic_surface else 0.29
             cloned.roughness_texture = Hero._army_micro_roughness()
+            cloned.roughness = 0.81 if ceramic_surface else 0.73
+            cloned.metallic = 0.12 if ceramic_surface else 0.26
+        else:
+            cloned.albedo_texture = null
+            cloned.normal_enabled = false
+            cloned.roughness_texture = null
+            cloned.roughness = 0.58
+            cloned.metallic = 0.54
         mesh.material_override = cloned
         count += 1
     var body: MeshInstance3D = model.find_child(
@@ -310,10 +360,16 @@ static func finish_materials(model: Node3D) -> int:
     if body != null:
         var mat: StandardMaterial3D = body.material_override.duplicate(true) as StandardMaterial3D
         mat.albedo_color = HULL
+        mat.albedo_texture = _enamel_mask(false)
+        mat.roughness = 0.74
+        mat.metallic = 0.24
         body.material_override = mat
     if head != null:
         var mat: StandardMaterial3D = head.material_override.duplicate(true) as StandardMaterial3D
         mat.albedo_color = TURRET
+        mat.albedo_texture = _enamel_mask(false)
+        mat.roughness = 0.74
+        mat.metallic = 0.24
         head.material_override = mat
     model.set_meta("tarvoka_mbt_sculpted_v10_pbr_count",count)
     return count
