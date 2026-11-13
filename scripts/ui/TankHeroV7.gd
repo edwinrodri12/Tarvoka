@@ -50,15 +50,13 @@ static func _army_texture() -> ImageTexture:
             var detail: float = _smooth_hash(float(x),float(y),6.0)
             var grit: float = _hash(x,y)
             var pattern: float = broad*0.56+medium*0.44
-            var base: Color = Color("#667265")
-            if pattern < 0.425:
-                base = Color("#535E56")
-            elif pattern > 0.61:
-                base = Color("#7B806F")
-            else:
-                base = Color("#657164")
-            var smoothed: float = clampf((pattern-0.40)/0.27,0.0,1.0)
-            var darkened: float = 0.91+0.16*smoothed+0.09*(detail-0.5)
+            # Broad gradients rather than thresholded polygons: the tank
+            # reads as sprayed matte military enamel, not camouflage tiles.
+            var transition: float = clampf((pattern-0.29)/0.43,0.0,1.0)
+            transition = transition*transition*(3.0-2.0*transition)
+            var base: Color = Color("#536157").lerp(
+                Color("#758071"),transition)
+            var darkened: float = 0.97+0.055*(medium-0.5)+0.07*(detail-0.5)
             var dusty: float = maxf(0.0,1.0-float(y)/float(SIDE))*0.062
             var color: Color = base*darkened
             color = color.lerp(Color("#A3997F"),dusty)
