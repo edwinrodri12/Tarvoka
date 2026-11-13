@@ -5,6 +5,7 @@ class_name TarvokaWorldArt
 # heights nor site silhouettes grant cover, income, movement or combat bonuses.
 const SITE_KINDS := ["city","factory","armor_plant","artillery_depot","drone_center","airbase","shipyard"]
 const Landscape = preload("res://scripts/ui/LandscapeDetailPainter.gd")
+const Transitions = preload("res://scripts/ui/LandscapeTransitions.gd")
 
 static func supports_site(kind: String) -> bool:
     return kind in SITE_KINDS
@@ -73,32 +74,32 @@ static func _water_banks(canvas: CanvasItem, center: Vector2, hw: float,
 static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
         hw: float, phase: float, seed: int, road_connections: int = 0,
         shore_mask: int = 0, terrain_neighbors: int = 0, bridge_axis: int = 0,
-        detail: int = 2) -> void:
+        detail: int = 2, context: Dictionary = {}) -> void:
     if hw <= 0.0:
         return
     var s: float = hw * 0.58
+    # Material transition strips are always inside the currently visible
+    # tile. Masks are provided by fog-filtered topology in IsoRenderer.
+    if kind != "water":
+        Transitions.draw_land_shore(canvas,c,hw,
+            int(context.get("water_edges",0)),kind,detail)
+        if kind == "plain" or kind == "road" or kind == "forest":
+            Transitions.draw_talus(canvas,c,hw,
+                int(context.get("mountain_edges",0)),detail)
     match kind:
         "forest":
             Landscape.draw_forest(canvas,c,hw,seed,terrain_neighbors,detail)
         "mountain":
-            Landscape.draw_mountain(canvas,c,hw,seed,terrain_neighbors,detail)
+            Landscape.draw_mountain(canvas,c,hw,seed,terrain_neighbors,detail,
+                int(context.get("exposed_edges",0)))
         "road":
             _connected_road(canvas,c,hw,road_connections)
             if bridge_axis != 0:
                 Landscape.draw_bridge(canvas,c,hw,bridge_axis,detail)
         "water":
-            # Small animated wavelets; shoreline data comes only from cells
-            # currently visible to the player.
-            for j in range(3):
-                var x: float = -0.74 + j * 0.36
-                var wave: float = 0.09 * sin(phase*2.2+j*1.7+seed)
-                _line(canvas,c,s,Vector2(x+wave,-0.25+j*0.22),
-                    Vector2(x+0.42+wave,-0.25+j*0.22),
-                    Color("#69B9DA"),0.052)
-                if detail >= 2:
-                    _line(canvas,c,s,Vector2(x+0.07+wave,-0.18+j*0.22),
-                        Vector2(x+0.27+wave,-0.18+j*0.22),
-                        Color("#A9E6EF"),0.035)
+            # Flow direction is derived from known neighboring water tiles.
+            Transitions.draw_river_current(canvas,c,hw,
+                int(context.get("water_connections",0)),seed,phase,detail)
             _water_banks(canvas,c,hw,shore_mask)
         _:
             # Plains remain readable at a glance but get fine vegetation
