@@ -774,7 +774,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
-    _apply_minimap_visibility()
+    minimap_shell.hide() # Main restores actual saved preference after menus exist.
 
 func _build_battle_hud() -> void:
     battle_hud_overlay = Control.new()
