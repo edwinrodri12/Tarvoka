@@ -7,10 +7,10 @@ class_name TarvokaTankArmorV10
 const Hero = preload("res://scripts/ui/TankHeroV7.gd")
 const ROOT := "G09ArmaduraIntegralV10"
 
-const HULL := Color("#5C6C73")
-const TURRET := Color("#435662")
-const CERAMIC := Color("#84929A")
-const CERAMIC_DARK := Color("#667680")
+const HULL := Color("#556974")
+const TURRET := Color("#465966")
+const CERAMIC := Color("#697A85")
+const CERAMIC_DARK := Color("#586C77")
 const GUNMETAL := Color("#2D3C48")
 const SEAM := Color("#202F37")
 const WEAR := Color("#8E9695")
@@ -153,16 +153,56 @@ static func _upgrade_hull(hull: Node3D) -> void:
             Vector3(0.0,1.155,z),
             Vector3(0.990,0.012,0.049),GUNMETAL)
 
+static func _wedge_cheek(turret: Node3D, side: int) -> MeshInstance3D:
+    # Not a rotated BoxMesh. A custom 6-sided, physically capped composite
+    # cheek follows the front of the turret as a single, heavy armored mass.
+    # Slightly different upper/lower footprints create sloped ceramic faces.
+    var sign: float = float(side)
+    var lower := [
+        Vector3(sign*0.22,0.176,-1.255),
+        Vector3(sign*0.52,0.176,-1.299),
+        Vector3(sign*0.815,0.177,-1.042),
+        Vector3(sign*0.928,0.198,-0.584),
+        Vector3(sign*0.672,0.177,-0.463),
+        Vector3(sign*0.319,0.176,-0.685)
+    ]
+    var upper := [
+        Vector3(sign*0.21,0.442,-1.232),
+        Vector3(sign*0.465,0.481,-1.265),
+        Vector3(sign*0.735,0.544,-0.985),
+        Vector3(sign*0.818,0.554,-0.598),
+        Vector3(sign*0.633,0.490,-0.492),
+        Vector3(sign*0.319,0.442,-0.686)
+    ]
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var mid_lower := Vector3.ZERO
+    var mid_upper := Vector3.ZERO
+    for i in range(lower.size()):
+        mid_lower += lower[i]
+        mid_upper += upper[i]
+    mid_lower /= float(lower.size())
+    mid_upper /= float(upper.size())
+    for i in range(lower.size()):
+        var next: int = (i+1)%lower.size()
+        Hero._tri(st,lower[i],lower[next],upper[next])
+        Hero._tri(st,lower[i],upper[next],upper[i])
+        Hero._tri(st,mid_lower,lower[next],lower[i])
+        Hero._tri(st,mid_upper,upper[i],upper[next])
+    var part := MeshInstance3D.new()
+    part.name = "G09V10MejillaCompuesta_%s" % side
+    part.mesh = st.commit()
+    part.material_override = Hero._army_material(CERAMIC,true)
+    turret.add_child(part)
+    return part
+
 static func _upgrade_turret(turret: Node3D) -> void:
     # Two large coherent armored cheeks and side curtains, with deliberate
     # negative-space seams. Their placement follows the V10 hull's new
     # profile and changes appearance dramatically at battle scale.
     for side in [-1,1]:
         var sign: float = float(side)
-        _plate(turret,"G09V10MejillaCompuesta_%s" % side,
-            Vector3(sign*0.585,0.356,-0.989),
-            Vector3(0.558,0.350,0.640),0.135,CERAMIC,
-            Vector3(-13.0,sign*20.0,-sign*6.0))
+        _wedge_cheek(turret,side)
         _plate(turret,"G09V10PlanchaMejillaExterior_%s" % side,
             Vector3(sign*0.904,0.326,-0.674),
             Vector3(0.145,0.276,0.599),0.044,CERAMIC_DARK,
