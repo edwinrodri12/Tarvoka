@@ -9,6 +9,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
+const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -714,6 +715,9 @@ static func build(role: String, faction: int = -1) -> Node3D:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
     if role == "tank":
+        # Physical finish is authored on the neutral geometry BEFORE PBR and
+        # strictly independent of the fourteen faction-color mesh panels.
+        TankFinish.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         TankDamage.prepare(model)
