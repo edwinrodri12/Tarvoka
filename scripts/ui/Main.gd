@@ -24,6 +24,7 @@ const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
 const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
+const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
 
 var board: Control
 var status_label: Label
@@ -62,6 +63,7 @@ var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
 var _minimap_view_key := -1
+var _minimap_preference := false
 var end_button: Button
 var cancel_button: Button
 var confirm_button: Button
@@ -616,6 +618,7 @@ func _ready() -> void:
     command_menu.campaign_requested.connect(_open_campaign)
     command_menu.change_view_requested.connect(func(): _toggle_isometric_view(); command_menu.refresh())
     command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
+    command_menu.minimap_requested.connect(func(): _toggle_minimap(); command_menu.refresh())
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
     command_menu.purchase_requested.connect(_purchase_command_unit)
     command_menu.home_requested.connect(_show_home_menu)
@@ -664,12 +667,16 @@ func _ready() -> void:
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
     _set_compact_hud(OS.has_feature("mobile"))
-    # Open the actual illustrated map on Android; classic remains one tap away.
-    if OS.has_feature("mobile"):
-        board.set_isometric(true)
-        iso_view_button.text = "Vista clásica"
-        battle_minimap.visible = true
-        minimap_caption.visible = true
+    # Restore only visual preferences. Defaults favor isometric/minimap on
+    # Android and the classic view on desktop, without touching a battle save.
+    var display: Dictionary = DisplayPrefs.load_config(OS.has_feature("mobile"))
+    board.set_battery_saver(bool(display["battery_saver"]))
+    board.set_isometric(bool(display["isometric"]))
+    _minimap_preference = bool(display["minimap_enabled"])
+    battery_saver_button.text = ("Ahorro de batería: activado" if board.battery_saver else "Ahorro de batería: desactivado")
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
+    _apply_minimap_visibility()
     call_deferred("_frame_camera_after_layout")
     if OS.has_feature("mobile"):
         call_deferred("_show_home_menu")
@@ -1404,21 +1411,43 @@ func _purchase_command_unit(role: String) -> void:
     else:
         command_menu.refresh()
 
+func _save_display_preferences() -> void:
+    if not DisplayPrefs.save_config({
+        "isometric":board.iso_enabled,
+        "battery_saver":board.battery_saver,
+        "minimap_enabled":_minimap_preference
+    }):
+        board.message = "No se pudieron guardar los ajustes visuales."
+
+func _apply_minimap_visibility() -> void:
+    # The existing minimap projects the isometric camera; hide it in classic
+    # view rather than showing a misleading viewport or inert tap handler.
+    var enabled: bool = _minimap_preference and board.iso_enabled
+    battle_minimap.visible = enabled
+    minimap_caption.visible = enabled
+    command_menu.minimap_enabled = _minimap_preference
+    _minimap_view_key = -1
+    if enabled:
+        battle_minimap.queue_redraw()
+
+func _toggle_minimap() -> void:
+    _minimap_preference = not _minimap_preference
+    _apply_minimap_visibility()
+    _save_display_preferences()
+
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
     battery_saver_button.text = ("Ahorro de batería: activado"
         if board.battery_saver else "Ahorro de batería: desactivado")
+    _save_display_preferences()
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
     board.frame_player_force()
     iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
-    battle_minimap.visible = board.iso_enabled
-    minimap_caption.visible = board.iso_enabled
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
-    _minimap_view_key = -1
-    if board.iso_enabled:
-        battle_minimap.queue_redraw()
+    _apply_minimap_visibility()
+    _save_display_preferences()
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
