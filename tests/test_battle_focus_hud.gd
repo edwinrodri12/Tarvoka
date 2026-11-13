@@ -73,7 +73,9 @@ func _run() -> void:
     assert(game.state["units"][0]["pos"] == Vector2i(2,2))
     view._process(0.0)
     assert(not view.compact_end_turn.disabled)
-    assert(game.selected_id == "A")
+    game.selected_id = "A"
+    view._process(0.0)
+    assert(not view.compact_cancel.disabled)
     view.compact_cancel.pressed.emit()
     assert(game.selected_id.is_empty())
 
