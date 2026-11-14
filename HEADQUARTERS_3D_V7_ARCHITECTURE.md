@@ -30,6 +30,14 @@ El workflow del Estudio 3D genera:
 - `artifacts/tarvoka_hq_v7_damaged.png`
 - `artifacts/tarvoka_hq_v7_entrance_closeup.png` (cámara de Godot realmente acercada)
 
+## Exportación real y editable en Blender
+
+La integración V7 introduce dos exportaciones GLB independientes del mismo nivel 3:
+- `TARVOKA_CuartelGeneral_V4_Nivel3_Editable.glb`: conserva el V4 **sin** la escultura V7 para referencia histórica.
+- `TARVOKA_CuartelGeneral_V7_Nivel3_Editable.glb`: incluye la geometría escultórica V7, escudos originales aprobados y microdetalles cercanos, organizado por categoría (arquitectura, facción, radar, logística y daños).
+
+La salida V7 se crea con `tests/export_headquarters_sculpt_v7_glb.gd` y se adjunta al artefacto del workflow de Estudio 3D; el exportador antiguo permanece reproducible.
+
 ## Límites reales
 
 La V7 no debe declararse **modelo final comercial** antes de revisar material PBR de cerca, reflejos, proporciones y lectura a escala Android. Se trata de un nuevo volumen de modelado y un salto verificable de acabado; la comparación V4/V7 permite iterar.
