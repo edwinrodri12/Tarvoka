@@ -136,12 +136,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 155s \\
-            xvfb-run -a -s "-screen 0 1280x800x24" \\
-            /tmp/Godot_v4.3-stable_linux.x86_64 \\
-              --path . --rendering-driver opengl3 --audio-driver Dummy \\
-              --script res://tests/test_live_battle_graphics.gd \\
-            2>&1 | tee /tmp/tarvoka-real-battle-models.log
+          timeout --signal=TERM --kill-after=5s 155s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_live_battle_graphics.gd 2>&1 | tee /tmp/tarvoka-real-battle-models.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-real-battle-models.log; then
             echo 'Live-model battle regression' >&2
             exit 1
