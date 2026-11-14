@@ -137,7 +137,8 @@ static func plan(state: Dictionary, observed: Dictionary, engineer: Dictionary) 
                 best_score = score
                 best = {
                     "valid":true,"engineer_id":str(engineer["id"]),
-                    "target_id":str(ally["id"]),"destination":cell,
+                    "target_id":str(ally["id"]),"target_pos":target,
+                    "destination":cell,
                     "remaining_cost":remaining,"route_cost":original_distance,
                     "estimated_repair_hp":restored,
                     "estimated_repair_cost":expense,"net_value":margin
@@ -202,8 +203,7 @@ static func _exposed(cell: Vector2i,engineer: Dictionary,
         if dist+mobility < low:
             continue
         var likely_damage: int = maxi(1,attack-int(engineer.get("defense",0))-cover)
-        if (dist >= low and dist <= high) or likely_damage >=
-                maxi(2,ceili(float(engineer.get("hp",0))*0.5)):
+        if (dist >= low and dist <= high) or likely_damage >= maxi(2,ceili(float(engineer.get("hp",0))*0.5)):
             return true
     return false
 
