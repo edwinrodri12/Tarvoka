@@ -1387,6 +1387,7 @@ func _play_ai_turn() -> void:
     var produced := 0
     var resupplied := 0
     var repaired := 0
+    var engineer_support_moves := 0
     for i in range(max_actions):
         if campaign_locked or int(state.get("winner", -1)) != -1:
             break
@@ -1403,6 +1404,8 @@ func _play_ai_turn() -> void:
         match str(result.get("action", "")):
             "move":
                 movements += 1
+                if str(result.get("reason","")) == "engineer_support":
+                    engineer_support_moves += 1
             "attack":
                 attacks += 1
             "produce":
@@ -1418,6 +1421,9 @@ func _play_ai_turn() -> void:
         last_enemy_turn_report += " %d reabastecimientos." % resupplied
     if repaired > 0:
         last_enemy_turn_report += " %d reparaciones pagadas." % repaired
+    if engineer_support_moves > 0:
+        # Aggregate number only: never reveal a target hidden by fog.
+        last_enemy_turn_report += " %d movimientos de ingenieros de apoyo." % engineer_support_moves
     if movements + attacks + produced + resupplied + repaired == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if campaign_locked or int(state.get("winner", -1)) != -1:
