@@ -102,8 +102,47 @@ static func ridge_height(cell: Dictionary, offset: Vector2,
         offset.x,offset.y,float(cell["half"]))+_uplift(
             cell,offset,mountains,scene)
 
+static func lithology_color(pos: Vector3, elevation: float,
+        scene: int, layered: bool = true) -> Color:
+    # World-space strata are vertex colors, no heavy textures/shaders.
+    var rock: Color = Color("#53666b") if scene != 1 else Color("#776861")
+    var top: float = clampf(elevation/2.0,0.0,1.0)
+    if not layered:
+        rock = rock.lerp(Color("#829193") if scene != 1
+            else Color("#9f8b7b"),pow(top,1.34)*0.28)
+        var legacy: float = 0.064*_geology(
+            Vector2(pos.x,pos.z)*1.9,scene)
+        return rock.lightened(legacy) if legacy >= 0.0 else rock.darkened(-legacy)
+    # Bent sedimentary layers, deterministically anchored to the world.
+    var fold: float = _geology(Vector2(pos.x,pos.z)*0.85,scene)
+    var phase: float = pos.y*3.8+pos.x*0.19+pos.z*0.12+fold*0.82
+    var band: float = fposmod(phase,1.0)
+    var mineral: Color = (
+        Color("#526269") if scene == 0 else
+        Color("#847266") if scene == 1 else Color("#677a76"))
+    var palette: Color = (
+        Color("#8b9590") if scene == 0 else
+        Color("#ad967f") if scene == 1 else Color("#8a9689"))
+    if band < 0.14:
+        rock = mineral.darkened(0.16)
+    elif band < 0.42:
+        rock = mineral
+    elif band < 0.70:
+        rock = mineral.lerp(palette,0.39)
+    else:
+        rock = mineral.darkened(0.075)
+    var fractures: float = _geology(Vector2(pos.x,pos.z)*3.0,scene)*0.11
+    rock = rock.lightened(fractures) if fractures > 0.0 else rock.darkened(-fractures)
+    if top < 0.38 and scene != 1:
+        var lichen: Color = Color("#647865") if scene == 0 else Color("#687f70")
+        var cover: float = (0.38-top)*0.47*clampf(
+            _geology(Vector2(pos.x,pos.z)*1.25,scene)+0.65,0.0,1.0)
+        rock = rock.lerp(lichen,cover)
+    return rock
+
 static func _ridge(parent: Node3D, cells: Array[Dictionary],
-        mountains: Dictionary, scene: int) -> Dictionary:
+        mountains: Dictionary, scene: int,
+        layered: bool = false) -> Dictionary:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count := 0
@@ -123,14 +162,7 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
                 var elevation: float = _uplift(cell,Vector2(dx,dz),mountains,scene)
                 var pos: Vector3 = _point(cell,dx,dz)+Vector3(0,elevation+0.016,0)
                 points.append(pos)
-                var tint: Color = Color("#53666b") if scene != 1 else Color("#776861")
-                var top: float = clampf(elevation/2.0,0.0,1.0)
-                tint = tint.lerp(Color("#829193") if scene != 1
-                    else Color("#9f8b7b"),pow(top,1.34)*0.28)
-                var strata: float = 0.064*_geology(
-                    Vector2(pos.x,pos.z)*1.9,scene)
-                tones.append(tint.lightened(strata) if strata >= 0.0 else
-                    tint.darkened(-strata))
+                tones.append(lithology_color(pos,elevation,scene,layered))
         for row in range(subdivisions):
             for col in range(subdivisions):
                 var a: int = row*(subdivisions+1)+col
@@ -245,7 +277,8 @@ static func _wave(parent: Node3D, cells: Array[Dictionary],
         "water_batches":1 if strips>0 else 0}
 
 static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
-        rock: bool = true, shores: bool = true, water: bool = true) -> Dictionary:
+        rock: bool = true, shores: bool = true, water: bool = true,
+        lithology: bool = false) -> Dictionary:
     var kinds: Dictionary = {}
     var mountains: Dictionary = {}
     for cell in cells:
@@ -256,9 +289,10 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
     var result := {
         "mountain_cells":0,"ridge_triangles":0,"shore_edges":0,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,
-        "batches":0}
+        "lithology_cells":0,"batches":0}
     if rock and not mountains.is_empty():
-        var stats: Dictionary = _ridge(parent,cells,mountains,scene)
+        var stats: Dictionary = _ridge(parent,cells,mountains,scene,lithology)
+        result["lithology_cells"] = int(stats["mountain_cells"]) if lithology else 0
         result["mountain_cells"] = stats["mountain_cells"]
         result["ridge_triangles"] = stats["ridge_triangles"]
         result["batches"] += int(stats["ridge_batches"])
