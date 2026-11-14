@@ -12,6 +12,9 @@ on:
       - "scripts/ui/HeadquartersMapLOD3D.gd"
       - "scripts/ui/HeadquartersEmblems3D.gd"
       - "scripts/ui/HeadquartersArchitectureV7.gd"
+      - "scripts/ui/HeadquartersFinishV8.gd"
+      - "tests/test_headquarters_v8.gd"
+      - "tests/export_headquarters_pbr_v8_glb.gd"
       - "tests/test_headquarters_v7.gd"
       - "scripts/ui/HeadquartersCityBatch3D.gd"
       - "tests/test_headquarters_v6.gd"
@@ -36,6 +39,7 @@ on:
   push:
     branches:
       - feat/browser-3d-model-lab-20261113
+      - feat/hq-v8-pbr-weathering-studio-20261113
       - main
     paths:
       - "scripts/ui/**"
@@ -222,6 +226,18 @@ jobs:
           test -s artifacts/tarvoka_hq_v7_level3.png
           test -s artifacts/tarvoka_hq_v7_damaged.png
           test -s artifacts/tarvoka_hq_v7_entrance_closeup.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v8.gd 2>&1 | tee /tmp/hq-v8-pbr-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v8-pbr-test.log; then
+            echo "HQ V8 PBR, fracture geometry or studio comparison regressed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V8:" /tmp/hq-v8-pbr-test.log
+          test -s artifacts/tarvoka_hq_v7_vs_v8_pbr.png
+          test -s artifacts/tarvoka_hq_v8_pbr_closeup.png
+          test -s artifacts/tarvoka_hq_v8_fractured_glass.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -269,6 +285,20 @@ jobs:
           fi
           grep -q "PASS HQ V7 GLB export:" /tmp/hq-v7-glb.log
           test -s artifacts/TARVOKA_CuartelGeneral_V7_Nivel3_Editable.glb
+      - name: Export HQ V8 PBR as editable Blender GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_headquarters_pbr_v8_glb.gd 2>&1 | tee /tmp/hq-v8-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v8-glb.log; then
+            echo "HQ V8 Blender GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V8 GLB export:" /tmp/hq-v8-glb.log
+          test -s artifacts/TARVOKA_CuartelGeneral_V8_Nivel3_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -306,6 +336,9 @@ jobs:
             artifacts/tarvoka_hq_v7_level3.png
             artifacts/tarvoka_hq_v7_damaged.png
             artifacts/tarvoka_hq_v7_entrance_closeup.png
+            artifacts/tarvoka_hq_v7_vs_v8_pbr.png
+            artifacts/tarvoka_hq_v8_pbr_closeup.png
+            artifacts/tarvoka_hq_v8_fractured_glass.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
@@ -314,6 +347,7 @@ jobs:
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V4_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V7_Nivel3_Editable.glb
+            artifacts/TARVOKA_CuartelGeneral_V8_Nivel3_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
