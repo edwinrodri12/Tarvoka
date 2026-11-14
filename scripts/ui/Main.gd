@@ -37,6 +37,8 @@ const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
+const DestinationComparison = preload("res://scripts/ui/DestinationComparison.gd")
+const DestinationComparisonPanel = preload("res://scripts/ui/DestinationComparisonPanel.gd")
 
 var board: Control
 var status_label: Label
@@ -64,6 +66,12 @@ var sidebar_navigation_row: HBoxContainer
 var sidebar_threat_button: Button
 var compact_threat_button: Button
 var expanded_threat_button: Button
+var sidebar_compare_button: Button
+var compact_compare_button: Button
+var expanded_compare_button: Button
+var sidebar_compare_panel: Control
+var compact_compare_panel: Control
+var _destination_comparison_snapshot: Dictionary = {}
 var home_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
@@ -203,7 +211,8 @@ func _bind_touch_feedback() -> void:
             expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle,
             sidebar_alerts_button,compact_alerts_button,expanded_alerts_button,
             sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit,
-            sidebar_threat_button,compact_threat_button,expanded_threat_button]:
+            sidebar_threat_button,compact_threat_button,expanded_threat_button,
+            sidebar_compare_button,compact_compare_button,expanded_compare_button]:
         var button: Button = control
         if button == null:
             continue
@@ -360,6 +369,12 @@ func _ready() -> void:
     sidebar_threat_button.custom_minimum_size.y = 46
     sidebar_threat_button.pressed.connect(_toggle_threat_preview)
     panel.add_child(sidebar_threat_button)
+    sidebar_compare_button = Button.new()
+    sidebar_compare_button.name = "CompararHastaTresDestinosLateral"
+    sidebar_compare_button.text = "COMPARAR DESTINOS"
+    sidebar_compare_button.custom_minimum_size.y = 46
+    sidebar_compare_button.pressed.connect(_toggle_destination_comparison)
+    panel.add_child(sidebar_compare_button)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -904,6 +919,11 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     battle_minimap.reparent(nav,false)
     minimap_caption.add_theme_color_override("font_color",GameUiTheme.GOLD)
 
+    sidebar_compare_panel = DestinationComparisonPanel.new()
+    sidebar_compare_panel.name = "AlternativasMovimientoLateral"
+    sidebar_compare_panel.destination_chosen.connect(_prepare_compared_destination)
+    panel.add_child(sidebar_compare_panel)
+
     polished_unit_card = PanelContainer.new()
     polished_unit_card.name = "FichaDeUnidad"
     polished_unit_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#102332"),GameUiTheme.EDGE,10,11))
@@ -948,7 +968,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # scenario controls remain accessible farther down the scroll but no
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,commander_sidebar_strip,polished_status_card,command_menu_button,objectives_button,
-        sidebar_alerts_button,sidebar_navigation_row,sidebar_threat_button,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
+        sidebar_alerts_button,sidebar_navigation_row,sidebar_threat_button,sidebar_compare_button,sidebar_compare_panel,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
@@ -1018,6 +1038,11 @@ func _build_battle_hud() -> void:
     compact_combat_preview = CombatPanel.new()
     compact_combat_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
     battle_hud_commands.add_child(compact_combat_preview)
+    compact_compare_panel = DestinationComparisonPanel.new()
+    compact_compare_panel.name = "AlternativasMovimientoMovil"
+    compact_compare_panel.compact = true
+    compact_compare_panel.destination_chosen.connect(_prepare_compared_destination)
+    battle_hud_commands.add_child(compact_compare_panel)
     compact_move_risk_card = MoveRiskCard.new()
     compact_move_risk_card.name = "ComparacionDeMovimientoMovil"
     compact_move_risk_card.compact = true
@@ -1132,6 +1157,13 @@ func _build_battle_hud() -> void:
     action_rows.add_child(other_actions)
     for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply]:
         shortcut.reparent(other_actions,false)
+    compact_compare_button = Button.new()
+    compact_compare_button.name = "CompararHastaTresDestinosMovil"
+    compact_compare_button.text = "Comparar"
+    compact_compare_button.custom_minimum_size.y = 48
+    compact_compare_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_compare_button.pressed.connect(_toggle_destination_comparison)
+    other_actions.add_child(compact_compare_button)
     # Strong hierarchy: order confirmation is the positive command;
     # finishing a turn stays distinct and visually cautionary.
     GameUiTheme.emphasize(compact_confirm,"success")
@@ -1184,6 +1216,12 @@ func _build_battle_hud() -> void:
     expanded_threat_button.custom_minimum_size = Vector2(108,40)
     expanded_threat_button.pressed.connect(_toggle_threat_preview)
     alert_header_row.add_child(expanded_threat_button)
+    expanded_compare_button = Button.new()
+    expanded_compare_button.name = "CompararHastaTresDestinosExpandido"
+    expanded_compare_button.text = "Comparar"
+    expanded_compare_button.custom_minimum_size = Vector2(112,40)
+    expanded_compare_button.pressed.connect(_toggle_destination_comparison)
+    alert_header_row.add_child(expanded_compare_button)
 
     expanded_actions = PanelContainer.new()
     expanded_actions.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1383,7 +1421,7 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.ai_enabled, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order,board.threat_preview_enabled])
+    var summary_key: int = hash([board.state, board.ai_enabled, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order,board.threat_preview_enabled,board.compare_mode,board.compare_candidates])
     var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,
         board.view_zoom,board.view_pan,board.size,board.map_dimensions()])
     if battle_minimap != null and minimap_key != _minimap_view_key:
@@ -1427,6 +1465,12 @@ func _process(_delta: float) -> void:
         _update_navigation_button(sidebar_next_unit,"SIGUIENTE · %d" % ready_count,ready_count,can_navigate)
         _update_navigation_button(sidebar_attention_unit,"ATENCIÓN · %d" % needs_count,needs_count,can_navigate)
         _update_threat_controls()
+        var chosen_cells: Array[Vector2i] = board.comparison_cells()
+        _destination_comparison_snapshot = DestinationComparison.compare(
+            board.state,board.selected_id,chosen_cells,_radar_viewer(),board.ai_enabled)
+        sidebar_compare_panel.bind_comparison(_destination_comparison_snapshot,board.compare_mode)
+        compact_compare_panel.bind_comparison(_destination_comparison_snapshot,board.compare_mode)
+        _update_comparison_buttons()
         # Source of truth is the current match, including restored saves.
         # Portrait ribbons remain presentation-only and fog-safe.
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
@@ -1500,7 +1544,7 @@ func _process(_delta: float) -> void:
             board.state,board.pending_order,_radar_viewer(),board.ai_enabled)
         sidebar_move_risk_card.bind_comparison(_last_move_risk_snapshot)
         compact_move_risk_card.bind_comparison(_last_move_risk_snapshot)
-        if str(board.pending_order.get("kind","")) in ["attack","move"]:
+        if board.compare_mode or str(board.pending_order.get("kind","")) in ["attack","move"]:
             compact_info_panel.hide() # Avoid stacking redundant cards on small phones.
         var action_kind := str(board.pending_order.get("kind", ""))
         var button_text := "Confirmar ataque" if action_kind == "attack" else ("Confirmar movimiento" if action_kind == "move" else "Confirmar orden")
@@ -1711,6 +1755,43 @@ func _update_threat_controls() -> void:
         button.add_theme_color_override("font_color",
             Color("#FF9F83") if active and count > 0 else
             (Color("#8EE3B1") if active and valid else Color("#C6DCE5")))
+
+func _toggle_destination_comparison() -> void:
+    if board == null:
+        return
+    board.toggle_destination_comparison()
+    _unit_summary_cache_key = -1
+    if battle_minimap != null:
+        battle_minimap.queue_redraw()
+    _process(0.0)
+
+func _prepare_compared_destination(cell: Vector2i) -> void:
+    if board == null or not board.stage_compared_destination(cell):
+        return
+    _unit_summary_cache_key = -1
+    if battle_minimap != null:
+        battle_minimap.queue_redraw()
+    _process(0.0)
+
+func _update_comparison_buttons() -> void:
+    var active: bool = board.compare_mode
+    var legal: bool = active or (
+        not board.selected_id.is_empty() and board.pending_order.is_empty()
+        and int(board.state.get("winner",-1)) == -1
+        and (not board.ai_enabled or int(board.state.get("faction",-1)) == 0)
+        and not board.legal_action_hints().get("moves",{}).is_empty())
+    var count: int = board.comparison_cells().size()
+    for button in [sidebar_compare_button,compact_compare_button,expanded_compare_button]:
+        if button == null:
+            continue
+        button.disabled = not legal
+        if button == sidebar_compare_button:
+            button.text = "TERMINAR COMPARACIÓN (%d/3)" % count if active else "COMPARAR DESTINOS"
+        else:
+            button.text = "Cerrar %d/3" % count if active else "Comparar"
+        button.tooltip_text = ("Pulsa hasta tres destinos legales. Selecciona Preparar "
+            + "para colocar una orden pendiente; después confirma normalmente."
+            + " No mueve tropas ni revela rivales ocultos.")
 
 func _next_ready_unit() -> void:
     _navigate_unit("ready")
