@@ -277,36 +277,6 @@ static func water_outline(grid: Array, cell: Vector2i,
                 float(cell.y)+v))
     return outline
 
-# Bank classification must use ONLY revealed neighbors. In addition
-# to camera testing, this guarantees that animating the river does not
-# display a coastline that should remain hidden by fog.
-static func _is_visible_bank_segment(grid: Array, cell: Vector2i,
-        a: Vector2, b: Vector2, observed: Dictionary,
-        restricted: bool) -> bool:
-    var mid: Vector2 = (a+b)*0.5
-    var dx: float = mid.x-float(cell.x)
-    var dz: float = mid.y-float(cell.y)
-    var side: int = -1
-    # The water_outline retracts visible banks inward by < 0.13;
-    # identify the nearest polygon side and inspect only its neighbor.
-    if dz < 0.18:
-        side = 0
-    elif dx > 0.82:
-        side = 1
-    elif dz > 0.82:
-        side = 2
-    elif dx < 0.18:
-        side = 3
-    if side < 0:
-        return false
-    const DELTAS := [
-        Vector2i(0,-1),Vector2i(1,0),
-        Vector2i(0,1),Vector2i(-1,0)
-    ]
-    var other: Vector2i = cell+DELTAS[side]
-    return observed_cell(grid,other,observed,restricted) and (
-        str(grid[other.y][other.x]) != "water")
-
 static func build_water(grid: Array, observed: Dictionary = {},
         restricted: bool = false, divisions: int = 8) -> ArrayMesh:
     var mesh := ArrayMesh.new()
@@ -332,9 +302,16 @@ static func build_water(grid: Array, observed: Dictionary = {},
                 # optional water shader: 0 = deep center, 1 = bank foam.
                 # Underlying world-space coordinates guarantee waves
                 # continue across neighboring water cells.
+                var shore_side: int = int(j / divisions)
+                const BANK_DIRS := [
+                    Vector2i(0,-1),Vector2i(1,0),
+                    Vector2i(0,1),Vector2i(-1,0)
+                ]
+                var nearby: Vector2i = cell+BANK_DIRS[shore_side]
                 var bank_strength: float = 1.0 if (
-                    Terrain3DMesh._is_visible_bank_segment(
-                        grid,cell,a,b,observed,restricted)) else 0.0
+                    observed_cell(grid,nearby,observed,restricted) and (
+                    not _neighbor_water(grid,cell,shore_side,
+                        observed,restricted))) else 0.0
                 _add_vertex(st,center,Color(0.35,0.64,0.71,0.0))
                 _add_vertex(st,Vector3(b.x,WATER_LEVEL,b.y),
                     Color(0.54,0.79,0.83,bank_strength))
