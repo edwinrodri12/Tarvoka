@@ -40,27 +40,30 @@ static func _quad(st: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,d: Vector3) -
 
 static func _streaks(snow: bool) -> ArrayMesh:
     # 1 actual 3D GPU mesh, no individual particle nodes or CPU emitters.
+    # V20 visual clarity: more visible rain streaks and flakes at the normal
+    # tactical camera without extra nodes, lights, or GPU batches. This
+    # still uses one real mesh per precipitation kind, not CPU particles.
     # Spatially distributed in front and behind the building; fixed random
     # seed guarantees reproducible UI captures and perf profiling.
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var rng := RandomNumberGenerator.new()
     rng.seed = 770120 if snow else 770121
-    var count: int = 56 if snow else 78
+    var count: int = 108 if snow else 132
     for i in range(count):
         var x: float = rng.randf_range(-9.1,9.1)
         var y: float = rng.randf_range(0.55,10.1)
         var z: float = rng.randf_range(-8.5,8.0)
         if snow:
-            var size: float = rng.randf_range(0.06,0.14)
+            var size: float = rng.randf_range(0.11,0.21)
             var offset := Vector3(x,y,z)
             _quad(st,offset+Vector3(-size,0,0),
                 offset+Vector3(0,size,0),
                 offset+Vector3(size,0,0),
                 offset+Vector3(0,-size,0))
         else:
-            var width: float = rng.randf_range(0.013,0.035)
-            var length: float = rng.randf_range(0.44,0.72)
+            var width: float = rng.randf_range(0.024,0.050)
+            var length: float = rng.randf_range(0.60,1.04)
             var offset := Vector3(x,y,z)
             _quad(st,offset,
                 offset+Vector3(width,0,0),
@@ -75,7 +78,7 @@ static func _make_weather_mesh(snow: bool) -> MeshInstance3D:
     instance.name = "CoposNieveUnLoteV17" if snow else "LluviaUnLoteV17"
     instance.mesh = _streaks(snow)
     instance.material_override = _material(
-        Color(0.94,0.98,1.0,0.89) if snow else Color(0.60,0.79,0.96,0.70),
+        Color(0.95,0.98,1.0,0.90) if snow else Color(0.69,0.84,0.99,0.78),
         0.85,true,true)
     instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     instance.visible = false
