@@ -74,5 +74,20 @@ func _initialize() -> void:
                             assert(actual.defeated == (expected == defender_hp), "Lethality must agree with preview")
                         checked += 1
 
+    # Saturated cover must retain minimum positive damage, regardless of
+    # positive attacker HP; repeated resolutions must be deterministic.
+    # These properties protect preview/UI consistency without changing balance.
+    for attack in [1, 2, 5, 12]:
+        for defense in [0, 3, 12, 100]:
+            for cover in [12, 100]:
+                var preview: int = combat.damage(attack, defense, cover)
+                assert(preview == 1, "Saturated protection must retain minimum damage")
+                var first: Dictionary = combat.resolve(1, 10, attack, defense, cover)
+                var second: Dictionary = combat.resolve(100, 10, attack, defense, cover)
+                var repeat: Dictionary = combat.resolve(1, 10, attack, defense, cover)
+                assert(first == second and first == repeat, "Positive attacker HP cannot alter deterministic damage")
+                assert(first.valid and first.damage == 1 and first.defender_hp == 9 and not first.defeated, "Saturated cover resolution mismatch")
+                checked += 1
+
     print("PASS: combat invariants (%d deterministic cases)" % checked)
     quit()
