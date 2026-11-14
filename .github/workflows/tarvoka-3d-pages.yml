@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v13-production-ready-runtime-lod-20261114
-      - feat/terrain-studio-v9-landscape-controls-20261114
+      - feat/terrain-studio-v10-ridges-forest-banks-20261114
       - feat/g09-v24-tactical-roof-identification-20261114
 
 permissions:
@@ -98,13 +98,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out verified V9 battle and improved landscape studio for Godot WebGL build
+      - name: Check out verified V10 battle and natural ridge/forest/shore studio for Godot WebGL build
         uses: actions/checkout@v4
         with:
-          ref: feat/terrain-studio-v9-landscape-controls-20261114
+          ref: feat/terrain-studio-v10-ridges-forest-banks-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export enhanced Battle and Terrain V9 to the existing site at /batalla/
+      - name: Export enhanced Battle and Terrain V10 to the existing site at /batalla/
         shell: bash
         run: |
           set -euo pipefail
@@ -112,6 +112,10 @@ jobs:
           test -s battle-source/scripts/ui/Battle3DOrders.gd
           test -s battle-source/scripts/ui/BattleTerrain3D.gd
           test -s battle-source/scripts/ui/TerrainStudioDetailV5.gd
+          test -s battle-source/scripts/ui/TerrainStudioNaturalV6.gd
+          test -s battle-source/tests/test_terrain_studio_v10_natural.gd
+          grep -q 'BosqueMixtoV6' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'CordilleraContinuaV6' battle-source/scripts/ui/TerrainStudioNaturalV6.gd
           test -s battle-source/tests/test_terrain_studio_v9_controls.gd
           grep -q 'TaludesNaturalesDeRiberaV5' battle-source/scripts/ui/TerrainStudioDetailV5.gd
           grep -q 'GaleriaFaccionesTerreno' battle-source/scripts/ui/CombinedArtStudioWeb.gd
