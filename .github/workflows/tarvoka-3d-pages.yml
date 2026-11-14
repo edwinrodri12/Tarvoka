@@ -11,6 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v11-lighting-refinements-20261113
+      - feat/battle-3d-web-studio-v8-20261113
 
 permissions:
   contents: read
@@ -18,17 +19,17 @@ permissions:
   id-token: write
 
 concurrency:
-  # Failed/PR checks must not cancel a valid native 3D studio publication.
-  group: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && 'publish' || github.run_id }}
+  # A newer site publication supersedes an older version of the same site.
+  group: tarvoka-public-studio-pages
   cancel-in-progress: true
 
 jobs:
   build:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Check out verified HQ V10 studio branch
+      - name: Check out the published HQ V11 studio without regressing its eight factions
         uses: actions/checkout@v4
         with:
           ref: feat/hq-v11-lighting-refinements-20261113
@@ -88,6 +89,82 @@ jobs:
           test -s build/web/index.pck
           test -s build/web/index.wasm
           touch build/web/.nojekyll
+
+      # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
+      # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
+      # No download or local installation is required for either view.
+      - name: Check out completed V8 battle studio for its own Godot WebGL build
+        uses: actions/checkout@v4
+        with:
+          ref: feat/battle-3d-web-studio-v8-20261113
+          path: battle-source
+          persist-credentials: false
+      - name: Export interactive Battle V8 to the existing site at /batalla/
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s battle-source/scripts/ui/Battle3DMapView.gd
+          test -s battle-source/scripts/ui/Battle3DOrders.gd
+          test -s battle-source/scripts/ui/BattleTerrain3D.gd
+          grep -q 'BATALLA 3D' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          mkdir -p battle-source/assets battle-source/build/web build/web/batalla
+          git -C battle-source rev-parse --short=12 HEAD > battle-source/assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' battle-source/project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' battle-source/project.godot
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path battle-source --import --quit 2>&1 | tee /tmp/battle-pages-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/battle-pages-import.log; then
+            echo 'TARVOKA Battle V8 script or asset import failed' >&2
+            exit 1
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path battle-source --export-release 'Web Studio' \
+            build/web/index.html 2>&1 | tee /tmp/battle-pages-export.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/battle-pages-export.log; then
+            echo 'TARVOKA Battle V8 WebGL export failed' >&2
+            exit 1
+          fi
+          cp -a battle-source/build/web/. build/web/batalla/
+          for asset in index.html index.js index.pck index.wasm; do
+            test -s "build/web/batalla/$asset"
+          done
+      - name: Add visible navigation between HQ V11 and battle studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def add_link(filepath, href, label, tooltip):
+              html = filepath.read_text(encoding='utf-8')
+              assert html.count('</body>') == 1, filepath
+              link = (
+                  '<nav aria-label="Navegacion TARVOKA Estudio 3D" '
+                  'style="position:fixed;left:16px;top:16px;z-index:1000;'
+                  'font:700 14px system-ui,Arial,sans-serif">'
+                  f'<a href="{href}" title="{tooltip}" '
+                  'style="display:inline-block;padding:12px 16px;'
+                  'border:2px solid #e1c275;border-radius:9px;'
+                  'background:#111d2e;color:#ffe5a0;'
+                  'box-shadow:0 4px 15px #0009;text-decoration:none">'
+                  f'{label}</a></nav>'
+              )
+              filepath.write_text(
+                  html.replace('</body>', link + '\n</body>'),
+                  encoding='utf-8'
+              )
+
+          add_link(Path('build/web/index.html'),
+                   'batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
+                   'Abre el mapa 3D interactivo, terreno y ordenes confirmadas')
+          add_link(Path('build/web/batalla/index.html'),
+                   '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
+                   'Volver al Estudio principal con tanque y Cuartel General V11')
+          PY
+          grep -q 'BATALLA 3D' build/web/index.html
+          grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
+          touch build/web/.nojekyll
+
       - name: Upload GitHub Pages web site
         uses: actions/upload-pages-artifact@v3
         with:
