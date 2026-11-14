@@ -1,4 +1,4 @@
-# TARVOKA 3D Studio — local-only web server for the Godot WebGL export.
+# TARVOKA 3D Studio - local-only web server for the Godot WebGL export.
 # No admin rights, internet connection, Python, npm, Node, or installation.
 # Bind exclusively to Windows loopback: other devices cannot reach it.
 param([switch]$NoBrowser)
@@ -38,7 +38,7 @@ $Mime = @{
 }
 $WebUrl = "http://127.0.0.1:$Port/"
 Write-Host ""
-Write-Host "TARVOKA ESTUDIO 3D — VERSION PC" -ForegroundColor Cyan
+Write-Host "TARVOKA ESTUDIO 3D - VERSION PC" -ForegroundColor Cyan
 Write-Host "Abre: $WebUrl" -ForegroundColor Green
 Write-Host "El servidor es privado: solo accesible en esta computadora."
 Write-Host "Manten esta ventana abierta mientras usas el Estudio."
