@@ -16,6 +16,7 @@ const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
 const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
 const EcotonesV8 = preload("res://scripts/ui/TerrainStudioEcotonesV8.gd")
 const FoothillsV11 = preload("res://scripts/ui/TerrainStudioFoothillsV11.gd")
+const SedimentsV12 = preload("res://scripts/ui/TerrainStudioSedimentsV12.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -573,7 +574,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v9_rock_facets: bool = false,
         v9_ecotone_tones: bool = false,
         v10_sculpted_ridges: bool = false,
-        v11_aprons: bool = false, v11_outcrops: bool = false) -> Node3D:
+        v11_aprons: bool = false, v11_outcrops: bool = false,
+        v12_deposits: bool = false, v12_shoulders: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -600,6 +602,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v10_sculpted_ridges",continuous and show_scatter and v7_ridges and v10_sculpted_ridges)
     root.set_meta("terrain_studio_v11_aprons",continuous and show_scatter and v10_sculpted_ridges and v11_aprons)
     root.set_meta("terrain_studio_v11_outcrops",continuous and show_scatter and v10_sculpted_ridges and v11_outcrops)
+    root.set_meta("terrain_studio_v12_deposits",continuous and show_scatter and v10_sculpted_ridges and v11_aprons and v12_deposits)
+    root.set_meta("terrain_studio_v12_shoulders",continuous and show_scatter and v10_sculpted_ridges and v11_aprons and v12_shoulders)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -760,6 +764,15 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v11_stats = FoothillsV11.populate(props,detail_cells,preset,
             v11_aprons,v11_outcrops)
     root.set_meta("terrain_foothills_v11",v11_stats)
+    var v12_stats := {
+        "sediment_patches":0,"road_verges":0,
+        "river_patches":0,"mountain_patches":0,"triangles":0,
+        "road_cells_skipped":0,"water_cells_skipped":0,"batches":0}
+    if continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and (
+            v12_deposits or v12_shoulders):
+        v12_stats = SedimentsV12.populate(props,detail_cells,preset,
+            v12_deposits,v12_shoulders)
+    root.set_meta("terrain_sediments_v12",v12_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
