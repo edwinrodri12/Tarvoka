@@ -158,7 +158,9 @@ func _run() -> void:
     var night: Image = studio.preview.get_texture().get_image()
     assert(night != null and not night.is_empty())
     var luma: float = _avg_luma(night)
+    # Bright enough to inspect, but visibly night (not a blue daytime sky).
     assert(luma>0.12)
+    assert(luma<0.31)
     assert(_diff_pixels(after,night)>150)
     assert(night.save_png(
         "res://artifacts/tarvoka_hq_v12_readable_night.png")==OK)
