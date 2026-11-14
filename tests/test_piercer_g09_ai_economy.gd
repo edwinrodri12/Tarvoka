@@ -30,7 +30,10 @@ func _initialize() -> void:
             if str(site["kind"]) == "armor_plant":
                 plant = site["pos"]
             elif site.has("produced_turn"):
-                site["produced_turn"] = int(state["economy"]["turn"])
+                # Neutralize unrelated plants in this isolated test; marking
+                # them already-produced would exhaust the AI's real per-turn
+                # recruiting limit and invalidate the very purchase we test.
+                site["owner"] = -1
         assert(plant.x >= 0)
         var unchanged: Dictionary = state.duplicate(true)
         var choice: Dictionary = AI.step(state)
