@@ -45,13 +45,16 @@ static func _fade_to_open_ground(cell: Dictionary,offset: Vector2,
                 continue
             var distance: float = Vector2(gx-float(x),gz-float(z)).length()
             nearest = minf(nearest,distance)
-    return smoothstep(0.46,1.02,nearest)
+    # Softer foothills create a taper, not a near-vertical wall around
+    # a solid mesa-shaped mountain block.
+    return smoothstep(0.32,1.18,nearest)
 
 static func uplift(cell: Dictionary, offset: Vector2, mountains: Dictionary,
         scene: int) -> float:
     var c: Vector3 = cell["center"]
     var world := Vector2(c.x+offset.x,c.z+offset.y)
     var field: float = 0.0
+    var strongest: float = 0.0
     # Each SOURCE mountain contributes to one coherent world-space field,
     # so the peak geometry has no dependence on which receiving tile
     # is rendering this position. A long narrow ridge replaces round humps.
@@ -70,18 +73,21 @@ static func uplift(cell: Dictionary, offset: Vector2, mountains: Dictionary,
         var length_width: float = 0.90+_hash(seed+19)*0.34
         var sharp_width: float = 2.30+_hash(seed+73)*1.35
         var amount: float = 1.18+_hash(seed+41)*0.82
-        field += amount*exp(
+        var contribution: float = amount*exp(
             -(parallel*parallel*length_width
             +perpendicular*perpendicular*sharp_width))
-    # Exponential saturation prevents unrealistically flat, clipped
-    # plateau tops while still joining neighboring mountain peaks.
-    var broad: float = 2.65*(1.0-exp(-field*0.58))
-    # Geologically eroded slashes and uneven shoulders are anchored to
-    # the same world coordinates as the broad uplift.
+        field += contribution
+        strongest = maxf(strongest,contribution)
+    # IMPORTANT: the sum of many closely packed peaks saturated into an
+    # almost constant mesa. The dominant spine now controls height,
+    # while the neighboring ridges softly join it instead of flattening it.
+    var broad: float = strongest*1.08 + (field-strongest)*0.19
+    # The same world-space fracture crosses tile boundaries. Subtractive
+    # clefts expose saddles and clear variations between mountain summits.
     var fracture: float = _noise(world*2.4,scene)
     var fold: float = _noise(world*0.83+Vector2(71.0,17.0),scene)
     var cleavage: float = absf(sin(
         world.x*2.27+world.y*1.53+fold*2.1))
     var crest: float = broad*(
-        0.88+0.22*fracture+0.13*fold-0.12*pow(cleavage,5.0))
+        0.88+0.27*fracture+0.13*fold-0.19*pow(cleavage,5.0))
     return maxf(0.0,crest)*_fade_to_open_ground(cell,offset,mountains)
