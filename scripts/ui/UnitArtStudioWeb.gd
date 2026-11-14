@@ -47,6 +47,7 @@ var _v23_preview := false
 var _v24_preview := false
 var _v25_preview := false
 var _v30_preview := false
+var _v31_preview := false
 var _tactical_view := false
 var _underside_view := false
 var _scenario_enabled := false
@@ -70,6 +71,7 @@ var v23_button: Button
 var v24_button: Button
 var v25_button: Button
 var v30_button: Button
+var v31_button: Button
 var tactical_button: Button
 var underside_button: Button
 var clay_button: Button
@@ -215,6 +217,7 @@ func _construct() -> void:
     v24_button = _button(column,"V24 · Pintura superior táctica",_toggle_v24)
     v25_button = _button(column,"NUEVO V25 · Esmalte, bordes y microdesgaste",_toggle_v25)
     v30_button = _button(column,"V30 · CADENAS ANCHAS Y DAÑO REALISTA",_toggle_v30)
+    v31_button = _button(column,"V31 · ORUGAS ALINEADAS HACIA DENTRO",_toggle_v31)
     clay_button = _button(column,"MODO ARCILLA · Ver geometría sin materiales",_toggle_clay)
     v17_quality_button = _button(column,"V17 · Efectos completos",_toggle_v17_quality)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
@@ -331,6 +334,8 @@ func _display_role(role: String) -> void:
         art_level = 25
     if _v25_preview and _v30_preview:
         art_level = 30
+    if _v25_preview and _v30_preview and _v31_preview:
+        art_level = 31
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
@@ -364,6 +369,7 @@ func _display_role(role: String) -> void:
     v24_button.visible = (_role == "tank")
     v25_button.visible = (_role == "tank")
     v30_button.visible = (_role == "tank")
+    v31_button.visible = (_role == "tank")
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -380,6 +386,7 @@ func _display_role(role: String) -> void:
     v24_button.text = "COMPARAR: Volver a V23" if _v24_preview else "V24 · Pintura superior táctica"
     v25_button.text = "COMPARAR: Volver a V24" if _v25_preview else "NUEVO V25 · Esmalte y microdesgaste"
     v30_button.text = "COMPARAR V30/V25 · Volver a V25" if _v30_preview else "V30 · CADENAS ANCHAS Y DAÑO REALISTA"
+    v31_button.text = "COMPARAR V31/V30 · Volver a V30" if _v31_preview else "V31 · ORUGAS ALINEADAS HACIA DENTRO"
     tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
     underside_button.text = "INSPECCIONAR ORUGAS · Volver a vista lateral" if _underside_view else "INSPECCIONAR ORUGAS · Vista inferior V29"
     v20_button.text = "COMPARAR: Volver a V19" if _v20_preview else "NUEVO V20 · Blindaje integrado y suspensión"
@@ -446,6 +453,8 @@ func _update_details() -> void:
         status_label.text += " · RODAJE V29 CORREGIDO"
     if model_root.get_meta("tarvoka_hit_v30",false):
         status_label.text += " · V30: CADENAS ANCHAS, DAÑO PBR, BALAS/EXPLOSIVOS"
+    if model_root.get_meta("tarvoka_mbt_tracks_inboard_v31",false):
+        status_label.text += " · V31: CADENAS Y ENGRANAJES ALINEADOS AL INTERIOR"
     if _scenario_enabled:
         status_label.text += " · %s / %s (V26)" % [
             str(BattleScenarioV26.TERRAIN_NAMES[_scenario_terrain]),
@@ -811,6 +820,7 @@ func _toggle_v25() -> void:
     # lighting, camera, faction, tactical zoom, animation and damage stage.
     _v25_preview = not _v25_preview
     _v30_preview = false
+    _v31_preview = false
     _v24_preview = not _v25_preview
     _v23_preview = false
     _v22_preview = false
@@ -833,6 +843,20 @@ func _toggle_v30() -> void:
     if _role!="tank":
         return
     _v30_preview=not _v30_preview
+    _v31_preview=false
+    _v25_preview=true
+    _v24_preview=false
+    _previous_version=false
+    _final_detail=true
+    _reload_tank_same_camera()
+
+func _toggle_v31() -> void:
+    if _role!="tank":
+        return
+    # Native Godot V30/V31 comparison, same camera, damage state, faction,
+    # real chain width and animation. Only x positioning of running gear.
+    _v31_preview=not _v31_preview
+    _v30_preview=true
     _v25_preview=true
     _v24_preview=false
     _previous_version=false
