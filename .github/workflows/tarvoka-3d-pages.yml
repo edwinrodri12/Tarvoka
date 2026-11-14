@@ -12,7 +12,7 @@ on:
     branches:
       - feat/hq-v13-production-ready-runtime-lod-20261114
       - feat/terrain-studio-v10-ridges-forest-banks-20261114
-      - feat/g09-v24-tactical-roof-identification-20261114
+      - feat/g09-v25-enamel-edge-wear-20261114
 
 permissions:
   contents: read
@@ -143,26 +143,28 @@ jobs:
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla/$asset"
           done
-      # Export the actual G09 V24 feature branch as an independent browser scene.
+      # Export the actual G09 V25 feature branch as an independent browser scene.
       # Preserve the existing HQ V11 root and Battle V8 at /batalla/ unchanged.
-      - name: Check out finished G09 V24 native tank source
+      - name: Check out finished G09 V25 native tank source
         uses: actions/checkout@v4
         with:
-          ref: feat/g09-v24-tactical-roof-identification-20261114
+          ref: feat/g09-v25-enamel-edge-wear-20261114
           path: tank-source
           persist-credentials: false
-      - name: Export G09 V24 tank into TARVOKA Estudio 3D at /tanque/
+      - name: Export G09 V25 tank into TARVOKA Estudio 3D at /tanque/
         shell: bash
         run: |
           set -euo pipefail
           test -s tank-source/scripts/ui/TankGunV22.gd
           test -s tank-source/scripts/ui/TankFactionV23.gd
           test -s tank-source/scripts/ui/TankTacticalV24.gd
+          test -s tank-source/scripts/ui/TankWearV25.gd
           test -s tank-source/scripts/ui/TankFinishV21.gd
           test -s tank-source/scripts/ui/UnitArtStudioWeb.gd
           test -s tank-source/tests/test_g09_art_v22.gd
           test -s tank-source/tests/test_g09_art_v23.gd
           test -s tank-source/tests/test_g09_art_v24.gd
+          test -s tank-source/tests/test_g09_art_v25.gd
           test -s tank-source/scenes/UnitArtStudioWeb.tscn
           mkdir -p tank-source/assets tank-source/build/web build/web/tanque
           git -C tank-source rev-parse --short=12 HEAD > tank-source/assets/art_studio_revision.txt
@@ -170,26 +172,26 @@ jobs:
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' tank-source/project.godot
           # Show the newest tank when opening the independent viewer;
           # the branch's Android defaults and other studio routes stay intact.
-          sed -i 's/var _v24_preview := false/var _v24_preview := true/' tank-source/scripts/ui/UnitArtStudioWeb.gd
-          grep -q 'var _v24_preview := true' tank-source/scripts/ui/UnitArtStudioWeb.gd
+          sed -i 's/var _v25_preview := false/var _v25_preview := true/' tank-source/scripts/ui/UnitArtStudioWeb.gd
+          grep -q 'var _v25_preview := true' tank-source/scripts/ui/UnitArtStudioWeb.gd
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
             --path tank-source --import --quit 2>&1 | tee /tmp/tank-pages-import.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/tank-pages-import.log; then
-            echo 'G09 V24 import or script validation failed' >&2
+            echo 'G09 V25 import or script validation failed' >&2
             exit 1
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path tank-source --export-release 'Web Studio' \
             build/web/index.html 2>&1 | tee /tmp/tank-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/tank-pages-export.log; then
-            echo 'G09 V24 WebGL export failed' >&2
+            echo 'G09 V25 WebGL export failed' >&2
             exit 1
           fi
           cp -a tank-source/build/web/. build/web/tanque/
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/tanque/$asset"
           done
-      - name: Add visible navigation among HQ V12, Battle V8 and G09 V24 studios
+      - name: Add visible navigation among HQ V12, Battle V8 and G09 V25 studios
         shell: bash
         run: |
           set -euo pipefail
@@ -219,14 +221,14 @@ jobs:
                    'batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
                    'Abre el mapa 3D interactivo, terreno y ordenes confirmadas')
           add_link(Path('build/web/index.html'),
-                   'tanque/', 'TANQUE G09 V24 · ESTUDIO 3D',
-                   'Compara V23/V24 en cámara táctica y revisa la pintura de los paneles superiores', 76)
+                   'tanque/', 'TANQUE G09 V25 · ESTUDIO 3D',
+                   'Compara V24/V25: desgaste de esmalte, rugosidad PBR y ocho facciones', 76)
           add_link(Path('build/web/batalla/index.html'),
                    '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
                    'Volver al Estudio principal con Cuartel General V11')
           add_link(Path('build/web/batalla/index.html'),
-                   '../tanque/', 'TANQUE G09 V24 · MODELO REAL',
-                   'Ver el tanque G09 V24 sin instalar la APK', 76)
+                   '../tanque/', 'TANQUE G09 V25 · MODELO REAL',
+                   'Ver el tanque G09 V25 sin instalar la APK', 76)
           add_link(Path('build/web/tanque/index.html'),
                    '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
                    'Abrir Cuartel General y facciones')
@@ -236,7 +238,7 @@ jobs:
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
-          grep -q 'TANQUE G09 V24' build/web/index.html
+          grep -q 'TANQUE G09 V25' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/tanque/index.html
           grep -q 'BATALLA 3D' build/web/tanque/index.html
           touch build/web/.nojekyll
