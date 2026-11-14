@@ -6,6 +6,8 @@ on:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/TerrainStudio3D.gd"
+      - "scripts/ui/TerrainStudioDetailV5.gd"
+      - "tests/test_terrain_studio_v9_controls.gd"
       - "scripts/ui/TerrainStudioBridge3D.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/Battle3DMapView.gd"
@@ -217,6 +219,21 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V9 terrain art controls and screenshot in native Godot Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v9_controls.gd 2>&1 | tee /tmp/terrain-studio-v9.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-studio-v9.log; then
+            echo "V9 terrain studio visual detail or previous view modes regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V9:' /tmp/terrain-studio-v9.log
+          test -s artifacts/tarvoka_terrain_v5_delta_studio.png
+          test -s artifacts/tarvoka_terrain_v4_v5_same_camera.png
       - name: Verify 3D terrain slopes and roads across all biomes
         shell: bash
         run: |
@@ -418,6 +435,8 @@ jobs:
             build/web/
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_terrain_studio_3d.png
+            artifacts/tarvoka_terrain_v5_delta_studio.png
+            artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_v2_v3_same_camera.png

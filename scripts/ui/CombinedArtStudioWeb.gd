@@ -38,6 +38,19 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_bridge_v4_toggle: CheckButton
+var terrain_shore_v5_toggle: CheckButton
+var terrain_water_v5_toggle: CheckButton
+var terrain_rocks_v5_toggle: CheckButton
+var terrain_camera_picker: OptionButton
+var terrain_compare_button: Button
+var terrain_faction_grid: GridContainer
+var terrain_side_panel: PanelContainer
+var terrain_fullscreen_button: Button
+var terrain_restore_panel_button: Button
+var _terrain_fullscreen := false
+var terrain_faction_buttons: Array[Button] = []
+var _terrain_v5_enabled := true
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
@@ -52,6 +65,8 @@ func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     assert(column != null)
+    terrain_side_panel = column.get_parent().get_parent() as PanelContainer
+    assert(terrain_side_panel != null)
     for node in column.get_children():
         if node is Label and (node as Label).text.begins_with("El mismo modelo de Godot"):
             (node as Label).text = "Visor 3D del motor Godot: las unidades se usan en Android; los edificios son prototipos visuales independientes. Arrastra para girar y pellizca para acercar."
@@ -169,6 +184,85 @@ func _add_building_mode() -> void:
     terrain_scatter_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_scatter_toggle)
 
+    _title(terrain_controls,"PUENTES Y ACABADOS DEL TERRENO",13)
+    terrain_bridge_v4_toggle = CheckButton.new()
+    terrain_bridge_v4_toggle.name = "PuentesRampasV4"
+    terrain_bridge_v4_toggle.text = "Puentes y rampas continuas V4"
+    terrain_bridge_v4_toggle.button_pressed = true
+    terrain_bridge_v4_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_bridge_v4_toggle)
+
+    terrain_shore_v5_toggle = CheckButton.new()
+    terrain_shore_v5_toggle.name = "TaludesDeRiberaV5"
+    terrain_shore_v5_toggle.text = "Riberas con pendiente natural V5"
+    terrain_shore_v5_toggle.button_pressed = true
+    terrain_shore_v5_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_shore_v5_toggle)
+
+    terrain_water_v5_toggle = CheckButton.new()
+    terrain_water_v5_toggle.name = "CorrientesDeAguaV5"
+    terrain_water_v5_toggle.text = "Corrientes y reflejos sutiles V5"
+    terrain_water_v5_toggle.button_pressed = true
+    terrain_water_v5_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_water_v5_toggle)
+
+    terrain_rocks_v5_toggle = CheckButton.new()
+    terrain_rocks_v5_toggle.name = "DetalleGeologicoV5"
+    terrain_rocks_v5_toggle.text = "Rocas y estratos de montaña V5"
+    terrain_rocks_v5_toggle.button_pressed = true
+    terrain_rocks_v5_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_rocks_v5_toggle)
+
+    terrain_compare_button = _button(terrain_controls,
+        "COMPARAR: volver a acabado V4",_toggle_v5_finish)
+    terrain_compare_button.name = "ComparacionTerrenoV4V5"
+    terrain_compare_button.custom_minimum_size.y = 50
+
+    _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
+    terrain_camera_picker = OptionButton.new()
+    terrain_camera_picker.name = "CamarasDeTerreno"
+    terrain_camera_picker.custom_minimum_size.y = 48
+    for caption in ["Isométrica general","Cenital táctica","A ras del terreno","Vista contraria"]:
+        terrain_camera_picker.add_item(caption)
+    terrain_camera_picker.select(0)
+    terrain_camera_picker.item_selected.connect(_change_terrain_camera)
+    terrain_controls.add_child(terrain_camera_picker)
+    terrain_fullscreen_button = _button(terrain_controls,
+        "AMPLIAR VISUALIZACIÓN · SIN PANEL",_toggle_terrain_fullscreen)
+    terrain_fullscreen_button.name = "PantallaCompletaTerreno3D"
+    terrain_fullscreen_button.custom_minimum_size.y = 50
+
+    _title(terrain_controls,"OCHO FACCIONES OFICIALES",13)
+    terrain_faction_grid = GridContainer.new()
+    terrain_faction_grid.name = "GaleriaFaccionesTerreno"
+    terrain_faction_grid.columns = 2
+    terrain_faction_grid.add_theme_constant_override("h_separation",5)
+    terrain_faction_grid.add_theme_constant_override("v_separation",5)
+    var short_names := ["NORTE","ESCARLATA","VERDE","SOLAR",
+        "VIOLETA","ÁMBAR","TURQUESA","ÓNIX"]
+    for i in range(Factions.FACTIONS.size()):
+        var item := Button.new()
+        item.name = "TerrenoFaccion_%d" % i
+        item.text = str(short_names[i])
+        item.tooltip_text = str(Factions.FACTIONS[i]["name"])
+        # Use original shield textures when bundled. This standalone V8/V9
+        # studio does not bundle the HQ branch's two emblem atlases, so
+        # its selector always retains the eight approved colors and labels.
+        item.icon = Factions.emblem_texture(i)
+        item.add_theme_color_override("font_color",
+            Factions.faction_color(i).lightened(0.16))
+        item.expand_icon = true
+        item.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        item.alignment = HORIZONTAL_ALIGNMENT_LEFT
+        item.custom_minimum_size = Vector2(134,45)
+        item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        item.toggle_mode = true
+        item.pressed.connect(_select_terrain_faction.bind(i))
+        terrain_faction_grid.add_child(item)
+        terrain_faction_buttons.append(item)
+    terrain_controls.add_child(terrain_faction_grid)
+    _sync_terrain_factions()
+
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
     terrain_light_picker.name = "LuzDeEntorno"
@@ -238,6 +332,21 @@ func _add_building_mode() -> void:
         + "La demostración no modifica guardados de Android.",12)
     battle_controls.hide()
 
+    # The only return control when the sidebar is hidden is an overlay
+    # OUTSIDE the sidebar, so exiting expanded view always remains possible.
+    terrain_restore_panel_button = Button.new()
+    terrain_restore_panel_button.name = "RestaurarPanelTerreno3D"
+    terrain_restore_panel_button.text = "MOSTRAR CONTROLES 3D"
+    terrain_restore_panel_button.anchor_left = 1.0
+    terrain_restore_panel_button.anchor_right = 1.0
+    terrain_restore_panel_button.offset_left = -225.0
+    terrain_restore_panel_button.offset_right = -12.0
+    terrain_restore_panel_button.offset_top = 12.0
+    terrain_restore_panel_button.offset_bottom = 60.0
+    terrain_restore_panel_button.pressed.connect(_toggle_terrain_fullscreen)
+    terrain_restore_panel_button.hide()
+    add_child(terrain_restore_panel_button)
+
     # The battle simulation and interactive viewer are WebGL-compatible
     # Godot nodes. Hidden parent 2D UI and autosave are disabled.
     battle_sample_board = BattleBoard.new()
@@ -280,6 +389,8 @@ func _toggle_hq_finish() -> void:
 func _switch_category(index: int) -> void:
     if index < 0 or index > 3:
         return
+    if _terrain_fullscreen:
+        _leave_terrain_fullscreen()
     var building: bool = index == 1
     var terrain: bool = index == 2
     var battle: bool = index == 3
@@ -304,6 +415,46 @@ func _switch_category(index: int) -> void:
     category_picker.select(index)
 
 func _change_terrain_scene(_index: int) -> void:
+    _rebuild_terrain(false)
+
+func _toggle_terrain_fullscreen() -> void:
+    if _role != "terrain":
+        return
+    _terrain_fullscreen = not _terrain_fullscreen
+    if terrain_side_panel != null:
+        terrain_side_panel.visible = not _terrain_fullscreen
+    terrain_restore_panel_button.visible = _terrain_fullscreen
+
+func _leave_terrain_fullscreen() -> void:
+    _terrain_fullscreen = false
+    if terrain_side_panel != null:
+        terrain_side_panel.show()
+    if terrain_restore_panel_button != null:
+        terrain_restore_panel_button.hide()
+
+func _select_terrain_faction(index: int) -> void:
+    if index < 0 or index >= Factions.FACTIONS.size():
+        return
+    _faction = index
+    faction_picker.select(index)
+    _sync_terrain_factions()
+    _rebuild_terrain(false)
+
+func _sync_terrain_factions() -> void:
+    for i in range(terrain_faction_buttons.size()):
+        var item: Button = terrain_faction_buttons[i]
+        item.set_pressed_no_signal(i == _faction)
+        item.modulate = Color.WHITE if i == _faction else Color(0.76,0.81,0.86,0.80)
+
+func _change_terrain_camera(_index: int) -> void:
+    if _role == "terrain":
+        _update_camera()
+
+func _toggle_v5_finish() -> void:
+    _terrain_v5_enabled = not _terrain_v5_enabled
+    terrain_compare_button.text = (
+        "COMPARAR: volver a acabado V4" if _terrain_v5_enabled
+        else "VOLVER AL ACABADO V5")
     _rebuild_terrain(false)
 
 func _rebuild_terrain(_checked: bool = false) -> void:
@@ -368,14 +519,16 @@ func _display_terrain() -> void:
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
         terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
         _faction,terrain_continuous_toggle.button_pressed,
-        terrain_scatter_toggle.button_pressed)
+        terrain_scatter_toggle.button_pressed,
+        _terrain_v5_enabled and terrain_shore_v5_toggle.button_pressed,
+        _terrain_v5_enabled and terrain_water_v5_toggle.button_pressed,
+        _terrain_v5_enabled and terrain_rocks_v5_toggle.button_pressed,
+        terrain_bridge_v4_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
         _zoom = 1.0
     model_root.rotation_degrees.y = _yaw
-    camera.position = Vector3(34.0,35.0,38.0)
-    camera.look_at(Vector3(0,0.4,0),Vector3.UP)
     _apply_terrain_lighting()
     _update_camera()
     _update_details()
@@ -470,6 +623,7 @@ func _refresh_building_faction(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
     elif _role == "terrain":
+        _sync_terrain_factions()
         _display_terrain()
 
 func _display_headquarters() -> void:
@@ -509,8 +663,23 @@ func _update_camera() -> void:
         camera.look_at(Vector3(0,0.08,0),Vector3.UP)
         return
     if _role == "terrain":
-        if camera != null:
-            camera.size = 30.5 / _zoom
+        if camera == null:
+            return
+        camera.size = 30.5 / _zoom
+        var angle: int = terrain_camera_picker.selected if terrain_camera_picker != null else 0
+        match angle:
+            1:
+                camera.position = Vector3(0.01,52.0,0.03)
+                camera.look_at(Vector3.ZERO,Vector3.FORWARD)
+            2:
+                camera.position = Vector3(19.0,11.0,29.0)
+                camera.look_at(Vector3(0,0.5,0),Vector3.UP)
+            3:
+                camera.position = Vector3(-34.0,28.0,-38.0)
+                camera.look_at(Vector3(0,0.4,0),Vector3.UP)
+            _:
+                camera.position = Vector3(34.0,35.0,38.0)
+                camera.look_at(Vector3(0,0.4,0),Vector3.UP)
         return
     if _role == "headquarters":
         if camera != null:
@@ -549,6 +718,11 @@ func _update_details() -> void:
             status_label.text += " · Detalles %d (%d lotes)" % [
                 int(foliage.get("grass",0))+int(foliage.get("reeds",0))
                 +int(foliage.get("gravel",0)),int(foliage.get("batches",0))]
+        var finish: Dictionary = model_root.get_meta("terrain_detail_v5",{})
+        if int(finish.get("batches",0)) > 0:
+            status_label.text += " · V5: %d riberas, %d corrientes, %d rocas (%d lotes)" % [
+                int(finish.get("banks",0)),int(finish.get("ripples",0)),
+                int(finish.get("rocks",0)),int(finish.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
