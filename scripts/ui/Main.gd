@@ -1303,8 +1303,9 @@ func _process(_delta: float) -> void:
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
         commander_compact_strip.bind_state(board.state,board.ai_enabled)
         _update_text(unit_label, board.selected_unit_summary())
+        var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",0))
         var info: Dictionary = InspectorData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
-            board.selected_factory_pos,board.inspected_cell,0)
+            board.selected_factory_pos,board.inspected_cell,viewer)
         var show_info: bool = str(info.get("kind","none")) != "none"
         inspection_title.visible = show_info
         inspection_detail.visible = show_info
@@ -1313,7 +1314,6 @@ func _process(_delta: float) -> void:
         _update_text(inspection_detail,str(info.get("body","")))
         _update_text(compact_info_title,str(info.get("title","")))
         _update_text(compact_info_body,str(info.get("body","")))
-        var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",0))
         var dossier: Dictionary = DossierData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
             board.selected_factory_pos,board.inspected_cell,viewer)
         sidebar_dossier.bind_dossier(dossier)
