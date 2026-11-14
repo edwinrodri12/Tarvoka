@@ -7,6 +7,8 @@ on:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
       - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/TerrainShore3D.gd"
+      - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
       - "scripts/ui/Conifer3DMesh.gd"
       - "scripts/ui/TerrainRockMaterials.gd"
@@ -28,6 +30,8 @@ on:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
       - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/TerrainShore3D.gd"
+      - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
       - "scripts/ui/Conifer3DMesh.gd"
       - "scripts/ui/TerrainRockMaterials.gd"
