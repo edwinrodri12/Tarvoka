@@ -93,10 +93,12 @@ static func forecast(state: Dictionary) -> Dictionary:
     }
 
 static func advance_after_turn(state: Dictionary) -> Dictionary:
+    # Avoid deep-copying up to 1,200 terrain cells on every legacy/fixed
+    # battle turn. The caller already owns the new authoritative turn state.
+    var cycle = state.get("weather_cycle",null)
+    if not valid_cycle(cycle) or not valid(state.get("weather",null)):
+        return state
     var result: Dictionary = state.duplicate(true)
-    var cycle = result.get("weather_cycle",null)
-    if not valid_cycle(cycle) or not valid(result.get("weather",null)):
-        return result
     var remaining: int = int(cycle["remaining"])-1
     if remaining == 0:
         result["weather"] = next_weather(str(result["weather"]))
