@@ -193,6 +193,13 @@ func _sync_3d_visual() -> void:
     if three_d_enabled and _battle_3d != null:
         _battle_3d.call("sync_battle",state,selected_id,battery_saver)
 
+# Accessible to the game's diagnostic menu and automated tests; only
+# exposes local graphics metrics and never alters gameplay or save data.
+func get_3d_performance_snapshot() -> Dictionary:
+    if not three_d_enabled or _battle_3d == null:
+        return {}
+    return _battle_3d.call("runtime_metrics")
+
 func change_iso_zoom(direction: int) -> void:
     if not iso_enabled or direction == 0:
         return
