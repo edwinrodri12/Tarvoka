@@ -102,6 +102,29 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     main._process(0.0)
 
+    # Priority list on an actual modern match: friendly units, available
+    # producers and visible objectives. No fake alerts or committed actions.
+    var before_alert_frame: Dictionary = main.board.state.duplicate(true)
+    var original_alert_inspection: Vector2i = main.board.inspected_cell
+    main.board.new_game(0,false,false,true,true,true,true)
+    main.board.selected_id = ""
+    main.board.inspected_cell = Vector2i(-1,-1)
+    main._set_compact_hud(true)
+    main._process(0.0)
+    main._open_tactical_alerts()
+    if not main.objectives_panel.visible or main.objectives_panel.tabs.current_tab != 2:
+        push_error("Tactical alert shortcuts did not open the existing radar priorities tab.")
+        _failed = true
+    if not await _capture_landscape("24-prioridades-tacticas-960x540",Vector2i(960,540),
+            "Batalla · prioridades, producción y localización sin órdenes"):
+        _failed = true
+    main._close_objectives_radar()
+    main.board.state = before_alert_frame
+    main.board.inspected_cell = original_alert_inspection
+    main.board.selected_id = selected_before_gallery
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Read-only verified factory preview in compact mode. Preserve the
     # authoritative match and restore selection after this gallery frame.
     var before_terrain_frame: Dictionary = main.board.state.duplicate(true)
@@ -244,11 +267,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 23:
-        push_error("Landscape UI QA incomplete: %d/23 captures" % _manifest.size())
+    if _failed or _manifest.size() != 24:
+        push_error("Landscape UI QA incomplete: %d/24 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 23 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 24 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
