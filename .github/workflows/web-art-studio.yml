@@ -7,6 +7,12 @@ on:
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/TerrainStudio3D.gd"
       - "scripts/ui/TerrainStudioBridge3D.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/TerrainVisualMapBridge3D.gd"
+      - "scripts/ui/Main.gd"
+      - "tests/test_battle_terrain_3d_v5.gd"
+      - "tests/test_battle_3d_map_ui_v5.gd"
       - "scripts/ui/TerrainSurfaceFinish3D.gd"
       - "tests/test_terrain_studio_bridge_v4.gd"
       - "scripts/ui/TerrainVisualMapBridge3D.gd"
@@ -222,6 +228,34 @@ jobs:
             exit 1
           fi
           grep -q 'PASS TERRAIN_BRIDGE_V4:' /tmp/terrain-bridge-v4.log
+      - name: Validate live battle 3D terrain with three real board sizes and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_terrain_3d_v5.gd 2>&1 | tee /tmp/live-battle-3d-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/live-battle-3d-contract.log; then
+            echo "Live battlefield 3D rules/fog state contract failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_TERRAIN_3D_V5:' /tmp/live-battle-3d-contract.log
+      - name: Run real Android battle 3D GPU UI and screenshot proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_map_ui_v5.gd 2>&1 | tee /tmp/live-battle-3d-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/live-battle-3d-ui.log; then
+            echo "Live 3D battle UI rendered nothing or changed tactical orders" >&2
+            exit 1
+          fi
+          grep -q 'PASS LIVE_BATTLE_3D_UI_V5:' /tmp/live-battle-3d-ui.log
+          test -s artifacts/tarvoka_battle_3d_live_10x8.png
+          test -s artifacts/tarvoka_battle_3d_live_40x30.png
       - name: Verify native 3D terrain and unified studio scenes
         shell: bash
         run: |
@@ -284,6 +318,8 @@ jobs:
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_v2_v3_same_camera.png
             artifacts/tarvoka_canyon_v2_v4_same_camera.png
+            artifacts/tarvoka_battle_3d_live_10x8.png
+            artifacts/tarvoka_battle_3d_live_40x30.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
