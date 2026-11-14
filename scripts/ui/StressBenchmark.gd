@@ -112,24 +112,22 @@ func _ready() -> void:
 
 func _seed_tanks(requested: int) -> int:
     var terrain: Array = board.state.get("terrain",[])
-    var units: Array = []
-    var index := 0
-    # Repeat the ONE currently implemented tank design, rather than claiming
-    # to test 150 finalized 3D models or introducing new combat roles.
+    var candidate_cells: Array[Vector2i] = []
     for y in range(terrain.size()):
         for x in range(terrain[y].size()):
-            if units.size() >= requested:
-                break
-            if str(terrain[y][x]) in ["water","mountain"]:
-                continue
-            var id: String = "QA_TANK_%03d" % index
-            var tank: Dictionary = Roles.make_unit(id,index%2,Vector2i(x,y),"tank")
-            if tank.is_empty():
-                continue
+            if not str(terrain[y][x]) in ["water","mountain"]:
+                candidate_cells.append(Vector2i(x,y))
+    var units: Array = []
+    var total: int = mini(requested,candidate_cells.size())
+    # Sample the WHOLE battlefield, not the first rows: meaningful viewport
+    # occupancy near the central camera and no duplicate surface positions.
+    for i in range(total):
+        var index: int = mini(candidate_cells.size()-1,
+            int(floor((float(i)+0.5)*float(candidate_cells.size())/float(total))))
+        var tank: Dictionary = Roles.make_unit(
+            "QA_TANK_%03d" % i,i%2,candidate_cells[index],"tank")
+        if not tank.is_empty():
             units.append(tank)
-            index += 1
-        if units.size() >= requested:
-            break
     board.state["units"] = units
     return units.size()
 
