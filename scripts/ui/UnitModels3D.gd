@@ -34,6 +34,7 @@ const TankWearV25 = preload("res://scripts/ui/TankWearV25.gd")
 const TankFinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
 const TankDamagePolishV30 = preload("res://scripts/ui/TankDamagePolishV30.gd")
 const TankHitReactionV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
+const TankTrackAlignmentV31 = preload("res://scripts/ui/TankTrackAlignmentV31.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -828,6 +829,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                                 if art_level >= 30:
                                                     TankDamagePolishV30.apply(model)
                                                     TankHitReactionV30.apply(model)
+                                                    if art_level >= 31:
+                                                        TankTrackAlignmentV31.apply(model)
     return model
 
 static func inspect_meshes(model: Node) -> int:
