@@ -10,6 +10,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
+const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -47,6 +48,9 @@ var _confirm_order_button: Button
 var _cancel_order_button: Button
 var _move_here_button: Button
 var _choose_unit_button: Button
+var _g09_detail_button: Button
+var _g09_high_detail := true
+var _g09_lod_band := -1
 
 func _ready() -> void:
     hide()
@@ -162,6 +166,13 @@ func _ready() -> void:
     _choose_unit_button.pressed.connect(_choose_unit_here)
     _choose_unit_button.hide()
     commands.add_child(_choose_unit_button)
+    _g09_detail_button = Button.new()
+    _g09_detail_button.name = "CalidadG09EnBatalla"
+    _g09_detail_button.text = "G09 V25 · AUTO"
+    _g09_detail_button.tooltip_text = "Un solo tanque completo al acercar. Desactivar para mejorar rendimiento."
+    _g09_detail_button.custom_minimum_size = Vector2(150,42)
+    _g09_detail_button.pressed.connect(_toggle_g09_detail)
+    commands.add_child(_g09_detail_button)
     _cancel_order_button = Button.new()
     _cancel_order_button.name = "CancelarOrden3D"
     _cancel_order_button.text = "Cancelar orden"
@@ -176,6 +187,36 @@ func _ready() -> void:
     _confirm_order_button.pressed.connect(_confirm_3d_order)
     _confirm_order_button.hide()
     commands.add_child(_confirm_order_button)
+
+func _update_g09_stats() -> void:
+    if _scene==null or stats_label==null:
+        return
+    var stats: Dictionary = _scene.get_meta("render_stats",{})
+    if stats.is_empty():
+        return
+    var units: Dictionary = stats.get("units",{})
+    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos) · G09 V25: %d · V10: %d · V6: %d"
+        % [_dims.x,_dims.y,int(stats.get("chunks",0)),
+            int(units.get("visible",0)),int(units.get("detailed",0)),
+            int(units.get("g09_v25",0)),int(units.get("g09_v10",0)),
+            int(units.get("g09_v6",0))])
+    if _g09_detail_button!=null:
+        _g09_detail_button.text = "G09 V25 · AUTO" if _g09_high_detail else "G09 V25 · ECO"
+
+func _refresh_g09_lod() -> void:
+    if _scene==null or _state_snapshot.is_empty():
+        return
+    var stats: Dictionary = Terrain.refresh_unit_lod(
+        _scene,_state_snapshot,_selected_hint_unit_id,
+        _camera_size,_g09_high_detail)
+    if stats.is_empty():
+        return
+    _g09_lod_band = TankBudget.tier(_camera_size)
+    _update_g09_stats()
+
+func _toggle_g09_detail() -> void:
+    _g09_high_detail = not _g09_high_detail
+    _refresh_g09_lod()
 
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
@@ -217,7 +258,14 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     if _scene != null:
         _scene.free()
         _scene = null
-    var model: Node3D = Terrain.build(state,selected_id)
+    var terrain: Array = state.get("terrain",[])
+    if not Rules.valid_terrain(terrain):
+        return false
+    var initial_dims: Vector2i = Rules.map_size(terrain)
+    var initial_zoom: float = clampf(float(maxi(
+        initial_dims.x,initial_dims.y))*Terrain.CELL*0.66,16.0,70.0)
+    var model: Node3D = Terrain.build(
+        state,selected_id,initial_zoom,_g09_high_detail)
     if model == null:
         return false
     _scene = model
@@ -232,15 +280,12 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.66,
         16.0,70.0)
     _yaw = PI*0.25
+    _g09_lod_band = TankBudget.tier(_camera_size)
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
     _update_order_ui()
-    var statistics: Dictionary = model.get_meta("render_stats")
-    var units: Dictionary = statistics["units"]
-    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
-        % [_dims.x,_dims.y,int(statistics["chunks"]),
-            int(units["visible"]),int(units["detailed"])])
+    _update_g09_stats()
     show()
     move_to_front()
     preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -305,6 +350,7 @@ func _select_3d_unit(unit_id: String) -> bool:
     if not Orders.select(_live_board,unit_id):
         return false
     _selected_hint_unit_id = unit_id
+    _refresh_g09_lod()
     _refresh_ranges()
     _update_order_ui()
     return true
@@ -398,6 +444,7 @@ func _refresh_from_board() -> void:
     _yaw = azimuth
     _camera_size = zoom
     _refresh_camera()
+    _refresh_g09_lod()
     if _cells.has(selected_cell):
         inspect_cell(selected_cell,false)
     _update_order_ui()
@@ -505,6 +552,8 @@ func _zoom_anchored(factor: float, anchor: Vector2) -> void:
     var new_point: Vector3 = _plane_point(anchor)
     _look_at += old_point-new_point
     _refresh_camera()
+    if TankBudget.tier(_camera_size)!=_g09_lod_band:
+        _refresh_g09_lod()
 
 func _reset_gesture() -> void:
     _touch_points.clear()
@@ -651,6 +700,7 @@ func close_view() -> void:
     _cells = {}
     _state_snapshot = {}
     _selected_hint_unit_id = ""
+    _g09_lod_band = -1
     _reset_gesture()
     if _selected_cell.x >= 0:
         focus_requested.emit(_selected_cell)
