@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V30-28 live battle fidelity and Android QA"]
     types: [completed]
     branches:
-      - feat/hq-v19-facade-crest-stress-20261114
+      - feat/hq-v20-walls-weather-release-android-bench-20261114
       - feat/terrain-v17-battle-seam-blending-20261114
       - feat/g09-v30-studio-wide-tracks-hit-effects-20261114
       - feat/g09-v30-wide-tracks-combat-hit-reactions-20261114
@@ -32,10 +32,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 50
     steps:
-      - name: Check out GPU-validated HQ V19 facade and authentic crest native studio with nine original Android HQ V15 sprites
+      - name: Check out fixed HQ V20 complete walls and release-safe weather native studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v19-facade-crest-stress-20261114
+          ref: feat/hq-v20-walls-weather-release-android-bench-20261114
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v19-facade-crest-stress-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v19-facade-crest-stress-20261114)"
+          test "$(git branch --show-current)" = "feat/hq-v20-walls-weather-release-android-bench-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v20-walls-weather-release-android-bench-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -99,6 +99,15 @@ jobs:
           test -s tests/test_hq_v18_wayfinding.gd
           test -s scripts/ui/HeadquartersFacadeV19.gd
           test -s tests/test_hq_v19_facade_stress.gd
+          test -s tests/test_hq_v20_walls_weather_release.gd
+          test -s scripts/ui/HQAndroidPhysicalBench.gd
+          grep -q 'MuroContinuoBajoVentanasAlaV20_' scripts/ui/Headquarters3D.gd
+          grep -q 'var climate_applied: bool = HQClimateV17.apply(' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'var applied: bool = HQWayfindingV18.apply(' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'var applied: bool = HQFacadeV19.apply(' scripts/ui/CombinedArtStudioWeb.gd
+          ! grep -q 'assert(HQClimateV17.apply(' scripts/ui/CombinedArtStudioWeb.gd
+          ! grep -q 'assert(HQFacadeV19.apply(' scripts/ui/CombinedArtStudioWeb.gd
+          ! grep -q 'assert(HQWayfindingV18.apply(' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'FachadaBiseladaEscudoOficialV19' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'Escenarios49_100_144CuartelesV19' scripts/ui/CombinedArtStudioWeb.gd
           grep -q "SenalizacionArquitectonicaHQV18" scripts/ui/CombinedArtStudioWeb.gd
