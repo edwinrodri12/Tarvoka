@@ -16,6 +16,7 @@ func _frames(n: int = 7) -> void:
 func _shot(name: String) -> void:
     var img: Image = root.get_texture().get_image()
     assert(img != null and img.get_width() >= 900 and img.get_height() >= 540)
+    assert(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts")) == OK)
     assert(img.save_png("res://artifacts/" + name) == OK)
 
 func _run() -> void:
