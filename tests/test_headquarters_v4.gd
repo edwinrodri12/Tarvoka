@@ -106,7 +106,7 @@ func _run() -> void:
     var scene: PackedScene = load("res://scenes/UnitArtStudioWeb.tscn")
     assert(scene != null)
     var studio: Control = scene.instantiate()
-    assert(studio.get_script() == Studio)
+    assert(studio.get_script() == preload("res://scripts/ui/EnvironmentArtStudioWeb.gd"))
     root.add_child(studio)
     for i in range(6):
         await process_frame

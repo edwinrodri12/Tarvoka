@@ -1,0 +1,89 @@
+name: TARVOKA Web Studio Environment QA
+
+on:
+  push:
+    branches:
+      - feat/studio-environment-v15-20261113
+      - feat/hq-v10-surface-transitions-20261113
+    paths:
+      - "scripts/ui/EnvironmentArtStudioWeb.gd"
+      - "scripts/ui/Terrain*.gd"
+      - "scripts/ui/Conifer3DMesh.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "scenes/UnitArtStudioWeb.tscn"
+      - "scenes/Terrain3DLab.tscn"
+      - "tools/terrain3d_lab.gd"
+      - "tests/test_web_terrain_studio.gd"
+      - ".github/workflows/studio-environment-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-terrain-studio:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and Web templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/old
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
+          cp /tmp/old/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+      - name: Import Godot textures and studio scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/studio-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Import failed" /tmp/studio-import.log; then exit 1; fi
+      - name: Validate real terrain in same Web Studio as tank and HQ
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_terrain_studio.gd 2>&1 | tee /tmp/studio-terrain-test.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-terrain-test.log; then exit 1; fi
+          grep -F 'PASS TARVOKA 3D studio terrain:' /tmp/studio-terrain-test.log
+          test -s artifacts/tarvoka_environment_actual_web_studio.png
+      - name: Verify preexisting tank/HQ web categories
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_building_studio.gd 2>&1 | tee /tmp/studio-old-categories.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-old-categories.log; then exit 1; fi
+          grep -F 'PASS unified web studio:' /tmp/studio-old-categories.log
+      - name: Export previewable real 3D browser studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-env-export.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-env-export.log; then exit 1; fi
+          for f in index.html index.js index.pck index.wasm; do test -s "build/web/$f"; done
+      - name: Archive native studio screenshots and web package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-studio-environment-v15
+          path: |
+            artifacts/tarvoka_environment_actual_web_studio.png
+            build/web/
+          retention-days: 30
