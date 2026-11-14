@@ -19,6 +19,8 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
@@ -94,7 +96,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear") -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -134,7 +136,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
             unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
-    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true)
+    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather)
     if Identity.is_valid(chosen_factions):
         # Cosmetic team presentation only; no new engine faction values.
         state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
@@ -425,7 +427,7 @@ func _draw() -> void:
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
-            var terrain_color: Color = VisualStyle.terrain_color(terrain_type, x, y)
+            var terrain_color: Color = Weather.terrain_tint(VisualStyle.terrain_color(terrain_type, x, y),Weather.from_state(state))
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
             # Subtle tile relief reads as depth without changing top-down touch geometry.
             draw_line(pos + Vector2(1, 1), pos + Vector2(tile - 1, 1), terrain_color.lightened(0.25), maxf(1.0, tile * 0.024))
@@ -447,6 +449,10 @@ func _draw() -> void:
             elif terrain_type == "water":
                 draw_line(pos + tile * Vector2(0.19, 0.40), pos + tile * Vector2(0.79, 0.40), Color(0.38, 0.66, 0.86, 0.80), maxf(1.0, tile * 0.025))
                 draw_line(pos + tile * Vector2(0.12, 0.62), pos + tile * Vector2(0.72, 0.62), Color(0.38, 0.66, 0.86, 0.65), maxf(1.0, tile * 0.025))
+            # Render precipitation on terrain before fog, so neither
+            # unknown locations nor unseen enemy positions gain new detail.
+            WeatherPainter.draw_classic(self,Vector2i(x,y),pos,tile,
+                Weather.from_state(state),battery_saver)
             if fog:
                 var spot := Vector2i(x, y)
                 if not visible.has(spot):
