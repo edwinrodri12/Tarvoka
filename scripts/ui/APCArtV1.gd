@@ -129,11 +129,27 @@ static func _hull(parent: Node3D,coating: Material) -> void:
         Vector3(-float(first[1]),float(first[3]),float(first[0])),
         Vector3(float(first[1]),float(first[3]),float(first[0])),
         Vector3(float(first[1]),float(first[2]),float(first[0])))
-    _quad(st,
-        Vector3(-float(last[1]),float(last[2]),float(last[0])),
-        Vector3(float(last[1]),float(last[2]),float(last[0])),
-        Vector3(float(last[1]),float(last[3]),float(last[0])),
-        Vector3(-float(last[1]),float(last[3]),float(last[0])))
+    # Four genuine rear rim panels, leaving an open troop aperture. The
+    # original rear cap was a solid wall that concealed the moving ramp.
+    var rz: float=float(last[0])
+    var rw: float=float(last[1])
+    var rb: float=float(last[2])
+    var rt: float=float(last[3])
+    var opening_half:=0.49
+    var opening_floor:=0.52
+    var opening_roof:=1.06
+    _quad(st,Vector3(-rw,rb,rz),Vector3(-opening_half,rb,rz),
+        Vector3(-opening_half,rt,rz),Vector3(-rw,rt,rz))
+    _quad(st,Vector3(opening_half,rb,rz),Vector3(rw,rb,rz),
+        Vector3(rw,rt,rz),Vector3(opening_half,rt,rz))
+    _quad(st,Vector3(-opening_half,opening_roof,rz),
+        Vector3(opening_half,opening_roof,rz),
+        Vector3(opening_half,rt,rz),
+        Vector3(-opening_half,rt,rz))
+    _quad(st,Vector3(-opening_half,rb,rz),
+        Vector3(opening_half,rb,rz),
+        Vector3(opening_half,opening_floor,rz),
+        Vector3(-opening_half,opening_floor,rz))
     st.generate_normals()
     var hull: MeshInstance3D=_part(parent,"CascoBlindadoEsculpidoP06",
         st.commit(),coating)
@@ -265,10 +281,27 @@ static func _details(root: Node3D,paint: Material,
         _box(root,"TiradorEscotilla_%d" % index,
             Vector3(-0.34+0.68*float(index),1.52,0.52),
             Vector3(0.10,0.05,0.16),black)
-    # Real aft passenger ramp with visible center seam and armored hinges.
-    _box(root,"MarcoRampaPosterior",
-        Vector3(0.0,0.86,1.33),Vector3(1.22,0.85,0.10),steel,
-        Vector3(8,0,0))
+    # Hollow 4-part ramp frame and visible troop bay, not a solid opaque
+    # rear wall. When open the ramp now exposes the actual bay and seats.
+    _box(root,"PisoAntideslizanteCompartimento",
+        Vector3(0.0,0.52,0.72),Vector3(1.00,0.05,1.12),black)
+    _box(root,"ParedInteriorIzquierda",
+        Vector3(-0.53,0.82,0.70),Vector3(0.06,0.59,1.10),steel)
+    _box(root,"ParedInteriorDerecha",
+        Vector3(0.53,0.82,0.70),Vector3(0.06,0.59,1.10),steel)
+    for side in [-1,1]:
+        var bench_x: float=float(side)*0.37
+        _box(root,"BancoTropas_%s" % side,
+            Vector3(bench_x,0.64,0.72),Vector3(0.25,0.09,0.72),black)
+        _box(root,"RespaldoBanco_%s" % side,
+            Vector3(bench_x,0.84,0.72),Vector3(0.06,0.35,0.72),steel)
+        _box(root,"MontanteRampa_%s" % side,
+            Vector3(float(side)*0.55,0.82,1.36),
+            Vector3(0.11,0.76,0.08),steel)
+    _box(root,"DintelRampaSuperior",
+        Vector3(0,1.16,1.36),Vector3(1.18,0.10,0.09),steel)
+    _box(root,"UmbralRampaInferior",
+        Vector3(0,0.47,1.36),Vector3(1.18,0.10,0.09),steel)
     # The ramp pivots from its actual BOTTOM hinge, not the middle of a
     # floating rectangular plate. At 80 degrees it opens toward the rear.
     var hinge:=Node3D.new()
@@ -341,7 +374,7 @@ static func apply(model: Node3D,color: Color) -> bool:
     var root:=Node3D.new()
     root.name=ROOT
     model.add_child(root)
-    var armor: StandardMaterial3D=_paint_material(color)
+    var armor: StandardMaterial3D=_paint_material(Color("#56666C").lerp(color,0.46))
     armor.cull_mode=BaseMaterial3D.CULL_DISABLED
     var lower: StandardMaterial3D=_mat(Color("#48545C"),0.36,0.86)
     var steel: StandardMaterial3D=_mat(Color("#707D82"),0.52,0.67)
@@ -367,7 +400,7 @@ static func recolor(model: Node3D,color: Color) -> int:
     if root==null:
         return 0
     var updated:=0
-    var paint: Material=_paint_material(color)
+    var paint: Material=_paint_material(Color("#56666C").lerp(color,0.46))
     for piece in root.find_children("*","MeshInstance3D",true,false):
         if piece.has_meta(PAINT_META) or piece.has_meta("tarvoka_apc_primary_hull"):
             (piece as MeshInstance3D).material_override=paint
