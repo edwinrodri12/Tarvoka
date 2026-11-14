@@ -54,5 +54,23 @@ func _initialize() -> void:
             assert(hit.defender_hp == 10 - elevated, "Defensive cover must conserve defender HP")
             checked += 1
 
+    # Cross-check the preview formula against actual resolution over HP boundaries.
+    # Includes invalid/zero attacks, lethal hits and negative defense/cover.
+    for attacker_hp in [-1, 0, 1, 10]:
+        for defender_hp in [-1, 0, 1, 3, 10]:
+            for attack in [-1, 0, 1, 5, 12]:
+                for defense in [-2, 0, 2, 8]:
+                    for cover in [-2, 0, 2, 8]:
+                        var expected: int = min(max(0, defender_hp), combat.damage(attack, defense, cover))
+                        var actual: Dictionary = combat.resolve(attacker_hp, defender_hp, attack, defense, cover)
+                        if attacker_hp <= 0 or defender_hp <= 0:
+                            assert(not actual.valid and actual.damage == 0, "Invalid participants cannot deal damage")
+                        else:
+                            assert(actual.valid, "Living participants must resolve deterministically")
+                            assert(actual.damage == expected, "Combat preview must equal applied damage capped by HP")
+                            assert(actual.defender_hp == defender_hp - expected, "Resolved HP must match preview")
+                            assert(actual.defeated == (expected == defender_hp), "Lethality must agree with preview")
+                        checked += 1
+
     print("PASS: combat invariants (%d deterministic cases)" % checked)
     quit()
