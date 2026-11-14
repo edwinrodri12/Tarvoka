@@ -29,6 +29,7 @@ const STAGE_META := "tarvoka_visual_damage_stage"
 const ACCENT := Color("#E8A34F")
 const V16 = preload("res://scripts/ui/TankFinishV16.gd")
 const V17 = preload("res://scripts/ui/TankFXV17.gd")
+const V20 = preload("res://scripts/ui/TankIntegrationV20.gd")
 
 static func _material(color: Color, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -534,4 +535,9 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var damaged_part: Node3D = model.find_child(part_name,true,false) as Node3D
             if damaged_part != null:
                 damaged_part.visible = stage < 4
+    # V20 retires protruding V7/V13/V15 decoration permanently. Damage
+    # updates above can re-enable old trims; re-hide them after every HP
+    # change so destruction and repair never resurrect the floating bars.
+    if model.get_meta("tarvoka_mbt_integrated_v20",false):
+        V20.hide_legacy(model)
     return true
