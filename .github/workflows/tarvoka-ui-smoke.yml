@@ -21,6 +21,7 @@ on:
       - 'tests/test_tactical_map_alerts.gd'
       - 'tests/test_quick_unit_navigation.gd'
       - 'tests/test_threat_awareness.gd'
+      - 'tests/test_premove_risk_comparison.gd'
       - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
       - 'tests/test_unit_art.gd'
@@ -88,6 +89,7 @@ jobs:
             test_tactical_map_alerts \
             test_quick_unit_navigation \
             test_threat_awareness \
+            test_premove_risk_comparison \
             test_road_command_menu \
             test_tactical_briefing \
             test_unit_art \
