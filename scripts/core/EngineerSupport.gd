@@ -30,7 +30,8 @@ static func plan(state: Dictionary, observed: Dictionary, engineer: Dictionary) 
         return none
     if str(engineer.get("role","")) != "engineer" or not Turns.can_move(engineer,side):
         return none
-    if bool(engineer.get("moved",true)) or int(engineer.get("hp",0)) < MIN_SAFE_HP:
+    # Legacy v1 units omit moved; Rules/Turns treat absence as not moved.
+    if bool(engineer.get("moved",false)) or int(engineer.get("hp",0)) < MIN_SAFE_HP:
         return none
     var origin = engineer.get("pos",null)
     var terrain: Array = observed["terrain"]
