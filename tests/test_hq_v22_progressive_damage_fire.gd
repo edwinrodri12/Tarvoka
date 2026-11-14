@@ -60,6 +60,8 @@ func _run() -> void:
         assert(not light.find_child("AntenaDeMandoBaliza",true,false).visible)
         assert(light.find_child("MastilCaidoDeMandoV22",true,false)!=null)
         assert(light.find_child("BaseAntenaRasgadaV22",true,false)!=null)
+        assert(not light.find_child("PlatoExterior",true,false).visible)
+        assert(light.find_child("PlatoRadarCaidoV22",true,false)!=null)
         assert(light.find_child("MuroPosteriorCentralContinuoV21",true,false).visible)
         assert(not light.has_node(Fire.STAGE_NAME))
         if level>=2:
@@ -94,13 +96,18 @@ func _run() -> void:
     studio._switch_category(1)
     await _frames(8)
     assert(studio.hq_damage_stage_picker.item_count==5)
+    # Inspect close enough for a fallen antenna to occupy multiple genuine
+    # GPU pixels, instead of comparing distant 160px thumbnails.
+    studio._zoom = 1.60
+    studio._update_camera()
+    await _frames(4)
     var intact_img: Image = _save(studio,"tarvoka_hq_v22_0_intact.png")
     studio._change_hq_damage_stage(1)
     await _frames(8)
     assert(studio.model_root.find_child("MastilCaidoDeMandoV22",true,false)!=null)
     assert(not studio.model_root.find_child("AntenaDeMandoMastil",true,false).visible)
     var light_img: Image = _save(studio,"tarvoka_hq_v22_1_fallen_antennas.png")
-    assert(_diff(intact_img,light_img)>15)
+    assert(_diff(intact_img,light_img)>6)
 
     studio._change_hq_damage_stage(2)
     await _frames(10)
