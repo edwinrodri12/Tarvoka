@@ -187,8 +187,14 @@ func _apply_foliage_shadow_budget() -> void:
 
 func _reset_chunk_cache() -> void:
     _chunk_signatures.clear()
+    _forest_signature = -1
+    _bridges_signature = -1
     for key in _chunk_parts:
         for instance in _chunk_parts[key]:
+            # Hide/remove immediately, not a frame later at queue_free:
+            # a map swap must never briefly reveal the old terrain.
+            instance.visible = false
+            _chunk_root.remove_child(instance)
             instance.queue_free()
     _chunk_parts.clear()
 
@@ -203,6 +209,23 @@ func _rebuild_visible_chunks() -> void:
             terrain,tile_region,observed,restrict_to_observed)])
         if _chunk_signatures.get(key,-1) == stamp:
             continue
+        # Entirely unseen sectors require NO mesh resources or draw
+        # calls. Hide old sectors immediately when fog covers them.
+        var any_observed := false
+        for y in range(tile_region.position.y,tile_region.end.y):
+            for x in range(tile_region.position.x,tile_region.end.x):
+                if TerrainMesh.observed_cell(terrain,Vector2i(x,y),
+                        observed,restrict_to_observed):
+                    any_observed = true
+                    break
+            if any_observed:
+                break
+        if not any_observed:
+            if _chunk_parts.has(key):
+                for old_part in _chunk_parts[key]:
+                    old_part.visible = false
+            _chunk_signatures[key] = stamp
+            continue
         if not _chunk_parts.has(key):
             var ground := MeshInstance3D.new()
             ground.name = "Ground_%s_%s" % [key.x,key.y]
@@ -215,6 +238,8 @@ func _rebuild_visible_chunks() -> void:
             _chunk_root.add_child(shore)
             _chunk_parts[key] = [ground,river,shore]
         var parts: Array = _chunk_parts[key]
+        for part in parts:
+            part.visible = true
         (parts[0] as MeshInstance3D).mesh = TerrainMesh.build_ground(
             terrain,observed,restrict_to_observed,divisions,
             tile_region)
@@ -338,6 +363,8 @@ func environment_metrics() -> Dictionary:
     if restrict_to_observed:
         for key in _chunk_parts:
             var parts: Array = _chunk_parts[key]
+            if not (parts[0] as MeshInstance3D).visible:
+                continue
             ground_triangles += _triangles_per_instance(
                 (parts[0] as MeshInstance3D).mesh)
             water_triangles += _triangles_per_instance(
