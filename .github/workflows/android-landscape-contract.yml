@@ -1,0 +1,15 @@
+name: Android landscape configuration contract
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  landscape-contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Godot 4.3 Android landscape contract
+        run: python3 tests/test_android_landscape_contract.py
