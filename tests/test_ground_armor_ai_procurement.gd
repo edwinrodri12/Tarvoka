@@ -47,8 +47,7 @@ static func _scenario(side: int, threat: String, fog: bool,
     for site in state["economy"]["sites"]:
         if int(site["owner"]) != side:
             continue
-        if str(site["kind"]) != "armor_plant" and
-                str(site["kind"]) != "city":
+        if str(site["kind"]) not in ["armor_plant","city"]:
             # Neutralize unrelated factories without consuming the shared
             # 1/2/3-purchases-per-phase limit or leaking opponent funds.
             site["owner"] = -1
@@ -86,8 +85,7 @@ func _initialize() -> void:
                 assert(chosen["valid"] and chosen["action"] == "produce")
                 assert(str(chosen["role"]) == str(entry["role"]))
                 assert(int(chosen["cost"]) == Economy.cost(str(entry["role"])))
-                var spent: int = int(before["economy"]["credits"][side])-
-                    int(chosen["state"]["economy"]["credits"][side])
+                var spent: int = int(before["economy"]["credits"][side]) - int(chosen["state"]["economy"]["credits"][side])
                 assert(spent == int(chosen["cost"]))
                 assert(chosen["state"]["economy"]["credits"][1-side] ==
                     before["economy"]["credits"][1-side])
