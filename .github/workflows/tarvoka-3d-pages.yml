@@ -7,14 +7,14 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V1 sculpt, studio and 6x6 mechanical QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V2 Commercial Geometry and Mobile Batching QA"]
     types: [completed]
     branches:
       - feat/hq-v21-rear-wall-damage-impact-20261114
       - feat/terrain-studio-v18-biome-mountain-integration-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
-      - feat/apc-v1-six-wheel-armored-transporter-20261114
+      - feat/apc-p06-v2-armored-finish-20261114
 
 permissions:
   contents: read
@@ -373,7 +373,7 @@ jobs:
       - name: Check out sculpted APC P06 Bastión 6x6 source
         uses: actions/checkout@v4
         with:
-          ref: feat/apc-v1-six-wheel-armored-transporter-20261114
+          ref: feat/apc-p06-v2-armored-finish-20261114
           path: apc-p06-source
           persist-credentials: false
       - name: Export real APC P06 model and interactive 6x6/ramp controls at /apc/
@@ -381,6 +381,10 @@ jobs:
         run: |
           set -euo pipefail
           test -s apc-p06-source/scripts/ui/APCArtV1.gd
+          test -s apc-p06-source/scripts/ui/APCArmorV2.gd
+          test -s apc-p06-source/tests/test_apc_p06_art_v2.gd
+          test -s apc-p06-source/tests/export_apc_p06_v2_glb.gd
+          grep -q 'var _apc_v2_preview := true' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
           test -s apc-p06-source/scripts/ui/APCVisualRigV1.gd
           test -s apc-p06-source/tests/test_apc_p06_art_v1.gd
           test -s apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
@@ -477,13 +481,13 @@ jobs:
                    '../tanque/', 'G09 · REVISIÓN ARTÍSTICA',
                    'Inspeccionar materiales de tanque V25 y escenarios V26', 136)
           add_link(Path('build/web/index.html'),
-                   'apc/', 'APC P06 · NUEVA UNIDAD 3D',
-                   'Inspeccionar el transporte 6x6, rampa y torreta animadas', 196)
+                   'apc/', 'APC P06 V2 · NUEVO BLINDAJE',
+                   'Revisar la V2 del APC 6x6: neumáticos esculpidos, blindaje PBR y rampa animada', 196)
           add_link(Path('build/web/tanque/index.html'),
-                   '../apc/', 'SIGUIENTE UNIDAD · APC P06',
+                   '../apc/', 'SIGUIENTE UNIDAD · APC P06 V2',
                    'Abrir el nuevo blindado sin alterar G09 V32', 196)
           add_link(Path('build/web/batalla/index.html'),
-                   '../apc/', 'APC P06 · MODELO 3D',
+                   '../apc/', 'APC P06 V2 · MODELO 3D',
                    'Revisar el nuevo transporte de tropas', 196)
           add_link(Path('build/web/apc/index.html'),
                    '../', 'VOLVER AL ESTUDIO 3D',
