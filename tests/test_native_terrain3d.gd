@@ -125,6 +125,15 @@ func _run() -> void:
         foam_full.surface_get_arrays(0)[Mesh.ARRAY_COLOR])
     var hidden_colors: PackedColorArray = (
         foam_hidden.surface_get_arrays(0)[Mesh.ARRAY_COLOR])
+    # A known shore uses a narrow 3-triangle perimeter ribbon, not a
+    # large center-to-bank gradient. Unknown banks are rendered with the
+    # original inexpensive one-triangle deep-water fan.
+    assert(full_colors.size() == hidden_colors.size()+6*6)
+    var narrow_alpha := 0
+    for tint in full_colors:
+        if tint.a > 0.8:
+            narrow_alpha += 1
+    assert(narrow_alpha == 6*3)
     var found_foam := false
     for color in full_colors:
         if color.a > 0.8:
