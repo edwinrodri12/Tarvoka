@@ -65,9 +65,14 @@ static func bank_strip(grid: Array, land_cell: Vector2i,
             u,v,observed,restricted)
         var inner_y: float = Terrain.height_at(grid,land_cell,
             inland_u,inland_v,observed,restricted)
-        points.append(Vector3(world_x,edge_y+0.024,world_z))
+        # Keep the visible wet ledge slightly ABOVE the water plane,
+        # while still following higher slopes where the terrain rises.
+        # Water cells are never created in this land-side decoration.
+        points.append(Vector3(world_x,maxf(
+            edge_y+0.024,Terrain.WATER_LEVEL+0.016),world_z))
         points.append(Vector3(float(land_cell.x)+inland_u,
-            inner_y+0.026,float(land_cell.y)+inland_v))
+            maxf(inner_y+0.026,Terrain.WATER_LEVEL+0.013),
+            float(land_cell.y)+inland_v))
     return points
 
 static func build_banks(grid: Array, observed: Dictionary = {},
