@@ -28,6 +28,7 @@ const TankSculptV19 = preload("res://scripts/ui/TankSculptV19.gd")
 const TankIntegrationV20 = preload("res://scripts/ui/TankIntegrationV20.gd")
 const TankFinishV21 = preload("res://scripts/ui/TankFinishV21.gd")
 const TankGunV22 = preload("res://scripts/ui/TankGunV22.gd")
+const TankFactionV23 = preload("res://scripts/ui/TankFactionV23.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -344,6 +345,8 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
         TankArtV12.refine_faction_paint(model)
     if model.get_meta("tarvoka_mbt_finish_v16",false):
         TankFinishV16.refine_faction_paint(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_faction_v23",false):
+        TankFactionV23.recolor(model,faction_paint_color(faction))
     return painted
 
 static func paintable_count(model: Node) -> int:
@@ -806,6 +809,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                 TankFinishV21.apply(model)
                                 if art_level >= 22:
                                     TankGunV22.apply(model)
+                                    if art_level >= 23:
+                                        TankFactionV23.apply(model,faction_paint_color(faction))
     return model
 
 static func inspect_meshes(model: Node) -> int:
