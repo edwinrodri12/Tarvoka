@@ -104,20 +104,50 @@ static func height_at(grid: Array, cell: Vector2i, u: float, v: float,
         return interpolated-noise*0.006
     return interpolated+noise*0.035
 
-static func _color_for(grid: Array, cell: Vector2i, u: float, v: float,
-        elevation: float) -> Color:
-    var kind: String = str(grid[cell.y][cell.x])
+static func _base_surface_color(kind: String,
+        world: Vector3) -> Color:
     var tint: Color = Color.html(str(BASE_TINTS.get(
         kind,BASE_TINTS["plain"])))
-    var world := Vector3(float(cell.x)+u,elevation,float(cell.y)+v)
-    # Rock minerals and fine strata are sampled in WORLD coordinates,
-    # not per-tile UVs. Adjacent mountain triangles share the same palette
-    # and do not restart their fractures at an artificial grid boundary.
     if kind == "mountain":
         return RockMaterials.rock_color(world,0.82)
     if kind == "water":
         tint = Color("#526A6F")
     return RockMaterials.grass_edge_color(world,kind,tint)
+
+static func _color_for(grid: Array, cell: Vector2i, u: float, v: float,
+        elevation: float, observed: Dictionary,
+        restricted: bool) -> Color:
+    var kind: String = str(grid[cell.y][cell.x])
+    var world := Vector3(float(cell.x)+u,elevation,float(cell.y)+v)
+    var tint: Color = _base_surface_color(kind,world)
+    if kind not in ["plain","forest","mountain"]:
+        return tint
+    # Ground colors are blended INSIDE the visible tile only; each side
+    # uses the same world position and the same symmetric 50:50 mix at
+    # the shared edge. No colors/types are sampled from fogged neighbors.
+    const DIRECTIONS := [
+        Vector2i(1,0),Vector2i(-1,0),
+        Vector2i(0,1),Vector2i(0,-1)
+    ]
+    var distances := [1.0-u,u,1.0-v,v]
+    for side in range(4):
+        var neighbor: Vector2i = cell+DIRECTIONS[side]
+        if not observed_cell(grid,neighbor,observed,restricted):
+            continue
+        var other_kind: String = str(grid[neighbor.y][neighbor.x])
+        if other_kind == kind or other_kind not in [
+                "plain","forest","mountain"]:
+            continue
+        var distance: float = float(distances[side])
+        if distance >= 0.43:
+            continue
+        var fade: float = 1.0-distance/0.43
+        var blend_weight: float = fade*fade*0.5
+        var other_color: Color = _base_surface_color(
+            other_kind,world)
+        tint = tint.lerp(other_color,blend_weight)
+    return tint
+
 static func _add_vertex(st: SurfaceTool, point: Vector3, tint: Color) -> void:
     st.set_color(tint)
     st.add_vertex(point)
@@ -154,12 +184,12 @@ static func build_ground(grid: Array, observed: Dictionary = {},
                     var p01 := _ground_point(grid,cell,u0,v1,observed,restricted)
                     var p11 := _ground_point(grid,cell,u1,v1,observed,restricted)
                     # Winding order produces upward-facing normals.
-                    _add_vertex(st,p00,_color_for(grid,cell,u0,v0,p00.y))
-                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y))
-                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y))
-                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y))
-                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y))
-                    _add_vertex(st,p11,_color_for(grid,cell,u1,v1,p11.y))
+                    _add_vertex(st,p00,_color_for(grid,cell,u0,v0,p00.y,observed,restricted))
+                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y,observed,restricted))
+                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y,observed,restricted))
+                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y,observed,restricted))
+                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y,observed,restricted))
+                    _add_vertex(st,p11,_color_for(grid,cell,u1,v1,p11.y,observed,restricted))
                     count += 6
     if count == 0:
         return mesh
