@@ -10,6 +10,9 @@ on:
       - 'scripts/ui/Main.gd'
       - 'tests/test_engineer_repair.gd'
       - 'tests/test_engineer_repair_ui.gd'
+      - 'tests/test_paired_balance_telemetry.gd'
+      - 'tests/test_modern_coastal_self_play.gd'
+      - 'tests/test_modern_mirror_decisions.gd'
       - '.github/workflows/engineer-repair.yml'
   push:
     branches: [main]
@@ -21,6 +24,9 @@ on:
       - 'scripts/ui/Main.gd'
       - 'tests/test_engineer_repair.gd'
       - 'tests/test_engineer_repair_ui.gd'
+      - 'tests/test_paired_balance_telemetry.gd'
+      - 'tests/test_modern_coastal_self_play.gd'
+      - 'tests/test_modern_mirror_decisions.gd'
       - '.github/workflows/engineer-repair.yml'
   workflow_dispatch:
 
@@ -55,6 +61,17 @@ jobs:
             | tee /tmp/engineer-repair-ui.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/engineer-repair-ui.log; then exit 1; fi
           grep -F 'PASS engineer repair UI:' /tmp/engineer-repair-ui.log
+      - name: Regress full modern economy, coastal combat and mirrored AI decisions
+        run: |
+          set -euo pipefail
+          for test in test_paired_balance_telemetry test_modern_coastal_self_play test_modern_mirror_decisions; do
+            timeout --signal=TERM --kill-after=5s 150s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" 2>&1 \
+              | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -F 'PASS ' "/tmp/${test}.log"
+          done
       - name: Upload repro logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -63,4 +80,7 @@ jobs:
           path: |
             /tmp/engineer-repair.log
             /tmp/engineer-repair-ui.log
+            /tmp/test_paired_balance_telemetry.log
+            /tmp/test_modern_coastal_self_play.log
+            /tmp/test_modern_mirror_decisions.log
           if-no-files-found: warn
