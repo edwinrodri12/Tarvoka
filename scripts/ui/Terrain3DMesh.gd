@@ -169,7 +169,10 @@ static func build_ground(grid: Array, observed: Dictionary = {},
     # number of unique vertices in mobile meshes without changing
     # any triangle, world position, tactical cell or UV.
     st.index()
-    st.generate_normals()
+    # SurfaceTool 4.3 interprets this heightfield's x/z triangles with
+    # the opposite face orientation. Flip the generated normals so
+    # lighting faces upward after indexing (validated by the mesh test).
+    st.generate_normals(true)
     st.commit(mesh)
     var material := StandardMaterial3D.new()
     material.vertex_color_use_as_albedo = true
