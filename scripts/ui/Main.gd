@@ -12,6 +12,8 @@ const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/ArsenalHomeScreen.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 const InspectorData = preload("res://scripts/ui/InspectionData.gd")
+const TileContextData = preload("res://scripts/ui/TileContextData.gd")
+const TileContextCard = preload("res://scripts/ui/TileContextCard.gd")
 const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
 const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
@@ -76,6 +78,8 @@ var minimap_caption: Label
 var minimap_shell: PanelContainer
 var polished_status_card: PanelContainer
 var polished_unit_card: PanelContainer
+var sidebar_tile_context: Control
+var compact_tile_context: Control
 var polished_actions_card: PanelContainer
 var _minimap_view_key := -1
 var _minimap_preference := false
@@ -855,6 +859,10 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     polished_unit_card.add_child(dossier_column)
     for widget in [unit_heading,inspection_title,sidebar_dossier,sidebar_site_actions,inspection_detail,unit_label,order_preview_label,sidebar_combat_preview]:
         widget.reparent(dossier_column,false)
+    sidebar_tile_context = TileContextCard.new()
+    sidebar_tile_context.name = "TerrenoYEdificiosExpanded"
+    dossier_column.add_child(sidebar_tile_context)
+    dossier_column.move_child(sidebar_tile_context,2)
     GameUiTheme.section(unit_heading)
     unit_heading.text = "INSPECCIÓN Y ÓRDENES"
     unit_label.add_theme_font_size_override("font_size",15)
@@ -975,6 +983,10 @@ func _build_battle_hud() -> void:
     compact_info_title.add_theme_font_size_override("font_size",16)
     compact_info_title.add_theme_color_override("font_color",Color("#F5D982"))
     info_column.add_child(compact_info_title)
+    compact_tile_context = TileContextCard.new()
+    compact_tile_context.name = "TerrenoYEdificiosAndroid"
+    compact_tile_context.compact = true
+    info_column.add_child(compact_tile_context)
     compact_dossier = DossierView.new()
     compact_dossier.compact = true
     info_column.add_child(compact_dossier)
@@ -1301,14 +1313,36 @@ func _process(_delta: float) -> void:
         _update_text(inspection_detail,str(info.get("body","")))
         _update_text(compact_info_title,str(info.get("title","")))
         _update_text(compact_info_body,str(info.get("body","")))
+        var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",0))
         var dossier: Dictionary = DossierData.inspect(board.state,board.selected_id,board.inspected_enemy_id,
-            board.selected_factory_pos,board.inspected_cell,0)
+            board.selected_factory_pos,board.inspected_cell,viewer)
         sidebar_dossier.bind_dossier(dossier)
         compact_dossier.bind_dossier(dossier)
+        # Only a real inspected tile gets the compact domain-cost card.
+        # A selected unit or enemy always takes precedence over that tile.
+        var context: Dictionary = {}
+        if board.selected_id.is_empty() and board.inspected_enemy_id.is_empty():
+            var cell: Vector2i = board.selected_factory_pos if board.selected_factory_pos != Vector2i(-1,-1) else board.inspected_cell
+            context = TileContextData.snapshot(board.state,cell,viewer)
+        sidebar_tile_context.bind_context(context)
+        compact_tile_context.bind_context(context)
+        var context_visible: bool = str(context.get("kind","none")) in ["terrain","building","unknown"]
+        if context_visible:
+            inspection_title.hide()
+            inspection_detail.hide()
+            compact_info_title.hide()
+            compact_info_body.hide()
+            # The new facts strip takes the place of the existing building
+            # dossier instead of stacking duplicate cards on a 540px screen.
+            if str(context.get("kind","none")) == "building":
+                sidebar_dossier.hide()
+                compact_dossier.hide()
+        else:
+            compact_info_title.visible = show_info
         var site_info: Dictionary = {}
-        if str(dossier.get("kind","")) == "building" and board.pending_order.is_empty():
+        if str(context.get("kind","")) == "building" and board.pending_order.is_empty():
             var site_cell: Vector2i = board.selected_factory_pos if board.selected_factory_pos != Vector2i(-1,-1) else board.inspected_cell
-            site_info = SiteInteraction.describe(board.state,site_cell,0)
+            site_info = SiteInteraction.describe(board.state,site_cell,viewer)
         sidebar_site_actions.bind_site(site_info)
         compact_site_actions.bind_site(site_info)
         # A context action receives taps; all unrelated map regions continue
@@ -1320,7 +1354,7 @@ func _process(_delta: float) -> void:
         # Terrain and unknown cells keep the familiar descriptive text.
         # For units and buildings the graphical compact card replaces it,
         # rather than consuming a third of the map with duplicate details.
-        compact_info_body.visible = not compact_dossier.visible
+        compact_info_body.visible = not compact_dossier.visible and not context_visible
         if objectives_panel != null and objectives_panel.visible:
             objectives_panel.refresh_from_state(board.state,_radar_viewer())
         var field_text: String = BattleReport.field_summary(board.state)
