@@ -10,6 +10,7 @@ const SOUTH := 4
 const NORTH := 8
 const TextureAtlas = preload("res://scripts/ui/TerrainTextureAtlas.gd")
 const Continuity = preload("res://scripts/ui/LandscapeContinuity.gd")
+const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 
 static func _polygon(canvas: CanvasItem, vertices: Array, tint: Color) -> void:
     var points := PackedVector2Array()
@@ -72,41 +73,38 @@ static func _pine(canvas: CanvasItem, foot: Vector2, height: float,
             Color(0.68,0.88,0.62,0.36),height*0.024)
 
 static func draw_forest(canvas: CanvasItem, c: Vector2, hw: float,
-        seed: int, neighbor_mask: int, detail: int) -> void:
-    var canopy := Color("#20543A")
-    # Shaded understory makes clumps read as connected instead of 3
-    # unrelated geometric triangles; never reaches an unseen neighboring tile.
-    _polygon(canvas,[
-        c+Vector2(-hw*0.77,0),c+Vector2(0,-hw*0.37),
-        c+Vector2(hw*0.76,0),c+Vector2(0,hw*0.36)
-    ],canopy)
-    var joins: Array = [
-        Vector2(0.48,0.24),Vector2(-0.48,-0.24),
-        Vector2(-0.48,0.24),Vector2(0.48,-0.24)
-    ]
-    for i in range(4):
-        if (neighbor_mask & (1 << i)) == 0:
-            continue
-        var edge: Vector2 = c+joins[i]*hw
-        canvas.draw_circle(edge,hw*0.15,Color("#1A4B36"))
-    # Understory and stones are deterministic, without per-frame RNG.
-    var count: int = 6 if detail >= 2 else 4
+        seed: int, neighbor_mask: int, detail: int,
+        cell: Vector2i = Vector2i.ZERO) -> void:
+    # The canopy floor spans confirmed forest neighbors. Tree placements
+    # are grouped, irregular and deterministic rather than six identical
+    # rows per forest tile. Silhouette geometry is only decoration.
+    Regions.draw_forest_floor(canvas,c,hw,cell,neighbor_mask,detail)
+    var count: int = Regions.forest_density(cell,neighbor_mask,detail)
+    var variation: float = Regions.region_variation(cell,11)
     for i in range(count):
-        var jitter: int = posmod(seed*31+i*47,97)
-        var horizontal: float = float(posmod(seed*7+i*31,29)-14)/20.0
-        var vertical: float = float(posmod(seed*11+i*13,23)-11)/40.0
-        var at := c+Vector2(horizontal*hw*0.79,vertical*hw*0.61)
-        var height: float = hw*(0.43+float(jitter%7)*0.042)
-        # draw farthest trees first; lower row overlaps naturally
-        _pine(canvas,at,height,jitter,detail >= 2)
+        var jitter: int = posmod(seed*31+i*47+cell.x*17+cell.y*29,97)
+        var cluster: float = -0.26 if i%3 == 0 else (
+            0.23 if i%3 == 1 else 0.0)
+        var horizontal: float = cluster + float(
+            posmod(seed*7+i*31+cell.y*13,29)-14)*0.017
+        var vertical: float = float(
+            posmod(seed*11+i*13+cell.x*17,23)-11)*0.011
+        var foot := c+Vector2(horizontal*hw,vertical*hw)
+        var height: float = hw*(0.38+float(jitter%9)*0.028+
+            variation*0.065)
+        _pine(canvas,foot,height,jitter,detail >= 2)
+    # Loose vegetation on exposed forest boundaries, deliberately small
+    # so unit and building icons remain the most legible objects.
     if detail >= 2:
-        for j in range(3):
-            var x: float = float(posmod(seed+j*29,15)-7)*hw*0.095
-            var at := c+Vector2(x,hw*0.13)
-            canvas.draw_circle(at,maxf(1.1,hw*0.034),Color("#668B59"))
+        for j in range(4):
+            var x: float = float(posmod(seed+j*29,15)-7)*hw*0.080
+            var at := c+Vector2(x,hw*0.16)
+            canvas.draw_circle(at,maxf(1.0,hw*0.024),
+                Color(0.44,0.59,0.30,0.42))
 
 static func _mountain_peak(canvas: CanvasItem, center: Vector2,
-        hw: float, reach: float, variant: int, detail: int) -> void:
+        hw: float, reach: float, variant: int, detail: int,
+        snow: bool = true) -> void:
     # Nine nonuniform ridge vertices form a jagged but connected massif
     # instead of two identical triangles. Every surface facet is a
     # separate triangle, preventing concave polygon raster errors.
@@ -151,7 +149,7 @@ static func _mountain_peak(canvas: CanvasItem, center: Vector2,
                     Color("#4C5964"),hw*0.010)
             # Irregular patches of snow cling to the steep summit,
             # rather than forming a repeated triangular cap.
-            if i >= 2 and i <= 5 and (
+            if snow and i >= 2 and i <= 5 and (
                     ridge[i].y < center.y-hw*reach*0.58 and
                     ridge[i+1].y < center.y-hw*reach*0.58):
                 var snow_color := Color("#DCE6E6") if i%2==0 else (
@@ -194,6 +192,8 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
         c+Vector2(0,-hw*0.43),c+Vector2(hw*0.84,0),
         c+Vector2(0,hw*0.40),c+Vector2(-hw*0.84,0)
     ],rock_ground)
+    # Shared rocky piedmont fills valleys between adjacent peaks.
+    Regions.draw_rock_foothills(canvas,c,hw,cell,neighbor_mask,detail)
     # Build ridgeline shoulders all the way to known mountain neighbors.
     for direction_index in range(4):
         if (neighbor_mask & (1 << direction_index)) != 0:
@@ -213,24 +213,31 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
             c+Vector2(-hw*0.84,0),c+Vector2(0,hw*0.40),
             c+Vector2(0,hw*0.52),c+Vector2(-hw*0.84,hw*0.12)
         ],Color("#67746C"))
-    # Differing dominant peaks (rather than the same 3 triangles per
-    # tile) make the ridge appear less mechanically repetitive.
-    var style: int = posmod(seed*73+19,5)
-    var primary_reach: float = 0.77+0.045*float(style)
-    var primary_at := c+Vector2(
-        (float(style)-2.0)*hw*0.036,-hw*0.078)
-    _mountain_peak(canvas,primary_at,hw,primary_reach,seed,detail)
+    # Region-level summit dominance: high massifs emerge sparsely from
+    # broad rocky shoulders, breaking the one-snowy-peak-per-cell pattern.
+    # Cell coordinates are included so two neighbors do not inherit the
+    # same peak geometry merely because their paint seeds match.
+    var strength: float = Regions.summit_strength(cell,neighbor_mask)
+    var variation: float = Regions.region_variation(cell,31)
+    var style: int = posmod(cell.x*13+cell.y*29+seed*3,7)
+    var reach: float = clampf(strength*(0.82+variation*0.14),0.36,0.94)
+    var summit_position := c+Vector2(
+        (variation-0.5)*hw*0.27,-hw*0.043)
+    var snowy: bool = strength > 0.82 and (style%4 != 1)
+    _mountain_peak(canvas,summit_position,hw,reach,
+        seed+cell.x*13+cell.y*17,detail,snowy)
     if detail >= 2:
-        var secondary_at := c+Vector2(
-            (-0.23+float(style%3)*0.06)*hw,hw*0.11)
-        _mountain_peak(canvas,secondary_at,hw,
-            0.39+0.04*float(style%3),seed+5,detail)
-        if style == 0 or style == 3:
-            _mountain_peak(canvas,c+Vector2(hw*0.31,hw*0.17),
-                hw,0.27+float(style)*0.013,seed+11,detail)
-    elif style >= 2:
-        _mountain_peak(canvas,c+Vector2(hw*0.21,hw*0.14),
-            hw,0.38,seed+7,detail)
+        # Secondary shoulders are much shorter and asymmetrical. They
+        # occupy the inter-peak valley rather than adding a second full
+        # snowy mountain to every tile.
+        var shoulder_at := c+Vector2(
+            (-0.24+variation*0.15)*hw,hw*(0.10+variation*0.03))
+        _mountain_peak(canvas,shoulder_at,hw,
+            reach*0.44,seed+29+style,detail,false)
+        if strength < 0.60:
+            var foothill_at := c+Vector2(hw*0.29,hw*0.16)
+            _mountain_peak(canvas,foothill_at,hw,
+                0.23+variation*0.07,seed+43+style,detail,false)
 
 static func draw_bridge(canvas: CanvasItem, c: Vector2, hw: float,
         axis: int, detail: int) -> void:
