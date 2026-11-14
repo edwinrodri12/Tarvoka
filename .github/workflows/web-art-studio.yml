@@ -36,6 +36,7 @@ on:
       - "scripts/ui/TerrainVisualMapBridge3D.gd"
       - "scripts/ui/Main.gd"
       - "tests/test_battle_terrain_3d_v5.gd"
+      - "tests/test_battle_terrain_v17_seams.gd"
       - "tests/test_battle_3d_map_ui_v5.gd"
       - "scripts/ui/TerrainSurfaceFinish3D.gd"
       - "tests/test_terrain_studio_bridge_v4.gd"
@@ -221,6 +222,21 @@ jobs:
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
           test -s artifacts/tarvoka_g09_v10_four_angles.png
           test -s artifacts/tarvoka_g09_v9_closeup_engine.png
+      - name: Verify V17 seamless material grid on 10x8, 24x18 and 40x30 battles
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Mesh vertex buffers require the real OpenGL renderer: headless
+          # dummy mesh storage cannot inspect surface arrays.
+          timeout --signal=TERM --kill-after=5s 135s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_terrain_v17_seams.gd 2>&1 | tee /tmp/battle-terrain-v17.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-terrain-v17.log; then
+            echo "Battle terrain V17 fog or chunk-edge colours, geometry or batch budget regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_BATTLE_V17:' /tmp/battle-terrain-v17.log
       - name: Verify full TARVOKA 3D battle mode inside the browser studio
         shell: bash
         run: |

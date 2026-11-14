@@ -1089,6 +1089,9 @@ func _update_details() -> void:
             int(units.get("visible",0)),int(units.get("detailed",0)),
             int(stats.get("unknown",0)),int(stats.get("trees",0)),
             int(stats.get("roads",0))]
+        status_label.text += " · V17: %d casillas integradas, +%d lotes" % [
+            int(stats.get("blended_tiles",0)),
+            int(stats.get("terrain_blend_extra_batches",0))]
         return
     if _role == "terrain":
         if model_root == null:
