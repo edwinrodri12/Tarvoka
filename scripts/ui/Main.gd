@@ -127,6 +127,7 @@ var balance_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
 var weather_picker: OptionButton
+var weather_cycle_picker: OptionButton
 var weather_status: Label
 var compact_weather: Label
 var relay_picker: OptionButton
@@ -756,6 +757,13 @@ func _ready() -> void:
     weather_picker.add_item("Nieve · hielo y suelo difícil",2)
     weather_picker.select(Weather.TYPES.find(Weather.from_state(board.state)))
     panel.add_child(weather_picker)
+    weather_cycle_picker = OptionButton.new()
+    weather_cycle_picker.name = "PronosticoMeteorologicoAvanzado"
+    weather_cycle_picker.custom_minimum_size.y = 54
+    weather_cycle_picker.add_item("Clima fijo (partida tradicional)",0)
+    weather_cycle_picker.add_item("Clima variable: cambia cada dos rondas",1)
+    weather_cycle_picker.select(1 if board.state.has("weather_cycle") else 0)
+    panel.add_child(weather_cycle_picker)
 
     var fog_help := Label.new()
     fog_help.text = "Niebla: Guardia y otras clases ven 3 casillas, Rastreador y exploradores clasicos ven 5. Las montanas bloquean la vista; solo puedes atacar objetivos visibles."
@@ -1460,12 +1468,19 @@ func _process(_delta: float) -> void:
         var readout: Dictionary = TurnReadout.snapshot(
             board.state,board.selected_id,board.pending_order,board.ai_enabled)
         var climate: String = Weather.from_state(board.state)
-        _update_text(weather_status,"CLIMA · %s · %s" % [
-            Weather.label(climate),
+        var forecast: Dictionary = Weather.forecast(board.state)
+        var conditions: String = (
             "Movilidad normal" if climate == Weather.CLEAR else
-                ("Barro: ruedas fuera de carretera" if climate == Weather.RAIN else "Nieve: suelo difícil y hielo")
-        ])
-        _update_text(compact_weather,"CLIMA: %s" % Weather.label(climate))
+                ("Barro: ruedas fuera de carretera" if climate == Weather.RAIN else "Nieve: suelo difícil y hielo"))
+        var ahead: String = " · Pronóstico: %s en %d turnos" % [
+            Weather.label(str(forecast["next"])),int(forecast["remaining"])] if bool(forecast["dynamic"]) else " · Clima fijo"
+        _update_text(weather_status,"CLIMA · %s · %s%s" % [
+            Weather.label(climate),conditions,ahead])
+        _update_text(compact_weather,"CLIMA: %s%s" % [
+            Weather.label(climate),
+            " · %s en %dT" % [Weather.label(str(forecast["next"])),
+                int(forecast["remaining"])] if bool(forecast["dynamic"]) else " · Fijo"])
+        compact_weather.tooltip_text = "Pronóstico público para ambos bandos." if bool(forecast["dynamic"]) else "Clima fijo durante la batalla."
         var active_side: int = int(board.state.get("faction",-1))
         if _last_turn_side == -2:
             _last_turn_side = active_side
@@ -1901,6 +1916,7 @@ func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
         roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
         weather_picker.select(Weather.TYPES.find(Weather.from_state(board.state)))
+        weather_cycle_picker.select(1 if board.state.has("weather_cycle") else 0)
         relay_picker.select(1 if board.state.has("control") else 0)
         economy_picker.select(1 if board.state.has("economy") else 0)
         if board.state.has("map_seed"):
@@ -1915,6 +1931,7 @@ func _new_game() -> void:
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
     var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
     var weather_name: String = Weather.label(str(Weather.TYPES[weather_picker.get_selected_id()]))
+    weather_name += " (variable cada dos rondas)" if weather_cycle_picker.get_selected_id() == 1 else " (fijo)"
     var objective_name := "control de reles" if relay_picker.get_selected_id() == 1 else "eliminacion"
     var roster_name := "32 clases modernas" if roster_picker.get_selected_id() == 2 else ("5 clases experimentales" if roster_picker.get_selected_id() == 1 else "soldados clasicos")
     if roster_picker.get_selected_id() == 2:
@@ -1947,7 +1964,9 @@ func _confirm_new_game() -> void:
         return
     var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
     var next_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else (Identity.from_state(board.state) if board.state.has(Identity.STATE_FIELD) else {})
-    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity, str(Weather.TYPES[weather_picker.get_selected_id()]))
+    board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
+        str(Weather.TYPES[weather_picker.get_selected_id()]),
+        weather_cycle_picker.get_selected_id() == 1)
     _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
@@ -2066,6 +2085,7 @@ func _prepare_skirmish() -> void:
         "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(), "fog":fog_picker.get_selected_id(),
         "weather":weather_picker.get_selected_id(),
+        "weather_cycle":weather_cycle_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
         "seed":int(map_seed_picker.value)
@@ -2103,6 +2123,7 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     roster_picker.select(int(configuration["roster"]))
     fog_picker.select(int(configuration["fog"]))
     weather_picker.select(int(configuration.get("weather",0)))
+    weather_cycle_picker.select(int(configuration.get("weather_cycle",0)))
     economy_picker.select(int(configuration["economy"]))
     relay_picker.select(int(configuration["objective"]))
     balance_picker.select(int(configuration["balance"]))

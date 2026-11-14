@@ -68,6 +68,49 @@ static func penalty(mode: String, terrain: String, chassis: String) -> int:
             return 1
     return 0
 
+# Deterministic, globally PUBLIC climate sequence. Four completed faction
+# turns = two complete rounds; no random weather rolls or hidden advantages.
+# Legacy and existing V1 battles have no weather_cycle and NEVER change.
+const CYCLE_INTERVAL := 4
+
+static func next_weather(mode: String) -> String:
+    var index: int = TYPES.find(mode)
+    return str(TYPES[(index+1)%TYPES.size()]) if index >= 0 else CLEAR
+
+static func valid_cycle(value: Variant) -> bool:
+    return value is Dictionary and value.size() == 1 and \
+        value.has("remaining") and value["remaining"] is int and \
+        int(value["remaining"]) >= 1 and int(value["remaining"]) <= CYCLE_INTERVAL
+
+static func forecast(state: Dictionary) -> Dictionary:
+    var current: String = from_state(state)
+    var cycle = state.get("weather_cycle",null)
+    if not valid_cycle(cycle):
+        return {"dynamic":false,"current":current,"next":"","remaining":0}
+    return {
+        "dynamic":true,"current":current,"next":next_weather(current),
+        "remaining":int(cycle["remaining"])
+    }
+
+static func advance_after_turn(state: Dictionary) -> Dictionary:
+    # Avoid deep-copying up to 1,200 terrain cells on every legacy/fixed
+    # battle turn. The caller already owns the new authoritative turn state.
+    var cycle = state.get("weather_cycle",null)
+    if not valid_cycle(cycle) or not valid(state.get("weather",null)):
+        return state
+    var result: Dictionary = state.duplicate(true)
+    var remaining: int = int(cycle["remaining"])-1
+    if remaining == 0:
+        result["weather"] = next_weather(str(result["weather"]))
+        remaining = CYCLE_INTERVAL
+    result["weather_cycle"]["remaining"] = remaining
+    return result
+
+static func blended_tint(base: Color, previous: String, current: String,
+        progress: float) -> Color:
+    return terrain_tint(base,previous).lerp(
+        terrain_tint(base,current),clampf(progress,0.0,1.0))
+
 static func terrain_tint(base: Color, mode: String) -> Color:
     if mode == RAIN:
         return base.lerp(Color("#27495E"),0.28)

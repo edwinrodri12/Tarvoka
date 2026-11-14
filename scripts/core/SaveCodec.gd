@@ -39,6 +39,8 @@ static func encode(state: Dictionary) -> String:
     }
     if state.has("weather"):
         snapshot["weather"] = state["weather"]
+    if state.has("weather_cycle"):
+        snapshot["weather_cycle"] = state["weather_cycle"].duplicate(true)
     if state.has(Identity.STATE_FIELD):
         snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
     if state.has("map_seed"):
@@ -221,6 +223,15 @@ static func decode(raw: String) -> Dictionary:
                     next_side[enemy_id] = position
                 contacts[str(faction)] = next_side
             state["contacts"] = contacts
+    if state.has("weather_cycle"):
+        # JSON numbers are sometimes floats. Normalize only integral,
+        # bounded clocks; reject incomplete or forged weather schedules.
+        if not state["weather_cycle"] is Dictionary:
+            return {}
+        var cycle: Dictionary = state["weather_cycle"]
+        if cycle.size() != 1 or not _whole(cycle.get("remaining",null)):
+            return {}
+        cycle["remaining"] = int(cycle["remaining"])
     # Malformed/tampered weather data must not enter a match silently.
     if not _valid_state(state):
         return {}
@@ -228,6 +239,9 @@ static func decode(raw: String) -> Dictionary:
 
 static func _valid_state(state: Dictionary) -> bool:
     if state.has("weather") and not Weather.valid(state["weather"]):
+        return false
+    if state.has("weather_cycle") and (
+            not state.has("weather") or not Weather.valid_cycle(state["weather_cycle"])):
         return false
     if state.has(Identity.STATE_FIELD) and not Identity.is_valid(state[Identity.STATE_FIELD]):
         return false

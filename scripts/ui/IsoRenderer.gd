@@ -57,7 +57,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
         unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
         site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1),
-        threat_preview: Dictionary = {}, compared_cells: Array[Vector2i] = []) -> void:
+        threat_preview: Dictionary = {}, compared_cells: Array[Vector2i] = [], weather_before: String = "clear", weather_blend: float = 1.0) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -96,7 +96,9 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     unknown += 1
                     continue
                 var terrain: String = str(state["terrain"][y][x])
-                var tint: Color = Weather.terrain_tint(VisualStyle.terrain_color(terrain,x,y), Weather.from_state(state))
+                var tint: Color = Weather.blended_tint(
+                    VisualStyle.terrain_color(terrain,x,y),
+                    weather_before,Weather.from_state(state),weather_blend)
                 _tile(canvas,vertices,tint)
                 if detail == VisualBudget.DETAIL_FULL:
                     canvas.draw_line(vertices[0],vertices[1],tint.lightened(0.20),

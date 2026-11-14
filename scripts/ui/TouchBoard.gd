@@ -88,6 +88,11 @@ var motion_effects: Array[Dictionary] = []
 var unit_headings: Dictionary = {}
 var art_phase := 0.0
 var _ambient_accum := 0.0
+# Presentation-only transition: no influence on weather rules or saves.
+var weather_visual_previous := "clear"
+var weather_visual_current := "clear"
+var weather_blend := 1.0
+const WEATHER_TRANSITION_SECONDS := 1.4
 const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
@@ -97,7 +102,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear") -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false) -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -137,7 +142,10 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
             unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
-    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather)
+    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
+    weather_visual_current = Weather.from_state(state)
+    weather_visual_previous = weather_visual_current
+    weather_blend = 1.0
     if Identity.is_valid(chosen_factions):
         # Cosmetic team presentation only; no new engine faction values.
         state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
@@ -412,7 +420,7 @@ func _draw() -> void:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
             inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview(),
-            comparison_cells())
+            comparison_cells(),weather_visual_previous,weather_blend)
         _draw_campaign_markers()
         AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
             iso_zoom,iso_pan,map_dimensions(),battery_saver)
@@ -428,7 +436,9 @@ func _draw() -> void:
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
-            var terrain_color: Color = Weather.terrain_tint(VisualStyle.terrain_color(terrain_type, x, y),Weather.from_state(state))
+            var terrain_color: Color = Weather.blended_tint(
+                VisualStyle.terrain_color(terrain_type,x,y),
+                weather_visual_previous,Weather.from_state(state),weather_blend)
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
             # Subtle tile relief reads as depth without changing top-down touch geometry.
             draw_line(pos + Vector2(1, 1), pos + Vector2(tile - 1, 1), terrain_color.lightened(0.25), maxf(1.0, tile * 0.024))
@@ -688,6 +698,15 @@ func _draw_campaign_markers() -> void:
 func _process(delta: float) -> void:
     var dt: float = maxf(0.0, delta)
     var needs_redraw := false
+    var current_weather: String = Weather.from_state(state)
+    if current_weather != weather_visual_current:
+        weather_visual_previous = weather_visual_current
+        weather_visual_current = current_weather
+        weather_blend = 0.0 if not battery_saver else 1.0
+        needs_redraw = true
+    if weather_blend < 1.0:
+        weather_blend = minf(1.0, weather_blend + dt / WEATHER_TRANSITION_SECONDS)
+        needs_redraw = true
     if iso_enabled:
         art_phase = fmod(art_phase + minf(dt,0.12), TAU*10.0)
         _ambient_accum += dt
@@ -1392,6 +1411,9 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    weather_visual_current = Weather.from_state(state)
+    weather_visual_previous = weather_visual_current
+    weather_blend = 1.0
     view_zoom = 1.0
     view_pan = Vector2.ZERO
     iso_zoom = 1.0
@@ -1439,6 +1461,9 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    weather_visual_current = Weather.from_state(state)
+    weather_visual_previous = weather_visual_current
+    weather_blend = 1.0
     view_zoom = 1.0
     view_pan = Vector2.ZERO
     iso_zoom = 1.0
