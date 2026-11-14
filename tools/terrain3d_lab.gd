@@ -7,6 +7,8 @@ class_name TarvokaTerrain3DLab
 const TerrainMesh = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
+const WaterMaterial = preload("res://scripts/ui/TerrainWaterMaterial.gd")
+const Conifers = preload("res://scripts/ui/Conifer3DMesh.gd")
 var terrain: Array = []
 var observed: Dictionary = {}
 var restrict_to_observed := false
@@ -50,6 +52,7 @@ func _ready() -> void:
     _water = MeshInstance3D.new()
     _water.name = "ShapedRiverSurface"
     add_child(_water)
+    _water.material_override = WaterMaterial.make_material(divisions >= 4)
     _canopies = MultiMeshInstance3D.new()
     _canopies.name = "ForestCanopies"
     add_child(_canopies)
@@ -112,6 +115,9 @@ func set_quality(segments: int) -> void:
     if next_divisions == divisions:
         return
     divisions = next_divisions
+    if _water != null:
+        _water.material_override = WaterMaterial.make_material(
+            divisions >= 4)
     if is_inside_tree() and _ground != null:
         rebuild(false)
 
@@ -179,15 +185,9 @@ func _generate_forest() -> void:
         return
     _canopies.visible = true
     _trunks.visible = true
-    var leaf_mesh := CylinderMesh.new()
-    leaf_mesh.top_radius = 0.035
-    leaf_mesh.bottom_radius = 0.27
-    leaf_mesh.height = 0.74
-    leaf_mesh.radial_segments = 7
-    var foliage := StandardMaterial3D.new()
-    foliage.vertex_color_use_as_albedo = true
-    foliage.roughness = 0.90
-    leaf_mesh.material = foliage
+    # Reuse ONE serrated crown per quality tier. A single MultiMesh
+    # handles all trees, rather than three individual meshes per pine.
+    var leaf_mesh: ArrayMesh = Conifers.build_crown(divisions >= 4)
     var trunk_mesh := CylinderMesh.new()
     trunk_mesh.top_radius = 0.052
     trunk_mesh.bottom_radius = 0.073
@@ -201,9 +201,8 @@ func _generate_forest() -> void:
     leaf_instances.transform_format = MultiMesh.TRANSFORM_3D
     leaf_instances.use_colors = true
     leaf_instances.mesh = leaf_mesh
-    # Two canopy tiers per pine produce a stepped crown with the same
-    # single GPU batched MultiMesh, avoiding hundreds of individual nodes.
-    leaf_instances.instance_count = trees.size()*2
+    # The shared crown mesh already contains all irregular branch tiers.
+    leaf_instances.instance_count = trees.size()
     var trunk_instances := MultiMesh.new()
     trunk_instances.transform_format = MultiMesh.TRANSFORM_3D
     trunk_instances.mesh = trunk_mesh
@@ -213,20 +212,18 @@ func _generate_forest() -> void:
         var p: Vector3 = tree["position"]
         var scale: float = tree["scale"]
         var seed: int = tree["seed"]
-        var lower_basis := Basis().scaled(Vector3(
-            scale*1.02,scale*0.88,scale*1.02))
-        var upper_basis := Basis().scaled(Vector3(
-            scale*0.70,scale*0.74,scale*0.70))
         var crown_tint: Color = [
             Color("#214F37"),Color("#2C6240"),
             Color("#315D47"),Color("#416D4B")
         ][seed%4]
-        leaf_instances.set_instance_transform(i*2,Transform3D(
-            lower_basis,p+Vector3(0,scale*0.52,0)))
-        leaf_instances.set_instance_color(i*2,crown_tint.darkened(0.12))
-        leaf_instances.set_instance_transform(i*2+1,Transform3D(
-            upper_basis,p+Vector3(0,scale*0.80,0)))
-        leaf_instances.set_instance_color(i*2+1,crown_tint.lightened(0.14))
+        var turn: float = float(seed)*0.27
+        var crown_basis := Basis(Vector3.UP,turn).scaled(Vector3(
+            scale*(0.90+float(seed%5)*0.048),
+            scale*(0.89+float(seed%7)*0.043),
+            scale*(0.93+float(seed%3)*0.065)))
+        leaf_instances.set_instance_transform(i,Transform3D(
+            crown_basis,p))
+        leaf_instances.set_instance_color(i,crown_tint)
         var trunk_basis := Basis().scaled(Vector3(scale,scale,scale))
         trunk_instances.set_instance_transform(i,Transform3D(
             trunk_basis,p+Vector3(0,scale*0.23,0)))
