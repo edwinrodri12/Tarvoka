@@ -9,6 +9,7 @@ const Hints = preload("res://scripts/core/TacticalHints.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
+const Mini = preload("res://scripts/ui/BattleMinimap.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -82,7 +83,9 @@ func _run() -> void:
     assert(int(legal_snow[two_steps]) == int(snow[two_steps]))
     assert(int(legal_rain[two_steps]) == int(rain[two_steps]))
     var ai_snow: Dictionary = BasicAI._reachable_for(Visibility.observed_state(snow_game,0),snow_game["units"][0])
-    assert(ai_snow == legal_snow.merged({start:0})) # Same public endpoints and origin.
+    var with_origin: Dictionary = legal_snow.duplicate()
+    with_origin[start] = 0
+    assert(ai_snow == with_origin) # Same public endpoints and origin.
     var before_fuel: int = int(snow_game["units"][0]["fuel"])
     var ordered: Dictionary = Session.move(snow_game,"W",two_steps)
     assert(ordered["valid"])
@@ -139,7 +142,7 @@ func _run() -> void:
     main.battle_minimap.queue_redraw()
     await process_frame
     assert(main.battle_minimap.visible)
-    assert(main.battle_minimap.safe_snapshot(main.board.state,0,false)["weather"] == "snow")
+    assert(Mini.safe_snapshot(main.board.state,0,false)["weather"] == "snow")
     main.board.set_battery_saver(true)
     main.board.queue_redraw()
     await process_frame
