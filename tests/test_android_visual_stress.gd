@@ -23,7 +23,7 @@ func _run() -> void:
             push_error("Stress screen did not complete the five work cases")
             quit(1)
             return
-    assert(bench.results.size() == 10)
+    assert(bench.results.size() == 11)
     assert(not bench.running)
     assert(bench.results[0]["map"] == "24x18")
     assert(bench.results[0]["actual_tanks"] == 24)
@@ -47,6 +47,14 @@ func _run() -> void:
     assert(bench.results[9]["actual_tanks"] == 768)
     assert(bench.results[9]["actual_sites"] == 256)
     assert(bench.results[9]["battery_saver"])
+    assert(bench.results[10]["visual_factions"] == 8)
+    assert(bench.results[10]["actual_tanks"] == 768)
+    assert(bench.results[10]["actual_sites"] == 256)
+    # Only the visible area should be sorted/drawn at maximum zoom:
+    # establishes a real culling regression guard for 8-party-scale maps.
+    assert(int(bench.results[10]["units_sorted"]) < 768)
+    assert(int(bench.results[10]["units_drawn"]) < 768)
+    assert(int(bench.results[10]["sites_drawn"]) < 256)
     # All eight identities share the actual Godot renderer, but NOT the
     # authoritative multiplayer/turn engine. Full 8-team participation is QA.
     assert(bool(bench.board.state.get("__qa_visual_eight_sides",false)))
@@ -75,7 +83,7 @@ func _run() -> void:
     var raw := FileAccess.get_file_as_string("user://tarvoka_stress_report.json")
     var report: Variant = JSON.parse_string(raw)
     assert(report is Dictionary)
-    assert(report["cases"].size() == 10)
+    assert(report["cases"].size() == 11)
     # Exercise Main integration without opening an autosave-changing scene.
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
@@ -93,5 +101,5 @@ func _run() -> void:
     overlay.queue_free()
     main.queue_free()
     bench.queue_free()
-    print("PASS TARVOKA Android stress QA: 10 visual workloads, 8 visual teams, 768 tanks, 256 buildings, HQ, weather, VFX, report and untouched skirmish")
+    print("PASS TARVOKA Android stress QA: 11 visual workloads, 8 visual teams, 768 tanks, 256 buildings, camera culling, HQ, weather, VFX, report and untouched skirmish")
     quit(0)
