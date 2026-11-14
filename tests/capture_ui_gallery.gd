@@ -275,6 +275,43 @@ func _run_gallery() -> void:
     if not await _capture_landscape("34-nieve-movilidad-isometrica-1280x720",Vector2i(1280,720),
             "Clima nieve · suelo helado, unidades y mapa isométrico con minimapa"):
         _failed = true
+
+    # Live two-round forecast. Capture one real starting climate, then a
+    # genuine sequence of FOUR completed faction turns before showing rain.
+    var dynamic_match: Dictionary = Session.start([vehicle,climate_enemy],risk_terrain,0,
+        false,false,false,false,false,"clear",true)
+    main.board.state = dynamic_match
+    main.board._process(3.0)
+    main.board.set_isometric(false)
+    main._set_compact_hud(true)
+    main.board.queue_redraw()
+    main._process(0.0)
+    if not main.compact_weather.text.contains("Lluvia en 4T"):
+        push_error("Public mobile dynamic forecast is not visible on the actual battlefield.")
+        _failed = true
+    if not await _capture_landscape("35-pronostico-movil-960x540",Vector2i(960,540),
+            "Clima dinámico · despejado, lluvia prevista dentro de cuatro turnos"):
+        _failed = true
+    for _step in range(4):
+        var advanced: Dictionary = Session.end_turn(dynamic_match)
+        if not bool(advanced.get("valid",false)):
+            push_error("The dynamic climate gallery could not finish a legitimate faction turn.")
+            _failed = true
+            break
+        dynamic_match = advanced["state"]
+    main.board.state = dynamic_match
+    main.board._process(0.65) # Genuine midpoint of the color transition
+    main.board.set_isometric(true)
+    main._set_compact_hud(false)
+    main.board.queue_redraw()
+    main.battle_minimap.queue_redraw()
+    main._process(0.0)
+    if not main.weather_status.text.contains("Nieve en 4 turnos") or not main.battle_minimap.visible:
+        push_error("Four completed turns did not trigger real rain/next snow forecast.")
+        _failed = true
+    if not await _capture_landscape("36-cambio-lluvia-isometrica-1280x720",Vector2i(1280,720),
+            "Transición meteorológica · lluvia real y próxima nieve, mapa y minimapa"):
+        _failed = true
     main.board.state = old_weather_scene
     main.board.selected_id = weather_original_selection
     main.board.set_isometric(weather_original_iso)
@@ -483,11 +520,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 34:
-        push_error("Landscape UI QA incomplete: %d/34 captures" % _manifest.size())
+    if _failed or _manifest.size() != 36:
+        push_error("Landscape UI QA incomplete: %d/36 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 34 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 36 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
