@@ -274,11 +274,16 @@ func _finish_sample() -> void:
         "worst_ms":frames[count-1],"max_process_ms":
             Performance.get_monitor(Performance.TIME_PROCESS)*1000.0,
         "device":OS.get_model_name(),"os":OS.get_name(),
-        "screen":str(DisplayServer.screen_get_size()),
+        # CSV-safe screen dimensions; Vector2i string contains a comma.
+        "screen":"%dx%d" % [DisplayServer.screen_get_size().x,
+            DisplayServer.screen_get_size().y],
         "weather":WEATHER[_weather] if _mode==0 else "batched_dry"
     }
     _records.append(info)
-    print("TARVOKA_HQ_PHYSICAL,%s" % JSON.stringify(info))
+    if OS.get_name()=="Android":
+        print("TARVOKA_HQ_PHYSICAL,%s" % JSON.stringify(info))
+    else:
+        print("TARVOKA_HQ_SYNTHETIC_QA,%s" % JSON.stringify(info))
     metrics.text = "%s\nPromedio: %.1f FPS\n1%% peor: %.1f FPS\nMáximo: %.1f ms" % [
         MODE_NAMES[_mode],avg_fps,low_fps,frames[count-1]]
     _save_csv()
