@@ -15,6 +15,7 @@ const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
 const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
 const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
 const EcotonesV8 = preload("res://scripts/ui/TerrainStudioEcotonesV8.gd")
+const FoothillsV11 = preload("res://scripts/ui/TerrainStudioFoothillsV11.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -571,7 +572,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v8_talus: bool = false, v8_ecotone: bool = false,
         v9_rock_facets: bool = false,
         v9_ecotone_tones: bool = false,
-        v10_sculpted_ridges: bool = false) -> Node3D:
+        v10_sculpted_ridges: bool = false,
+        v11_aprons: bool = false, v11_outcrops: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -596,6 +598,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v9_rock_facets",continuous and show_scatter and v7_ridges and v9_rock_facets)
     root.set_meta("terrain_studio_v9_ecotone_tones",continuous and show_scatter and v9_ecotone_tones and (v8_talus or v8_ecotone))
     root.set_meta("terrain_studio_v10_sculpted_ridges",continuous and show_scatter and v7_ridges and v10_sculpted_ridges)
+    root.set_meta("terrain_studio_v11_aprons",continuous and show_scatter and v10_sculpted_ridges and v11_aprons)
+    root.set_meta("terrain_studio_v11_outcrops",continuous and show_scatter and v10_sculpted_ridges and v11_outcrops)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -748,6 +752,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v8_stats = EcotonesV8.populate(props,detail_cells,preset,
             v8_talus,v8_ecotone,v9_ecotone_tones)
     root.set_meta("terrain_ecotones_v8",v8_stats)
+    var v11_stats := {
+        "mountain_edges":0,"apron_triangles":0,"boulders":0,
+        "road_cells_skipped":0,"water_cells_skipped":0,"batches":0}
+    if continuous and show_scatter and v7_ridges and v10_sculpted_ridges and (
+            v11_aprons or v11_outcrops):
+        v11_stats = FoothillsV11.populate(props,detail_cells,preset,
+            v11_aprons,v11_outcrops)
+    root.set_meta("terrain_foothills_v11",v11_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
