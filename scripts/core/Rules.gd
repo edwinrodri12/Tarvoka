@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaRules
 
 const Domains = preload("res://scripts/core/Domains.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 
 const WIDTH := 10
 const HEIGHT := 8
@@ -53,11 +54,13 @@ static func movement_cost_for(terrain: String, domain: String = "ground") -> int
 # motorized ground units, while ordinary ground/air/naval rules remain intact.
 # A full movement point therefore covers TWO road cells for a vehicle.
 # Returned costs stay integer (ceil of half-points) for fuel and UI parity.
-static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground", motorized: bool = false, transit_only: Array[Vector2i] = []) -> Dictionary:
+static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground", motorized: bool = false, transit_only: Array[Vector2i] = [], weather: String = "clear", traction: String = "foot") -> Dictionary:
     var distances := {}
     if not valid_terrain(terrain) or not inside(origin, terrain) or points < 0 or origin in blocked or not Domains.valid_domain(domain):
         return distances
     if movement_cost_for(terrain[origin.y][origin.x], domain) < 0:
+        return {}
+    if not Weather.valid(weather) or traction not in Weather.TRACTIONS:
         return {}
     var road_bonus: bool = motorized and domain == Domains.GROUND
     var scale: int = 2 if road_bonus else 1
@@ -77,7 +80,10 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
             var base: int = movement_cost_for(kind, domain)
             if base < 0:
                 continue
-            var cost: int = 1 if road_bonus and kind == "road" else base * scale
+            var cost: int = (1 if road_bonus and kind == "road" else base * scale)
+            # Weather surcharge is charged on every entered cell, using
+            # the same half-point precision as road travel. No UI-only cost.
+            cost += Weather.penalty(weather,kind,traction) * scale
             # A slow unit can climb ONE adjacent mountain, using its whole
             # move allowance. No chain of mountain shortcuts is permitted.
             if domain == Domains.GROUND and kind == "mountain" and current == origin and points > 0 and cost > budget:
