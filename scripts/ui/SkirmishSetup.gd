@@ -18,6 +18,7 @@ var size_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
 var weather_picker: OptionButton
+var weather_cycle_picker: OptionButton
 var economy_picker: OptionButton
 var objective_picker: OptionButton
 var balance_picker: OptionButton
@@ -133,6 +134,10 @@ func _ready() -> void:
         "Despejado · movilidad normal",
         "Lluvia · ruedas frenan fuera de carretera",
         "Nieve · hielo y terreno difícil"
+    ])
+    weather_cycle_picker = _picker(content,"Pronóstico",[
+        "Clima fijo durante toda la batalla",
+        "Variable · cambia cada dos rondas"
     ])
     # Live preview reuses the real scenario generator. Pure UI: it never
     # creates units, reveals fog from a running match or replaces save data.
@@ -339,6 +344,7 @@ func apply_preset(index: int) -> void:
             roster_picker.select(0)
             fog_picker.select(0)
             weather_picker.select(0)
+            weather_cycle_picker.select(0)
             economy_picker.select(0)
             objective_picker.select(0)
             balance_picker.select(0)
@@ -350,6 +356,7 @@ func apply_preset(index: int) -> void:
             roster_picker.select(2)
             fog_picker.select(1)
             weather_picker.select(0)
+            weather_cycle_picker.select(0)
             economy_picker.select(1)
             objective_picker.select(1)
             balance_picker.select(1)
@@ -361,6 +368,7 @@ func apply_preset(index: int) -> void:
             roster_picker.select(2)
             fog_picker.select(1)
             weather_picker.select(0)
+            weather_cycle_picker.select(0)
             economy_picker.select(1)
             objective_picker.select(0)
             balance_picker.select(1)
@@ -370,7 +378,7 @@ func apply_preset(index: int) -> void:
 
 func load_choices(values: Dictionary) -> void:
     selected_factions = Identity.resolved(values.get("factions",{}))
-    for name in ["scenario","size","roster","fog","weather","economy","objective","balance","first"]:
+    for name in ["scenario","size","roster","fog","weather","weather_cycle","economy","objective","balance","first"]:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
@@ -403,7 +411,9 @@ func _changed() -> void:
         economy_picker.get_item_text(economy_picker.selected),
         objective_picker.get_item_text(objective_picker.selected)
     ]
-    preset_summary += " · Clima: %s" % ["Despejado","Lluvia","Nieve"][weather_picker.selected]
+    preset_summary += " · Clima: %s (%s)" % [
+        ["Despejado","Lluvia","Nieve"][weather_picker.selected],
+        "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
     if scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID:
         preset_summary += "\nSemilla reproducible: %d" % int(seed_picker.value)
     var blue: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},0)
@@ -432,6 +442,7 @@ func options() -> Dictionary:
         "roster":roster_picker.get_selected_id(),
         "fog":fog_picker.get_selected_id(),
         "weather":weather_picker.get_selected_id(),
+        "weather_cycle":weather_cycle_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(),
         "objective":objective_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(),
