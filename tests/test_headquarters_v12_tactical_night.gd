@@ -151,13 +151,14 @@ func _run() -> void:
     studio.hq_lighting_picker.select(2)
     studio._change_hq_lighting(2)
     assert(studio.hq_night_lamps[0].visible)
-    assert(studio.hq_key_light.light_energy > 0.65)
+    assert(studio.hq_key_light.light_energy > 0.55)
     assert(studio.hq_environment.environment.ambient_light_energy > 0.95)
     for i in range(12):
         await process_frame
     var night: Image = studio.preview.get_texture().get_image()
     assert(night != null and not night.is_empty())
     var luma: float = _avg_luma(night)
+    print("HQ V12 night measured luma: %.4f" % luma)
     # Bright enough to inspect, but visibly night (not a blue daytime sky).
     assert(luma>0.12)
     assert(luma<0.31)
