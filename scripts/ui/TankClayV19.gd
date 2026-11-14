@@ -5,7 +5,7 @@ class_name TarvokaTankClayV19
 # One flat neutral PBR material exposes topology, faceting and silhouettes
 # instead of allowing PBR textures/faction stripes to mask modeling faults.
 # There is no shader compilation or per-pixel wireframe pass at run time.
-const CLAY := Color("#A1A8AC")
+const CLAY := Color("#667078")  # Medium-value gray; avoids blown highlights under studio lights.
 const RESTORE := "tarvoka_v19_clay_restore"
 const EFFECT_NAMES := [
     "HumoGrisMotor","VahoMotor","HumoNegroCritico",
@@ -19,7 +19,7 @@ static func _material() -> StandardMaterial3D:
     if _shared_clay == null:
         _shared_clay = StandardMaterial3D.new()
         _shared_clay.albedo_color = CLAY
-        _shared_clay.roughness = 0.88
+        _shared_clay.roughness = 0.94
         _shared_clay.metallic = 0.0
         _shared_clay.normal_enabled = false
         _shared_clay.cull_mode = BaseMaterial3D.CULL_DISABLED
