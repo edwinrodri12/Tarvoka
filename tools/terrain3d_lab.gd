@@ -9,12 +9,16 @@ const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 const WaterMaterial = preload("res://scripts/ui/TerrainWaterMaterial.gd")
 const Conifers = preload("res://scripts/ui/Conifer3DMesh.gd")
+const Shores = preload("res://scripts/ui/TerrainShore3D.gd")
+const Understory = preload("res://scripts/ui/TerrainUnderstory3D.gd")
 var terrain: Array = []
 var observed: Dictionary = {}
 var restrict_to_observed := false
 var divisions := 5
 var _ground: MeshInstance3D
 var _water: MeshInstance3D
+var _banks: MeshInstance3D
+var _undergrowth: MultiMeshInstance3D
 var _canopies: MultiMeshInstance3D
 var _trunks: MultiMeshInstance3D
 var _bridges: Node3D
@@ -53,6 +57,12 @@ func _ready() -> void:
     _water.name = "ShapedRiverSurface"
     add_child(_water)
     _water.material_override = WaterMaterial.make_material(divisions >= 4)
+    _banks = MeshInstance3D.new()
+    _banks.name = "HeightfieldShorelineErosion"
+    add_child(_banks)
+    _undergrowth = MultiMeshInstance3D.new()
+    _undergrowth.name = "SlopeFollowingUnderstory"
+    add_child(_undergrowth)
     _canopies = MultiMeshInstance3D.new()
     _canopies.name = "ForestCanopies"
     add_child(_canopies)
@@ -141,6 +151,9 @@ func rebuild(fit_camera: bool = true) -> void:
     _water.mesh = TerrainMesh.build_water(
         terrain,observed,restrict_to_observed,
         maxi(6,divisions*2))
+    _banks.mesh = Shores.build_banks(
+        terrain,observed,restrict_to_observed,
+        8 if divisions >= 4 else 4)
     _generate_forest()
     _generate_bridges()
     if fit_camera:
@@ -148,6 +161,7 @@ func rebuild(fit_camera: bool = true) -> void:
 
 func _generate_forest() -> void:
     var trees: Array = []
+    var shrubs: Array = []
     for y in range(terrain.size()):
         if not (terrain[y] is Array):
             continue
@@ -176,15 +190,28 @@ func _generate_forest() -> void:
                 trees.append({"position":Vector3(
                     float(x)+u,height,float(y)+v),
                     "scale":scale,"seed":seed})
+            # Forest ground cover follows the same heightfield as trunks
+            # and stays inside known forest cells (never into water).
+            var shrub_count: int = 3 if divisions >= 4 else 1
+            for plant in range(shrub_count):
+                var local: Vector2 = Understory.placement(cell,plant)
+                var elevation: float = TerrainMesh.height_at(
+                    terrain,cell,local.x,local.y,observed,
+                    restrict_to_observed)
+                shrubs.append({"position":Vector3(
+                    float(x)+local.x,elevation,float(y)+local.y),
+                    "seed":posmod(x*67+y*131+plant*37,109)})
     if trees.is_empty():
         # Keep the MultiMesh resources allocated while a forest is entirely
         # behind fog. Clearing a live MultiMeshInstance3D.mesh to null can
         # issue mesh_get_surface_count(null) on the headless renderer.
         _canopies.visible = false
         _trunks.visible = false
+        _undergrowth.visible = false
         return
     _canopies.visible = true
     _trunks.visible = true
+    _undergrowth.visible = true
     # Reuse ONE serrated crown per quality tier. A single MultiMesh
     # handles all trees, rather than three individual meshes per pine.
     var leaf_mesh: ArrayMesh = Conifers.build_crown(divisions >= 4)
@@ -229,6 +256,24 @@ func _generate_forest() -> void:
             trunk_basis,p+Vector3(0,scale*0.23,0)))
     _canopies.multimesh = leaf_instances
     _trunks.multimesh = trunk_instances
+    var shrub_instances := MultiMesh.new()
+    shrub_instances.transform_format = MultiMesh.TRANSFORM_3D
+    shrub_instances.use_colors = true
+    shrub_instances.mesh = Understory.shrub_mesh(divisions >= 4)
+    shrub_instances.instance_count = shrubs.size()
+    for index in range(shrubs.size()):
+        var plant_data: Dictionary = shrubs[index]
+        var plant_pos: Vector3 = plant_data["position"]
+        var plant_seed: int = plant_data["seed"]
+        var angle: float = float(plant_seed)*0.41
+        var shrub_scale: float = 0.69+float(plant_seed%7)*0.055
+        shrub_instances.set_instance_transform(index,Transform3D(
+            Basis(Vector3.UP,angle).scaled(
+                Vector3.ONE*shrub_scale),plant_pos))
+        shrub_instances.set_instance_color(index,
+            Color("#7D955E") if plant_seed%3 == 0 else (
+                Color("#597E57")))
+    _undergrowth.multimesh = shrub_instances
 
 func _box(parent: Node3D, name: String, dimensions: Vector3,
         position: Vector3, material: Material) -> void:
