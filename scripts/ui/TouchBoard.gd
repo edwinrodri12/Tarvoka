@@ -26,6 +26,7 @@ const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
 const ThreatData = preload("res://scripts/ui/ThreatAwarenessData.gd")
 const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
+const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
@@ -56,6 +57,10 @@ var _alert_marker_snapshot: Array = []
 var threat_preview_enabled := false
 var _threat_preview_key := -1
 var _threat_preview_snapshot: Dictionary = {}
+# Completely transient UI state: never written into Session or save data.
+var compare_mode := false
+var compare_candidates: Array[Vector2i] = []
+var _compare_signature := -1
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var last_economy_report := ""
@@ -140,6 +145,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    compare_mode = false
+    compare_candidates.clear()
     message = "Apertura equilibrada: %d ordenes disponibles para quien comienza." % Opening.remaining(state)
     last_enemy_turn_report = ""
     last_economy_report = ""
@@ -330,11 +337,79 @@ func threat_preview() -> Dictionary:
         _threat_preview_snapshot = ThreatData.preview(state,selected_id,viewer,ai_enabled)
     return _threat_preview_snapshot
 
+func _compare_key() -> int:
+    return hash([state,selected_id,ai_enabled])
+
+func comparison_cells() -> Array[Vector2i]:
+    if not compare_mode:
+        return []
+    if _compare_key() != _compare_signature or not pending_order.is_empty() or campaign_locked:
+        compare_mode = false
+        compare_candidates.clear()
+        return []
+    return compare_candidates.duplicate()
+
+func toggle_destination_comparison() -> bool:
+    if compare_mode:
+        compare_mode = false
+        compare_candidates.clear()
+        message = "Comparación de destinos cerrada."
+        queue_redraw()
+        return false
+    var viewer: int = 0 if ai_enabled else int(state.get("faction",-1))
+    if campaign_locked or selected_id.is_empty() or not pending_order.is_empty() or int(state.get("winner",-1)) != -1 or (ai_enabled and int(state.get("faction",-1)) != 0) or viewer not in [0,1]:
+        message = "Selecciona primero una unidad disponible y cancela cualquier orden pendiente."
+        return false
+    if TacticalHints.for_unit(state,selected_id).get("moves",{}).is_empty():
+        message = "Esta unidad no tiene movimientos disponibles para comparar."
+        return false
+    compare_mode = true
+    compare_candidates.clear()
+    _compare_signature = _compare_key()
+    message = "COMPARAR: toca hasta tres casillas azules. Tócalas otra vez para quitarlas."
+    queue_redraw()
+    return true
+
+func toggle_compared_cell(cell: Vector2i) -> bool:
+    comparison_cells() # Reject a stale saved game, unit selection or turn.
+    if not compare_mode or not Rules.inside(cell,state.get("terrain",[])):
+        return false
+    if not TacticalHints.for_unit(state,selected_id).get("moves",{}).has(cell):
+        message = "Solo puedes comparar destinos azules legales para la unidad seleccionada."
+        return false
+    if cell in compare_candidates:
+        compare_candidates.erase(cell)
+    elif compare_candidates.size() < 3:
+        compare_candidates.append(cell)
+    else:
+        message = "Máximo tres destinos. Quita uno para comparar otro."
+        queue_redraw()
+        return false
+    message = "Comparación: %d/3 destinos marcados. Elige una opción en el panel para preparar el movimiento." % compare_candidates.size()
+    queue_redraw()
+    return true
+
+func stage_compared_destination(cell: Vector2i) -> bool:
+    var chosen: Array[Vector2i] = comparison_cells()
+    if not compare_mode or not pending_order.is_empty() or not (cell in chosen):
+        return false
+    if not TacticalHints.for_unit(state,selected_id).get("moves",{}).has(cell):
+        return false
+    # Mandatory two-stage safety even on a board without Main. The ordinary
+    # confirm handler still revalidates the order before any movement occurs.
+    pending_order = {"unit_id":selected_id,"cell":cell,"kind":"move","target_id":""}
+    compare_mode = false
+    compare_candidates.clear()
+    message = "Destino (%d,%d) preparado. Debes pulsar Confirmar movimiento." % [cell.x+1,cell.y+1]
+    queue_redraw()
+    return true
+
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
-            inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview())
+            inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview(),
+            comparison_cells())
         _draw_campaign_markers()
         AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
             iso_zoom,iso_pan,map_dimensions(),battery_saver)
@@ -459,6 +534,7 @@ func _draw() -> void:
     # previews. Green bars are actual defensive terrain bonuses for the
     # selected unit; an unmarked cell is not guaranteed to be safe.
     ThreatPainter.draw_classic(self,threat_preview(),origin,tile,size)
+    ComparisonPainter.draw_classic(self,comparison_cells(),origin,tile,size)
     # Surface units are always painted first, aircraft last. Independent
     # air/surface glyph positions make stacks readable on a small phone.
     var draw_units: Array = state.get("units", []).duplicate()
@@ -737,6 +813,8 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
         BattleVFX.draw_damage_readout(self,effect,center,origin_center,tile,battery_saver)
 
 func cancel_selection() -> void:
+    compare_mode = false
+    compare_candidates.clear()
     if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1) and inspected_cell == Vector2i(-1,-1):
         return
     selected_id = ""
@@ -790,6 +868,8 @@ func _commit_order(order: Dictionary) -> bool:
     var kind := str(order.get("kind", ""))
     var enemy_id := str(order.get("target_id", ""))
     pending_order.clear()
+    compare_mode = false
+    compare_candidates.clear()
     if unit_id.is_empty() or unit_id != selected_id or not (cell is Vector2i):
         message = "Orden cancelada."
         return false
@@ -1055,6 +1135,14 @@ func _tap(point: Vector2) -> void:
     var cell: Vector2i = screen_cell(point)
     if cell.x < 0 or cell.y < 0:
         return
+    # Compare mode is an explicit safety tool: taps only add/remove LEGAL
+    # movement candidates, never fire weapons or commit an order.
+    if compare_mode:
+        comparison_cells() # Invalidate stale UI state after turn/selection changes.
+        if compare_mode:
+            toggle_compared_cell(cell)
+            queue_redraw()
+            return
     inspected_cell = cell # Any revealed tile may show contextual info.
     var target: Dictionary = {}
     var visible: Dictionary = Visibility.visible_cells(state, 0) if Visibility.enabled(state) else {}
@@ -1311,6 +1399,8 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    compare_mode = false
+    compare_candidates.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""
     var loaded_winner := int(state.get("winner", -1))
@@ -1356,6 +1446,8 @@ func resume_autosave() -> bool:
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    compare_mode = false
+    compare_candidates.clear()
     last_enemy_turn_report = ""
     last_economy_report = ""
     message = "Se recupero una copia anterior de la partida." if bool(report["recovered"]) else "Partida recuperada automaticamente."
