@@ -361,6 +361,9 @@ func _record_case() -> void:
         "max_static_memory_mb":snappedf(_peak_mem_mb,0.1),
         "max_draw_calls_reported":_peak_draw_calls,
         "tiles_drawn":int(_last_stats.get("tiles_drawn",0)),
+        "environment_stride":int(_last_stats.get("environment_stride",1)),
+        "precipitation_cells":int(_last_stats.get("precipitation_cells",0)),
+        "visible_unit_load":int(_last_stats.get("visible_unit_load",0)),
         "units_drawn":int(_last_stats.get("units_drawn",0)),
         "hq_baked_visible":hq_on_screen
     }
@@ -387,6 +390,7 @@ func _finish() -> void:
     _result_text += "Draw calls puede ser cero si el driver no ofrece datos.\n"
     _result_text += "Cargas sintéticas: tanque técnico actual + HQ 3D precalculado.\n"
     _result_text += "Los 8 equipos son visuales: no hay red, turnos ni niebla por jugador.\n"
+    _result_text += "Con alta densidad se reduce follaje/clima secundario, nunca tropas ni ciudades.\n"
     _result_text += "El modo ahorro y la niebla de guerra pueden cambiar la carga.\n"
     output_label.text = _result_text
     var report: Dictionary = {
