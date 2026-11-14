@@ -76,7 +76,7 @@ func _run() -> void:
         assert(Models.inspect_meshes(modern)==modern_count)
     assert(paints[0]!=paints[1] and paints[2]!=paints[4])
     assert(Models.apply_faction_palette(modern,2)>15)
-    assert(hatch.material_override.albedo_color==original_paint)
+    assert((hatch.material_override as StandardMaterial3D).albedo_color==original_paint)
     var other_hatch: MeshInstance3D=other.find_child(
         "BlindajeRegistroSuperiorV3",true,false) as MeshInstance3D
     assert(other_hatch!=null and (
