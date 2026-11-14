@@ -9,6 +9,8 @@ on:
       - "scripts/ui/TerrainStudioBridge3D.gd"
       - "scripts/ui/TerrainSurfaceFinish3D.gd"
       - "tests/test_terrain_studio_bridge_v4.gd"
+      - "scripts/ui/TerrainVisualMapBridge3D.gd"
+      - "tests/test_terrain_visual_map_bridge_v4.gd"
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/TerrainStudioScatter3D.gd"
       - "tests/test_terrain_studio_preflight.gd"
@@ -195,6 +197,18 @@ jobs:
             exit 1
           fi
           grep -q 'PASS TERRAIN_SLOPES:' /tmp/terrain-slopes-check.log
+      - name: Verify visual map bridge for three tactical board sizes and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_visual_map_bridge_v4.gd 2>&1 | tee /tmp/map-adapter-v4.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/map-adapter-v4.log; then
+            echo "Visual map bridge broke source board dimensions or fog masks" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_MAP_ADAPTER_V4:' /tmp/map-adapter-v4.log
       - name: Verify V4 continuous canyon bridge ramps and microtexture contracts
         shell: bash
         run: |
