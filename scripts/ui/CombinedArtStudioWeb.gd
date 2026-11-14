@@ -8,6 +8,7 @@ const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
 const HQWayfindingV18 = preload("res://scripts/ui/HeadquartersWayfindingV18.gd")
+const HQFacadeV19 = preload("res://scripts/ui/HeadquartersFacadeV19.gd")
 const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
@@ -43,6 +44,7 @@ var hq_terrain_picker: OptionButton
 var hq_climate_stage: Node3D
 var hq_climate_status: Label
 var hq_wayfinding_toggle: CheckButton
+var hq_facade_v19_toggle: CheckButton
 var _hq_weather_time := 0.0
 var hq_camera_picker: OptionButton
 var _hq_camera_preset := 0
@@ -57,6 +59,8 @@ var faction_view_label: Label
 var faction_view_buttons: Array[Button] = []
 var hq_map_lod_toggle: CheckButton
 var hq_batch_toggle: CheckButton
+var hq_stress_picker: OptionButton
+var _hq_grid_dimension := 7
 var hq_fps_label: Label
 var _fps_refresh := 0.0
 var hq_ground: MeshInstance3D
@@ -179,6 +183,23 @@ func _sync_hq_wayfinding_v18() -> void:
         _hq_light_preset,weather,hq_wayfinding_toggle.button_pressed,
         bool(model_root.get_meta("tarvoka_hq_map_distant",false))))
 
+func _sync_hq_facade_v19() -> void:
+    if _role != "headquarters" or model_root == null or hq_facade_v19_toggle == null:
+        return
+    var stage: Node3D = model_root.get_node_or_null(HQFacadeV19.STAGE_NAME) as Node3D
+    if stage == null:
+        return
+    var weather: String = "clear"
+    if hq_weather_picker != null and hq_weather_picker.selected >= 0:
+        weather = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
+    assert(HQFacadeV19.apply(stage,_faction,level_picker.selected+1,
+        str(BUILDING_STATES[building_state_picker.selected]),weather,
+        hq_facade_v19_toggle.button_pressed,
+        bool(model_root.get_meta("tarvoka_hq_map_distant",false))))
+
+func _change_hq_facade_v19(_enabled: bool) -> void:
+    _sync_hq_facade_v19()
+
 func _change_hq_wayfinding_v18(_enabled: bool) -> void:
     _sync_hq_wayfinding_v18()
 
@@ -191,6 +212,7 @@ func _change_hq_weather_v17(index: int) -> void:
     hq_weather_picker.select(index)
     _apply_hq_climate_v17()
     _apply_hq_lighting(_hq_light_preset)
+    _sync_hq_facade_v19()
 
 func _change_hq_terrain_v17(index: int) -> void:
     if index < 0 or index >= HQClimateV17.TERRAINS.size():
@@ -431,6 +453,12 @@ func _add_building_mode() -> void:
     hq_wayfinding_toggle.button_pressed = true
     hq_wayfinding_toggle.toggled.connect(_change_hq_wayfinding_v18)
     building_controls.add_child(hq_wayfinding_toggle)
+    hq_facade_v19_toggle = CheckButton.new()
+    hq_facade_v19_toggle.name = "FachadaBiseladaEscudoOficialV19"
+    hq_facade_v19_toggle.text = "V19 · Marcos biselados y contraste del escudo oficial"
+    hq_facade_v19_toggle.button_pressed = true
+    hq_facade_v19_toggle.toggled.connect(_change_hq_facade_v19)
+    building_controls.add_child(hq_facade_v19_toggle)
     _title(building_controls,"ENCUADRE PARA REVISAR LA SILUETA",13)
     hq_camera_picker = OptionButton.new()
     hq_camera_picker.name = "EncuadreDeBatallaHQ"
@@ -468,9 +496,18 @@ func _add_building_mode() -> void:
     building_controls.add_child(hq_map_lod_toggle)
     hq_batch_toggle = CheckButton.new()
     hq_batch_toggle.name = "Escenario49Cuarteles"
-    hq_batch_toggle.text = "Probar distrito de 49 edificios 3D"
+    hq_batch_toggle.text = "Prueba de rendimiento · edificios 3D agrupados"
     hq_batch_toggle.toggled.connect(_change_building_batch)
     building_controls.add_child(hq_batch_toggle)
+    hq_stress_picker = OptionButton.new()
+    hq_stress_picker.name = "Escenarios49_100_144CuartelesV19"
+    hq_stress_picker.custom_minimum_size.y = 46
+    for label in ["49 edificios (7×7)","100 edificios (10×10)","144 edificios (12×12)"]:
+        hq_stress_picker.add_item(label)
+    hq_stress_picker.select(0)
+    hq_stress_picker.item_selected.connect(_change_hq_stress_dimension)
+    building_controls.add_child(hq_stress_picker)
+    hq_stress_picker.visible = false
     hq_fps_label = _title(building_controls,"FPS: — | 49 edificios | carga agrupada",12)
     hq_fps_label.visible = false
     _title(building_controls,
@@ -696,10 +733,19 @@ func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
 
+func _change_hq_stress_dimension(index: int) -> void:
+    if index < 0 or index >= 3:
+        return
+    _hq_grid_dimension = [7,10,12][index]
+    hq_stress_picker.select(index)
+    if _role == "headquarters" and hq_batch_toggle.button_pressed:
+        _display_headquarters()
+
 func _set_hq_map_lod(distant: bool) -> void:
     if _role == "headquarters" and _hq_show_v4 and model_root != null:
         HQMapLOD.set_distant(model_root,distant)
         _sync_hq_wayfinding_v18()
+        _sync_hq_facade_v19()
         _update_details()
 
 func _refresh_building_faction(_index: int) -> void:
@@ -738,8 +784,9 @@ func _display_headquarters() -> void:
     hq_production_toggle.visible = _hq_show_v4 and not showing_batch
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
+    hq_stress_picker.visible = showing_batch
     if showing_batch:
-        model_root = HQCityBatch.build_grid(7,7,15.5)
+        model_root = HQCityBatch.build_grid(_hq_grid_dimension,_hq_grid_dimension,15.5)
         assert(model_root != null)
         hq_map_lod_toggle.visible = false
         preview.add_child(model_root)
@@ -747,7 +794,7 @@ func _display_headquarters() -> void:
             _yaw = 32.0
             _zoom = 1.0
         model_root.rotation_degrees.y = _yaw
-        camera.position = Vector3(-125.0,100.0,-125.0)
+        camera.position = Vector3(-125.0,100.0,-125.0) * float(_hq_grid_dimension)/7.0
         camera.look_at(Vector3(0,2.3,0),Vector3.UP)
         _update_camera()
         _update_details()
@@ -780,8 +827,10 @@ func _display_headquarters() -> void:
     preview.add_child(model_root)
     if model_root.get_meta("tarvoka_hq_visual_v12",false):
         model_root.add_child(HQWayfindingV18.build())
+        model_root.add_child(HQFacadeV19.build())
     _apply_hq_climate_v17()
     _sync_hq_wayfinding_v18()
+    _sync_hq_facade_v19()
     if initial:
         _yaw = 32.0
         _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
@@ -808,7 +857,7 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role == "headquarters":
         if camera != null:
-            camera.size = (153.0 if hq_batch_toggle.button_pressed and _hq_show_v4 else 18.6) / _zoom
+            camera.size = (153.0 * float(_hq_grid_dimension)/7.0 if hq_batch_toggle.button_pressed and _hq_show_v4 else 18.6) / _zoom
             if model_root != null and not hq_batch_toggle.button_pressed:
                 Headquarters.set_render_detail(model_root,_zoom >= 1.24)
         return
