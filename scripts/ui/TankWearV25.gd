@@ -96,6 +96,11 @@ static func _finish(part: MeshInstance3D,seed: int) -> bool:
     var previous: StandardMaterial3D = part.material_override as StandardMaterial3D
     if part.mesh == null or previous == null:
         return false
+    # Idempotent: a finished white-base material already contains the baked
+    # faction coat. Only V23/V24 palette changes create a new tinted coat.
+    if previous.albedo_color.is_equal_approx(Color.WHITE) and (\
+            previous.roughness>=0.999 and previous.albedo_texture!=null):
+        return true
     # Take the existing V23/V24 coat's authoritative faction color before
     # switching to a baked full-color albedo. This is not a cumulative blend.
     var pigment: Color = previous.albedo_color
