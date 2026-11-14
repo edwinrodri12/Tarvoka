@@ -43,7 +43,7 @@ static func counter_description(role: String) -> String:
         "scout":
             return "Especialista contra Lanzador (+3 ATQ)."
         "piercer":
-            return "Antiblindaje: +4 ATQ contra Baluarte, +2 contra Tanque G09."
+            return "Especialista contra Baluarte (+4 ATQ) y Tanque G09 (+2 ATQ)."
         "bulwark":
             return "Blindaje 2; avanza despacio."
         "artillery":
