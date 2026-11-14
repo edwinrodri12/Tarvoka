@@ -76,17 +76,27 @@ static func bank_strip(grid: Array, land_cell: Vector2i,
     return points
 
 static func build_banks(grid: Array, observed: Dictionary = {},
-        restricted: bool = false, segments: int = 8) -> ArrayMesh:
+        restricted: bool = false, segments: int = 8,
+        region: Rect2i = Rect2i()) -> ArrayMesh:
     var result := ArrayMesh.new()
     if segments < 2:
         return result
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var triangles := 0
-    for y in range(grid.size()):
+    var y_from: int = maxi(0,region.position.y) if (
+        region.has_area()) else 0
+    var y_until: int = mini(grid.size(),region.end.y) if (
+        region.has_area()) else grid.size()
+    for y in range(y_from,y_until):
         if not (grid[y] is Array):
             continue
-        for x in range((grid[y] as Array).size()):
+        var x_from: int = maxi(0,region.position.x) if (
+            region.has_area()) else 0
+        var x_until: int = mini(
+            (grid[y] as Array).size(),region.end.x) if (
+            region.has_area()) else (grid[y] as Array).size()
+        for x in range(x_from,x_until):
             var cell := Vector2i(x,y)
             if not Terrain.observed_cell(grid,cell,observed,restricted):
                 continue
