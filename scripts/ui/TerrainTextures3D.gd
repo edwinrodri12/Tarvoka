@@ -114,7 +114,7 @@ static func material(kind: String, tint: Color = Color.WHITE,
     mat.roughness = 0.35 if surface == "water" else (
         0.89 if surface == "asphalt" else 0.94)
     mat.metallic = 0.035 if surface == "water" else 0.0
-    mat.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
+    mat.texture_repeat = true
     mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     mat.vertex_color_use_as_albedo = use_vertex_color
     mat.cull_mode = BaseMaterial3D.CULL_DISABLED if use_vertex_color else BaseMaterial3D.CULL_BACK
