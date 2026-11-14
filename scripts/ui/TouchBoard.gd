@@ -22,6 +22,8 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
+const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
+const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
@@ -47,6 +49,8 @@ var selected_factory_pos := Vector2i(-1,-1)
 var inspected_cell := Vector2i(-1,-1) # UI-only terrain/building inspection; not saved.
 var _site_overlay_key := -1
 var _site_overlay_snapshot: Array = []
+var _alert_marker_cache_key := -1
+var _alert_marker_snapshot: Array = []
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var last_economy_report := ""
@@ -300,12 +304,25 @@ func site_overlay_snapshots() -> Array:
         _site_overlay_snapshot = SiteOverlayData.snapshots(state,0)
     return _site_overlay_snapshot
 
+# Reuse the same authoritative, redacted alert feed for both map renderers.
+# No rule or save operation ever consumes these visualization-only markers.
+func alert_marker_snapshots() -> Array:
+    var viewer: int = 0 if ai_enabled else int(state.get("faction",0))
+    var key: int = hash([state,ai_enabled,viewer])
+    if key != _alert_marker_cache_key:
+        _alert_marker_cache_key = key
+        _alert_marker_snapshot = TacticalAlerts.build(
+            state,viewer,ai_enabled).get("markers",[])
+    return _alert_marker_snapshot
+
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
             inspected_enemy_id,site_overlay_snapshots(),inspected_cell)
         _draw_campaign_markers()
+        AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
+            iso_zoom,iso_pan,map_dimensions(),battery_saver)
         return
     var tile := _cell_size()
     var origin := _board_origin()
@@ -499,6 +516,9 @@ func _draw() -> void:
             draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
                 "HP %d" % int(unit["hp"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.16)), health_tint)
+    # Visual attention indicators are drawn after troops, above the tile,
+    # with no new touch hitboxes or tactical commands.
+    AlertPainter.draw_classic(self,alert_marker_snapshots(),tile,origin,battery_saver)
     # Draw transient impact flashes over the battlefield, never as units.
     _draw_combat_effects(tile, origin)
     # A question mark is deliberately NOT a unit: no HP, target preview,

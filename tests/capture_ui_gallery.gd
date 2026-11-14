@@ -125,6 +125,41 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     main._process(0.0)
 
+    # True map and minimap markers on a 1280x720 isometric battle. Only
+    # temporary QA-local data is changed; no real save, order or economy cost.
+    var before_marker_frame: Dictionary = main.board.state.duplicate(true)
+    var marker_previous_iso: bool = main.board.iso_enabled
+    var marker_previous_minimap: bool = main._minimap_preference
+    main.board.new_game(0,false,false,false,true,true,true)
+    var marked_unit := false
+    for unit in main.board.state["units"]:
+        if int(unit.get("faction",-1)) == 0 and unit.has("ammo") and unit.has("fuel") and not marked_unit:
+            unit["ammo"] = 0
+            unit["fuel"] = 0
+            unit["hp"] = 2
+            marked_unit = true
+    main.board.set_isometric(true)
+    main._minimap_preference = true
+    main._apply_minimap_visibility()
+    main._set_compact_hud(false)
+    main.board.frame_player_force()
+    main._process(0.0)
+    main.board.queue_redraw()
+    main.battle_minimap.queue_redraw()
+    if not marked_unit or main.board.alert_marker_snapshots().is_empty() or not main.battle_minimap.visible:
+        push_error("Map and minimap tactical alert evidence is missing.")
+        _failed = true
+    if not await _capture_landscape("25-alertas-mapa-minimapa-1280x720",Vector2i(1280,720),
+            "Batalla isométrica · alertas críticas y fábricas visibles en minimapa"):
+        _failed = true
+    main.board.state = before_marker_frame
+    main.board.set_isometric(marker_previous_iso)
+    main._minimap_preference = marker_previous_minimap
+    main._apply_minimap_visibility()
+    main.board.selected_id = selected_before_gallery
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Read-only verified factory preview in compact mode. Preserve the
     # authoritative match and restore selection after this gallery frame.
     var before_terrain_frame: Dictionary = main.board.state.duplicate(true)
@@ -267,11 +302,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 24:
-        push_error("Landscape UI QA incomplete: %d/24 captures" % _manifest.size())
+    if _failed or _manifest.size() != 25:
+        push_error("Landscape UI QA incomplete: %d/25 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 24 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 25 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
