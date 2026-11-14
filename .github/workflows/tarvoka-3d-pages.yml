@@ -7,13 +7,14 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V1 sculpt, studio and 6x6 mechanical QA"]
     types: [completed]
     branches:
       - feat/hq-v21-rear-wall-damage-impact-20261114
       - feat/terrain-v17-battle-seam-blending-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
+      - feat/apc-v1-six-wheel-armored-transporter-20261114
 
 permissions:
   contents: read
@@ -363,6 +364,52 @@ jobs:
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla-g09/$asset"
           done
+      # The next 3D unit is published in its OWN native Godot viewer.
+      # Do not replace G09 V32, terrain, battle or the approved HQ gallery.
+      - name: Check out sculpted APC P06 Bastión 6x6 source
+        uses: actions/checkout@v4
+        with:
+          ref: feat/apc-v1-six-wheel-armored-transporter-20261114
+          path: apc-p06-source
+          persist-credentials: false
+      - name: Export real APC P06 model and interactive 6x6/ramp controls at /apc/
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s apc-p06-source/scripts/ui/APCArtV1.gd
+          test -s apc-p06-source/scripts/ui/APCVisualRigV1.gd
+          test -s apc-p06-source/tests/test_apc_p06_art_v1.gd
+          test -s apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
+          mkdir -p apc-p06-source/assets apc-p06-source/build/web build/web/apc
+          git -C apc-p06-source rev-parse --short=12 HEAD > apc-p06-source/assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' apc-p06-source/project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' apc-p06-source/project.godot
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apc-p06-source/scripts/ui/UnitArtStudioWeb.gd')
+          src=p.read_text(encoding='utf-8')
+          needle='    _construct()\n    _display_role("tank")\n'
+          assert src.count(needle)==1
+          src=src.replace(needle,'    _construct()\n    _display_role("apc")\n',1)
+          p.write_text(src,encoding='utf-8')
+          PY
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path apc-p06-source --import --quit 2>&1 | tee /tmp/apc-p06-pages-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Import failed' /tmp/apc-p06-pages-import.log; then
+            echo 'APC P06 source import failed' >&2
+            exit 1
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path apc-p06-source --export-release 'Web Studio' \
+            build/web/index.html 2>&1 | tee /tmp/apc-p06-pages-export.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/apc-p06-pages-export.log; then
+            echo 'APC P06 WebGL export failed' >&2
+            exit 1
+          fi
+          cp -a apc-p06-source/build/web/. build/web/apc/
+          for asset in index.html index.js index.pck index.wasm; do
+            test -s "build/web/apc/$asset"
+          done
       - name: Add visible navigation among HQ V12, Battle V8 and G09 V32 studios
         shell: bash
         run: |
@@ -425,6 +472,24 @@ jobs:
           add_link(Path('build/web/batalla-g09/index.html'),
                    '../tanque/', 'G09 · REVISIÓN ARTÍSTICA',
                    'Inspeccionar materiales de tanque V25 y escenarios V26', 136)
+          add_link(Path('build/web/index.html'),
+                   'apc/', 'APC P06 · NUEVA UNIDAD 3D',
+                   'Inspeccionar el transporte 6x6, rampa y torreta animadas', 196)
+          add_link(Path('build/web/tanque/index.html'),
+                   '../apc/', 'SIGUIENTE UNIDAD · APC P06',
+                   'Abrir el nuevo blindado sin alterar G09 V32', 196)
+          add_link(Path('build/web/batalla/index.html'),
+                   '../apc/', 'APC P06 · MODELO 3D',
+                   'Revisar el nuevo transporte de tropas', 196)
+          add_link(Path('build/web/apc/index.html'),
+                   '../', 'VOLVER AL ESTUDIO 3D',
+                   'Volver al Estudio TARVOKA')
+          add_link(Path('build/web/apc/index.html'),
+                   '../tanque/', 'TANQUE G09 V32 · FINAL',
+                   'Inspeccionar el tanque terminado', 76)
+          add_link(Path('build/web/apc/index.html'),
+                   '../batalla/', 'MAPA Y BATALLA 3D',
+                   'Abrir el entorno y mapa de batalla', 136)
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
@@ -436,6 +501,10 @@ jobs:
           grep -q 'G09 V32' build/web/tanque/index.html
           grep -q 'ESTUDIO' build/web/batalla-g09/index.html
           grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
+          grep -q 'APC P06' build/web/index.html
+          grep -q 'APC P06' build/web/tanque/index.html
+          grep -q 'TANQUE G09 V32' build/web/apc/index.html
+          grep -q 'VOLVER AL ESTUDIO 3D' build/web/apc/index.html
           touch build/web/.nojekyll
 
       - name: Upload GitHub Pages web site
