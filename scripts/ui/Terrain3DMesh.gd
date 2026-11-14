@@ -15,6 +15,7 @@ const BASE_TINTS := {
 const WATER_LEVEL := 0.075
 const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
+const RockMaterials = preload("res://scripts/ui/TerrainRockMaterials.gd")
 
 static func inside(grid: Array, cell: Vector2i) -> bool:
     return cell.y >= 0 and cell.y < grid.size() and (
@@ -77,12 +78,21 @@ static func height_at(grid: Array, cell: Vector2i, u: float, v: float,
             grid,cell,"mountain",true,observed,restricted)
         var summit: float = Regions.summit_strength(cell,known_links)
         var crest: float = maxf(0.08,(summit-0.38)*3.1)
-        var folds: float = 0.81+0.12*sin(
-            float(cell.x)*0.47+float(cell.y)*0.73+u*4.8)
-        folds += 0.07*cos(v*8.3-u*4.7+float(cell.x)*0.29)
-        # Center bump is exactly zero at each shared tile edge, so the
-        # native heightfield remains crack-free even with different peaks.
-        return interpolated+pow(center_bump,0.86)*crest*folds
+        # Elongated folds flow across the world rather than separate
+        # circular cones. Shared world coordinates vary the main ridge
+        # direction, while the envelope still vanishes at each tile edge.
+        var world_x: float = float(cell.x)+u
+        var world_z: float = float(cell.y)+v
+        var ridge_line: float = sin(
+            world_x*0.78-world_z*0.44+0.46*sin(world_z*0.67))
+        var folds: float = 0.69+0.31*absf(ridge_line)
+        folds *= 0.88+0.12*cos(world_x*4.1+world_z*5.9)
+        var weathering: float = sin(
+            world_x*9.3+world_z*6.2)*0.025*crest
+        # The exact-zero edge envelope keeps the native mesh crack-free.
+        # World-space strata and colors are applied separately below.
+        return interpolated+pow(center_bump,0.78)*(
+            crest*folds+weathering)
     if kind == "water":
         # A river bed rises continuously towards adjacent terrain.
         return interpolated-center_bump*0.32
@@ -94,26 +104,20 @@ static func height_at(grid: Array, cell: Vector2i, u: float, v: float,
         return interpolated-noise*0.006
     return interpolated+noise*0.035
 
-static func _color_for(grid: Array, cell: Vector2i, u: float, v: float) -> Color:
+static func _color_for(grid: Array, cell: Vector2i, u: float, v: float,
+        elevation: float) -> Color:
     var kind: String = str(grid[cell.y][cell.x])
-    var tint := Color.html(str(BASE_TINTS.get(kind,BASE_TINTS["plain"])))
-    var grain: float = sin((float(cell.x)+u)*6.37+(
-        float(cell.y)+v)*5.29)
-    grain += 0.35*cos((float(cell.y)+v)*15.71)
-    var shift: float = grain*0.043
+    var tint: Color = Color.html(str(BASE_TINTS.get(
+        kind,BASE_TINTS["plain"])))
+    var world := Vector3(float(cell.x)+u,elevation,float(cell.y)+v)
+    # Rock minerals and fine strata are sampled in WORLD coordinates,
+    # not per-tile UVs. Adjacent mountain triangles share the same palette
+    # and do not restart their fractures at an artificial grid boundary.
     if kind == "mountain":
-        var above: float = sin(u*PI)*sin(v*PI)
-        var elevation: float = Regions.region_variation(cell,7)
-        var prominent: bool = posmod(cell.x*19+cell.y*23,5) == 0
-        if prominent and above*elevation > 0.60:
-            var snow: float = clampf(
-                (above*elevation-0.60)*0.8,0.0,0.25)
-            tint = tint.lerp(Color("#C6D3D4"),snow)
-        return tint.lightened(shift) if shift > 0.0 else tint.darkened(-shift)
+        return RockMaterials.rock_color(world,0.82)
     if kind == "water":
         tint = Color("#526A6F")
-    return tint.lightened(shift) if shift > 0.0 else tint.darkened(-shift)
-
+    return RockMaterials.grass_edge_color(world,kind,tint)
 static func _add_vertex(st: SurfaceTool, point: Vector3, tint: Color) -> void:
     st.set_color(tint)
     st.add_vertex(point)
@@ -150,12 +154,12 @@ static func build_ground(grid: Array, observed: Dictionary = {},
                     var p01 := _ground_point(grid,cell,u0,v1,observed,restricted)
                     var p11 := _ground_point(grid,cell,u1,v1,observed,restricted)
                     # Winding order produces upward-facing normals.
-                    _add_vertex(st,p00,_color_for(grid,cell,u0,v0))
-                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1))
-                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0))
-                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0))
-                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1))
-                    _add_vertex(st,p11,_color_for(grid,cell,u1,v1))
+                    _add_vertex(st,p00,_color_for(grid,cell,u0,v0,p00.y))
+                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y))
+                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y))
+                    _add_vertex(st,p10,_color_for(grid,cell,u1,v0,p10.y))
+                    _add_vertex(st,p01,_color_for(grid,cell,u0,v1,p01.y))
+                    _add_vertex(st,p11,_color_for(grid,cell,u1,v1,p11.y))
                     count += 6
     if count == 0:
         return mesh
