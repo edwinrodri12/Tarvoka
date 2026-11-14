@@ -38,8 +38,8 @@ jobs:
           set -euo pipefail
           mkdir -p assets/buildings/hq_v15
           for i in {0..7}; do
-            test -s "source-android/assets/buildings/hq_v15/hq_\${i}.png"
-            cp "source-android/assets/buildings/hq_v15/hq_\${i}.png" assets/buildings/hq_v15/
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
           done
           test -s source-android/assets/buildings/hq_v15/hq_neutral.png
           cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
