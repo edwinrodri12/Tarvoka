@@ -18,6 +18,8 @@ on:
       - "scripts/ui/HeadquartersRefinementV11.gd"
       - "scripts/ui/HeadquartersSilhouetteV12.gd"
       - "scripts/ui/HeadquartersProductionV13.gd"
+      - "scripts/ui/HeadquartersSpriteStudioV16.gd"
+      - "tests/test_hq_v16_sprite_studio.gd"
       - "tests/test_headquarters_v13_production.gd"
       - "tests/export_headquarters_production_v13_glb.gd"
       - "tests/test_headquarters_v12_tactical_night.gd"
@@ -60,6 +62,7 @@ on:
       - feat/hq-v11-lighting-refinements-20261113
       - feat/hq-v12-tactical-silhouette-night-20261114
       - feat/hq-v13-production-ready-runtime-lod-20261114
+      - feat/hq-v16-studio-v15-sprite-live-preview-20261114
       - main
     paths:
       - "scripts/ui/**"
@@ -83,6 +86,26 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout the actually shipped V15 Android PNG sprites
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: hq-v15-game-source
+          persist-credentials: false
+      - name: Mount V15 assets inside the official HQ studio, not the Android code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "hq-v15-game-source/assets/buildings/hq_v15/hq_${i}.png"
+            cp "hq-v15-game-source/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          test -s hq-v15-game-source/assets/buildings/hq_v15/hq_neutral.png
+          cp hq-v15-game-source/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf hq-v15-game-source
+          test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
+          test -s scripts/ui/HeadquartersSpriteStudioV16.gd
       - name: Download Godot 4.3 and web export templates
         shell: bash
         run: |
@@ -323,6 +346,20 @@ jobs:
           test -s artifacts/tarvoka_hq_v13_optimized_tactical.png
           test -s artifacts/tarvoka_hq_v13_eight_official_faction_lods.png
           test -s artifacts/tarvoka_hq_v13_tactical_damage.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_hq_v16_sprite_studio.gd 2>&1 | tee /tmp/hq-v16-sprite-studio.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v16-sprite-studio.log; then
+            echo "HQ V16 3D viewer failed to display V15 Android sprites and eight official factions" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V16 studio:" /tmp/hq-v16-sprite-studio.log
+          test -s artifacts/tarvoka_hq_v16_3d_and_android_v15_same_screen.png
+          test -s artifacts/tarvoka_hq_v16_neutral_sprite_in_3d_scene.png
+          test -s artifacts/tarvoka_hq_v16_android_sprite_inside_3d_studio.png
+          test -s artifacts/tarvoka_hq_v16_zoom_distant_fallback_comparison.png
+          test -s artifacts/tarvoka_hq_v16_v13_optimized_and_v15_android.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -514,6 +551,12 @@ jobs:
             artifacts/tarvoka_hq_v13_optimized_tactical.png
             artifacts/tarvoka_hq_v13_eight_official_faction_lods.png
             artifacts/tarvoka_hq_v13_tactical_damage.png
+            artifacts/tarvoka_hq_v16_3d_and_android_v15_same_screen.png
+            artifacts/tarvoka_hq_v16_neutral_sprite_in_3d_scene.png
+            artifacts/tarvoka_hq_v16_android_sprite_inside_3d_studio.png
+            artifacts/tarvoka_hq_v16_zoom_distant_fallback_comparison.png
+            artifacts/tarvoka_hq_v16_v13_optimized_and_v15_android.png
+            assets/buildings/hq_v15/*.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
