@@ -1386,6 +1386,7 @@ func _play_ai_turn() -> void:
     var attacks := 0
     var produced := 0
     var resupplied := 0
+    var repaired := 0
     for i in range(max_actions):
         if campaign_locked or int(state.get("winner", -1)) != -1:
             break
@@ -1408,12 +1409,16 @@ func _play_ai_turn() -> void:
                 produced += 1
             "resupply":
                 resupplied += 1
+            "repair":
+                repaired += 1
     last_enemy_turn_report = "Turno enemigo: %d movimientos, %d ataques." % [movements, attacks]
     if state.has("economy"):
         last_enemy_turn_report += " %d refuerzos producidos." % produced
     if resupplied > 0:
         last_enemy_turn_report += " %d reabastecimientos." % resupplied
-    if movements + attacks + produced + resupplied == 0:
+    if repaired > 0:
+        last_enemy_turn_report += " %d reparaciones pagadas." % repaired
+    if movements + attacks + produced + resupplied + repaired == 0:
         last_enemy_turn_report = "Turno enemigo: sin acciones disponibles."
     if campaign_locked or int(state.get("winner", -1)) != -1:
         message = "Ejercicio finalizado." if campaign_locked else "Victoria de faccion %d." % (int(state["winner"]) + 1)
