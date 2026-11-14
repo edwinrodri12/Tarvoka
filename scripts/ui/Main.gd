@@ -27,6 +27,7 @@ const CommanderIdentityStrip = preload("res://scripts/ui/CommanderIdentityStrip.
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const CombatPanel = preload("res://scripts/ui/CombatPreviewPanel.gd")
 const ObjectivesData = preload("res://scripts/ui/ObjectivesRadarData.gd")
+const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const ObjectivesPanel = preload("res://scripts/ui/ObjectivesRadarPanel.gd")
 const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
@@ -47,6 +48,10 @@ var _results_seen_signature := -1
 var objectives_scrim: ColorRect
 var objectives_button: Button
 var compact_objectives_button: Button
+var sidebar_alerts_button: Button
+var compact_alerts_button: Button
+var expanded_alerts_button: Button
+var _tactical_alerts_snapshot: Dictionary = {}
 var home_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
@@ -180,7 +185,8 @@ func _reveal_screen(panel: Control) -> void:
 func _bind_touch_feedback() -> void:
     for control in [command_menu_button,compact_menu_button,compact_options_button,
             compact_confirm,compact_cancel,compact_end_turn,compact_resupply,
-            expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle]:
+            expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle,
+            sidebar_alerts_button,compact_alerts_button,expanded_alerts_button]:
         var button: Button = control
         if button == null:
             continue
@@ -306,6 +312,13 @@ func _ready() -> void:
     objectives_button.tooltip_text = "Mostrar puntos estratégicos y unidades que requieren atención"
     objectives_button.pressed.connect(_open_objectives_radar)
     panel.add_child(objectives_button)
+    sidebar_alerts_button = Button.new()
+    sidebar_alerts_button.name = "PrioridadesTacticasLateral"
+    sidebar_alerts_button.text = "ALERTAS TÁCTICAS"
+    sidebar_alerts_button.custom_minimum_size.y = 48
+    sidebar_alerts_button.tooltip_text = "Prioridades propias, fábricas disponibles y objetivos observados"
+    sidebar_alerts_button.pressed.connect(_open_tactical_alerts)
+    panel.add_child(sidebar_alerts_button)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -890,7 +903,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # scenario controls remain accessible farther down the scroll but no
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,commander_sidebar_strip,polished_status_card,command_menu_button,objectives_button,
-        minimap_shell,polished_unit_card,polished_actions_card,result_banner,
+        sidebar_alerts_button,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
@@ -1085,7 +1098,7 @@ func _build_battle_hud() -> void:
     expanded_header.offset_left = 12
     expanded_header.offset_right = -145
     expanded_header.offset_top = 8
-    expanded_header.offset_bottom = 82
+    expanded_header.offset_bottom = 98
     expanded_header.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#09263F"),GameUiTheme.EDGE_BRIGHT,6,9))
     battle_hud_overlay.add_child(expanded_header)
     var header_column := VBoxContainer.new()
@@ -1103,7 +1116,18 @@ func _build_battle_hud() -> void:
     expanded_turn_cue.clip_text = true
     expanded_turn_cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
     expanded_turn_cue.add_theme_font_size_override("font_size",13)
-    header_column.add_child(expanded_turn_cue)
+    var alert_header_row := HBoxContainer.new()
+    alert_header_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    alert_header_row.add_theme_constant_override("separation",8)
+    header_column.add_child(alert_header_row)
+    expanded_turn_cue.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    alert_header_row.add_child(expanded_turn_cue)
+    expanded_alerts_button = Button.new()
+    expanded_alerts_button.name = "PrioridadesTacticasExpandido"
+    expanded_alerts_button.text = "Alertas"
+    expanded_alerts_button.custom_minimum_size = Vector2(126,40)
+    expanded_alerts_button.pressed.connect(_open_tactical_alerts)
+    alert_header_row.add_child(expanded_alerts_button)
 
     expanded_actions = PanelContainer.new()
     expanded_actions.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1199,6 +1223,13 @@ func _build_battle_hud() -> void:
     compact_options_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_options_button.pressed.connect(_toggle_battle_hud)
     compact_top_shortcuts.add_child(compact_options_button)
+    compact_alerts_button = Button.new()
+    compact_alerts_button.name = "PrioridadesTacticasMovil"
+    compact_alerts_button.text = "Alertas"
+    compact_alerts_button.custom_minimum_size.y = 44
+    compact_alerts_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_alerts_button.pressed.connect(_open_tactical_alerts)
+    compact_top_shortcuts.add_child(compact_alerts_button)
     GameUiTheme.emphasize(compact_options_button,"primary")
     battle_hud_commands.hide()
     compact_center.hide()
@@ -1213,6 +1244,7 @@ func _set_compact_hud(compact: bool) -> void:
     compact_center.visible = compact
     compact_iso.visible = compact
     compact_options_button.visible = compact
+    compact_alerts_button.visible = compact
     compact_top_shortcuts.visible = compact
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
@@ -1298,6 +1330,14 @@ func _process(_delta: float) -> void:
         _update_text(expanded_turn_cue,cue)
         expanded_turn_cue.tooltip_text = cue
         expanded_turn_cue.add_theme_color_override("font_color",readout["tint"])
+        # Only recalculate the attention queue when the authoritative match
+        # or selection changes, never every Android render frame.
+        _tactical_alerts_snapshot = TacticalAlerts.build(board.state,_radar_viewer(),board.ai_enabled)
+        var pending_count: int = int(_tactical_alerts_snapshot.get("total",0))
+        var badge_text: String = "Alertas %d" % pending_count
+        _update_alert_button(compact_alerts_button,badge_text,pending_count)
+        _update_alert_button(expanded_alerts_button,badge_text,pending_count)
+        _update_alert_button(sidebar_alerts_button,"ALERTAS TÁCTICAS · %d" % pending_count,pending_count)
         # Source of truth is the current match, including restored saves.
         # Portrait ribbons remain presentation-only and fog-safe.
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
@@ -1356,7 +1396,7 @@ func _process(_delta: float) -> void:
         # rather than consuming a third of the map with duplicate details.
         compact_info_body.visible = not compact_dossier.visible and not context_visible
         if objectives_panel != null and objectives_panel.visible:
-            objectives_panel.refresh_from_state(board.state,_radar_viewer())
+            objectives_panel.refresh_from_state(board.state,_radar_viewer(),board.ai_enabled)
         var field_text: String = BattleReport.field_summary(board.state)
         if board.state.has("opening"):
             var remaining_orders: int = int(board.state["opening"]["limit"]) - int(board.state["opening"]["used"])
@@ -1526,6 +1566,15 @@ func _battle_summary() -> String:
 func _update_text(label: Label, content: String) -> void:
     if label.text != content:
         label.text = content
+
+func _update_alert_button(button: Button, title: String, count: int) -> void:
+    if button == null:
+        return
+    if button.text != title:
+        button.text = title
+    button.tooltip_text = "Abrir prioridades tácticas sin ejecutar órdenes"
+    button.add_theme_color_override("font_color",
+        Color("#FFD981") if count > 0 else Color("#BDD5E1"))
 
 func _show_turn_banner(message: String, tint: Color) -> void:
     if turn_banner == null or board == null:
@@ -1818,7 +1867,15 @@ func _open_objectives_radar() -> void:
         return
     command_menu.hide()
     objectives_scrim.show()
-    objectives_panel.open_with_state(board.state,_radar_viewer())
+    objectives_panel.open_with_state(board.state,_radar_viewer(),board.ai_enabled)
+    _reveal_screen(objectives_panel)
+
+func _open_tactical_alerts() -> void:
+    if objectives_panel == null or board == null:
+        return
+    command_menu.hide()
+    objectives_scrim.show()
+    objectives_panel.open_alerts_with_state(board.state,_radar_viewer(),board.ai_enabled)
     _reveal_screen(objectives_panel)
 
 func _locate_objective_site(cell: Vector2i, category: String) -> void:
@@ -1843,12 +1900,19 @@ func _locate_objective_site(cell: Vector2i, category: String) -> void:
 func _locate_objective_unit(unit_id: String) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
         return
-    var snapshot: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
+    var snapshot: Dictionary = TacticalAlerts.build(board.state,_radar_viewer(),board.ai_enabled)
     var allowed := false
-    for item in snapshot.get("alerts",[]):
-        if item is Dictionary and str(item.get("id","")) == unit_id:
+    for item in snapshot.get("rows",[]):
+        if item is Dictionary and str(item.get("kind","")) == "unit" and str(item.get("id","")) == unit_id:
             allowed = true
             break
+    if not allowed:
+        # Preserve the existing objective radar's own read-only alert rows.
+        var old: Dictionary = ObjectivesData.build(board.state,_radar_viewer())
+        for item in old.get("alerts",[]):
+            if item is Dictionary and str(item.get("id","")) == unit_id:
+                allowed = true
+                break
     if not allowed:
         return
     for unit in board.state.get("units",[]):

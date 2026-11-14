@@ -6,6 +6,7 @@ signal locate_site_requested(cell: Vector2i, category: String)
 signal locate_unit_requested(unit_id: String)
 
 const Data = preload("res://scripts/ui/ObjectivesRadarData.gd")
+const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 
 var tabs: TabContainer
@@ -15,6 +16,7 @@ var alerts_body: VBoxContainer
 var header_label: Label
 var summary_label: Label
 var _data: Dictionary = {}
+var _priorities: Dictionary = {}
 
 # A collapsible side drawer rather than another full-screen menu:
 # phone portrait uses the lower screen, landscape leaves the tactical map
@@ -151,19 +153,24 @@ func _unit_row(body: VBoxContainer, item: Dictionary) -> void:
     var line := HSeparator.new()
     body.add_child(line)
 
-func refresh_from_state(state: Dictionary, viewer: int = 0) -> void:
-    # Preserve the active tab across battle updates; never reset the player's
-    # exploration to Objetivos just because a turn or alert changed.
+func refresh_from_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
+    # Preserve the active tab and read only one valid snapshot per change.
     var tab: int = tabs.current_tab
     _data = Data.build(state,viewer)
+    _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
     tabs.current_tab = tab
 
-func open_with_state(state: Dictionary, viewer: int = 0) -> void:
+func open_with_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
     _data = Data.build(state,viewer)
+    _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
     tabs.current_tab = 0
     show()
+
+func open_alerts_with_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
+    open_with_state(state,viewer,vs_ai)
+    tabs.current_tab = 2
 
 func render() -> void:
     _clear(overview_body)
@@ -207,15 +214,27 @@ func render() -> void:
             if int(site.get("income",0)) > 0:
                 caption += " · +%d cr./turno para su propietario" % int(site["income"])
             _location_row(sites_body,str(site.get("label","Instalación")),caption,site["pos"],"site")
-    var alert_count: int = int(_data.get("alert_count",0))
-    _section(alerts_body,"TROPAS QUE REQUIEREN ATENCIÓN (%d)" % alert_count)
-    if alert_count <= 0:
-        _info(alerts_body,"No se detectaron alertas de vida o suministros en tus unidades.")
+    var alert_count: int = int(_priorities.get("total",0))
+    _section(alerts_body,"PRIORIDADES TÁCTICAS (%d)" % alert_count)
+    var summary: String = "Críticas %d · Suministros %d · Tropas listas %d · Bases listas %d · Objetivos %d" % [
+        int(_priorities.get("urgent",0)),int(_priorities.get("supplies",0)),
+        int(_priorities.get("ready_units",0)),int(_priorities.get("ready_bases",0)),
+        int(_priorities.get("objectives",0))]
+    _info(alerts_body,summary)
+    if not bool(_priorities.get("active",false)):
+        _info(alerts_body,"No hay órdenes tácticas pendientes para tu bando en este momento.")
+    elif alert_count == 0:
+        _info(alerts_body,"Sin prioridades pendientes. Puedes finalizar el turno.")
     else:
-        for unit in _data.get("alerts",[]):
-            _unit_row(alerts_body,unit)
-        if alert_count > _data.get("alerts",[]).size():
-            _info(alerts_body,"Se muestran las alertas más urgentes.")
+        for item in _priorities.get("rows",[]):
+            if str(item.get("kind","")) == "unit":
+                _unit_row(alerts_body,item)
+            elif str(item.get("kind","")) in ["site","relay"]:
+                _location_row(alerts_body,str(item.get("label","Ubicación")),
+                    str(item.get("status","")),item["pos"],str(item["kind"]))
+        if int(_priorities.get("overflow",0)) > 0:
+            _info(alerts_body,"%d prioridades adicionales. Se muestran primero las más urgentes." %
+                int(_priorities["overflow"]))
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):

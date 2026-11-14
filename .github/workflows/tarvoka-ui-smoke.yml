@@ -16,6 +16,7 @@ on:
       - 'tests/test_battle_damage_feedback.gd'
       - 'tests/test_turn_selection_hud.gd'
       - 'tests/test_tile_context_battle.gd'
+      - 'tests/test_tactical_alert_priorities.gd'
       - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
       - 'tests/test_unit_art.gd'
@@ -77,6 +78,7 @@ jobs:
             test_battle_damage_feedback \
             test_turn_selection_hud \
             test_tile_context_battle \
+            test_tactical_alert_priorities \
             test_road_command_menu \
             test_tactical_briefing \
             test_unit_art \
