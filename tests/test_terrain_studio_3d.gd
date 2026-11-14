@@ -50,8 +50,34 @@ func _run() -> void:
     var old_grass: MultiMeshInstance3D = studio.model_root.find_child(
         "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
     assert(old_grass != null and old_grass.multimesh.instance_count >= 100)
+    for render_frame in range(6):
+        await process_frame
+    var v2_image: Image = studio.preview.get_texture().get_image()
+    assert(v2_image != null and not v2_image.is_empty())
     studio.terrain_scatter_toggle.button_pressed = true
     studio._rebuild_terrain(true)
+    for render_frame in range(6):
+        await process_frame
+    var v3_image: Image = studio.preview.get_texture().get_image()
+    assert(v3_image != null and not v3_image.is_empty())
+    var old_sample := v2_image.duplicate()
+    var new_sample := v3_image.duplicate()
+    old_sample.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    new_sample.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var changed_pixels: int = 0
+    for py in range(0,330,5):
+        for px in range(0,480,5):
+            var c2: Color = old_sample.get_pixel(px,py)
+            var c3: Color = new_sample.get_pixel(px,py)
+            if absf(c2.r-c3.r)+absf(c2.g-c3.g)+absf(c2.b-c3.b) > 0.08:
+                changed_pixels += 1
+    assert(changed_pixels > 25)
+    var comparison_v3 := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    comparison_v3.blit_rect(old_sample,Rect2i(0,0,480,330),Vector2i.ZERO)
+    comparison_v3.blit_rect(new_sample,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(comparison_v3.save_png(
+        "res://artifacts/tarvoka_terrain_v2_v3_same_camera.png") == OK)
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
