@@ -149,6 +149,13 @@ func _run() -> void:
     await _capture(vp,cam,baseline,
         "tarvoka_g09_v30_cadenas_sobresalientes_referencia.png",
         Vector3(0.0,1.0,-6.5))
-    vp.queue_free()
+    # GL resources must be destroyed before SceneTree quits, otherwise the
+    # renderer reports leaked mesh RIDs even when geometry assertions pass.
+    vp.remove_child(baseline)
+    baseline.free()
+    model.free()
+    vp.free()
+    await process_frame
+    await process_frame
     print("PASS G09 V31: wide 0.422 tracks fully inboard; both gear/wheel axles aligned; 168 links, 48 teeth, 70 spoke transforms, 8 factions, 5 damage stages, 4 motion types, no draw calls added")
     quit(0)
