@@ -4,6 +4,7 @@ class_name TarvokaCombinedArtStudioWeb
 # Add the approved Headquarters to the existing actual Godot Web studio.
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
 const OfficialEmblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
@@ -25,6 +26,8 @@ var hq_v9_toggle: CheckButton
 var hq_v10_toggle: CheckButton
 var hq_v11_toggle: CheckButton
 var hq_v12_toggle: CheckButton
+var hq_production_toggle: CheckButton
+var hq_production_metric_label: Label
 var hq_camera_picker: OptionButton
 var _hq_camera_preset := 0
 var hq_lighting_picker: OptionButton
@@ -187,7 +190,7 @@ func _add_building_mode() -> void:
     hq_version_picker = OptionButton.new()
     hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
     hq_version_picker.custom_minimum_size.y = 50
-    for name_version in ["V12 · Silueta táctica y noche legible",
+    for name_version in ["V13 · Escultura V12 + perfil optimizado opcional",
             "V3 · Arquitectura anterior",
             "V2 · Primera revisión",
             "V1 · Prototipo original"]:
@@ -231,6 +234,15 @@ func _add_building_mode() -> void:
     hq_v12_toggle.button_pressed = true
     hq_v12_toggle.toggled.connect(_change_hq_silhouette_v12)
     building_controls.add_child(hq_v12_toggle)
+    hq_production_toggle = CheckButton.new()
+    hq_production_toggle.name = "PerfilComercialHQV13"
+    hq_production_toggle.text = "Perfil táctico V13 (sin miles de mallas ocultas)"
+    hq_production_toggle.button_pressed = false
+    hq_production_toggle.toggled.connect(_change_hq_production_v13)
+    building_controls.add_child(hq_production_toggle)
+    hq_production_metric_label = _title(building_controls,
+        "Perfil V13: 2 mallas · 10 superficies · 8 escudos oficiales",12)
+    hq_production_metric_label.visible = false
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
@@ -455,6 +467,10 @@ func _change_hq_camera(index: int) -> void:
 func _hq_camera_position() -> Vector3:
     return Vector3(-17.5,22.0,-19.5) if _hq_camera_preset == 1 else Vector3(-18.0,16.5,-19.0)
 
+func _change_hq_production_v13(_enabled: bool) -> void:
+    if _role == "headquarters":
+        _display_headquarters()
+
 func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -489,6 +505,8 @@ func _display_headquarters() -> void:
     hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
     hq_v12_toggle.visible = hq_v11_toggle.visible and hq_v11_toggle.button_pressed
     hq_camera_picker.visible = not showing_batch
+    hq_production_toggle.visible = _hq_show_v4 and not showing_batch
+    hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(7,7,15.5)
@@ -506,15 +524,21 @@ func _display_headquarters() -> void:
         return
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4,
-        hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,hq_v9_toggle.button_pressed,
-        hq_v10_toggle.button_pressed,hq_v11_toggle.button_pressed,
-        hq_v12_toggle.button_pressed)
+    if hq_production_toggle.button_pressed and _hq_show_v4:
+        model_root = HQProduction.build(level,_faction,condition,
+            HQProduction.QUALITY_TACTICAL,true)
+        hq_map_lod_toggle.visible = false
+    else:
+        model_root = Headquarters.build(level,_faction,condition,
+            _hq_show_v2,_hq_show_v3,_hq_show_v4,
+            hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,
+            hq_v9_toggle.button_pressed,hq_v10_toggle.button_pressed,
+            hq_v11_toggle.button_pressed,hq_v12_toggle.button_pressed)
+        hq_map_lod_toggle.visible = _hq_show_v4
+        if _hq_show_v4:
+            HQMapLOD.install(model_root,level,_faction,condition)
+            HQMapLOD.set_distant(model_root,hq_map_lod_toggle.button_pressed)
     assert(model_root != null)
-    hq_map_lod_toggle.visible = _hq_show_v4
-    if _hq_show_v4:
-        HQMapLOD.install(model_root,level,_faction,condition)
-        HQMapLOD.set_distant(model_root,hq_map_lod_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = 32.0
@@ -578,6 +602,12 @@ func _update_details() -> void:
         detail_label.text = "Cuartel General · REMATES CURVOS V11 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_visual_v12",false):
         detail_label.text = "Cuartel General · SILUETA TÁCTICA V12 · Nivel %d · %d mallas 3D" % [level,meshes]
+    if model_root.get_meta("tarvoka_hq_production_v13",false):
+        var budget: Dictionary = HQProduction.render_budget(model_root)
+        detail_label.text = "Cuartel General · PERFIL V13 · Nivel %d · %d mallas / %d superficies" % [
+            level,int(budget["meshes"]),int(budget["surfaces"])]
+        hq_production_metric_label.text = "Modelo Android: %d mallas · %d superficies · sin modelo completo oculto" % [
+            int(budget["meshes"]),int(budget["surfaces"])]
     if model_root.get_meta("tarvoka_hq_map_distant",false):
         detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
