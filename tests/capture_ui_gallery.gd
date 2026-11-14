@@ -98,6 +98,20 @@ func _run_gallery() -> void:
     main._process(0.0)
     if not await _capture_landscape("22-unidad-seleccionada-960x540",Vector2i(960,540),"Batalla · unidad activa y acciones disponibles"):
         _failed = true
+    # Real next-unit button, not a drawn mockup: take one step through the
+    # active human force, then restore the selection and untouched match.
+    var navigation_before_gallery: Dictionary = main.board.state.duplicate(true)
+    main.compact_next_unit.emit_signal("pressed")
+    main._process(0.0)
+    if main.board.selected_id.is_empty() or not main.compact_next_unit.visible:
+        push_error("Android next-unit control failed to select an available unit.")
+        _failed = true
+    if not await _capture_landscape("26-navegacion-unidades-960x540",Vector2i(960,540),
+            "Batalla · navegación rápida entre unidades disponibles"):
+        _failed = true
+    if main.board.state != navigation_before_gallery:
+        push_error("Navigation visual QA accidentally mutated battle data.")
+        _failed = true
     main.board.selected_id = selected_before_gallery
     main._set_compact_hud(false)
     main._process(0.0)
@@ -302,11 +316,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 25:
-        push_error("Landscape UI QA incomplete: %d/25 captures" % _manifest.size())
+    if _failed or _manifest.size() != 26:
+        push_error("Landscape UI QA incomplete: %d/26 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 25 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 26 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
