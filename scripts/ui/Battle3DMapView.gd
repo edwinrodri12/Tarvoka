@@ -7,6 +7,8 @@ signal focus_requested(cell: Vector2i)
 
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
+const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
+const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -21,6 +23,22 @@ var _selected_cell := Vector2i(-1,-1)
 var _look_at := Vector3.ZERO
 var _yaw: float = PI*0.25
 var _camera_size: float = 28.0
+var _state_snapshot: Dictionary = {}
+var _selected_hint_unit_id: String = ""
+var _ranges_node: Node3D = null
+var _ranges_visible: bool = true
+var _range_text: Label
+const GESTURE_DRAG_LIMIT := 18.0
+var _touch_points: Dictionary = {}
+var _touch_origin := Vector2.ZERO
+var _touch_suppressed := false
+var _pinch_previous_distance: float = 0.0
+var _pinch_previous_midpoint := Vector2.ZERO
+var _pinch_previous_angle: float = 0.0
+var _mouse_down: bool = false
+var _mouse_start := Vector2.ZERO
+var _mouse_last := Vector2.ZERO
+var _mouse_dragged: bool = false
 
 func _ready() -> void:
     hide()
@@ -38,7 +56,7 @@ func _ready() -> void:
     holder.mouse_filter = Control.MOUSE_FILTER_STOP
     holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     holder.offset_top = 62
-    holder.offset_bottom = -81
+    holder.offset_bottom = -107
     holder.gui_input.connect(_on_viewport_input)
     add_child(holder)
     preview = SubViewport.new()
@@ -83,6 +101,7 @@ func _ready() -> void:
             ["−",_zoom_out,"Alejar mapa 3D"],
             ["+",_zoom_in,"Acercar mapa 3D"],
             ["Girar",_rotate_camera,"Rotar cámara"],
+            ["Alcances",_toggle_ranges,"Mostrar u ocultar las guías tácticas 3D"],
             ["Cerrar",close_view,"Regresar sin emitir órdenes"]]:
         var action := Button.new()
         action.text = str(control[0])
@@ -93,7 +112,7 @@ func _ready() -> void:
 
     var footer := PanelContainer.new()
     footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-    footer.offset_top = -79
+    footer.offset_top = -105
     add_child(footer)
     var labels := VBoxContainer.new()
     footer.add_child(labels)
@@ -106,6 +125,11 @@ func _ready() -> void:
     stats_label.add_theme_font_size_override("font_size",13)
     stats_label.add_theme_color_override("font_color",Color("#c6d7df"))
     labels.add_child(stats_label)
+    _range_text = Label.new()
+    _range_text.text = "Azul: movimiento legal · Naranja: cobertura potencial · Rojo: ataque actual"
+    _range_text.add_theme_font_size_override("font_size",13)
+    _range_text.add_theme_color_override("font_color",Color("#f0c77d"))
+    labels.add_child(_range_text)
 
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
@@ -122,12 +146,10 @@ func _refresh_camera() -> void:
     camera.look_at(_look_at,Vector3.UP)
 
 func _zoom_in() -> void:
-    _camera_size = maxf(7.0,_camera_size/1.28)
-    _refresh_camera()
+    _zoom_anchored(1.0/1.28,holder.size*0.5)
 
 func _zoom_out() -> void:
-    _camera_size = minf(112.0,_camera_size*1.28)
-    _refresh_camera()
+    _zoom_anchored(1.28,holder.size*0.5)
 
 func _rotate_camera() -> void:
     _yaw = fposmod(_yaw+PI*0.25,TAU)
@@ -150,14 +172,20 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     if model == null:
         return false
     _scene = model
+    _state_snapshot = state.duplicate(true)
+    _selected_hint_unit_id = selected_id
+    _ranges_visible = true
+    _reset_gesture()
     preview.add_child(_scene)
     _cells = model.get_meta("public_cells")
     _dims = model.get_meta("board_size")
+    _look_at = Vector3.ZERO
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.66,
         16.0,70.0)
     _yaw = PI*0.25
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
+    _refresh_ranges()
     var statistics: Dictionary = model.get_meta("render_stats")
     var units: Dictionary = statistics["units"]
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
@@ -172,6 +200,10 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     if not _cells.has(cell):
         return false
     _selected_cell = cell
+    var selected_friendly: String = _friendly_unit_at(cell)
+    if not selected_friendly.is_empty():
+        _selected_hint_unit_id = selected_friendly
+        _refresh_ranges()
     var tile: Dictionary = _cells[cell]
     var kind: String = str(tile.get("kind","unknown"))
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
@@ -197,48 +229,208 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
         Terrain.height_at(_cells,cell)+0.065,0)
     _scene.add_child(cursor)
     _cursor = cursor
-    if recenter:
-        _look_at = Terrain.world_at(cell)+Vector3.UP*0.17
-        _refresh_camera()
-    else:
+    if recenter or _look_at == Vector3.ZERO:
         _look_at = Terrain.world_at(cell)+Vector3.UP*0.17
         _refresh_camera()
     return true
 
-func pick_from_preview(point: Vector2) -> Vector2i:
-    if _scene == null or camera == null or preview == null:
-        return Vector2i(-1,-1)
+func _friendly_unit_at(cell: Vector2i) -> String:
+    if not _cells.has(cell) or not bool(_cells[cell].get("visible",false)):
+        return ""
+    for unit in _state_snapshot.get("units",[]):
+        if unit is Dictionary and int(unit.get("faction",-1)) == 0 and \
+                int(unit.get("hp",0)) > 0 and unit.get("pos",Vector2i(-1,-1)) == cell:
+            return str(unit.get("id",""))
+    return ""
+
+func _refresh_ranges() -> void:
+    if _ranges_node != null:
+        _ranges_node.get_parent().remove_child(_ranges_node)
+        _ranges_node.queue_free()
+        _ranges_node = null
+    if _scene == null:
+        return
+    if not _ranges_visible:
+        _range_text.text = "Alcances ocultos · Toca «Alcances» para verlos."
+        return
+    _ranges_node = Ranges.build(_scene,_state_snapshot,
+        _selected_hint_unit_id,_cells)
+    var counts: Dictionary = _ranges_node.get_meta("counts")
+    if _selected_hint_unit_id.is_empty():
+        _range_text.text = "Toca una unidad aliada para ver sus alcances."
+    else:
+        _range_text.text = ("Unidad %s · Azul %d destinos · Naranja %d cobertura potencial · Rojo %d ataques posibles ahora"
+            % [_selected_hint_unit_id,int(counts["moves"]),
+                int(counts["coverage"]),int(counts["attacks"])])
+
+func _toggle_ranges() -> void:
+    _ranges_visible = not _ranges_visible
+    _refresh_ranges()
+
+func _preview_point(at: Vector2) -> Vector2:
+    if holder.size.x <= 0.0 or holder.size.y <= 0.0:
+        return at
+    return at*Vector2(preview.size)/holder.size
+
+func _plane_point(at: Vector2, elevation: float = 0.16) -> Vector3:
+    var point: Vector2 = _preview_point(at)
     var start: Vector3 = camera.project_ray_origin(point)
     var direction: Vector3 = camera.project_ray_normal(point)
-    if absf(direction.y) < 0.00001:
-        return Vector2i(-1,-1)
-    var distance: float = (0.18-start.y)/direction.y
-    if distance < 0.0:
-        return Vector2i(-1,-1)
-    var hit: Vector3 = start+direction*distance
-    var cell := Vector2i(
-        floori(hit.x/Terrain.CELL+0.5),
-        floori(hit.z/Terrain.CELL+0.5))
-    if not _cells.has(cell):
-        return Vector2i(-1,-1)
-    return cell
+    if absf(direction.y) < 0.000001:
+        return _look_at
+    var t: float = (elevation-start.y)/direction.y
+    return start+direction*maxf(0.0,t)
+
+func _pan_between(before: Vector2, after: Vector2) -> void:
+    if before.distance_squared_to(after) < 0.001:
+        return
+    var previous: Vector3 = _plane_point(before)
+    var current: Vector3 = _plane_point(after)
+    _look_at += previous-current
+    _refresh_camera()
+
+func _zoom_anchored(factor: float, anchor: Vector2) -> void:
+    if camera == null or holder == null:
+        return
+    var old_point: Vector3 = _plane_point(anchor)
+    _camera_size = clampf(_camera_size*factor,7.0,112.0)
+    _refresh_camera()
+    var new_point: Vector3 = _plane_point(anchor)
+    _look_at += old_point-new_point
+    _refresh_camera()
+
+func _reset_gesture() -> void:
+    _touch_points.clear()
+    _touch_suppressed = false
+    _pinch_previous_distance = 0.0
+    _mouse_down = false
+    _mouse_dragged = false
+
+func _touch_pair() -> Array[Vector2]:
+    var indices: Array = _touch_points.keys()
+    indices.sort()
+    if indices.size() < 2:
+        return []
+    return [_touch_points[indices[0]],_touch_points[indices[1]]]
+
+func _begin_pinch() -> void:
+    var pair: Array[Vector2] = _touch_pair()
+    if pair.size() < 2:
+        return
+    _touch_suppressed = true # Never turn the final release into an inspection.
+    _pinch_previous_distance = pair[0].distance_to(pair[1])
+    _pinch_previous_midpoint = (pair[0]+pair[1])*0.5
+    var axis: Vector2 = pair[1]-pair[0]
+    _pinch_previous_angle = atan2(axis.y,axis.x)
+
+func _update_pinch() -> void:
+    var pair: Array[Vector2] = _touch_pair()
+    if pair.size() < 2:
+        return
+    var distance: float = pair[0].distance_to(pair[1])
+    if distance < 7.0:
+        return
+    var midpoint: Vector2 = (pair[0]+pair[1])*0.5
+    var axis: Vector2 = pair[1]-pair[0]
+    var angle: float = atan2(axis.y,axis.x)
+    if _pinch_previous_distance > 7.0:
+        # One gesture can zoom, rotate and pan at the same time.
+        _pan_between(_pinch_previous_midpoint,midpoint)
+        _zoom_anchored(_pinch_previous_distance/distance,midpoint)
+        _yaw = fposmod(_yaw+wrapf(angle-_pinch_previous_angle,-PI,PI),TAU)
+        _refresh_camera()
+    _pinch_previous_distance = distance
+    _pinch_previous_midpoint = midpoint
+    _pinch_previous_angle = angle
+
+func pick_hit_from_preview(point: Vector2) -> Dictionary:
+    if _scene == null or camera == null or preview == null:
+        return {}
+    var at: Vector2 = _preview_point(point)
+    return Picker.cast(_cells,camera.project_ray_origin(at),
+        camera.project_ray_normal(at))
+
+func pick_from_preview(point: Vector2) -> Vector2i:
+    var hit: Dictionary = pick_hit_from_preview(point)
+    return hit.get("cell",Vector2i(-1,-1))
 
 func _on_viewport_input(event: InputEvent) -> void:
     if not visible:
         return
-    if event is InputEventMouseButton and event.pressed:
-        if event.button_index == MOUSE_BUTTON_LEFT and event.device != InputEvent.DEVICE_ID_EMULATION:
-            var cell: Vector2i = pick_from_preview(event.position)
-            if cell.x >= 0:
-                inspect_cell(cell)
-        elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-            _zoom_in()
-        elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-            _zoom_out()
-    elif event is InputEventScreenTouch and not event.pressed:
-        var cell: Vector2i = pick_from_preview(event.position)
-        if cell.x >= 0:
-            inspect_cell(cell)
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            _touch_points[event.index] = event.position
+            if _touch_points.size() == 1:
+                _touch_origin = event.position
+                _touch_suppressed = false
+            elif _touch_points.size() >= 2:
+                _begin_pinch()
+        elif _touch_points.has(event.index):
+            var final_finger: bool = _touch_points.size() == 1
+            var short_tap: bool = final_finger and not _touch_suppressed and \
+                _touch_origin.distance_to(event.position) <= GESTURE_DRAG_LIMIT
+            _touch_points.erase(event.index)
+            if _touch_points.is_empty():
+                if short_tap:
+                    var picked: Vector2i = pick_from_preview(event.position)
+                    if picked.x >= 0:
+                        inspect_cell(picked)
+                _pinch_previous_distance = 0.0
+                _touch_suppressed = false
+            elif _touch_points.size() == 1:
+                # The last finger may pan, but its release is NEVER a tap.
+                _touch_suppressed = true
+                _pinch_previous_distance = 0.0
+            else:
+                _begin_pinch()
+        accept_event()
+    elif event is InputEventScreenDrag:
+        if not _touch_points.has(event.index):
+            return
+        var previous: Vector2 = _touch_points[event.index]
+        _touch_points[event.index] = event.position
+        if _touch_points.size() >= 2:
+            _update_pinch()
+        elif _touch_points.size() == 1:
+            if event.position.distance_to(_touch_origin) > GESTURE_DRAG_LIMIT:
+                _touch_suppressed = true
+            if _touch_suppressed:
+                _pan_between(previous,event.position)
+        accept_event()
+    elif event is InputEventMouseButton:
+        if event.device == InputEvent.DEVICE_ID_EMULATION or not _touch_points.is_empty():
+            accept_event()
+            return
+        if event.button_index == MOUSE_BUTTON_LEFT:
+            if event.pressed:
+                _mouse_down = true
+                _mouse_start = event.position
+                _mouse_last = event.position
+                _mouse_dragged = false
+            elif _mouse_down:
+                if not _mouse_dragged and \
+                        _mouse_start.distance_to(event.position) <= GESTURE_DRAG_LIMIT:
+                    var picked: Vector2i = pick_from_preview(event.position)
+                    if picked.x >= 0:
+                        inspect_cell(picked)
+                _mouse_down = false
+            accept_event()
+        elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+            _zoom_anchored(1.0/1.16,event.position)
+            accept_event()
+        elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+            _zoom_anchored(1.16,event.position)
+            accept_event()
+    elif event is InputEventMouseMotion and _mouse_down:
+        if event.device == InputEvent.DEVICE_ID_EMULATION:
+            accept_event()
+            return
+        if event.position.distance_to(_mouse_start) > GESTURE_DRAG_LIMIT:
+            _mouse_dragged = true
+        if _mouse_dragged:
+            _pan_between(_mouse_last,event.position)
+        _mouse_last = event.position
+        accept_event()
 
 func close_view() -> void:
     hide()
@@ -247,7 +439,11 @@ func close_view() -> void:
         _scene.queue_free()
         _scene = null
     _cursor = null
+    _ranges_node = null
     _cells = {}
+    _state_snapshot = {}
+    _selected_hint_unit_id = ""
+    _reset_gesture()
     if _selected_cell.x >= 0:
         focus_requested.emit(_selected_cell)
     _selected_cell = Vector2i(-1,-1)
