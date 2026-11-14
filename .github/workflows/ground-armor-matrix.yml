@@ -1,0 +1,79 @@
+name: TARVOKA ground armor role matrix
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/GroundArmorProcurement.gd'
+      - 'tests/test_ground_armor_role_matrix.gd'
+      - 'tests/test_ground_armor_ai_procurement.gd'
+      - '.github/workflows/ground-armor-matrix.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/GroundArmorProcurement.gd'
+      - 'tests/test_ground_armor_role_matrix.gd'
+      - 'tests/test_ground_armor_ai_procurement.gd'
+      - '.github/workflows/ground-armor-matrix.yml'
+  workflow_dispatch:
+
+jobs:
+  armor-matrix:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Measure real 4x4 x terrain x weather x side combat and mobility
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ground_armor_role_matrix.gd 2>&1 \
+            | tee /tmp/ground-armor-matrix.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/ground-armor-matrix.log; then exit 1; fi
+          grep -F 'PASS ground armor role matrix:' /tmp/ground-armor-matrix.log
+          grep 'GROUND_ARMOR_MATRIX_JSON ' /tmp/ground-armor-matrix.log \
+            | tail -1 | sed 's/^.*GROUND_ARMOR_MATRIX_JSON //' \
+            > /tmp/ground-armor-matrix.json
+          python3 -m json.tool /tmp/ground-armor-matrix.json >/dev/null
+      - name: Validate contextual AI procurement
+        if: ${{ hashFiles('tests/test_ground_armor_ai_procurement.gd') != '' }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ground_armor_ai_procurement.gd 2>&1 \
+            | tee /tmp/ground-armor-ai.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/ground-armor-ai.log; then exit 1; fi
+          grep -F 'PASS ground armor procurement:' /tmp/ground-armor-ai.log
+      - name: Check AI economy and mirrored decisions
+        if: ${{ hashFiles('tests/test_ground_armor_ai_procurement.gd') != '' }}
+        run: |
+          set -euo pipefail
+          for test in test_modern_mirror_decisions test_paired_balance_telemetry test_piercer_g09_ai_economy; do
+            timeout --signal=TERM --kill-after=5s 75s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" 2>&1 \
+              | tee "/tmp/${test}-ground-armor.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}-ground-armor.log"; then exit 1; fi
+            grep -F 'PASS ' "/tmp/${test}-ground-armor.log"
+          done
+      - name: Upload audit data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Ground-Armor-Matrix-QA
+          path: |
+            /tmp/ground-armor-matrix.log
+            /tmp/ground-armor-matrix.json
+            /tmp/ground-armor-ai.log
+            /tmp/*-ground-armor.log
+          if-no-files-found: warn
