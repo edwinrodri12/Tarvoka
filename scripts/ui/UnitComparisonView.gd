@@ -27,7 +27,7 @@ func _text(parent: Container, value: String, size: int = 14, tint: Color = Color
     parent.add_child(label)
     return label
 
-func _portrait(parent: Container, data: Dictionary, side: String) -> void:
+func _portrait(parent: Container, data: Dictionary, side: String, tint: Color) -> void:
     var cell := VBoxContainer.new()
     cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     parent.add_child(cell)
@@ -37,7 +37,7 @@ func _portrait(parent: Container, data: Dictionary, side: String) -> void:
     var icon := UnitIcon.new()
     icon.custom_minimum_size = Vector2(50,50)
     visual.add_child(icon)
-    icon.configure(str(data.get("role","line")),VisualStyle.faction_color(0))
+    icon.configure(str(data.get("role","line")),tint)
     var labels := VBoxContainer.new()
     labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     visual.add_child(labels)
@@ -58,7 +58,7 @@ func _portrait(parent: Container, data: Dictionary, side: String) -> void:
 
 # Render ONLY actual producer-eligible roles already authorized by the model.
 # The comparison is informational: there are no clickable purchase surfaces.
-func show_comparison(result: Dictionary) -> void:
+func show_comparison(result: Dictionary, tint: Color = Color("#2375F3")) -> void:
     _clear()
     if result.is_empty():
         hide()
@@ -72,9 +72,9 @@ func show_comparison(result: Dictionary) -> void:
     var columns := HBoxContainer.new()
     columns.add_theme_constant_override("separation",6)
     _content.add_child(columns)
-    _portrait(columns,left,"A · Selección")
+    _portrait(columns,left,"A · Selección",tint)
     if not right.is_empty():
-        _portrait(columns,right,"B · Comparación")
+        _portrait(columns,right,"B · Comparación",tint)
     var grid := GridContainer.new()
     grid.columns = 3 if not right.is_empty() else 2
     grid.add_theme_constant_override("h_separation",12)
