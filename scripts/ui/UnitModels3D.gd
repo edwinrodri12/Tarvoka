@@ -16,6 +16,21 @@ const TankArt = preload("res://scripts/ui/TankArtV6.gd")
 const TankHero = preload("res://scripts/ui/TankHeroV7.gd")
 const TankProductionV9 = preload("res://scripts/ui/TankProductionV9.gd")
 const TankArmorV10 = preload("res://scripts/ui/TankArmorV10.gd")
+const TankSilhouetteV11 = preload("res://scripts/ui/TankSilhouetteV11.gd")
+const TankArtV12 = preload("res://scripts/ui/TankArtV12.gd")
+const TankDetailV13 = preload("res://scripts/ui/TankDetailV13.gd")
+const TankDetailV14 = preload("res://scripts/ui/TankDetailV14.gd")
+const TankArmorV15 = preload("res://scripts/ui/TankArmorV15.gd")
+const TankFinishV16 = preload("res://scripts/ui/TankFinishV16.gd")
+const TankFXV17 = preload("res://scripts/ui/TankFXV17.gd")
+const TankSculptV18 = preload("res://scripts/ui/TankSculptV18.gd")
+const TankSculptV19 = preload("res://scripts/ui/TankSculptV19.gd")
+const TankIntegrationV20 = preload("res://scripts/ui/TankIntegrationV20.gd")
+const TankFinishV21 = preload("res://scripts/ui/TankFinishV21.gd")
+const TankGunV22 = preload("res://scripts/ui/TankGunV22.gd")
+const TankFactionV23 = preload("res://scripts/ui/TankFactionV23.gd")
+const TankTacticalV24 = preload("res://scripts/ui/TankTacticalV24.gd")
+const TankWearV25 = preload("res://scripts/ui/TankWearV25.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -327,7 +342,18 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     # instances; recoloring a tank cannot modify any other unit.
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
-    return _paint_panels(model,faction_paint_color(faction))
+    var painted: int = _paint_panels(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_refined_v12",false):
+        TankArtV12.refine_faction_paint(model)
+    if model.get_meta("tarvoka_mbt_finish_v16",false):
+        TankFinishV16.refine_faction_paint(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_faction_v23",false):
+        TankFactionV23.recolor(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_tactical_v24",false):
+        TankTacticalV24.recolor(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_mbt_wear_v25",false):
+        TankWearV25.refinish(model)
+    return painted
 
 static func paintable_count(model: Node) -> int:
     if model == null:
@@ -744,6 +770,16 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     TankProductionV9.apply(model)
                     if art_level >= 10:
                         TankArmorV10.apply(model)
+                        if art_level >= 11:
+                            TankSilhouetteV11.apply(model)
+                            if art_level >= 12:
+                                TankArtV12.apply(model)
+                                if art_level >= 13:
+                                    TankDetailV13.apply(model)
+                                    if art_level >= 14:
+                                        TankDetailV14.apply(model)
+                                        if art_level >= 15:
+                                            TankArmorV15.apply(model)
         apply_faction_palette(model,faction)
         TankSurface.apply_finish(model)
         if finish_enabled and art_level >= 7:
@@ -754,7 +790,37 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 TankProductionV9.restore_materials(model)
                 if art_level >= 10:
                     TankArmorV10.finish_materials(model)
+                    if art_level >= 11:
+                        TankSilhouetteV11.finish_materials(model)
+                        if art_level >= 12:
+                            TankArtV12.finish_materials(model)
+                            if art_level >= 13:
+                                TankDetailV13.finish_materials(model)
+                                if art_level >= 14:
+                                    TankDetailV14.finish_materials(model)
+                                    if art_level >= 15:
+                                        TankArmorV15.finish_materials(model)
         TankDamage.prepare(model)
+        if art_level >= 16 and model.get_meta("tarvoka_mbt_integrated_v15",false):
+            TankFinishV16.apply(model,faction_paint_color(faction))
+            if art_level >= 17:
+                TankFXV17.apply(model)
+                if art_level >= 18:
+                    TankSculptV18.apply(model)
+                    if art_level >= 19:
+                        TankSculptV19.apply(model)
+                        if art_level >= 20:
+                            TankIntegrationV20.apply(model)
+                            if art_level >= 21:
+                                TankFinishV21.apply(model)
+                                if art_level >= 22:
+                                    TankGunV22.apply(model)
+                                    if art_level >= 23:
+                                        TankFactionV23.apply(model,faction_paint_color(faction))
+                                        if art_level >= 24:
+                                            TankTacticalV24.apply(model,faction_paint_color(faction))
+                                            if art_level >= 25:
+                                                TankWearV25.apply(model)
     return model
 
 static func inspect_meshes(model: Node) -> int:
