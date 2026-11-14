@@ -11,6 +11,7 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Bridge = preload("res://scripts/ui/TerrainStudioBridge3D.gd")
 const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
+const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -554,7 +555,9 @@ static func _water_details(parent: Node3D, origin: Vector3, x: int,
 
 static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
-        continuous: bool = true, show_scatter: bool = true) -> Node3D:
+        continuous: bool = true, show_scatter: bool = true,
+        v5_shores: bool = false, v5_water: bool = false,
+        v5_rocks: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -563,6 +566,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_samples",show_samples)
     root.set_meta("terrain_studio_continuous",continuous)
     root.set_meta("terrain_studio_scatter",continuous and show_scatter)
+    root.set_meta("terrain_studio_v5_shores",continuous and show_scatter and v5_shores)
+    root.set_meta("terrain_studio_v5_water",continuous and show_scatter and v5_water)
+    root.set_meta("terrain_studio_v5_rocks",continuous and show_scatter and v5_rocks)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -676,6 +682,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     if continuous and show_scatter:
         scatter_stats = Scatter.populate(props,detail_cells,preset)
     root.set_meta("terrain_scatter_counts",scatter_stats)
+    var v5_stats: Dictionary = {
+        "banks":0,"ripples":0,"rocks":0,"batches":0}
+    if continuous and show_scatter and (v5_shores or v5_water or v5_rocks):
+        # One optional ornamental pass per render. The original V1–V4
+        # preview and all existing tactical/mesh tests remain unchanged.
+        v5_stats = DetailV5.populate(props,detail_cells,preset,
+            v5_shores,v5_water,v5_rocks)
+    root.set_meta("terrain_detail_v5",v5_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
