@@ -23,6 +23,7 @@ func _initialize() -> void:
     var total_buys := 0
     var total_resupplies := 0
     var total_repairs := 0
+    var total_support_moves := 0
     var total_repair_spend := 0
     var total_paid_rearms := 0
     var total_critical := 0
@@ -40,6 +41,7 @@ func _initialize() -> void:
                     total_buys += int(report["bought"][0]) + int(report["bought"][1])
                     total_resupplies += int(report["resupplied"][0]) + int(report["resupplied"][1])
                     total_repairs += int(report["repaired"][0]) + int(report["repaired"][1])
+                    total_support_moves += int(report["support_moves"][0]) + int(report["support_moves"][1])
                     total_repair_spend += int(report["repair_spent"][0]) + int(report["repair_spent"][1])
                     total_paid_rearms += int(report["rearm_spent"][0]) + int(report["rearm_spent"][1])
                     total_critical += int(report["low_supply"][0]) + int(report["low_supply"][1])
@@ -74,8 +76,8 @@ func _initialize() -> void:
     assert(matches == 16 and total_actions > 60)
     assert(total_buys > 0)
     assert(pair_wins[0] + pair_wins[1] + undecided == matches)
-    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d repairs=%d repair_spend=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
-        matches,total_actions,total_phases,total_buys,total_resupplies,total_repairs,total_repair_spend,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
+    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d repairs=%d repair_spend=%d support_moves=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
+        matches,total_actions,total_phases,total_buys,total_resupplies,total_repairs,total_repair_spend,total_support_moves,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
         faction_wins[0],faction_wins[1],str(relay_moves),str(urban_moves)
     ])
     print("PASS paired balance telemetry: 16 matched games, mirrored starts, action economy, save and supply invariants")
@@ -85,7 +87,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,relay,true,true)
     var report := {
         "winner":-1, "phases":0, "actions":0,
-        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0], "repaired":[0,0], "repair_spent":[0,0],
+        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0], "repaired":[0,0], "repair_spent":[0,0], "support_moves":[0,0],
         "attacks":[0,0], "low_supply":[0,0],
         "relay_moves":[0,0], "urban_moves":[0,0], "cities":[0,0], "relays":[0,0]
     }
@@ -133,6 +135,11 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
                 report["attacks"][side] += 1
             elif str(step["action"]) == "move":
                 var reason: String = str(step.get("reason",""))
+                if reason == "engineer_support":
+                    report["support_moves"][side] += 1
+                    assert(str(step.get("recipient_id","")) != "")
+                    assert(str(step.get("unit_id","")) != "")
+                    assert(int(next["economy"]["credits"][side]) == int(state["economy"]["credits"][side]))
                 if reason in ["relay","defend_relay"]:
                     report["relay_moves"][side] += 1
                 elif reason in ["capture_city","capture_factory"]:
