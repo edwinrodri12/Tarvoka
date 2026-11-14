@@ -9,6 +9,8 @@ const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const Scatter = preload("res://scripts/ui/TerrainStudioScatter3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
+const Bridge = preload("res://scripts/ui/TerrainStudioBridge3D.gd")
+const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -293,8 +295,7 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
     ground.name = "SueloContinuoConRelieve"
     ground.mesh = land.commit()
     var land_mat := StandardMaterial3D.new()
-    land_mat.vertex_color_use_as_albedo = true
-    land_mat.roughness = 0.92
+    SurfaceFinish.apply(land_mat,"soil")
     land_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
     ground.material_override = land_mat
     parent.add_child(ground)
@@ -302,8 +303,7 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
     water_surface.name = "LaminaDeAguaContinua"
     water_surface.mesh = water.commit()
     var water_mat := StandardMaterial3D.new()
-    water_mat.vertex_color_use_as_albedo = true
-    water_mat.roughness = 0.32
+    SurfaceFinish.apply(water_mat,"water")
     water_mat.metallic = 0.05
     water_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
     water_surface.material_override = water_mat
@@ -376,9 +376,12 @@ static func _scatter_grass(parent: Node3D, scene: int) -> void:
             grass_mesh_tool.add_vertex(vertex)
     grass_mesh_tool.generate_normals()
     var mesh: ArrayMesh = grass_mesh_tool.commit()
-    var mat: StandardMaterial3D = _material(
-        Color("#527a46") if scene == 0 else (
-        Color("#99885e") if scene == 1 else Color("#3c7765"))
+    var grass_tint: Color = Color("#527a46")
+    if scene == 1:
+        grass_tint = Color("#99885e")
+    elif scene == 2:
+        grass_tint = Color("#3c7765")
+    var mat: StandardMaterial3D = _material(grass_tint)
     var grass_material := mat.duplicate() as StandardMaterial3D
     grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
     grass_material.roughness = 0.98
@@ -474,8 +477,7 @@ static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
     mountain.mesh = rock_surface.commit()
     mountain.position = origin
     var material := StandardMaterial3D.new()
-    material.vertex_color_use_as_albedo = true
-    material.roughness = 0.92
+    SurfaceFinish.apply(material,"rock")
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
     mountain.material_override = material
     parent.add_child(mountain)
@@ -644,7 +646,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     # Both east-west causeways remain visually continuous
                     # over the winding river at rows 5 and 8.
                     if preset == 1 and ((z == 5 and x in [4,5]) or
-                        (z == 8 and x in [5,6])):
+                        (z == 8 and x in [5,6])) and not (continuous and show_scatter):
                         _bridge(props,p,x)
             if show_grid:
                 var grid_tint: Color = Color("#223842") if type != "water" else Color("#19566d")
@@ -654,6 +656,21 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                 _box(props,"GuiaCasillaO",
                     p+Vector3(-CELL*0.49,top+0.025,0),
                     Vector3(0.026,0.026,CELL*0.985),grid_tint)
+    var bridge_count: int = 0
+    if preset == 1 and continuous and show_scatter:
+        # Draw each causeway once, from land road center to land road center.
+        # Unlike individual box tiles, ramps meet the real road height.
+        for row in [5,8]:
+            var left_x: int = 3 if row == 5 else 4
+            var right_x: int = 6 if row == 5 else 7
+            var left_at: Vector3 = _cell_center(left_x,row)
+            var right_at: Vector3 = _cell_center(right_x,row)
+            var left_y: float = surface_height_at(left_x,row,preset)+0.06
+            var right_y: float = surface_height_at(right_x,row,preset)+0.06
+            Bridge.build(props,row,left_at,right_at,
+                left_y,right_y,CELL,WATER_LEVEL)
+            bridge_count += 1
+    root.set_meta("terrain_bridge_visual_count",bridge_count)
     var scatter_stats: Dictionary = {
         "grass":0,"reeds":0,"gravel":0,"batches":0}
     if continuous and show_scatter:

@@ -99,6 +99,7 @@ func _run() -> void:
     assert(ground != null and ground.mesh != null)
     assert(ground.mesh.get_surface_count() == 1)
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
+    assert((ground.material_override as StandardMaterial3D).albedo_texture != null)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
     assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
@@ -185,18 +186,58 @@ func _run() -> void:
         if preset == 0:
             assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)
         if preset == 1:
-            assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
-            assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
-            assert(studio.model_root.find_child("PuenteElevado_6",true,false) != null)
+            assert(studio.model_root.get_meta("terrain_bridge_visual_count") == 2)
+            for row in [5,8]:
+                var bridge: Node3D = studio.model_root.find_child(
+                    "PuenteContinuoV4_%d" % row,true,false) as Node3D
+                assert(bridge != null)
+                assert(bridge.find_child("TableroYRampasV4",true,false) != null)
+                assert(bridge.find_child("BarandasContinuasV4",true,false) != null)
+                assert(bridge.find_child("PilaresAgrupadosV4",true,false) != null)
             assert(Terrain.kind(3,0,preset) == "water")
             assert(Terrain.kind(6,9,preset) == "water")
-            assert(studio.model_root.find_child("PilarPuente",true,false) != null)
+            assert(studio.model_root.find_child("PuenteElevado_4",true,false) == null)
         if preset == 2:
             assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or
                 studio.model_root.find_child("CopaFrondosa_43",true,false) != null)
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
+    # Specific canyon bridge proof: identical camera, lighting and models,
+    # with only the V2/V4 renderer switched.
+    studio.terrain_scene_picker.select(1)
+    studio._change_terrain_scene(1)
+    studio._reset_camera()
+    studio.terrain_scatter_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    for bridge_frame in range(8):
+        await process_frame
+    var canyon_v2: Image = studio.preview.get_texture().get_image()
+    assert(canyon_v2 != null and not canyon_v2.is_empty())
+    studio.terrain_scatter_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    for bridge_frame in range(8):
+        await process_frame
+    var canyon_v4: Image = studio.preview.get_texture().get_image()
+    assert(canyon_v4 != null and not canyon_v4.is_empty())
+    var old_canyon := canyon_v2.duplicate()
+    var new_canyon := canyon_v4.duplicate()
+    old_canyon.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    new_canyon.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var visible_bridge_changes: int = 0
+    for py in range(0,330,5):
+        for px in range(0,480,5):
+            var before_color: Color = old_canyon.get_pixel(px,py)
+            var after_color: Color = new_canyon.get_pixel(px,py)
+            if absf(before_color.r-after_color.r)+absf(before_color.g-after_color.g)+absf(before_color.b-after_color.b) > 0.12:
+                visible_bridge_changes += 1
+    assert(visible_bridge_changes > 35)
+    var bridge_comparison := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    bridge_comparison.blit_rect(old_canyon,Rect2i(0,0,480,330),Vector2i.ZERO)
+    bridge_comparison.blit_rect(new_canyon,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(bridge_comparison.save_png(
+        "res://artifacts/tarvoka_canyon_v2_v4_same_camera.png") == OK)
     # Same-camera image captures are mandatory; smoke tests that only
     # inspect node counts can miss unlit, empty or visually broken terrain.
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
