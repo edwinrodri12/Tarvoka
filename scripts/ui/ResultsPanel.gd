@@ -14,6 +14,8 @@ var title_label: Label
 var cause_label: Label
 var stats_column: VBoxContainer
 var commander_matchup: Control
+var result_columns: BoxContainer
+var stats_scroll: ScrollContainer
 var _side_labels: Array[String] = ["AZUL","ROJO"]
 var _side_tints: Array[Color] = [Color("#82C5FF"),Color("#FF9D96")]
 var hint_label: Label
@@ -35,27 +37,60 @@ func _ready() -> void:
     main.size_flags_vertical = Control.SIZE_EXPAND_FILL
     main.add_theme_constant_override("separation",10)
     add_child(main)
+    # Landscape screen: winner and approved commander portraits remain visible
+    # at left while the truthful recorded statistics scroll independently at
+    # right. Both sides share the same battle state, never fabricated data.
+    result_columns = BoxContainer.new()
+    result_columns.name = "ResultadosHorizontales"
+    result_columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    result_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    result_columns.add_theme_constant_override("separation",12)
+    main.add_child(result_columns)
+
+    var identity_card := PanelContainer.new()
+    identity_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    identity_card.size_flags_stretch_ratio = 0.98
+    identity_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(
+        Color("#10283A"),GameUiTheme.EDGE,8,10))
+    result_columns.add_child(identity_card)
+    var identity_stack := VBoxContainer.new()
+    identity_stack.add_theme_constant_override("separation",10)
+    identity_card.add_child(identity_stack)
+    var outcome_heading := _label("DESENLACE  /  COMANDANTES",14,GameUiTheme.GOLD)
+    identity_stack.add_child(outcome_heading)
     title_label = _label("RESULTADOS",27,Color("#F6D78F"))
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    main.add_child(title_label)
+    identity_stack.add_child(title_label)
     cause_label = _label("",15,Color("#C2D6E1"))
     cause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    main.add_child(cause_label)
+    identity_stack.add_child(cause_label)
     commander_matchup = CommanderStrip.new()
     commander_matchup.name = "ComandantesDelResultado"
-    main.add_child(commander_matchup)
+    identity_stack.add_child(commander_matchup)
+
+    var statistics_card := PanelContainer.new()
+    statistics_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    statistics_card.size_flags_stretch_ratio = 1.02
+    statistics_card.add_theme_stylebox_override("panel",GameUiTheme.box_style(
+        Color("#0D2232"),GameUiTheme.EDGE_BRIGHT,8,9))
+    result_columns.add_child(statistics_card)
+    var statistics_stack := VBoxContainer.new()
+    statistics_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    statistics_stack.add_theme_constant_override("separation",7)
+    statistics_card.add_child(statistics_stack)
+    statistics_stack.add_child(_label("BALANCE DE FUERZAS",16,GameUiTheme.GOLD))
     var divider := HSeparator.new()
-    main.add_child(divider)
-    var scroll := ScrollContainer.new()
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    main.add_child(scroll)
+    statistics_stack.add_child(divider)
+    stats_scroll = ScrollContainer.new()
+    stats_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    stats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    statistics_stack.add_child(stats_scroll)
     stats_column = VBoxContainer.new()
     stats_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     stats_column.add_theme_constant_override("separation",8)
-    scroll.add_child(stats_column)
-    hint_label = _label("Cifras finales del motor. No se estiman disparos, daño causado ni precisión sin historial registrado.",12,Color("#9FB3C4"))
-    main.add_child(hint_label)
+    stats_scroll.add_child(stats_column)
+    hint_label = _label("Datos registrados por el motor. No se inventan estadísticas.",12,Color("#9FB3C4"))
+    statistics_stack.add_child(hint_label)
 
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",6)
@@ -90,8 +125,10 @@ func _reflow() -> void:
     var size_rect: Vector2 = get_viewport_rect().size
     var portrait: bool = size_rect.y > size_rect.x
     var landscape_compact: bool = not portrait and size_rect.y < 570.0
-    set_anchor(SIDE_LEFT,0.04 if portrait else (0.07 if landscape_compact else 0.24))
-    set_anchor(SIDE_RIGHT,0.96 if portrait else (0.93 if landscape_compact else 0.76))
+    if result_columns != null:
+        result_columns.vertical = portrait
+    set_anchor(SIDE_LEFT,0.04 if portrait else (0.04 if landscape_compact else 0.10))
+    set_anchor(SIDE_RIGHT,0.96 if portrait else (0.96 if landscape_compact else 0.90))
     offset_left = 0
     offset_right = 0
     if portrait:
