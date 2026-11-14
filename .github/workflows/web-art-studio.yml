@@ -24,6 +24,7 @@ on:
       - "tests/test_g09_art_v12.gd"
       - "tests/test_g09_art_v13.gd"
       - "tests/test_g09_art_v14.gd"
+      - "tests/test_g09_art_v15.gd"
       - "tests/test_mbt_silhouette_v5.gd"
   push:
     branches:
@@ -304,6 +305,36 @@ jobs:
           fi
           grep -q "PASS G09 V14 GLB export:" /tmp/g09-v14-glb.log
           test -s artifacts/TARVOKA_G09_V14_Escultura_Editable.glb
+      - name: Verify V15 actual fused 3D panels versus V14 and visual HP restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v15.gd 2>&1 | tee /tmp/g09-v15-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v15-art.log; then
+            echo "G09 V15 silhouette, mobility, color or destruction failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V15:" /tmp/g09-v15-art.log
+          test -s artifacts/tarvoka_g09_v14_v15_same_camera.png
+          test -s artifacts/tarvoka_g09_v15_four_angles.png
+          test -s artifacts/tarvoka_g09_v15_three_damage_states.png
+      - name: Export repaired V15 original geometry into editable GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v15_glb.gd 2>&1 | tee /tmp/g09-v15-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v15-glb.log; then
+            echo "V15 GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V15 GLB export:" /tmp/g09-v15-glb.log
+          test -s artifacts/TARVOKA_G09_V15_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -343,6 +374,9 @@ jobs:
             artifacts/tarvoka_g09_v13_four_angles.png
             artifacts/tarvoka_g09_v13_v14_same_camera.png
             artifacts/tarvoka_g09_v14_four_angles.png
+            artifacts/tarvoka_g09_v14_v15_same_camera.png
+            artifacts/tarvoka_g09_v15_four_angles.png
+            artifacts/tarvoka_g09_v15_three_damage_states.png
             artifacts/tarvoka_g09_v11_v12_closeup.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
@@ -351,6 +385,7 @@ jobs:
             artifacts/TARVOKA_G09_V12_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V13_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V14_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V15_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
