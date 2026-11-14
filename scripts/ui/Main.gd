@@ -2059,7 +2059,7 @@ func _open_repair_targets() -> void:
     for i in range(available.size()):
         var choice: Dictionary = available[i]
         repair_popup.add_item("%s · +%d HP · %d cr. (queda %d/%d)" % [
-            str(choice["target_role"]),int(choice["restored"]),int(choice["cost"]),
+            Roles.label(str(choice["target_role"])),int(choice["restored"]),int(choice["cost"]),
             int(choice["after_hp"]),int(choice["maximum_hp"])],i)
     repair_popup.popup_centered(Vector2i(420,mini(350,available.size()*44+35)))
 
