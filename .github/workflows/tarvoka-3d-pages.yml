@@ -66,7 +66,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/studio-pages-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Import failed" /tmp/studio-pages-import.log; then
+            echo "Godot HQ V8 atlas import failed" >&2
+            exit 1
+          fi
+          test -d .godot/imported
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
