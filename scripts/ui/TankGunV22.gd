@@ -39,8 +39,8 @@ static func _lathe(sections: Array, sides: int = 28) -> ArrayMesh:
             var l1 := Vector3(lower.y*cos(b),lower.x,lower.y*sin(b))
             var u0 := Vector3(upper.y*cos(a),upper.x,upper.y*sin(a))
             var u1 := Vector3(upper.y*cos(b),upper.x,upper.y*sin(b))
-            Hero._tri(st,l0,l1,u1)
-            Hero._tri(st,l0,u1,u0)
+            Hero._tri(st,l0,u1,l1)
+            Hero._tri(st,l0,u0,u1)
     return st.commit()
 
 static func _profiles() -> Array:
