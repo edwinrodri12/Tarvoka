@@ -46,3 +46,26 @@ static func placement(cell: Vector2i, index: int) -> Vector2:
     return Vector2(
         0.16+float(posmod(salt*13+index*11,69))*0.010,
         0.16+float(posmod(salt*19+index*17,69))*0.010)
+
+
+# A ragged forest edge reduces the straight, square boundary without
+# painting into a road, river, plain or fogged neighbor. The caller must
+# supply ONLY explicitly known non-forest neighbors.
+static func edge_placement(cell: Vector2i, side: int,
+        index: int = 0) -> Vector2:
+    if side < 0 or side > 3:
+        return Vector2(0.5,0.5)
+    var seed: int = posmod(
+        cell.x*97+cell.y*181+side*59+index*43,997)
+    var t: float = 0.17+float(posmod(seed*7+index*17,67))*0.010
+    var inset: float = 0.07+float(
+        posmod(seed*11+index*7,12))*0.006
+    match side:
+        0:
+            return Vector2(t,inset)
+        1:
+            return Vector2(1.0-inset,t)
+        2:
+            return Vector2(t,1.0-inset)
+        _:
+            return Vector2(inset,t)
