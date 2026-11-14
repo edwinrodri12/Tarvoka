@@ -47,6 +47,10 @@ var terrain_deposits_v12_toggle: CheckButton
 var terrain_verges_v12_toggle: CheckButton
 var terrain_compare_v12_button: Button
 var _terrain_v12_enabled := true
+var terrain_mineral_v13_toggle: CheckButton
+var terrain_habitat_v13_toggle: CheckButton
+var terrain_compare_v13_button: Button
+var _terrain_v13_enabled := true
 var terrain_silhouette_v10_toggle: CheckButton
 var terrain_compare_v10_button: Button
 var terrain_ridge_profile_button: Button
@@ -396,6 +400,24 @@ func _add_building_mode() -> void:
     terrain_compare_v12_button.name = "ComparadorTerrenoV11V12"
     terrain_compare_v12_button.custom_minimum_size.y = 50
 
+    _title(terrain_controls,"MONTAÑAS INTEGRADAS CON EL AMBIENTE V13",13)
+    terrain_mineral_v13_toggle = CheckButton.new()
+    terrain_mineral_v13_toggle.name = "EstratosAmbientalesV13"
+    terrain_mineral_v13_toggle.text = "Roca, crestas y laderas según valle / cañón / costa"
+    terrain_mineral_v13_toggle.button_pressed = true
+    terrain_mineral_v13_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_mineral_v13_toggle)
+    terrain_habitat_v13_toggle = CheckButton.new()
+    terrain_habitat_v13_toggle.name = "VegetacionDePieDeMonteV13"
+    terrain_habitat_v13_toggle.text = "Vegetación húmeda / pedregal seco según bioma"
+    terrain_habitat_v13_toggle.button_pressed = true
+    terrain_habitat_v13_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_habitat_v13_toggle)
+    terrain_compare_v13_button = _button(terrain_controls,
+        "COMPARAR: montañas V13 frente a V12",_toggle_v13_finish)
+    terrain_compare_v13_button.name = "ComparadorTerrenoV12V13"
+    terrain_compare_v13_button.custom_minimum_size.y = 50
+
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
     terrain_camera_picker.name = "CamarasDeTerreno"
@@ -657,11 +679,35 @@ func _change_terrain_light_toggle(_checked: bool) -> void:
     if _role == "terrain":
         _apply_terrain_lighting()
 
+func _disable_v13_finish() -> void:
+    _terrain_v13_enabled = false
+    terrain_compare_v13_button.text = "VOLVER A MONTAÑAS POR BIOMA V13"
+
+func _toggle_v13_finish() -> void:
+    _terrain_v13_enabled = not _terrain_v13_enabled
+    if _terrain_v13_enabled:
+        _terrain_v5_enabled = true
+        _terrain_v6_enabled = true
+        _terrain_v7_enabled = true
+        _terrain_v8_enabled = true
+        _terrain_v9_enabled = true
+        _terrain_v10_enabled = true
+        _terrain_v11_enabled = true
+        _terrain_v12_enabled = true
+        terrain_compare_v12_button.text = "COMPARAR: volver al acabado V11"
+        terrain_compare_v11_button.text = "COMPARAR: volver al acabado V10"
+    terrain_compare_v13_button.text = (
+        "COMPARAR: montañas V13 frente a V12" if _terrain_v13_enabled
+        else "VOLVER A MONTAÑAS POR BIOMA V13")
+    _rebuild_terrain(false)
+
 func _disable_v12_finish() -> void:
+    _disable_v13_finish()
     _terrain_v12_enabled = false
     terrain_compare_v12_button.text = "VOLVER A SEDIMENTOS V12"
 
 func _toggle_v12_finish() -> void:
+    _disable_v13_finish()
     _terrain_v12_enabled = not _terrain_v12_enabled
     if _terrain_v12_enabled:
         _terrain_v5_enabled = true
@@ -911,7 +957,9 @@ func _display_terrain() -> void:
         _terrain_v11_enabled and terrain_aprons_v11_toggle.button_pressed,
         _terrain_v11_enabled and terrain_outcrops_v11_toggle.button_pressed,
         _terrain_v12_enabled and terrain_deposits_v12_toggle.button_pressed,
-        _terrain_v12_enabled and terrain_verges_v12_toggle.button_pressed)
+        _terrain_v12_enabled and terrain_verges_v12_toggle.button_pressed,
+        _terrain_v13_enabled and terrain_mineral_v13_toggle.button_pressed,
+        _terrain_v13_enabled and terrain_habitat_v13_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -1154,6 +1202,13 @@ func _update_details() -> void:
                 int(v12.get("sediment_patches",0)),
                 int(v12.get("road_verges",0)),
                 int(v12.get("batches",0))]
+        var v13: Dictionary = model_root.get_meta("terrain_mountain_biomes_v13",{})
+        if int(v13.get("batches",0)) > 0:
+            status_label.text += " · V13: %d caras, %d mantos y %d detalles (%d lotes)" % [
+                int(v13.get("ridge_facets",0)),
+                int(v13.get("mantle_triangles",0)),
+                int(v13.get("ecotone_pieces",0)),
+                int(v13.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
