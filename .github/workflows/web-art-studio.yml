@@ -10,6 +10,8 @@ on:
       - "scripts/ui/TerrainStudioNaturalV6.gd"
       - "scripts/ui/TerrainStudioErosionV7.gd"
       - "scripts/ui/TerrainStudioWeatherV8.gd"
+      - "scripts/ui/WeatherCoating3D.gd"
+      - "tests/test_universal_weather_coating_3d.gd"
       - "tests/test_terrain_studio_weather_v8.gd"
       - "tests/test_terrain_studio_v11_erosion.gd"
       - "tests/test_terrain_studio_v10_natural.gd"
@@ -225,6 +227,22 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify universal wet materials and local snow on real units/HQ in Godot 3D
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 155s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_universal_weather_coating_3d.gd 2>&1 | tee /tmp/universal-weather-models.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/universal-weather-models.log; then
+            echo "Universal weather coating failed material, mesh, protection or UI tests" >&2
+            exit 1
+          fi
+          grep -q 'PASS UNIVERSAL_WEATHER_3D:' /tmp/universal-weather-models.log
+          test -s artifacts/tarvoka_universal_snow_g09.png
+          test -s artifacts/tarvoka_universal_snow_hq.png
+          test -s artifacts/tarvoka_universal_wet_hq.png
       - name: Verify V11 natural erosion, river slopes and water in real GPU studio
         shell: bash
         run: |
@@ -493,6 +511,7 @@ jobs:
             artifacts/tarvoka_terrain_v11_erosion.png
             artifacts/tarvoka_terrain_v11_v10_comparison.png
             artifacts/tarvoka_studio_weather_v8_*.png
+            artifacts/tarvoka_universal_*.png
             artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png

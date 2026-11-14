@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const TerrainStudio = preload("res://scripts/ui/TerrainStudio3D.gd")
+const WeatherCoating = preload("res://scripts/ui/WeatherCoating3D.gd")
 const BattleTerrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const BattleRanges = preload("res://scripts/ui/BattleRanges3D.gd")
 const BattleBoard = preload("res://scripts/ui/TouchBoard.gd")
@@ -14,6 +15,9 @@ const BattleOrders = preload("res://scripts/ui/Battle3DOrders.gd")
 const BUILDING_STATES := ["operativo","capturado","danado","destruido"]
 
 var category_picker: OptionButton
+var model_weather_picker: OptionButton
+var model_weather_compare_button: Button
+var _last_model_weather := 1
 var building_picker: OptionButton
 var level_picker: OptionButton
 var building_state_picker: OptionButton
@@ -94,6 +98,20 @@ func _add_building_mode() -> void:
     category_picker.item_selected.connect(_switch_category)
     column.add_child(category_picker)
     column.move_child(category_picker,3)
+    model_weather_picker = OptionButton.new()
+    model_weather_picker.name = "ClimaUniversalModelos3D"
+    model_weather_picker.custom_minimum_size.y = 48
+    model_weather_picker.add_item("Modelos · Despejado",0)
+    model_weather_picker.add_item("Modelos · Lluvia (materiales mojados)",1)
+    model_weather_picker.add_item("Modelos · Nieve sobre blindajes y techos",2)
+    model_weather_picker.select(0)
+    model_weather_picker.item_selected.connect(_change_model_weather)
+    column.add_child(model_weather_picker)
+    column.move_child(model_weather_picker,4)
+    model_weather_compare_button = _button(column,
+        "COMPARAR MODELO SECO / CLIMA",_compare_model_weather)
+    model_weather_compare_button.name = "CompararAcabadoClimaUniversal"
+    column.move_child(model_weather_compare_button,5)
 
     # Remember exactly which existing controls are tank/unit-specific.
     # Common faction, rotation, zoom and reset widgets remain shared.
@@ -107,7 +125,7 @@ func _add_building_mode() -> void:
                 unit_section = false
         if node == detail_label:
             unit_section = false
-        if unit_section and node is Control:
+        if unit_section and node is Control and node != model_weather_picker and node != model_weather_compare_button:
             _unit_only_controls.append(node as Control)
 
     building_controls = VBoxContainer.new()
@@ -448,6 +466,48 @@ func _add_building_mode() -> void:
     column.move_child(battle_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
 
+func _model_weather() -> String:
+    return ["clear","rain","snow"][model_weather_picker.selected]         if model_weather_picker != null else "clear"
+
+func _change_model_weather(index: int) -> void:
+    if index not in [0,1,2]:
+        return
+    if index != 0:
+        _last_model_weather = index
+    model_weather_compare_button.text = "VOLVER AL CLIMA ELEGIDO"         if index == 0 else "COMPARAR MODELO SECO / CLIMA"
+    if _role in ["headquarters","tank"] or _role in Models.ROLES:
+        _apply_model_weather()
+
+func _compare_model_weather() -> void:
+    var option: int = _last_model_weather if model_weather_picker.selected == 0 else 0
+    model_weather_picker.select(option)
+    _change_model_weather(option)
+
+func _apply_model_weather() -> void:
+    if model_root == null or model_weather_picker == null:
+        return
+    var result: Dictionary = WeatherCoating.apply(model_root,_model_weather())
+    if _role == "headquarters" or _role in Models.ROLES:
+        var suffix: String = " · Clima %s · %d materiales húmedos · %d mallas de nieve" % [
+            ["despejado","lluvia","nieve"][model_weather_picker.selected],
+            int(result.get("wet",0)),int(result.get("snow_nodes",0))]
+        status_label.text = status_label.text.split(" · Clima ")[0]+suffix
+
+# The base unit selector rebuilds real native geometry for every role.
+# Wrapping it here also covers future roles without hand-authored patches.
+func _display_role(role: String) -> void:
+    super._display_role(role)
+    _apply_model_weather()
+
+func _on_faction(index: int) -> void:
+    # The original tank recoloring runs on dry PBR materials, preventing
+    # stale wet material copies from restoring the previous faction color.
+    if model_root != null and model_weather_picker != null:
+        WeatherCoating.clear(model_root)
+    super._on_faction(index)
+    if _role in Models.ROLES:
+        _apply_model_weather()
+
 func _toggle_hq_detail() -> void:
     _hq_show_v2 = true
     _hq_show_v3 = not _hq_show_v3
@@ -477,6 +537,8 @@ func _switch_category(index: int) -> void:
     building_controls.visible = building
     terrain_controls.visible = terrain
     battle_controls.visible = battle
+    model_weather_picker.visible = building or index == 0
+    model_weather_compare_button.visible = building or index == 0
     for widget in _unit_only_controls:
         widget.visible = not building and not terrain and not battle
     faction_picker.visible = building or terrain
@@ -492,6 +554,7 @@ func _switch_category(index: int) -> void:
         camera.position = Vector3(5.3,4.2,6.3)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         super._display_role("tank")
+        _apply_model_weather()
     category_picker.select(index)
 
 func _change_terrain_scene(_index: int) -> void:
@@ -787,6 +850,7 @@ func _display_headquarters() -> void:
     model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3)
     assert(model_root != null)
     preview.add_child(model_root)
+    _apply_model_weather()
     if initial:
         _yaw = -32.0
         _zoom = 1.0
