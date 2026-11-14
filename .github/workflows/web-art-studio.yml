@@ -39,6 +39,7 @@ on:
   push:
     branches:
       - feat/browser-3d-model-lab-20261113
+      - feat/hq-v8-pbr-weathering-studio-20261113
       - main
     paths:
       - "scripts/ui/**"
