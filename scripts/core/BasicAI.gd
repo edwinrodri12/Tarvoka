@@ -831,6 +831,10 @@ static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vec
             if not distances.has(previous) or proposed < int(distances[previous]):
                 distances[previous] = proposed
                 queue.append(previous)
+    # Expose whole-points, retaining the legacy scale while keeping exact
+    # half-point path preferences for motorized road routing internally.
+    for cell in distances:
+        distances[cell] = ceili(float(distances[cell]) / 2.0)
     return distances
 
 static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i], attacker: Dictionary, weather: String = "clear") -> Dictionary:
@@ -886,6 +890,10 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
             if not distances.has(previous) or proposed < int(distances[previous]):
                 distances[previous] = proposed
                 queue.append(previous)
+    # Expose whole-points, retaining the legacy scale while keeping exact
+    # half-point path preferences for motorized road routing internally.
+    for cell in distances:
+        distances[cell] = ceili(float(distances[cell]) / 2.0)
     return distances
 
 static func _closest_enemy_distance(cell: Vector2i, enemies: Array) -> int:
