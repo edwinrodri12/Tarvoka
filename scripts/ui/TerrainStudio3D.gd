@@ -198,13 +198,13 @@ static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
     # Deliberately unindexed: faceted normals describe readable low-poly relief.
     surface.set_color(ca)
-    surface.set_uv(Vector2(a.x*0.05,a.z*0.05))
+    surface.set_uv(Vector2(a.x*0.05+a.y*0.004,a.z*0.05+a.y*0.007))
     surface.add_vertex(a)
     surface.set_color(cb)
-    surface.set_uv(Vector2(b.x*0.05,b.z*0.05))
+    surface.set_uv(Vector2(b.x*0.05+b.y*0.004,b.z*0.05+b.y*0.007))
     surface.add_vertex(b)
     surface.set_color(cc)
-    surface.set_uv(Vector2(c.x*0.05,c.z*0.05))
+    surface.set_uv(Vector2(c.x*0.05+c.y*0.004,c.z*0.05+c.y*0.007))
     surface.add_vertex(c)
 
 static func _continuous_ground(parent: Node3D, scene: int) -> void:
@@ -263,7 +263,9 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
                     _triangle(land,corners[nxt],below_a,below_b,
                         shades[nxt].darkened(0.17),cliff_tint,cliff_tint)
     land.generate_normals()
+    land.generate_tangents()
     water.generate_normals()
+    water.generate_tangents()
     var ground := MeshInstance3D.new()
     ground.name = "SueloContinuoConRelieve"
     ground.mesh = land.commit()
@@ -444,6 +446,7 @@ static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
             face_tint.lightened(0.02),SNOW if snow else face_tint.lightened(0.17),
             face_tint.lightened(0.08))
     rock_surface.generate_normals()
+    rock_surface.generate_tangents()
     var mountain := MeshInstance3D.new()
     mountain.name = name
     mountain.mesh = rock_surface.commit()
