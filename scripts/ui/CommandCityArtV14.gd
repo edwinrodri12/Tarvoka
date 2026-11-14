@@ -7,6 +7,7 @@ class_name TarvokaCommandCityArtV14
 # Approved faction crests come exclusively from the existing original atlases.
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const DARK := Color("#172932")
 const STEEL := Color("#314856")
 const CONCRETE := Color("#9eadab")
@@ -20,15 +21,9 @@ static func is_visual_command_city(kind: String,position: Vector2i,
     # neither ownership nor the city order is trusted, so capture is visual.
     if kind != "city" or map_size.x < 10 or map_size.y < 8:
         return false
-    var left := Vector2i(_scaled_x(2,map_size),_scaled_y(1,map_size))
-    var right := Vector2i(_scaled_x(7,map_size),_scaled_y(1,map_size))
+    var left := Vector2i(Scenarios.scale_x(2,map_size),Scenarios.scale_y(1,map_size))
+    var right := Vector2i(Scenarios.scale_x(7,map_size),Scenarios.scale_y(1,map_size))
     return position == left or position == right
-
-static func _scaled_x(x: int,dims: Vector2i) -> int:
-    return clampi(int(round(float(x)*float(dims.x-1)/9.0)),0,dims.x-1)
-
-static func _scaled_y(y: int,dims: Vector2i) -> int:
-    return clampi(int(round(float(y)*float(dims.y-1)/7.0)),0,dims.y-1)
 
 static func faction_index(state: Dictionary,public_owner: int) -> int:
     # -2 is "seen but current owner unconfirmed", -1 is neutral.
