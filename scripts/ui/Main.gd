@@ -2395,7 +2395,7 @@ func _open_faction_gallery() -> void:
 func _open_stress_benchmark() -> void:
     # A separate board is used so the running skirmish and its autosave survive.
     for child in get_children():
-        if child is TarvokaVisualStressBenchmark:
+        if child.name == "VisualStressAndroid":
             return
     var benchmark := StressBenchmark.new()
     benchmark.name = "VisualStressAndroid"
