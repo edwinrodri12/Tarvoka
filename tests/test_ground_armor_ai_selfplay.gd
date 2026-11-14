@@ -63,8 +63,7 @@ static func _match(map_id: int, fog: bool, relay: bool,
                     var infantry := false
                     var indirect := false
                     for enemy in obs["units"]:
-                        if int(enemy.get("hp",0)) <= 0 or
-                                int(enemy.get("faction",-1)) == side:
+                        if int(enemy.get("hp",0)) <= 0 or int(enemy.get("faction",-1)) == side:
                             continue
                         var e_role: String = str(enemy.get("role",""))
                         if e_role in ["tank","bulwark"]:
@@ -117,11 +116,9 @@ func _initialize() -> void:
                     assert(int(report["actions"]) > 0)
                     pair.append(report)
                     for role in WATCH:
-                        totals[role] = int(totals[role])+
-                            int(report["roles"][role])
+                        totals[role] = int(totals[role])+int(report["roles"][role])
                     for purpose in totals_when_visible:
-                        totals_when_visible[purpose] = int(totals_when_visible[purpose])+
-                            int(report["visible_threat_buys"][purpose])
+                        totals_when_visible[purpose] = int(totals_when_visible[purpose])+int(report["visible_threat_buys"][purpose])
                     if int(report["winner"]) == -1:
                         undecided += 1
                     elif int(report["winner"]) == first:
