@@ -16,6 +16,7 @@ const WATER_LEVEL := 0.075
 const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const RockMaterials = preload("res://scripts/ui/TerrainRockMaterials.gd")
+const SurfaceFinishV9 = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 
 static func inside(grid: Array, cell: Vector2i) -> bool:
     return cell.y >= 0 and cell.y < grid.size() and (
@@ -149,6 +150,9 @@ static func _color_for(grid: Array, cell: Vector2i, u: float, v: float,
     return tint
 
 static func _add_vertex(st: SurfaceTool, point: Vector3, tint: Color) -> void:
+    # Studio V9 micro-surface texture repeats in world space and preserves
+    # each original terrain biome vertex color and exact tactical height.
+    st.set_uv(Vector2(point.x*1.3,point.z*1.3))
     st.set_color(tint)
     st.add_vertex(point)
 
@@ -223,8 +227,9 @@ static func build_ground(grid: Array, observed: Dictionary = {},
     st.generate_normals(true)
     st.commit(mesh)
     var material := StandardMaterial3D.new()
-    material.vertex_color_use_as_albedo = true
-    material.roughness = 0.96
+    SurfaceFinishV9.apply(material,"soil")
+    # Cosmetic roughness only; movement cost, visibility, height and
+    # world-coordinate cell picking stay under the native terrain engine.
     # Godot treats the top-down grid face winding differently from a
     # conventional right-handed x/z heightfield. Two-sided shading avoids
     # dropping the entire flat landscape while keeping smooth +Y normals.
