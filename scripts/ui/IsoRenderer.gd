@@ -304,8 +304,16 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 HORIZONTAL_ALIGNMENT_LEFT, -1, int(maxf(13.0, hw * 0.34)), Color("#F2DF90"))
     if pending_order.has("cell"):
         var pending_cell: Vector2i = pending_order["cell"]
-        canvas.draw_polyline(_ring(_poly(pending_cell, canvas, zoom, pan, dims)),
-            Color("#FFE451"), maxf(2.0, hw * 0.06), true)
+        if bounds.has_point(pending_cell):
+            var pending_attack: bool = str(pending_order.get("kind","")) == "attack"
+            var pending_tint := Color("#FF746C") if pending_attack else Color("#FFE451")
+            canvas.draw_polyline(_ring(_poly(pending_cell, canvas, zoom, pan, dims)),
+                pending_tint, maxf(2.0, hw * 0.06), true)
+            if VisualBudget.should_draw_label(detail,hw):
+                canvas.draw_string(font,
+                    _center(pending_cell,canvas,zoom,pan,dims)+Vector2(-hw*0.42,-hh*0.65),
+                    "CONF. ATQ" if pending_attack else "CONF. MOV",
+                    HORIZONTAL_ALIGNMENT_LEFT,-1,clampi(int(hw*0.21),11,19),pending_tint)
 
     for destination in hints["attacks"]:
         if bounds.has_point(destination) and VisualBudget.should_draw_label(detail,hw):
@@ -316,4 +324,4 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
 
     # Effects belong to rendering only, and their stored origins already
     # passed the fog-safety check in the core TouchBoard code.
-    BattleVFX.draw_effects(canvas,combat_effects,hw,canvas.size,zoom,pan,dims)
+    BattleVFX.draw_effects(canvas,combat_effects,hw,canvas.size,zoom,pan,dims,battery_saver)
