@@ -12,8 +12,9 @@ func _run() -> void:
     root.add_child(screen)
     await process_frame
     var home = screen.home_menu
-    assert(home != null and home.primary_buttons.size() == 7)
+    assert(home != null and home.primary_buttons.size() == 8)
     assert(home.primary_buttons.has("Partidas guardadas"))
+    assert(home.primary_buttons.has("Estudio 3D"))
     assert(home.primary_buttons["Multijugador"].disabled)
     assert(home.hero != null and home.action_card != null)
     assert(home._brand_image.texture != null)

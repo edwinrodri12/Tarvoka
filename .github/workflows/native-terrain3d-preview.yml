@@ -1,0 +1,242 @@
+name: TARVOKA native terrain 3D lab (no APK)
+
+on:
+  push:
+    branches:
+      - feat/connected-environment-map-20261113
+    paths:
+      - ".github/workflows/native-terrain3d-preview.yml"
+      - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/Terrain3DChunkCache.gd"
+      - "scripts/ui/TerrainShore3D.gd"
+      - "scripts/ui/TerrainUnderstory3D.gd"
+      - "scripts/ui/TerrainWaterMaterial.gd"
+      - "scripts/ui/Conifer3DMesh.gd"
+      - "tools/benchmark_forest3d.gd"
+      - "scripts/ui/TerrainRockMaterials.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tools/terrain3d_lab.gd"
+      - "tools/export_terrain3d_preview.gd"
+      - "tools/terrain3d-gallery.html"
+      - "scenes/Terrain3DLab.tscn"
+      - "tests/test_native_terrain3d.gd"
+      - "tests/test_incremental_map3d.gd"
+      - "tests/test_battle_3d_view.gd"
+      - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/Battle3DAssetLayer.gd"
+      - "tests/test_live_battle_graphics.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "tools/export_battle3d_preview.gd"
+      - "tools/battle3d-gallery.html"
+  pull_request:
+    paths:
+      - ".github/workflows/native-terrain3d-preview.yml"
+      - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/Terrain3DChunkCache.gd"
+      - "scripts/ui/TerrainShore3D.gd"
+      - "scripts/ui/TerrainUnderstory3D.gd"
+      - "scripts/ui/TerrainWaterMaterial.gd"
+      - "scripts/ui/Conifer3DMesh.gd"
+      - "tools/benchmark_forest3d.gd"
+      - "scripts/ui/TerrainRockMaterials.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tools/terrain3d_lab.gd"
+      - "tools/export_terrain3d_preview.gd"
+      - "tools/terrain3d-gallery.html"
+      - "scenes/Terrain3DLab.tscn"
+      - "tests/test_native_terrain3d.gd"
+      - "tests/test_incremental_map3d.gd"
+      - "tests/test_battle_3d_view.gd"
+      - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/Battle3DAssetLayer.gd"
+      - "tests/test_live_battle_graphics.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "tools/export_battle3d_preview.gd"
+      - "tools/battle3d-gallery.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-native-terrain:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official Linux editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+          if ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb
+          fi
+      - name: Verify mesh continuity, 3D fog privacy and all map sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_native_terrain3d.gd \
+            2>&1 | tee /tmp/tarvoka-terrain3d-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-terrain3d-test.log; then
+            echo 'Native 3D terrain rules regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS native terrain 3D:' /tmp/tarvoka-terrain3d-test.log
+      - name: Verify incremental fog chunks, no hidden biome leaks and 2D fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tests/test_incremental_map3d.gd \
+            2>&1 | tee /tmp/tarvoka-incremental-fog.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-incremental-fog.log; then
+            echo 'Incremental fog visibility regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS incremental map3d:' /tmp/tarvoka-incremental-fog.log
+
+      - name: Verify battle 3D camera ray picks tactical cells using real OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tests/test_battle_3d_view.gd \
+            2>&1 | tee /tmp/tarvoka-real-3d-battle-input.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-real-3d-battle-input.log; then
+            echo 'Real 3D battle input regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS battle 3D:' /tmp/tarvoka-real-3d-battle-input.log
+
+      - name: Validate real V23 units and HQ V13 inside playable battle (GPU)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 155s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_live_battle_graphics.gd 2>&1 | tee /tmp/tarvoka-real-battle-models.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-real-battle-models.log; then
+            echo 'Live-model battle regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS live battle graphics:' /tmp/tarvoka-real-battle-models.log
+          test -s build/battle3d-previews/battle-real-graphics.png
+
+      - name: Benchmark 3D tree batches and mobile geometry budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/benchmark_forest3d.gd \
+            2>&1 | tee /tmp/tarvoka-forest3d-budget.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-forest3d-budget.log; then
+            echo 'Forest geometry/performance budget regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS forest 3D benchmark:' /tmp/tarvoka-forest3d-budget.log
+          test -s build/map3d-previews/forest3d-budget.json
+
+      - name: Render native 3D scene into two real Godot screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s "-screen 0 1600x960x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/export_terrain3d_preview.gd \
+            2>&1 | tee /tmp/tarvoka-terrain3d-preview.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-terrain3d-preview.log; then
+            echo 'Native 3D terrain rendering failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS exported native 3D terrain: terrain3d-full.png' /tmp/tarvoka-terrain3d-preview.log
+          grep -F 'PASS exported native 3D terrain: terrain3d-medium.png' /tmp/tarvoka-terrain3d-preview.log
+          cp tools/terrain3d-gallery.html build/map3d-previews/index.html
+      - name: Capture same tactical battle in playable 3D and isometric fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s "-screen 0 1600x960x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/export_battle3d_preview.gd \
+            2>&1 | tee /tmp/tarvoka-live-3d-battle-frames.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-live-3d-battle-frames.log; then
+            echo 'Battle 3D screenshot export failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS battle view preview: battle-native-3d.png' /tmp/tarvoka-live-3d-battle-frames.log
+          grep -F 'PASS battle view preview: battle-2d-fallback.png' /tmp/tarvoka-live-3d-battle-frames.log
+          cp tools/battle3d-gallery.html build/battle3d-previews/index.html
+
+      - name: Validate screenshots and detail variation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct,hashlib
+          signatures=[]
+          for level in ('full','medium'):
+              path=Path(f'build/map3d-previews/terrain3d-{level}.png')
+              content=path.read_bytes()
+              assert content[:8] == b'\x89PNG\r\n\x1a\n'
+              dims=struct.unpack('>II',content[16:24])
+              assert dims==(1600,960), (path,dims)
+              assert len(content)>25000, (path,len(content))
+              signatures.append(hashlib.sha256(content).digest())
+              print(level,len(content),dims)
+          assert signatures[0] != signatures[1], '3D mobile LOD and full quality rendered identically'
+          assert Path('build/map3d-previews/index.html').is_file()
+          PY
+      - name: Upload native 3D gallery (no Android installation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-native-terrain3d-preview
+          path: build/map3d-previews/
+          if-no-files-found: error
+          retention-days: 21
+      - name: Upload real tactical 3D vs 2D fallback screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-battle3d-vs-2d-preview
+          path: build/battle3d-previews/
+          if-no-files-found: error
+          retention-days: 21
+      - name: Explain how to review the 3D environment
+        run: |
+          {
+            echo '## TARVOKA — Native Godot 3D Terrain'
+            echo 'Download the **tarvoka-native-terrain3d-preview** artifact.'
+            echo 'Unzip and open **index.html** in your browser to compare full vs medium 3D.'
+            echo 'Open an approved Rio Azul concept reference alongside the actual engine render.'
+            echo 'The tactical battle now has an opt-in 3D viewport; normal isometric view remains the fallback.'
+            echo 'Download **tarvoka-battle3d-vs-2d-preview** to inspect the SAME TouchBoard battle in both modes.'
+          } >> "$GITHUB_STEP_SUMMARY"

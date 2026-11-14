@@ -7,6 +7,7 @@ signal skirmish_requested
 signal arsenal_requested
 signal settings_requested
 signal saves_requested
+signal studio_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
@@ -201,6 +202,7 @@ func _ready() -> void:
     _section(menu,"CUARTEL Y SISTEMA")
     _option(menu,"Arsenal","Unidades, especialidades y modelos",func(): arsenal_requested.emit())
     _option(menu,"Ajustes","Cámara, pantalla y rendimiento",func(): settings_requested.emit())
+    _option(menu,"Estudio 3D","Unidades V23, Cuartel General V13, terreno V9 y batalla experimental",func(): studio_requested.emit())
     _option(menu,"Multijugador","En desarrollo · sin partidas online todavía",Callable(),false)
     var footer := Label.new()
     footer.text = "TARVOKA  /  VERSIÓN DE DESARROLLO"

@@ -1,0 +1,151 @@
+name: TARVOKA map art preview (no APK)
+
+on:
+  push:
+    branches:
+      - feat/connected-environment-map-20261113
+    paths:
+      - ".github/workflows/map-art-previews.yml"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/VisualStyle.gd"
+      - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tests/test_landscape_regions.gd"
+      - "scripts/ui/LandscapeContinuity.gd"
+      - "scripts/ui/LandscapeTransitions.gd"
+      - "scripts/ui/TerrainTextureAtlas.gd"
+      - "tools/export_environment_preview.gd"
+  pull_request:
+    paths:
+      - ".github/workflows/map-art-previews.yml"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tests/test_landscape_regions.gd"
+      - "scripts/ui/LandscapeContinuity.gd"
+      - "scripts/ui/LandscapeTransitions.gd"
+      - "scripts/ui/TerrainSurfaceMaterials.gd"
+      - "scripts/ui/TerrainTextureAtlas.gd"
+      - "scripts/ui/VisualStyle.gd"
+      - "scripts/ui/TerrainTopology.gd"
+      - "tools/export_environment_preview.gd"
+      - "tools/environment-preview-gallery.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keep only the latest environmental snapshot when this branch is
+# iterated rapidly. The result is still inspectable as a run artifact.
+concurrency:
+  group: map-art-preview-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official Linux editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+          if ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb
+          fi
+      - name: Verify river ridges and coast seamlessly meet neighboring tiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_continuous_world_seams.gd \
+            2>&1 | tee /tmp/tarvoka-world-seams.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-world-seams.log; then
+            echo 'Seam continuity failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS continuous world seams:' /tmp/tarvoka-world-seams.log
+
+      - name: Validate regional forest, mountain and ground transitions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_landscape_regions.gd \
+            2>&1 | tee /tmp/tarvoka-regional-landscape.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-regional-landscape.log; then
+            echo 'Regional landscape regression failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS landscape regions:' /tmp/tarvoka-regional-landscape.log
+
+      - name: Rasterize environment at full and medium mobile detail
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s "-screen 0 1600x960x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/export_environment_preview.gd \
+            2>&1 | tee /tmp/tarvoka-env-preview.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Invalid polygon|Assertion failed' /tmp/tarvoka-env-preview.log; then
+            echo 'Godot map preview emitted rendering errors' >&2
+            exit 1
+          fi
+          grep -F 'PASS exported game-material preview: terrain-full.png' /tmp/tarvoka-env-preview.log
+          grep -F 'PASS exported game-material preview: terrain-medium.png' /tmp/tarvoka-env-preview.log
+          cp tools/environment-preview-gallery.html build/map-previews/index.html
+      - name: Verify PNG format, dimensions and visual LOD change
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, struct
+          images = []
+          for quality in ('full', 'medium'):
+              path = Path('build/map-previews/terrain-' + quality + '.png')
+              raw = path.read_bytes()
+              assert raw[:8] == b'\x89PNG\r\n\x1a\n'
+              width, height = struct.unpack('>II',raw[16:24])
+              assert (width,height) == (1600,960), (quality,width,height)
+              assert len(raw) > 10000, (quality,len(raw))
+              images.append(hashlib.sha256(raw).hexdigest())
+              print(quality, len(raw), images[-1][:12])
+          assert images[0] != images[1], 'Both visual quality levels rendered identical pixels'
+          assert Path('build/map-previews/index.html').is_file()
+          PY
+      - name: Upload environment screenshots and offline comparison gallery
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-environment-preview
+          path: build/map-previews/
+          if-no-files-found: error
+          retention-days: 21
+      - name: Add download instructions to job summary
+        shell: bash
+        run: |
+          {
+            echo '## TARVOKA — Environment visual comparison'
+            echo 'Download the **tarvoka-environment-preview** artifact from this run.'
+            echo 'Unzip and open **index.html** in your browser to compare full vs medium render.'
+            echo 'You can load the approved reference PNG/JPG locally in the right panel.'
+            echo 'No Android APK installation, external image service or server needed.'
+          } >> "$GITHUB_STEP_SUMMARY"

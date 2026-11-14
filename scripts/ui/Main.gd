@@ -100,6 +100,11 @@ var unit_art_gallery: Control
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
+var three_d_view_button: Button
+var three_d_quality_button: Button
+var compact_3d_quality_button: Button
+var compact_perf_label: Label
+var _compact_perf_elapsed := 0.0
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -385,6 +390,20 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    three_d_view_button = Button.new()
+    three_d_view_button.text = "Vista 3D · Experimental"
+    three_d_view_button.custom_minimum_size.y = 46
+    three_d_view_button.tooltip_text = "Alterna terreno y unidades 3D en la batalla actual, sin cambiar reglas ni guardados"
+    three_d_view_button.pressed.connect(_toggle_battle_3d_view)
+    panel.add_child(three_d_view_button)
+    three_d_quality_button = Button.new()
+    three_d_quality_button.name = "CalidadDeGraficos3D"
+    three_d_quality_button.text = "Calidad 3D: Alta · G09 V23"
+    three_d_quality_button.tooltip_text = "Alterna calidad para medir FPS con las mismas unidades, edificios y terreno"
+    three_d_quality_button.custom_minimum_size.y = 45
+    three_d_quality_button.visible = false
+    three_d_quality_button.pressed.connect(_cycle_3d_quality)
+    panel.add_child(three_d_quality_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -843,6 +862,7 @@ func _ready() -> void:
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
+    home_menu.studio_requested.connect(_open_studio_3d)
 
     saved_matches_menu = SavedMatchesMenu.new()
     add_child(saved_matches_menu)
@@ -1020,6 +1040,14 @@ func _build_battle_hud() -> void:
     compact_detail.add_theme_color_override("font_color",Color("#D9E6ED"))
     compact_detail.clip_text = true
     title_row.add_child(compact_detail)
+    compact_perf_label = Label.new()
+    compact_perf_label.name = "FPS3DEnPartida"
+    compact_perf_label.visible = false
+    compact_perf_label.clip_text = true
+    compact_perf_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_perf_label.add_theme_font_size_override("font_size",12)
+    compact_perf_label.add_theme_color_override("font_color",Color("#F7D98D"))
+    title_row.add_child(compact_perf_label)
 
     # Separate touch controls from status/commander portraits. Anchoring
     # three floating buttons over the top card clipped both names and art.
@@ -1309,8 +1337,16 @@ func _build_battle_hud() -> void:
     compact_iso.text = "Vista"
     compact_iso.custom_minimum_size.y = 44
     compact_iso.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    compact_iso.pressed.connect(_toggle_isometric_view)
+    compact_iso.pressed.connect(_cycle_compact_projection)
     compact_top_shortcuts.add_child(compact_iso)
+    compact_3d_quality_button = Button.new()
+    compact_3d_quality_button.name = "Rendimiento3DMovil"
+    compact_3d_quality_button.text = "V23"
+    compact_3d_quality_button.custom_minimum_size.y = 44
+    compact_3d_quality_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_3d_quality_button.visible = false
+    compact_3d_quality_button.pressed.connect(_cycle_3d_quality)
+    compact_top_shortcuts.add_child(compact_3d_quality_button)
     compact_options_button = Button.new()
     compact_options_button.text = "Opciones"
     compact_options_button.custom_minimum_size.y = 44
@@ -1358,6 +1394,7 @@ func _set_compact_hud(compact: bool) -> void:
     battle_hud_commands.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
+    compact_3d_quality_button.visible = compact and board != null and board.three_d_enabled
     compact_options_button.visible = compact
     compact_alerts_button.visible = compact
     compact_next_unit.visible = compact
@@ -1418,6 +1455,17 @@ func _on_viewport_resized() -> void:
 func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
         return
+    if compact_perf_label != null:
+        compact_perf_label.visible = board.three_d_enabled and battle_hud_compact
+        if compact_perf_label.visible:
+            _compact_perf_elapsed += _delta
+            if _compact_perf_elapsed >= 0.9:
+                _compact_perf_elapsed = 0.0
+                var perf: Dictionary = board.get_3d_performance_snapshot()
+                compact_perf_label.text = "FPS %d  |  Unidades %d  |  G09 V23 %d  |  HQ V13 %d  |  Mallas %d" % [
+                    int(perf.get("engine_fps",0)),int(perf.get("3d_visible_units",0)),
+                    int(perf.get("3d_g09_v23",0)),int(perf.get("3d_headquarters_v13",0)),
+                    int(perf.get("3d_unit_meshes",0))]
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
@@ -2304,6 +2352,9 @@ func _toggle_battery_saver() -> void:
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
+    if three_d_view_button != null:
+        three_d_view_button.text = "Vista 3D · Experimental"
+    _refresh_3d_quality_controls()
     board.frame_player_force()
     iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
@@ -2312,10 +2363,61 @@ func _toggle_isometric_view() -> void:
     if command_menu != null:
         command_menu.refresh_settings_controls()
 
+func _toggle_battle_3d_view() -> void:
+    board.set_3d_view(not board.three_d_enabled)
+    if three_d_view_button != null:
+        three_d_view_button.text = "Volver a vista isométrica" if board.three_d_enabled else "Vista 3D · Experimental"
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    camera_reset.text = "Centrar cámara 3D" if board.three_d_enabled else ("Centrar isométrico" if board.iso_enabled else "Centrar cámara")
+    _apply_minimap_visibility()
+    _refresh_3d_quality_controls()
+
+# On compact Android HUD a single touch cycles classic -> ISO -> 3D.
+# No second hidden desktop sidebar is required to reach the 3D renderer.
+func _cycle_compact_projection() -> void:
+    if board.three_d_enabled:
+        board.set_3d_view(false)
+        board.set_isometric(false)
+    elif board.iso_enabled:
+        board.set_3d_view(true)
+    else:
+        board.set_isometric(true)
+    board.frame_player_force()
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    three_d_view_button.text = "Volver a vista isométrica" if board.three_d_enabled else "Vista 3D · Experimental"
+    camera_reset.text = "Centrar cámara 3D" if board.three_d_enabled else ("Centrar isométrico" if board.iso_enabled else "Centrar cámara")
+    _refresh_3d_quality_controls()
+    _apply_minimap_visibility()
+
+func _cycle_3d_quality() -> void:
+    var next: int = (int(board._3d_art_quality)+1)%3
+    board.set_3d_art_quality(next)
+    _refresh_3d_quality_controls()
+
+func _refresh_3d_quality_controls() -> void:
+    if board == null:
+        return
+    var active: bool = board.three_d_enabled
+    var quality: int = int(board._3d_art_quality)
+    var labels := ["Baja","Equilibrada","Alta · G09 V23"]
+    if three_d_quality_button != null:
+        three_d_quality_button.text = "Calidad 3D: " + labels[quality]
+        three_d_quality_button.visible = active
+    if compact_iso != null:
+        compact_iso.text = "3D" if active else ("ISO" if board.iso_enabled else "2D")
+    if compact_3d_quality_button != null:
+        compact_3d_quality_button.text = ["Baja","Eq.","V23"][quality]
+        compact_3d_quality_button.visible = active and battle_hud_compact
+
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
         unit_art_gallery.open_for()
         _reveal_screen(unit_art_gallery)
+
+func _open_studio_3d() -> void:
+    # Accessible only from the home menu: studio is an isolated visual sandbox.
+    # Existing tactical save and rules are never modified by the preview.
+    get_tree().change_scene_to_file("res://scenes/UnitArtStudioWeb.tscn")
 
 func _open_campaign() -> void:
     # Main keeps the existing skirmish autosave unchanged. Campaign resumes
