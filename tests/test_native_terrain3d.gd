@@ -4,6 +4,8 @@ const Terrain = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Lab = preload("res://tools/terrain3d_lab.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const Rocks = preload("res://scripts/ui/TerrainRockMaterials.gd")
+const WaterMaterial = preload("res://scripts/ui/TerrainWaterMaterial.gd")
+const Conifers = preload("res://scripts/ui/Conifer3DMesh.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -77,6 +79,47 @@ func _run() -> void:
     assert(Rocks.strata(Vector3(1,1,1)) >= 0.0)
     assert(Rocks.strata(Vector3(1,1,1)) <= 1.0)
     assert(Terrain.build_water(grid,{},false,8).get_surface_count() == 1)
+    # Both LODs use a shared batched conifer, but full detail includes
+    # more serrated boughs. These are true Godot 3D mesh resources.
+    var detailed_pine: ArrayMesh = Conifers.build_crown(true)
+    var mobile_pine: ArrayMesh = Conifers.build_crown(false)
+    assert(detailed_pine.get_surface_count() == 1)
+    assert(mobile_pine.get_surface_count() == 1)
+    var detailed_vertices: PackedVector3Array = (
+        detailed_pine.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+    var mobile_vertices: PackedVector3Array = (
+        mobile_pine.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+    assert(detailed_vertices.size() > mobile_vertices.size())
+    assert(detailed_vertices.size() >= 90)
+    assert(detailed_pine.surface_get_material(0) != null)
+    for vertex in detailed_vertices:
+        assert(vertex.is_finite())
+        assert(vertex.y >= 0.0 and vertex.y <= 1.2)
+    var water_full: ShaderMaterial = WaterMaterial.make_material(true)
+    var water_mobile: ShaderMaterial = WaterMaterial.make_material(false)
+    assert(water_full.shader != null)
+    assert(water_full.shader.code.find("river_world") >= 0)
+    assert(water_full.get_shader_parameter("detail_scale") > (
+        water_mobile.get_shader_parameter("detail_scale")))
+    # Foam is generated ONLY along a boundary with land that is
+    # explicitly observed. Fogged land cannot reveal the river's coast.
+    var known_water: Array = [["water","plain"]]
+    var foam_full: ArrayMesh = Terrain.build_water(known_water,{},false,6)
+    var fog_only := {Vector2i(0,0):true}
+    var foam_hidden: ArrayMesh = Terrain.build_water(
+        known_water,fog_only,true,6)
+    var full_colors: PackedColorArray = (
+        foam_full.surface_get_arrays(0)[Mesh.ARRAY_COLOR])
+    var hidden_colors: PackedColorArray = (
+        foam_hidden.surface_get_arrays(0)[Mesh.ARRAY_COLOR])
+    var found_foam := false
+    for color in full_colors:
+        if color.a > 0.8:
+            found_foam = true
+            break
+    assert(found_foam)
+    for color in hidden_colors:
+        assert(color.a <= 0.001)
     var flat_water := Terrain.water_outline(grid,Vector2i(2,2))
     assert(flat_water.size() == 32)
     for point in flat_water:
@@ -143,5 +186,5 @@ func _run() -> void:
     assert(grid_center.x == 2.5 and grid_center.z == 2.5)
     assert(Terrain.tactical_cell_from_world(grid,
         grid_center) == Vector2i(2,2))
-    print("PASS native terrain 3D: smooth mineral rock, seamless visible biomes, fog-safe materials, indexed slopes, bridges, world-to-cell, 10x8/24x18/40x30, immutable tactics")
+    print("PASS native terrain 3D: animated water foam, serrated pine LOD, visible banks, smooth rock, seamless biomes, fog-safe selection, 10x8/24x18/40x30")
     quit(0)
