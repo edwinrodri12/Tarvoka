@@ -9,6 +9,7 @@ const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
+const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -39,6 +40,12 @@ var _mouse_down: bool = false
 var _mouse_start := Vector2.ZERO
 var _mouse_last := Vector2.ZERO
 var _mouse_dragged: bool = false
+var _live_board: Control = null
+var _order_quote: Dictionary = {}
+var _order_note: Label
+var _confirm_order_button: Button
+var _cancel_order_button: Button
+var _move_here_button: Button
 
 func _ready() -> void:
     hide()
@@ -56,7 +63,7 @@ func _ready() -> void:
     holder.mouse_filter = Control.MOUSE_FILTER_STOP
     holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     holder.offset_top = 62
-    holder.offset_bottom = -107
+    holder.offset_bottom = -157
     holder.gui_input.connect(_on_viewport_input)
     add_child(holder)
     preview = SubViewport.new()
@@ -112,7 +119,7 @@ func _ready() -> void:
 
     var footer := PanelContainer.new()
     footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-    footer.offset_top = -105
+    footer.offset_top = -155
     add_child(footer)
     var labels := VBoxContainer.new()
     footer.add_child(labels)
@@ -130,6 +137,35 @@ func _ready() -> void:
     _range_text.add_theme_font_size_override("font_size",13)
     _range_text.add_theme_color_override("font_color",Color("#f0c77d"))
     labels.add_child(_range_text)
+    _order_note = Label.new()
+    _order_note.text = "Visor de inspección; abre desde la batalla para ordenar."
+    _order_note.add_theme_font_size_override("font_size",14)
+    _order_note.add_theme_color_override("font_color",Color("#f6e1ab"))
+    labels.add_child(_order_note)
+    var commands := HBoxContainer.new()
+    commands.add_theme_constant_override("separation",10)
+    labels.add_child(commands)
+    _move_here_button = Button.new()
+    _move_here_button.name = "MoverAqui3D"
+    _move_here_button.text = "Mover aquí"
+    _move_here_button.custom_minimum_size = Vector2(110,42)
+    _move_here_button.pressed.connect(_request_move_here)
+    _move_here_button.hide()
+    commands.add_child(_move_here_button)
+    _cancel_order_button = Button.new()
+    _cancel_order_button.name = "CancelarOrden3D"
+    _cancel_order_button.text = "Cancelar orden"
+    _cancel_order_button.custom_minimum_size = Vector2(145,42)
+    _cancel_order_button.pressed.connect(_cancel_3d_order)
+    _cancel_order_button.hide()
+    commands.add_child(_cancel_order_button)
+    _confirm_order_button = Button.new()
+    _confirm_order_button.name = "ConfirmarOrden3D"
+    _confirm_order_button.text = "Confirmar movimiento o ataque"
+    _confirm_order_button.custom_minimum_size = Vector2(275,42)
+    _confirm_order_button.pressed.connect(_confirm_3d_order)
+    _confirm_order_button.hide()
+    commands.add_child(_confirm_order_button)
 
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
@@ -165,6 +201,9 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
     return Vector2i(_dims.x/2,_dims.y/2)
 
 func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
+    # Standalone and browser tests remain read-only.
+    _live_board = null
+    _order_quote.clear()
     if _scene != null:
         _scene.free()
         _scene = null
@@ -186,6 +225,7 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
+    _update_order_ui()
     var statistics: Dictionary = model.get_meta("render_stats")
     var units: Dictionary = statistics["units"]
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
@@ -433,6 +473,7 @@ func _on_viewport_input(event: InputEvent) -> void:
         accept_event()
 
 func close_view() -> void:
+    _drop_3d_quote()
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
     if _scene != null:
