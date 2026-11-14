@@ -217,16 +217,16 @@ func _generate_forest() -> void:
             scale*1.02,scale*0.88,scale*1.02))
         var upper_basis := Basis().scaled(Vector3(
             scale*0.70,scale*0.74,scale*0.70))
-        var foliage: Color = [
+        var crown_tint: Color = [
             Color("#214F37"),Color("#2C6240"),
             Color("#315D47"),Color("#416D4B")
         ][seed%4]
         leaf_instances.set_instance_transform(i*2,Transform3D(
             lower_basis,p+Vector3(0,scale*0.52,0)))
-        leaf_instances.set_instance_color(i*2,foliage.darkened(0.12))
+        leaf_instances.set_instance_color(i*2,crown_tint.darkened(0.12))
         leaf_instances.set_instance_transform(i*2+1,Transform3D(
             upper_basis,p+Vector3(0,scale*0.80,0)))
-        leaf_instances.set_instance_color(i*2+1,foliage.lightened(0.14))
+        leaf_instances.set_instance_color(i*2+1,crown_tint.lightened(0.14))
         var trunk_basis := Basis().scaled(Vector3(scale,scale,scale))
         trunk_instances.set_instance_transform(i,Transform3D(
             trunk_basis,p+Vector3(0,scale*0.23,0)))
