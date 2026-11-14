@@ -11,6 +11,7 @@ const MAX_VARIANTS := 9
 const SPRITE_EDGE := 384
 
 static var _cache: Dictionary = {}
+static var enabled: bool = true # Diagnostic presentation switch; never game state.
 
 static func asset_path(faction: int) -> String:
     if faction == -1:
@@ -36,7 +37,7 @@ static func sprite(faction: int) -> Texture2D:
 static func prefer(high_width: float,battery_saver: bool) -> bool:
     # Fewer draw calls and zero texture sample cost when zoomed too far out
     # or when the user selects Android battery saver.
-    return not battery_saver and high_width >= MIN_HALF_WIDTH
+    return enabled and not battery_saver and high_width >= MIN_HALF_WIDTH
 
 static func draw_iso(canvas: CanvasItem,center: Vector2,half_width: float,
         faction: int,battery_saver: bool = false) -> bool:
