@@ -79,6 +79,16 @@ func _run() -> void:
                 if lip != null:
                     total_shores += 1
                     assert(lip is MeshInstance3D)
+                    var beach_mesh: Mesh = (lip as MeshInstance3D).mesh
+                    assert(beach_mesh != null and beach_mesh.get_surface_count() == 1)
+                    var beach_vertices: PackedVector3Array = (
+                        beach_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+                    var beach_center: Vector3 = Terrain._cell_center(x,z)
+                    for vertex in beach_vertices:
+                        var h: float = Terrain.surface_height_at(
+                            x,z,scene,vertex.x-beach_center.x,
+                            vertex.z-beach_center.z)
+                        assert(_close(vertex.y,h+0.036))
         root.free()
     assert(total_roads > 10 and total_shores > 6)
     print("PASS TERRAIN_SLOPES: shared seams, slope-anchored props, roads and coasts in 3 scenes")
