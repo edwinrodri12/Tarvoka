@@ -35,6 +35,22 @@ func _run() -> void:
     assert(Regions.connection_count(0) == 0)
     assert(Regions.connection_count(15) == 4)
     assert(Regions.connection_count(5) == 2)
+    # A genuine massif needs a few standout summits and many shoulders,
+    # not a mountain peak of equal prominence in every connected cell.
+    var prominent := 0
+    var shoulders := 0
+    var forest_counts: Dictionary = {}
+    for x in range(15):
+        var region_cell := Vector2i(x,3)
+        var score: float = Regions.summit_strength(region_cell,15)
+        if score > 0.81:
+            prominent += 1
+        if score < 0.60:
+            shoulders += 1
+        forest_counts[Regions.forest_density(region_cell,15,2)] = true
+    assert(prominent >= 1 and prominent <= 5)
+    assert(shoulders >= 5)
+    assert(forest_counts.size() >= 2)
     for cell in [
         Vector2i.ZERO,Vector2i(1,2),
         Vector2i(12,7),Vector2i(31,29)
