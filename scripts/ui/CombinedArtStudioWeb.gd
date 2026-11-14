@@ -4,6 +4,8 @@ class_name TarvokaCombinedArtStudioWeb
 # Add the approved Headquarters to the existing actual Godot Web studio.
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
+const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const BUILDING_STATES := ["operativo","capturado","danado","destruido"]
 
 var category_picker: OptionButton
@@ -15,6 +17,7 @@ var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
 var hq_version_picker: OptionButton
+var hq_map_lod_toggle: CheckButton
 var hq_ground: MeshInstance3D
 var hq_key_light: DirectionalLight3D
 var _hq_show_v2 := true
@@ -133,6 +136,12 @@ func _add_building_mode() -> void:
         building_state_picker.add_item(condition)
     building_state_picker.item_selected.connect(_change_building_variant)
     building_controls.add_child(building_state_picker)
+    hq_map_lod_toggle = CheckButton.new()
+    hq_map_lod_toggle.name = "VistaTacticaOptimizadaHQ"
+    hq_map_lod_toggle.text = "Vista lejana optimizada (mapa)"
+    hq_map_lod_toggle.button_pressed = false
+    hq_map_lod_toggle.toggled.connect(_set_hq_map_lod)
+    building_controls.add_child(hq_map_lod_toggle)
     _title(building_controls,
         "Modelo editable de prueba. La arquitectura, daños y niveles "
         + "son visuales: no cambian estadísticas, recursos ni partidas.",12)
@@ -202,6 +211,11 @@ func _change_building_variant(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
 
+func _set_hq_map_lod(distant: bool) -> void:
+    if _role == "headquarters" and _hq_show_v4 and model_root != null:
+        HQMapLOD.set_distant(model_root,distant)
+        _update_details()
+
 func _refresh_building_faction(_index: int) -> void:
     # UnitArtStudioWeb's handler owns _faction; we rebuild using that
     # selected paint colour rather than tinting an entire concrete building.
@@ -221,6 +235,10 @@ func _display_headquarters() -> void:
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
     model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4)
     assert(model_root != null)
+    hq_map_lod_toggle.visible = _hq_show_v4
+    if _hq_show_v4:
+        HQMapLOD.install(model_root,level,_faction,condition)
+        HQMapLOD.set_distant(model_root,hq_map_lod_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = 32.0
@@ -263,6 +281,8 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
         ("ARQUITECTURA V4" if _hq_show_v4 else ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2")) if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
+    if model_root.get_meta("tarvoka_hq_map_distant",false):
+        detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),
