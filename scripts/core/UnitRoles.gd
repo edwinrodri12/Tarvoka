@@ -22,7 +22,7 @@ const ORDER := ["line", "scout", "bulwark", "piercer", "artillery"]
 # piercers defeat front-line armor. The same rules apply to either faction.
 const BONUSES := {
     "scout": {"artillery":3},
-    "piercer": {"bulwark":4}
+    "piercer": {"bulwark":4,"tank":2}
 }
 
 static func valid(role: String) -> bool:
@@ -43,7 +43,7 @@ static func counter_description(role: String) -> String:
         "scout":
             return "Especialista contra Lanzador (+3 ATQ)."
         "piercer":
-            return "Especialista contra Baluarte (+4 ATQ)."
+            return "Antiblindaje: +4 ATQ contra Baluarte, +2 contra Tanque G09."
         "bulwark":
             return "Blindaje 2; avanza despacio."
         "artillery":
