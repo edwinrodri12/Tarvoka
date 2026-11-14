@@ -14,6 +14,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
 const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
 const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
+const EcotonesV8 = preload("res://scripts/ui/TerrainStudioEcotonesV8.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -566,7 +567,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v6_ridges: bool = false, v6_forest: bool = false,
         v6_banks: bool = false,
         v7_ridges: bool = false, v7_shores: bool = false,
-        v7_waves: bool = false) -> Node3D:
+        v7_waves: bool = false, v8_lithology: bool = false,
+        v8_talus: bool = false, v8_ecotone: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -585,6 +587,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v7_ridges",continuous and show_scatter and v7_ridges)
     root.set_meta("terrain_studio_v7_shores",continuous and show_scatter and v7_shores)
     root.set_meta("terrain_studio_v7_waves",continuous and show_scatter and v7_waves)
+    root.set_meta("terrain_studio_v8_lithology",continuous and show_scatter and v7_ridges and v8_lithology)
+    root.set_meta("terrain_studio_v8_talus",continuous and show_scatter and v8_talus)
+    root.set_meta("terrain_studio_v8_ecotone",continuous and show_scatter and v8_ecotone)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -727,8 +732,15 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,"batches":0}
     if continuous and show_scatter and (v7_ridges or v7_shores or v7_waves):
         v7_stats = ErosionV7.populate(props,detail_cells,preset,
-            v7_ridges,v7_shores,v7_waves)
+            v7_ridges,v7_shores,v7_waves,v8_lithology)
     root.set_meta("terrain_erosion_v7",v7_stats)
+    var v8_stats := {
+        "transition_edges":0,"scree_stones":0,"undergrowth":0,
+        "water_edges_skipped":0,"roads_skipped":0,"batches":0}
+    if continuous and show_scatter and (v8_talus or v8_ecotone):
+        v8_stats = EcotonesV8.populate(props,detail_cells,preset,
+            v8_talus,v8_ecotone)
+    root.set_meta("terrain_ecotones_v8",v8_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
