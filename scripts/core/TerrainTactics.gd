@@ -16,6 +16,11 @@ const CITY_COVER := 1
 static func tile_at(terrain: Array, cell: Vector2i) -> String:
     # Terrain bonuses must work at every coordinate in 10x8, 24x18
     # and 40x30 maps, not only within the legacy compact board.
+    # Preview callers may omit terrain entirely (counterfire, dossier,
+    # legacy saves). Rules.inside([], cell) intentionally falls back to the
+    # default 10x8 dimensions, so it cannot guard an empty array access.
+    if terrain.is_empty() or cell.y < 0 or cell.y >= terrain.size():
+        return ""
     if not Rules.inside(cell,terrain):
         return ""
     if not terrain[cell.y] is Array or cell.x >= terrain[cell.y].size():
