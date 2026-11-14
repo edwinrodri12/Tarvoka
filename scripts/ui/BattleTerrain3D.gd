@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -347,7 +348,12 @@ static func _make_units(parent: Node3D,state: Dictionary,
             disc.mesh = disk
             model.add_child(disc)
         model.name = "Unidad3D_%s" % str(unit["id"])
-        model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+0.43,0)
+        # Distinct layers may share exactly one logical grid coordinate.
+        # Air models must be visibly ABOVE ground/naval models rather than
+        # clipping through another unit when both occupy the same cell.
+        var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
+        model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
+        model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
         model.set_meta("selected",str(unit["id"])==selected_id)
