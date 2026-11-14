@@ -157,6 +157,58 @@ func _initialize() -> void:
     assert(fix["valid"] and fix["action"] == "repair" and fix["cost"] == 105)
     assert(Codec.decode(Codec.encode(fix["state"])) == fix["state"])
 
+    # A genuinely purchased engineer cannot act on its recruitment turn.
+    # Upon receiving the next faction turn it can use normal move/repair
+    # actions; army upkeep and income stay on their normal timeline.
+    var recruited: Dictionary = Session.start([
+        Roles.make_unit("T0",0,Vector2i(3,3),"tank"),
+        Roles.make_unit("R0",1,Vector2i(9,7),"line")
+    ],Scenarios.terrain(0),0,false,false,true,true)
+    recruited["units"][0]["hp"] = 5
+    var bought: Dictionary = Session.purchase(recruited,Vector2i(0,3),"engineer")
+    assert(bought["valid"] and bought["role"] == "engineer")
+    var new_id := str(bought["state"]["units"].back()["id"])
+    assert(bool(bought["state"]["units"].back()["acted"]))
+    assert(int(bought["state"]["economy"]["credits"][0]) ==
+        Economy.MODERN_START_CREDITS-Economy.cost("engineer"))
+    assert(not Repair.quote(bought["state"],new_id,"T0")["valid"])
+    var enemy_phase: Dictionary = Session.end_turn(bought["state"])
+    assert(enemy_phase["valid"] and enemy_phase["state"]["faction"] == 1)
+    var friendly_phase: Dictionary = Session.end_turn(enemy_phase["state"])
+    assert(friendly_phase["valid"] and friendly_phase["state"]["faction"] == 0)
+    var escort_order: Dictionary = AI.step(friendly_phase["state"])
+    assert(escort_order["valid"] and escort_order["reason"] == "engineer_support")
+    assert(escort_order["unit_id"] == new_id)
+    var workshop_repair: Dictionary = AI.step(escort_order["state"])
+    assert(workshop_repair["valid"] and workshop_repair["action"] == "repair")
+    assert(workshop_repair["cost"] == 105 and workshop_repair["restored"] == 3)
+    assert(Codec.decode(Codec.encode(workshop_repair["state"])) ==
+        workshop_repair["state"])
+    all_checks += 1
+
+    # Exercise exactly the existing 40x30 gameplay map limit with a real
+    # chassis: this tests 1200 walkable tiles, NOT 8-player multiplayer.
+    var arena: Array = []
+    for y in range(30):
+        var row: Array = []
+        for x in range(40):
+            row.append("plain")
+        arena.append(row)
+    var massive: Dictionary = Session.start([
+        Roles.make_unit("EL",0,Vector2i(4,6),"engineer"),
+        Roles.make_unit("TL",0,Vector2i(7,6),"tank"),
+        Roles.make_unit("RL",1,Vector2i(38,26),"line")
+    ],arena,0,false,false,true,true)
+    massive["units"][1]["hp"] = 5
+    var big_plan: Dictionary = Support.plan(massive,
+        Visibility.observed_state(massive,0),massive["units"][0])
+    assert(big_plan["valid"] and big_plan["destination"] == Vector2i(6,6))
+    var big_move: Dictionary = AI.step(massive)
+    assert(big_move["valid"] and big_move["reason"] == "engineer_support")
+    assert(big_move["destination"] == Vector2i(6,6))
+    assert(AI.step(big_move["state"])["action"] == "repair")
+    all_checks += 1
+
     print("PASS engineer support navigation: %d move+repair scenarios, multistep, value, threatened, terrain, allied transit, city, fog and mirrored sides" % all_checks)
     quit(0)
 
