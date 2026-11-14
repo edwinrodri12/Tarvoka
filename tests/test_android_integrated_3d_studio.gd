@@ -18,12 +18,15 @@ func _run() -> void:
     assert(main_scene != null and studio_scene != null)
     assert(main_scene.get_state().get_node_count() > 0)
     assert(studio_scene.get_state().get_node_count() > 0)
-    assert(Home.new().has_signal("studio_requested"))
+    var menu: Control = Home.new()
+    assert(menu.has_signal("studio_requested"))
+    menu.free()
     assert(MainScreen != null and Studio != null)
     assert(Models.supports("tank") and Models.supports("scout"))
     assert(HQProduction.valid(1,0,"operativo",HQProduction.QUALITY_TACTICAL))
     assert(HQProduction.valid(3,7,"destruido",HQProduction.QUALITY_HERO))
     assert(Battle3D != null)
+    assert(load("res://scripts/ui/Battle3DAssetLayer.gd") != null)
     var board_script: Script = load("res://scripts/ui/TouchBoard.gd")
     assert(board_script != null)
     var api := {}
@@ -31,5 +34,6 @@ func _run() -> void:
         api[str(item.get("name",""))] = true
     assert(api.has("set_3d_view"))
     assert(api.has("get_3d_performance_snapshot"))
+    assert(api.has("set_3d_art_quality"))
     print("PASS combined art Android studio integration: scenes, 3D renderer, HQ/units, entry and native battle APIs")
     quit()
