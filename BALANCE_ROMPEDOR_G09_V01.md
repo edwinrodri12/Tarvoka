@@ -51,3 +51,16 @@ Los datos se generaron con **la ruta real del motor**: `BattleActions.preview_ex
 - **Multijugador:** este cambio es simétrico para los dos bandos actuales. No implica implementar partidas en línea ni ocho jugadores tácticos; eso requiere arquitectura separada.
 
 **Política:** mantener como PR en borrador si cualquier regresión sigue fallando. El bono +2 es un valor seleccionado con evidencia controlada, todavía sujeto a revisiones A/B más amplias.
+
+## Resultados ejecutados en CI Godot 4.3
+
+[Suite A/B, juego real y regresiones verdes](https://github.com/edwinrodri12/Tarvoka/actions/runs/43641035054) · [JSON y logs auditables](https://github.com/edwinrodri12/Tarvoka/actions/runs/43641035054/artifacts/14131962368).
+
+- **120 ataques reales de comparación** (bonificaciones 0/+1/+2/+4; 6 roles × 5 terrenos), validando cada previsión contra `BattleSession.attack` y que los demás objetivos no reciban daños nuevos.
+- **15 combates de producción**: cinco terrenos × 3 climas, daño correcto, contrafuego, reducción de munición, guardados v1, ataque tras movimiento, lado invertido y límites de dominio.
+- **IA y economía real**: dos bandos compran Rompedor en planta de blindados por **300 créditos**; ambos atacan G09 por **4 HP** y reciben la respuesta prevista. No hay descuento ni ataque extra por ser IA.
+- **Regresiones existentes**: fichas y resumen de roles, 32 doctrinas de contrafuego, vista previa y HUD, **304 decisiones espejo sin divergencias** y **16 partidas emparejadas** con economía y guardados correctos. En esas 16 partidas hubo 1454 acciones, 285 compras, 17 reabastecimientos, 4 victorias del primer jugador, 4 del segundo y 8 sin resolver. Esta muestra NO acredita balance PvP humano.
+- **Corrección adicional de compatibilidad**: `TerrainTactics.tile_at([],...)` ya no indexa filas inexistentes en previsualizaciones sin terreno; las vistas con mapa válido conservan valores idénticos. La prueba antigua del resumen de Rompedor sigue reconociendo literalmente «Baluarte (+4 ATQ)» y muestra también el +2 contra G09.
+- **APK Android depuración**: compila (no se ha ejecutado todavía un ensayo táctil de FPS/jugabilidad en Android físico). La **suite Godot integral de 124 pasos** debe finalizar y revisarse antes de fusionar.
+
+La PR permanece **DRAFT**, sujeta a testeo humano y comparación de partidas más largas con distintas estrategias. El +2 está implementado *en la rama*, no todavía en `main`.
