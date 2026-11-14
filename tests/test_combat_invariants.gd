@@ -27,7 +27,7 @@ func _initialize() -> void:
         for attacker_hp in [-1, 0, 1, 10]:
             for attack in [0, 1, 5, 12]:
                 var result: Dictionary = combat.resolve(attacker_hp, defender_hp, attack, 2, 1)
-                var valid: bool = attacker_hp > 0 and defender_hp > 0
+                var valid: bool = attacker_hp > 0 and defender_hp > 0 and attack > 0
                 assert(result.valid == valid, "Dead participants cannot resolve attacks")
                 assert(result.defender_hp >= 0, "HP cannot become negative")
                 if valid:
@@ -63,7 +63,7 @@ func _initialize() -> void:
                     for cover in [-2, 0, 2, 8]:
                         var expected: int = min(max(0, defender_hp), combat.damage(attack, defense, cover))
                         var actual: Dictionary = combat.resolve(attacker_hp, defender_hp, attack, defense, cover)
-                        if attacker_hp <= 0 or defender_hp <= 0:
+                        if attacker_hp <= 0 or defender_hp <= 0 or attack <= 0:
                             assert(not actual.valid and actual.damage == 0, "Invalid participants cannot deal damage")
                         else:
                             assert(actual.valid, "Living participants must resolve deterministically")
