@@ -57,5 +57,20 @@ func _initialize() -> void:
     assert(rules.reachable(origin, -1, terrain, blocked).is_empty())
     var origin_blocked: Array[Vector2i] = [origin]
     assert(rules.reachable(origin, 2, terrain, origin_blocked).is_empty())
+    # Regression: path queries are deterministic and never mutate the board or occupancy.
+    var terrain_before: Array = terrain.duplicate(true)
+    var allies_before: Array[Vector2i] = allies.duplicate()
+    var blocked_before: Array[Vector2i] = blocked.duplicate()
+    var baseline: Dictionary = rules.reachable(origin, 2, terrain, blocked, "ground", true, allies)
+    for repeat_index in range(12):
+        var again: Dictionary = rules.reachable(origin, 2, terrain, blocked, "ground", true, allies)
+        assert(again == baseline)
+        assert(terrain == terrain_before)
+        assert(allies == allies_before)
+        assert(blocked == blocked_before)
+    # Weather and traction inputs must not leak into later clear-weather queries.
+    for weather_case in ["rain", "snow", "clear"]:
+        rules.reachable(origin, 2, terrain, blocked, "ground", true, allies, weather_case, "wheeled")
+        assert(rules.reachable(origin, 2, terrain, blocked, "ground", true, allies) == baseline)
     print("PASS: road/weather cost parity")
     quit()
