@@ -106,6 +106,11 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
     # Battle HP, deterministic cached unit portraits and saves stay untouched.
     if model == null or current_stage(model) < 2:
         return
+    # Optimized V17 stores the six smoke and five fire nodes directly.
+    # Avoid legacy find_child on every animation frame.
+    if model.get_meta("tarvoka_mbt_fx_v17",false):
+        V17.animate_effects(model,elapsed)
+        return
     var names := ["HumoGrisMotor","VahoMotor","HumoNegroCritico",
         "HumoElevado","ColumnaHumo","HumoSuperior"]
     for index in range(names.size()):
@@ -130,10 +135,6 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
             flame.scale = Vector3.ONE * (0.92 + 0.11*sin(swish*1.7))
         if not model.get_meta("tarvoka_mbt_fx_v17",false) and model.get_meta("tarvoka_mbt_finish_v16",false):
             V16.animate_fire(model,elapsed)
-    # V17 plumes also rise during moderate/critical damage (stages 2-3).
-    if model.get_meta("tarvoka_mbt_fx_v17",false):
-        V17.animate_effects(model,elapsed)
-
 # Angled, light-emitting flame tongues instead of a fire effect made
 # entirely of round spheres. Kept under 8 segments for Android OpenGL.
 static func _flame(parent: Node3D, label: String, at: Vector3,
