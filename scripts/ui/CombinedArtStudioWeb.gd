@@ -183,6 +183,48 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_controls.add_child(building_picker)
+    _title(building_controls,"V15 · ARTE REAL UTILIZADO EN ANDROID",13)
+    hq_v15_mode_picker = OptionButton.new()
+    hq_v15_mode_picker.name = "ModoVisorModelo3DYSpriteV15"
+    hq_v15_mode_picker.custom_minimum_size.y = 48
+    hq_v15_mode_picker.add_item("3D real + sprite V15 (comparar)")
+    hq_v15_mode_picker.add_item("Solo 3D real (ocultar sprite)")
+    hq_v15_mode_picker.add_item("Mostrar sprite V15 en escenario 3D")
+    hq_v15_mode_picker.select(0)
+    hq_v15_mode_picker.item_selected.connect(_change_hq_v15_mode)
+    building_controls.add_child(hq_v15_mode_picker)
+
+    hq_v15_neutral_toggle = CheckButton.new()
+    hq_v15_neutral_toggle.name = "V15NeutralNieblaSinEscudo"
+    hq_v15_neutral_toggle.text = "Sprite neutral (niebla sin insignia)"
+    hq_v15_neutral_toggle.toggled.connect(_change_hq_v15_neutral)
+    building_controls.add_child(hq_v15_neutral_toggle)
+
+    hq_v15_zoom_picker = OptionButton.new()
+    hq_v15_zoom_picker.name = "ZoomVisualAndroidV15"
+    hq_v15_zoom_picker.custom_minimum_size.y = 42
+    for zoom_text in HQSpriteV16.ZOOM_LABELS:
+        hq_v15_zoom_picker.add_item(str(zoom_text))
+    hq_v15_zoom_picker.select(0)
+    hq_v15_zoom_picker.item_selected.connect(_change_hq_v15_zoom)
+    building_controls.add_child(hq_v15_zoom_picker)
+
+    hq_v15_frame = CenterContainer.new()
+    hq_v15_frame.name = "ComparacionSpriteV15EnEstudio3D"
+    hq_v15_frame.custom_minimum_size = Vector2(270,198)
+    hq_v15_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    building_controls.add_child(hq_v15_frame)
+    hq_v15_thumbnail = TextureRect.new()
+    hq_v15_thumbnail.name = "TexturaHQV15RealAndroid"
+    hq_v15_thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hq_v15_thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hq_v15_thumbnail.custom_minimum_size = Vector2(188,188)
+    hq_v15_thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hq_v15_frame.add_child(hq_v15_thumbnail)
+    hq_v15_caption = _title(building_controls,
+        "Sprite Android V15 · 384 px · exportado desde Godot V13",12)
+    _refresh_hq_v15_sprite()
+
     hq_compare_button = _button(building_controls,
         "Comparar con diseño anterior (V1)",_toggle_hq_finish)
     hq_compare_button.name = "CompararAcabadoDeEdificio"
@@ -250,48 +292,6 @@ func _add_building_mode() -> void:
     hq_production_metric_label = _title(building_controls,
         "Perfil V13: 2 mallas · 10 superficies · 8 escudos oficiales",12)
     hq_production_metric_label.visible = false
-
-    _title(building_controls,"V15 · ARTE REAL UTILIZADO EN ANDROID",13)
-    hq_v15_mode_picker = OptionButton.new()
-    hq_v15_mode_picker.name = "ModoVisorModelo3DYSpriteV15"
-    hq_v15_mode_picker.custom_minimum_size.y = 48
-    hq_v15_mode_picker.add_item("3D real + sprite V15 (comparar)")
-    hq_v15_mode_picker.add_item("Solo 3D real (ocultar sprite)")
-    hq_v15_mode_picker.add_item("Mostrar sprite V15 en escenario 3D")
-    hq_v15_mode_picker.select(0)
-    hq_v15_mode_picker.item_selected.connect(_change_hq_v15_mode)
-    building_controls.add_child(hq_v15_mode_picker)
-
-    hq_v15_neutral_toggle = CheckButton.new()
-    hq_v15_neutral_toggle.name = "V15NeutralNieblaSinEscudo"
-    hq_v15_neutral_toggle.text = "Sprite neutral (niebla sin insignia)"
-    hq_v15_neutral_toggle.toggled.connect(_change_hq_v15_neutral)
-    building_controls.add_child(hq_v15_neutral_toggle)
-
-    hq_v15_zoom_picker = OptionButton.new()
-    hq_v15_zoom_picker.name = "ZoomVisualAndroidV15"
-    hq_v15_zoom_picker.custom_minimum_size.y = 42
-    for zoom_text in HQSpriteV16.ZOOM_LABELS:
-        hq_v15_zoom_picker.add_item(str(zoom_text))
-    hq_v15_zoom_picker.select(0)
-    hq_v15_zoom_picker.item_selected.connect(_change_hq_v15_zoom)
-    building_controls.add_child(hq_v15_zoom_picker)
-
-    hq_v15_frame = CenterContainer.new()
-    hq_v15_frame.name = "ComparacionSpriteV15EnEstudio3D"
-    hq_v15_frame.custom_minimum_size = Vector2(270,230)
-    hq_v15_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    building_controls.add_child(hq_v15_frame)
-    hq_v15_thumbnail = TextureRect.new()
-    hq_v15_thumbnail.name = "TexturaHQV15RealAndroid"
-    hq_v15_thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    hq_v15_thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    hq_v15_thumbnail.custom_minimum_size = Vector2(220,220)
-    hq_v15_thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    hq_v15_frame.add_child(hq_v15_thumbnail)
-    hq_v15_caption = _title(building_controls,
-        "Sprite Android V15 · 384 px · exportado desde Godot V13",12)
-    _refresh_hq_v15_sprite()
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
