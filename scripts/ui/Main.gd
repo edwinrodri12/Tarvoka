@@ -1676,7 +1676,9 @@ func _process(_delta: float) -> void:
     if board.state.has("economy") and bool(board.state["economy"].get("modern",false)):
         for unit in board.state.get("units",[]):
             if str(unit.get("id","")) == board.selected_id:
-                chosen_engineer = str(unit.get("role","")) == "engineer"
+                chosen_engineer = (str(unit.get("role","")) == "engineer"
+                    and int(unit.get("faction",-1)) == int(board.state.get("faction",-2))
+                    and (not board.ai_enabled or int(board.state.get("faction",-1)) == 0))
                 break
     repair_button.visible = chosen_engineer and board.inspected_enemy_id.is_empty()
     repair_button.disabled = board.repair_options_selected().is_empty() if repair_button.visible else true
