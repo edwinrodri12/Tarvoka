@@ -15,20 +15,27 @@ const MAX_SNOW_TRIANGLES := 420
 const MAX_ECO_SNOW_NODES := 5
 const MAX_ECO_SNOW_TRIANGLES := 65
 
-static func _protected(shape: MeshInstance3D, root: Node3D) -> bool:
+static func _protected(shape: MeshInstance3D, root: Node3D,
+        weather: String) -> bool:
     var node: Node = shape
     while node != null and node != root:
         if node.has_meta("tarvoka_weather_protect") or \
-                node.has_meta("tarvoka_faction_panel") or \
-                node.has_meta("tarvoka_paint_zone") or \
                 node.has_meta("tarvoka_weather_v1"):
             return true
+        # Wet paint still keeps the original faction albedo, but a white
+        # snow polygon must never cover a flag, crest or colored armor plate.
+        if weather == "snow" and (node.has_meta("tarvoka_faction_panel") or \
+                node.has_meta("tarvoka_paint_zone")):
+            return true
         var label: String = node.name.to_lower()
-        for word in ["faccion","insignia","escudo","emblema","logo",
-                "pantalla","vidrio","cristal","ventana","luz_","solar",
-                "h_raya","h_travesano","letrero","camuflaje"]:
+        for word in ["pantalla","vidrio","cristal","ventana","luz_","solar"]:
             if label.contains(word):
                 return true
+        if weather == "snow":
+            for word in ["faccion","insignia","escudo","emblema","logo",
+                    "h_raya","h_travesano","letrero","camuflaje"]:
+                if label.contains(word):
+                    return true
         node = node.get_parent()
     return false
 
@@ -197,7 +204,7 @@ static func apply(model: Node3D, weather: String, economy: bool = false,
     _walk(model,shapes)
     var candidates: Array[MeshInstance3D] = []
     for shape in shapes:
-        if not shape.visible or _protected(shape,model):
+        if not shape.visible or _protected(shape,model,weather):
             result["protected"] += 1
             continue
         if weather == "rain":
