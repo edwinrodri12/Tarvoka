@@ -9,6 +9,7 @@ const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
+const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -39,6 +40,13 @@ var _mouse_down: bool = false
 var _mouse_start := Vector2.ZERO
 var _mouse_last := Vector2.ZERO
 var _mouse_dragged: bool = false
+var _live_board: Control = null
+var _order_quote: Dictionary = {}
+var _order_note: Label
+var _confirm_order_button: Button
+var _cancel_order_button: Button
+var _move_here_button: Button
+var _choose_unit_button: Button
 
 func _ready() -> void:
     hide()
@@ -56,7 +64,7 @@ func _ready() -> void:
     holder.mouse_filter = Control.MOUSE_FILTER_STOP
     holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     holder.offset_top = 62
-    holder.offset_bottom = -107
+    holder.offset_bottom = -157
     holder.gui_input.connect(_on_viewport_input)
     add_child(holder)
     preview = SubViewport.new()
@@ -112,7 +120,7 @@ func _ready() -> void:
 
     var footer := PanelContainer.new()
     footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-    footer.offset_top = -105
+    footer.offset_top = -155
     add_child(footer)
     var labels := VBoxContainer.new()
     footer.add_child(labels)
@@ -130,6 +138,44 @@ func _ready() -> void:
     _range_text.add_theme_font_size_override("font_size",13)
     _range_text.add_theme_color_override("font_color",Color("#f0c77d"))
     labels.add_child(_range_text)
+    _order_note = Label.new()
+    _order_note.text = "Visor de inspección; abre desde la batalla para ordenar."
+    _order_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _order_note.add_theme_font_size_override("font_size",14)
+    _order_note.add_theme_color_override("font_color",Color("#f6e1ab"))
+    labels.add_child(_order_note)
+    var commands := HBoxContainer.new()
+    commands.add_theme_constant_override("separation",10)
+    labels.add_child(commands)
+    _move_here_button = Button.new()
+    _move_here_button.name = "MoverAqui3D"
+    _move_here_button.text = "Mover aquí"
+    _move_here_button.custom_minimum_size = Vector2(110,42)
+    _move_here_button.pressed.connect(_request_move_here)
+    _move_here_button.hide()
+    commands.add_child(_move_here_button)
+    _choose_unit_button = Button.new()
+    _choose_unit_button.name = "ElegirUnidad3D"
+    _choose_unit_button.text = "Elegir unidad"
+    _choose_unit_button.tooltip_text = "Cambiar entre unidades terrestres y aéreas en una misma casilla"
+    _choose_unit_button.custom_minimum_size = Vector2(126,42)
+    _choose_unit_button.pressed.connect(_choose_unit_here)
+    _choose_unit_button.hide()
+    commands.add_child(_choose_unit_button)
+    _cancel_order_button = Button.new()
+    _cancel_order_button.name = "CancelarOrden3D"
+    _cancel_order_button.text = "Cancelar orden"
+    _cancel_order_button.custom_minimum_size = Vector2(145,42)
+    _cancel_order_button.pressed.connect(_cancel_3d_order)
+    _cancel_order_button.hide()
+    commands.add_child(_cancel_order_button)
+    _confirm_order_button = Button.new()
+    _confirm_order_button.name = "ConfirmarOrden3D"
+    _confirm_order_button.text = "Confirmar movimiento o ataque"
+    _confirm_order_button.custom_minimum_size = Vector2(275,42)
+    _confirm_order_button.pressed.connect(_confirm_3d_order)
+    _confirm_order_button.hide()
+    commands.add_child(_confirm_order_button)
 
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
@@ -165,6 +211,9 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
     return Vector2i(_dims.x/2,_dims.y/2)
 
 func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
+    # Standalone and browser tests remain read-only.
+    _live_board = null
+    _order_quote.clear()
     if _scene != null:
         _scene.free()
         _scene = null
@@ -186,6 +235,7 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
+    _update_order_ui()
     var statistics: Dictionary = model.get_meta("render_stats")
     var units: Dictionary = statistics["units"]
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
@@ -195,6 +245,162 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     move_to_front()
     preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     return true
+
+func open_from_board(board: Control) -> bool:
+    if board == null:
+        return false
+    var state: Variant = board.get("state")
+    if not state is Dictionary:
+        return false
+    if not open_from_state(state,str(board.get("selected_id"))):
+        return false
+    _live_board = board
+    _update_order_ui()
+    return true
+
+func _current_state() -> Dictionary:
+    if _live_board != null:
+        var live: Variant = _live_board.get("state")
+        if live is Dictionary:
+            return live
+    return _state_snapshot
+
+func _update_order_ui() -> void:
+    if _order_note == null:
+        return
+    var active: bool = Orders.can_control(_live_board)
+    var pending: bool = active and not _order_quote.is_empty()
+    _cancel_order_button.visible = pending
+    _confirm_order_button.visible = pending
+    _move_here_button.hide()
+    _choose_unit_button.hide()
+    if not active:
+        _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
+        return
+    if _selected_cell.x >= 0:
+        _choose_unit_button.visible = not Orders.visible_friends(
+            _current_state(),_selected_cell).is_empty()
+    if pending:
+        _order_note.text = str(_order_quote.get("message","Orden pendiente de confirmación."))
+        var kind: String = str(_order_quote.get("order",{}).get("kind",""))
+        _confirm_order_button.text = "CONFIRMAR ATAQUE" if kind=="attack" else "CONFIRMAR MOVIMIENTO"
+        return
+    _order_note.text = "Selecciona aliada → destino azul o enemigo rojo. Solo CONFIRMAR ejecuta."
+    if _selected_cell.x >= 0:
+        var current: String = str(_live_board.get("selected_id"))
+        var possible: Dictionary = Orders.legal_intent(_current_state(),current,_selected_cell)
+        _move_here_button.visible = possible.get("kind","") == "move"
+
+func _drop_3d_quote() -> void:
+    if _live_board != null and not _order_quote.is_empty():
+        Orders.cancel_preview(_live_board,_order_quote)
+    _order_quote.clear()
+
+func _cancel_3d_order() -> void:
+    _drop_3d_quote()
+    _update_order_ui()
+
+func _select_3d_unit(unit_id: String) -> bool:
+    _drop_3d_quote()
+    if not Orders.select(_live_board,unit_id):
+        return false
+    _selected_hint_unit_id = unit_id
+    _refresh_ranges()
+    _update_order_ui()
+    return true
+
+func _preview_3d_intent(intent: Dictionary) -> bool:
+    if _live_board == null or intent.is_empty():
+        return false
+    _drop_3d_quote()
+    _order_quote = Orders.request_preview(_live_board,intent)
+    _update_order_ui()
+    return not _order_quote.is_empty()
+
+func _choose_unit_here() -> void:
+    if not Orders.can_control(_live_board) or _selected_cell.x < 0:
+        return
+    var chosen: String = Orders.next_friendly(_current_state(),
+        _selected_cell,str(_live_board.get("selected_id")))
+    if not chosen.is_empty():
+        _select_3d_unit(chosen)
+
+func _request_move_here() -> void:
+    if not Orders.can_control(_live_board) or _selected_cell.x < 0:
+        return
+    var current: String = str(_live_board.get("selected_id"))
+    var intent: Dictionary = Orders.legal_intent(_current_state(),current,_selected_cell)
+    if intent.get("kind","") == "move":
+        _preview_3d_intent(intent)
+
+func tap_battle_cell(cell: Vector2i) -> bool:
+    # Inspections are safe in detached mode. Live taps can ONLY preview.
+    if not _cells.has(cell):
+        return false
+    if _live_board == null:
+        return inspect_cell(cell)
+    if _current_state() != _state_snapshot:
+        _drop_3d_quote()
+        _refresh_from_board()
+        return false
+    var selected_before: String = str(_live_board.get("selected_id"))
+    var intent: Dictionary = Orders.legal_intent(_current_state(),selected_before,cell)
+    var friends: Array[Dictionary] = Orders.visible_friends(_current_state(),cell)
+    inspect_cell(cell)
+    if not Orders.can_control(_live_board):
+        _update_order_ui()
+        return true
+    # A legal target may share a coordinate with a friendly from another
+    # layer; use the exact engine target ID, not the first sprite in a cell.
+    if intent.get("kind","") == "attack":
+        _selected_hint_unit_id = selected_before
+        _refresh_ranges()
+        return _preview_3d_intent(intent)
+    if intent.get("kind","") == "move":
+        _selected_hint_unit_id = selected_before
+        _refresh_ranges()
+        return _preview_3d_intent(intent)
+    if not friends.is_empty():
+        var chosen: String = Orders.next_friendly(_current_state(),cell,selected_before)
+        return _select_3d_unit(chosen)
+    _drop_3d_quote()
+    _update_order_ui()
+    return true
+
+func _confirm_3d_order() -> void:
+    if _live_board == null or _order_quote.is_empty():
+        return
+    var committed: bool = Orders.confirm(_live_board,_order_quote)
+    if not committed:
+        # A rejected confirmation cannot leak a queued order into the 2D HUD.
+        Orders.cancel_preview(_live_board,_order_quote)
+    _order_quote.clear()
+    _refresh_from_board()
+    if _live_board == null:
+        return
+    if committed:
+        _order_note.text = str(_live_board.get("message"))
+    else:
+        _order_note.text = "Orden no ejecutada: el estado cambió o dejó de ser válida."
+
+func _refresh_from_board() -> void:
+    if _live_board == null:
+        return
+    var board: Control = _live_board
+    var focus: Vector3 = _look_at
+    var azimuth: float = _yaw
+    var zoom: float = _camera_size
+    var selected_cell: Vector2i = _selected_cell
+    if not open_from_board(board):
+        close_view()
+        return
+    _look_at = focus
+    _yaw = azimuth
+    _camera_size = zoom
+    _refresh_camera()
+    if _cells.has(selected_cell):
+        inspect_cell(selected_cell,false)
+    _update_order_ui()
 
 func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     if not _cells.has(cell):
@@ -208,8 +414,9 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     var kind: String = str(tile.get("kind","unknown"))
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
     var visibility: String = " · Con niebla" if bool(tile.get("seen",false)) and not bool(tile.get("visible",false)) else ""
-    inspection.text = "Casilla (%d, %d) · %s%s · Inspección únicamente" % [
-        cell.x+1,cell.y+1,label_text,visibility]
+    inspection.text = "Casilla (%d, %d) · %s%s · %s" % [
+        cell.x+1,cell.y+1,label_text,visibility,
+        "Órdenes con confirmación" if _live_board != null else "Inspección únicamente"]
     if _cursor != null:
         _cursor.queue_free()
         _cursor = null
@@ -374,7 +581,7 @@ func _on_viewport_input(event: InputEvent) -> void:
                 if short_tap:
                     var picked: Vector2i = pick_from_preview(event.position)
                     if picked.x >= 0:
-                        inspect_cell(picked)
+                        tap_battle_cell(picked)
                 _pinch_previous_distance = 0.0
                 _touch_suppressed = false
             elif _touch_points.size() == 1:
@@ -412,7 +619,7 @@ func _on_viewport_input(event: InputEvent) -> void:
                         _mouse_start.distance_to(event.position) <= GESTURE_DRAG_LIMIT:
                     var picked: Vector2i = pick_from_preview(event.position)
                     if picked.x >= 0:
-                        inspect_cell(picked)
+                        tap_battle_cell(picked)
                 _mouse_down = false
             accept_event()
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -433,6 +640,7 @@ func _on_viewport_input(event: InputEvent) -> void:
         accept_event()
 
 func close_view() -> void:
+    _drop_3d_quote()
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
     if _scene != null:
@@ -447,3 +655,6 @@ func close_view() -> void:
     if _selected_cell.x >= 0:
         focus_requested.emit(_selected_cell)
     _selected_cell = Vector2i(-1,-1)
+    _live_board = null
+    _order_quote.clear()
+    _update_order_ui()
