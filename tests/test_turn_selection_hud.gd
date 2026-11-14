@@ -32,8 +32,8 @@ func _run() -> void:
     state["units"][0]["acted"] = true
     var used: Dictionary = Readout.snapshot(state,"A",{},true)
     assert(used["state"] == "used" and used["ready"] == 0)
-    state["units"][0]["acted"] = false
-    state["units"][0]["moved"] = false
+    # Restore the exact source state: old saves may not have a "moved" key.
+    state = before.duplicate(true)
     var order: Dictionary = Readout.snapshot(state,"A",
         {"kind":"attack","cell":Vector2i(2,2),"target_id":"X"},true)
     assert(order["state"] == "pending" and order["detail"].contains("SIN CONFIRMAR"))
