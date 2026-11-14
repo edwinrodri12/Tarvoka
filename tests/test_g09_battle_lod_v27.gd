@@ -104,7 +104,7 @@ func _run() -> void:
     viewer._toggle_g09_detail()
     assert(viewer._g09_high_detail)
     _assert_tank(viewer._scene,"T0",25)
-    viewer._zoom_anchored(5.0,viewer.holder.size*0.5)
+    viewer._zoom_anchored(12.0,viewer.holder.size*0.5)
     assert(viewer._g09_lod_band==Budget.FAR)
     _assert_tank(viewer._scene,"T0",6)
     assert(viewer._scene.get_meta("public_cells").size()==
