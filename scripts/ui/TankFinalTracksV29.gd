@@ -17,6 +17,42 @@ const SPROCKET_RADIUS := 0.208
 const TOOTH_RADIUS := 0.214
 const RING_TOOTH_COUNT := 12
 const PERIMETER := 4.0*SPROCKET_Z+TAU*PATH_RADIUS
+const TRACK_WIDTH_V30 := 0.422
+const OLD_TRACK_WIDTH := 0.160
+static var _wide_mesh: ArrayMesh
+
+static func _wide_shoe_mesh(original: Mesh) -> ArrayMesh:
+    # Preserve the EXACT V21 two-surface PBR tread shape and cross ribs.
+    # Widen ONLY the lateral x dimension, not shoe length or belt arc path.
+    # Both sides share one GPU mesh + the existing 2 MultiMesh draw batches.
+    if _wide_mesh!=null:
+        return _wide_mesh
+    var output := ArrayMesh.new()
+    var factor: float = TRACK_WIDTH_V30/OLD_TRACK_WIDTH
+    for surface in range(original.get_surface_count()):
+        var arrays: Array = original.surface_get_arrays(surface)
+        var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+        for i in range(points.size()):
+            var p: Vector3 = points[i]
+            p.x *= factor
+            points[i] = p
+        arrays[Mesh.ARRAY_VERTEX] = points
+        output.add_surface_from_arrays(
+            original.surface_get_primitive_type(surface),arrays)
+        output.surface_set_material(
+            surface,original.surface_get_material(surface))
+    _wide_mesh = output
+    return output
+
+static func _widen_links(model: Node3D) -> bool:
+    for side in [-1,1]:
+        var belt: MultiMeshInstance3D = model.find_child(
+            "OrugaArticuladaG09V7_%s" % side,true,false) as MultiMeshInstance3D
+        if belt==null or belt.multimesh==null or belt.multimesh.mesh==null:
+            return false
+        belt.multimesh.mesh = _wide_shoe_mesh(belt.multimesh.mesh)
+    return true
+
 const LEGACY_PATTERNS := [
     "BandaOruga%s",
     "GuiaOruga%s",
@@ -178,6 +214,8 @@ static func apply(model: Node3D) -> bool:
         return false
     if not _move_links(model,0.0) or not _teeth(model,0.0):
         return false
+    if not _widen_links(model):
+        return false
     var hidden: int = _hide_rectangular_prototypes(model)
     var marker := Node3D.new()
     marker.name = ROOT
@@ -186,6 +224,8 @@ static func apply(model: Node3D) -> bool:
     model.set_meta("tarvoka_mbt_track_final_v29_hidden",hidden)
     model.set_meta("tarvoka_mbt_track_center_y_v29",CENTER_Y)
     model.set_meta("tarvoka_mbt_track_radius_v29",PATH_RADIUS)
+    model.set_meta("tarvoka_mbt_track_width_v30",TRACK_WIDTH_V30)
+    model.set_meta("tarvoka_mbt_track_wide_v30",true)
     return true
 
 static func enforce_hidden_after_damage(model: Node3D) -> int:
