@@ -1,0 +1,22 @@
+name: Road and weather cost parity
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/Rules.gd'
+      - 'scripts/core/Weather.gd'
+      - 'tests/test_road_weather_cost_parity.gd'
+      - '.github/workflows/road-weather-cost-parity.yml'
+  workflow_dispatch:
+jobs:
+  road-weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3
+        run: |
+          curl -fL --retry 3 -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+      - name: Execute road-weather regression
+        run: ./Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_road_weather_cost_parity.gd
