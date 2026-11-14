@@ -13,6 +13,7 @@ on:
       - 'tests/test_army_production_landscape.gd'
       - 'tests/test_saved_matches_landscape.gd'
       - 'tests/test_battle_ui_motion.gd'
+      - 'tests/test_battle_damage_feedback.gd'
       - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
       - 'tests/test_unit_art.gd'
@@ -71,6 +72,7 @@ jobs:
             test_army_production_landscape \
             test_saved_matches_landscape \
             test_battle_ui_motion \
+            test_battle_damage_feedback \
             test_road_command_menu \
             test_tactical_briefing \
             test_unit_art \

@@ -50,6 +50,53 @@ static func impact_color(role: String) -> Color:
         _:
             return Color("#FFCE7C")
 
+# Compact confirmed results, not a forecast. The authoritative BattleSession
+# decides damage; we only read values already recorded by TouchBoard. A hidden
+# firing origin has no marker, even if the attack target was visible.
+static func damage_labels(effect: Dictionary) -> Dictionary:
+    var damage: int = maxi(0,int(effect.get("damage",0)))
+    var counter: int = maxi(0,int(effect.get("counter_damage",0)))
+    var origin: Vector2i = effect.get("origin",Vector2i(-1,-1))
+    return {
+        "target": "-%d HP" % damage if damage > 0 else "SIN DAÑO",
+        "counter": "-%d HP" % counter if counter > 0 and origin.x >= 0 else "",
+        "destroyed": bool(effect.get("destroyed",false))
+    }
+
+static func _damage_badge(canvas: CanvasItem, center: Vector2, label: String,
+        tint: Color, scale: float, progress: float, battery_saver: bool) -> void:
+    if label.is_empty() or scale < 11.0:
+        return
+    # Readable at 960x540, but no giant labels at high camera zoom.
+    var font_size: int = clampi(int(scale*0.25),11,23)
+    var font: Font = ThemeDB.fallback_font
+    var dimensions: Vector2 = font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size)
+    var y_shift: float = 0.0 if battery_saver else (10.0*progress)
+    var center_pos := center+Vector2(0.0,-scale*0.42-y_shift)
+    var rect := Rect2(center_pos-Vector2(dimensions.x*0.5+6.0,dimensions.y+4.0),
+        Vector2(dimensions.x+12.0,dimensions.y+9.0))
+    var alpha: float = clampf((1.0-progress)*1.6,0.0,1.0)
+    canvas.draw_rect(rect,Color(0.025,0.055,0.085,0.86*alpha),true)
+    canvas.draw_rect(rect,Color(tint.r,tint.g,tint.b,0.95*alpha),false,1.4)
+    canvas.draw_string(font,Vector2(rect.position.x+6.0,rect.end.y-5.0),
+        label,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size,
+        Color(tint.r,tint.g,tint.b,alpha))
+
+static func draw_damage_readout(canvas: CanvasItem, effect: Dictionary,
+        target_center: Vector2, origin_center: Vector2,
+        scale: float, battery_saver: bool = false) -> void:
+    var elapsed: float = float(effect.get("elapsed",EFFECT_SECONDS))
+    if elapsed < FLIGHT_SECONDS or elapsed >= EFFECT_SECONDS:
+        return
+    var phase: float = clampf((elapsed-FLIGHT_SECONDS) /
+        (EFFECT_SECONDS-FLIGHT_SECONDS),0.0,1.0)
+    var labels: Dictionary = damage_labels(effect)
+    _damage_badge(canvas,target_center,str(labels["target"]),
+        Color("#FFE08F"),scale,phase,battery_saver)
+    if not str(labels["counter"]).is_empty():
+        _damage_badge(canvas,origin_center,str(labels["counter"]),
+            Color("#FF7B77"),scale,phase,battery_saver)
+
 static func _impact(canvas: CanvasItem, center: Vector2, radius: float,
         elapsed: float, tint: Color, destroyed: bool, family: String) -> void:
     var t: float = clampf((elapsed - FLIGHT_SECONDS) / (EFFECT_SECONDS - FLIGHT_SECONDS), 0.0, 1.0)
@@ -75,7 +122,8 @@ static func _impact(canvas: CanvasItem, center: Vector2, radius: float,
             maxf(1.0, radius * (0.05 if destroyed else 0.028)), true)
 
 static func draw_effects(canvas: CanvasItem, effects: Array, scale: float,
-        view_size: Vector2, zoom: float, pan: Vector2, grid_size: Vector2i = Vector2i(10,8)) -> void:
+        view_size: Vector2, zoom: float, pan: Vector2, grid_size: Vector2i = Vector2i(10,8),
+        battery_saver: bool = false) -> void:
     for effect in effects:
         var elapsed: float = float(effect.get("elapsed", EFFECT_SECONDS))
         if elapsed >= EFFECT_SECONDS:
@@ -106,6 +154,8 @@ static func draw_effects(canvas: CanvasItem, effects: Array, scale: float,
             # impact may still be shown without disclosing the attacker.
             _impact(canvas, target_pos, scale, maxf(elapsed, FLIGHT_SECONDS),
                 tint, destroyed, family)
+        var counter_pos := IsoTransform.center(source, view_size, zoom, pan, grid_size) if source.x >= 0 else Vector2.ZERO
+        draw_damage_readout(canvas,effect,target_pos,counter_pos,scale,battery_saver)
         if bool(effect.get("consumed", false)) and source.x >= 0:
             var launch: Vector2 = IsoTransform.center(source, view_size, zoom, pan, grid_size)
             var fade: float = 1.0 - clampf(elapsed / EFFECT_SECONDS, 0.0, 1.0)
