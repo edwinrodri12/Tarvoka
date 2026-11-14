@@ -7,12 +7,13 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V27 live battle LOD and Android visual QA"]
     types: [completed]
     branches:
       - feat/hq-v16-studio-v15-sprite-live-preview-20261114
       - feat/terrain-studio-v13-material-light-20261114
       - feat/g09-v26-battle-lighting-terrain-qa-20261114
+      - feat/g09-v27-live-battle-android-lod-20261114
 
 permissions:
   contents: read
@@ -241,6 +242,56 @@ jobs:
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/tanque/$asset"
           done
+      # The dedicated V27 demo uses the ACTUAL 3D orders view and tank
+      # LOD source, without replacing newer terrain and HQ galleries.
+      - name: Check out playable G09 V27 battle branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/g09-v27-live-battle-android-lod-20261114
+          path: battle-g09-source
+          persist-credentials: false
+      - name: Export tested G09 V25 live-battle LOD demo at /batalla-g09/
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s battle-g09-source/scripts/ui/Battle3DMapView.gd
+          test -s battle-g09-source/scripts/ui/BattleTerrain3D.gd
+          test -s battle-g09-source/scripts/ui/TankBattleLOD27.gd
+          test -s battle-g09-source/scripts/ui/TankWearV25.gd
+          test -s battle-g09-source/tests/test_g09_battle_lod_v27.gd
+          test -s battle-g09-source/scripts/ui/CombinedArtStudioWeb.gd
+          mkdir -p battle-g09-source/assets battle-g09-source/build/web build/web/batalla-g09
+          git -C battle-g09-source rev-parse --short=12 HEAD > battle-g09-source/assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' battle-g09-source/project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' battle-g09-source/project.godot
+          # Open the interactive sandbox instead of the default tank-only
+          # gallery. Sandbox orders use the real action validation code.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('battle-g09-source/scripts/ui/CombinedArtStudioWeb.gd')
+          src=p.read_text(encoding='utf-8')
+          needle='    _add_building_mode()\n'
+          assert src.count(needle)==1
+          src=src.replace(needle,needle+'    _switch_category(3)\n',1)
+          p.write_text(src,encoding='utf-8')
+          PY
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path battle-g09-source --import --quit 2>&1 | tee /tmp/g09-v27-pages-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/g09-v27-pages-import.log; then
+            echo 'G09 V27 live-battle source import failed' >&2
+            exit 1
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path battle-g09-source --export-release 'Web Studio' \
+            build/web/index.html 2>&1 | tee /tmp/g09-v27-pages-export.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/g09-v27-pages-export.log; then
+            echo 'G09 V27 live battle WebGL export failed' >&2
+            exit 1
+          fi
+          cp -a battle-g09-source/build/web/. build/web/batalla-g09/
+          for asset in index.html index.js index.pck index.wasm; do
+            test -s "build/web/batalla-g09/$asset"
+          done
       - name: Add visible navigation among HQ V12, Battle V8 and G09 V26 studios
         shell: bash
         run: |
@@ -285,12 +336,35 @@ jobs:
           add_link(Path('build/web/tanque/index.html'),
                    '../batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
                    'Ver terreno y combate en 3D', 76)
+          add_link(Path('build/web/index.html'),
+                   'batalla-g09/', 'BATALLA G09 V27 · JUGABLE',
+                   'Prueba órdenes reales, zoom y modo AUTO/ECO del G09', 136)
+          add_link(Path('build/web/batalla/index.html'),
+                   '../batalla-g09/', 'PROBAR G09 V27 EN BATALLA',
+                   'Comparar tanque V25 con detalle adaptativo al jugar', 136)
+          add_link(Path('build/web/tanque/index.html'),
+                   '../batalla-g09/', 'G09 V27 · PARTIDA REAL',
+                   'Abrir juego de prueba con G09 V25 y modo ECO', 136)
+          add_link(Path('build/web/batalla-g09/index.html'),
+                   '../', 'ESTUDIO · EDIFICIOS Y UNIDADES',
+                   'Regresar al Estudio TARVOKA')
+          add_link(Path('build/web/batalla-g09/index.html'),
+                   '../batalla/', 'MAPA 3D ACTUAL',
+                   'Volver al visor de terreno avanzado', 76)
+          add_link(Path('build/web/batalla-g09/index.html'),
+                   '../tanque/', 'G09 · REVISIÓN ARTÍSTICA',
+                   'Inspeccionar materiales de tanque V25 y escenarios V26', 136)
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
           grep -q 'TANQUE G09 V26' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/tanque/index.html
           grep -q 'BATALLA 3D' build/web/tanque/index.html
+          grep -q 'BATALLA G09 V27' build/web/index.html
+          grep -q 'G09 V27' build/web/batalla/index.html
+          grep -q 'G09 V27' build/web/tanque/index.html
+          grep -q 'ESTUDIO' build/web/batalla-g09/index.html
+          grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
           touch build/web/.nojekyll
 
       - name: Upload GitHub Pages web site
