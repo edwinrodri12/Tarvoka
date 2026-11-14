@@ -36,6 +36,7 @@ const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const StressBenchmark = preload("res://scripts/ui/StressBenchmark.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
 const DestinationComparison = preload("res://scripts/ui/DestinationComparison.gd")
@@ -396,6 +397,13 @@ func _ready() -> void:
     battery_saver_button.tooltip_text = "Reduce animación ambiental; las órdenes y ataques mantienen sus efectos"
     battery_saver_button.pressed.connect(_toggle_battery_saver)
     panel.add_child(battery_saver_button)
+    var stress_test_button := Button.new()
+    stress_test_button.name = "PruebaEstresVisualAndroid"
+    stress_test_button.text = "PRUEBA DE RENDIMIENTO (QA)"
+    stress_test_button.tooltip_text = "Carga grafica aislada: tanques, HQ 3D precalculado, clima y efectos. No modifica partidas."
+    stress_test_button.custom_minimum_size.y = 45
+    stress_test_button.pressed.connect(_open_stress_benchmark)
+    panel.add_child(stress_test_button)
     camera_zoom_out = Button.new()
     camera_zoom_out.text = "−"
     camera_zoom_out.tooltip_text = "Alejar mapa táctico"
@@ -2383,3 +2391,12 @@ func _open_campaign() -> void:
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
         faction_gallery.popup_centered_ratio(0.85)
+
+func _open_stress_benchmark() -> void:
+    # A separate board is used so the running skirmish and its autosave survive.
+    for child in get_children():
+        if child is TarvokaVisualStressBenchmark:
+            return
+    var benchmark := StressBenchmark.new()
+    benchmark.name = "VisualStressAndroid"
+    add_child(benchmark)
