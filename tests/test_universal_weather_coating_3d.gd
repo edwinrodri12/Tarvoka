@@ -89,7 +89,7 @@ func _run() -> void:
     assert((faction_panels[0].material_override as StandardMaterial3D).albedo_color == repaint)
     Weather.apply(tank,"snow")
     _assert_snow_protection(tank)
-    tank.queue_free()
+    tank.free()
 
     # ONE service across all eight unit roles; ground, air and naval are
     # visual modes only and never change movement or fuel.
@@ -103,7 +103,7 @@ func _run() -> void:
         assert(winter["valid"] and int(winter["snow_nodes"]) <=
             Weather.MAX_ECO_SNOW_NODES)
         Weather.clear(model)
-        model.queue_free()
+        model.free()
 
     # Headquarters levels/conditions and ALL 8 factions. Transparent glass
     # and faction panels must remain legible under snowfall.
@@ -126,7 +126,7 @@ func _run() -> void:
             Weather.clear(hq)
             assert((paint[0].material_override as StandardMaterial3D).albedo_color == before)
             assert(hq.find_child(Weather.SNOW_NODE,true,false) == null)
-            hq.queue_free()
+            hq.free()
 
     # Actual unified web studio including controller and same-camera A/B.
     root.content_scale_size = Vector2i(1366,860)
