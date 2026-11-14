@@ -42,6 +42,16 @@ func _run() -> void:
         "MacizosErosionadosContinuosV7",true,false) as MeshInstance3D
     assert(ridge != null and ridge.mesh != null)
     assert(ridge.mesh.get_faces().size() == int(v7["ridge_triangles"])*3)
+    var colors: PackedColorArray = ridge.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+    assert(colors.size() > 600)
+    # Protect against the washed-out white glacier-like mountain mistake.
+    # Natural slate/rock faces must remain recognizable under day lighting.
+    var too_bright := 0
+    for k in range(0,colors.size(),maxi(1,colors.size()/150)):
+        var col: Color = colors[k]
+        if col.r > 0.73 and col.g > 0.73 and col.b > 0.73:
+            too_bright += 1
+    assert(too_bright == 0)
     assert(studio.model_root.find_child("SedimentosYOrillasSinParedV7",true,false) != null)
     assert(studio.model_root.find_child("OndulacionesDispersasV7",true,false) != null)
     assert(studio.model_root.find_child("CordilleraContinuaV6",true,false) == null)
