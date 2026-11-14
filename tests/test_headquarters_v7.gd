@@ -57,6 +57,8 @@ func _run() -> void:
         assert((canopy.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 250)
         assert(sculpted.find_child("CristalPanoramicoComando_-1",true,false) != null)
         assert(sculpted.find_child("CristalPanoramicoComando_1",true,false) != null)
+        assert(sculpted.find_child("CubiertaConvexaAla_-1",true,false) != null)
+        assert(sculpted.find_child("CubiertaConvexaAla_1",true,false) != null)
         assert(sculpted.find_child("ExtractorAzotea_1",true,false) != null)
         assert(sculpted.find_child("MecanismoDeRadarArticuladoV7",true,false) != null)
         assert(sculpted.find_child("BalizamientoHelipuertoV7",true,false) != null)
@@ -108,6 +110,19 @@ func _run() -> void:
         await process_frame
     var front_v7: Image = studio.preview.get_texture().get_image()
     assert(not front_v7.is_empty())
+    # True close camera capture makes facade finishing inspectable, not a
+    # blown-up raster image. Capture then restore exactly the same framing.
+    studio._change_zoom(1)
+    studio._change_zoom(1)
+    for i in range(8):
+        await process_frame
+    var closeup: Image = studio.preview.get_texture().get_image()
+    assert(not closeup.is_empty())
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(closeup.save_png("res://artifacts/tarvoka_hq_v7_entrance_closeup.png")==OK)
+    studio._reset_camera()
+    for i in range(8):
+        await process_frame
     studio.hq_v7_toggle.set_pressed_no_signal(false)
     studio._change_hq_sculpt(false)
     assert(not studio.model_root.get_meta("tarvoka_hq_visual_v7",false))
