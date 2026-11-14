@@ -46,10 +46,21 @@ jobs:
             | tee /tmp/engineer-repair.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/engineer-repair.log; then exit 1; fi
           grep -F 'PASS engineer repair:' /tmp/engineer-repair.log
+      - name: Verify Android landscape repair UI and actual paid target selection
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_engineer_repair_ui.gd 2>&1 \
+            | tee /tmp/engineer-repair-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/engineer-repair-ui.log; then exit 1; fi
+          grep -F 'PASS engineer repair UI:' /tmp/engineer-repair-ui.log
       - name: Upload repro logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: TARVOKA-engineer-repair-QA
-          path: /tmp/engineer-repair.log
+          path: |
+            /tmp/engineer-repair.log
+            /tmp/engineer-repair-ui.log
           if-no-files-found: warn
