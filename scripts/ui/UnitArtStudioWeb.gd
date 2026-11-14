@@ -455,6 +455,8 @@ func _update_details() -> void:
         status_label.text += " · V30: CADENAS ANCHAS, DAÑO PBR, BALAS/EXPLOSIVOS"
     if model_root.get_meta("tarvoka_mbt_tracks_inboard_v31",false):
         status_label.text += " · V31: CADENAS Y ENGRANAJES ALINEADOS AL INTERIOR"
+    if model_root.has_meta("tarvoka_v32_hit_nodes"):
+        status_label.text += " · V32 FINAL: MOVIMIENTO, TORRETA, DISPARO, IMPACTOS Y DAÑOS REVISADOS"
     if _scenario_enabled:
         status_label.text += " · %s / %s (V26)" % [
             str(BattleScenarioV26.TERRAIN_NAMES[_scenario_terrain]),

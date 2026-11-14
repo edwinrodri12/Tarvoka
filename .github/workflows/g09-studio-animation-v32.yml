@@ -1,0 +1,66 @@
+name: TARVOKA G09 V32 native animation filmstrips and QA
+
+on:
+  push:
+    branches:
+      - feat/g09-v32-studio-final-animation-20261114
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-animation-signoff:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Godot 4.3 renderer and virtual display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Parse original PBR model and final animation rig
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g09-v32-parse.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/g09-v32-parse.log; then exit 1; fi
+      - name: Verify every pose, track alignment, damage and factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_g09_animation_final_v32 test_g09_track_alignment_v31 test_g09_art_v30; do
+            timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS G09' "/tmp/${test}.log"
+          done
+      - name: Render authentic six-frame sequences and five HP damage stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 200s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v32_animation_filmstrips.gd 2>&1 | tee /tmp/g09-v32-visual.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v32-visual.log; then exit 1; fi
+          grep -q 'PASS G09 V32 FILMSTRIPS:' /tmp/g09-v32-visual.log
+          for name in move attack hit_bullet hit_explosion damaged; do
+            test -s "artifacts/tarvoka_g09_v32_anim_${name}.png"
+          done
+          test -s artifacts/tarvoka_g09_v32_five_damage_stages.png
+      - name: Archive native animation quality reference renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-G09-V32-Final-Animation-Frames
+          path: |
+            artifacts/tarvoka_g09_v32_anim_*.png
+            artifacts/tarvoka_g09_v32_five_damage_stages.png
+          if-no-files-found: error
