@@ -38,6 +38,14 @@ func _run() -> void:
     assert(first["fog_chunks_updated"] == 1)
     assert(first["trees"] > 0)
     assert(first["dynamic_canopy_shadows"] == false)
+    for canopy in [
+        "ForestCanopiesSpruce","ForestCanopiesFir",
+        "ForestCanopiesYoung","ForestTrunks"
+    ]:
+        assert((lab.get_node(canopy) as MultiMeshInstance3D
+            ).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+    assert((lab.get_node("SlopeFollowingUnderstory") as MultiMeshInstance3D).cast_shadow == (
+        GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
     var chunks: Dictionary = lab.get("_chunk_parts")
     assert(chunks.has(Vector2i(0,0)))
     var original_ground: Mesh = (chunks[Vector2i(0,0)][0] as MeshInstance3D).mesh
@@ -100,6 +108,12 @@ func _run() -> void:
         "skipped_unchanged_updates"]) == bypass_before+1)
     lab.set_battle_terrain(changed,{},false,6)
     assert(lab.environment_metrics()["dynamic_canopy_shadows"])
+    for canopy in [
+        "ForestCanopiesSpruce","ForestCanopiesFir",
+        "ForestCanopiesYoung","ForestTrunks"
+    ]:
+        assert((lab.get_node(canopy) as MultiMeshInstance3D
+            ).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
     assert(changed == full)
     lab.queue_free()
     print("PASS incremental map3d: local fog chunks, cached forests, hidden terrain privacy, one-pass quality, 2D fallback")
