@@ -28,6 +28,15 @@ Se modifica **únicamente** el renderizador 3D opcional. La vista 2.5D sigue sie
 
 `tools/benchmark_forest3d.gd` añade un escenario sintético de niebla en mapa **40×30** con una revelación localizada: registra cuántos sectores se reconstruyen y cuánto tarda la operación en el runner Mesa, junto con las medidas full/mobile que ya existían. Los tiempos de GitHub Actions **no son FPS ni una garantía de rendimiento en un Android físico**.
 
+### Resultado reproducible del benchmark 40×30
+
+En [GitHub Actions 43555846922](https://github.com/edwinrodri12/Tarvoka/actions/runs/43555846922), con la calidad móvil 3D y un mapa sintético de 40×30:
+
+- Visibilidad inicial: **420 casillas**. Se generaron **9 de 20 sectores** visibles, en **551,071 ms** en el runner.
+- Revelación posterior: **una casilla adicional** distante, pasando a 421 visibles. Se reconstruyó **1 de los 20 sectores**, en **20,513 ms**.
+- La prueba independiente también verifica la reutilización de la misma malla de un sector lejano y los mismos `MultiMesh` forestales cuando una llanura distante aparece.
+- Son tiempos de **un escenario sintético sobre Mesa x86_64**, no medidas de FPS de Android ni estimaciones universales de aceleración. En especial, si la niebla revela muchos sectores a la vez, el coste puede seguir siendo elevado.
+
 La compilación Android, las capturas reales de Godot y las pruebas integrales deben quedar verdes antes de fusionar. La PR #183 continúa en borrador por cambios concurrentes y conflictos con `main`.
 
 ## Próximos pasos
