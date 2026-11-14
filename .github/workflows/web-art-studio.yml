@@ -19,6 +19,8 @@ on:
       - "scripts/ui/HeadquartersSilhouetteV12.gd"
       - "scripts/ui/HeadquartersProductionV13.gd"
       - "scripts/ui/HeadquartersSpriteStudioV16.gd"
+      - "scripts/ui/HeadquartersClimateV17.gd"
+      - "tests/test_hq_v17_weather_terrain.gd"
       - "tests/test_hq_v16_sprite_studio.gd"
       - "tests/test_headquarters_v13_production.gd"
       - "tests/export_headquarters_production_v13_glb.gd"
@@ -63,6 +65,7 @@ on:
       - feat/hq-v12-tactical-silhouette-night-20261114
       - feat/hq-v13-production-ready-runtime-lod-20261114
       - feat/hq-v16-studio-v15-sprite-live-preview-20261114
+      - feat/hq-v17-commercial-weather-terrain-20261114
       - main
     paths:
       - "scripts/ui/**"
@@ -360,6 +363,20 @@ jobs:
           test -s artifacts/tarvoka_hq_v16_android_sprite_inside_3d_studio.png
           test -s artifacts/tarvoka_hq_v16_zoom_distant_fallback_comparison.png
           test -s artifacts/tarvoka_hq_v16_v13_optimized_and_v15_android.png
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_hq_v17_weather_terrain.gd 2>&1 | tee /tmp/hq-v17-weather-terrain.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v17-weather-terrain.log; then
+            echo "HQ V17 real 3D rain/snow/puddles and four terrain presets regression" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V17:" /tmp/hq-v17-weather-terrain.log
+          test -s artifacts/tarvoka_hq_v17_four_terrains_three_weathers_godot.png
+          test -s artifacts/tarvoka_hq_v17_rain_screen_with_controls.png
+          test -s artifacts/tarvoka_hq_v17_snow_screen_with_controls.png
+          test -s artifacts/tarvoka_hq_v17_weather_around_actual_android_sprite.png
+          test -s artifacts/tarvoka_hq_v17_optimized_v13_rain.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -556,6 +573,7 @@ jobs:
             artifacts/tarvoka_hq_v16_android_sprite_inside_3d_studio.png
             artifacts/tarvoka_hq_v16_zoom_distant_fallback_comparison.png
             artifacts/tarvoka_hq_v16_v13_optimized_and_v15_android.png
+            artifacts/tarvoka_hq_v17_*.png
             assets/buildings/hq_v15/*.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
