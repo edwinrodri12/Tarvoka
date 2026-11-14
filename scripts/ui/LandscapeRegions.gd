@@ -8,7 +8,7 @@ class_name TarvokaLandscapeRegions
 static func connection_count(mask: int) -> int:
     var count := 0
     for side in range(4):
-        if mask & (1 << side):
+        if (mask & (1 << side)) != 0:
             count += 1
     return count
 
@@ -122,7 +122,7 @@ static func draw_forest_floor(canvas: CanvasItem, center: Vector2,
         Vector2(-0.5,0.25), Vector2(0.5,-0.25)
     ]
     for side in range(4):
-        if links & (1 << side) == 0:
+        if (links & (1 << side)) == 0:
             continue
         var exit: Vector2 = center+reaches[side]*hw
         var local := exit-center
