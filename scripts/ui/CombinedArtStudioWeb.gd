@@ -193,7 +193,7 @@ func _add_building_mode() -> void:
 func _install_faction_gallery(column: VBoxContainer) -> void:
     # Restore the eight *visible*, officially approved faction views.
     # Keep the original full-name dropdown intact for accessibility.
-    _title(column,"VISTAS POR FACCIÓN · 8 ESCUDOS OFICIALES",12)
+    var gallery_heading := _title(column,"VISTAS POR FACCIÓN · 8 ESCUDOS OFICIALES",12)
     faction_view_label = _title(column,"",12)
     faction_view_label.name = "NombreFaccionEnEstudio"
     faction_view_grid = GridContainer.new()
@@ -225,12 +225,9 @@ func _install_faction_gallery(column: VBoxContainer) -> void:
     # The entire gallery must remain visible for Units and Buildings;
     # it is deliberately NOT in _unit_only_controls / building_controls.
     var at: int = column.get_children().find(faction_picker)
-    column.move_child(faction_view_label,at+1)
-    column.move_child(faction_view_grid,at+2)
-    # Keep the gallery heading adjacent to its cards.
-    var heading: Node = faction_view_label.get_previous_sibling()
-    if heading is Label and (heading as Label).text.begins_with("VISTAS POR FACCIÓN"):
-        column.move_child(heading,at+1)
+    column.move_child(gallery_heading,at+1)
+    column.move_child(faction_view_label,at+2)
+    column.move_child(faction_view_grid,at+3)
 
 func _select_faction_view(faction: int) -> void:
     if faction < 0 or faction >= VisualStyle.FACTIONS.size():
