@@ -188,6 +188,13 @@ static func apply(model: Node3D) -> bool:
     model.set_meta("tarvoka_mbt_track_radius_v29",PATH_RADIUS)
     return true
 
+static func enforce_hidden_after_damage(model: Node3D) -> int:
+    # Old V5 damage logic toggles CintaSuperiorOruga1 back on at HP stages.
+    # Reassert the V29 final model after ANY five-stage damage transition.
+    if model==null or not model.get_meta("tarvoka_mbt_track_final_v29",false):
+        return 0
+    return _hide_rectangular_prototypes(model)
+
 static func slide_tracks(model: Node3D,phase: float) -> void:
     if model==null or not model.get_meta("tarvoka_mbt_track_final_v29",false):
         return

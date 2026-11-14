@@ -32,6 +32,7 @@ const V17 = preload("res://scripts/ui/TankFXV17.gd")
 const V20 = preload("res://scripts/ui/TankIntegrationV20.gd")
 const V21 = preload("res://scripts/ui/TankFinishV21.gd")
 const V22 = preload("res://scripts/ui/TankGunV22.gd")
+const FinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
 
 static func _material(color: Color, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -546,4 +547,6 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         V21.hide_legacy(model)
     if model.get_meta("tarvoka_mbt_gun_v22",false):
         V22.apply_damage(model,stage)
+    if model.get_meta("tarvoka_mbt_track_final_v29",false):
+        FinalTracksV29.enforce_hidden_after_damage(model)
     return true
