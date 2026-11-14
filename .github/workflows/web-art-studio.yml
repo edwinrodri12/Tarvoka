@@ -9,6 +9,8 @@ on:
       - "scripts/ui/TerrainStudioDetailV5.gd"
       - "scripts/ui/TerrainStudioNaturalV6.gd"
       - "scripts/ui/TerrainStudioErosionV7.gd"
+      - "scripts/ui/TerrainStudioEcotonesV8.gd"
+      - "tests/test_terrain_studio_v12_lithology.gd"
       - "tests/test_terrain_studio_v11_erosion.gd"
       - "tests/test_terrain_studio_v10_natural.gd"
       - "tests/test_terrain_studio_v9_controls.gd"
@@ -223,6 +225,21 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V12 stratified rock materials and ecotones in the WebGL Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 155s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v12_lithology.gd 2>&1 | tee /tmp/terrain-studio-v12.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-studio-v12.log; then
+            echo "V12 rock materials/ecotone, batching, or older studio views regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V12:' /tmp/terrain-studio-v12.log
+          test -s artifacts/tarvoka_terrain_v12_lithology.png
+          test -s artifacts/tarvoka_terrain_v12_v11_comparison.png
       - name: Verify V11 natural erosion, river slopes and water in real GPU studio
         shell: bash
         run: |
@@ -474,6 +491,8 @@ jobs:
             artifacts/tarvoka_terrain_v10_v5_vs_v6.png
             artifacts/tarvoka_terrain_v11_erosion.png
             artifacts/tarvoka_terrain_v11_v10_comparison.png
+            artifacts/tarvoka_terrain_v12_lithology.png
+            artifacts/tarvoka_terrain_v12_v11_comparison.png
             artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png

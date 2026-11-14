@@ -38,6 +38,11 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_lithology_v8_toggle: CheckButton
+var terrain_talus_v8_toggle: CheckButton
+var terrain_ecotone_v8_toggle: CheckButton
+var terrain_compare_v8_button: Button
+var _terrain_v8_enabled := true
 var terrain_ridges_v7_toggle: CheckButton
 var terrain_shores_v7_toggle: CheckButton
 var terrain_water_v7_toggle: CheckButton
@@ -276,6 +281,30 @@ func _add_building_mode() -> void:
     terrain_compare_v7_button.name = "ComparadorTerrenoV6V7"
     terrain_compare_v7_button.custom_minimum_size.y = 50
 
+    _title(terrain_controls,"GEOLOGÍA Y TRANSICIONES NATURALES V8",13)
+    terrain_lithology_v8_toggle = CheckButton.new()
+    terrain_lithology_v8_toggle.name = "EstratosMineralesV8"
+    terrain_lithology_v8_toggle.text = "Estratos minerales, grietas y líquenes"
+    terrain_lithology_v8_toggle.button_pressed = true
+    terrain_lithology_v8_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_lithology_v8_toggle)
+    terrain_talus_v8_toggle = CheckButton.new()
+    terrain_talus_v8_toggle.name = "PedregalesDeLaderaV8"
+    terrain_talus_v8_toggle.text = "Pedregales entre montañas y terreno abierto"
+    terrain_talus_v8_toggle.button_pressed = true
+    terrain_talus_v8_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_talus_v8_toggle)
+    terrain_ecotone_v8_toggle = CheckButton.new()
+    terrain_ecotone_v8_toggle.name = "SotobosqueDeTransicionV8"
+    terrain_ecotone_v8_toggle.text = "Vegetación gradual entre bosque y llanura"
+    terrain_ecotone_v8_toggle.button_pressed = true
+    terrain_ecotone_v8_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_ecotone_v8_toggle)
+    terrain_compare_v8_button = _button(terrain_controls,
+        "COMPARAR: volver al acabado V7",_toggle_v8_finish)
+    terrain_compare_v8_button.name = "ComparadorTerrenoV7V8"
+    terrain_compare_v8_button.custom_minimum_size.y = 50
+
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
     terrain_camera_picker.name = "CamarasDeTerreno"
@@ -508,7 +537,24 @@ func _change_terrain_camera(_index: int) -> void:
     if _role == "terrain":
         _update_camera()
 
+func _toggle_v8_finish() -> void:
+    _terrain_v8_enabled = not _terrain_v8_enabled
+    if _terrain_v8_enabled:
+        # Preserve forest, canyon and shore details from the older modes.
+        _terrain_v5_enabled = true
+        _terrain_v6_enabled = true
+        _terrain_v7_enabled = true
+        terrain_compare_button.text = "COMPARAR: volver a acabado V4"
+        terrain_compare_v6_button.text = "COMPARAR: volver al terreno V5"
+        terrain_compare_v7_button.text = "COMPARAR: volver al terreno V6"
+    terrain_compare_v8_button.text = (
+        "COMPARAR: volver al acabado V7" if _terrain_v8_enabled
+        else "VOLVER AL ACABADO V8")
+    _rebuild_terrain(false)
+
 func _toggle_v7_finish() -> void:
+    _terrain_v8_enabled = false
+    terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     _terrain_v7_enabled = not _terrain_v7_enabled
     if _terrain_v7_enabled:
         # Returning from V4 or V5 restores the shared V6 forest and V5
@@ -523,6 +569,8 @@ func _toggle_v7_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v6_finish() -> void:
+    _terrain_v8_enabled = false
+    terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     # V6/V5 compare must temporarily disable V7 or its replacement
     # meshes would conceal the versions being compared.
     _terrain_v7_enabled = false
@@ -534,6 +582,8 @@ func _toggle_v6_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v5_finish() -> void:
+    _terrain_v8_enabled = false
+    terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     _terrain_v7_enabled = false
     _terrain_v6_enabled = false
     terrain_compare_v7_button.text = "VOLVER AL TERRENO V7"
@@ -616,7 +666,10 @@ func _display_terrain() -> void:
         _terrain_v6_enabled and terrain_banks_v6_toggle.button_pressed,
         _terrain_v7_enabled and terrain_ridges_v7_toggle.button_pressed,
         _terrain_v7_enabled and terrain_shores_v7_toggle.button_pressed,
-        _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed)
+        _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed,
+        _terrain_v8_enabled and terrain_lithology_v8_toggle.button_pressed,
+        _terrain_v8_enabled and terrain_talus_v8_toggle.button_pressed,
+        _terrain_v8_enabled and terrain_ecotone_v8_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -827,6 +880,14 @@ func _update_details() -> void:
                 int(v7.get("mountain_cells",0)),
                 int(v7.get("shore_edges",0)),
                 int(v7.get("wave_strips",0)),int(v7.get("batches",0))]
+        var v8: Dictionary = model_root.get_meta("terrain_ecotones_v8",{})
+        if int(v8.get("batches",0)) > 0:
+            status_label.text += " · V8: %d piedras, %d plantas, %d lotes" % [
+                int(v8.get("scree_stones",0)),
+                int(v8.get("undergrowth",0)),
+                int(v8.get("batches",0))]
+        if bool(model_root.get_meta("terrain_studio_v8_lithology",false)):
+            status_label.text += " · roca estratificada"
         return
     if _role != "headquarters":
         super._update_details()
