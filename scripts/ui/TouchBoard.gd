@@ -17,6 +17,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const EngineerRepair = preload("res://scripts/core/EngineerRepair.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
@@ -979,6 +980,47 @@ func resupply_selected() -> bool:
             int(action["cargo_ammo"]), int(action["cargo_fuel"])
         ]
     selected_id = ""
+    selected_factory_pos = Vector2i(-1,-1)
+    pending_order.clear()
+    _write_autosave()
+    queue_redraw()
+    return true
+
+# A repair is an explicit paid choice among adjacent wounded friendly ground
+# chassis. The engine rechecks the offered price/HP/ownership at commitment.
+func repair_options_selected() -> Array:
+    if campaign_locked or not pending_order.is_empty() or selected_id.is_empty():
+        return []
+    if ai_enabled and int(state.get("faction",-1)) != 0:
+        return []
+    if not Opening.can_order(state):
+        return []
+    return EngineerRepair.options(state,selected_id)
+
+func repair_selected_target(target_id: String) -> bool:
+    if target_id.is_empty():
+        return false
+    var offers: Array = repair_options_selected()
+    var listed := false
+    for offered in offers:
+        if str(offered.get("target_id","")) == target_id:
+            listed = true
+            break
+    if not listed:
+        message = "Reparación no disponible: elige un vehículo aliado dañado, adyacente y con créditos."
+        return false
+    var actor_id: String = selected_id
+    var action: Dictionary = Session.repair(state,actor_id,target_id)
+    if not bool(action.get("valid",false)):
+        message = "Reparación rechazada: la posición, el turno o los créditos cambiaron."
+        return false
+    state = action["state"]
+    message = "Ingeniero repara %s: +%d HP (-%d créditos). Hasta %d/%d HP." % [
+        str(action["target_role"]),int(action["restored"]),int(action["cost"]),
+        int(action["after_hp"]),int(action["maximum_hp"])]
+    tactical_action_committed.emit({"kind":"repair","unit_id":actor_id,"result":action})
+    selected_id = ""
+    inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
     _write_autosave()
