@@ -5,6 +5,7 @@ class_name TarvokaBattleMinimap
 # cells, changes fog visibility or touches the battle/save state.
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
@@ -64,7 +65,7 @@ static func point_to_cell(point: Vector2, canvas_size: Vector2,
 static func safe_snapshot(state: Dictionary, viewer: int = 0,
         vs_ai: bool = false) -> Dictionary:
     var dims: Vector2i = dimensions(state)
-    var result: Dictionary = {"size":dims,"tiles":[],"units":[],"sites":[],"nodes":[],"alerts":[]}
+    var result: Dictionary = {"size":dims,"tiles":[],"units":[],"sites":[],"nodes":[],"alerts":[],"weather":Weather.from_state(state)}
     if dims.x <= 0 or dims.y <= 0:
         return result
     var fog: bool = Visibility.enabled(state)
@@ -137,7 +138,7 @@ static func _rasterize_terrain(data: Dictionary) -> Texture2D:
         var cell: Vector2i = item["pos"]
         var color := Color("#09101C")
         if bool(item["explored"]):
-            color = VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y)
+            color = Weather.terrain_tint(VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y),str(data.get("weather","clear")))
             if not bool(item["visible"]):
                 color = color.darkened(0.70)
         image.set_pixel(cell.x,cell.y,color)
