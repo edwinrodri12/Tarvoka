@@ -203,6 +203,41 @@ func _run() -> void:
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
+    # Specific canyon bridge proof: identical camera, lighting and models,
+    # with only the V2/V4 renderer switched.
+    studio.terrain_scene_picker.select(1)
+    studio._change_terrain_scene(1)
+    studio._reset_camera()
+    studio.terrain_scatter_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    for bridge_frame in range(8):
+        await process_frame
+    var canyon_v2: Image = studio.preview.get_texture().get_image()
+    assert(canyon_v2 != null and not canyon_v2.is_empty())
+    studio.terrain_scatter_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    for bridge_frame in range(8):
+        await process_frame
+    var canyon_v4: Image = studio.preview.get_texture().get_image()
+    assert(canyon_v4 != null and not canyon_v4.is_empty())
+    var old_canyon := canyon_v2.duplicate()
+    var new_canyon := canyon_v4.duplicate()
+    old_canyon.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    new_canyon.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var visible_bridge_changes: int = 0
+    for py in range(0,330,5):
+        for px in range(0,480,5):
+            var before_color: Color = old_canyon.get_pixel(px,py)
+            var after_color: Color = new_canyon.get_pixel(px,py)
+            if absf(before_color.r-after_color.r)+absf(before_color.g-after_color.g)+absf(before_color.b-after_color.b) > 0.12:
+                visible_bridge_changes += 1
+    assert(visible_bridge_changes > 35)
+    var bridge_comparison := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    bridge_comparison.blit_rect(old_canyon,Rect2i(0,0,480,330),Vector2i.ZERO)
+    bridge_comparison.blit_rect(new_canyon,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(bridge_comparison.save_png(
+        "res://artifacts/tarvoka_canyon_v2_v4_same_camera.png") == OK)
     # Same-camera image captures are mandatory; smoke tests that only
     # inspect node counts can miss unlit, empty or visually broken terrain.
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
