@@ -260,7 +260,10 @@ static func water_outline(grid: Array, cell: Vector2i,
                 # without holes on water-water seams or under fog.
                 var ripple: float = sin((t+float(cell.x)*0.31+
                     float(cell.y)*0.17)*TAU*1.6)
-                var inset: float = 0.075+0.036*ripple
+                # Taper the bank offset to zero at edge endpoints.
+                # This prevents holes when two adjoining water tiles
+                # meet a bank at the same grid corner.
+                var inset: float = (0.088+0.041*ripple)*sin(t*PI)
                 match side:
                     0:
                         v = inset
@@ -273,6 +276,36 @@ static func water_outline(grid: Array, cell: Vector2i,
             outline.append(Vector2(float(cell.x)+u,
                 float(cell.y)+v))
     return outline
+
+# Bank classification must use ONLY revealed neighbors. In addition
+# to camera testing, this guarantees that animating the river does not
+# display a coastline that should remain hidden by fog.
+static func _is_visible_bank_segment(grid: Array, cell: Vector2i,
+        a: Vector2, b: Vector2, observed: Dictionary,
+        restricted: bool) -> bool:
+    var mid: Vector2 = (a+b)*0.5
+    var dx: float = mid.x-float(cell.x)
+    var dz: float = mid.y-float(cell.y)
+    var side: int = -1
+    # The water_outline retracts visible banks inward by < 0.13;
+    # identify the nearest polygon side and inspect only its neighbor.
+    if dz < 0.18:
+        side = 0
+    elif dx > 0.82:
+        side = 1
+    elif dz > 0.82:
+        side = 2
+    elif dx < 0.18:
+        side = 3
+    if side < 0:
+        return false
+    const DELTAS := [
+        Vector2i(0,-1),Vector2i(1,0),
+        Vector2i(0,1),Vector2i(-1,0)
+    ]
+    var other: Vector2i = cell+DELTAS[side]
+    return observed_cell(grid,other,observed,restricted) and (
+        str(grid[other.y][other.x]) != "water")
 
 static func build_water(grid: Array, observed: Dictionary = {},
         restricted: bool = false, divisions: int = 8) -> ArrayMesh:
@@ -295,9 +328,18 @@ static func build_water(grid: Array, observed: Dictionary = {},
                 var b: Vector2 = outline[(j+1)%outline.size()]
                 # Top view perimeter order is clockwise in x/z, so
                 # center -> b -> a makes the normal face +y.
-                _add_vertex(st,center,Color("#5AAEC4"))
-                _add_vertex(st,Vector3(b.x,WATER_LEVEL,b.y),Color("#81CDDA"))
-                _add_vertex(st,Vector3(a.x,WATER_LEVEL,a.y),Color("#81CDDA"))
+                # Alpha is an opaque geometry ATTRIBUTE for the
+                # optional water shader: 0 = deep center, 1 = bank foam.
+                # Underlying world-space coordinates guarantee waves
+                # continue across neighboring water cells.
+                var bank_strength: float = 1.0 if (
+                    Terrain3DMesh._is_visible_bank_segment(
+                        grid,cell,a,b,observed,restricted)) else 0.0
+                _add_vertex(st,center,Color(0.35,0.64,0.71,0.0))
+                _add_vertex(st,Vector3(b.x,WATER_LEVEL,b.y),
+                    Color(0.54,0.79,0.83,bank_strength))
+                _add_vertex(st,Vector3(a.x,WATER_LEVEL,a.y),
+                    Color(0.54,0.79,0.83,bank_strength))
                 triangles += 1
     if triangles == 0:
         return mesh
