@@ -71,9 +71,9 @@ static func _height(x: float,z: float,terrain: int) -> float:
     var radius: float = Vector2(x,z).length()
     var outer: float = smoothstep(2.40,5.25,radius)
     var amplitude: float = [0.045,0.19,0.16,0.075][terrain]
-    return -0.115+amplitude*outer*(
-        sin(x*1.18+0.33*float(terrain))*cos(z*0.98)
-        +0.36*sin(x*2.05-z*1.74))
+    var wave: float = sin(x*1.18+0.33*float(terrain))*cos(z*0.98)
+    wave += 0.36*sin(x*2.05-z*1.74)
+    return -0.115+amplitude*outer*wave
 
 static func _vertex(st: SurfaceTool,point: Vector3) -> void:
     st.set_uv(Vector2(point.x*0.29+0.5,point.z*0.29+0.5))
