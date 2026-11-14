@@ -29,6 +29,16 @@ func _run() -> void:
     assert(studio.terrain_rocks_v5_toggle.button_pressed)
     assert(studio.terrain_faction_buttons.size() == 8)
     assert(studio.terrain_camera_picker.item_count == 4)
+    assert(studio.terrain_side_panel != null and studio.terrain_side_panel.visible)
+    studio._toggle_terrain_fullscreen()
+    assert(studio._terrain_fullscreen)
+    assert(not studio.terrain_side_panel.visible)
+    assert(studio.terrain_restore_panel_button.visible)
+    assert(studio.model_holder.visible)
+    studio._toggle_terrain_fullscreen()
+    assert(not studio._terrain_fullscreen)
+    assert(studio.terrain_side_panel.visible)
+    assert(not studio.terrain_restore_panel_button.visible)
     var original_map: Array = studio.model_root.get_meta("terrain_counts").keys()
     var counts_before: Dictionary = studio.model_root.get_meta("terrain_counts").duplicate(true)
     var v5: Dictionary = studio.model_root.get_meta("terrain_detail_v5")
@@ -91,6 +101,7 @@ func _run() -> void:
     assert(studio.faction_picker.selected == 6)
     assert(studio.terrain_faction_buttons[6].button_pressed)
     assert(not studio.terrain_faction_buttons[0].button_pressed)
+    assert(studio.terrain_faction_buttons[6].icon != null)
     var samples: Node3D = studio.model_root.find_child(
         "MuestrasDeEscalaUnidadYEdificio",true,false) as Node3D
     assert(samples != null)
@@ -130,8 +141,12 @@ func _run() -> void:
 
     # Switching between all modes must retain the existing unit, HQ,
     # terrain and interactive combat experiments.
+    studio._toggle_terrain_fullscreen()
+    assert(not studio.terrain_side_panel.visible)
     studio._switch_category(0)
     assert(studio._role == "tank")
+    assert(studio.terrain_side_panel.visible)
+    assert(not studio._terrain_fullscreen)
     studio._switch_category(1)
     assert(studio._role == "headquarters")
     studio._switch_category(3)
