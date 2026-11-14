@@ -99,6 +99,7 @@ func _run() -> void:
     assert(ground != null and ground.mesh != null)
     assert(ground.mesh.get_surface_count() == 1)
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
+    assert((ground.material_override as StandardMaterial3D).albedo_texture != null)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
     assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
@@ -185,12 +186,17 @@ func _run() -> void:
         if preset == 0:
             assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)
         if preset == 1:
-            assert(studio.model_root.find_child("PuenteElevado_4",true,false) != null)
-            assert(studio.model_root.find_child("PuenteElevado_5",true,false) != null)
-            assert(studio.model_root.find_child("PuenteElevado_6",true,false) != null)
+            assert(studio.model_root.get_meta("terrain_bridge_visual_count") == 2)
+            for row in [5,8]:
+                var bridge: Node3D = studio.model_root.find_child(
+                    "PuenteContinuoV4_%d" % row,true,false) as Node3D
+                assert(bridge != null)
+                assert(bridge.find_child("TableroYRampasV4",true,false) != null)
+                assert(bridge.find_child("BarandasContinuasV4",true,false) != null)
+                assert(bridge.find_child("PilaresAgrupadosV4",true,false) != null)
             assert(Terrain.kind(3,0,preset) == "water")
             assert(Terrain.kind(6,9,preset) == "water")
-            assert(studio.model_root.find_child("PilarPuente",true,false) != null)
+            assert(studio.model_root.find_child("PuenteElevado_4",true,false) == null)
         if preset == 2:
             assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or
                 studio.model_root.find_child("CopaFrondosa_43",true,false) != null)
