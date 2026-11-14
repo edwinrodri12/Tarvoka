@@ -103,6 +103,8 @@ var iso_view_button: Button
 var three_d_view_button: Button
 var three_d_quality_button: Button
 var compact_3d_quality_button: Button
+var compact_perf_label: Label
+var _compact_perf_elapsed := 0.0
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -1038,6 +1040,14 @@ func _build_battle_hud() -> void:
     compact_detail.add_theme_color_override("font_color",Color("#D9E6ED"))
     compact_detail.clip_text = true
     title_row.add_child(compact_detail)
+    compact_perf_label = Label.new()
+    compact_perf_label.name = "FPS3DEnPartida"
+    compact_perf_label.visible = false
+    compact_perf_label.clip_text = true
+    compact_perf_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_perf_label.add_theme_font_size_override("font_size",12)
+    compact_perf_label.add_theme_color_override("font_color",Color("#F7D98D"))
+    title_row.add_child(compact_perf_label)
 
     # Separate touch controls from status/commander portraits. Anchoring
     # three floating buttons over the top card clipped both names and art.
@@ -1445,6 +1455,17 @@ func _on_viewport_resized() -> void:
 func _process(_delta: float) -> void:
     if board == null or status_label == null or unit_label == null:
         return
+    if compact_perf_label != null:
+        compact_perf_label.visible = board.three_d_enabled and battle_hud_compact
+        if compact_perf_label.visible:
+            _compact_perf_elapsed += _delta
+            if _compact_perf_elapsed >= 0.9:
+                _compact_perf_elapsed = 0.0
+                var perf: Dictionary = board.get_3d_performance_snapshot()
+                compact_perf_label.text = "FPS %d  |  Unidades %d  |  G09 V23 %d  |  HQ V13 %d  |  Mallas %d" % [
+                    int(perf.get("engine_fps",0)),int(perf.get("3d_visible_units",0)),
+                    int(perf.get("3d_g09_v23",0)),int(perf.get("3d_headquarters_v13",0)),
+                    int(perf.get("3d_unit_meshes",0))]
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
