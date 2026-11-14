@@ -1016,7 +1016,7 @@ func repair_selected_target(target_id: String) -> bool:
         return false
     state = action["state"]
     message = "Ingeniero repara %s: +%d HP (-%d créditos). Hasta %d/%d HP." % [
-        str(action["target_role"]),int(action["restored"]),int(action["cost"]),
+        Roles.label(str(action["target_role"])),int(action["restored"]),int(action["cost"]),
         int(action["after_hp"]),int(action["maximum_hp"])]
     tactical_action_committed.emit({"kind":"repair","unit_id":actor_id,"result":action})
     selected_id = ""
