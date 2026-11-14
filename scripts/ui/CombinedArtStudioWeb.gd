@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const TerrainStudio = preload("res://scripts/ui/TerrainStudio3D.gd")
+const PremiumTerrain = preload("res://scripts/ui/TerrainStudioPremiumFinish3D.gd")
 const BUILDING_STATES := ["operativo","capturado","danado","destruido"]
 
 var category_picker: OptionButton
@@ -17,6 +18,7 @@ var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
 var terrain_textures_toggle: CheckButton
+var terrain_premium_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
@@ -151,6 +153,13 @@ func _add_building_mode() -> void:
     terrain_textures_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_textures_toggle)
 
+    terrain_premium_toggle = CheckButton.new()
+    terrain_premium_toggle.name = "ComparadorGeologiaVegetacionAguaV4"
+    terrain_premium_toggle.text = "Acabado V4: rocas, árboles, agua y caminos"
+    terrain_premium_toggle.button_pressed = true
+    terrain_premium_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_premium_toggle)
+
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
     terrain_light_picker.name = "LuzDeEntorno"
@@ -283,6 +292,8 @@ func _display_terrain() -> void:
         _faction,terrain_continuous_toggle.button_pressed)
     if terrain_textures_toggle.button_pressed:
         TerrainStudio.apply_texture_finish(model_root)
+    if terrain_continuous_toggle.button_pressed and terrain_premium_toggle.button_pressed:
+        PremiumTerrain.apply(model_root,terrain_scene_picker.selected)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
