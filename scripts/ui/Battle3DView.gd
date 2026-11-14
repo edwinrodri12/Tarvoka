@@ -9,11 +9,15 @@ const LabScene = preload("res://scenes/Terrain3DLab.tscn")
 const Terrain3D = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
+const AssetLayer = preload("res://scripts/ui/Battle3DAssetLayer.gd")
 
 var _viewport: SubViewport
 var _lab
 var _camera: Camera3D
-var _markers: Node3D
+var _asset_layer: Node3D
+var _visual_quality := 2
+var _telemetry_label: Label
+var _telemetry_elapsed := 0.0
 var _tactical_highlights: MeshInstance3D
 var _terrain_signature := -1
 var _unit_signature := -1
@@ -34,15 +38,43 @@ func _ready() -> void:
     _lab = LabScene.instantiate()
     _viewport.add_child(_lab)
     _camera = _lab.get_node("IsoCamera") as Camera3D
-    _markers = Node3D.new()
-    _markers.name = "VisibleTacticalMarkers"
-    _lab.add_child(_markers)
+    _asset_layer = AssetLayer.new()
+    _asset_layer.name = "ModelosRealesEnPartida"
+    _lab.add_child(_asset_layer)
     _tactical_highlights = MeshInstance3D.new()
     _tactical_highlights.name = "LegalTacticalHighlights"
     _lab.add_child(_tactical_highlights)
     texture = _viewport.get_texture()
     resized.connect(_resize_viewport)
     _resize_viewport()
+    _telemetry_label = Label.new()
+    _telemetry_label.name = "FPSModelos3D"
+    _telemetry_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _telemetry_label.position = Vector2(10,10)
+    _telemetry_label.add_theme_font_size_override("font_size",15)
+    _telemetry_label.add_theme_color_override("font_color",Color("#F8E2A3"))
+    _telemetry_label.add_theme_color_override("font_shadow_color",Color("#041726"))
+    _telemetry_label.add_theme_constant_override("shadow_offset_x",2)
+    _telemetry_label.add_theme_constant_override("shadow_offset_y",2)
+    add_child(_telemetry_label)
+
+func _process(delta: float) -> void:
+    if not visible or _asset_layer == null:
+        return
+    _telemetry_elapsed += delta
+    if _telemetry_elapsed < 0.7:
+        return
+    _telemetry_elapsed = 0.0
+    var counters: Dictionary = _asset_layer.call("runtime_metrics")
+    var profile: String = ["BAJO","EQUILIBRADO","ALTO V23"][_visual_quality]
+    _telemetry_label.text = "FPS: %d  |  Unidades: %d  |  G09 V23: %d  |  HQ V13: %d  |  %s" % [
+        Engine.get_frames_per_second(),int(counters.get("3d_visible_units",0)),
+        int(counters.get("3d_g09_v23",0)),
+        int(counters.get("3d_headquarters_v13",0)),profile]
+
+func set_visual_quality(quality: int) -> void:
+    _visual_quality = clampi(quality,0,2)
+    _unit_signature = -1
 
 func _resize_viewport() -> void:
     if _viewport == null or size.x < 16 or size.y < 16:
@@ -66,6 +98,10 @@ func runtime_metrics() -> Dictionary:
     metrics["viewport_resolution"] = _viewport.size
     metrics["live_renderer_active"] = is_visible_in_tree()
     metrics["fps_sample_source"] = "running Godot instance"
+    metrics["draw_calls_this_frame"] = Performance.get_monitor(
+        Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+    if _asset_layer != null:
+        metrics.merge(_asset_layer.call("runtime_metrics"),true)
     return metrics
 
 func set_rendering(active: bool) -> void:
@@ -206,53 +242,15 @@ func reset_camera() -> void:
     if _lab != null:
         _lab._fit_camera()
 
-func _marker_box(name: String, position: Vector3, color: Color,
-        scale: Vector3) -> void:
-    var visual := MeshInstance3D.new()
-    visual.name = name
-    var shape := CapsuleMesh.new()
-    shape.radius = 0.19
-    shape.height = 0.57
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.roughness = 0.72
-    material.metallic = 0.16
-    shape.material = material
-    visual.mesh = shape
-    visual.position = position
-    visual.scale = scale
-    _markers.add_child(visual)
-
 func _refresh_markers(state: Dictionary, selected: String,
-        currently_visible: Dictionary, fog: bool) -> void:
-    for node in _markers.get_children():
-        node.queue_free()
-    var observed: Dictionary = _lab.observed
-    for unit in state.get("units",[]):
-        if not unit is Dictionary or int(unit.get("hp",0)) <= 0:
-            continue
-        var cell = unit.get("pos",null)
-        if not cell is Vector2i:
-            continue
-        if fog and not currently_visible.has(cell):
-            continue
-        if not Terrain3D.observed_cell(_lab.terrain,cell,
-                observed,_lab.restrict_to_observed):
-            continue
-        var side: int = int(unit.get("faction",-1))
-        var color := Color("#398BE2") if side == 0 else Color("#CF5559")
-        var center: Vector3 = Terrain3D.tactical_cell_center(
-            _lab.terrain,cell,observed,_lab.restrict_to_observed)
-        var selected_unit: bool = str(unit.get("id","")) == selected
-        if selected_unit:
-            color = Color("#F5E39A")
-        _marker_box("Unit_"+str(unit.get("id","")),center+Vector3(
-            0,0.37,0),color,Vector3.ONE if not selected_unit else (
-            Vector3(1.25,1.25,1.25)))
-    if not selected.is_empty():
-        # Units remain basic colored placeholders until the approved
-        # 3D unit-model branch supplies its real art.
-        pass
+        currently_visible: Dictionary, fog: bool, battery_saver: bool) -> void:
+    if _asset_layer == null:
+        return
+    # Battle3DAssetLayer uses real V23 meshes, HQ V13 and native 3D sites,
+    # filtered by *exactly the same fog* as the tactical renderer.
+    _asset_layer.call("synchronize",state,selected,currently_visible,fog,
+        _lab.terrain,_lab.observed,_lab.restrict_to_observed,
+        0 if battery_saver else _visual_quality)
 
 func sync_battle(state: Dictionary, selected: String,
         battery_saver: bool = false) -> void:
@@ -268,10 +266,12 @@ func sync_battle(state: Dictionary, selected: String,
         _lab.set_battle_terrain(state["terrain"],visible,fog,
             2 if battery_saver else 4)
         _unit_signature = -1
-    var unit_key: int = hash([state.get("units",[]),selected,visible,fog,state.get("faction",-1)])
+    var unit_key: int = hash([state.get("units",[]),selected,visible,fog,
+        state.get("faction",-1),state.get("economy",{}),
+        state.get("visual_factions",{}),_visual_quality,battery_saver])
     if unit_key != _unit_signature:
         _unit_signature = unit_key
-        _refresh_markers(state,selected,visible,fog)
+        _refresh_markers(state,selected,visible,fog,battery_saver)
         _refresh_tactical_highlights(state,selected,visible,fog)
 
 # Legal movement and attack previews are READ ONLY and come from the
