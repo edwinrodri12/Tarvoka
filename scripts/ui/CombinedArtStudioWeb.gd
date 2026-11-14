@@ -23,6 +23,13 @@ var hq_v7_toggle: CheckButton
 var hq_v8_toggle: CheckButton
 var hq_v9_toggle: CheckButton
 var hq_v10_toggle: CheckButton
+var hq_v11_toggle: CheckButton
+var hq_lighting_picker: OptionButton
+var hq_lighting_label: Label
+var hq_fill_light: DirectionalLight3D
+var hq_environment: WorldEnvironment
+var hq_night_lamps: Array[OmniLight3D] = []
+var _hq_light_preset := 0
 var faction_view_grid: GridContainer
 var faction_view_label: Label
 var faction_view_buttons: Array[Button] = []
@@ -59,9 +66,62 @@ func _setup_architecture_stage() -> void:
     preview.add_child(hq_ground)
     for child in preview.get_children():
         if child is DirectionalLight3D:
-            hq_key_light = child as DirectionalLight3D
-            hq_key_light.shadow_enabled = false
-            break
+            if hq_key_light == null:
+                hq_key_light = child as DirectionalLight3D
+                hq_key_light.shadow_enabled = false
+            else:
+                hq_fill_light = child as DirectionalLight3D
+        elif child is WorldEnvironment:
+            hq_environment = child as WorldEnvironment
+    for lamp_data in [
+            [Vector3(0,2.65,-5.4),Color("#ffd39d"),5.0],
+            [Vector3(4.8,2.5,-4.1),Color("#a4dfff"),6.3],
+            [Vector3(0,7.0,-3.3),Color("#cbdfff"),7.4]]:
+        var lamp := OmniLight3D.new()
+        lamp.name = "BalizaNocturnaEscenarioV11"
+        lamp.position = lamp_data[0] as Vector3
+        lamp.light_color = lamp_data[1] as Color
+        lamp.omni_range = float(lamp_data[2])
+        lamp.light_energy = 0.58
+        lamp.shadow_enabled = false
+        lamp.visible = false
+        preview.add_child(lamp)
+        hq_night_lamps.append(lamp)
+    _apply_hq_lighting(0)
+
+func _apply_hq_lighting(index: int) -> void:
+    if hq_key_light == null or hq_environment == null:
+        return
+    var active: bool = _role == "headquarters"
+    _hq_light_preset = clampi(index,0,2)
+    var preset: int = _hq_light_preset if active else 0
+    # Three reproducible lighting rigs, same camera and exact 3D material.
+    # Material response is measured instead of painted with false colors.
+    var sun_color := [Color("#fff3e4"),Color("#ffc289"),Color("#7597c0")]
+    var sky_color := [Color("#14232d"),Color("#493b38"),Color("#0a1427")]
+    var ambient_color := [Color("#c1d5de"),Color("#e1a789"),Color("#7297bd")]
+    var key_energy := [1.65,1.23,0.18]
+    var fill_energy := [0.80,0.37,0.12]
+    var ambient_energy := [0.84,0.61,0.39]
+    var pitch := [-46.0,-18.0,-9.0]
+    if hq_key_light != null:
+        hq_key_light.rotation_degrees = Vector3(float(pitch[preset]),-32.0,0)
+        hq_key_light.light_color = sun_color[preset]
+        hq_key_light.light_energy = float(key_energy[preset])
+        hq_key_light.shadow_enabled = active
+    if hq_fill_light != null:
+        hq_fill_light.light_color = ambient_color[preset]
+        hq_fill_light.light_energy = float(fill_energy[preset])
+    var scene: Environment = hq_environment.environment
+    if scene != null:
+        scene.background_color = sky_color[preset]
+        scene.ambient_light_color = ambient_color[preset]
+        scene.ambient_light_energy = float(ambient_energy[preset])
+    for lamp in hq_night_lamps:
+        lamp.visible = active and preset == 2
+
+func _change_hq_lighting(index: int) -> void:
+    _apply_hq_lighting(index)
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -120,7 +180,7 @@ func _add_building_mode() -> void:
     hq_version_picker = OptionButton.new()
     hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
     hq_version_picker.custom_minimum_size.y = 50
-    for name_version in ["V10 · Cuartel General: materiales y juntas",
+    for name_version in ["V11 · Curvas y acabados bajo distintas luces",
             "V3 · Arquitectura anterior",
             "V2 · Primera revisión",
             "V1 · Prototipo original"]:
@@ -152,6 +212,22 @@ func _add_building_mode() -> void:
     hq_v10_toggle.button_pressed = true
     hq_v10_toggle.toggled.connect(_change_hq_surfaces_v10)
     building_controls.add_child(hq_v10_toggle)
+    hq_v11_toggle = CheckButton.new()
+    hq_v11_toggle.name = "EsculturaAristasRedondeadasV11"
+    hq_v11_toggle.text = "Remates curvos V11 (comparar con V10)"
+    hq_v11_toggle.button_pressed = true
+    hq_v11_toggle.toggled.connect(_change_hq_refinement_v11)
+    building_controls.add_child(hq_v11_toggle)
+
+    hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
+    hq_lighting_picker = OptionButton.new()
+    hq_lighting_picker.name = "IluminacionCuartelGeneral"
+    hq_lighting_picker.custom_minimum_size.y = 49
+    for name_preset in ["Día neutro","Atardecer cálido","Noche operativa"]:
+        hq_lighting_picker.add_item(name_preset)
+    hq_lighting_picker.select(0)
+    hq_lighting_picker.item_selected.connect(_change_hq_lighting)
+    building_controls.add_child(hq_lighting_picker)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -301,6 +377,7 @@ func _switch_category(index: int) -> void:
         hq_ground.visible = building
     if hq_key_light != null:
         hq_key_light.shadow_enabled = building
+    _apply_hq_lighting(_hq_light_preset)
     for widget in _unit_only_controls:
         widget.visible = not building
     if building:
@@ -330,6 +407,10 @@ func _change_hq_readability_v9(_enabled: bool) -> void:
 
 func _change_hq_surfaces_v10(_enabled: bool) -> void:
     if _role == "headquarters" and _hq_show_v4 and hq_v9_toggle.button_pressed:
+        _display_headquarters()
+
+func _change_hq_refinement_v11(_enabled: bool) -> void:
+    if _role == "headquarters" and _hq_show_v4 and hq_v10_toggle.button_pressed:
         _display_headquarters()
 
 func _change_building_batch(_enabled: bool) -> void:
@@ -363,6 +444,7 @@ func _display_headquarters() -> void:
     hq_v8_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and not showing_batch
     hq_v9_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed and not showing_batch
     hq_v10_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed and hq_v9_toggle.button_pressed and not showing_batch
+    hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
     hq_fps_label.visible = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(7,7,15.5)
@@ -382,7 +464,7 @@ func _display_headquarters() -> void:
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
     model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4,
         hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,hq_v9_toggle.button_pressed,
-        hq_v10_toggle.button_pressed)
+        hq_v10_toggle.button_pressed,hq_v11_toggle.button_pressed)
     assert(model_root != null)
     hq_map_lod_toggle.visible = _hq_show_v4
     if _hq_show_v4:
@@ -444,6 +526,8 @@ func _update_details() -> void:
         detail_label.text = "Cuartel General · SILUETA V9 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_visual_v10",false):
         detail_label.text = "Cuartel General · SUPERFICIES V10 · Nivel %d · %d mallas 3D" % [level,meshes]
+    if model_root.get_meta("tarvoka_hq_visual_v11",false):
+        detail_label.text = "Cuartel General · REMATES CURVOS V11 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_map_distant",false):
         detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
