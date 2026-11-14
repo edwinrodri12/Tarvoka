@@ -263,6 +263,10 @@ func _apply_hq_climate_v17() -> void:
             str(HQClimateV17.WEATHER_NAMES[hq_weather_picker.selected]),
             str(HQClimateV17.TERRAIN_NAMES[hq_terrain_picker.selected]),
             HQClimateV17.active_mesh_count(hq_climate_stage)]
+        if hq_batch_toggle != null and hq_batch_toggle.button_pressed:
+            hq_climate_status.text = "Distrito agrupado: clima visual desactivado (prueba de rendimiento)."
+        elif sprite_mode:
+            hq_climate_status.text += " · El sprite no se modifica; solo el entorno."
         if actual_model:
             hq_climate_status.text += " · Modelo 3D: %d materiales húmedos / %d mallas nieve." % [
                 int(model_stats.get("wet",0)),int(model_stats.get("snow_nodes",0))]
@@ -792,6 +796,10 @@ func _display_headquarters() -> void:
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
     hq_stress_picker.visible = showing_batch
+    # Large districts are deliberately batched dry map proxies; disable
+    # climate selectors there instead of silently ignoring user clicks.
+    hq_weather_picker.disabled = showing_batch
+    hq_terrain_picker.disabled = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(_hq_grid_dimension,_hq_grid_dimension,15.5)
         assert(model_root != null)
