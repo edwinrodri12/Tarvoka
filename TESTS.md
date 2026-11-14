@@ -250,3 +250,9 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 2026-11-14 — PR #296 corrección de expectativas: `tests/test_combat_invariants.gd` ahora considera inválidos los ataques con potencia <= 0 tanto en la matriz de resolución como en el cruce de 1,600 casos. Antes, la suite exigía incorrectamente `valid=true` para ataques cero/negativos, contradiciendo `Combat.resolve` y la PR #297. Commit `34ef91b`; CI de este commit: NO EJECUTADO / sin runs asociados al momento de consulta. La PR #297, commit `8084cd8`, tiene Godot y export Android SUCCESS (runs 43597917621 y 43597917594); Android físico NO EJECUTADO. No fusionar #296 hasta verificar CI propia.
 
 2026-11-14 — PR #296: diagnosticado CI 43603079654 (job 132471808843): assertion en test_combat_invariants.gd:31 porque main todavía considera válido resolve con ataque 0, mientras PR #297 propone rechazarlo. Corregida la suite para probar solo ataques positivos en resolve y mantener comprobaciones de daño nulo en damage; la validez de ataques no positivos se verifica por separado en PR #297. Commit 3911b63. CI de esta corrección: PENDIENTE; Android físico: NO EJECUTADO. No fusionar sin nueva CI verde.
+
+## 2026-11-14 — Invariantes de cobertura saturada (PR #296)
+- Se añadieron 32 casos deterministas en `tests/test_combat_invariants.gd` para defensa/cobertura elevadas: daño mínimo positivo = 1, misma resolución con HP atacante positivo distinto y repetición idéntica.
+- Commit de código `1a420358ebe9bb1b457fe4e1ac457d9caf177801`. No altera `Combat.gd` ni el balance aprobado; independiente de PR #297.
+- CI del commit previo `9a2a758597c2ea53892ab3bb6108081747495db2`: Godot `43613974360` PASS, suite combate `43613974396` PASS, export Android `43613974419` PASS.
+- CI del nuevo cambio: PENDIENTE DE VERIFICACIÓN. Android físico: NO EJECUTADO EN DISPOSITIVO. No fusionar antes de CI del último commit.
