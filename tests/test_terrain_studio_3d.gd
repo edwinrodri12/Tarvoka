@@ -28,6 +28,55 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.terrain_premium_toggle.button_pressed)
+    assert(studio.model_root.get_meta("terrain_premium_finish_v4",false))
+    var finish_stats: Dictionary = studio.model_root.get_meta("terrain_premium_stats")
+    assert(int(finish_stats.get("geology",0)) > 10)
+    assert(int(finish_stats.get("foliage",0)) > 20)
+    assert(int(finish_stats.get("waves",0)) > 10)
+    assert(int(finish_stats.get("road_wear",0)) > 2)
+    assert(studio.model_root.find_child("OndasYLitoralV4",true,false) != null)
+    assert(studio.model_root.find_child("FisurasDeAsfaltoV4",true,false) != null)
+    var sculpted: MeshInstance3D = studio.model_root.find_child(
+        "MacizoTallado_*",true,false) as MeshInstance3D
+    assert(sculpted != null and sculpted.mesh is ArrayMesh)
+    assert((sculpted.material_override as StandardMaterial3D).normal_enabled)
+    var foliage: MeshInstance3D = studio.model_root.find_child(
+        "CopaInferior_*",true,false) as MeshInstance3D
+    assert(foliage != null and foliage.mesh is ArrayMesh)
+    for f in range(7):
+        await process_frame
+    var premium_capture: Image = studio.preview.get_texture().get_image()
+    assert(premium_capture != null and not premium_capture.is_empty())
+    studio.terrain_premium_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_premium_finish_v4",false))
+    assert(studio.model_root.find_child("OndasYLitoralV4",true,false) == null)
+    for f in range(7):
+        await process_frame
+    var flat_capture: Image = studio.preview.get_texture().get_image()
+    assert(flat_capture != null and not flat_capture.is_empty())
+    var v3_comparison_a: Image = flat_capture.duplicate()
+    var v4_comparison_b: Image = premium_capture.duplicate()
+    v3_comparison_a.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    v4_comparison_b.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var affected_pixels: int = 0
+    for py in range(0,330,4):
+        for px in range(0,480,4):
+            var col_a: Color = v3_comparison_a.get_pixel(px,py)
+            var col_b: Color = v4_comparison_b.get_pixel(px,py)
+            if absf(col_a.r-col_b.r)+absf(col_a.g-col_b.g)+absf(col_a.b-col_b.b)>0.10:
+                affected_pixels += 1
+    assert(affected_pixels > 75)
+    var premium_comparison := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    premium_comparison.blit_rect(v3_comparison_a,Rect2i(0,0,480,330),Vector2i.ZERO)
+    premium_comparison.blit_rect(v4_comparison_b,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(premium_comparison.save_png(
+        "res://artifacts/tarvoka_terrain_v4_premium_comparison.png") == OK)
+    studio.terrain_premium_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    assert(studio.model_root.get_meta("terrain_premium_finish_v4",false))
     assert(studio.terrain_textures_toggle.button_pressed)
     assert(studio.model_root.get_meta("terrain_textures_pbr",false))
     assert(int(studio.model_root.get_meta("terrain_textured_meshes",0)) >= 20)
