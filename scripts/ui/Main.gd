@@ -1782,12 +1782,16 @@ func _toggle_minimap() -> void:
     _minimap_preference = not _minimap_preference
     _apply_minimap_visibility()
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
     battery_saver_button.text = ("Ahorro de batería: activado"
         if board.battery_saver else "Ahorro de batería: desactivado")
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
@@ -1796,6 +1800,8 @@ func _toggle_isometric_view() -> void:
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
     _apply_minimap_visibility()
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
