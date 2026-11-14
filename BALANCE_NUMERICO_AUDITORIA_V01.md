@@ -71,3 +71,24 @@ Todos los cambios deben comparar antes/después, conservar reglas y guardados ex
 - Artefactos: tar voka numeric balance JSON con **32 fichas**, comparaciones, límites, riesgos reconocidos y log completo.
 - Las advertencias de unidades aún incompletas NO son aprobaciones ni errores silenciados: son pendientes priorizados.
 - Esta PR se limita a auditoría y documentación. Cualquier reequilibrado auténtico debe seguir como experimento separado con evidencia.
+
+
+## Resultados A/B medidos en Godot 4.3 (hipótesis, NO juego actualizado)
+La ejecución reproducible de tests/test_numeric_balance_sensitivity.gd pasó 16 comparaciones de combate y tres escenarios de ciudades. Conserva exactamente el motor del juego y modifica solo **copias temporales** del perfil Rompedor para calcular alternativas.
+
+| Contra tanque G09 de 14 HP | Bonus actual +0 | Prototipo +1 | Prototipo +2 | Referencia +4 |
+|---|---:|---:|---:|---:|
+| Llano: daño por golpe | 2 | 3 | 4 | 6 |
+| Bosque: daño por golpe | 1 | 2 | 3 | 5 |
+| Montaña: daño por golpe | 1 | 1 | 1 | 3 |
+| Ciudad: daño por golpe | 1 | 2 | 3 | 5 |
+| Llano: daño de la posible respuesta del tanque | 5 | 4 | 4 | 3 |
+| Llano: HP del Rompedor tras un primer intercambio | 3 | 4 | 4 | 5 |
+
+La tabla no incluye la siguiente acción real del tanque ni economía de refuerzos. **+2 parece un candidato investigable**, no una conclusión ni una autorización de alterar sus números; la montaña conserva una poderosa protección contra el Rompedor incluso en +2. Hay que evaluar si la especialización debería contrarrestar únicamente ciertos blindajes y no todos.
+
+**Tanque a 1 HP:** en la versión real su golpe contra otro tanque hace 6 daño, al igual que a HP completo. Un prototipo de ataque escalado suavemente por HP bajaría el golpe a 3; sería un cambio importante y potencialmente perjudicial para remontadas. No activarlo sin partidas comparativas.
+
+**Ingreso moderno por ciudades:** 1/2/3 ciudades generan 250/500/750 créditos al iniciar cada turno propio. Desde saldo cero, un tanque de 750 requiere respectivamente 3/2/1 ingresos; un bombardero de 1400 requiere 6/3/2; un destructor de 2000 requiere 8/4/3. Estas cifras **excluyen** los 2.500 créditos iniciales, el tiempo de captura, fabricación, la munición y el reabastecimiento, por lo que no equivalen al ritmo total de la partida.
+
+Verificable en Actions mediante el artefacto TARVOKA-numeric-balance-audit: JSON exhaustivo de 32 roles + 432 cruces legales y segundo JSON con alternativas sobre terreno e ingresos. Ambas suites pasaron en Godot CI; pruebas con humanos y Android físico siguen pendientes.
