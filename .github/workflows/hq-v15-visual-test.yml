@@ -1,0 +1,98 @@
+name: TARVOKA V15 Real 3D HQ Sprites in Android Battle
+
+on:
+  push:
+    branches:
+      - feat/hq-v15-baked-isometric-sprites-20261114
+    paths:
+      - "assets/buildings/hq_v15/**"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/HeadquartersSpriteV15.gd"
+      - "tests/test_hq_v15_baked_mobile.gd"
+      - ".github/workflows/hq-v15-visual-test.yml"
+  pull_request:
+    paths:
+      - "assets/buildings/hq_v15/**"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/HeadquartersSpriteV15.gd"
+      - "tests/test_hq_v15_baked_mobile.gd"
+      - ".github/workflows/hq-v15-visual-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure all nine baked assets are present in playable source, not copied at runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {0..7}; do
+            test -s "assets/buildings/hq_v15/hq_${i}.png"
+          done
+          test -s assets/buildings/hq_v15/hq_neutral.png
+          test -s tests/test_hq_v15_baked_mobile.gd
+          test -s scripts/ui/HeadquartersSpriteV15.gd
+          # The game itself deliberately does NOT load or ship V13 3D source.
+          test ! -e scripts/ui/HeadquartersProductionV13.gd
+      - name: Install Godot 4.3 runtime and import nine baked HQ sprites
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/hq-v15-godot.zip
+          unzip -q /tmp/hq-v15-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 130s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/hq-v15-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/hq-v15-import.log; then
+            echo "Sprite import failed" >&2
+            exit 1
+          fi
+      - name: Check all 9 3D-sourced images and unchanged battle state
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_hq_v15_baked_mobile.gd 2>&1 | tee /tmp/hq-v15-headless.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/hq-v15-headless.log; then
+            echo "HQ V15 headless render assets or tactical invariants failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V15:" /tmp/hq-v15-headless.log
+      - name: Compare same live Android battle with V14 vector versus V15 3D-baked building
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_hq_v15_baked_mobile.gd 2>&1 | tee /tmp/hq-v15-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/hq-v15-gpu.log; then
+            echo "HQ V15 GPU capture or map click/fog regression" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V15:" /tmp/hq-v15-gpu.log
+          test -s artifacts/tarvoka_hq_v14_vector_vs_v15_real_3d_baked.png
+          test -s artifacts/tarvoka_hq_v15_live_android_isometric.png
+          test -s artifacts/tarvoka_hq_v15_live_battle_close.png
+          test -s artifacts/tarvoka_hq_v15_8_factions_in_real_battle.png
+      - name: Upload actual Godot battle PNG screenshots for art QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V15-Live-Android-Battle-Captures
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            artifacts/tarvoka_hq_v14_vector_vs_v15_real_3d_baked.png
+            artifacts/tarvoka_hq_v15_live_android_isometric.png
+            artifacts/tarvoka_hq_v15_live_battle_close.png
+            artifacts/tarvoka_hq_v15_8_factions_in_real_battle.png

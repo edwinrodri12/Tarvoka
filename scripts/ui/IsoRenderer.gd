@@ -18,6 +18,7 @@ const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
+const HeadquartersSprite = preload("res://scripts/ui/HeadquartersSpriteV15.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
@@ -152,8 +153,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 # regular city sites for captures, income and unit rules.
                 # Unknown fogged owners never receive a faction emblem.
                 var faction_id: int = CommandArt.faction_index(state,int(marker["owner"]))
-                CommandArt.draw_iso(canvas,c,hw,tint,faction_id,
-                    detail >= VisualBudget.DETAIL_MEDIUM)
+                # Commercial HQ sprites are baked offline from the TRUE V13
+                # Godot geometry. Always preserve cheap vector V14 for
+                # battery saver, tiny map tiles or missing imported assets.
+                if not HeadquartersSprite.draw_iso(canvas,c,hw,
+                        faction_id,battery_saver):
+                    CommandArt.draw_iso(canvas,c,hw,tint,faction_id,
+                        detail >= VisualBudget.DETAIL_MEDIUM)
             else:
                 WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
             var selected: bool = cell == selected_factory_pos or cell == inspected_cell
