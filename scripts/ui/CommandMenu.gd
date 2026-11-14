@@ -268,7 +268,7 @@ func _army_row(unit: Dictionary, viewer: int) -> void:
     var uid: String = str(unit.get("id",""))
     var role: String = str(unit.get("role",""))
     var card := PanelContainer.new()
-    card.name = "Unidad_" + uid.validate_node_name()
+    card.name = "Unidad_" + uid.replace(":","_")
     card.add_theme_stylebox_override("panel",Chrome.box_style(
         Color("#102638"),Chrome.EDGE,7,5))
     army_list_body.add_child(card)
@@ -312,8 +312,9 @@ func _select_army_unit(uid: String) -> void:
     var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",0))
     var selected: Dictionary = {}
     for unit in board.state.get("units",[]):
-        if unit is Dictionary and str(unit.get("id","")) == uid and
-                int(unit.get("faction",-1)) == viewer and int(unit.get("hp",0)) > 0:
+        if (unit is Dictionary and str(unit.get("id","")) == uid
+                and int(unit.get("faction",-1)) == viewer
+                and int(unit.get("hp",0)) > 0):
             selected = unit
             break
     if selected.is_empty():
@@ -373,40 +374,65 @@ func _unit_action(body: VBoxContainer, role: String, label_text: String, action:
 
 func _production_unit_row(role: String, viewer: int) -> void:
     var record: Dictionary = CompareData.candidate(board.state,board.selected_factory_pos,role,viewer)
-    if record.is_empty():
+    if record.is_empty() or production_list_body == null:
         return
+    var available: bool = bool(record.get("available",false))
     var card := PanelContainer.new()
-    var background := StyleBoxFlat.new()
-    background.bg_color = Color("#122332")
-    background.content_margin_left = 7
-    background.content_margin_right = 7
-    background.content_margin_top = 5
-    background.content_margin_bottom = 5
-    card.add_theme_stylebox_override("panel",background)
-    production_body.add_child(card)
+    card.name = "Produce_" + role
+    card.add_theme_stylebox_override("panel",Chrome.box_style(
+        Color("#122A3A"),Chrome.EDGE if available else Color("#344B59"),7,7))
+    production_list_body.add_child(card)
     var stack := VBoxContainer.new()
+    stack.add_theme_constant_override("separation",5)
     card.add_child(stack)
     var top := HBoxContainer.new()
+    top.add_theme_constant_override("separation",7)
     stack.add_child(top)
     var portrait := UnitIcon.new()
-    portrait.custom_minimum_size = Vector2(52,52)
+    portrait.custom_minimum_size = Vector2(58,58)
     top.add_child(portrait)
-    portrait.configure(role,Identity.color_for(board.state,clampi(viewer,0,1)))
+    portrait.configure(role,Identity.color_for(board.state,viewer))
     var details := VBoxContainer.new()
     details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    details.add_theme_constant_override("separation",3)
     top.add_child(details)
-    _description(details,"%s · %d créditos" % [str(record["name"]),int(record["price"])])
-    _description(details,"ATQ %d · DEF %d · MOV %d · RANGO %d-%d" % [
+    var heading := Label.new()
+    heading.text = str(record["name"])
+    heading.add_theme_font_size_override("font_size",17)
+    heading.add_theme_color_override("font_color",Chrome.TEXT)
+    heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    details.add_child(heading)
+    var price := Label.new()
+    price.text = "%d CRÉDITOS" % int(record["price"])
+    price.add_theme_font_size_override("font_size",15)
+    price.add_theme_color_override("font_color",Chrome.GOLD)
+    details.add_child(price)
+    var status := Label.new()
+    status.text = str(record.get("reason",""))
+    status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    status.add_theme_font_size_override("font_size",12)
+    status.add_theme_color_override("font_color",
+        Color("#9FE4C3") if available else Color("#E7AD8F"))
+    details.add_child(status)
+    var specs := Label.new()
+    specs.text = "ATQ %d  ·  DEF %d  ·  MOV %d  ·  RANGO %d–%d" % [
         int(record["attack"]),int(record["defense"]),int(record["move"]),
         int(record["range_min"]),int(record["range_max"])
-    ])
+    ]
+    specs.add_theme_font_size_override("font_size",12)
+    specs.add_theme_color_override("font_color",Chrome.MUTED)
+    specs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    stack.add_child(specs)
     var commands := HBoxContainer.new()
-    commands.add_theme_constant_override("separation",5)
+    commands.add_theme_constant_override("separation",6)
     stack.add_child(commands)
-    _action(commands,"Ficha",func(): _select_production_role(role))
-    _action(commands,"Comparar",func(): _compare_production_role(role))
-    var buy: Button = _action(commands,"Comprar",func(): purchase_requested.emit(role),bool(record.get("available",false)))
+    var sheet := _action(commands,"Ficha A",func(): _select_production_role(role))
+    sheet.tooltip_text = "Mostrar estadísticas y disponibilidad de esta unidad"
+    var compare := _action(commands,"Comparar B",func(): _compare_production_role(role))
+    compare.tooltip_text = "Comparar este modelo con la selección A"
+    var buy: Button = _action(commands,"Comprar",func(): purchase_requested.emit(role),available)
     buy.tooltip_text = str(record.get("reason",""))
+    production_purchase_buttons[role] = buy
 
 func _select_production_role(role: String) -> void:
     selected_catalog_role = role
