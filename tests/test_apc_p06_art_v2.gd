@@ -189,6 +189,9 @@ func _run() -> void:
     Rig.restore(modern)
     viewport.remove_child(modern)
     viewport.add_child(previous)
+    # Compare identical paint, angle, zoom, terrain and light, never two
+    # unrelated faction liveries (the source models start at 0 and 2).
+    Models.apply_faction_palette(previous,2)
     await _capture(viewport,camera,Vector3(4.4,2.45,-5.4),
         Vector3(0,0.57,0),
         "res://artifacts/tarvoka_apc_p06_v1_comparativa.png")
