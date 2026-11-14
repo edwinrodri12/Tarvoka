@@ -38,6 +38,8 @@ var _v20_preview := false
 var _v21_preview := false
 var _v22_preview := false
 var _v23_preview := false
+var _v24_preview := false
+var _tactical_view := false
 var _clay_review := false
 var _v17_eco := false
 var v11_button: Button
@@ -53,6 +55,8 @@ var v20_button: Button
 var v21_button: Button
 var v22_button: Button
 var v23_button: Button
+var v24_button: Button
+var tactical_button: Button
 var clay_button: Button
 var v17_quality_button: Button
 var comparison_button: Button
@@ -185,7 +189,8 @@ func _construct() -> void:
     v20_button = _button(column,"NUEVO V20 · Blindaje integrado y suspensión",_toggle_v20)
     v21_button = _button(column,"V21 · Proa, barbeta y rodaje realista",_toggle_v21)
     v22_button = _button(column,"V22 · Cañón y sistema de retroceso",_toggle_v22)
-    v23_button = _button(column,"NUEVO V23 · Identificación de facción",_toggle_v23)
+    v23_button = _button(column,"V23 · Identificación de facción",_toggle_v23)
+    v24_button = _button(column,"NUEVO V24 · Pintura superior táctica",_toggle_v24)
     clay_button = _button(column,"MODO ARCILLA · Ver geometría sin materiales",_toggle_clay)
     v17_quality_button = _button(column,"V17 · Efectos completos",_toggle_v17_quality)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
@@ -210,6 +215,7 @@ func _construct() -> void:
         "Girar 45° ↷",func(): _rotate(45.0))
     _add_paired(column,"− Alejar",func(): _change_zoom(-1),
         "+ Acercar",func(): _change_zoom(1))
+    tactical_button = _button(column,"CÁMARA: Cambiar a vista táctica",_toggle_tactical_camera)
 
     _title(column,"ANIMACION REAL",12)
     _add_paired(column,"Orugas",func(): _play("move"),
@@ -275,11 +281,13 @@ func _display_role(role: String) -> void:
         art_level = 22
     if _v23_preview:
         art_level = 23
+    if _v24_preview:
+        art_level = 24
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
         _final_detail,art_level)
-    if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview:
+    if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview:
         TankV17.set_quality(model_root,_v17_eco)
-    if _clay_review and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview):
+    if _clay_review and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview):
         ClayV19.set_enabled(model_root,true)
     preview.add_child(model_root)
     _yaw = -32.0
@@ -305,15 +313,19 @@ func _display_role(role: String) -> void:
     v21_button.visible = (_role == "tank")
     v22_button.visible = (_role == "tank")
     v23_button.visible = (_role == "tank")
+    v24_button.visible = (_role == "tank")
+    tactical_button.visible = (_role == "tank")
     v21_button.text = "COMPARAR: Volver a V20" if _v21_preview else "V21 · Proa, barbeta y rodaje realista"
     v22_button.text = "COMPARAR: Volver a V21" if _v22_preview else "V22 · Cañón y sistema de retroceso"
-    v23_button.text = "COMPARAR: Volver a V22" if _v23_preview else "NUEVO V23 · Identificación de facción"
+    v23_button.text = "COMPARAR: Volver a V22" if _v23_preview else "V23 · Identificación de facción"
+    v24_button.text = "COMPARAR: Volver a V23" if _v24_preview else "NUEVO V24 · Pintura superior táctica"
+    tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
     v20_button.text = "COMPARAR: Volver a V19" if _v20_preview else "NUEVO V20 · Blindaje integrado y suspensión"
     v19_button.text = "COMPARAR: Volver a V18" if _v19_preview else "V19 · Techo, sensores y mantelete"
-    clay_button.visible = (_role == "tank" and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview))
+    clay_button.visible = (_role == "tank" and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview))
     clay_button.text = "MODO ARCILLA · Volver a materiales" if _clay_review else "MODO ARCILLA · Ver geometría sin materiales"
     v18_button.text = "COMPARAR: Volver a V17" if _v18_preview else "V18 · Reconstrucción del casco y la torreta"
-    v17_quality_button.visible = (_role == "tank" and (_v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview))
+    v17_quality_button.visible = (_role == "tank" and (_v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview))
     v17_button.text = "COMPARAR: Volver a V16" if _v17_preview else "V17 · Humo orgánico y rendimiento"
     v17_quality_button.text = "EFECTOS: ECO (6 planos)" if _v17_eco else "EFECTOS: COMPLETOS (11 planos)"
     v16_button.text = "COMPARAR: Volver a V15" if _v16_preview else "V16 · Pintura mate, acero y fuego"
@@ -344,7 +356,7 @@ func _update_details() -> void:
         _v11_preview,_v12_preview,_v13_preview,_v14_preview,
         _v15_preview,_v16_preview,_v17_preview,_v18_preview,
         _v19_preview,_v20_preview,_v21_preview,_v22_preview,
-        _v23_preview
+        _v23_preview,_v24_preview
     ]
     var titles := [
         "PROPUESTA V11","REFINAMIENTO V12","ESCULTURA V13",
@@ -352,7 +364,8 @@ func _update_details() -> void:
         "EFECTOS V17","ESCULTURA V18","ESCULTURA V19",
         "INTEGRACION V20","PROA Y RODAJE V21",
         "CAÑON Y RETROCESO V22",
-        "IDENTIFICACION DE FACCION V23"
+        "IDENTIFICACION DE FACCION V23",
+        "LECTURA TACTICA V24"
     ]
     for index in range(stages.size()):
         if stages[index]:
@@ -362,6 +375,8 @@ func _update_details() -> void:
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])
     ]
+    if _tactical_view:
+        status_label.text += " · CÁMARA TÁCTICA"
 
 func _toggle_details() -> void:
     if _role != "tank":
@@ -386,6 +401,7 @@ func _toggle_previous() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _final_detail = true
     _reload_tank_same_camera()
 
@@ -405,6 +421,7 @@ func _toggle_v11() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _previous_version = false
     _final_detail = true
     _reload_tank_same_camera()
@@ -424,6 +441,7 @@ func _toggle_v12() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v11_preview = not _v12_preview
     _previous_version = false
     _final_detail = true
@@ -445,6 +463,7 @@ func _toggle_v13() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v12_preview = not _v13_preview
     _v11_preview = true
     _previous_version = false
@@ -464,6 +483,7 @@ func _toggle_v14() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v13_preview = not _v14_preview
     _v12_preview = false
     _v11_preview = true
@@ -484,6 +504,7 @@ func _toggle_v15() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v14_preview = not _v15_preview
     _v13_preview = false
     _v12_preview = false
@@ -504,6 +525,7 @@ func _toggle_v16() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v15_preview = not _v16_preview
     _v14_preview = false
     _v13_preview = false
@@ -523,6 +545,7 @@ func _toggle_v17() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v16_preview = not _v17_preview
     _v15_preview = false
     _v14_preview = false
@@ -544,6 +567,7 @@ func _toggle_v18() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v17_preview = not _v18_preview
     _v16_preview = false
     _v15_preview = false
@@ -565,6 +589,7 @@ func _toggle_v19() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v18_preview = not _v19_preview
     _v17_preview = false
     _v16_preview = false
@@ -586,6 +611,7 @@ func _toggle_v20() -> void:
     _v21_preview = false
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v19_preview = not _v20_preview
     _v18_preview = false
     _v17_preview = false
@@ -607,6 +633,7 @@ func _toggle_v21() -> void:
     _v21_preview = not _v21_preview
     _v22_preview = false
     _v23_preview = false
+    _v24_preview = false
     _v20_preview = not _v21_preview
     _v19_preview = false
     _v18_preview = false
@@ -628,6 +655,7 @@ func _toggle_v22() -> void:
     # native camera, HP, current faction, effect budget and clay mode.
     _v22_preview = not _v22_preview
     _v23_preview = false
+    _v24_preview = false
     _v21_preview = not _v22_preview
     _v20_preview = false
     _v19_preview = false
@@ -649,6 +677,7 @@ func _toggle_v23() -> void:
     # Repaint actual armor, not stickers; compare native V22/V23 models at
     # identical camera, faction, damage state and clay preview.
     _v23_preview = not _v23_preview
+    _v24_preview = false
     _v22_preview = not _v23_preview
     _v21_preview = false
     _v20_preview = false
@@ -665,8 +694,40 @@ func _toggle_v23() -> void:
     _final_detail = true
     _reload_tank_same_camera()
 
+func _toggle_v24() -> void:
+    if _role != "tank":
+        return
+    # Exact V23/V24 material comparison on the original meshes.
+    _v24_preview = not _v24_preview
+    _v23_preview = not _v24_preview
+    _v22_preview = false
+    _v21_preview = false
+    _v20_preview = false
+    _v19_preview = false
+    _v18_preview = false
+    _v17_preview = false
+    _v16_preview = false
+    _v15_preview = false
+    _v14_preview = false
+    _v13_preview = false
+    _v12_preview = false
+    _v11_preview = true
+    _previous_version = false
+    _final_detail = true
+    _reload_tank_same_camera()
+
+func _toggle_tactical_camera() -> void:
+    # An elevated long-distance three-quarter tactical view, with the same
+    # Godot lighting and the same actual meshes. Never a fake 2D sprite.
+    if _role != "tank":
+        return
+    _tactical_view = not _tactical_view
+    _update_camera()
+    tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
+    _update_details()
+
 func _toggle_clay() -> void:
-    if _role != "tank" or not (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview) or model_root == null:
+    if _role != "tank" or not (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview) or model_root == null:
         return
     _clay_review = not _clay_review
     ClayV19.set_enabled(model_root,_clay_review)
@@ -674,7 +735,7 @@ func _toggle_clay() -> void:
     _update_details()
 
 func _toggle_v17_quality() -> void:
-    if _role != "tank" or not (_v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview) or model_root == null:
+    if _role != "tank" or not (_v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview) or model_root == null:
         return
     _v17_eco = not _v17_eco
     TankV17.set_quality(model_root,_v17_eco)
@@ -769,7 +830,9 @@ func _change_zoom(direction: int) -> void:
 
 func _update_camera() -> void:
     if camera != null:
-        camera.size = Models.preview_frame_height(_role)*1.10/_zoom
+        camera.size = Models.preview_frame_height(_role)*(2.35 if _tactical_view and _role=="tank" else 1.10)/_zoom
+        camera.position = Vector3(5.2,10.6,6.4) if _tactical_view and _role=="tank" else Vector3(5.3,4.2,6.3)
+        camera.look_at(Vector3(0,0.35,0),Vector3.UP)
 
 func _reset_camera() -> void:
     _yaw = -32.0
