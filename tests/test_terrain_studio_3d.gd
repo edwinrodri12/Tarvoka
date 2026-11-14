@@ -184,7 +184,10 @@ func _run() -> void:
             assert(Terrain.kind(grid_x,grid_z,preset) in ["plain","forest"])
         assert(Terrain.kind(-1,0,preset) == "outside")
         if preset == 0:
-            assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)
+            # V6 intentionally replaces the old repeating single-tile peak
+            # with a grouped natural ridge; V4 must remain switchable.
+            assert(studio.model_root.find_child("CordilleraContinuaV6",true,false) != null)
+            assert(studio.model_root.find_child("MacizoTallado_0",true,false) == null)
         if preset == 1:
             assert(studio.model_root.get_meta("terrain_bridge_visual_count") == 2)
             for row in [5,8]:
@@ -198,8 +201,9 @@ func _run() -> void:
             assert(Terrain.kind(6,9,preset) == "water")
             assert(studio.model_root.find_child("PuenteElevado_4",true,false) == null)
         if preset == 2:
-            assert(studio.model_root.find_child("CopaFrondosa_172",true,false) != null or
-                studio.model_root.find_child("CopaFrondosa_43",true,false) != null)
+            # Batched mixed woodland replaces individual coastal tree nodes.
+            assert(studio.model_root.find_child("BosqueCaducifoliosV6",true,false) != null)
+            assert(studio.model_root.find_child("CopaFrondosa_172",true,false) == null)
     studio.terrain_grid_toggle.button_pressed = false
     studio.terrain_samples_toggle.button_pressed = true
     studio._rebuild_terrain(false)
