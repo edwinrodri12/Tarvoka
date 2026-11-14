@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio"]
     types: [completed]
     branches:
-      - feat/hq-v11-lighting-refinements-20261113
+      - feat/hq-v12-tactical-silhouette-night-20261114
 
 permissions:
   contents: read
@@ -28,10 +28,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
-      - name: Check out verified HQ V10 studio branch
+      - name: Check out verified HQ V12 studio branch
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v11-lighting-refinements-20261113
+          ref: feat/hq-v12-tactical-silhouette-night-20261114
           persist-credentials: false
       - name: Download Godot 4.3 and Web export templates
         shell: bash
@@ -55,7 +55,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v11-lighting-refinements-20261113" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v11-lighting-refinements-20261113)"
+          test "$(git branch --show-current)" = "feat/hq-v12-tactical-silhouette-night-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v12-tactical-silhouette-night-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -66,6 +66,8 @@ jobs:
           test -s tests/test_headquarters_v10_surfaces.gd
           test -s scripts/ui/HeadquartersRefinementV11.gd
           test -s tests/test_headquarters_v11_lighting.gd
+          test -s scripts/ui/HeadquartersSilhouetteV12.gd
+          test -s tests/test_headquarters_v12_tactical_night.gd
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
       - name: Export native Godot 3D browser studio
