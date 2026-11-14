@@ -1,0 +1,67 @@
+name: TARVOKA numeric balance audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/**'
+      - 'tests/test_numeric_balance_audit.gd'
+      - 'tests/test_numeric_balance_sensitivity.gd'
+      - '.github/workflows/numeric-balance-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/core/**'
+      - 'tests/test_numeric_balance_audit.gd'
+      - '.github/workflows/numeric-balance-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  numerical-audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify numerical invariants and export complete role catalogue
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_numeric_balance_audit.gd 2>&1 \
+            | tee /tmp/tarvoka_numeric_balance.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka_numeric_balance.log; then exit 1; fi
+          grep -F 'PASS numeric balance audit:' /tmp/tarvoka_numeric_balance.log
+          grep -F 'BALANCE_AUDIT_JSON ' /tmp/tarvoka_numeric_balance.log \
+            | tail -1 | sed 's/^.*BALANCE_AUDIT_JSON //' \
+            > /tmp/tarvoka_numeric_balance.json
+          python3 -m json.tool /tmp/tarvoka_numeric_balance.json >/dev/null
+      - name: Model sensitivity (NO gameplay balance changes)
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_numeric_balance_sensitivity.gd 2>&1 \
+            | tee /tmp/tarvoka_balance_sensitivity.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka_balance_sensitivity.log; then exit 1; fi
+          grep -F 'PASS balance sensitivity:' /tmp/tarvoka_balance_sensitivity.log
+          grep -F 'BALANCE_SENSITIVITY_JSON ' /tmp/tarvoka_balance_sensitivity.log \
+            | tail -1 | sed 's/^.*BALANCE_SENSITIVITY_JSON //' \
+            > /tmp/tarvoka_balance_sensitivity.json
+          python3 -m json.tool /tmp/tarvoka_balance_sensitivity.json >/dev/null
+      - name: Upload inspectable baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-numeric-balance-audit
+          path: |
+            /tmp/tarvoka_numeric_balance.log
+            /tmp/tarvoka_numeric_balance.json
+            /tmp/tarvoka_balance_sensitivity.log
+            /tmp/tarvoka_balance_sensitivity.json
+          if-no-files-found: warn
