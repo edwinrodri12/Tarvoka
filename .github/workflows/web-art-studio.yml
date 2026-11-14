@@ -15,6 +15,8 @@ on:
       - "scripts/ui/TerrainStudioFoothillsV11.gd"
       - "scripts/ui/TerrainStudioSedimentsV12.gd"
       - "tests/test_terrain_studio_v16_valley.gd"
+      - "scripts/ui/TerrainStudioMountainBiomesV13.gd"
+      - "tests/test_terrain_studio_v18_biomes.gd"
       - "tests/test_terrain_studio_v15_foothills.gd"
       - "tests/test_terrain_studio_v14_silhouettes.gd"
       - "tests/test_terrain_studio_v13_material_light.gd"
@@ -252,6 +254,24 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V18 mountain biome integration against all three native scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 175s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v18_biomes.gd 2>&1 | tee /tmp/terrain-studio-v18.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-studio-v18.log; then
+            echo "V18 mountain biome meshes, edge protection or comparison regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V18:' /tmp/terrain-studio-v18.log
+          test -s artifacts/tarvoka_terrain_v18_woodland.png
+          test -s artifacts/tarvoka_terrain_v18_canyon.png
+          test -s artifacts/tarvoka_terrain_v18_coastal.png
+          test -s artifacts/tarvoka_terrain_v18_vs_v17.png
+          test -s artifacts/tarvoka_terrain_v18_ridge_profile.png
       - name: Verify V16 sediment fans and road shoulder transitions in real GPU Studio
         shell: bash
         run: |
