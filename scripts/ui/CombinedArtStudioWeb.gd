@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const TerrainStudio = preload("res://scripts/ui/TerrainStudio3D.gd")
+const MaterialV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
 const BattleTerrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const BattleRanges = preload("res://scripts/ui/BattleRanges3D.gd")
 const BattleBoard = preload("res://scripts/ui/TouchBoard.gd")
@@ -38,6 +39,12 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_rock_v9_toggle: CheckButton
+var terrain_vegetation_v9_toggle: CheckButton
+var terrain_light_v9_toggle: CheckButton
+var terrain_compare_v9_button: Button
+var terrain_game_view_button: Button
+var _terrain_v9_enabled := true
 var terrain_lithology_v8_toggle: CheckButton
 var terrain_talus_v8_toggle: CheckButton
 var terrain_ecotone_v8_toggle: CheckButton
@@ -305,6 +312,30 @@ func _add_building_mode() -> void:
     terrain_compare_v8_button.name = "ComparadorTerrenoV7V8"
     terrain_compare_v8_button.custom_minimum_size.y = 50
 
+    _title(terrain_controls,"MATERIALES Y LUZ A DISTANCIA DE JUEGO V9",13)
+    terrain_rock_v9_toggle = CheckButton.new()
+    terrain_rock_v9_toggle.name = "RocaConRelieveV9"
+    terrain_rock_v9_toggle.text = "Caras rocosas: pendiente, grietas y profundidad"
+    terrain_rock_v9_toggle.button_pressed = true
+    terrain_rock_v9_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_rock_v9_toggle)
+    terrain_vegetation_v9_toggle = CheckButton.new()
+    terrain_vegetation_v9_toggle.name = "EcotonosAjustadosV9"
+    terrain_vegetation_v9_toggle.text = "Vegetación y pedregales con color natural"
+    terrain_vegetation_v9_toggle.button_pressed = true
+    terrain_vegetation_v9_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_vegetation_v9_toggle)
+    terrain_light_v9_toggle = CheckButton.new()
+    terrain_light_v9_toggle.name = "LuzLateralV9"
+    terrain_light_v9_toggle.text = "Luz lateral para mostrar el relieve"
+    terrain_light_v9_toggle.button_pressed = true
+    terrain_light_v9_toggle.toggled.connect(_change_terrain_light_toggle)
+    terrain_controls.add_child(terrain_light_v9_toggle)
+    terrain_compare_v9_button = _button(terrain_controls,
+        "COMPARAR: volver al acabado V8",_toggle_v9_finish)
+    terrain_compare_v9_button.name = "ComparadorTerrenoV8V9"
+    terrain_compare_v9_button.custom_minimum_size.y = 50
+
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
     terrain_camera_picker.name = "CamarasDeTerreno"
@@ -314,6 +345,10 @@ func _add_building_mode() -> void:
     terrain_camera_picker.select(0)
     terrain_camera_picker.item_selected.connect(_change_terrain_camera)
     terrain_controls.add_child(terrain_camera_picker)
+    terrain_game_view_button = _button(terrain_controls,
+        "VISTA DE JUEGO · DISTANCIA NORMAL",_view_normal_game_distance)
+    terrain_game_view_button.name = "VistaDistanciaRealV9"
+    terrain_game_view_button.custom_minimum_size.y = 48
     terrain_fullscreen_button = _button(terrain_controls,
         "AMPLIAR VISUALIZACIÓN · SIN PANEL",_toggle_terrain_fullscreen)
     terrain_fullscreen_button.name = "PantallaCompletaTerreno3D"
@@ -537,7 +572,39 @@ func _change_terrain_camera(_index: int) -> void:
     if _role == "terrain":
         _update_camera()
 
+func _view_normal_game_distance() -> void:
+    # A reproducible camera framing for judging visual quality at the
+    # view size used in normal tactical inspection, not model close-ups.
+    terrain_camera_picker.select(0)
+    _zoom = 1.0
+    _yaw = -32.0
+    if model_root != null and _role == "terrain":
+        model_root.rotation_degrees.y = _yaw
+    _update_camera()
+
+func _change_terrain_light_toggle(_checked: bool) -> void:
+    if _role == "terrain":
+        _apply_terrain_lighting()
+
+func _toggle_v9_finish() -> void:
+    _terrain_v9_enabled = not _terrain_v9_enabled
+    if _terrain_v9_enabled:
+        _terrain_v5_enabled = true
+        _terrain_v6_enabled = true
+        _terrain_v7_enabled = true
+        _terrain_v8_enabled = true
+        terrain_compare_button.text = "COMPARAR: volver a acabado V4"
+        terrain_compare_v6_button.text = "COMPARAR: volver al terreno V5"
+        terrain_compare_v7_button.text = "COMPARAR: volver al terreno V6"
+        terrain_compare_v8_button.text = "COMPARAR: volver al acabado V7"
+    terrain_compare_v9_button.text = (
+        "COMPARAR: volver al acabado V8" if _terrain_v9_enabled
+        else "VOLVER AL ACABADO V9")
+    _rebuild_terrain(false)
+
 func _toggle_v8_finish() -> void:
+    _terrain_v9_enabled = false
+    terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = not _terrain_v8_enabled
     if _terrain_v8_enabled:
         # Preserve forest, canyon and shore details from the older modes.
@@ -553,6 +620,8 @@ func _toggle_v8_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v7_finish() -> void:
+    _terrain_v9_enabled = false
+    terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
     terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     _terrain_v7_enabled = not _terrain_v7_enabled
@@ -569,6 +638,8 @@ func _toggle_v7_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v6_finish() -> void:
+    _terrain_v9_enabled = false
+    terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
     terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     # V6/V5 compare must temporarily disable V7 or its replacement
@@ -582,6 +653,8 @@ func _toggle_v6_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v5_finish() -> void:
+    _terrain_v9_enabled = false
+    terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
     terrain_compare_v8_button.text = "VOLVER AL ACABADO V8"
     _terrain_v7_enabled = false
@@ -622,26 +695,28 @@ func _restore_default_lighting() -> void:
 
 func _apply_terrain_lighting() -> void:
     var setting: int = terrain_light_picker.selected
+    var enhance: bool = _terrain_v9_enabled and terrain_light_v9_toggle.button_pressed
+    var profile: Dictionary = MaterialV9.daylight_profile(setting,enhance)
     for item in preview.get_children():
         if item is WorldEnvironment:
             var env: Environment = (item as WorldEnvironment).environment
             env.background_color = Color("#374c58") if setting == 1 else Color("#4b606c") if setting == 2 else Color("#526c75")
             env.ambient_light_color = Color("#f1c8a7") if setting == 1 else Color("#becdd6")
-            env.ambient_light_energy = 0.37 if setting == 1 else 0.53 if setting == 2 else 0.46
+            env.ambient_light_energy = float(profile["ambient"])
         elif item is DirectionalLight3D:
             var sun: DirectionalLight3D = item as DirectionalLight3D
             var is_key: bool = sun == preview.get_child(2)
             if is_key:
-                sun.light_color = Color("#f5b98b") if setting == 1 else Color("#e3edf4") if setting == 2 else Color("#fff6dd")
-                sun.light_energy = 0.89 if setting == 0 else 0.76 if setting == 1 else 0.62
-                sun.rotation_degrees = Vector3(-27,-52,0) if setting == 1 else Vector3(-46,-32,0)
+                sun.light_color = profile["sun"]
+                sun.light_energy = float(profile["key"])
+                sun.rotation_degrees = profile["rotation"]
                 sun.shadow_enabled = terrain_shadow_toggle.button_pressed
-                sun.shadow_blur = 1.18
+                sun.shadow_blur = float(profile["blur"])
             else:
                 # The old prototype used the FULL key-light energy on BOTH
                 # directionals, bleaching vertex-coloured ground to white.
                 sun.light_color = Color("#9cb7d5") if setting == 1 else Color("#bbcbd6")
-                sun.light_energy = 0.20 if setting == 1 else 0.30 if setting == 2 else 0.26
+                sun.light_energy = float(profile["fill"])
                 sun.shadow_enabled = false
 
 func _display_terrain() -> void:
@@ -669,7 +744,9 @@ func _display_terrain() -> void:
         _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed,
         _terrain_v8_enabled and terrain_lithology_v8_toggle.button_pressed,
         _terrain_v8_enabled and terrain_talus_v8_toggle.button_pressed,
-        _terrain_v8_enabled and terrain_ecotone_v8_toggle.button_pressed)
+        _terrain_v8_enabled and terrain_ecotone_v8_toggle.button_pressed,
+        _terrain_v9_enabled and terrain_rock_v9_toggle.button_pressed,
+        _terrain_v9_enabled and terrain_vegetation_v9_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -888,6 +965,12 @@ func _update_details() -> void:
                 int(v8.get("batches",0))]
         if bool(model_root.get_meta("terrain_studio_v8_lithology",false)):
             status_label.text += " · roca estratificada"
+        if bool(model_root.get_meta("terrain_studio_v9_rock_facets",false)):
+            status_label.text += " · V9: roca con caras"
+        if bool(model_root.get_meta("terrain_studio_v9_ecotone_tones",false)):
+            status_label.text += " · transiciones matizadas"
+        if _terrain_v9_enabled and terrain_light_v9_toggle.button_pressed:
+            status_label.text += " · iluminación lateral"
         return
     if _role != "headquarters":
         super._update_details()
