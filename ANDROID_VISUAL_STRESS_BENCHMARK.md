@@ -94,3 +94,17 @@ Las mediciones preliminares del entorno Linux OpenGL por software mostraron much
 No se omite ninguna casilla, unidad, instalación, indicador de HP, marcador táctico, control o efecto de combate; tampoco cambia la intensidad reglamentaria de lluvia/nieve, movimiento o defensa. Sólo se reducen detalles de follaje/suelo y las gotas/copos *decorativos* de la pantalla durante cargas extremas. El informe registra `environment_stride`, `precipitation_cells` y `visible_unit_load` para explicar cualquier cambio de calidad y permitir A/B por escenario. Se mantienen los modos completos para batallas normales.
 
 **Verificación pendiente:** confirmar cuánto disminuyen las llamadas de dibujo y si mejora el p95 en Android físico. El renderizador OpenGL por software de CI es útil para hallar errores y tendencias, no para publicar una cifra garantizada de FPS en teléfonos.
+
+## Comparación inicial reproducible en escritorio virtual (no Android)
+
+Medición sobre Godot 4.3 con OpenGL por software/Xvfb, en las mismas pruebas sintéticas de estrés, antes y después de aplicar la densidad adaptativa. Estos números describen **llamadas de dibujo del runner CI**, no FPS ni memoria de un dispositivo Android:
+
+| Carga visual | Draw calls antes | Después | Reducción aproximada |
+|---|---:|---:|---:|
+| 150 tanques con nieve | 10,527 | 7,666 | 27.2% |
+| 320 tanques, 128 edificios | 8,113 | 6,491 | 20.0% |
+| 512 tanques, 192 edificios y lluvia | 9,750 | 7,479 | 23.3% |
+| 768 tanques, 256 edificios y nieve | 13,510 | 9,928 | 26.5% |
+| 768 tanques con ahorro | 10,197 | 8,666 | 15.0% |
+
+Fuentes de comparación: ejecuciones de QA en GitHub Actions [antes](https://github.com/edwinrodri12/Tarvoka/actions/runs/43631951421) y [después](https://github.com/edwinrodri12/Tarvoka/actions/runs/43632322671). Se comparan los resultados de escritorio (no el modo headless). **El FPS del runner virtual permanece bajo y no mejoró consistentemente**, por lo que la reducción de comandos de dibujo no garantiza aumentar FPS. Todavía faltan medidas Android reales a temperatura estable, con brillo y frecuencia configurados, y repetir tras integrar modelos definitivos.
