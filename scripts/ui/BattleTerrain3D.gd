@@ -111,6 +111,12 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i) -> Color:
         return COLORS["plain"]
     return total*(1.0/weight_sum)
 
+static func _cached_corner_tint(cells: Dictionary,corner: Vector2i,
+        cache: Dictionary) -> Color:
+    if not cache.has(corner):
+        cache[corner] = _shared_corner_tint(cells,corner)
+    return cache[corner]
+
 static func _vertex(tool: SurfaceTool, at: Vector3,
         color: Color) -> void:
     tool.set_color(color)
@@ -149,7 +155,7 @@ static func _finish(parent: Node3D, label: String,
     parent.add_child(mesh)
 
 static func _build_chunk(parent: Node3D, data: Dictionary,
-        cells: Dictionary) -> Dictionary:
+        cells: Dictionary,corner_cache: Dictionary) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -191,10 +197,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         # No new geometry or draw calls: only vertex pigments change.
         # Explored but not presently visible tiles stay uniformly dim.
         if bool(tile.get("details",false)):
-            var nw_tint: Color = _shared_corner_tint(cells,cell)
-            var ne_tint: Color = _shared_corner_tint(cells,cell+Vector2i(1,0))
-            var se_tint: Color = _shared_corner_tint(cells,cell+Vector2i(1,1))
-            var sw_tint: Color = _shared_corner_tint(cells,cell+Vector2i(0,1))
+            var nw_tint: Color = _cached_corner_tint(cells,cell,corner_cache)
+            var ne_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,0),corner_cache)
+            var se_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,1),corner_cache)
+            var sw_tint: Color = _cached_corner_tint(cells,cell+Vector2i(0,1),corner_cache)
             _tri_tinted(ground,nw,middle,ne,nw_tint,tinted,ne_tint)
             _tri_tinted(ground,ne,middle,se,ne_tint,tinted,se_tint)
             _tri_tinted(ground,se,middle,sw,se_tint,tinted,sw_tint)
@@ -436,8 +442,11 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
         "roads":0,"shore_edges":0,"blended_tiles":0}
+    # One palette sample per global grid corner, reused by up to four
+    # tiles and across 8x8 sectors. Cache only for this render build.
+    var corner_cache: Dictionary = {}
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
     counters["trees"] = _make_cone_trees(scene,cells)
@@ -447,6 +456,7 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.
     counters["terrain_blend_extra_batches"] = 0
+    counters["terrain_blend_palette_samples"] = corner_cache.size()
     scene.set_meta("board_size",dims)
     scene.set_meta("visual_only",true)
     scene.set_meta("public_cells",cells)
