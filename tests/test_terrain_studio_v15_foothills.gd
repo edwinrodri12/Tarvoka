@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Native GPU regression for the real TARVOKA Godot Web Studio.
-# The V15 footslope rock and transition meshes must remain inside land
+# The V15b footslope rock and transition meshes must remain inside land
 # tiles, never water/road, and preserve all old V1-V14 visual modes.
 const Terrain = preload("res://scripts/ui/TerrainStudio3D.gd")
 
@@ -22,6 +22,14 @@ func _checked_mesh(studio: Control,name: String,biome: int) -> MeshInstance3D:
         # A slope or stone cannot ever overlap a river or a road tile,
         # including the V4 bridges crossing the canyon.
         assert(Terrain.kind(x,z,biome) in ["forest","plain"])
+        # V15b: classify the whole rock footprint, not just its center.
+        # Keep a protected inset even when the NEXT tile is a bridge,
+        # a navigable river or a road. This is checked on the real mesh.
+        var center_x: float = (float(x)-float(Terrain.WIDTH-1)*0.5)*Terrain.CELL
+        var center_z: float = (float(z)-float(Terrain.HEIGHT-1)*0.5)*Terrain.CELL
+        var inset: float = 0.085 if name=="AfloramientosDeValleV11" else 0.045
+        assert(absf(position.x-center_x)<Terrain.CELL*0.5-inset)
+        assert(absf(position.z-center_z)<Terrain.CELL*0.5-inset)
     return node
 
 func _image(studio: Control,filepath: String) -> Image:
@@ -153,5 +161,5 @@ func _run() -> void:
     studio._switch_category(2)
     assert(studio._role=="terrain")
     studio.free()
-    print("PASS TERRAIN_STUDIO_V15: blended aprons, valley outcrops, strict road/water bounds, 2 render batches, 3 biomes, preserved V1-V14 comparisons")
+    print("PASS TERRAIN_STUDIO_V15B: safe inset fractured rock, blended aprons, valley outcrops, strict road/water bounds, 2 render batches, 3 biomes, preserved V1-V14 comparisons")
     quit(0)
