@@ -25,7 +25,10 @@ func _check_scatter(root: Node3D, scene: int, node_name: String,
         var center: Vector3 = Terrain._cell_center(x,z)
         var expected: float = Terrain.surface_height_at(
             x,z,scene,at.x-center.x,at.z-center.z)+lift
-        assert(_close(at.y,expected))
+        if not _close(at.y,expected):
+            print("TERRAIN_HEIGHT_DIAGNOSTIC scene=%d batch=%s cell=(%d,%d) actual=%.6f expected=%.6f point=%s" % [
+                scene,node_name,x,z,at.y,expected,str(at)])
+            assert(_close(at.y,expected))
 
 func _check_road_mesh(root: Node3D, scene: int, x: int, z: int) -> void:
     var road: MeshInstance3D = root.find_child(
