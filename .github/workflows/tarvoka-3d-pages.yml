@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA"]
     types: [completed]
     branches:
-      - feat/hq-v20-walls-weather-release-android-bench-20261114
+      - feat/hq-v21-rear-wall-damage-impact-20261114
       - feat/terrain-v17-battle-seam-blending-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -32,10 +32,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 50
     steps:
-      - name: Check out fixed HQ V20 complete walls and release-safe weather native studio with nine original Android HQ V15 sprites
+      - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v20-walls-weather-release-android-bench-20261114
+          ref: feat/hq-v21-rear-wall-damage-impact-20261114
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v20-walls-weather-release-android-bench-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v20-walls-weather-release-android-bench-20261114)"
+          test "$(git branch --show-current)" = "feat/hq-v21-rear-wall-damage-impact-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v21-rear-wall-damage-impact-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -100,6 +100,13 @@ jobs:
           test -s scripts/ui/HeadquartersFacadeV19.gd
           test -s tests/test_hq_v19_facade_stress.gd
           test -s tests/test_hq_v20_walls_weather_release.gd
+          test -s scripts/ui/HeadquartersDamageV21.gd
+          test -s scripts/ui/HeadquartersImpactV21.gd
+          test -s tests/test_hq_v21_rear_damage_impacts.gd
+          grep -q 'MuroPosteriorCentralContinuoV21' scripts/ui/Headquarters3D.gd
+          grep -q 'CincoNivelesDanoFisicoHQV21' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'ProbarImpactoExplosivoHQV21' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'ProbarDisparoDeBalasHQV21' scripts/ui/CombinedArtStudioWeb.gd
           test -s scripts/ui/HQAndroidPhysicalBench.gd
           grep -q 'MuroContinuoBajoVentanasAlaV20_' scripts/ui/Headquarters3D.gd
           grep -q 'var climate_applied: bool = HQClimateV17.apply(' scripts/ui/CombinedArtStudioWeb.gd
