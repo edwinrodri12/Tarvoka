@@ -10,6 +10,7 @@ const Factions = preload("res://scripts/ui/VisualStyle.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
+const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -48,6 +49,10 @@ var _v24_preview := false
 var _v25_preview := false
 var _v30_preview := false
 var _v31_preview := false
+var _apc_v1_preview := true
+var apc_controls: VBoxContainer
+var apc_compare_button: Button
+var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
 var _scenario_enabled := false
@@ -229,6 +234,24 @@ func _construct() -> void:
     column.add_child(role_picker)
     role_picker.item_selected.connect(_on_role)
 
+    apc_controls=VBoxContainer.new()
+    apc_controls.name="APCP06V1_InspeccionTecnica"
+    apc_controls.add_theme_constant_override("separation",6)
+    column.add_child(apc_controls)
+    var apc_heading:=_title(apc_controls,
+        "SIGUIENTE UNIDAD · APC P06 BASTIÓN 6×6",13)
+    apc_heading.add_theme_color_override("font_color",Color("#E6C17C"))
+    apc_compare_button=_button(apc_controls,
+        "APC V1 · Comparar prototipo original",_toggle_apc_version)
+    _add_paired(apc_controls,"APC: Avanzar 6×6",
+        func(): _play("move"),
+        "APC: Girar torreta",func(): _play("turn_turret"))
+    _add_paired(apc_controls,"APC: Disparar",
+        func(): _play("attack"),
+        "APC: Recibir impacto",func(): _play("hit"))
+    apc_ramp_button=_button(apc_controls,
+        "APC: Abrir rampa de tropas",_toggle_apc_ramp)
+
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
     faction_picker.custom_minimum_size.y = 44
@@ -336,7 +359,9 @@ func _display_role(role: String) -> void:
         art_level = 30
     if _v25_preview and _v30_preview and _v31_preview:
         art_level = 31
-    model_root = Models.build(_role,_faction if _role == "tank" else -1,
+    if _role=="apc" and _apc_v1_preview:
+        art_level=11
+    model_root = Models.build(_role,_faction if _role in ["tank","apc"] else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
         TankV17.set_quality(model_root,_v17_eco)
@@ -370,6 +395,9 @@ func _display_role(role: String) -> void:
     v25_button.visible = (_role == "tank")
     v30_button.visible = (_role == "tank")
     v31_button.visible = (_role == "tank")
+    apc_controls.visible = (_role=="apc")
+    apc_compare_button.text = ("APC P06 V1 · Volver al prototipo V0" if _apc_v1_preview else "APC P06 V1 · Ver escultura 6×6")
+    apc_ramp_button.text = "APC: Abrir rampa de tropas"
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -405,6 +433,7 @@ func _display_role(role: String) -> void:
     v11_button.text = "COMPARAR: Volver al G09 V10" if _v11_preview else "NUEVO G09 V11 · Escultura angular"
     comparison_button.text = "COMPARAR: Ver modelo base" if _final_detail else "COMPARAR: Ver acabado nuevo"
     previous_version_button.text = "COMPARAR: Volver al acabado V10" if _previous_version else "COMPARAR: Ver acabado V9 anterior"
+    damage_picker.visible = (_role=="tank")
     if _role == "tank":
         damage_picker.select(0)
     _update_camera()
@@ -415,6 +444,12 @@ func _update_details() -> void:
         return
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
+    if _role=="apc":
+        status_label.text = ("APC P06 BASTIÓN V1 · 6×6 · CASCO ESCULPIDO"
+            " · RAMPA Y TORRETA ANIMADAS · 8 FACCIONES"
+            if model_root.get_meta("tarvoka_apc_sculpt_v1",false)
+            else "APC P06 · PROTOTIPO TÉCNICO ORIGINAL V0")
+        return
     if _role != "tank":
         status_label.text = "Modelo técnico 3D · misma librería de TARVOKA"
         return
@@ -945,6 +980,28 @@ func _reload_tank_same_camera() -> void:
     _update_camera()
     _update_details()
 
+func _toggle_apc_version() -> void:
+    if _role!="apc":
+        return
+    _apc_v1_preview=not _apc_v1_preview
+    var angle: float=_yaw
+    var zoom: float=_zoom
+    _display_role("apc")
+    _yaw=angle
+    _zoom=zoom
+    model_root.rotation_degrees.y=angle
+    _update_camera()
+    _update_details()
+
+func _toggle_apc_ramp() -> void:
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_sculpt_v1",false)):
+        return
+    var opened: bool=bool(model_root.get_meta("tarvoka_apc_ramp_open",false))
+    _play("close_ramp" if opened else "open_ramp")
+    apc_ramp_button.text=("APC: Abrir rampa de tropas" if opened
+        else "APC: Cerrar rampa de tropas")
+
 func _on_role(index: int) -> void:
     if index >= 0 and index < Models.ROLES.size():
         _display_role(str(Models.ROLES[index]))
@@ -953,6 +1010,8 @@ func _on_faction(index: int) -> void:
     if index < 0 or index >= Factions.FACTIONS.size():
         return
     _faction = index
+    if _role=="apc" and model_root!=null:
+        Models.apply_faction_palette(model_root,index)
     if _role == "tank" and model_root != null:
         var clay_was_on: bool = ClayV19.is_enabled(model_root)
         if clay_was_on:
@@ -974,23 +1033,43 @@ func _set_damage(stage: int) -> void:
         _update_details()
 
 func _play(kind: String) -> void:
-    if _role != "tank" or model_root == null:
+    if _role not in ["tank","apc"] or model_root==null:
         return
-    _animation = kind
-    _animation_time = 0.0
-    TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
-    TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
+    if _role=="apc" and not model_root.get_meta("tarvoka_apc_sculpt_v1",false):
+        return
+    _animation=kind
+    _animation_time=0.0
+    if _role=="apc":
+        APCVisual.pose(model_root,kind,0.0)
+    else:
+        TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
+        TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
 
 func _stop_animation() -> void:
     _animation = ""
     _animation_time = 0.0
-    if _role == "tank" and model_root != null:
+    if _role=="apc" and model_root!=null:
+        APCVisual.restore(model_root)
+    elif _role == "tank" and model_root != null:
         var stage: int = TankDamage.current_stage(model_root)
         TankRig.restore(model_root)
         TankDamage.apply_stage(model_root,stage)
 
 func _process(delta: float) -> void:
-    if model_root == null or _role != "tank":
+    if model_root==null:
+        return
+    if _role=="apc":
+        if not _animation.is_empty():
+            _animation_time+=maxf(delta,0.0)
+            var duration: float=(APCVisual.MOVE_DURATION if _animation=="move"
+                else APCVisual.RAMP_DURATION if _animation in ["open_ramp","close_ramp"]
+                else APCVisual.SHOT_DURATION)
+            var t: float=minf(_animation_time/maxf(duration,0.01),1.0)
+            APCVisual.pose(model_root,_animation,t)
+            if t>=1.0:
+                _stop_animation()
+        return
+    if _role!="tank":
         return
     if TankDamage.current_stage(model_root) >= 2:
         _effect_time += delta
