@@ -4,6 +4,7 @@ extends SceneTree
 # Confirms 3 public climates x 4 locations, existing V12/V13/V15 controls,
 # rain/snow geometry budgets, no gameplay state or original 3D mesh changes.
 const Climate = preload("res://scripts/ui/HeadquartersClimateV17.gd")
+const Universal = preload("res://scripts/ui/WeatherCoating3D.gd")
 const Studio = preload("res://scripts/ui/CombinedArtStudioWeb.gd")
 const Production = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const Sprites = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -106,7 +107,18 @@ func _run() -> void:
             var same_model: Node3D = studio.model_root
             studio._change_hq_weather_v17(weather_index)
             assert(studio.model_root==same_model)
-            assert(Production._meshes(studio.model_root)==original_meshes)
+            var model_coat: Dictionary = studio.model_root.get_meta("weather_coating",{})
+            assert(model_coat["mode"] == Climate.WEATHERS[weather_index])
+            assert(Production._meshes(studio.model_root)==original_meshes + \
+                int(model_coat.get("snow_nodes",0)))
+            if weather_index == 1:
+                assert(int(model_coat["wet"]) > 0)
+                assert(int(model_coat["snow_nodes"]) == 0)
+            if weather_index == 2:
+                assert(int(model_coat["snow_nodes"]) > 0)
+                assert(int(model_coat["snow_nodes"]) <= Universal.MAX_SNOW_NODES)
+                assert(not studio.hq_climate_stage.get_node(
+                    "NieveAcumuladaCubiertaV17_0").visible)
             assert(studio.hq_climate_stage.get_meta("tarvoka_weather_visual")==Climate.WEATHERS[weather_index])
             assert(studio.hq_climate_stage.get_meta("tarvoka_terrain_visual")==Climate.TERRAINS[terrain_index])
             assert(Climate.active_mesh_count(studio.hq_climate_stage)<=Climate.MATERIAL_BUDGET)
@@ -153,8 +165,17 @@ func _run() -> void:
     assert(studio.model_root.get_meta("tarvoka_hq_production_v13",false))
     studio._change_hq_weather_v17(1)
     assert(Production.render_budget(studio.model_root)["within_tactical_budget"])
+    assert(int(studio.model_root.get_meta("weather_coating")["wet"]) > 0)
     await _frames()
     _save("tarvoka_hq_v17_optimized_v13_rain.png")
+    studio._change_hq_weather_v17(2)
+    var production_coating: Dictionary = studio.model_root.get_meta("weather_coating")
+    assert(production_coating["mode"] == "snow")
+    assert(int(production_coating["snow_nodes"]) > 0)
+    assert(int(production_coating["snow_nodes"]) <= Universal.MAX_ECO_SNOW_NODES)
+    await _frames()
+    _save("tarvoka_hq_v17_universal_coating_v13_snow.png")
+    studio._change_hq_weather_v17(1)
 
     studio._switch_category(0)
     assert(studio._role=="tank")
@@ -165,5 +186,5 @@ func _run() -> void:
     assert(studio.hq_terrain_picker.selected==0)
     assert(studio.hq_weather_picker.selected==1)
     studio.queue_free()
-    print("PASS HQ V17: 3 public climates, 4 material terrains, one-batch precipitation, rain puddles, snow roofs, 12 GPU renders, Android sprite/v12/v13 preservation, no gameplay mutation")
+    print("PASS HQ V17: true universal wet PBR/snow on HQ V12/V13, 3 climates x 4 terrains, original sprite V15, 12 GPU renders, zero gameplay mutation")
     quit(0)
