@@ -65,6 +65,17 @@ jobs:
             | tee /tmp/piercer-g09-ai-economy.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/piercer-g09-ai-economy.log; then exit 1; fi
           grep -F 'PASS piercer G09 AI economy:' /tmp/piercer-g09-ai-economy.log
+      - name: Regress existing role text, counterfire, HUD and paired AI economy
+        run: |
+          set -euo pipefail
+          for test in test_unit_roles test_counterfire_doctrine test_skirmish_combat_preview test_modern_mirror_decisions test_paired_balance_telemetry; do
+            timeout --signal=TERM --kill-after=5s 150s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" 2>&1 \
+              | tee "/tmp/${test}-g09.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}-g09.log"; then exit 1; fi
+            grep -F 'PASS ' "/tmp/${test}-g09.log"
+          done
       - name: Upload auditable balance measurements
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,4 +86,9 @@ jobs:
             /tmp/piercer-g09-sensitivity.json
             /tmp/piercer-g09-regression.log
             /tmp/piercer-g09-ai-economy.log
+            /tmp/test_unit_roles-g09.log
+            /tmp/test_counterfire_doctrine-g09.log
+            /tmp/test_skirmish_combat_preview-g09.log
+            /tmp/test_modern_mirror_decisions-g09.log
+            /tmp/test_paired_balance_telemetry-g09.log
           if-no-files-found: warn
