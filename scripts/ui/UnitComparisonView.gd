@@ -27,6 +27,9 @@ func _text(parent: Container, value: String, size: int = 14, tint: Color = Color
     parent.add_child(label)
     return label
 
+func _domain_text(source: String) -> String:
+    return source.replace("ground","tierra").replace("air","aire").replace("naval","mar")
+
 func _portrait(parent: Container, data: Dictionary, side: String, tint: Color) -> void:
     var cell := VBoxContainer.new()
     cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -43,7 +46,10 @@ func _portrait(parent: Container, data: Dictionary, side: String, tint: Color) -
     visual.add_child(labels)
     _text(labels,str(data.get("name","")),15)
     _text(labels,"%d cr." % int(data.get("price",0)),14,Color("#F1D58C"))
-    _text(labels,"%s · Blanco: %s" % [str(data.get("domain","")),str(data.get("targets",""))],12)
+    _text(labels,"%s · Blanco: %s" % [
+        _domain_text(str(data.get("domain",""))),
+        _domain_text(str(data.get("targets","")))
+    ],12)
     var logistics: PackedStringArray = []
     if int(data.get("ammo_capacity",0)) > 0:
         logistics.append("Mun. %d" % int(data["ammo_capacity"]))
