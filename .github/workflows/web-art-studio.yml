@@ -82,6 +82,14 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Diagnose standalone V26 scenario GDScript compile before studio preflight
+        shell: bash
+        run: |
+          set +e
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://scripts/ui/TankBattleScenarioV26.gd \
+            --quit 2>&1 | tee /tmp/g09-v26-parser-diagnostic.log
+          echo "V26 direct-script diagnostic finished"
       - name: Preflight parse imported G09 V11 scripts
         shell: bash
         run: |
