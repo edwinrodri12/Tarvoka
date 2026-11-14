@@ -130,6 +130,16 @@ jobs:
           fi
           grep -F 'PASS map site overlays' /tmp/tarvoka-site-overlays.log
 
+      - name: Verify V14 HQ command-city art preserves capture income faction and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_headquarters_battle_bridge_v14.gd 2>&1 | tee /tmp/tarvoka-hq-v14-art.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-hq-v14-art.log; then
+            echo 'HQ V14 battle cosmetic or fog information regression'; exit 1
+          fi
+          grep -q 'PASS HQ V14:' /tmp/tarvoka-hq-v14-art.log
+
       - name: Validate unit/building dossiers, factory comparison and fog-safe stat visibility
         shell: bash
         run: |
