@@ -262,9 +262,15 @@ static func _details(root: Node3D,paint: Material,
     _box(root,"MarcoRampaPosterior",
         Vector3(0.0,0.86,1.33),Vector3(1.22,0.85,0.10),steel,
         Vector3(8,0,0))
-    var ramp:=_box(root,"RampaDesembarcoBlindada",
-        Vector3(0,0.82,1.40),Vector3(1.00,0.67,0.055),paint,
-        Vector3(8,0,0))
+    # The ramp pivots from its actual BOTTOM hinge, not the middle of a
+    # floating rectangular plate. At 80 degrees it opens toward the rear.
+    var hinge:=Node3D.new()
+    hinge.name="BisagraRampaP06"
+    hinge.position=Vector3(0.0,0.43,1.40)
+    hinge.rotation_degrees.x=8.0
+    root.add_child(hinge)
+    var ramp:=_box(hinge,"RampaDesembarcoBlindada",
+        Vector3(0,0.39,0.0),Vector3(1.00,0.67,0.055),paint)
     ramp.set_meta(PAINT_META,true)
     for side in [-1,1]:
         _cylinder(root,"BisagraRampa_%d" % side,
@@ -301,6 +307,18 @@ static func _remote_turret(root: Node3D,
         Vector3(0,0,-0.14),0.073,0.20,steel,12,Vector3(90,0,0))
     _box(gun,"FrenoBoca",
         Vector3(0,0,-0.61),Vector3(0.14,0.10,0.105),black)
+    var flash_mat:=StandardMaterial3D.new()
+    flash_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+    flash_mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+    flash_mat.albedo_color=Color(1.0,0.69,0.19,0.82)
+    flash_mat.emission_enabled=true
+    flash_mat.emission=Color("#FFD293")
+    flash_mat.emission_energy_multiplier=1.25
+    flash_mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+    var flash:=_cylinder(gun,"FogonazoArmaP06",
+        Vector3(0,0,-0.73),0.10,0.18,flash_mat,6,
+        Vector3(90,0,0))
+    flash.visible=false
     return turret
 
 static func apply(model: Node3D,color: Color) -> bool:
@@ -317,6 +335,7 @@ static func apply(model: Node3D,color: Color) -> bool:
     root.name=ROOT
     model.add_child(root)
     var armor: StandardMaterial3D=_paint_material(color)
+    armor.cull_mode=BaseMaterial3D.CULL_DISABLED
     var lower: StandardMaterial3D=_mat(Color("#48545C"),0.36,0.86)
     var steel: StandardMaterial3D=_mat(Color("#707D82"),0.52,0.67)
     var black: StandardMaterial3D=_mat(Color("#182127"),0.12,0.94)
