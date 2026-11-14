@@ -20,7 +20,7 @@ Escenarios:
 
 ## Extensión: requisito comercial de 8 jugadores (14-XI-2026)
 
-La prueba incorpora cinco situaciones de estrés gráfico **con ocho colores oficiales simultáneos**. Este es un **prototipo aislado de presentación**, NO una batalla de ocho participantes:
+La prueba incorpora seis situaciones de estrés gráfico **con ocho colores oficiales simultáneos**. Este es un **prototipo aislado de presentación**, NO una batalla de ocho participantes:
 
 | Carga adicional | Mapa | Participantes VISUALES | Tanques técnicos | Edificios representados | Ataques simulados | Clima |
 |---|---|---:|---:|---:|---:|---|
@@ -29,6 +29,7 @@ La prueba incorpora cinco situaciones de estrés gráfico **con ocho colores ofi
 | Masiva | 40×30 | 8 | 512 (64/equipo) | 192 (8 HQ V15) | 24 | lluvia |
 | Extremo | 40×30 | 8 | 768 (96/equipo) | 256 (8 HQ V15) | 32 | nieve |
 | Ahorro | 40×30 | 8 | 768 (96/equipo) | 256 (8 HQ V15) | 32 | nieve |
+| Cámara cercana | 40×30 | 8 | 768 (96/equipo) | 256 (8 HQ V15) | 32 | lluvia, zoom ×4 |
 
 Los edificios incluyen las siluetas de los siete tipos ya disponibles en el renderer y ocho imágenes de HQ obtenidas del modelo 3D. Las unidades siguen usando el tanque **técnico** existente. Los edificios y tropas se distribuyen en posiciones distintas; las tropas pueden ocupar casillas de instalaciones porque esta es carga gráfica. La pantalla usa el motor de dibujo real, pero no controla economía ni turnos en ocho equipos. No modifica mapas guardados.
 
@@ -45,7 +46,7 @@ Se ha mejorado el culling previo a ordenar las unidades por profundidad: solo se
 
 ### Qué podemos y qué NO podemos concluir
 
-- Concluir: que Godot puede **ejecutar los diez escenarios gráficos sintéticos sin errores** cuando CI está verde y que Android ofrece mediciones comparables cuando la APK se ejecuta en un móvil.
+- Concluir: que Godot puede **ejecutar los once escenarios gráficos sintéticos sin errores** cuando CI está verde y que Android ofrece mediciones comparables cuando la APK se ejecuta en un móvil.
 - No concluir: que ocho jugadores ya pueden conectarse o mover unidades; que el servidor soporta ocho conexiones; que 30/60 FPS Android están garantizados; que los modelos de arte 3D aún no incorporados tienen el mismo costo que los sprites técnicos.
 - Meta propuesta: por lo menos **30 FPS estables** en teléfonos de gama media durante situaciones habituales, 60 FPS preferidos en gama alta; comparar p95 de cuadros y caídas con la escena extrema y opciones de calidad. No prometer límite fijo de tropas antes de los datos del teléfono.
 
