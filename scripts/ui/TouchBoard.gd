@@ -19,6 +19,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
@@ -513,7 +514,13 @@ func _draw() -> void:
     if pending_order.has("cell"):
         var preview_cell: Vector2i = pending_order["cell"]
         var preview_pos: Vector2 = origin + Vector2(preview_cell) * tile
-        draw_rect(Rect2(preview_pos, Vector2.ONE * tile), Color(1.0, 0.86, 0.20), false, 4.0)
+        var preview_attack: bool = str(pending_order.get("kind","")) == "attack"
+        var preview_color := Color("#FF746C") if preview_attack else Color("#FFE451")
+        draw_rect(Rect2(preview_pos, Vector2.ONE * tile), preview_color, false, maxf(2.0,tile*0.06))
+        if tile >= 32.0:
+            draw_string(font,preview_pos+Vector2(tile*0.05,tile*0.21),
+                "CONF. ATQ" if preview_attack else "CONF. MOV",
+                HORIZONTAL_ALIGNMENT_LEFT,-1,clampi(int(tile*0.14),10,18),preview_color)
     # Put expected damage above the enemy tile, after units are drawn so it stays readable.
     for destination in hints["attacks"]:
         if tile >= 33.0:
@@ -618,6 +625,7 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
     var shot_from := Vector2i(-1,-1)
     var target := Vector2i(-1,-1)
     var target_was_alive := false
+    var defender_before_hp := 0
     var attacker_role := ""
     var defender_role := ""
     for unit in before.get("units", []):
@@ -629,7 +637,8 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
         elif str(unit.get("id","")) == defender_id:
             target = unit["pos"]
             defender_role = str(unit.get("role",""))
-            target_was_alive = int(unit.get("hp",0)) > 0
+            defender_before_hp = int(unit.get("hp",0))
+            target_was_alive = defender_before_hp > 0
     if target.x < 0 or not target_was_alive:
         return
     # Enemy fire must never expose positions or origins hidden from the human.
@@ -639,18 +648,21 @@ func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: 
     if Visibility.enabled(before) and not visible.has(shot_from):
         shot_from = Vector2i(-1,-1)
     # Destroyed units may be removed entirely from the next state's array.
-    var target_survives := false
+    var defender_after_hp := 0
     for unit in result.get("state", {}).get("units", []):
-        if unit is Dictionary and str(unit.get("id","")) == defender_id and int(unit.get("hp",0)) > 0:
-            target_survives = true
+        if unit is Dictionary and str(unit.get("id","")) == defender_id:
+            defender_after_hp = maxi(0,int(unit.get("hp",0)))
             break
-    var target_destroyed := not target_survives
+    var target_destroyed := defender_after_hp == 0
+    # Use observed HP loss, never theoretical overkill damage.
+    var confirmed_damage: int = maxi(0,defender_before_hp-defender_after_hp)
     if shot_from.x >= 0:
         unit_headings[attacker_id] = target - shot_from
     combat_effects.append({
         "origin":shot_from, "target":target,
         "elapsed":0.0, "destroyed":target_destroyed,
         "attacker_role":attacker_role, "defender_role":defender_role,
+        "damage":confirmed_damage,
         "counter_damage":int(result.get("counter_damage",0)),
         "consumed":not str(result.get("consumed_unit_id", "")).is_empty()
     })
@@ -682,6 +694,8 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
             if bool(effect["consumed"]):
                 draw_arc(launch, tile * (0.06 + 0.30 * progress), 0.0, TAU, 22,
                     Color(1.0, 0.28, 0.18, alpha), maxf(2.0, tile * 0.04))
+        var origin_center: Vector2 = board_origin + (Vector2(from_cell)+Vector2(0.5,0.5))*tile if from_cell.x >= 0 else Vector2.ZERO
+        BattleVFX.draw_damage_readout(self,effect,center,origin_center,tile,battery_saver)
 
 func cancel_selection() -> void:
     if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1) and inspected_cell == Vector2i(-1,-1):
