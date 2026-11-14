@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V27 live battle LOD and Android visual QA"]
     types: [completed]
     branches:
-      - feat/hq-v16-studio-v15-sprite-live-preview-20261114
+      - feat/hq-v17-commercial-weather-terrain-20261114
       - feat/terrain-studio-v13-material-light-20261114
       - feat/g09-v26-battle-lighting-terrain-qa-20261114
       - feat/g09-v27-live-battle-android-lod-20261114
@@ -32,10 +32,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 50
     steps:
-      - name: Check out the verified HQ V16 studio with original V15 Android sprite gallery
+      - name: Check out HQ V17 climate-ready native studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v16-studio-v15-sprite-live-preview-20261114
+          ref: feat/hq-v17-commercial-weather-terrain-20261114
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v16-studio-v15-sprite-live-preview-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v16-studio-v15-sprite-live-preview-20261114)"
+          test "$(git branch --show-current)" = "feat/hq-v17-commercial-weather-terrain-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v17-commercial-weather-terrain-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -93,6 +93,8 @@ jobs:
           test -s scripts/ui/HeadquartersProductionV13.gd
           test -s tests/test_headquarters_v13_production.gd
           test -s scripts/ui/HeadquartersSpriteStudioV16.gd
+          test -s scripts/ui/HeadquartersClimateV17.gd
+          test -s tests/test_hq_v17_weather_terrain.gd
           test -s tests/test_hq_v16_sprite_studio.gd
           test -s assets/buildings/hq_v15/hq_0.png
           test -s assets/buildings/hq_v15/hq_7.png
