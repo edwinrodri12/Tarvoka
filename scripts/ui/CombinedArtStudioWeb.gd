@@ -235,6 +235,29 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_controls.add_child(building_picker)
+    _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
+    var climate_row := HBoxContainer.new()
+    climate_row.name = "SelectorClimaYTerrenoHQV17"
+    climate_row.add_theme_constant_override("separation",5)
+    building_controls.add_child(climate_row)
+    hq_weather_picker = OptionButton.new()
+    hq_weather_picker.name = "ClimaVisualHQV17"
+    hq_weather_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_weather_picker.custom_minimum_size = Vector2(125,45)
+    for weather_name in HQClimateV17.WEATHER_NAMES:
+        hq_weather_picker.add_item(str(weather_name))
+    hq_weather_picker.select(0)
+    hq_weather_picker.item_selected.connect(_change_hq_weather_v17)
+    climate_row.add_child(hq_weather_picker)
+    hq_terrain_picker = OptionButton.new()
+    hq_terrain_picker.name = "TerrenoVisualHQV17"
+    hq_terrain_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_terrain_picker.custom_minimum_size = Vector2(125,45)
+    for terrain_name in HQClimateV17.TERRAIN_NAMES:
+        hq_terrain_picker.add_item(str(terrain_name))
+    hq_terrain_picker.select(0)
+    hq_terrain_picker.item_selected.connect(_change_hq_terrain_v17)
+    climate_row.add_child(hq_terrain_picker)
     _title(building_controls,"V15 · ARTE REAL UTILIZADO EN ANDROID",13)
     hq_v15_mode_picker = OptionButton.new()
     hq_v15_mode_picker.name = "ModoVisorModelo3DYSpriteV15"
@@ -276,29 +299,6 @@ func _add_building_mode() -> void:
     hq_v15_caption = _title(building_controls,
         "Sprite Android V15 · 384 px · exportado desde Godot V13",12)
     _refresh_hq_v15_sprite()
-    _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
-    var climate_row := HBoxContainer.new()
-    climate_row.name = "SelectorClimaYTerrenoHQV17"
-    climate_row.add_theme_constant_override("separation",5)
-    building_controls.add_child(climate_row)
-    hq_weather_picker = OptionButton.new()
-    hq_weather_picker.name = "ClimaVisualHQV17"
-    hq_weather_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    hq_weather_picker.custom_minimum_size = Vector2(125,45)
-    for weather_name in HQClimateV17.WEATHER_NAMES:
-        hq_weather_picker.add_item(str(weather_name))
-    hq_weather_picker.select(0)
-    hq_weather_picker.item_selected.connect(_change_hq_weather_v17)
-    climate_row.add_child(hq_weather_picker)
-    hq_terrain_picker = OptionButton.new()
-    hq_terrain_picker.name = "TerrenoVisualHQV17"
-    hq_terrain_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    hq_terrain_picker.custom_minimum_size = Vector2(125,45)
-    for terrain_name in HQClimateV17.TERRAIN_NAMES:
-        hq_terrain_picker.add_item(str(terrain_name))
-    hq_terrain_picker.select(0)
-    hq_terrain_picker.item_selected.connect(_change_hq_terrain_v17)
-    climate_row.add_child(hq_terrain_picker)
     hq_climate_status = _title(building_controls,
         "Comparación estética · lluvia/nieve con volúmenes 3D · sin cambios de jugabilidad",11)
 
@@ -808,6 +808,8 @@ func _process(delta: float) -> void:
     super._process(delta)
     if _role == "headquarters" and hq_climate_stage != null and hq_climate_stage.visible:
         _hq_weather_time += delta
+        if model_root != null:
+            HQClimateV17.orient_roof_caps(hq_climate_stage,model_root.rotation.y)
         HQClimateV17.animate(hq_climate_stage,_hq_weather_time)
     if _role != "headquarters" or hq_batch_toggle == null or not hq_batch_toggle.button_pressed:
         return
