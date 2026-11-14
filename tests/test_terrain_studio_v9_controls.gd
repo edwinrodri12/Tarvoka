@@ -18,6 +18,9 @@ func _run() -> void:
         await process_frame
     assert(studio.category_picker.item_count == 4)
     studio._switch_category(2)
+    # Legacy visual regression: V14 changes mountain geometry intentionally.
+    # Switch it off so V1–V13 mesh and comparison assertions stay meaningful.
+    studio._toggle_v10_finish()
     # This is a legacy baseline regression. The V7 erosion layer is
     # verified independently and must not conceal its old reference meshes.
     studio._toggle_v7_finish()

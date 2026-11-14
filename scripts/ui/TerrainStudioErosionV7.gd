@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudioErosionV7
 # All tile types, navigation, elevation rules, combat and saves are untouched.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
+const RidgeV10 = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
 const WATER_LEVEL := -0.17
 const WORLD_CELL := 2.4
 static var _fracture_noise: FastNoiseLite
@@ -98,10 +99,12 @@ static func _uplift(cell: Dictionary, offset: Vector2,
     return uplift*fade
 
 static func ridge_height(cell: Dictionary, offset: Vector2,
-        mountains: Dictionary, scene: int) -> float:
+        mountains: Dictionary, scene: int, sculpted: bool = false) -> float:
+    var rise: float = RidgeV10.uplift(
+        cell,offset,mountains,scene) if sculpted else _uplift(
+        cell,offset,mountains,scene)
     return Sampler.height(float(cell["top"]),cell["corners"],
-        offset.x,offset.y,float(cell["half"]))+_uplift(
-            cell,offset,mountains,scene)
+        offset.x,offset.y,float(cell["half"]))+rise
 
 static func lithology_color(pos: Vector3, elevation: float,
         scene: int, layered: bool = true) -> Color:
@@ -143,11 +146,12 @@ static func lithology_color(pos: Vector3, elevation: float,
 
 static func _ridge(parent: Node3D, cells: Array[Dictionary],
         mountains: Dictionary, scene: int,
-        layered: bool = false, facets: bool = false) -> Dictionary:
+        layered: bool = false, facets: bool = false,
+        sculpted: bool = false) -> Dictionary:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count := 0
-    var subdivisions := 8
+    var subdivisions := 12 if sculpted else 8
     for cell in cells:
         if str(cell["kind"]) != "mountain":
             continue
@@ -160,7 +164,9 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
             for col in range(subdivisions+1):
                 var dx: float = lerpf(-half,half,float(col)/subdivisions)
                 var dz: float = lerpf(-half,half,float(row)/subdivisions)
-                var elevation: float = _uplift(cell,Vector2(dx,dz),mountains,scene)
+                var elevation: float = RidgeV10.uplift(
+                    cell,Vector2(dx,dz),mountains,scene) if sculpted else _uplift(
+                    cell,Vector2(dx,dz),mountains,scene)
                 var pos: Vector3 = _point(cell,dx,dz)+Vector3(0,elevation+0.016,0)
                 points.append(pos)
                 tones.append(lithology_color(pos,elevation,scene,layered))
@@ -195,7 +201,8 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
     if count > 0:
         _surface_node(parent,"MacizosErosionadosContinuosV7",tool)
     return {"mountain_cells":count,"ridge_triangles":
-        count*subdivisions*subdivisions*2,"ridge_batches":1 if count>0 else 0}
+        count*subdivisions*subdivisions*2,"ridge_batches":1 if count>0 else 0,
+        "crest_subdivisions":subdivisions,"silhouette_cells":count if sculpted else 0}
 
 static func _bank(parent: Node3D, cells: Array[Dictionary],
         scene: int) -> Dictionary:
@@ -297,7 +304,8 @@ static func _wave(parent: Node3D, cells: Array[Dictionary],
 
 static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
         rock: bool = true, shores: bool = true, water: bool = true,
-        lithology: bool = false, facets: bool = false) -> Dictionary:
+        lithology: bool = false, facets: bool = false,
+        sculpted: bool = false) -> Dictionary:
     var kinds: Dictionary = {}
     var mountains: Dictionary = {}
     for cell in cells:
@@ -308,10 +316,13 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
     var result := {
         "mountain_cells":0,"ridge_triangles":0,"shore_edges":0,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,
-        "lithology_cells":0,"facet_cells":0,"batches":0}
+        "lithology_cells":0,"facet_cells":0,
+        "crest_subdivisions":8,"silhouette_cells":0,"batches":0}
     if rock and not mountains.is_empty():
         var stats: Dictionary = _ridge(parent,cells,mountains,scene,
-            lithology,facets)
+            lithology,facets,sculpted)
+        result["crest_subdivisions"] = stats["crest_subdivisions"]
+        result["silhouette_cells"] = stats["silhouette_cells"]
         result["facet_cells"] = int(stats["mountain_cells"]) if facets else 0
         result["lithology_cells"] = int(stats["mountain_cells"]) if lithology else 0
         result["mountain_cells"] = stats["mountain_cells"]
