@@ -17,6 +17,7 @@ const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
 const EcotonesV8 = preload("res://scripts/ui/TerrainStudioEcotonesV8.gd")
 const FoothillsV11 = preload("res://scripts/ui/TerrainStudioFoothillsV11.gd")
 const SedimentsV12 = preload("res://scripts/ui/TerrainStudioSedimentsV12.gd")
+const MountainBiomesV13 = preload("res://scripts/ui/TerrainStudioMountainBiomesV13.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -575,7 +576,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v9_ecotone_tones: bool = false,
         v10_sculpted_ridges: bool = false,
         v11_aprons: bool = false, v11_outcrops: bool = false,
-        v12_deposits: bool = false, v12_shoulders: bool = false) -> Node3D:
+        v12_deposits: bool = false, v12_shoulders: bool = false,
+        v13_facets: bool = false, v13_ecotones: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -604,6 +606,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v11_outcrops",continuous and show_scatter and v10_sculpted_ridges and v11_outcrops)
     root.set_meta("terrain_studio_v12_deposits",continuous and show_scatter and v10_sculpted_ridges and v11_aprons and v12_deposits)
     root.set_meta("terrain_studio_v12_shoulders",continuous and show_scatter and v10_sculpted_ridges and v11_aprons and v12_shoulders)
+    root.set_meta("terrain_studio_v13_facets",continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and v13_facets)
+    root.set_meta("terrain_studio_v13_ecotones",continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and v13_ecotones)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -773,6 +777,15 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v12_stats = SedimentsV12.populate(props,detail_cells,preset,
             v12_deposits,v12_shoulders)
     root.set_meta("terrain_sediments_v12",v12_stats)
+    var v13_stats := {
+        "scene":preset,"mountain_cells":0,"mountain_edges":0,
+        "ridge_facets":0,"mantle_triangles":0,"ecotone_pieces":0,
+        "water_cells_skipped":0,"road_cells_skipped":0,"batches":0}
+    if continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and (
+            v13_facets or v13_ecotones):
+        v13_stats = MountainBiomesV13.populate(props,detail_cells,preset,
+            v13_facets,v13_ecotones)
+    root.set_meta("terrain_mountain_biomes_v13",v13_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
