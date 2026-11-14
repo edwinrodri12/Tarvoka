@@ -1,0 +1,28 @@
+name: Large-map movement regression
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/Rules.gd'
+      - 'scripts/core/Domains.gd'
+      - 'scripts/core/Weather.gd'
+      - 'tests/test_large_map_movement_contract.gd'
+      - '.github/workflows/large-map-movement.yml'
+  workflow_dispatch:
+jobs:
+  movement:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run large-map movement contract
+        run: |
+          set -euo pipefail
+          timeout 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_large_map_movement_contract.gd 2>&1 | tee /tmp/movement.log
+          ! grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/movement.log
+          grep -F 'PASS large-map movement:' /tmp/movement.log
