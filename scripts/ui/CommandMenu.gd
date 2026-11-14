@@ -45,6 +45,15 @@ var battle_columns: BoxContainer
 var settings_columns: BoxContainer
 var settings_buttons: Dictionary = {}
 var operational_values: Dictionary = {}
+var army_columns: BoxContainer
+var army_list_body: VBoxContainer
+var army_details_body: VBoxContainer
+var army_selected_id := ""
+var army_list_scroll: ScrollContainer
+var production_columns: BoxContainer
+var production_list_body: VBoxContainer
+var production_list_scroll: ScrollContainer
+var production_purchase_buttons: Dictionary = {}
 var _tab_transition: Tween
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
@@ -234,6 +243,122 @@ func _action(body: Container, name: String, callable: Callable, enabled: bool = 
     elif name.begins_with("Preparar escaramuza"):
         Chrome.emphasize(button,"success")
     return button
+
+# A nested scroll leaves both the catalog and the dossier visible at
+# 1280x720; narrow horizontal Android devices can use the same layout.
+func _catalog_scroll(parent: VBoxContainer, title: String) -> VBoxContainer:
+    _heading(parent,title)
+    var scroller := ScrollContainer.new()
+    scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroller.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroller.custom_minimum_size.y = 310
+    scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    parent.add_child(scroller)
+    var content := VBoxContainer.new()
+    content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    content.add_theme_constant_override("separation",6)
+    scroller.add_child(content)
+    if title.begins_with("UNIDADES"):
+        army_list_scroll = scroller
+    elif title.begins_with("CATÁLOGO"):
+        production_list_scroll = scroller
+    return content
+
+func _army_row(unit: Dictionary, viewer: int) -> void:
+    var uid: String = str(unit.get("id",""))
+    var role: String = str(unit.get("role",""))
+    var card := PanelContainer.new()
+    card.name = "Unidad_" + uid.validate_node_name()
+    card.add_theme_stylebox_override("panel",Chrome.box_style(
+        Color("#102638"),Chrome.EDGE,7,5))
+    army_list_body.add_child(card)
+    var body := HBoxContainer.new()
+    body.add_theme_constant_override("separation",7)
+    card.add_child(body)
+    var icon := UnitIcon.new()
+    icon.custom_minimum_size = Vector2(54,54)
+    body.add_child(icon)
+    icon.configure(role,Identity.color_for(board.state,viewer))
+    var caption := VBoxContainer.new()
+    caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    caption.add_theme_constant_override("separation",2)
+    body.add_child(caption)
+    var name := Label.new()
+    name.text = "%s · %s" % [uid,Roles.label(role)]
+    name.add_theme_color_override("font_color",Chrome.TEXT)
+    name.add_theme_font_size_override("font_size",14)
+    name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    caption.add_child(name)
+    var status := Label.new()
+    status.text = "%d HP · %s" % [
+        int(unit.get("hp",0)),
+        "Puede atacar" if not bool(unit.get("acted",true)) else "Ya actuó"
+    ]
+    status.add_theme_color_override("font_color",
+        Chrome.GOLD if not bool(unit.get("acted",true)) else Chrome.MUTED)
+    status.add_theme_font_size_override("font_size",12)
+    caption.add_child(status)
+    var actions := VBoxContainer.new()
+    actions.add_theme_constant_override("separation",4)
+    body.add_child(actions)
+    var dossier := _action(actions,"Ficha",func(): _select_army_unit(uid))
+    dossier.custom_minimum_size = Vector2(92,42)
+    var locate := _action(actions,"Mapa",func(): inspect_unit_requested.emit(uid))
+    locate.custom_minimum_size = Vector2(92,42)
+
+func _select_army_unit(uid: String) -> void:
+    if board == null or army_details_body == null:
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",0))
+    var selected: Dictionary = {}
+    for unit in board.state.get("units",[]):
+        if unit is Dictionary and str(unit.get("id","")) == uid and
+                int(unit.get("faction",-1)) == viewer and int(unit.get("hp",0)) > 0:
+            selected = unit
+            break
+    if selected.is_empty():
+        return
+    army_selected_id = uid
+    _clear(army_details_body)
+    _heading(army_details_body,"FICHA DE UNIDAD")
+    var heading := HBoxContainer.new()
+    heading.add_theme_constant_override("separation",10)
+    army_details_body.add_child(heading)
+    var icon := UnitIcon.new()
+    icon.custom_minimum_size = Vector2(92,92)
+    heading.add_child(icon)
+    icon.configure(str(selected.get("role","")),Identity.color_for(board.state,viewer))
+    var text_column := VBoxContainer.new()
+    text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    heading.add_child(text_column)
+    _description(text_column,"%s · %s" % [uid,Roles.label(str(selected.get("role","")))])
+    _description(text_column,"Dominio: %s" % str(Domains.domain(selected)))
+    var labels := GridContainer.new()
+    labels.name = "EstadisticasUnidades"
+    labels.columns = 2
+    labels.add_theme_constant_override("h_separation",10)
+    labels.add_theme_constant_override("v_separation",5)
+    army_details_body.add_child(labels)
+    for item in [
+        ["VIDA",int(selected.get("hp",0))],
+        ["ATAQUE",int(selected.get("attack",0))],
+        ["DEFENSA",int(selected.get("defense",0))],
+        ["MOVIMIENTO",int(selected.get("move_points",0))],
+        ["ALCANCE MÍN.",int(selected.get("attack_min_range",1))],
+        ["ALCANCE MÁX.",int(selected.get("attack_range",1))]
+    ]:
+        _description(labels,"%s" % item[0])
+        _description(labels,"%d" % item[1])
+    if selected.has("fuel"):
+        _description(army_details_body,"Combustible: %d" % int(selected["fuel"]))
+    if selected.has("ammo"):
+        _description(army_details_body,"Munición: %d" % int(selected["ammo"]))
+    _description(army_details_body,"Movimiento: %s · Ataque: %s" % [
+        "usado" if bool(selected.get("moved",false)) else "disponible",
+        "usado" if bool(selected.get("acted",true)) else "disponible"
+    ])
+    _action(army_details_body,"LOCALIZAR EN EL MAPA",
+        func(): inspect_unit_requested.emit(uid))
 
 func _unit_action(body: VBoxContainer, role: String, label_text: String, action: Callable, enabled: bool = true, faction: int = 0) -> void:
     var row := HBoxContainer.new()
