@@ -39,6 +39,14 @@ static func _protected(shape: MeshInstance3D, root: Node3D,
         node = node.get_parent()
     return false
 
+static func _actually_visible(shape: MeshInstance3D,root: Node3D) -> bool:
+    var node: Node = shape
+    while node != null and node != root:
+        if node is Node3D and not (node as Node3D).visible:
+            return false
+        node = node.get_parent()
+    return true
+
 static func _walk(root: Node, out: Array[MeshInstance3D]) -> void:
     for child in root.get_children():
         if child is MeshInstance3D and not child.has_meta(COAT_TAG):
@@ -204,7 +212,7 @@ static func apply(model: Node3D, weather: String, economy: bool = false,
     _walk(model,shapes)
     var candidates: Array[MeshInstance3D] = []
     for shape in shapes:
-        if not shape.visible or _protected(shape,model,weather):
+        if not _actually_visible(shape,model) or _protected(shape,model,weather):
             result["protected"] += 1
             continue
         if weather == "rain":
