@@ -33,6 +33,7 @@ on:
   push:
     branches:
       - feat/browser-3d-model-lab-20261113
+      - feat/g09-v30-studio-wide-tracks-hit-effects-20261114
       - main
     paths:
       - "scripts/ui/**"
@@ -658,6 +659,27 @@ jobs:
           fi
           grep -q "PASS G09 V25 GLB export:" /tmp/g09-v25-glb.log
           test -s artifacts/TARVOKA_G09_V25_Escultura_Editable.glb
+      - name: G09 V30 definitive wide links and realistic bullet/explosive damage QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v30.gd 2>&1 | tee /tmp/g09-v30-art-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v30-art-studio.log; then exit 1; fi
+          grep -q 'PASS G09 V30:' /tmp/g09-v30-art-studio.log
+      - name: Export V30 widened track and PBR damage into editable GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v30_glb.gd 2>&1 | tee /tmp/g09-v30-export.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v30-export.log; then exit 1; fi
+          grep -q 'PASS G09 V30 GLB export:' /tmp/g09-v30-export.log
+          test -s artifacts/TARVOKA_G09_V30_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -755,6 +777,7 @@ jobs:
             artifacts/TARVOKA_G09_V23_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V24_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V25_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V30_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
