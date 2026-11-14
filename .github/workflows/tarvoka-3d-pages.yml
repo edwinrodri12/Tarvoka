@@ -162,7 +162,7 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path tank-source --export-release 'Web Studio' \
-            tank-source/build/web/index.html 2>&1 | tee /tmp/tank-pages-export.log
+            build/web/index.html 2>&1 | tee /tmp/tank-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/tank-pages-export.log; then
             echo 'G09 V22 WebGL export failed' >&2
             exit 1
