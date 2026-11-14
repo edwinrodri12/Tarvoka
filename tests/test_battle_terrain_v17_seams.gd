@@ -85,6 +85,8 @@ func _run() -> void:
         assert(int(stats["unknown"])==0)
         assert(int(stats["blended_tiles"])==int(stats["land"]))
         assert(int(stats["terrain_blend_extra_batches"])==0)
+        assert(int(stats["terrain_blend_palette_samples"])>0)
+        assert(int(stats["terrain_blend_palette_samples"])<=((dims.x+1)*(dims.y+1)))
         assert(int(stats["land"])+int(stats["water"])==dims.x*dims.y)
         var mesh: Dictionary = _scan_seams(scene)
         assert(int(mesh["chunks"])>0)
