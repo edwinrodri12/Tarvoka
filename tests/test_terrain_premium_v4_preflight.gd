@@ -7,7 +7,7 @@ const Terrain = preload("res://scripts/ui/TerrainStudio3D.gd")
 
 func _initialize() -> void:
     assert(Premium != null and Terrain != null)
-    assert(is_finite(Premium._hash(31,7,4)))
+    assert(Premium._hash(31,7,4) >= 0.0)
     assert(Terrain.SCENES.size() == 3)
     print("PASS terrain premium V4 preload")
     quit(0)
