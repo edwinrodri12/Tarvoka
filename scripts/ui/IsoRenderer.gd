@@ -138,6 +138,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             WorldArt.draw_relay(canvas, c, hw*0.38, tint, phase)
             canvas.draw_polyline(_ring(badge), tint.darkened(0.15), maxf(1.0, hw * 0.025), true)
 
+    var sites_drawn := 0
     if state.has("economy"):
         # Direct painter callers may omit the board's cached snapshot.
         var draw_markers: Array = site_markers if not site_markers.is_empty() else SiteOverlayData.snapshots(state,0)
@@ -145,6 +146,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var cell: Vector2i = marker["pos"]
             if not bounds.has_point(cell):
                 continue
+            sites_drawn += 1
             var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
             if bool(marker.get("visual_command_city",false)):
@@ -152,7 +154,9 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 # command-HQ silhouette from our V13 sculpt. They remain
                 # regular city sites for captures, income and unit rules.
                 # Unknown fogged owners never receive a faction emblem.
-                var faction_id: int = CommandArt.faction_index(state,int(marker["owner"]))
+                var faction_id: int = (int(marker["owner"])
+                    if bool(state.get("__qa_visual_eight_sides",false))
+                    else CommandArt.faction_index(state,int(marker["owner"])))
                 # Commercial HQ sprites are baked offline from the TRUE V13
                 # Godot geometry. Always preserve cheap vector V14 for
                 # battery saver, tiny map tiles or missing imported assets.
@@ -167,6 +171,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             if selected:
                 canvas.draw_polyline(_ring(_poly(cell,canvas,zoom,pan,dims)),
                     Color("#FFE451"),maxf(2.0,hw*0.055),true)
+
+    last_frame_stats["sites_drawn"] = sites_drawn
 
     # Read-only enemy inspection and friendly move+weapon envelopes. Orange
     # marks a possible shot AFTER a separate legal move, never an instant shot.
@@ -214,7 +220,20 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     ThreatPainter.draw_iso(canvas,threat_preview,canvas.size,zoom,pan,dims)
     ComparisonPainter.draw_iso(canvas,compared_cells,canvas.size,zoom,pan,dims)
     # Units are depth-sorted; aircraft have a separate offset and outline.
-    var draw_units: Array = state.get("units", []).duplicate()
+    # 8-player-scale preparation: filter the viewport BEFORE depth sorting.
+    # The tactical state is immutable; this only avoids sorting hundreds of
+    # invisible/faraway entities on every redraw or camera pan.
+    var all_units: Array = state.get("units", [])
+    var draw_units: Array = []
+    for candidate in all_units:
+        if int(candidate.get("hp",0)) <= 0:
+            continue
+        var pos: Vector2i = candidate["pos"]
+        if not bounds.has_point(pos):
+            continue
+        if fog and int(candidate["faction"]) != 0 and not visible.has(pos):
+            continue
+        draw_units.append(candidate)
     draw_units.sort_custom(func(a, b):
         var pos_a: Vector2i = a["pos"]
         var pos_b: Vector2i = b["pos"]
@@ -249,7 +268,9 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 break
         if is_air:
             c += Vector2(hw * 0.23, -hh * 0.48 + sin(phase*2.5) * hh*0.08)
-        var tint: Color = Identity.color_for(state,int(unit["faction"]))
+        var tint: Color = (VisualStyle.faction_color(int(unit["faction"]))
+            if bool(state.get("__qa_visual_eight_sides",false))
+            else Identity.color_for(state,int(unit["faction"])))
         var face: Color = tint.darkened(0.46) if bool(unit.get("acted", false)) else (tint.darkened(0.18) if bool(unit.get("moved", false)) else tint)
         var role: String = str(unit.get("role",""))
         var radius: float = hw * (0.29 if is_air else 0.33)
@@ -320,6 +341,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     int(maxf(10.0,hw*0.19)),Color("#FFD15A"))
 
     last_frame_stats["units_drawn"] = units_drawn
+    last_frame_stats["units_total"] = all_units.size()
+    last_frame_stats["units_sorted"] = draw_units.size()
     if fog:
         var stale_contacts: Dictionary = Visibility.last_known_contacts(state, 0)
         for enemy_id in stale_contacts:
