@@ -9,6 +9,7 @@ const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
 const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
+const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
 
 var board: Control = null
 var last_state_hash := -1
@@ -198,6 +199,7 @@ func _draw() -> void:
     AlertPainter.draw_minimap(self,data.get("alerts",[]),bounds,dims,
         bool(board.get("battery_saver")))
     ThreatPainter.draw_minimap(self,board.call("threat_preview"),bounds,dims)
+    ComparisonPainter.draw_minimap(self,board.call("comparison_cells"),bounds,dims)
     var view: PackedVector2Array = viewport_corners(size,state,board.size,
         float(board.get("iso_zoom")),board.get("iso_pan"))
     if view.size() == 5:
