@@ -1,0 +1,59 @@
+name: TARVOKA G09 V31 3D Studio final track QA and GLB
+on:
+  push:
+    branches:
+      - feat/g09-v31-studio-inboard-track-alignment-20261114
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  v31-studio-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Parse actual showroom Godot scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/v31-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/v31-import.log; then exit 1; fi
+      - name: Verify corrected inboard full-width chains, all gear centers, animations and rendered angles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_track_alignment_v31.gd 2>&1 | tee /tmp/v31-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/v31-test.log; then exit 1; fi
+          grep -q 'PASS G09 V31:' /tmp/v31-test.log
+      - name: Export final real G09 V31 editable 3D GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v31_glb.gd 2>&1 | tee /tmp/v31-glb.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/v31-glb.log; then exit 1; fi
+          grep -q 'PASS G09 V31 GLB export:' /tmp/v31-glb.log
+          test -s artifacts/TARVOKA_G09_V31_Escultura_Editable.glb
+      - name: Keep editable G09 and front/back/side inspection images
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-G09-V31-Final-3D-Model
+          path: |
+            artifacts/TARVOKA_G09_V31_Escultura_Editable.glb
+            artifacts/tarvoka_g09_v31_*.png
+            artifacts/tarvoka_g09_v30_cadenas_sobresalientes_referencia.png
+          if-no-files-found: error
