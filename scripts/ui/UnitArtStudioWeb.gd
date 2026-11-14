@@ -11,10 +11,15 @@ const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
+const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
 
 var model_root: Node3D
 var preview: SubViewport
 var camera: Camera3D
+var battle_scenario: TarvokaTankBattleScenarioV26
+var scenario_button: Button
+var terrain_picker: OptionButton
+var light_picker: OptionButton
 var model_holder: SubViewportContainer
 var role_picker: OptionButton
 var faction_picker: OptionButton
@@ -41,6 +46,9 @@ var _v23_preview := false
 var _v24_preview := false
 var _v25_preview := false
 var _tactical_view := false
+var _scenario_enabled := false
+var _scenario_terrain := 0
+var _scenario_light := 0
 var _clay_review := false
 var _v17_eco := false
 var v11_button: Button
@@ -159,6 +167,13 @@ func _construct() -> void:
     fill.light_energy = 0.8
     preview.add_child(fill)
 
+    # Native battlefield materials; kept entirely outside the tank rig so
+    # it never changes the geometry used in Android sprite captures.
+    battle_scenario = BattleScenarioV26.new()
+    battle_scenario.name = "G09V26EscenarioDeEnsayo"
+    preview.add_child(battle_scenario)
+    battle_scenario.setup(environment,key,fill)
+
     var panel := PanelContainer.new()
     panel.custom_minimum_size.x = 306.0
     panel.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -219,6 +234,22 @@ func _construct() -> void:
     _add_paired(column,"− Alejar",func(): _change_zoom(-1),
         "+ Acercar",func(): _change_zoom(1))
     tactical_button = _button(column,"CÁMARA: Cambiar a vista táctica",_toggle_tactical_camera)
+    _title(column,"V26 · PRUEBAS EN CAMPO DE BATALLA",12)
+    scenario_button = _button(column,"ESCENARIO: Activar campo de batalla",_toggle_scenario)
+    _title(column,"TERRENO DE PRUEBA",12)
+    terrain_picker = OptionButton.new()
+    terrain_picker.custom_minimum_size.y = 44
+    for terrain_name in BattleScenarioV26.TERRAIN_NAMES:
+        terrain_picker.add_item(str(terrain_name))
+    column.add_child(terrain_picker)
+    terrain_picker.item_selected.connect(_on_scenario_terrain)
+    _title(column,"ILUMINACIÓN DE PRUEBA",12)
+    light_picker = OptionButton.new()
+    light_picker.custom_minimum_size.y = 44
+    for period_name in BattleScenarioV26.LIGHT_NAMES:
+        light_picker.add_item(str(period_name))
+    column.add_child(light_picker)
+    light_picker.item_selected.connect(_on_scenario_light)
 
     _title(column,"ANIMACION REAL",12)
     _add_paired(column,"Orugas",func(): _play("move"),
@@ -321,6 +352,14 @@ func _display_role(role: String) -> void:
     v24_button.visible = (_role == "tank")
     v25_button.visible = (_role == "tank")
     tactical_button.visible = (_role == "tank")
+    scenario_button.visible = (_role == "tank")
+    terrain_picker.visible = (_role == "tank")
+    light_picker.visible = (_role == "tank")
+    terrain_picker.select(_scenario_terrain)
+    light_picker.select(_scenario_light)
+    battle_scenario.set_conditions(_scenario_terrain,_scenario_light)
+    battle_scenario.set_active(_scenario_enabled and _role == "tank")
+    scenario_button.text = "ESCENARIO: Volver al estudio neutro" if _scenario_enabled else "ESCENARIO: Activar campo de batalla"
     v21_button.text = "COMPARAR: Volver a V20" if _v21_preview else "V21 · Proa, barbeta y rodaje realista"
     v22_button.text = "COMPARAR: Volver a V21" if _v22_preview else "V22 · Cañón y sistema de retroceso"
     v23_button.text = "COMPARAR: Volver a V22" if _v23_preview else "V23 · Identificación de facción"
@@ -385,6 +424,10 @@ func _update_details() -> void:
     ]
     if _tactical_view:
         status_label.text += " · CÁMARA TÁCTICA"
+    if _scenario_enabled:
+        status_label.text += " · %s / %s (V26)" % [
+            str(BattleScenarioV26.TERRAIN_NAMES[_scenario_terrain]),
+            str(BattleScenarioV26.LIGHT_NAMES[_scenario_light])]
 
 func _toggle_details() -> void:
     if _role != "tank":
@@ -771,6 +814,30 @@ func _toggle_tactical_camera() -> void:
     _tactical_view = not _tactical_view
     _update_camera()
     tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
+    _update_details()
+
+func _toggle_scenario() -> void:
+    if _role != "tank":
+        return
+    _scenario_enabled = not _scenario_enabled
+    battle_scenario.set_active(_scenario_enabled)
+    scenario_button.text = "ESCENARIO: Volver al estudio neutro" if _scenario_enabled else "ESCENARIO: Activar campo de batalla"
+    _update_details()
+
+func _on_scenario_terrain(index: int) -> void:
+    if index<0 or index>=BattleScenarioV26.TERRAIN_NAMES.size():
+        return
+    _scenario_terrain = index
+    battle_scenario.set_conditions(_scenario_terrain,_scenario_light)
+    terrain_picker.select(index)
+    _update_details()
+
+func _on_scenario_light(index: int) -> void:
+    if index<0 or index>=BattleScenarioV26.LIGHT_NAMES.size():
+        return
+    _scenario_light = index
+    battle_scenario.set_conditions(_scenario_terrain,_scenario_light)
+    light_picker.select(index)
     _update_details()
 
 func _toggle_clay() -> void:
