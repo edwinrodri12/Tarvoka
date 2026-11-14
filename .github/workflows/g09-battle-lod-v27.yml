@@ -1,0 +1,73 @@
+name: TARVOKA G09 V27 live battle LOD and Android visual QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/Tank*.gd"
+      - "tests/test_g09_battle_lod_v27.gd"
+      - ".github/workflows/g09-battle-lod-v27.yml"
+  push:
+    branches:
+      - feat/g09-v27-live-battle-android-lod-20261114
+    paths:
+      - "scripts/ui/**"
+      - "tests/test_g09_battle_lod_v27.gd"
+      - ".github/workflows/g09-battle-lod-v27.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-battle-3d-android-lod:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and virtual OpenGL display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Verify GDScript dependencies against actual gameplay main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g09-preflight.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/g09-preflight.log; then
+            exit 1
+          fi
+      - name: Prove V25 tank is playable in actual battle and LOD is bounded
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 185s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_battle_lod_v27.gd 2>&1 | tee /tmp/g09-battle-lod-v27.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-battle-lod-v27.log; then
+            exit 1
+          fi
+          grep -q 'PASS G09 V27:' /tmp/g09-battle-lod-v27.log
+      - name: Confirm fog proof and battle 3D picker/order lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_battle_terrain_3d_v5 test_battle_3d_live_orders_v7 test_battle_3d_picking_v6; do
+            timeout --signal=TERM --kill-after=5s 125s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then
+              exit 1
+            fi
+            grep -q 'PASS' "/tmp/${test}.log"
+          done
