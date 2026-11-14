@@ -10,6 +10,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const TerrainTactics = preload("res://scripts/core/TerrainTactics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -66,7 +67,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             blockers.append(candidate["pos"])
     var moves: Dictionary = {}
     if Turns.can_move(unit, faction):
-        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit), Logistics.road_fast(unit), transit_only)
+        moves = Rules.reachable(origin, Logistics.movement_budget(unit), state["terrain"], blockers, Domains.domain(unit), Logistics.road_fast(unit), transit_only, Weather.from_state(state), Weather.traction(unit))
         moves.erase(origin)
     if Visibility.enabled(state):
         for cell in moves.keys():
@@ -194,6 +195,7 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
+        text += " | Clima: %s" % Weather.label(Weather.from_state(state))
         var weapon_area: Dictionary = friendly_weapon_coverage(state,unit_id)
         if not weapon_area.is_empty():
             text += "\nAzul: movimiento legal | Naranja: cobertura del arma tras mover o desde esta casilla | Rojo: objetivo atacable ahora."
@@ -313,7 +315,7 @@ static func inspect_enemy(state: Dictionary, enemy_id: String, viewer: int = 0) 
         else:
             blockers.append(unit["pos"])
     var base_move: int = maxi(0,int(enemy.get("move_points",0)))
-    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], blockers, Domains.domain(enemy), Logistics.road_fast(enemy), transit_only)
+    var moves: Dictionary = Rules.reachable(origin, base_move, observed["terrain"], blockers, Domains.domain(enemy), Logistics.road_fast(enemy), transit_only, Weather.from_state(state), Weather.traction(enemy))
     moves.erase(origin)
     if fogged:
         for cell in moves.keys():
