@@ -1898,7 +1898,8 @@ func _locate_capture_unit(unit_id: String, site_pos: Vector2i) -> void:
         return
     if board.ai_enabled and int(board.state.get("faction",-1)) != 0:
         return
-    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,0)
+    var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",-1))
+    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,viewer)
     var authorized := false
     var can_move := false
     for candidate in view.get("capturers",[]):
@@ -1909,7 +1910,7 @@ func _locate_capture_unit(unit_id: String, site_pos: Vector2i) -> void:
     if not authorized:
         return
     for unit in board.state.get("units",[]):
-        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != 0 or int(unit.get("hp",0)) <= 0:
+        if not unit is Dictionary or str(unit.get("id","")) != unit_id or int(unit.get("faction",-1)) != viewer or int(unit.get("hp",0)) <= 0:
             continue
         board.cancel_selection()
         board.selected_id = unit_id
@@ -1925,7 +1926,8 @@ func _open_site_production(site_pos: Vector2i) -> void:
         return
     if board.ai_enabled and int(board.state.get("faction",-1)) != 0:
         return
-    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,0)
+    var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",-1))
+    var view: Dictionary = SiteInteraction.describe(board.state,site_pos,viewer)
     if not bool(view.get("production",false)):
         return
     board.cancel_selection()
