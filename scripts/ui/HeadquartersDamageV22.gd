@@ -65,12 +65,33 @@ static func _light(model: Node3D,part: Node3D,level: int) -> void:
     for item in ["PlatoExterior","CentroParabolica",
             "AlimentadorRadar","BrazoInclinable"]:
         _hide(model,item)
-    var dish: MeshInstance3D = HQ._cylinder(
-        broken,"PlatoRadarCaidoV22",
-        Vector3(-1.09,roof_y+0.23,0.64),
-        0.66 if level<3 else 0.88,
-        0.14,STEEL,0.23,16,Vector3(74,21,27))
-    dish.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    # The PREMIUM concave dish (V2/V4) is the large antenna visibly
+    # towering over the HQ. Hide that entire intact assembly, then
+    # reuse its real curved mesh as a fallen, tilted roof fragment.
+    var premium: Node3D = model.find_child(
+        "RadarPremium3D",true,false) as Node3D
+    if premium != null:
+        var original_bowl: MeshInstance3D = premium.find_child(
+            "PlatoParabolicoConcavo",true,false) as MeshInstance3D
+        if original_bowl != null:
+            var fallen := MeshInstance3D.new()
+            fallen.name = "PlatoParabolicoCaidoV22"
+            fallen.mesh = original_bowl.mesh
+            fallen.material_override = original_bowl.material_override
+            fallen.position = Vector3(-1.10,roof_y+0.33,0.64)
+            fallen.rotation_degrees = Vector3(22.0,17.0,31.0)
+            fallen.scale = Vector3(1.28,1.28,1.28)
+            fallen.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            broken.add_child(fallen)
+        premium.visible = false
+    else:
+        # Older low-detail variants still display a physical fallen dish.
+        var dish: MeshInstance3D = HQ._cylinder(
+            broken,"PlatoRadarCaidoV22",
+            Vector3(-1.09,roof_y+0.23,0.64),
+            0.66 if level<3 else 0.88,
+            0.14,STEEL,0.23,16,Vector3(74,21,27))
+        dish.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     _box(broken,"SoporteRadarDesprendidoV22",
         Vector3(-1.54,roof_y+0.18,0.81),
         Vector3(0.12,0.83,0.15),OXIDE,Vector3(14,0,77))
