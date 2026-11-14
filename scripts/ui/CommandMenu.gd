@@ -334,12 +334,15 @@ func _select_army_unit(uid: String) -> void:
     heading.add_child(text_column)
     _description(text_column,"%s · %s" % [uid,Roles.label(str(selected.get("role","")))])
     _description(text_column,"Dominio: %s" % str(Domains.domain(selected)))
-    var labels := GridContainer.new()
-    labels.name = "EstadisticasUnidades"
-    labels.columns = 2
-    labels.add_theme_constant_override("h_separation",10)
-    labels.add_theme_constant_override("v_separation",5)
-    army_details_body.add_child(labels)
+    var stats := GridContainer.new()
+    stats.name = "EstadisticasUnidades"
+    stats.columns = 2
+    stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    stats.add_theme_constant_override("h_separation",8)
+    stats.add_theme_constant_override("v_separation",8)
+    army_details_body.add_child(stats)
+    # Each attribute owns a real width so Godot cannot wrap stat labels into
+    # a vertical column on Android's smaller landscape canvases.
     for item in [
         ["VIDA",int(selected.get("hp",0))],
         ["ATAQUE",int(selected.get("attack",0))],
@@ -348,8 +351,30 @@ func _select_army_unit(uid: String) -> void:
         ["ALCANCE MÍN.",int(selected.get("attack_min_range",1))],
         ["ALCANCE MÁX.",int(selected.get("attack_range",1))]
     ]:
-        _description(labels,"%s" % item[0])
-        _description(labels,"%d" % item[1])
+        var cell := PanelContainer.new()
+        cell.custom_minimum_size.x = 190
+        cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        cell.add_theme_stylebox_override("panel",Chrome.box_style(
+            Color("#0C2535"),Chrome.EDGE,6,5))
+        stats.add_child(cell)
+        var line := HBoxContainer.new()
+        line.add_theme_constant_override("separation",6)
+        cell.add_child(line)
+        var title := Label.new()
+        title.text = str(item[0])
+        title.autowrap_mode = TextServer.AUTOWRAP_OFF
+        title.clip_text = true
+        title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        title.add_theme_font_size_override("font_size",12)
+        title.add_theme_color_override("font_color",Chrome.MUTED)
+        line.add_child(title)
+        var number := Label.new()
+        number.text = "%d" % int(item[1])
+        number.custom_minimum_size.x = 26
+        number.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+        number.add_theme_font_size_override("font_size",18)
+        number.add_theme_color_override("font_color",Chrome.GOLD)
+        line.add_child(number)
     if selected.has("fuel"):
         _description(army_details_body,"Combustible: %d" % int(selected["fuel"]))
     if selected.has("ammo"):
