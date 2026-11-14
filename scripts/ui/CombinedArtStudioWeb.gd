@@ -38,6 +38,11 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_ridges_v7_toggle: CheckButton
+var terrain_shores_v7_toggle: CheckButton
+var terrain_water_v7_toggle: CheckButton
+var terrain_compare_v7_button: Button
+var _terrain_v7_enabled := true
 var terrain_ridges_v6_toggle: CheckButton
 var terrain_forest_v6_toggle: CheckButton
 var terrain_banks_v6_toggle: CheckButton
@@ -246,6 +251,30 @@ func _add_building_mode() -> void:
         "COMPARAR: volver al terreno V5",_toggle_v6_finish)
     terrain_compare_v6_button.name = "ComparadorTerrenoV5V6"
     terrain_compare_v6_button.custom_minimum_size.y = 50
+
+    _title(terrain_controls,"EROSIÓN Y AGUA NATURAL V7",13)
+    terrain_ridges_v7_toggle = CheckButton.new()
+    terrain_ridges_v7_toggle.name = "MacizosErosionadosV7"
+    terrain_ridges_v7_toggle.text = "Montañas erosionadas sin picos idénticos"
+    terrain_ridges_v7_toggle.button_pressed = true
+    terrain_ridges_v7_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_ridges_v7_toggle)
+    terrain_shores_v7_toggle = CheckButton.new()
+    terrain_shores_v7_toggle.name = "SedimentosDeRiberaV7"
+    terrain_shores_v7_toggle.text = "Orillas en pendiente, sin paredes verticales"
+    terrain_shores_v7_toggle.button_pressed = true
+    terrain_shores_v7_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_shores_v7_toggle)
+    terrain_water_v7_toggle = CheckButton.new()
+    terrain_water_v7_toggle.name = "AguaSinPatronesV7"
+    terrain_water_v7_toggle.text = "Agua con ondulaciones suaves y variadas"
+    terrain_water_v7_toggle.button_pressed = true
+    terrain_water_v7_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_water_v7_toggle)
+    terrain_compare_v7_button = _button(terrain_controls,
+        "COMPARAR: volver al terreno V6",_toggle_v7_finish)
+    terrain_compare_v7_button.name = "ComparadorTerrenoV6V7"
+    terrain_compare_v7_button.custom_minimum_size.y = 50
 
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
@@ -479,7 +508,18 @@ func _change_terrain_camera(_index: int) -> void:
     if _role == "terrain":
         _update_camera()
 
+func _toggle_v7_finish() -> void:
+    _terrain_v7_enabled = not _terrain_v7_enabled
+    terrain_compare_v7_button.text = (
+        "COMPARAR: volver al terreno V6" if _terrain_v7_enabled
+        else "VOLVER AL TERRENO V7")
+    _rebuild_terrain(false)
+
 func _toggle_v6_finish() -> void:
+    # V6/V5 compare must temporarily disable V7 or its replacement
+    # meshes would conceal the versions being compared.
+    _terrain_v7_enabled = false
+    terrain_compare_v7_button.text = "VOLVER AL TERRENO V7"
     _terrain_v6_enabled = not _terrain_v6_enabled
     terrain_compare_v6_button.text = (
         "COMPARAR: volver al terreno V5" if _terrain_v6_enabled
@@ -487,6 +527,10 @@ func _toggle_v6_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v5_finish() -> void:
+    _terrain_v7_enabled = false
+    _terrain_v6_enabled = false
+    terrain_compare_v7_button.text = "VOLVER AL TERRENO V7"
+    terrain_compare_v6_button.text = "VOLVER AL TERRENO V6"
     _terrain_v5_enabled = not _terrain_v5_enabled
     terrain_compare_button.text = (
         "COMPARAR: volver a acabado V4" if _terrain_v5_enabled
@@ -562,7 +606,10 @@ func _display_terrain() -> void:
         terrain_bridge_v4_toggle.button_pressed,
         _terrain_v6_enabled and terrain_ridges_v6_toggle.button_pressed,
         _terrain_v6_enabled and terrain_forest_v6_toggle.button_pressed,
-        _terrain_v6_enabled and terrain_banks_v6_toggle.button_pressed)
+        _terrain_v6_enabled and terrain_banks_v6_toggle.button_pressed,
+        _terrain_v7_enabled and terrain_ridges_v7_toggle.button_pressed,
+        _terrain_v7_enabled and terrain_shores_v7_toggle.button_pressed,
+        _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -767,6 +814,12 @@ func _update_details() -> void:
             status_label.text += " · V6: %d crestas, %d árboles, %d orillas (%d lotes)" % [
                 int(v6.get("ridges",0)),int(v6.get("trees",0)),
                 int(v6.get("banks",0)),int(v6.get("batches",0))]
+        var v7: Dictionary = model_root.get_meta("terrain_erosion_v7",{})
+        if int(v7.get("batches",0)) > 0:
+            status_label.text += " · V7: %d montaña, %d riberas, %d ondulaciones (%d lotes)" % [
+                int(v7.get("mountain_cells",0)),
+                int(v7.get("shore_edges",0)),
+                int(v7.get("wave_strips",0)),int(v7.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
