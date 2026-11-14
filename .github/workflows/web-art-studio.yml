@@ -82,14 +82,6 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
-      - name: Diagnose standalone V26 scenario GDScript compile before studio preflight
-        shell: bash
-        run: |
-          set +e
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
-            --script res://scripts/ui/TankBattleScenarioV26.gd \
-            --quit 2>&1 | tee /tmp/g09-v26-parser-diagnostic.log
-          echo "V26 direct-script diagnostic finished"
       - name: Preflight parse imported G09 V11 scripts
         shell: bash
         run: |
@@ -99,6 +91,23 @@ jobs:
             echo "GDScript parse errors before 3D test" >&2
             exit 1
           fi
+      - name: Verify G09 V26 battlefield lighting and terrain across twelve conditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v26.gd 2>&1 | tee /tmp/g09-v26-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v26-art.log; then
+            echo "G09 V26 terrain/day-dusk-night comparison or faction visibility failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V26:" /tmp/g09-v26-art.log
+          test -s artifacts/tarvoka_g09_v26_12_lighting_terrain.png
+          test -s artifacts/tarvoka_g09_v25_day_vs_night.png
+          test -s artifacts/tarvoka_g09_v24_v25_night_forest.png
+          test -s artifacts/tarvoka_g09_v26_eight_factions_night.png
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
@@ -649,23 +658,6 @@ jobs:
           fi
           grep -q "PASS G09 V25 GLB export:" /tmp/g09-v25-glb.log
           test -s artifacts/TARVOKA_G09_V25_Escultura_Editable.glb
-      - name: Verify G09 V26 battlefield lighting and terrain across twelve conditions
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
-            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
-            --rendering-driver opengl3 --audio-driver Dummy \
-            --script res://tests/test_g09_art_v26.gd 2>&1 | tee /tmp/g09-v26-art.log
-          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v26-art.log; then
-            echo "G09 V26 terrain/day-dusk-night comparison or faction visibility failed" >&2
-            exit 1
-          fi
-          grep -q "PASS G09 V26:" /tmp/g09-v26-art.log
-          test -s artifacts/tarvoka_g09_v26_12_lighting_terrain.png
-          test -s artifacts/tarvoka_g09_v25_day_vs_night.png
-          test -s artifacts/tarvoka_g09_v24_v25_night_forest.png
-          test -s artifacts/tarvoka_g09_v26_eight_factions_night.png
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
