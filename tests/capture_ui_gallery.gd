@@ -89,6 +89,11 @@ func _run_gallery() -> void:
     main._open_command_menu()
     if not await _capture_landscape("08-mando-1280x720",Vector2i(1280,720),"Centro de mando · operaciones"):
         _failed = true
+    if not await _capture_landscape("13-mando-960x540",Vector2i(960,540),"Centro de mando · horizontal compacto"):
+        _failed = true
+    if main.command_menu.operational_values.size() != 4:
+        push_error("Operational command tiles are not present in compact landscape.")
+        _failed = true
     main.command_menu.open_for(main.board,"Ajustes")
     if not await _capture_landscape("09-ajustes-1280x720",Vector2i(1280,720),"Ajustes · configuraciones tácticas"):
         _failed = true
@@ -99,6 +104,11 @@ func _run_gallery() -> void:
     main.board.state["winner"] = 0
     main._process(0.0)
     if not await _capture_landscape("10-resultados-1280x720",Vector2i(1280,720),"Resultados · simulación visual"):
+        _failed = true
+    if not await _capture_landscape("14-resultados-960x540",Vector2i(960,540),"Resultados · horizontal compacto"):
+        _failed = true
+    if main.results_panel.result_columns.vertical:
+        push_error("Result screen stacked cards on a horizontal phone.")
         _failed = true
     main._show_home_menu()
     main._open_saved_matches_from_home()
@@ -127,11 +137,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 12:
-        push_error("Landscape UI QA incomplete: %d/12 captures" % _manifest.size())
+    if _failed or _manifest.size() != 14:
+        push_error("Landscape UI QA incomplete: %d/14 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 12 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 14 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
