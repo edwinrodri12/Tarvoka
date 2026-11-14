@@ -89,5 +89,30 @@ func _initialize() -> void:
     # A zero-budget query cannot move, but retains the legal origin.
     var zero_budget: Dictionary = rules.reachable(origin, 0, terrain, blocked)
     assert(zero_budget.size() == 1 and zero_budget.has(origin))
+    # Large-map boundary regression: 40x30 routes must use real dimensions.
+    var large_map: Array = []
+    for large_y in range(30):
+        var large_row: Array = []
+        for large_x in range(40):
+            large_row.append("plain")
+        large_map.append(large_row)
+    assert(rules.valid_terrain(large_map))
+    var far_corner := Vector2i(39, 29)
+    var far_routes: Dictionary = rules.reachable(far_corner, 1, large_map, blocked)
+    assert(far_routes.size() == 3)
+    assert(far_routes.has(far_corner))
+    assert(far_routes.has(Vector2i(38, 29)))
+    assert(far_routes.has(Vector2i(39, 28)))
+    assert(not far_routes.has(Vector2i(40, 29)))
+    assert(not far_routes.has(Vector2i(39, 30)))
+    assert(rules.reachable(Vector2i(40, 29), 1, large_map, blocked).is_empty())
+    assert(rules.reachable(Vector2i(-1, 29), 1, large_map, blocked).is_empty())
+    var unsupported_map: Array = large_map.slice(0, 29)
+    assert(not rules.valid_terrain(unsupported_map))
+    assert(rules.reachable(far_corner, 1, unsupported_map, blocked).is_empty())
+    var ragged_map: Array = large_map.duplicate(true)
+    ragged_map[29].pop_back()
+    assert(not rules.valid_terrain(ragged_map))
+    assert(rules.reachable(far_corner, 1, ragged_map, blocked).is_empty())
     print("PASS: road/weather cost parity")
     quit()
