@@ -220,6 +220,7 @@ jobs:
           test -s artifacts/tarvoka_hq_v4_vs_v7_sculpted_front.png
           test -s artifacts/tarvoka_hq_v7_level3.png
           test -s artifacts/tarvoka_hq_v7_damaged.png
+          test -s artifacts/tarvoka_hq_v7_entrance_closeup.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -289,6 +290,7 @@ jobs:
             artifacts/tarvoka_hq_v4_vs_v7_sculpted_front.png
             artifacts/tarvoka_hq_v7_level3.png
             artifacts/tarvoka_hq_v7_damaged.png
+            artifacts/tarvoka_hq_v7_entrance_closeup.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
