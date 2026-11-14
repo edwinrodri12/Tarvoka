@@ -9,6 +9,9 @@ on:
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/TerrainStudioScatter3D.gd"
       - "tests/test_terrain_studio_preflight.gd"
+      - "tests/test_terrain_studio_slope_transitions.gd"
+      - "scripts/ui/TerrainStudioRoadShore3D.gd"
+      - "scripts/ui/TerrainSurfaceSampler3D.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
       - "scripts/ui/HeadquartersDetail3D.gd"
@@ -176,6 +179,18 @@ jobs:
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
           test -s artifacts/tarvoka_g09_v10_four_angles.png
           test -s artifacts/tarvoka_g09_v9_closeup_engine.png
+      - name: Verify 3D terrain slopes and roads across all biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 80s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_studio_slope_transitions.gd 2>&1 | tee /tmp/terrain-slopes-check.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-slopes-check.log; then
+            echo "Terrain slopes or generated road shoreline meshes failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_SLOPES:' /tmp/terrain-slopes-check.log
       - name: Verify native 3D terrain and unified studio scenes
         shell: bash
         run: |
