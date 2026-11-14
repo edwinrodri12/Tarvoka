@@ -398,6 +398,19 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
                 "CarrilleraEscalonada" in piece.name or
                 "CantoProa" in piece.name)
             piece.visible = stage < 4 and not (stage >= 3 and starboard_hit)
+    # V15 reshapes the SAME V14 armor nodes. Re-hide old projecting welds
+    # after each V14 visibility pass; new flush seams follow the intact hull
+    # and detach on the damaged starboard side.
+    if model.get_meta("tarvoka_mbt_integrated_v15",false):
+        for retired_name in ["G09V14CantoProa_-1","G09V14CantoProa_1",
+                "G09V14NervioLongitudinal_-1","G09V14NervioLongitudinal_1",
+                "G09V14JuntaCarrillera_-1","G09V14JuntaCarrillera_1"]:
+            var retired: Node3D = model.find_child(retired_name,true,false) as Node3D
+            if retired != null:
+                retired.visible = false
+        for join in model.find_children("G09V15*","MeshInstance3D",true,false):
+            var hit: bool = str(join.name).ends_with("_1")
+            join.visible = stage < 4 and not (stage >= 3 and hit)
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
