@@ -60,6 +60,7 @@ func _run() -> void:
     # Medium 24x18 randomized battlefield, with fog and modern forces.
     studio.battle_scenario_picker.select(4)
     studio.battle_size_picker.select(1)
+    studio.battle_fog_toggle.button_pressed = true
     studio._reset_battle_demo()
     assert(studio.model_root.get_meta("board_size") == Vector2i(24,18))
     assert(Rules.map_size(studio.battle_sample_board.state["terrain"]) == Vector2i(24,18))
