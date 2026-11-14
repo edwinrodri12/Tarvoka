@@ -6,6 +6,7 @@ const Board = preload("res://scripts/ui/TouchBoard.gd")
 const Commands = preload("res://scripts/ui/Battle3DOrders.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
+const Terrain3D = preload("res://scripts/ui/BattleTerrain3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -111,6 +112,37 @@ func _run() -> void:
     assert(Commands.next_friendly(board.state,Vector2i(2,2),"A")=="P")
     assert(Commands.next_friendly(board.state,Vector2i(2,2),"P")=="A")
 
+    # A hostile aircraft may share a tile with FRIENDLY surface infantry.
+    # Anti-air fire must pick the target from TacticalHints, never the first
+    # occupant returned from the visual scene.
+    var shooter: Dictionary = _soldier("A",0,Vector2i(1,2))
+    shooter["target_domains"] = ["air"]
+    var infantry: Dictionary = _soldier("F",0,Vector2i(2,2))
+    var hostile_plane: Dictionary = _soldier("E",1,Vector2i(2,2))
+    hostile_plane["domain"] = "air"
+    board.state = Session.start([shooter,infantry,hostile_plane],
+        Scenarios.terrain(0),0,false,false,false,false,false)
+    board.selected_id = "A"
+    var shared_attack: Dictionary = Commands.legal_intent(
+        board.state,"A",Vector2i(2,2))
+    assert(shared_attack.get("kind")=="attack")
+    assert(shared_attack.get("target_id")=="E")
+    var shared_world: Node3D = Terrain3D.build(board.state,"A")
+    var ground_model: Node3D = shared_world.find_child("Unidad3D_F",true,false) as Node3D
+    var flight_model: Node3D = shared_world.find_child("Unidad3D_E",true,false) as Node3D
+    assert(ground_model != null and flight_model != null)
+    assert(ground_model.get_meta("visual_layer")=="surface")
+    assert(flight_model.get_meta("visual_layer")=="air")
+    assert(flight_model.position.y-ground_model.position.y > 1.7)
+    shared_world.free()
+    var ground_hp: int = int(_unit(board.state,"F")["hp"])
+    var flying_hp: int = int(_unit(board.state,"E")["hp"])
+    quote = Commands.request_preview(board,shared_attack)
+    assert(quote.get("order",{}).get("target_id")=="E")
+    assert(Commands.confirm(board,quote))
+    assert(int(_unit(board.state,"F")["hp"])==ground_hp)
+    assert(int(_unit(board.state,"E")["hp"])<flying_hp)
+
     # A fogged opponent must not be exposed or hit by a new 3D overlay.
     board.state = Session.start([
         _soldier("A",0,Vector2i(1,2)),
@@ -129,5 +161,5 @@ func _run() -> void:
     assert(Commands.request_preview(board,intent).is_empty())
     board.free()
     assert(not snapshot.is_empty())
-    print("PASS BATTLE_3D_ORDERS_V7: preview never commits, mandatory explicit confirm, real damage+movement, air/surface layers, stale/fog guards")
+    print("PASS BATTLE_3D_ORDERS_V7: preview never commits, mandatory explicit confirm, real damage+movement, overlapping hostile aircraft, air/surface layers, stale/fog guards")
     quit(0)
