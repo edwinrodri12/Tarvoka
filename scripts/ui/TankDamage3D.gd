@@ -128,10 +128,11 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
             var swish: float = elapsed*3.2+float(index)*1.8
             flame.rotation_degrees.z = [-18.0,12.0,23.0][index] + 4.5*sin(swish)
             flame.scale = Vector3.ONE * (0.92 + 0.11*sin(swish*1.7))
-        if model.get_meta("tarvoka_mbt_fx_v17",false):
-            V17.animate_effects(model,elapsed)
-        elif model.get_meta("tarvoka_mbt_finish_v16",false):
+        if not model.get_meta("tarvoka_mbt_fx_v17",false) and model.get_meta("tarvoka_mbt_finish_v16",false):
             V16.animate_fire(model,elapsed)
+    # V17 plumes also rise during moderate/critical damage (stages 2-3).
+    if model.get_meta("tarvoka_mbt_fx_v17",false):
+        V17.animate_effects(model,elapsed)
 
 # Angled, light-emitting flame tongues instead of a fire effect made
 # entirely of round spheres. Kept under 8 segments for Android OpenGL.
