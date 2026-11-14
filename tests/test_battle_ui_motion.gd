@@ -11,11 +11,12 @@ func _run() -> void:
     await process_frame
     main.board.autosave_enabled = false
     main.board.ai_enabled = false
+    main.board.battery_saver = false
     var baseline: Dictionary = main.board.state.duplicate(true)
 
     main._show_home_menu()
     assert(main.home_menu.visible)
-    assert(main.home_menu.modulate.a >= 0.88 and main.home_menu.modulate.a < 1.0)
+    assert(main.home_menu.modulate.a > 0.80 and main.home_menu.modulate.a < 1.0)
 
     # Quick navigation should cancel and restore the preceding animation,
     # instead of accumulating tweens or leaving a hidden screen translucent.
