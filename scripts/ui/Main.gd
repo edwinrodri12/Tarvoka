@@ -143,6 +143,7 @@ var resupply_button: Button
 var repair_button: Button
 var repair_popup: PopupMenu
 var _repair_targets: Array = []
+var _repair_ui_signature := -1
 var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
@@ -1670,20 +1671,23 @@ func _process(_delta: float) -> void:
     if not compact_resupply.disabled:
         var compact_order: Dictionary = Logistics.quote(board.state, board.selected_id)
         compact_resupply.text = "Cargar M/F" if int(compact_order.get("fuel", 0)) + int(compact_order.get("cargo_fuel", 0)) > 0 else "Cargar mun."
-    # The repair choice shares the exact authoritative quote for desktop
-    # and Android; never execute a repair merely on button activation.
-    var chosen_engineer := false
-    if board.state.has("economy") and bool(board.state["economy"].get("modern",false)):
-        for unit in board.state.get("units",[]):
-            if str(unit.get("id","")) == board.selected_id:
-                chosen_engineer = (str(unit.get("role","")) == "engineer"
-                    and int(unit.get("faction",-1)) == int(board.state.get("faction",-2))
-                    and (not board.ai_enabled or int(board.state.get("faction",-1)) == 0))
-                break
-    repair_button.visible = chosen_engineer and board.inspected_enemy_id.is_empty()
-    repair_button.disabled = board.repair_options_selected().is_empty() if repair_button.visible else true
-    compact_repair.visible = repair_button.visible
-    compact_repair.disabled = repair_button.disabled
+    # Avoid scanning the complete 8-player-scale army every visual frame:
+    # refresh repair eligibility only when tactical state or selection changes.
+    # Each target option is quoted again when the user selects the menu entry.
+    if summary_key != _repair_ui_signature:
+        _repair_ui_signature = summary_key
+        var chosen_engineer := false
+        if board.state.has("economy") and bool(board.state["economy"].get("modern",false)):
+            for unit in board.state.get("units",[]):
+                if str(unit.get("id","")) == board.selected_id:
+                    chosen_engineer = (str(unit.get("role","")) == "engineer"
+                        and int(unit.get("faction",-1)) == int(board.state.get("faction",-2))
+                        and (not board.ai_enabled or int(board.state.get("faction",-1)) == 0))
+                    break
+        repair_button.visible = chosen_engineer and board.inspected_enemy_id.is_empty()
+        repair_button.disabled = board.repair_options_selected().is_empty() if repair_button.visible else true
+        compact_repair.visible = repair_button.visible
+        compact_repair.disabled = repair_button.disabled
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")
