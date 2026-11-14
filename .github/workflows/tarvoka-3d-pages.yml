@@ -401,6 +401,8 @@ jobs:
           test -s apc-p06-source/tests/export_apc_p06_v3_glb.gd
           grep -q 'var _apc_v3_preview := true' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
           grep -q '_cycle_apc_damage' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
+          grep -q 'APC V3 · TECHO, JUNTAS, TORRETA Y DAÑOS' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
+          grep -q 'APCFinishV3.apply_stage' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
           test -s apc-p06-source/tests/test_apc_p06_art_v2.gd
           test -s apc-p06-source/tests/export_apc_p06_v2_glb.gd
           grep -q 'var _apc_v2_preview := true' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
