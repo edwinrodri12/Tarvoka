@@ -94,6 +94,29 @@ func _run() -> void:
     assert(detailed_vertices.size() > mobile_vertices.size())
     assert(detailed_vertices.size() >= 90)
     assert(detailed_pine.surface_get_material(0) != null)
+    assert(Conifers.PROFILE_COUNT == 3)
+    assert(Conifers.profile_for(Vector2i(2,5),0) == (
+        Conifers.profile_for(Vector2i(2,5),0)))
+    var profile_colors: Dictionary = {}
+    for profile in range(Conifers.PROFILE_COUNT):
+        var model: ArrayMesh = Conifers.build_crown(true,profile)
+        assert(model.get_surface_count() == 1)
+        var verts: PackedVector3Array = model.surface_get_arrays(
+            0)[Mesh.ARRAY_VERTEX]
+        var widest := 0.0
+        var highest := 0.0
+        for point in verts:
+            widest = maxf(widest,Vector2(point.x,point.z).length())
+            highest = maxf(highest,point.y)
+            assert(point.is_finite())
+        assert(widest > 0.10 and highest > 0.35)
+        profile_colors["%.3f/%.3f" % [widest,highest]] = true
+        var economy: ArrayMesh = Conifers.build_crown(false,profile)
+        assert(economy.surface_get_arrays(
+            0)[Mesh.ARRAY_VERTEX].size() < verts.size())
+    assert(profile_colors.size() == 3)
+    assert(Conifers.make_material(true) is ShaderMaterial)
+    assert(Conifers.make_material(false) is StandardMaterial3D)
     for vertex in detailed_vertices:
         assert(vertex.is_finite())
         assert(vertex.y >= 0.0 and vertex.y <= 1.2)
@@ -108,6 +131,23 @@ func _run() -> void:
         assert(spot == Understory.placement(Vector2i(7,3),index))
         assert(spot.x >= 0.15 and spot.x <= 0.85)
         assert(spot.y >= 0.15 and spot.y <= 0.85)
+    for side in range(4):
+        for index in range(3):
+            var edge: Vector2 = Understory.edge_placement(
+                Vector2i(7,3),side,index)
+            assert(edge == Understory.edge_placement(
+                Vector2i(7,3),side,index))
+            assert(edge.x >= 0.06 and edge.x <= 0.94)
+            assert(edge.y >= 0.06 and edge.y <= 0.94)
+            match side:
+                0:
+                    assert(edge.y < 0.15)
+                1:
+                    assert(edge.x > 0.85)
+                2:
+                    assert(edge.y > 0.85)
+                _:
+                    assert(edge.x < 0.15)
     var water_full: ShaderMaterial = WaterMaterial.make_material(true)
     var water_mobile: ShaderMaterial = WaterMaterial.make_material(false)
     assert(water_full.shader != null)
