@@ -28,6 +28,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure all nine baked assets are present in playable source, not copied at runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {0..7}; do
+            test -s "assets/buildings/hq_v15/hq_${i}.png"
+          done
+          test -s assets/buildings/hq_v15/hq_neutral.png
+          test -s tests/test_hq_v15_baked_mobile.gd
+          test -s scripts/ui/HeadquartersSpriteV15.gd
+          # The game itself deliberately does NOT load or ship V13 3D source.
+          test ! -e scripts/ui/HeadquartersProductionV13.gd
       - name: Install Godot 4.3 runtime and import nine baked HQ sprites
         shell: bash
         run: |
