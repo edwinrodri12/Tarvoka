@@ -70,7 +70,7 @@ func advance(delta: float) -> void:
         var left: bool = damage_stage == 3 and plume < 3
         var base := Vector3(-4.18,2.26,-3.25) if left else Vector3(4.04,2.43,-3.25)
         for shell in range(LAYERS):
-            var i: int = plume*LAYERS+shell
+            var i: int = shell*_sources+plume
             var phase: float = fposmod(_seconds*(0.19+float(plume%3)*0.036)
                 +float(plume)*0.229+float(shell)*0.173,1.0)
             var drift := Vector3(
@@ -98,8 +98,8 @@ func set_distant(distant: bool) -> void:
 func set_mobile_quality(enabled: bool) -> void:
     _mobile_quality = enabled
     if _smoke_batch != null:
-        # Render two shells per source on lower-end Android;
-        # no new mesh materials, only fewer instances.
+        # Shell-major ordering preserves ALL smoke origins when low-end
+        # Android limits the number of shells to two per plume.
         _smoke_batch.multimesh.visible_instance_count = (
             _sources*2 if enabled else _sources*LAYERS)
 
