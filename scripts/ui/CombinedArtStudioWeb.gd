@@ -85,7 +85,7 @@ func _setup_architecture_stage() -> void:
         lamp.position = lamp_data[0] as Vector3
         lamp.light_color = lamp_data[1] as Color
         lamp.omni_range = float(lamp_data[2])*1.55
-        lamp.light_energy = 2.05
+        lamp.light_energy = 1.75
         lamp.shadow_enabled = false
         lamp.visible = false
         preview.add_child(lamp)
@@ -101,11 +101,11 @@ func _apply_hq_lighting(index: int) -> void:
     # Three reproducible lighting rigs, same camera and exact 3D material.
     # Material response is measured instead of painted with false colors.
     var sun_color := [Color("#fff3e4"),Color("#ffc289"),Color("#b5d2f5")]
-    var sky_color := [Color("#14232d"),Color("#493b38"),Color("#14253a")]
+    var sky_color := [Color("#14232d"),Color("#493b38"),Color("#040b18")]
     var ambient_color := [Color("#c1d5de"),Color("#e1a789"),Color("#b5cbe3")]
-    var key_energy := [1.65,1.23,0.78]
-    var fill_energy := [0.80,0.37,0.68]
-    var ambient_energy := [0.84,0.61,1.08]
+    var key_energy := [1.65,1.23,0.61]
+    var fill_energy := [0.80,0.37,0.51]
+    var ambient_energy := [0.84,0.61,1.02]
     var pitch := [-46.0,-18.0,-29.0]
     if hq_key_light != null:
         hq_key_light.rotation_degrees = Vector3(float(pitch[preset]),-32.0,0)
@@ -125,7 +125,7 @@ func _apply_hq_lighting(index: int) -> void:
     if hq_ground != null:
         var ground_mat: StandardMaterial3D = hq_ground.material_override as StandardMaterial3D
         if ground_mat != null:
-            ground_mat.albedo_color = Color("#2d3d4c") if active and preset == 2 else Color("#182d32")
+            ground_mat.albedo_color = Color("#171f2b") if active and preset == 2 else Color("#182d32")
 
 func _change_hq_lighting(index: int) -> void:
     _apply_hq_lighting(index)
