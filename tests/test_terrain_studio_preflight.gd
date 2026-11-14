@@ -12,6 +12,7 @@ func _inspect() -> void:
             "res://scripts/ui/BattleTerrain3D.gd",
             "res://scripts/ui/BattleTerrainPicker3D.gd",
             "res://scripts/ui/BattleRanges3D.gd",
+            "res://scripts/ui/Battle3DOrders.gd",
             "res://scripts/ui/Battle3DMapView.gd",
             "res://scripts/ui/Main.gd",
             "res://scripts/ui/CombinedArtStudioWeb.gd"]:
