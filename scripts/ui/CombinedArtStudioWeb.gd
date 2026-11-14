@@ -18,6 +18,7 @@ var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
 var terrain_textures_toggle: CheckButton
+var terrain_scatter_toggle: CheckButton
 var terrain_premium_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
@@ -144,6 +145,13 @@ func _add_building_mode() -> void:
     terrain_continuous_toggle.button_pressed = true
     terrain_continuous_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_continuous_toggle)
+
+    terrain_scatter_toggle = CheckButton.new()
+    terrain_scatter_toggle.name = "PendientesVegetacionCostaV3"
+    terrain_scatter_toggle.text = "Relieve, caminos y vegetación V3.1"
+    terrain_scatter_toggle.button_pressed = true
+    terrain_scatter_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_scatter_toggle)
 
     _title(terrain_controls,"ACABADO DE SUPERFICIES",13)
     terrain_textures_toggle = CheckButton.new()
@@ -289,7 +297,8 @@ func _display_terrain() -> void:
     _role = "terrain"
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
         terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
-        _faction,terrain_continuous_toggle.button_pressed)
+        _faction,terrain_continuous_toggle.button_pressed,
+        terrain_scatter_toggle.button_pressed)
     if terrain_textures_toggle.button_pressed:
         TerrainStudio.apply_texture_finish(model_root)
     if terrain_continuous_toggle.button_pressed and terrain_premium_toggle.button_pressed:
@@ -362,9 +371,11 @@ func _update_details() -> void:
             int(model_root.get_meta("terrain_tile_count",0)),
             Models.inspect_meshes(model_root),
             "TEXTURAS PBR" if model_root.get_meta("terrain_textures_pbr",false) else "MATERIALES PLANOS"]
-        status_label.text = "Bosques %d · Montañas %d · Agua %d · Carreteras %d" % [
+        var scatter: Dictionary = model_root.get_meta("terrain_scatter_counts",{})
+        status_label.text = "Bosques %d · Montañas %d · Agua %d · Carreteras %d · Instancias %d" % [
             int(counts.get("forest",0)),int(counts.get("mountain",0)),
-            int(counts.get("water",0)),int(counts.get("road",0))]
+            int(counts.get("water",0)),int(counts.get("road",0)),
+            int(scatter.get("grass",0))+int(scatter.get("reeds",0))+int(scatter.get("gravel",0))]
         return
     if _role != "headquarters":
         super._update_details()

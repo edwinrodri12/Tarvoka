@@ -8,6 +8,11 @@ on:
       - "scripts/ui/TerrainStudio3D.gd"
       - "scripts/ui/TerrainTextures3D.gd"
       - "scripts/ui/TerrainStudioPremiumFinish3D.gd"
+      - "scripts/ui/TerrainSurfaceSampler3D.gd"
+      - "scripts/ui/TerrainStudioScatter3D.gd"
+      - "scripts/ui/TerrainStudioRoadShore3D.gd"
+      - "tests/test_terrain_studio_slope_transitions.gd"
+      - "tests/test_terrain_studio_preflight.gd"
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
@@ -77,6 +82,19 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Parse integrated terrain modules with explicit diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 35s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_integrated_preflight.gd \
+            2>&1 | tee /tmp/integrated-terrain-preflight.log
+          if grep -E "SCRIPT ERROR:|ERROR:|FAILED_TO_LOAD_TERRAIN" /tmp/integrated-terrain-preflight.log; then
+            echo "Combined terrain V3+PBR+V4 scripts failed to load" >&2
+            exit 1
+          fi
+          grep -q "PASS integrated terrain preflight:" /tmp/integrated-terrain-preflight.log
       - name: Quick parse gate for V4 terrain module
         shell: bash
         run: |
@@ -90,6 +108,15 @@ jobs:
             exit 1
           fi
           grep -q "PASS terrain premium V4 preload" /tmp/terrain-v4-preflight.log
+          timeout --signal=TERM --kill-after=5s 35s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_studio_preflight.gd \
+            2>&1 | tee /tmp/terrain-v3-preflight.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-v3-preflight.log; then
+            echo "V3.1 terrain scatter, road and slope load failed" >&2
+            exit 1
+          fi
+          grep -q "PASS TERRAIN_PREFLIGHT:" /tmp/terrain-v3-preflight.log
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
@@ -194,6 +221,17 @@ jobs:
           test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
           test -s artifacts/tarvoka_terrain_pbr_comparison.png
           test -s artifacts/tarvoka_terrain_v4_premium_comparison.png
+          test -s artifacts/tarvoka_terrain_v2_v3_same_camera.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_slope_transitions.gd \
+            2>&1 | tee /tmp/terrain-slope-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-slope-check.log; then
+            echo "V3.1 surface height alignment failed" >&2
+            exit 1
+          fi
+          grep -q "PASS TERRAIN_SLOPES:" /tmp/terrain-slope-check.log
           for i in 00 01 02; do test -s "artifacts/tarvoka_terrain_scene_${i}.png"; done
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
@@ -239,6 +277,7 @@ jobs:
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_pbr_comparison.png
             artifacts/tarvoka_terrain_v4_premium_comparison.png
+            artifacts/tarvoka_terrain_v2_v3_same_camera.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
