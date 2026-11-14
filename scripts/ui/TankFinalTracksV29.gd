@@ -64,7 +64,7 @@ const LEGACY_PATTERNS := [
     "EslabonTreadInferior%s_%02d"
 ]
 
-static func _shoe_transform(side: int,phase: float) -> Transform3D:
+static func _shoe_transform(side: int,phase: float,axle_x: float = CENTER_X) -> Transform3D:
     # Four sections: upper straight, rear half circle, lower straight,
     # front half circle. Exact arc lengths and C1-continuous tangent.
     var dist: float = fposmod(phase,1.0)*PERIMETER
@@ -89,7 +89,7 @@ static func _shoe_transform(side: int,phase: float) -> Transform3D:
         z = -SPROCKET_Z+PATH_RADIUS*sin(theta)
         y = CENTER_Y+PATH_RADIUS*cos(theta)
     return Transform3D(Basis(Vector3.RIGHT,theta),
-        Vector3(float(side)*CENTER_X,y,z))
+        Vector3(float(side)*axle_x,y,z))
 
 static func _teeth(model: Node3D,phase: float) -> bool:
     var rig: MultiMeshInstance3D = model.find_child(
@@ -100,11 +100,12 @@ static func _teeth(model: Node3D,phase: float) -> bool:
     var matrix: int = 0
     # Angular speed matches the actual displacement along the belt.
     var rotation: float = phase*PERIMETER/PATH_RADIUS
+    var axle_x: float = float(model.get_meta("tarvoka_track_axle_x_v31",CENTER_X))
     for side in [-1,1]:
         for end in [-1,1]:
             for index in range(RING_TOOTH_COUNT):
                 var angle: float = TAU*float(index)/float(RING_TOOTH_COUNT)+rotation
-                var center := Vector3(float(side)*1.357,
+                var center := Vector3(float(side)*(axle_x+0.022),
                     CENTER_Y+TOOTH_RADIUS*cos(angle),
                     float(end)*SPROCKET_Z+TOOTH_RADIUS*sin(angle))
                 rig.multimesh.set_instance_transform(matrix,
@@ -113,6 +114,7 @@ static func _teeth(model: Node3D,phase: float) -> bool:
     return true
 
 static func _move_links(model: Node3D,phase: float) -> bool:
+    var axle_x: float = float(model.get_meta("tarvoka_track_axle_x_v31",CENTER_X))
     for side in [-1,1]:
         var belt: MultiMeshInstance3D = model.find_child(
             "OrugaArticuladaG09V7_%s" % side,true,false) as MultiMeshInstance3D
@@ -121,7 +123,7 @@ static func _move_links(model: Node3D,phase: float) -> bool:
             return false
         for index in range(SHOE_COUNT):
             belt.multimesh.set_instance_transform(index,
-                _shoe_transform(side,float(index)/float(SHOE_COUNT)+phase))
+                _shoe_transform(side,float(index)/float(SHOE_COUNT)+phase,axle_x))
     return true
 
 static func _sprockets(model: Node3D) -> int:

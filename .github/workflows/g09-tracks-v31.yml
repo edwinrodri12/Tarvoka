@@ -1,0 +1,78 @@
+name: TARVOKA G09 V31 final inboard track alignment
+on:
+  push:
+    branches:
+      - feat/g09-v31-tracks-inboard-alignment-20261114
+    paths:
+      - "scripts/ui/Tank*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "tests/test_g09_track_alignment_v31.gd"
+      - ".github/workflows/g09-tracks-v31.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/Tank*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "tests/test_g09_track_alignment_v31.gd"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-alignment:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Godot 4.3 and software GL renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Parse and import every GDScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/v31-parse.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/v31-parse.log; then exit 1; fi
+      - name: Real 3D inboard bounds, drive/idler wheel/teeth synchronization and four angles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_track_alignment_v31.gd 2>&1 | tee /tmp/v31-alignment.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/v31-alignment.log; then exit 1; fi
+          grep -q 'PASS G09 V31:' /tmp/v31-alignment.log
+          for png in \
+            tarvoka_g09_v31_cadenas_ambos_lados.png \
+            tarvoka_g09_v31_ejes_alineados_frente.png \
+            tarvoka_g09_v31_ejes_alineados_posterior.png \
+            tarvoka_g09_v30_cadenas_sobresalientes_referencia.png; do
+            test -s "artifacts/$png"
+          done
+      - name: Existing five-stage damage and combat effects regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_g09_art_v30 test_g09_live_hits_v30; do
+            timeout --signal=TERM --kill-after=5s 140s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS G09 V30' "/tmp/${test}.log"
+          done
+      - name: Archive true Godot V30/V31 visual A/B and underside views
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-G09-V31-Inboard-Track-Geometry-Comparison
+          path: |
+            artifacts/tarvoka_g09_v31_*.png
+            artifacts/tarvoka_g09_v30_cadenas_sobresalientes_referencia.png
+          if-no-files-found: error

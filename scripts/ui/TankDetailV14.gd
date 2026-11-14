@@ -19,13 +19,13 @@ static func _shell(parent: Node3D,name: String,polygon: Array,
     return Hero._loft(parent,name,polygon,levels,paint)
 
 static func _wheel_transform(side: int, wheel: int, spoke: int,
-        phase: float) -> Transform3D:
+        phase: float,axle_x: float = 1.405) -> Transform3D:
     # BoxMesh length follows the actual disk radius, rotating about the
     # axle (X) rather than counter-rotating the complete tank mesh.
     var theta: float = TAU*float(spoke)/float(SPOKES) + phase
     var z_center: float = -1.13+float(wheel)*0.377
     return Transform3D(Basis(Vector3.RIGHT,theta),
-        Vector3(float(side)*1.405,
+        Vector3(float(side)*axle_x,
             0.290+sin(theta)*0.081,
             z_center+cos(theta)*0.081))
 
@@ -52,6 +52,7 @@ static func animate_wheels(model: Node3D, travel: float) -> void:
     if model == null or not model.get_meta("tarvoka_mbt_silhouette_v14",false):
         return
     var phase: float = travel*TAU*1.7
+    var spoke_x: float = float(model.get_meta("tarvoka_wheel_spokes_x_v31",1.405))
     for side in [-1,1]:
         var node: MultiMeshInstance3D = model.find_child(
             "G09V14RadiosRuedas_%s" % side,true,false) as MultiMeshInstance3D
@@ -61,7 +62,7 @@ static func animate_wheels(model: Node3D, travel: float) -> void:
             for spoke in range(SPOKES):
                 node.multimesh.set_instance_transform(
                     wheel*SPOKES+spoke,
-                    _wheel_transform(side,wheel,spoke,phase))
+                    _wheel_transform(side,wheel,spoke,phase,spoke_x))
 
 static func apply(model: Node3D) -> bool:
     if model == null or not model.get_meta("tarvoka_mbt_segmented_v13",false):

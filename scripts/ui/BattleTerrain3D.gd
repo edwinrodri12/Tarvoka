@@ -355,8 +355,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
             if role=="tank":
                 # The real final G09 V25 is the source at EVERY zoom.
                 # Quality changes only microdetails, shaders and shadows.
-                model = Models.build(role,faction,true,30)
-                art_level = 30
+                model = Models.build(role,faction,true,31)
+                art_level = 31
                 if model!=null:
                     var life: int = int(unit.get("hp",10))
                     var max_life: int = maxi(1,int(unit.get("max_hp",10)))
