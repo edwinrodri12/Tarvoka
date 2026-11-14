@@ -12,6 +12,7 @@ const HQFacadeV19 = preload("res://scripts/ui/HeadquartersFacadeV19.gd")
 const HQDamageV21 = preload("res://scripts/ui/HeadquartersDamageV21.gd")
 const HQDamageV22 = preload("res://scripts/ui/HeadquartersDamageV22.gd")
 const HQFireV22 = preload("res://scripts/ui/HeadquartersFireV22.gd")
+const HQSmokeV23 = preload("res://scripts/ui/HeadquartersSmokeV23.gd")
 const HQImpactV21 = preload("res://scripts/ui/HeadquartersImpactV21.gd")
 const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
@@ -850,6 +851,10 @@ func _set_hq_map_lod(distant: bool) -> void:
             HQFireV22.STAGE_NAME) as TarvokaHeadquartersFireV22
         if ambient != null:
             ambient.set_distant(distant)
+        var volume: TarvokaHeadquartersSmokeV23 = model_root.get_node_or_null(
+            HQSmokeV23.STAGE_NAME) as TarvokaHeadquartersSmokeV23
+        if volume != null:
+            volume.set_distant(distant)
         var debris_layer: Node3D = model_root.get_node_or_null(
             HQDamageV22.STAGE_NAME) as Node3D
         if debris_layer != null:
@@ -960,7 +965,11 @@ func _display_headquarters() -> void:
         if damage_stage in [2,3]:
             var persistent: TarvokaHeadquartersFireV22 = HQFireV22.build(damage_stage)
             model_root.add_child(persistent)
+            persistent.set_smoke_replaced(true)
             persistent.set_distant(hq_map_lod_toggle.button_pressed)
+            var volume: TarvokaHeadquartersSmokeV23 = HQSmokeV23.build(damage_stage)
+            model_root.add_child(volume)
+            volume.set_distant(hq_map_lod_toggle.button_pressed)
         var structural: Node3D = model_root.get_node_or_null(
             HQDamageV22.STAGE_NAME) as Node3D
         if structural != null:
@@ -973,8 +982,8 @@ func _display_headquarters() -> void:
             var detail: String = [
                 "Sin daños estructurales",
                 "Antenas superiores derribadas",
-                "Cristales y techos rotos · humo animado",
-                "Ala colapsada · fuego y humo animados",
+                "Cristales y techos rotos · humo volumétrico V23",
+                "Ala colapsada · fuego y humo volumétrico V23",
                 "Ruinas estructurales sin edificio intacto"
             ][damage_stage]
             hq_impact_status.text = "V22 · %s · %s · impactos de bala y explosión" % [
