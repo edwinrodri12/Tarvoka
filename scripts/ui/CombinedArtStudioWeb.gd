@@ -388,6 +388,7 @@ func _switch_category(index: int) -> void:
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         super._display_role("tank")
     category_picker.select(index)
+    _apply_hq_lighting(_hq_light_preset)
 
 func _change_building_variant(_index: int) -> void:
     if _role == "headquarters":
