@@ -53,8 +53,8 @@ func _ready() -> void:
     var material := ShaderMaterial.new()
     material.shader = SHADER
     material.set_shader_parameter("smoke_tint",
-        Color(0.23,0.27,0.29,0.49) if damage_stage == 2
-        else Color(0.14,0.17,0.19,0.63))
+        Color(0.35,0.39,0.42,0.45) if damage_stage == 2
+        else Color(0.23,0.27,0.30,0.54))
     material.set_shader_parameter("drift_speed",0.11)
     material.set_shader_parameter("turbulence",1.0)
     _smoke_batch.material_override = material
@@ -78,13 +78,15 @@ func advance(delta: float) -> void:
                 0.28+phase*(2.22 if damage_stage==3 else 1.62),
                 cos(_seconds*0.37+float(plume)*1.3+float(shell))*0.20)
             var center := base + drift + Vector3(
-                float(shell-1)*0.24,float(shell)*0.09,-float(shell)*0.15)
-            var diameter: float = 0.78+phase*1.16+float(shell)*0.15
+                float(shell-1)*0.28,float(shell)*0.44,-float(shell)*0.19)
+            var diameter: float = 0.65+phase*1.14+float(shell)*0.15
             var basis := Basis(Vector3.UP,
                 0.13*sin(_seconds*0.45+float(plume)+float(shell)*0.8))
             basis = basis.scaled(Vector3(diameter,diameter*1.28,diameter*0.91))
             _smoke_batch.multimesh.set_instance_transform(i,
                 Transform3D(basis,center))
+            _smoke_batch.multimesh.set_instance_custom_data(i,
+                Color(fposmod(float(i)*0.173,1.0),phase,0.0,0.0))
 
 func _process(delta: float) -> void:
     if _active and not _distant:
