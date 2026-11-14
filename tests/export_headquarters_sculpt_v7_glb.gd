@@ -106,7 +106,7 @@ func _run() -> void:
     assert(file != null and file.get_length() > 35000)
     var bytes: int = file.get_length()
     file.close()
-    print("PASS HQ V4 GLB export: %d visible real 3D meshes, %d editable bolt instances, %d shared materials, %d bytes" % [
+    print("PASS HQ V7 GLB export: %d visible real 3D meshes, %d editable bolt instances, %d shared materials, %d bytes" % [
         meshes,batches,mats.size(),bytes])
     artist.queue_free()
     source.queue_free()
