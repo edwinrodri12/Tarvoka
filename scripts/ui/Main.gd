@@ -141,6 +141,74 @@ var expanded_confirm: Button
 var expanded_cancel: Button
 var expanded_end_turn: Button
 
+# Lightweight UI-only feedback. A single screen tween is shared across
+# major panels; combat/order widgets do not acquire per-frame processors.
+var _screen_enter_tween: Tween
+var _screen_enter_target: Control
+var _touch_feedback_tweens: Dictionary = {}
+
+func _reveal_screen(panel: Control) -> void:
+    if panel == null:
+        return
+    if _screen_enter_tween != null and _screen_enter_tween.is_running():
+        _screen_enter_tween.kill()
+    if _screen_enter_target != null and is_instance_valid(_screen_enter_target):
+        _screen_enter_target.modulate.a = 1.0
+    _screen_enter_target = panel
+    panel.show()
+    panel.modulate.a = 1.0
+    if board == null or board.battery_saver or not panel.is_visible_in_tree():
+        return
+    panel.modulate.a = 0.88
+    _screen_enter_tween = create_tween()
+    _screen_enter_tween.tween_property(panel,"modulate:a",1.0,0.14).set_trans(
+        Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+# These callbacks only change presentation; pressing, confirming or spending
+# a turn is still exclusively owned by the existing button.pressed handlers.
+func _bind_touch_feedback() -> void:
+    for control in [command_menu_button,compact_menu_button,compact_options_button,
+            compact_confirm,compact_cancel,compact_end_turn,compact_resupply,
+            expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle]:
+        var button: Button = control
+        if button == null:
+            continue
+        button.button_down.connect(_touch_feedback_down.bind(button))
+        button.button_up.connect(_touch_feedback_up.bind(button))
+        button.mouse_exited.connect(_touch_feedback_up.bind(button))
+        button.visibility_changed.connect(_touch_feedback_visibility.bind(button))
+
+func _touch_feedback_visibility(button: Button) -> void:
+    if not button.visible:
+        _touch_feedback_reset(button)
+
+func _touch_feedback_reset(button: Button) -> void:
+    var previous: Tween = _touch_feedback_tweens.get(button,null)
+    if previous != null and previous.is_running():
+        previous.kill()
+    _touch_feedback_tweens.erase(button)
+    button.self_modulate = Color.WHITE
+
+func _touch_feedback_down(button: Button) -> void:
+    _touch_feedback_reset(button)
+    if button.disabled or board == null or board.battery_saver:
+        return
+    button.self_modulate = Color(1.0,0.90,0.72)
+
+func _touch_feedback_up(button: Button) -> void:
+    var previous: Tween = _touch_feedback_tweens.get(button,null)
+    if previous != null and previous.is_running():
+        previous.kill()
+    if board == null or board.battery_saver or not button.visible:
+        _touch_feedback_reset(button)
+        return
+    if button.self_modulate == Color.WHITE:
+        return
+    var tween: Tween = button.create_tween()
+    tween.tween_property(button,"self_modulate",Color.WHITE,0.10).set_trans(
+        Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    _touch_feedback_tweens[button] = tween
+
 func _ready() -> void:
     # Install the same game-grade visual language on all native Godot menus,
     # so opening a submenu no longer falls back to developer-theme widgets.
@@ -713,6 +781,7 @@ func _ready() -> void:
     faction_selector.back_requested.connect(_cancel_faction_selection)
     faction_selector.confirmed.connect(_confirm_faction_selection)
 
+    _bind_touch_feedback()
     get_viewport().size_changed.connect(_on_viewport_resized)
     layout_for_size(get_viewport_rect().size)
     _set_compact_hud(OS.has_feature("mobile"))
@@ -1505,16 +1574,17 @@ func _show_home_menu() -> void:
     skirmish_setup.hide()
     saved_matches_menu.hide()
     home_menu.show()
+    _reveal_screen(home_menu)
 
 func _open_saved_matches_from_home() -> void:
     home_menu.hide()
     skirmish_setup.hide()
     saved_matches_menu.refresh_slots()
-    saved_matches_menu.show()
+    _reveal_screen(saved_matches_menu)
 
 func _back_from_saved_matches() -> void:
     saved_matches_menu.hide()
-    home_menu.show()
+    _reveal_screen(home_menu)
 
 func _load_saved_match(path: String) -> void:
     # The save UI only emits the two existing, fixed save paths.
@@ -1548,27 +1618,28 @@ func _prepare_skirmish() -> void:
         "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
         "seed":int(map_seed_picker.value)
     })
-    skirmish_setup.show()
+    _reveal_screen(skirmish_setup)
 
 func _open_faction_selection() -> void:
     skirmish_setup.hide()
     faction_selector.open_for(skirmish_setup.selected_factions)
+    _reveal_screen(faction_selector)
 
 func _cancel_faction_selection() -> void:
     faction_selector.hide()
-    skirmish_setup.show()
+    _reveal_screen(skirmish_setup)
 
 func _confirm_faction_selection(values: Dictionary) -> void:
     if not Identity.is_valid(values):
         return
     skirmish_setup.set_factions(values)
     faction_selector.hide()
-    skirmish_setup.show()
+    _reveal_screen(skirmish_setup)
 
 func _back_from_skirmish() -> void:
     _pending_visual_factions.clear()
     skirmish_setup.hide()
-    home_menu.show()
+    _reveal_screen(home_menu)
 
 func _show_advanced_skirmish() -> void:
     skirmish_setup.hide()
@@ -1605,6 +1676,7 @@ func _open_settings_from_home() -> void:
     home_menu.hide()
     _command_from_home = true
     command_menu.open_for(board,"Ajustes")
+    _reveal_screen(command_menu)
 
 func _close_command_menu() -> void:
     command_menu.hide()
@@ -1625,6 +1697,7 @@ func _open_objectives_radar() -> void:
     command_menu.hide()
     objectives_scrim.show()
     objectives_panel.open_with_state(board.state,_radar_viewer())
+    _reveal_screen(objectives_panel)
 
 func _locate_objective_site(cell: Vector2i, category: String) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
@@ -1682,6 +1755,7 @@ func _open_results_screen() -> void:
     command_menu.hide()
     results_scrim.show()
     results_panel.open_for(board.state,_radar_viewer())
+    _reveal_screen(results_panel)
 
 func _results_new_battle() -> void:
     _close_results_screen()
@@ -1695,6 +1769,7 @@ func _open_command_menu() -> void:
     _command_from_home = false
     var section := "Produccion" if board.selected_factory_pos != Vector2i(-1,-1) else ("Ejercito" if not board.selected_id.is_empty() or not board.inspected_enemy_id.is_empty() else "Batalla")
     command_menu.open_for(board,section)
+    _reveal_screen(command_menu)
 
 func _locate_capture_unit(unit_id: String, site_pos: Vector2i) -> void:
     if not board.pending_order.is_empty() or int(board.state.get("winner",-1)) != -1:
@@ -1737,6 +1812,7 @@ func _open_site_production(site_pos: Vector2i) -> void:
     board.focus_view_cell(site_pos)
     board.queue_redraw()
     command_menu.open_for(board,"Produccion")
+    _reveal_screen(command_menu)
 
 func _focus_command_unit(unit_id: String) -> void:
     for unit in board.state.get("units",[]):
@@ -1806,6 +1882,7 @@ func _toggle_isometric_view() -> void:
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
         unit_art_gallery.open_for()
+        _reveal_screen(unit_art_gallery)
 
 func _open_campaign() -> void:
     # Main keeps the existing skirmish autosave unchanged. Campaign resumes
