@@ -1,4 +1,4 @@
-# TARVOKA · Balance Rompedor G01 vs G09 (v0.1)
+# TARVOKA · Balance Rompedor vs G09 (v0.1)
 
 **Fecha:** 14 de noviembre de 2026 · **PR #328**, rama independiente de los trabajos de reparación y navegación del Ingeniero. **Estado:** ajuste implementado para pruebas, aún no aprobado para equilibrio comercial ni fusionado en main.
 
@@ -40,7 +40,8 @@ Los datos se generaron con **la ruta real del motor**: `BattleActions.preview_ex
 2. **15 combates reales con regla oficial +2** en cinco terrenos y tres climas (despejado, lluvia y nieve). Clima afecta movimiento, no añade daño táctico oculto. Verificar previsión y ejecución, munición, contrafuego y persistencia.
 3. **Economía y diferencias de turno**: enfrentamiento de dos Rompedores contra un tanque; comienza G09 y viceversa; el tanque responde como máximo una vez; costo sin cambios; alternancia de facción y combate después de mover.
 4. **Rangos/domínios y guardados**: no se habilita ataque antiaéreo/naval por ser antiblindaje; no se modifica la unidad de Baluarte (+4); la tabla para 32 roles conserva sin cambios todos los demás emparejamientos. JSON de guardado v1 reversible.
-5. **Compilación Android y regresión Godot completa** deben confirmarse antes de cerrar la revisión. La compilación automática no equivale a haber probado el rendimiento Android físico.
+5. **Decisión económica de la IA:** prueba de producción de Rompedor desde la planta de blindados a **300 créditos**, verificando saldo de ambos bandos, límites de fabricación y elección del mismo ataque de **4 HP** en los dos lados. No se cambia la prioridad oficial de compras ni se inventa un descuento para la IA.
+6. **Compilación Android y regresión Godot completa** deben confirmarse antes de cerrar la revisión. La compilación automática no equivale a haber probado el rendimiento Android físico.
 
 ## Criterios pendientes para considerar balance comercial
 
