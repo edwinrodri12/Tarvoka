@@ -453,6 +453,46 @@ jobs:
           path: build/web/
 
 
+  windows-pc-launcher-smoke:
+    name: Verify no-install Windows browser launcher
+    needs: build-art-studio
+    runs-on: windows-2022
+    timeout-minutes: 6
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TARVOKA-Estudio-3D-PC-Windows
+          path: studio
+      - name: Serve Godot WASM and PCK over local-only HTTP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $app = (Resolve-Path "studio/Start-Tarvoka-Studio.ps1").Path
+          $args = "-NoProfile -ExecutionPolicy Bypass -File `"$app`" -NoBrowser"
+          $server = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try {
+                $page = Invoke-WebRequest "http://127.0.0.1:8765/index.html" -TimeoutSec 3
+                if ($page.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) { throw "Windows Studio server did not start" }
+            if ($page.Content.Length -lt 100) { throw "Empty Godot WebGL HTML" }
+            foreach ($asset in @("index.wasm","index.pck","index.js")) {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:8765/$asset" -Method Head -TimeoutSec 15
+              if ($response.StatusCode -ne 200) { throw "Failed to serve $asset" }
+            }
+            $wasm = Invoke-WebRequest "http://127.0.0.1:8765/index.wasm" -Method Head
+            if ($wasm.Headers["Content-Type"] -ne "application/wasm") {
+              throw "Incorrect WebAssembly MIME type"
+            }
+            Write-Host "PASS TARVOKA WINDOWS PC LAUNCHER: Godot HTML, JS, WASM and PCK load from localhost with no admin or Python."
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
+
   deploy-preview:
     # Publish the SAME validated WebGL files as the artifact. Do not deploy
     # speculative previews from untrusted pull-request events.
