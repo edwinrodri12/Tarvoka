@@ -83,6 +83,20 @@ class PreviewCanvas:
                 var neigh: int = Topology.neighbor_mask(grid,cell,kind)
                 var crossing: int = Topology.bridge_axis(grid,cell)
                 var environment: Dictionary = {"cell":cell}
+                if kind in ["plain","forest","mountain"]:
+                    var biome_colors: Dictionary = {}
+                    for side in range(4):
+                        var neighbor: Vector2i = cell+Topology.DIRECTIONS[side]
+                        if neighbor.x < 0 or neighbor.y < 0 or (
+                                neighbor.x >= GRID_SIZE.x or neighbor.y >= GRID_SIZE.y):
+                            continue
+                        var neighbor_kind: String = str(grid[neighbor.y][neighbor.x])
+                        if neighbor_kind == kind or (
+                                neighbor_kind in ["road","water"]):
+                            continue
+                        biome_colors[side] = Style.terrain_color(
+                            neighbor_kind,neighbor.x,neighbor.y)
+                    environment["biome_colors"] = biome_colors
                 if kind == "water":
                     environment["water_connections"] = neigh
                     var bank_colors: Dictionary = {}
