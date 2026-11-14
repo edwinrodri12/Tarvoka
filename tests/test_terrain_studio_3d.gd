@@ -28,6 +28,12 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.terrain_scatter_toggle.button_pressed)
+    assert(studio.model_root.get_meta("terrain_studio_scatter",false))
+    var surface_stats: Dictionary = studio.model_root.get_meta("terrain_scatter_counts")
+    assert(int(surface_stats.get("grass",0)) > 100)
+    assert(int(surface_stats.get("batches",0)) <= 3)
+    assert(studio.model_root.find_child("OrillaConPendienteV3_*",true,false) != null)
     assert(studio.terrain_premium_toggle.button_pressed)
     assert(studio.model_root.get_meta("terrain_premium_finish_v4",false))
     var finish_stats: Dictionary = studio.model_root.get_meta("terrain_premium_stats")
@@ -92,7 +98,7 @@ func _run() -> void:
     assert(Textures.texture_identity("soil") != Textures.texture_identity("rock"))
     assert(Textures.texture_identity("rock") != Textures.texture_identity("asphalt"))
     var exact_road: MeshInstance3D = studio.model_root.find_child(
-        "Calzada_*",true,false) as MeshInstance3D
+        "CalzadaContinuaV3_*",true,false) as MeshInstance3D
     assert(exact_road != null)
     assert((exact_road.material_override as StandardMaterial3D).albedo_texture ==
         Textures.texture_identity("asphalt"))
@@ -131,6 +137,45 @@ func _run() -> void:
     studio.terrain_textures_toggle.button_pressed = true
     studio._rebuild_terrain(true)
     assert(studio.model_root.get_meta("terrain_textures_pbr",false))
+    # V3 biome and shoreline mesh comparison with V4 disabled: same camera.
+    studio.terrain_premium_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    studio.terrain_scatter_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_studio_scatter",false))
+    assert(studio.model_root.find_child("CalzadaContinuaV3_*",true,false) == null)
+    for capture_step in range(7):
+        await process_frame
+    var v2_capture: Image = studio.preview.get_texture().get_image()
+    assert(v2_capture != null and not v2_capture.is_empty())
+    studio.terrain_scatter_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    assert(studio.model_root.get_meta("terrain_studio_scatter",false))
+    assert(studio.model_root.find_child("CalzadaContinuaV3_*",true,false) != null)
+    for capture_step in range(7):
+        await process_frame
+    var v3_capture: Image = studio.preview.get_texture().get_image()
+    assert(v3_capture != null and not v3_capture.is_empty())
+    var v2a: Image = v2_capture.duplicate()
+    var v3b: Image = v3_capture.duplicate()
+    v2a.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    v3b.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var v3_pixels: int = 0
+    for yy in range(0,330,4):
+        for xx in range(0,480,4):
+            var before_v3: Color = v2a.get_pixel(xx,yy)
+            var after_v3: Color = v3b.get_pixel(xx,yy)
+            if absf(before_v3.r-after_v3.r)+absf(before_v3.g-after_v3.g)+absf(before_v3.b-after_v3.b)>0.11:
+                v3_pixels += 1
+    assert(v3_pixels > 55)
+    var v3_combined := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    v3_combined.blit_rect(v2a,Rect2i(0,0,480,330),Vector2i.ZERO)
+    v3_combined.blit_rect(v3b,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(v3_combined.save_png("res://artifacts/tarvoka_terrain_v2_v3_same_camera.png") == OK)
+    studio.terrain_premium_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    assert(studio.model_root.get_meta("terrain_premium_finish_v4",false))
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
@@ -154,7 +199,7 @@ func _run() -> void:
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
     var grass: MultiMeshInstance3D = studio.model_root.find_child(
-        "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
+        "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
     assert(grass != null and grass.multimesh != null)
     assert(grass.multimesh.instance_count >= 100)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
