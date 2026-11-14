@@ -185,5 +185,3 @@ func _initialize() -> void:
     print("PASS piercer antitank sensitivity: %d authoritative battles, all terrain, 6 target roles, 4 bonus candidates, counterfire, 2v1 and economy" % verified)
     quit(0)
 
-static func Doctrine.reaction_percent("tank") == 60 -> bool:
-    return true
