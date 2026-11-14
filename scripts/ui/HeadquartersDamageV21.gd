@@ -79,6 +79,10 @@ static func _moderate(model: Node3D,part: Node3D,level: int) -> void:
         "CristalPuerta",true,false) as MeshInstance3D
     if chipped != null:
         chipped.visible = false
+    var wing_glass: MeshInstance3D = model.find_child(
+        "VidrioMiradorAla_1_1",true,false) as MeshInstance3D
+    if wing_glass != null:
+        wing_glass.visible = false
     var breakage := _group(part,"CristaleriaAbiertaYFragmentosHQV21")
     for i in range(6):
         var x: float = -0.77+float(i%3)*0.24
@@ -90,6 +94,20 @@ static func _moderate(model: Node3D,part: Node3D,level: int) -> void:
     _box(breakage,"MarcoPuertaRetorcidoV21",
         Vector3(-0.90,0.98,-4.20),Vector3(0.073,1.41,0.089),
         STEEL,Vector3(0,0,-13.0))
+    # Clearly visible front-right observatory failure: real glass is gone,
+    # and three inclined surviving fragments replace the original pane.
+    for k in range(3):
+        _box(breakage,"CristalMiradorDerechoRotoV21_%d" % k,
+            Vector3(4.54+float(k)*0.12,2.48+float(k%2)*0.13,-3.22),
+            Vector3(0.11,0.25,0.028),GLASS,
+            Vector3(11.0,0,21.0+float(k)*19.0))
+    _box(part,"PlacaFrontalDesgarradaModeradaV21",
+        Vector3(4.08,1.04,-3.28),
+        Vector3(0.96,1.12,0.14),EXPOSED,
+        Vector3(9.0,0,23.0))
+    _box(part,"SombraFisuraBajoPlacaModeradaV21",
+        Vector3(4.39,0.83,-3.26),
+        Vector3(0.24,0.94,0.12),CHAR,Vector3(0,0,-16.0))
     _crack(part,"GrietaFracturaLadoDerechoV21",
         [Vector3(4.95,2.04,-3.181),Vector3(4.78,1.85,-3.183),
          Vector3(4.92,1.69,-3.186),Vector3(4.73,1.51,-3.188)],0.037)
@@ -104,6 +122,9 @@ static func _critical(model: Node3D,part: Node3D,level: int) -> void:
     # The damaged LEFT wing really loses its original wall and front
     # curved parapet, exposing its fracture and replaced half-height chunks.
     for label in ["MuroPosteriorAlaV21_-1",
+            "MuroContinuoBajoVentanasAlaV20_-1",
+            "TechoAla-1",
+            "BandaAla-1",
             "PetoCurvoDeAlaV12_-1",
             "CoronaHormigonAlaV12_-1",
             "VidrioMiradorAla_-1_-1"]:
@@ -123,6 +144,22 @@ static func _critical(model: Node3D,part: Node3D,level: int) -> void:
             Vector3(-5.07+float(i)*0.53,1.64+float(i%2)*0.26,2.55),
             Vector3(0.077,1.72,0.091),RUST,
             Vector3(0,0,-30.0+float(i)*17.0))
+    # Highly readable front-facing structural opening, not a small soot
+    # patch pasted over the same intact facade used by moderate damage.
+    for i in range(3):
+        _box(collapsed,"RestosMuroAlaFrontalCriticaV21_%d" % i,
+            Vector3(-4.88+float(i)*0.68,0.81+float(i%2)*0.24,-3.25),
+            Vector3(0.83,1.20+float(i)*0.13,0.30),
+            CONCRETE.darkened(0.16+float(i)*0.08),
+            Vector3(11.0+float(i)*7,7.0,25.0+float(i)*15.0))
+    for i in range(4):
+        _box(collapsed,"AceroAlaAbiertaFrontalV21_%d" % i,
+            Vector3(-5.00+float(i)*0.61,1.85+float(i%2)*0.21,-3.23),
+            Vector3(0.11,2.05,0.12),RUST,
+            Vector3(0.0,0.0,-26.0+float(i)*18.0))
+    _box(collapsed,"PlacaVoladaHaciaPatioV21",
+        Vector3(-3.86,0.53,-4.44),Vector3(1.87,0.24,1.02),
+        EXPOSED,Vector3(26.0,18.0,32.0))
     _box(collapsed,"VoladizoCurvoCaidoV21",
         Vector3(-4.04,0.33,-3.78),
         Vector3(2.04,0.22,0.78),CHAR,Vector3(16.0,11.0,28.0))
@@ -131,9 +168,9 @@ static func _critical(model: Node3D,part: Node3D,level: int) -> void:
         Vector3(1.57,0.22,0.61),EXPOSED,Vector3(21.0,19.0,14.0))
     for i in range(3):
         HQ._sphere(collapsed,"NubeHumoCriticoHQV21_%d" % i,
-            Vector3(-3.95+float(i)*0.38,2.65+float(i)*0.42,0.32),
-            Vector3(0.45+float(i)*0.16,0.66+float(i)*0.19,0.54),
-            SMOKE)
+            Vector3(-4.40+float(i)*0.38,2.95+float(i)*0.58,-2.98),
+            Vector3(0.85+float(i)*0.18,1.03+float(i)*0.21,0.88),
+            Color(0.15,0.16,0.17,0.56-float(i)*0.06))
     _crack(collapsed,"FisuraGraveTorreHQV21",
         [Vector3(-1.57,4.20+0.91*float(level-1),-3.56),
          Vector3(-1.30,3.96+0.91*float(level-1),-3.58),
