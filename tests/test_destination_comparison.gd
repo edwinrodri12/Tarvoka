@@ -74,6 +74,9 @@ func _run() -> void:
     assert(Compare.compare(masked,"A",[first,second],0,true) == fog_result)
     var foe_turn: Dictionary = battle.duplicate(true)
     foe_turn["faction"] = 1
+    for unit in foe_turn["units"]:
+        if str(unit["id"]) == "X":
+            unit["move_points"] = 3
     assert(not Compare.compare(foe_turn,"A",[first],0,true)["valid"])
     assert(Compare.compare(foe_turn,"X",[Vector2i(5,2)],1,false)["valid"])
 
