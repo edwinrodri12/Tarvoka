@@ -4,6 +4,8 @@ Fecha: 14 de noviembre de 2026 · Implementación QA de primera fase.
 
 ## Qué mide en una APK real
 
+En las compilaciones de pull request, el APK se identifica como **TARVOKA QA** y usa un identificador Android separado (`com.edwinrodri12.tarvoka.qa`), de modo que no obliga a desinstalar el juego habitual. Esta sustitución se hace solo en el runner de CI; el nombre/paquete oficial de `main` permanece intacto.
+
 Abrir **PRUEBA DE RENDIMIENTO (QA)** en el menú lateral del juego. La pantalla crea un tablero **independiente**, sin sobrescribir la partida ni su guardado. Se ejecutan automáticamente cinco cargas, cada una con calentamiento inicial y muestreo de fotogramas. El botón **REPETIR PRUEBA** permite comparar teléfono frío/caliente. El botón **COPIAR INFORME** facilita compartir resultados. El JSON también se guarda en \`user://tarvoka_stress_report.json\` (almacenamiento privado de la aplicación).
 
 Escenarios:
