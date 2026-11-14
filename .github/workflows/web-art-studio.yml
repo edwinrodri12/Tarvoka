@@ -77,6 +77,19 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Quick parse gate for V4 terrain module
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 35s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_premium_v4_preflight.gd \
+            2>&1 | tee /tmp/terrain-v4-preflight.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-v4-preflight.log; then
+            echo "V4 terrain script failed to parse" >&2
+            exit 1
+          fi
+          grep -q "PASS terrain premium V4 preload" /tmp/terrain-v4-preflight.log
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
