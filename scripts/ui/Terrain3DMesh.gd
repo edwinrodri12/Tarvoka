@@ -6,14 +6,15 @@ class_name TarvokaTerrain3DMesh
 # No physics bodies, pathfinding, collision map or gameplay height changes.
 const BASE_HEIGHTS := {
     "plain":0.20, "forest":0.32, "road":0.12,
-    "mountain":1.70, "water":-0.48
+    "mountain":0.96, "water":-0.48
 }
 const BASE_TINTS := {
     "plain":"#748C52","forest":"#305F47","road":"#858071",
-    "mountain":"#879499","water":"#486C6E"
+    "mountain":"#62757E","water":"#486C6E"
 }
 const WATER_LEVEL := 0.075
 const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
+const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 
 static func inside(grid: Array, cell: Vector2i) -> bool:
     return cell.y >= 0 and cell.y < grid.size() and (
@@ -69,15 +70,18 @@ static func height_at(grid: Array, cell: Vector2i, u: float, v: float,
     var kind: String = str(grid[cell.y][cell.x])
     var center_bump: float = sin(u*PI)*sin(v*PI)
     if kind == "mountain":
-        # Region-weighted mountains share their boundary height exactly,
-        # but don't create one identical summit in every tactical cell.
-        # All extra relief is multiplied by a zero-at-edge envelope, so
-        # no vertical cracks appear across the real 3D heightfield.
-        var massif: float = Regions.region_variation(cell,7)
-        var crest: float = 0.84+massif*1.38
+        # Use only KNOWN adjacent mountain cells for summit grouping,
+        # never hidden terrain. Most connected mountain cells are a low
+        # plateau with a few isolated high peaks, not a grid of cones.
+        var known_links: int = Topology.neighbor_mask(
+            grid,cell,"mountain",true,observed,restricted)
+        var summit: float = Regions.summit_strength(cell,known_links)
+        var crest: float = maxf(0.08,(summit-0.38)*3.1)
         var folds: float = 0.81+0.12*sin(
             float(cell.x)*0.47+float(cell.y)*0.73+u*4.8)
         folds += 0.07*cos(v*8.3-u*4.7+float(cell.x)*0.29)
+        # Center bump is exactly zero at each shared tile edge, so the
+        # native heightfield remains crack-free even with different peaks.
         return interpolated+pow(center_bump,0.86)*crest*folds
     if kind == "water":
         # A river bed rises continuously towards adjacent terrain.
@@ -100,10 +104,11 @@ static func _color_for(grid: Array, cell: Vector2i, u: float, v: float) -> Color
     if kind == "mountain":
         var above: float = sin(u*PI)*sin(v*PI)
         var elevation: float = Regions.region_variation(cell,7)
-        if above*elevation > 0.49:
+        var prominent: bool = posmod(cell.x*19+cell.y*23,5) == 0
+        if prominent and above*elevation > 0.60:
             var snow: float = clampf(
-                (above*elevation-0.49)*1.1,0.0,0.48)
-            tint = tint.lerp(Color("#DCE1DD"),snow)
+                (above*elevation-0.60)*0.8,0.0,0.25)
+            tint = tint.lerp(Color("#C6D3D4"),snow)
         return tint.lightened(shift) if shift > 0.0 else tint.darkened(-shift)
     if kind == "water":
         tint = Color("#526A6F")
