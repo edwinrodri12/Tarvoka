@@ -18,6 +18,7 @@ var _smoke: Array[MeshInstance3D] = []
 var _time := 0.0
 var _animated := false
 var _distant := false
+var _smoke_replaced := false
 
 static func build(stage: int) -> TarvokaHeadquartersFireV22:
     var node := TarvokaHeadquartersFireV22.new()
@@ -96,16 +97,17 @@ func advance(delta: float) -> void:
     if not _animated or _distant:
         return
     _time += maxf(0.0,delta)
-    for i in range(_smoke.size()):
-        var puff: MeshInstance3D = _smoke[i]
-        var phase: float = fposmod(_time*0.35+float(i)*0.23,1.0)
-        var left: bool = damage_stage == 3 and i < 3
-        var origin := Vector3(-4.35,2.18,-3.27) if left else Vector3(3.91,2.54,-3.25)
-        var drift := Vector3(sin(_time*0.72+float(i))*0.32,
-            phase*2.15,cos(_time*0.46+float(i)*1.5)*0.19)
-        puff.position = origin+drift+Vector3(float(i%3)*0.20,0,0)
-        puff.scale = Vector3.ONE*(0.61+phase*(1.52 if damage_stage==3 else 1.18))
-        puff.transparency = clampf(0.08+phase*0.70,0.0,0.97)
+    if not _smoke_replaced:
+        for i in range(_smoke.size()):
+            var puff: MeshInstance3D = _smoke[i]
+            var phase: float = fposmod(_time*0.35+float(i)*0.23,1.0)
+            var left: bool = damage_stage == 3 and i < 3
+            var origin := Vector3(-4.35,2.18,-3.27) if left else Vector3(3.91,2.54,-3.25)
+            var drift := Vector3(sin(_time*0.72+float(i))*0.32,
+                phase*2.15,cos(_time*0.46+float(i)*1.5)*0.19)
+            puff.position = origin+drift+Vector3(float(i%3)*0.20,0,0)
+            puff.scale = Vector3.ONE*(0.61+phase*(1.52 if damage_stage==3 else 1.18))
+            puff.transparency = clampf(0.08+phase*0.70,0.0,0.97)
     if _fire != null:
         for i in range(MAX_FLAMES):
             var is_left: bool = i < 8
@@ -119,6 +121,12 @@ func advance(delta: float) -> void:
             var basis := Basis(Vector3.UP,0.11*sin(_time*3.2+float(i)))
             basis = basis.scaled(Vector3(size_xz,1.65*scale_y,size_xz))
             _fire.multimesh.set_instance_transform(i,Transform3D(basis,pos))
+
+func set_smoke_replaced(replaced: bool) -> void:
+    # Keep the existing V22 flame batch; V23 provides all smoke.
+    _smoke_replaced = replaced
+    for puff in _smoke:
+        puff.visible = not replaced
 
 func set_distant(distant: bool) -> void:
     _distant = distant
