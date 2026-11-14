@@ -190,6 +190,65 @@ static func _command_bridge(parent: Node3D, level: int, tint: Color) -> void:
             Vector3(sx*1.26,y+1.79,-2.97),
             Vector3(sx*1.47,y+1.81,-1.43),0.066,INK)
 
+static func _wing_fascias(parent: Node3D,tint: Color) -> void:
+    var wing := _group(parent,"CubiertasEsculpidasDeAlasV7")
+    # The former wing roof was two flat chamfered boxes. These front apron
+    # shells now have convex sections, real fascia depth and structural ribs.
+    # They sit in front of roof machinery and do not overwrite faction art.
+    for side in [-1,1]:
+        var cx: float = float(side)*4.06
+        var width: float = 1.22
+        var steps: int = 12
+        var tool := SurfaceTool.new()
+        tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+        for i in range(steps):
+            var local0: float = -width + 2.0*width*float(i)/float(steps)
+            var local1: float = -width + 2.0*width*float(i+1)/float(steps)
+            var y0: float = 2.82 + 0.22*(1.0-pow(local0/width,2.0))
+            var y1: float = 2.82 + 0.22*(1.0-pow(local1/width,2.0))
+            var a := Vector3(cx+local0,y0,-2.22)
+            var b := Vector3(cx+local0,y0,-1.10)
+            var c := Vector3(cx+local1,y1,-1.10)
+            var d := Vector3(cx+local1,y1,-2.22)
+            var e := a-Vector3(0,0.15,0)
+            var f := b-Vector3(0,0.15,0)
+            var g := c-Vector3(0,0.15,0)
+            var h := d-Vector3(0,0.15,0)
+            _tri(tool,a,b,c)
+            _tri(tool,a,c,d)
+            _tri(tool,f,e,h)
+            _tri(tool,f,h,g)
+            _tri(tool,a,d,h)
+            _tri(tool,a,h,e)
+            if i == 0:
+                _tri(tool,b,a,e)
+                _tri(tool,b,e,f)
+            if i == steps-1:
+                _tri(tool,d,c,g)
+                _tri(tool,d,g,h)
+        tool.generate_normals()
+        tool.generate_tangents()
+        var panel := MeshInstance3D.new()
+        panel.name = "CubiertaConvexaAla_%s" % side
+        panel.mesh = tool.commit()
+        panel.material_override = Finish._mat(tint.darkened(0.31),"roof")
+        panel.set_meta("tarvoka_faction_panel",true)
+        wing.add_child(panel)
+        for i in range(12):
+            var x0: float = -width+2.0*width*float(i)/12.0
+            var x1: float = -width+2.0*width*float(i+1)/12.0
+            var y0: float = 2.82+0.22*(1.0-pow(x0/width,2.0))
+            var y1: float = 2.82+0.22*(1.0-pow(x1/width,2.0))
+            _beam(wing,"MolduraCurvadaAla_%s_%02d" % [side,i],
+                Vector3(cx+x0,y0-0.07,-2.24),
+                Vector3(cx+x1,y1-0.07,-2.24),0.034,EDGE)
+        _shell(wing,"AristaAlaBiselada_%s" % side,
+            Vector3(cx,2.82,-2.29),
+            Vector3(2.18,0.075,0.10),0.03,INK,"roof")
+        _box(wing,"LuzCorridaAla_%s" % side,
+            Vector3(cx,2.84,-2.35),
+            Vector3(1.94,0.038,0.026),LIGHT)
+
 static func _roof_equipment(parent: Node3D, level: int,tint: Color) -> void:
     var equipment := _group(parent,"AzoteasTecnicasModularesV7")
     for side in [-1,1]:
@@ -372,6 +431,7 @@ static func apply(model: Node3D,level: int,tint: Color,condition: String) -> voi
         return
     _entrance(model,tint)
     _command_bridge(model,level,tint)
+    _wing_fascias(model,tint)
     _roof_equipment(model,level,tint)
     _radar_mount(model,level)
     _helipad_finish(model,tint)
