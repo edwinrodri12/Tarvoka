@@ -316,6 +316,10 @@ static func fog_cover_color(has_explored: bool) -> Color:
     return Color(0.025, 0.035, 0.05, 0.73) if has_explored else Color(0.015, 0.025, 0.04, 1.0)
 
 func site_overlay_snapshots() -> Array:
+    # Synthetic load-bearing buildings for isolated 8-team graphics QA.
+    # The authoritative economy and saves are never rewritten as eight sides.
+    if bool(state.get("__qa_visual_eight_sides",false)):
+        return state.get("__qa_site_markers",[])
     if not state.has("economy"):
         return []
     # Derive only when battle data or sight changes, never on every idle frame.
