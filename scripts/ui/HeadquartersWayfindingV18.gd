@@ -47,15 +47,19 @@ static func build() -> Node3D:
     stage.set_meta("tarvoka_hq_v18_max_draws",MAX_DRAW_BATCHES)
     # Façade glows occupy existing openings; they never cover the official
     # faction crest or change the silhouette of the central radar.
+    # Coordinates are calibrated against REAL V12 glazing in
+    # HeadquartersSilhouetteV12._wing_profiles and
+    # Headquarters3D._windows, not approximate facade rectangles.
+    # The final two upper tower panes are translated by level in apply().
     var windows := [
-        [Vector3(-5.22,2.04,-3.17),Vector3(0.53,0.36,0.07)],
-        [Vector3(-4.18,2.04,-3.17),Vector3(0.53,0.36,0.07)],
-        [Vector3(4.18,2.04,-3.17),Vector3(0.53,0.36,0.07)],
-        [Vector3(5.22,2.04,-3.17),Vector3(0.53,0.36,0.07)],
-        [Vector3(-1.12,1.47,-3.91),Vector3(0.36,0.56,0.06)],
-        [Vector3(1.12,1.47,-3.91),Vector3(0.36,0.56,0.06)],
-        [Vector3(-4.67,2.72,-3.17),Vector3(0.39,0.18,0.07)],
-        [Vector3(4.67,2.72,-3.17),Vector3(0.39,0.18,0.07)]
+        [Vector3(-4.60,2.56,-3.149),Vector3(0.29,0.18,0.012)],
+        [Vector3(-3.46,2.56,-3.149),Vector3(0.29,0.18,0.012)],
+        [Vector3(3.46,2.56,-3.149),Vector3(0.29,0.18,0.012)],
+        [Vector3(4.60,2.56,-3.149),Vector3(0.29,0.18,0.012)],
+        [Vector3(-1.32,1.26,-2.452),Vector3(0.48,0.44,0.012)],
+        [Vector3(1.32,1.26,-2.452),Vector3(0.48,0.44,0.012)],
+        [Vector3(-1.26,4.945,-2.817),Vector3(0.19,0.26,0.012)],
+        [Vector3(1.26,4.945,-2.817),Vector3(0.19,0.26,0.012)]
     ]
     stage.add_child(_batch("VentanasIluminadasUnLoteV18",windows,Color("#ffd9a0")))
     # Wide, unmistakable faction accents flank the front entrance; at night
@@ -88,6 +92,14 @@ static func apply(stage: Node3D, faction: int, level: int,
         return false
     # No floating façade details over rubble, LOD proxies or V15 sprites.
     stage.visible = enabled and not distant and condition != "destruido" and lighting > 0
+    # V18's upper glows must follow the V4 tower height at L1/L2/L3.
+    # Do not regenerate the mesh or create new instances at each level.
+    var windows: MultiMeshInstance3D = stage.get_node("VentanasIluminadasUnLoteV18")
+    for side in [-1,1]:
+        var index: int = 6 if side == -1 else 7
+        var transform: Transform3D = windows.multimesh.get_instance_transform(index)
+        transform.origin.y = 4.945 + 0.91 * float(level-1)
+        windows.multimesh.set_instance_transform(index,transform)
     var accents: MultiMeshInstance3D = stage.get_node("GuiasColorFaccionUnLoteV18")
     var paint: StandardMaterial3D = accents.material_override as StandardMaterial3D
     var faction_color: Color = Style.faction_color(faction)
