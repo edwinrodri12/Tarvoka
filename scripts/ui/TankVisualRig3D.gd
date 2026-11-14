@@ -4,6 +4,7 @@ class_name TarvokaTankVisualRig3D
 # Visual-only MBT articulation. Does not access BattleSession, economy, combat
 # damage or saved state. Operates on the named meshes in UnitModels3D.
 const Hero = preload("res://scripts/ui/TankHeroV7.gd")
+const FinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
 const V14 = preload("res://scripts/ui/TankDetailV14.gd")
 const REST_META := "tarvoka_tank_rest_position"
 const TURRET_NAME := "TorretaGiratoria"
@@ -109,7 +110,9 @@ static func pose(model: Node3D, kind: String, progress: float,
             pass
     # Real circulation of the track shoes around rounded idler/sprockets.
     # This is independent of HP, recoil and the eight faction materials.
-    if model.get_meta("tarvoka_mbt_hero_v7",false):
+    if model.get_meta("tarvoka_mbt_track_final_v29",false):
+        FinalTracksV29.slide_tracks(model,t*0.31 if kind == "move" else 0.0)
+    elif model.get_meta("tarvoka_mbt_hero_v7",false):
         Hero.slide_tracks(model,t*0.31 if kind == "move" else 0.0)
     if model.get_meta("tarvoka_mbt_silhouette_v14",false):
         V14.animate_wheels(model,t if kind == "move" else 0.0)
