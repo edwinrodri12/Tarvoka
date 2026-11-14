@@ -15,7 +15,7 @@ func _run() -> void:
     # The home screen puts active game modes ahead of long explanatory copy.
     var home: Control = main.home_menu
     main._show_home_menu()
-    assert(home.primary_buttons.size() == 7)
+    assert(home.primary_buttons.size() == 8)
     var master_preview := Image.new()
     assert(master_preview.load(home.OFFICIAL_ICON_HD) == OK)
     assert(master_preview.get_width() == 512)
@@ -28,6 +28,7 @@ func _run() -> void:
     assert(home.primary_buttons["Continuar"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Escaramuza"].custom_minimum_size.y >= 44)
     assert(home.primary_buttons["Multijugador"].disabled)
+    assert(home.primary_buttons.has("Estudio 3D"))
     assert(home._hero_subtitle.text.contains("tierra, mar y aire"))
     assert(not home._menu_caption.text.contains("Partidas guardadas y modos"))
 
