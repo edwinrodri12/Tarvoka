@@ -13,6 +13,7 @@ const BASE_TINTS := {
     "mountain":"#879499","water":"#486C6E"
 }
 const WATER_LEVEL := 0.075
+const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 
 static func inside(grid: Array, cell: Vector2i) -> bool:
     return cell.y >= 0 and cell.y < grid.size() and (
@@ -68,11 +69,16 @@ static func height_at(grid: Array, cell: Vector2i, u: float, v: float,
     var kind: String = str(grid[cell.y][cell.x])
     var center_bump: float = sin(u*PI)*sin(v*PI)
     if kind == "mountain":
-        # Multiple asymmetric ridges, continuously zero at all boundaries.
-        var irregular: float = 0.78+0.15*sin(
-            float(cell.x)*1.37+float(cell.y)*0.79+u*5.2)
-        irregular += 0.10*cos(u*9.0-v*5.0+float(cell.y)*0.8)
-        return interpolated+center_bump*1.75*irregular
+        # Region-weighted mountains share their boundary height exactly,
+        # but don't create one identical summit in every tactical cell.
+        # All extra relief is multiplied by a zero-at-edge envelope, so
+        # no vertical cracks appear across the real 3D heightfield.
+        var massif: float = Regions.region_variation(cell,7)
+        var crest: float = 0.84+massif*1.38
+        var folds: float = 0.81+0.12*sin(
+            float(cell.x)*0.47+float(cell.y)*0.73+u*4.8)
+        folds += 0.07*cos(v*8.3-u*4.7+float(cell.x)*0.29)
+        return interpolated+pow(center_bump,0.86)*crest*folds
     if kind == "water":
         # A river bed rises continuously towards adjacent terrain.
         return interpolated-center_bump*0.32
@@ -93,9 +99,11 @@ static func _color_for(grid: Array, cell: Vector2i, u: float, v: float) -> Color
     var shift: float = grain*0.043
     if kind == "mountain":
         var above: float = sin(u*PI)*sin(v*PI)
-        if above > 0.72:
-            tint = tint.lerp(Color("#DCE1DD"),clampf(
-                (above-0.72)*1.6,0.0,0.34))
+        var elevation: float = Regions.region_variation(cell,7)
+        if above*elevation > 0.49:
+            var snow: float = clampf(
+                (above*elevation-0.49)*1.1,0.0,0.48)
+            tint = tint.lerp(Color("#DCE1DD"),snow)
         return tint.lightened(shift) if shift > 0.0 else tint.darkened(-shift)
     if kind == "water":
         tint = Color("#526A6F")
