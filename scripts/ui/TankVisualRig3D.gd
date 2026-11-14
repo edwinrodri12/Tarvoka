@@ -5,6 +5,7 @@ class_name TarvokaTankVisualRig3D
 # damage or saved state. Operates on the named meshes in UnitModels3D.
 const Hero = preload("res://scripts/ui/TankHeroV7.gd")
 const FinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
+const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const V14 = preload("res://scripts/ui/TankDetailV14.gd")
 const REST_META := "tarvoka_tank_rest_position"
 const TURRET_NAME := "TorretaGiratoria"
@@ -47,6 +48,8 @@ static func pose(model: Node3D, kind: String, progress: float,
     var smoke: Node3D = model.find_child("EfectoHumoCanon",true,false) as Node3D
     var dust: Node3D = model.find_child("EfectoPolvoOrugas",true,false) as Node3D
     var impact: Node3D = model.find_child("EfectoImpactoBlindaje",true,false) as Node3D
+    if model.get_meta("tarvoka_hit_v30",false):
+        HitV30.pose(model,kind,t)
     for effect in [muzzle,smoke,dust,impact]:
         if effect != null:
             effect.visible = false
@@ -99,6 +102,16 @@ static func pose(model: Node3D, kind: String, progress: float,
             if smoke != null:
                 smoke.visible = t >= 0.11 and t < 0.90
                 smoke.scale = Vector3.ONE * (0.72+0.75*t)
+        "hit_bullet":
+            # Light ballistic ricochet: short, sharp turret shiver.
+            model.rotation_degrees.z = sin(t*PI*9.0)*0.54*(1.0-t)
+            turret.position.y = 1.11-0.009*sin(t*PI)
+        "hit_explosion":
+            # Large shell/missile/bomb: longer hull kick and turret shock.
+            model.rotation_degrees.z = sin(t*PI*3.2)*3.7*pow(1.0-t,1.6)
+            hull.rotation_degrees.x = sin(t*PI*2.7)*2.9*(1.0-t)
+            model.position.y -= 0.085*sin(PI*t)
+            turret.position.y = 1.11-0.068*sin(PI*t)
         "damaged":
             model.rotation_degrees.z = sin(t*PI*2.0)*2.1*(1.0-t)
             gun.rotation_degrees.x = 2.0
