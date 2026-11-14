@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v19-facade-crest-stress-20261114
-      - feat/terrain-studio-v16-sediment-road-20261114
+      - feat/terrain-v17-battle-seam-blending-20261114
       - feat/g09-v30-studio-wide-tracks-hit-effects-20261114
       - feat/g09-v30-wide-tracks-combat-hit-reactions-20261114
 
@@ -133,13 +133,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out V16 organic valley sediments and battle 3D studio
+      - name: Check out V17 native battlefield seamless materials and V16 valley studio
         uses: actions/checkout@v4
         with:
-          ref: feat/terrain-studio-v16-sediment-road-20261114
+          ref: feat/terrain-v17-battle-seam-blending-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export Battle and Terrain V16 sediment/road transitions to existing /batalla/ viewer
+      - name: Export V17 seamless 3D battles and V16 valley landscapes to /batalla/
         shell: bash
         run: |
           set -euo pipefail
@@ -156,6 +156,10 @@ jobs:
           test -s battle-source/tests/test_terrain_studio_v15_foothills.gd
           test -s battle-source/scripts/ui/TerrainStudioSedimentsV12.gd
           test -s battle-source/tests/test_terrain_studio_v16_valley.gd
+          test -s battle-source/tests/test_battle_terrain_v17_seams.gd
+          grep -q '_cached_corner_tint' battle-source/scripts/ui/BattleTerrain3D.gd
+          grep -q 'terrain_blend_extra_batches' battle-source/scripts/ui/BattleTerrain3D.gd
+          grep -q 'PASS TERRAIN_BATTLE_V17:' battle-source/tests/test_battle_terrain_v17_seams.gd
           grep -q 'ComparadorTerrenoV11V12' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'DepositosAluvialesV12' battle-source/scripts/ui/TerrainStudioSedimentsV12.gd
           grep -q 'ArcenesNaturalesV12' battle-source/scripts/ui/TerrainStudioSedimentsV12.gd
