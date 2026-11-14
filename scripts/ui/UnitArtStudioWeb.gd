@@ -355,6 +355,8 @@ func _toggle_v15() -> void:
         return
     # Fixed-angle browser A/B, never switch the Android default artwork.
     _v15_preview = not _v15_preview
+    _v16_preview = false
+    _v17_preview = false
     _v14_preview = not _v15_preview
     _v13_preview = false
     _v12_preview = false
@@ -368,6 +370,7 @@ func _toggle_v16() -> void:
         return
     # Native V15/V16 Godot comparison: same yaw, zoom and damage stage.
     _v16_preview = not _v16_preview
+    _v17_preview = false
     _v15_preview = not _v16_preview
     _v14_preview = false
     _v13_preview = false
