@@ -58,6 +58,27 @@ func _run() -> void:
         assert(Picker.cast(cells,Vector3(-50,10,-50),Vector3.DOWN).is_empty())
         assert(state == before)
         world.free()
+    # Fog hides mountains until explored; exercise a known mountain
+    # separately instead of expecting secret terrain in the fogged scene.
+    var mountain_state: Dictionary = Session.start([
+        {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,1),
+            "move_points":3,"attack":5,"acted":false},
+        {"id":"X","faction":1,"hp":10,"pos":Vector2i(8,6),
+            "move_points":3,"attack":5,"acted":false}
+    ],Scenarios.terrain(1),0,false,false,false,false,false)
+    var mountain_world: Node3D = Terrain.build(mountain_state)
+    var mountain_cells: Dictionary = mountain_world.get_meta("public_cells")
+    var mountain_cell := Vector2i(4,0)
+    assert(str(mountain_cells[mountain_cell]["kind"]) == "mountain")
+    for off in [Vector2.ZERO,Vector2(0.4,-0.4)]:
+        var expected: Vector3 = Terrain.world_at(mountain_cell)+Vector3(
+            off.x,Terrain.height_at(mountain_cells,mountain_cell,off.x,off.y),off.y)
+        var impact: Dictionary = Picker.cast(mountain_cells,
+            expected+Vector3.UP*9.0,Vector3.DOWN)
+        assert(impact.get("cell") == mountain_cell)
+        assert(_close(impact["position"].y,expected.y))
+        landmark += 1
+    mountain_world.free()
     assert(landmark > 0)
     assert(total == (80+432+1200)*4)
     print("PASS BATTLE_3D_PICKING_V6: %d real triangle hits, mountains, water, unknown fog and diagonal rays" % total)
