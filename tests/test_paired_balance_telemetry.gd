@@ -22,6 +22,8 @@ func _initialize() -> void:
     var total_phases := 0
     var total_buys := 0
     var total_resupplies := 0
+    var total_repairs := 0
+    var total_repair_spend := 0
     var total_paid_rearms := 0
     var total_critical := 0
     for scenario in [0,3]:
@@ -37,6 +39,8 @@ func _initialize() -> void:
                     total_phases += int(report["phases"])
                     total_buys += int(report["bought"][0]) + int(report["bought"][1])
                     total_resupplies += int(report["resupplied"][0]) + int(report["resupplied"][1])
+                    total_repairs += int(report["repaired"][0]) + int(report["repaired"][1])
+                    total_repair_spend += int(report["repair_spent"][0]) + int(report["repair_spent"][1])
                     total_paid_rearms += int(report["rearm_spent"][0]) + int(report["rearm_spent"][1])
                     total_critical += int(report["low_supply"][0]) + int(report["low_supply"][1])
                     relay_moves[0] += int(report["relay_moves"][0])
@@ -70,8 +74,8 @@ func _initialize() -> void:
     assert(matches == 16 and total_actions > 60)
     assert(total_buys > 0)
     assert(pair_wins[0] + pair_wins[1] + undecided == matches)
-    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
-        matches,total_actions,total_phases,total_buys,total_resupplies,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
+    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d repairs=%d repair_spend=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
+        matches,total_actions,total_phases,total_buys,total_resupplies,total_repairs,total_repair_spend,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
         faction_wins[0],faction_wins[1],str(relay_moves),str(urban_moves)
     ])
     print("PASS paired balance telemetry: 16 matched games, mirrored starts, action economy, save and supply invariants")
