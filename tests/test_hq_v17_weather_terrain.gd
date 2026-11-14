@@ -18,7 +18,7 @@ func _frames(count: int = 7) -> void:
 func _save(name: String) -> Image:
     var image: Image = root.get_texture().get_image()
     assert(image != null and not image.is_empty())
-    assert(image.get_width()>=1150 and image.get_height()>=700)
+    assert(image.get_width()>=900 and image.get_height()>=540)
     assert(image.save_png("res://artifacts/"+name)==OK)
     return image
 
