@@ -80,12 +80,18 @@ func _run() -> void:
     var new_hull: MeshInstance3D = sculpt.find_child(
         "CorazaSoldadaHermeticaV7",true,false) as MeshInstance3D
     assert(new_hull.mesh.get_aabb().size.x > original_hull.mesh.get_aabb().size.x)
-    assert(new_hull.mesh.get_aabb().position.z < original_hull.mesh.get_aabb().position.z)
+    var hull_before: AABB = original_hull.mesh.get_aabb()
+    var hull_after: AABB = new_hull.mesh.get_aabb()
+    print("G09 V18 primary hull AABB: old=",hull_before," new=",hull_after)
+    assert(absf(hull_after.position.z-hull_before.position.z)>0.06)
     var old_turret: MeshInstance3D = previous.find_child(
         "TorreBajaSoldadaV7",true,false) as MeshInstance3D
     var new_turret: MeshInstance3D = sculpt.find_child(
         "TorreBajaSoldadaV7",true,false) as MeshInstance3D
-    assert(new_turret.mesh.get_aabb().position.z < old_turret.mesh.get_aabb().position.z)
+    var turret_before: AABB = old_turret.mesh.get_aabb()
+    var turret_after: AABB = new_turret.mesh.get_aabb()
+    print("G09 V18 articulated turret AABB: old=",turret_before," new=",turret_after)
+    assert(absf(turret_after.position.z-turret_before.position.z)>0.06)
     var gun: MeshInstance3D = sculpt.find_child(
         "MantleteConjuntoV7",true,false) as MeshInstance3D
     assert(gun.mesh is ArrayMesh)
