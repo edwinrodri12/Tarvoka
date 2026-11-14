@@ -1,0 +1,192 @@
+name: TARVOKA HQ V20 Android Physical Benchmark APK
+
+on:
+  push:
+    branches:
+      - feat/hq-v20-walls-weather-release-android-bench-20261114
+    paths:
+      - "scripts/ui/HQAndroidPhysicalBench.gd"
+      - "scenes/HQAndroidPhysicalBench.tscn"
+      - "tests/test_hq_v20_android_bench.gd"
+      - ".github/workflows/hq-v20-physical-android-apk.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/HQAndroidPhysicalBench.gd"
+      - "scenes/HQAndroidPhysicalBench.tscn"
+      - ".github/workflows/hq-v20-physical-android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-android-debug:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    env:
+      GODOT_VERSION: "4.3"
+      GODOT_STATUS: "stable"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure Android SDK tools are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          test -d "${ANDROID_HOME}"
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          test -f "${ANDROID_HOME}/platforms/android-34/android.jar"
+          test -x "${ANDROID_HOME}/build-tools/34.0.0/apksigner"
+
+      - name: Download official Godot 4.3 and matching export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/godot-templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p /tmp/godot-template-extract
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-template-extract
+          cp /tmp/godot-template-extract/templates/android_debug.apk "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          cp /tmp/godot-template-extract/templates/android_release.apk "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '%s\n' '4.3.stable' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+
+      # Persistent credentials are ONLY made available to a manually dispatched
+      # workflow on main, never to pull-request code. Every PR still builds
+      # with a disposable debug key, so untrusted PRs cannot access the secret.
+      - name: Prepare Android debug signing identity
+        shell: bash
+        env:
+          TARVOKA_KEYSTORE_B64: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_KEYSTORE_BASE64 || '' }}
+          TARVOKA_STORE_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_STORE_PASSWORD || '' }}
+          TARVOKA_KEY_ALIAS: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_KEY_ALIAS || '' }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KEYSTORE=/tmp/tarvoka-debug.keystore
+          configured=0
+          for value in "$TARVOKA_KEYSTORE_B64" "$TARVOKA_STORE_PASSWORD" "$TARVOKA_KEY_ALIAS"; do
+            if [ -n "$value" ]; then configured=$((configured + 1)); fi
+          done
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$GITHUB_REF" = refs/heads/main ] && [ "$configured" -gt 0 ]; then
+            if [ "$configured" -ne 3 ]; then
+              echo "Incomplete signing configuration. Configure all three TARVOKA_DEBUG_* secrets." >&2
+              exit 1
+            fi
+            printf '%s' "$TARVOKA_KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
+            if ! test -s "$KEYSTORE" || ! keytool -list -keystore "$KEYSTORE" \
+                -storepass "$TARVOKA_STORE_PASSWORD" -alias "$TARVOKA_KEY_ALIAS" >/dev/null 2>&1; then
+              echo "Configured signing keystore or alias is invalid." >&2
+              exit 1
+            fi
+            echo "TARVOKA_SIGNING_MODE=persistent" >> "$GITHUB_ENV"
+            echo "Signing: configured persistent debug identity (main, manual build)."
+          else
+            keytool -genkeypair -keystore "$KEYSTORE" \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1000 \
+              -storepass android -keypass android \
+              -dname "CN=Android Debug,O=TARVOKA Development,C=US" >/dev/null 2>&1
+            test -s "$KEYSTORE"
+            echo "TARVOKA_SIGNING_MODE=ephemeral" >> "$GITHUB_ENV"
+            echo "Signing: disposable debug identity (not update-in-place compatible)."
+          fi
+
+      - name: Generate production sprite atlas (32 roles x 4 poses)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tools/export_unit_atlas.gd
+          test -s assets/generated/tarvoka_units_32x4.png
+          test -s assets/generated/tarvoka_units_32x4.json
+
+      - name: Select independent HQ V20 benchmark and verify genuine Android lab scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/HQAndroidPhysicalBench.gd
+          test -s scenes/HQAndroidPhysicalBench.tscn
+          test -s tests/test_hq_v20_android_bench.gd
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/HQAndroidPhysicalBench.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/HQAndroidPhysicalBench.tscn"' project.godot
+          sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.hqbenchmark"|' export_presets.cfg
+          sed -i 's|package/name="TARVOKA"|package/name="TARVOKA HQ Benchmark"|' export_presets.cfg
+          grep -q 'com.edwinrodri12.tarvoka.hqbenchmark' export_presets.cfg
+      - name: Import and smoke-test on Godot native renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq-bench-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/hq-bench-import.log; then
+            exit 1
+          fi
+          timeout --signal=TERM --kill-after=5s 150s             xvfb-run -a -s "-screen 0 1280x720x24"             /tmp/Godot_v4.3-stable_linux.x86_64 --path .             --rendering-driver opengl3 --audio-driver Dummy             --script res://tests/test_hq_v20_android_bench.gd 2>&1 | tee /tmp/hq-bench-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/hq-bench-smoke.log; then
+            exit 1
+          fi
+          grep -q 'PASS HQ V20 Android benchmark:' /tmp/hq-bench-smoke.log
+      - name: Import and export debug APK with Godot
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/tarvoka-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_KEY_ALIAS || 'androiddebugkey' }}
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_STORE_PASSWORD || 'android' }}
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug Android build/TARVOKA-HQ-V20-Benchmark.apk
+          test -s build/TARVOKA-HQ-V20-Benchmark.apk
+          file build/TARVOKA-HQ-V20-Benchmark.apk
+          sha256sum build/TARVOKA-HQ-V20-Benchmark.apk
+
+      - name: Verify APK is signed
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose build/TARVOKA-HQ-V20-Benchmark.apk
+          unzip -tq build/TARVOKA-HQ-V20-Benchmark.apk > /dev/null
+          # Fail closed if export silently changes to a non-ARM64 package.
+          unzip -Z1 build/TARVOKA-HQ-V20-Benchmark.apk | grep -Eq "^lib/arm64-v8a/[^/]+\\.so$"
+          # Record public certificate fingerprint only; never upload keystore/private key.
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --print-certs build/TARVOKA-HQ-V20-Benchmark.apk | grep -E "Signer #1 certificate SHA-256 digest:"
+          echo "Debug signing identity mode: ${TARVOKA_SIGNING_MODE}"
+
+      - name: Upload standalone physical benchmark APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V20-Physical-Benchmark-Android-arm64
+          path: build/TARVOKA-HQ-V20-Benchmark.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload reusable sprite atlas and frame manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V20-Sprites-Diagnostic-Support
+          path: |
+            assets/generated/tarvoka_units_32x4.png
+            assets/generated/tarvoka_units_32x4.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Erase debug keystore from runner
+        if: always()
+        shell: bash
+        run: |
+          rm -f /tmp/tarvoka-debug.keystore
