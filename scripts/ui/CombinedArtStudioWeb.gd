@@ -16,6 +16,7 @@ var terrain_controls: VBoxContainer
 var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
+var terrain_textures_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
@@ -141,6 +142,14 @@ func _add_building_mode() -> void:
     terrain_continuous_toggle.button_pressed = true
     terrain_continuous_toggle.toggled.connect(_rebuild_terrain)
     terrain_controls.add_child(terrain_continuous_toggle)
+
+    _title(terrain_controls,"ACABADO DE SUPERFICIES",13)
+    terrain_textures_toggle = CheckButton.new()
+    terrain_textures_toggle.name = "ComparadorDeTexturasPBR"
+    terrain_textures_toggle.text = "Texturas PBR (comparar con colores planos)"
+    terrain_textures_toggle.button_pressed = true
+    terrain_textures_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_textures_toggle)
 
     _title(terrain_controls,"ILUMINACION",13)
     terrain_light_picker = OptionButton.new()
@@ -272,6 +281,8 @@ func _display_terrain() -> void:
     model_root = TerrainStudio.build_demo(terrain_scene_picker.selected,
         terrain_grid_toggle.button_pressed,terrain_samples_toggle.button_pressed,
         _faction,terrain_continuous_toggle.button_pressed)
+    if terrain_textures_toggle.button_pressed:
+        TerrainStudio.apply_texture_finish(model_root)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -335,10 +346,11 @@ func _update_details() -> void:
         if model_root == null:
             return
         var counts: Dictionary = model_root.get_meta("terrain_counts",{})
-        detail_label.text = "%s · %d casillas · %d mallas reales" % [
+        detail_label.text = "%s · %d casillas · %d mallas reales · %s" % [
             str(TerrainStudio.SCENES[terrain_scene_picker.selected]),
             int(model_root.get_meta("terrain_tile_count",0)),
-            Models.inspect_meshes(model_root)]
+            Models.inspect_meshes(model_root),
+            "TEXTURAS PBR" if model_root.get_meta("terrain_textures_pbr",false) else "MATERIALES PLANOS"]
         status_label.text = "Bosques %d · Montañas %d · Agua %d · Carreteras %d" % [
             int(counts.get("forest",0)),int(counts.get("mountain",0)),
             int(counts.get("water",0)),int(counts.get("road",0))]
