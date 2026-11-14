@@ -121,6 +121,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Diagnose the source file itself before dependent preloads mask its errors.
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --check-only --script res://scripts/ui/TerrainStudioFoothillsV11.gd 2>&1 | tee /tmp/terrain-foothills-source-check.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit 2>&1 | tee /tmp/terrain-import-editor.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --script res://tests/test_terrain_studio_preflight.gd 2>&1 | tee /tmp/terrain-import-check.log
