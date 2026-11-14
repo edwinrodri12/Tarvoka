@@ -9,6 +9,12 @@ on:
       - "scripts/**"
       - "scenes/**"
       - "tests/**"
+  push:
+    branches:
+      - feat/g09-v28-single-design-adaptive-quality-20261114
+    paths:
+      - "scripts/ui/**"
+      - ".github/workflows/android-debug-apk.yml"
   workflow_dispatch:
 
 permissions:
