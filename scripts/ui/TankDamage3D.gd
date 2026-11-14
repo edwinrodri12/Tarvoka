@@ -30,6 +30,7 @@ const ACCENT := Color("#E8A34F")
 const V16 = preload("res://scripts/ui/TankFinishV16.gd")
 const V17 = preload("res://scripts/ui/TankFXV17.gd")
 const V20 = preload("res://scripts/ui/TankIntegrationV20.gd")
+const V21 = preload("res://scripts/ui/TankFinishV21.gd")
 
 static func _material(color: Color, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -540,4 +541,6 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
     # change so destruction and repair never resurrect the floating bars.
     if model.get_meta("tarvoka_mbt_integrated_v20",false):
         V20.hide_legacy(model)
+    if model.get_meta("tarvoka_mbt_finish_v21",false):
+        V21.hide_legacy(model)
     return true
