@@ -193,6 +193,40 @@ func _run_gallery() -> void:
         push_error("Two read-only movement comparisons changed the battle or committed the move.")
         _failed = true
     main.board.pending_order.clear()
+
+    # Real interactive 3-choice comparison; pins are numbered on the map.
+    # Preserve the same source match from the earlier cover/risk screenshots.
+    main.board.set_isometric(false)
+    main._set_compact_hud(true)
+    main.board.selected_id = "A"
+    main._process(0.0)
+    main.compact_compare_button.emit_signal("pressed")
+    for option in [Vector2i(4,3),Vector2i(3,2),Vector2i(2,3)]:
+        main.board.toggle_compared_cell(option)
+    main.board.queue_redraw()
+    main._process(0.0)
+    if not main.board.compare_mode or not main.compact_compare_panel.visible or main.board.comparison_cells().size() != 3:
+        push_error("Mobile three-choice comparison is not active.")
+        _failed = true
+    if not await _capture_landscape("31-comparar-tres-destinos-android-960x540",Vector2i(960,540),
+            "Compara tres destinos · coste, cobertura, riesgo y ataque después de mover"):
+        _failed = true
+    main.board.set_isometric(true)
+    main._set_compact_hud(false)
+    main.board.queue_redraw()
+    main.battle_minimap.queue_redraw()
+    main._process(0.0)
+    if not main.sidebar_compare_panel.visible or not main.battle_minimap.visible:
+        push_error("Three-choice desktop comparison/minimap is missing.")
+        _failed = true
+    if not await _capture_landscape("32-comparar-destinos-iso-pc-1280x720",Vector2i(1280,720),
+            "Vista isométrica · tres alternativas y selección antes de confirmar"):
+        _failed = true
+    main.sidebar_compare_panel.choose_buttons[0].emit_signal("pressed")
+    if main.board.state != before_move_gallery or str(main.board.pending_order.get("kind","")) != "move":
+        push_error("Preparing a compared choice committed a move or did not require confirmation.")
+        _failed = true
+    main.board.cancel_selection()
     main.board.require_order_confirmation = risk_previous_confirmation
     main.board.state = before_risk_gallery
     main.board.selected_id = risk_previous_selection
@@ -403,11 +437,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 30:
-        push_error("Landscape UI QA incomplete: %d/30 captures" % _manifest.size())
+    if _failed or _manifest.size() != 32:
+        push_error("Landscape UI QA incomplete: %d/32 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 30 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 32 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
