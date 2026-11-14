@@ -72,5 +72,22 @@ func _initialize() -> void:
     for weather_case in ["rain", "snow", "clear"]:
         rules.reachable(origin, 2, terrain, blocked, "ground", true, allies, weather_case, "wheeled")
         assert(rules.reachable(origin, 2, terrain, blocked, "ground", true, allies) == baseline)
+    # Domain isolation: air can cross water, naval units cannot occupy land.
+    var air_routes: Dictionary = rules.reachable(origin, 1, terrain, blocked, "air")
+    assert(air_routes.has(Vector2i(1, 0)))
+    var naval_origin := Vector2i(1, 0)
+    var naval_routes: Dictionary = rules.reachable(naval_origin, 2, terrain, blocked, "naval")
+    assert(naval_routes.has(naval_origin))
+    assert(not naval_routes.has(origin))
+    # Invalid traction/domain and corrupted terrain must fail closed.
+    assert(rules.reachable(origin, 2, terrain, blocked, "ground", true, allies, "clear", "hovercraft-invalid").is_empty())
+    assert(rules.reachable(origin, 2, terrain, blocked, "invalid-domain").is_empty())
+    var corrupt_terrain: Array = terrain.duplicate(true)
+    corrupt_terrain[3][3] = "unknown-tile"
+    assert(rules.reachable(origin, 2, corrupt_terrain, blocked).is_empty())
+    assert(terrain == terrain_before)
+    # A zero-budget query cannot move, but retains the legal origin.
+    var zero_budget: Dictionary = rules.reachable(origin, 0, terrain, blocked)
+    assert(zero_budget.size() == 1 and zero_budget.has(origin))
     print("PASS: road/weather cost parity")
     quit()
