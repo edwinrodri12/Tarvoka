@@ -10,6 +10,7 @@ on:
       - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_landscape_only_ui.gd'
       - 'tests/test_landscape_command_results.gd'
+      - 'tests/test_dossier_comparison.gd'
       - 'tests/test_army_production_landscape.gd'
       - 'tests/test_saved_matches_landscape.gd'
       - 'tests/test_battle_ui_motion.gd'
@@ -37,6 +38,7 @@ on:
       - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_landscape_only_ui.gd'
       - 'tests/test_landscape_command_results.gd'
+      - 'tests/test_dossier_comparison.gd'
       - 'tests/test_army_production_landscape.gd'
       - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
@@ -78,6 +80,7 @@ jobs:
             test_battle_damage_feedback \
             test_turn_selection_hud \
             test_tile_context_battle \
+            test_dossier_comparison \
             test_tactical_alert_priorities \
             test_road_command_menu \
             test_tactical_briefing \

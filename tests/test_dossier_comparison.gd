@@ -106,7 +106,14 @@ func _run() -> void:
     board.inspected_cell = Vector2i(4,0)
     view._process(0.0)
     assert(not view.compact_dossier.visible)
-    assert(view.compact_info_body.visible)
+    # Terrain now has a structured fact card rather than duplicate prose.
+    # This tests the production UI users actually see in compact Android.
+    assert(view.compact_tile_context.visible)
+    assert(view.sidebar_tile_context.visible)
+    assert(not view.compact_info_body.visible)
+    assert(view.compact_tile_context.mobility_label.text.contains("INF"))
+    assert(view.compact_tile_context.defense_label.text.contains("Cobertura"))
+    assert(board.state == ui_snapshot)
 
     board.new_game(3,false,false,false,true,true,true)
     board.selected_factory_pos = armor
