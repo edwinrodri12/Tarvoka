@@ -51,6 +51,8 @@ var _choose_unit_button: Button
 var _g09_detail_button: Button
 var _g09_high_detail := true
 var _g09_lod_band := -1
+var weather_preview_picker: OptionButton
+var _weather_preview_override := "" # "" = real state, never saved.
 
 func _ready() -> void:
     hide()
@@ -122,6 +124,16 @@ func _ready() -> void:
         action.pressed.connect(control[1])
         tools.add_child(action)
 
+    weather_preview_picker = OptionButton.new()
+    weather_preview_picker.name = "Clima3DBatallaVista"
+    weather_preview_picker.custom_minimum_size = Vector2(154,42)
+    weather_preview_picker.tooltip_text = "REAL sigue el clima de la partida. Vista lluvia/nieve solo modifica gráficos; no cambia reglas, movimientos, combustible ni partidas guardadas."
+    for label in ["Clima REAL","Vista despejada","Vista lluvia","Vista nieve"]:
+        weather_preview_picker.add_item(label)
+    weather_preview_picker.select(0)
+    weather_preview_picker.item_selected.connect(_choose_visual_weather)
+    tools.add_child(weather_preview_picker)
+
     var footer := PanelContainer.new()
     footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
     footer.offset_top = -155
@@ -188,13 +200,48 @@ func _ready() -> void:
     _confirm_order_button.hide()
     commands.add_child(_confirm_order_button)
 
+func _presented_state(state: Dictionary) -> Dictionary:
+    if _weather_preview_override.is_empty():
+        return state
+    # Never mutate the live battle or pass this visual copy to order rules.
+    var preview_state: Dictionary = state.duplicate(false)
+    preview_state["weather"] = _weather_preview_override
+    return preview_state
+
+func _choose_visual_weather(index: int) -> void:
+    if index < 0 or index > 3:
+        return
+    _weather_preview_override = ["","clear","rain","snow"][index]
+    weather_preview_picker.select(index)
+    if _scene == null or _state_snapshot.is_empty():
+        return
+    # Keep camera, selected cell and pending validated order; only rebuild
+    # scene geometry and decorative overlays.
+    var model: Node3D = Terrain.build(
+        _presented_state(_state_snapshot),_selected_hint_unit_id,
+        _camera_size,_g09_high_detail)
+    if model == null:
+        return
+    var inspected: Vector2i = _selected_cell
+    preview.remove_child(_scene)
+    _scene.free()
+    _scene = model
+    preview.add_child(_scene)
+    _cells = model.get_meta("public_cells")
+    _cursor = null
+    _ranges_node = null
+    _refresh_ranges()
+    if _cells.has(inspected):
+        inspect_cell(inspected,false)
+    _update_g09_stats()
+
 func _process(_delta: float) -> void:
     # End-turn weather is authoritative; a viewer open during an AI turn
     # follows the real battle instead of retaining stale snowy/rainy meshes.
     if not visible or _live_board == null or _scene == null:
         return
     var current: Variant = _live_board.get("state")
-    if current is Dictionary and Terrain._weather(current) != \
+    if current is Dictionary and Terrain._weather(_presented_state(current)) != \
             str(_scene.get_meta("battle_weather","clear")):
         _refresh_from_board()
 
@@ -215,6 +262,8 @@ func _update_g09_stats() -> void:
             int(units.get("g09_v25",0)),int(units.get("g09_v10",0)),
             int(units.get("g09_v6",0)),climate_label,
             int(units.get("weather_models",0)),int(hq.get("visible",0))])
+    if not _weather_preview_override.is_empty():
+        stats_label.text += " · VISTA ARTÍSTICA (SIN CAMBIOS TÁCTICOS)"
     if _g09_detail_button!=null:
         _g09_detail_button.text = "G09 V25 · AUTO" if _g09_high_detail else "G09 V25 · ECO"
 
@@ -222,7 +271,7 @@ func _refresh_g09_lod() -> void:
     if _scene==null or _state_snapshot.is_empty():
         return
     var stats: Dictionary = Terrain.refresh_unit_lod(
-        _scene,_state_snapshot,_selected_hint_unit_id,
+        _scene,_presented_state(_state_snapshot),_selected_hint_unit_id,
         _camera_size,_g09_high_detail)
     if stats.is_empty():
         return
@@ -280,7 +329,7 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     var initial_zoom: float = clampf(float(maxi(
         initial_dims.x,initial_dims.y))*Terrain.CELL*0.66,16.0,70.0)
     var model: Node3D = Terrain.build(
-        state,selected_id,initial_zoom,_g09_high_detail)
+        _presented_state(state),selected_id,initial_zoom,_g09_high_detail)
     if model == null:
         return false
     _scene = model
