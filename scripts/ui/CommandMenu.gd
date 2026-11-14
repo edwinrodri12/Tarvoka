@@ -557,6 +557,7 @@ func refresh() -> void:
     army_details_body = null
     var army_layout: Dictionary = _dashboard_columns(army_body,"EjercitoYFicha")
     army_columns = army_layout["rail"]
+    army_columns.custom_minimum_size.y = 495
     var roster: VBoxContainer = army_layout["left"]
     army_details_body = army_layout["right"]
     var owned_units: Array[Dictionary] = []
