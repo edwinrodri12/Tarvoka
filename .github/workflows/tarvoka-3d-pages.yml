@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v12-tactical-silhouette-night-20261114
-      - feat/battle-3d-web-studio-v8-20261113
+      - feat/terrain-studio-v9-landscape-controls-20261114
       - feat/g09-v23-faction-armor-readability-20261114
 
 permissions:
@@ -96,19 +96,24 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out completed V8 battle studio for its own Godot WebGL build
+      - name: Check out verified V9 battle and improved landscape studio for Godot WebGL build
         uses: actions/checkout@v4
         with:
-          ref: feat/battle-3d-web-studio-v8-20261113
+          ref: feat/terrain-studio-v9-landscape-controls-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export interactive Battle V8 to the existing site at /batalla/
+      - name: Export enhanced Battle and Terrain V9 to the existing site at /batalla/
         shell: bash
         run: |
           set -euo pipefail
           test -s battle-source/scripts/ui/Battle3DMapView.gd
           test -s battle-source/scripts/ui/Battle3DOrders.gd
           test -s battle-source/scripts/ui/BattleTerrain3D.gd
+          test -s battle-source/scripts/ui/TerrainStudioDetailV5.gd
+          test -s battle-source/tests/test_terrain_studio_v9_controls.gd
+          grep -q 'TaludesNaturalesDeRiberaV5' battle-source/scripts/ui/TerrainStudioDetailV5.gd
+          grep -q 'GaleriaFaccionesTerreno' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'PantallaCompletaTerreno3D' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'BATALLA 3D' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           mkdir -p battle-source/assets battle-source/build/web build/web/batalla
           git -C battle-source rev-parse --short=12 HEAD > battle-source/assets/art_studio_revision.txt
