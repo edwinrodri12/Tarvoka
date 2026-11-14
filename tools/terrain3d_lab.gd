@@ -281,6 +281,11 @@ func _generate_forest() -> void:
                 Vector2i(0,1),Vector2i(-1,0)
             ]
             for edge in range(4):
+                # Ragged borders should be sparse, not another dense
+                # shrub wall: one small clump in roughly every third
+                # eligible edge segment is enough at tactical scale.
+                if posmod(x*13+y*17+edge*7,3) != 0:
+                    continue
                 var next_cell: Vector2i = cell+EDGE_OFFSETS[edge]
                 if not TerrainMesh.observed_cell(
                         terrain,next_cell,observed,
@@ -290,7 +295,7 @@ func _generate_forest() -> void:
                     terrain[next_cell.y][next_cell.x])
                 if kind not in ["plain","mountain"]:
                     continue
-                var count_at_edge: int = 2 if divisions >= 4 else 1
+                var count_at_edge := 1
                 for shrub_index in range(count_at_edge):
                     var local: Vector2 = Understory.edge_placement(
                         cell,edge,shrub_index)
