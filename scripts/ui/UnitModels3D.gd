@@ -35,6 +35,7 @@ const TankFinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
 const TankDamagePolishV30 = preload("res://scripts/ui/TankDamagePolishV30.gd")
 const TankHitReactionV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const TankTrackAlignmentV31 = preload("res://scripts/ui/TankTrackAlignmentV31.gd")
+const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -357,6 +358,8 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
         TankTacticalV24.recolor(model,faction_paint_color(faction))
     if model.get_meta("tarvoka_mbt_wear_v25",false):
         TankWearV25.refinish(model)
+    if model.get_meta("tarvoka_apc_sculpt_v1",false):
+        painted += APCArtV1.recolor(model,faction_paint_color(faction))
     return painted
 
 static func paintable_count(model: Node) -> int:
@@ -758,6 +761,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
+    if role == "apc" and finish_enabled and art_level >= 11:
+        APCArtV1.apply(model,faction_paint_color(faction))
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
