@@ -1,0 +1,48 @@
+TARVOKA ESTUDIO 3D — V8 PARA WINDOWS
+=================================
+
+ESTUDIO 3D EN EL NAVEGADOR (SIN APK)
+1. Descarga el artefacto TARVOKA-Estudio-3D-PC-Windows de GitHub Actions.
+2. Extrae TODO el ZIP en una carpeta local, por ejemplo Escritorio\Tarvoka3D.
+3. Haz doble clic en ABRIR_TARVOKA_ESTUDIO_3D.cmd.
+4. Se abre el navegador predeterminado con TARVOKA Estudio 3D.
+   La direccion local sera http://127.0.0.1:8765/ o un puerto cercano.
+5. Deja abierta la ventana del servidor mientras usas el visor. Para cerrarlo, Ctrl+C.
+
+No necesitas instalar Godot, Python, Node.js ni la APK Android.
+El servidor integrado usa exclusivamente 127.0.0.1; no publica tu PC
+en tu red. Funciona sin internet una vez descargado el ZIP.
+
+IMPORTANTE: NO abras index.html con doble clic. WebGL necesita un
+servidor HTTP local para cargar correctamente el WASM y el archivo PCK.
+
+LAS CUATRO SECCIONES DEL ESTUDIO
+- UNIDADES 3D: tanque/modelos, ocho facciones, animaciones y danos.
+- EDIFICIOS 3D: Cuartel General, niveles y estados de deterioro.
+- ENTORNO Y MAPA 3D: tres biomas, orillas, carreteras, puentes y suelo V2/V3/V4.
+- BATALLA 3D INTERACTIVA: mapas reales 10x8/24x18/40x30,
+  bosques, montanas, agua, niebla, unidades, ataques y movimiento.
+
+EN BATALLA 3D
+1. Selecciona escenario, tamano, niebla y unidades modernas en el panel.
+2. Pulsa CREAR / REINICIAR MAPA 3D para aplicar tus opciones.
+3. Pulsa ABRIR BATALLA 3D INTERACTIVA.
+4. Arrastra para desplazar la camara; rueda o pellizca para zoom;
+   gira con los controles o con dos dedos.
+5. Toca una unidad amiga y luego una casilla azul o un objetivo rojo.
+   Debes pulsar CONFIRMAR MOVIMIENTO o CONFIRMAR ATAQUE para ejecutar.
+6. Usa CANCELAR ORDEN o CERRAR para no ejecutar.
+7. Al cerrar, vuelves al mismo Estudio 3D y puedes explorar los otros modos.
+
+Las batallas del Estudio son demostraciones aisladas. No comparten partidas
+guardadas de Android y la IA esta desactivada.
+
+VERSION EN LINEA
+Si el proyecto tiene GitHub Pages habilitado, tambien puedes abrir
+el Estudio desde el sitio del repositorio. El artefacto descargable
+es el camino de respaldo independiente de Pages.
+
+NOTA DE CALIDAD
+Modo de evaluacion para PC. No sustituye las pruebas de rendimiento en un
+telefono fisico. No supone que todos los modelos o animaciones ya tengan
+acabado comercial.

@@ -19,7 +19,7 @@ func _run() -> void:
         await process_frame
     assert(studio.model_root != null)
     assert(studio._role == "tank")
-    assert(studio.category_picker.item_count == 3)
+    assert(studio.category_picker.item_count == 4)
     assert(not studio.building_controls.visible)
 
     studio._switch_category(1)
