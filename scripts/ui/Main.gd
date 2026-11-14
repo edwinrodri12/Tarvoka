@@ -34,6 +34,7 @@ const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
+const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 
 var board: Control
 var status_label: Label
@@ -52,6 +53,12 @@ var sidebar_alerts_button: Button
 var compact_alerts_button: Button
 var expanded_alerts_button: Button
 var _tactical_alerts_snapshot: Dictionary = {}
+var _quick_navigation_snapshot: Dictionary = {}
+var sidebar_next_unit: Button
+var sidebar_attention_unit: Button
+var compact_next_unit: Button
+var compact_attention_unit: Button
+var sidebar_navigation_row: HBoxContainer
 var home_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
@@ -186,7 +193,8 @@ func _bind_touch_feedback() -> void:
     for control in [command_menu_button,compact_menu_button,compact_options_button,
             compact_confirm,compact_cancel,compact_end_turn,compact_resupply,
             expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle,
-            sidebar_alerts_button,compact_alerts_button,expanded_alerts_button]:
+            sidebar_alerts_button,compact_alerts_button,expanded_alerts_button,
+            sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit]:
         var button: Button = control
         if button == null:
             continue
@@ -319,6 +327,24 @@ func _ready() -> void:
     sidebar_alerts_button.tooltip_text = "Prioridades propias, fábricas disponibles y objetivos observados"
     sidebar_alerts_button.pressed.connect(_open_tactical_alerts)
     panel.add_child(sidebar_alerts_button)
+    sidebar_navigation_row = HBoxContainer.new()
+    sidebar_navigation_row.name = "NavegacionRapidaLateral"
+    sidebar_navigation_row.add_theme_constant_override("separation",6)
+    panel.add_child(sidebar_navigation_row)
+    sidebar_next_unit = Button.new()
+    sidebar_next_unit.name = "SiguienteUnidadLateral"
+    sidebar_next_unit.text = "SIGUIENTE"
+    sidebar_next_unit.custom_minimum_size.y = 46
+    sidebar_next_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    sidebar_next_unit.pressed.connect(_next_ready_unit)
+    sidebar_navigation_row.add_child(sidebar_next_unit)
+    sidebar_attention_unit = Button.new()
+    sidebar_attention_unit.name = "SiguienteAlertaLateral"
+    sidebar_attention_unit.text = "ATENCIÓN"
+    sidebar_attention_unit.custom_minimum_size.y = 46
+    sidebar_attention_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    sidebar_attention_unit.pressed.connect(_next_attention_unit)
+    sidebar_navigation_row.add_child(sidebar_attention_unit)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -903,7 +929,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # scenario controls remain accessible farther down the scroll but no
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,commander_sidebar_strip,polished_status_card,command_menu_button,objectives_button,
-        sidebar_alerts_button,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
+        sidebar_alerts_button,sidebar_navigation_row,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
@@ -1230,6 +1256,20 @@ func _build_battle_hud() -> void:
     compact_alerts_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_alerts_button.pressed.connect(_open_tactical_alerts)
     compact_top_shortcuts.add_child(compact_alerts_button)
+    compact_next_unit = Button.new()
+    compact_next_unit.name = "SiguienteUnidadMovil"
+    compact_next_unit.text = "Sig."
+    compact_next_unit.custom_minimum_size.y = 44
+    compact_next_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_next_unit.pressed.connect(_next_ready_unit)
+    compact_top_shortcuts.add_child(compact_next_unit)
+    compact_attention_unit = Button.new()
+    compact_attention_unit.name = "SiguienteAlertaMovil"
+    compact_attention_unit.text = "Atención"
+    compact_attention_unit.custom_minimum_size.y = 44
+    compact_attention_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_attention_unit.pressed.connect(_next_attention_unit)
+    compact_top_shortcuts.add_child(compact_attention_unit)
     GameUiTheme.emphasize(compact_options_button,"primary")
     battle_hud_commands.hide()
     compact_center.hide()
@@ -1245,6 +1285,8 @@ func _set_compact_hud(compact: bool) -> void:
     compact_iso.visible = compact
     compact_options_button.visible = compact
     compact_alerts_button.visible = compact
+    compact_next_unit.visible = compact
+    compact_attention_unit.visible = compact
     compact_top_shortcuts.visible = compact
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
@@ -1338,6 +1380,14 @@ func _process(_delta: float) -> void:
         _update_alert_button(compact_alerts_button,badge_text,pending_count)
         _update_alert_button(expanded_alerts_button,badge_text,pending_count)
         _update_alert_button(sidebar_alerts_button,"ALERTAS TÁCTICAS · %d" % pending_count,pending_count)
+        _quick_navigation_snapshot = QuickNavigation.queues(board.state,_radar_viewer(),board.ai_enabled)
+        var ready_count: int = _quick_navigation_snapshot.get("ready",[]).size()
+        var needs_count: int = _quick_navigation_snapshot.get("attention",[]).size()
+        var can_navigate: bool = board.pending_order.is_empty() and bool(_quick_navigation_snapshot.get("valid",false))
+        _update_navigation_button(compact_next_unit,"Sig. %d" % ready_count,ready_count,can_navigate)
+        _update_navigation_button(compact_attention_unit,"Atenc. %d" % needs_count,needs_count,can_navigate)
+        _update_navigation_button(sidebar_next_unit,"SIGUIENTE · %d" % ready_count,ready_count,can_navigate)
+        _update_navigation_button(sidebar_attention_unit,"ATENCIÓN · %d" % needs_count,needs_count,can_navigate)
         # Source of truth is the current match, including restored saves.
         # Portrait ribbons remain presentation-only and fog-safe.
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
@@ -1575,6 +1625,44 @@ func _update_alert_button(button: Button, title: String, count: int) -> void:
     button.tooltip_text = "Abrir prioridades tácticas sin ejecutar órdenes"
     button.add_theme_color_override("font_color",
         Color("#FFD981") if count > 0 else Color("#BDD5E1"))
+
+func _update_navigation_button(button: Button, title: String, count: int,
+        can_navigate: bool) -> void:
+    if button == null:
+        return
+    button.text = title
+    button.disabled = not can_navigate or count <= 0
+    button.tooltip_text = ("Confirma o cancela la orden antes de navegar."
+        if not board.pending_order.is_empty()
+        else "Solo centra y selecciona la unidad. No ejecuta órdenes.")
+
+func _next_ready_unit() -> void:
+    _navigate_unit("ready")
+
+func _next_attention_unit() -> void:
+    _navigate_unit("attention")
+
+func _navigate_unit(mode: String) -> void:
+    # Never clear pending orders implicitly, even if a saved game or another
+    # UI path delivers a callback while a control is disabled.
+    if board == null or not board.pending_order.is_empty():
+        return
+    var fresh: Dictionary = QuickNavigation.queues(board.state,_radar_viewer(),board.ai_enabled)
+    var candidate: Dictionary = QuickNavigation.next_unit(fresh,mode,board.selected_id)
+    if candidate.is_empty():
+        return
+    var uid: String = str(candidate.get("id",""))
+    var pos: Vector2i = candidate.get("pos",Vector2i(-1,-1))
+    if uid.is_empty() or not board.focus_view_cell(pos):
+        return
+    board.selected_factory_pos = Vector2i(-1,-1)
+    board.inspected_enemy_id = ""
+    board.selected_id = uid
+    board.inspected_cell = pos
+    board.message = "Unidad %s · %d/%d · %s. Sin órdenes ejecutadas." % [
+        uid,int(candidate["index"]),int(candidate["total"]),
+        "atención" if mode == "attention" else "disponible"]
+    board.queue_redraw()
 
 func _show_turn_banner(message: String, tint: Color) -> void:
     if turn_banner == null or board == null:
