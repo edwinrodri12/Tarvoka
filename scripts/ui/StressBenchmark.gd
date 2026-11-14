@@ -25,7 +25,17 @@ const CASES := [
     {"name":"Nieve extrema", "dims":Vector2i(40,30), "tanks":150,
         "weather":"snow", "zoom":1.7, "focus":Vector2i(20,15), "effects":16, "saver":false},
     {"name":"Nieve con ahorro", "dims":Vector2i(40,30), "tanks":150,
-        "weather":"snow", "zoom":1.7, "focus":Vector2i(20,15), "effects":16, "saver":true}
+        "weather":"snow", "zoom":1.7, "focus":Vector2i(20,15), "effects":16, "saver":true},
+    {"name":"8 equipos: avanzada", "dims":Vector2i(40,30), "tanks":160, "sites":64, "teams":8,
+        "weather":"clear", "zoom":1.9, "focus":Vector2i(20,15), "effects":8, "saver":false},
+    {"name":"8 equipos: grande", "dims":Vector2i(40,30), "tanks":320, "sites":128, "teams":8,
+        "weather":"clear", "zoom":1.7, "focus":Vector2i(20,15), "effects":16, "saver":false},
+    {"name":"8 equipos: masiva", "dims":Vector2i(40,30), "tanks":512, "sites":192, "teams":8,
+        "weather":"rain", "zoom":1.7, "focus":Vector2i(20,15), "effects":24, "saver":false},
+    {"name":"8 equipos: extremo", "dims":Vector2i(40,30), "tanks":768, "sites":256, "teams":8,
+        "weather":"snow", "zoom":1.9, "focus":Vector2i(20,15), "effects":32, "saver":false},
+    {"name":"8 equipos: ahorro", "dims":Vector2i(40,30), "tanks":768, "sites":256, "teams":8,
+        "weather":"snow", "zoom":1.9, "focus":Vector2i(20,15), "effects":32, "saver":true}
 ]
 
 var board: Control
@@ -44,6 +54,8 @@ var _samples: Array[float] = []
 var _peak_mem_mb := 0.0
 var _last_stats: Dictionary = {}
 var _actual_tanks := 0
+var _actual_sites := 0
+var _actual_teams := 2
 var _result_text := ""
 var _previous_memory := 0.0
 
@@ -83,7 +95,7 @@ func _ready() -> void:
     title.add_theme_font_size_override("font_size",20)
     right.add_child(title)
     var instructions := Label.new()
-    instructions.text = "Carga gráfica artificial. No cambia partidas ni guardados. Los FPS son del dispositivo donde corre esta pantalla."
+    instructions.text = "Carga aislada: hasta 8 equipos, 768 tanques y 256 edificios. NO simula la red ni la IA de ocho jugadores. Los FPS corresponden a este dispositivo."
     instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     right.add_child(instructions)
     status_label = Label.new()
@@ -110,7 +122,7 @@ func _ready() -> void:
     set_process(true)
     call_deferred("start_benchmark")
 
-func _seed_tanks(requested: int) -> int:
+func _seed_tanks(requested: int, teams: int = 2) -> int:
     var terrain: Array = board.state.get("terrain",[])
     var candidate_cells: Array[Vector2i] = []
     for y in range(terrain.size()):
@@ -127,9 +139,64 @@ func _seed_tanks(requested: int) -> int:
         var tank: Dictionary = Roles.make_unit(
             "QA_TANK_%03d" % i,i%2,candidate_cells[index],"tank")
         if not tank.is_empty():
+            # Only visual team IDs 2..7. Not a legal 8-player combat session.
+            tank["faction"] = i%teams
             units.append(tank)
     board.state["units"] = units
     return units.size()
+
+func _seed_visual_sites(requested: int, teams: int) -> int:
+    if teams <= 2:
+        return board.state.get("economy",{}).get("sites",[]).size()
+    var terrain: Array = board.state.get("terrain",[])
+    var eligible: Array[Vector2i] = []
+    for y in range(terrain.size()):
+        for x in range(terrain[y].size()):
+            if str(terrain[y][x]) not in ["water","mountain"]:
+                eligible.append(Vector2i(x,y))
+    var positions: Array[Vector2i] = []
+    var middle := Vector2i(int(terrain[0].size()/2),int(terrain.size()/2))
+    # Eight real baked HQ textures in one central visual test scene.
+    for offset in [Vector2i(-6,-4),Vector2i(0,-6),Vector2i(6,-4),
+            Vector2i(7,0),Vector2i(5,5),Vector2i(0,7),
+            Vector2i(-6,5),Vector2i(-7,0)]:
+        if eligible.is_empty():
+            break
+        var goal: Vector2i = middle+offset
+        var best_index := 0
+        var best_dist := 100000000
+        for j in range(eligible.size()):
+            var point: Vector2i = eligible[j]
+            var d: int = abs(point.x-goal.x)+abs(point.y-goal.y)
+            if d < best_dist:
+                best_dist = d
+                best_index = j
+        positions.append(eligible[best_index])
+        eligible.remove_at(best_index)
+    var sites_total: int = mini(requested,positions.size()+eligible.size())
+    while positions.size() < sites_total and not eligible.is_empty():
+        var pick: int = int(floor(float(eligible.size())*0.55))
+        positions.append(eligible[pick])
+        eligible.remove_at(pick)
+    var kinds := ["city","factory","armor_plant","artillery_depot",
+        "drone_center","airbase","shipyard"]
+    var markers: Array = []
+    for i in range(positions.size()):
+        markers.append({
+            "pos":positions[i],
+            "owner":i%teams,
+            "kind":"city" if i < teams else kinds[i%kinds.size()],
+            "visual_command_city":i < teams,
+            "owner_known":true,
+            "status":"city" if i < teams else "unknown",
+            "income":0,
+            "caption":"",
+            "capture_pending":false
+        })
+    # Isolated display markers; never rewrite the authoritative economy.
+    board.state["__qa_visual_eight_sides"] = true
+    board.state["__qa_site_markers"] = markers
+    return markers.size()
 
 func start_benchmark() -> void:
     if running or board == null or board.size.x <= 0.0:
