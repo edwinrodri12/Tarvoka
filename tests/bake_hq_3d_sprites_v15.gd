@@ -3,7 +3,9 @@ extends SceneTree
 # OFFLINE sprite atlas generator. Run this script inside the frozen Godot
 # HQ V13 art project checked out by GitHub Actions (not at app runtime).
 # Each PNG comes from an actual 3D mesh with the original faction crest.
-const Production = preload("res://scripts/ui/HeadquartersProductionV13.gd")
+# This source is copied into the V13 art checkout by the baker workflow.
+# The playable game does not contain V13 3D source: NEVER preload it here,
+# otherwise the ordinary Android project importer tries to parse missing code.
 const BASE := "res://artifacts/hq-v15-bake"
 const FILENAME := "hq_%d.png"
 const EDGE := 512
@@ -36,6 +38,8 @@ func _neutralize(model: Node3D) -> void:
     shell.material_override = neutral
 
 func _run() -> void:
+    var Production: Variant = load("res://scripts/ui/HeadquartersProductionV13.gd")
+    assert(Production != null)
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(BASE))
     var stage := SubViewport.new()
     stage.size = Vector2i(EDGE,EDGE)
