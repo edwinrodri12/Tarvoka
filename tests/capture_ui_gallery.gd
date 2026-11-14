@@ -90,6 +90,18 @@ func _run_gallery() -> void:
     if not await _capture_landscape("07-batalla-1280x720",Vector2i(1280,720),"Batalla · tablero táctico horizontal"):
         _failed = true
 
+    # Mobile selection is a real, non-destructive unit state. The status strip
+    # must remain readable at 960x540 in fullscreen HUD.
+    var selected_before_gallery: String = main.board.selected_id
+    main._set_compact_hud(true)
+    main.board.selected_id = "A"
+    main._process(0.0)
+    if not await _capture_landscape("22-unidad-seleccionada-960x540",Vector2i(960,540),"Batalla · unidad activa y acciones disponibles"):
+        _failed = true
+    main.board.selected_id = selected_before_gallery
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Visual QA of the REAL attack controller, not a painted mockup.
     # The scenario stays in memory and its authoritative state is restored.
     var battle_before_effect: Dictionary = main.board.state.duplicate(true)
