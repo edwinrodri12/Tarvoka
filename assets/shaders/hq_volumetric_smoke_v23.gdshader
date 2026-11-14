@@ -42,10 +42,10 @@ void fragment() {
     float large = smooth_noise(uv);
     float small = smooth_noise(uv*2.14 + vec3(8.91,-3.12,1.92));
     float density = mix(large,small,0.30)*turbulence;
-    float body = 1.0-smoothstep(0.36,1.12,length(local_pos*2.0));
-    float wave = smoothstep(0.25,0.61,density+0.13);
+    float body = 1.0-smoothstep(0.31,1.22,length(local_pos*1.40));
+    float wave = smoothstep(0.10,0.58,density+0.20);
     // Internal density and smooth silhouette; reject hollow black spheres.
     float shade = mix(0.70,1.09,large);
     ALBEDO = smoke_tint.rgb*shade;
-    ALPHA = clamp(smoke_tint.a*body*wave,0.0,0.52);
+    ALPHA = clamp(smoke_tint.a*body*wave,0.0,0.68);
 }
