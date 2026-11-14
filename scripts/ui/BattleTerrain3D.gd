@@ -12,6 +12,7 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
+const G09Quality = preload("res://scripts/ui/TankAdaptiveV28.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
@@ -319,11 +320,14 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var detailed := 0
     var hidden_enemies := 0
     var hero_count := 0
-    var medium_count := 0
-    var light_count := 0
-    var player: int = 0
-    # Prioritize the selected unit for the eight-detailed-model GPU budget,
-    # without changing, disclosing or reordering the authoritative state.
+    var tank_count := 0
+    var placeholders := 0
+    var hidden_micro := 0
+    var shadow_off := 0
+    var shader_simplified := 0
+    const PLAYER := 0
+    # Preserve exactly the existing fog-of-war checks. Prioritize selected
+    # unit for the expensive real-mesh budget without touching game state.
     var ordered: Array = []
     for entry in state.get("units",[]):
         if entry is Dictionary and str(entry.get("id",""))==selected_id:
@@ -336,7 +340,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
             continue
         var cell: Vector2i = unit["pos"]
         var faction: int = int(unit.get("faction",-1))
-        if faction != player and (not cells.has(cell) or
+        if faction != PLAYER and (not cells.has(cell) or
                 not bool(cells[cell].get("visible",false))):
             hidden_enemies += 1
             continue
@@ -345,29 +349,33 @@ static func _make_units(parent: Node3D,state: Dictionary,
         var role: String = str(unit.get("role","line"))
         var selected: bool = str(unit.get("id",""))==selected_id
         var model: Node3D = null
-        var actual_art: int = 0
+        var art_level := 0
         if detailed < MAX_DETAILED_UNITS and Models.supports(role):
-            if role == "tank":
-                actual_art = TankBudget.tank_art_level(
-                    camera_size,selected,enable_g09_v25,hero_count,medium_count)
-                model = Models.build(role,faction,actual_art>=10,actual_art)
-                if model != null and actual_art == TankBudget.HERO_ART:
-                    if model.get_meta("tarvoka_mbt_wear_v25",false):
+            if role=="tank":
+                # The real final G09 V25 is the source at EVERY zoom.
+                # Quality changes only microdetails, shaders and shadows.
+                model = Models.build(role,faction,true,25)
+                art_level = 25
+                if model!=null and model.get_meta("tarvoka_mbt_wear_v25",false):
+                    tank_count += 1
+                    var qa: Dictionary = G09Quality.configure(
+                        model,camera_size,selected,enable_g09_v25)
+                    hidden_micro += int(qa.get("hidden_micro",0))
+                    shadow_off += int(qa.get("shadow_off",0))
+                    shader_simplified += int(qa.get("simplified_materials",0))
+                    if selected and int(qa.get("tier",1))==G09Quality.CLOSE:
                         hero_count += 1
-                    else:
-                        model.free()
-                        actual_art = TankBudget.MEDIUM_ART
-                        model = Models.build(role,faction,true,actual_art)
-                if actual_art == TankBudget.MEDIUM_ART:
-                    medium_count += 1
-                if actual_art == TankBudget.FAR_ART:
-                    light_count += 1
             else:
                 model = Models.build(role,faction,false,6)
-                actual_art = 6
-            if model != null:
+                art_level = 6
+            if model!=null:
                 detailed += 1
-        if model == null:
+        if model==null:
+            # Future baked V25 impostors will replace these old generic
+            # over-budget discs; count them openly instead of claiming LOD
+            # parity for a unit that does not fit the scene's 3D budget.
+            if role=="tank":
+                placeholders += 1
             model = Node3D.new()
             var disc := MeshInstance3D.new()
             var disk := CylinderMesh.new()
@@ -376,46 +384,70 @@ static func _make_units(parent: Node3D,state: Dictionary,
             disk.height = 0.42
             disk.radial_segments = 8
             var mat := StandardMaterial3D.new()
-            mat.albedo_color = Color("#5d94d8") if faction == 0 else Color("#d76d61")
+            mat.albedo_color = Color("#5d94d8") if faction==0 else Color("#d76d61")
             disk.material = mat
             disc.mesh = disk
             model.add_child(disc)
         model.name = "Unidad3D_%s" % str(unit["id"])
-        # Distinct layers may occupy one logical tile without clipping.
-        var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
+        var altitude: float = 2.45 if Domains.layer(unit)=="air" else 0.43
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
         model.set_meta("selected",selected)
-        model.set_meta("battle_art_level",actual_art)
-        model.set_meta("battle_g09_v25",
-            role=="tank" and actual_art==TankBudget.HERO_ART)
+        model.set_meta("battle_role",role)
+        model.set_meta("battle_art_level",art_level)
+        model.set_meta("battle_g09_v25",role=="tank" and art_level==25)
         parent.add_child(model)
         visible_count += 1
-    return {"visible":visible_count,"detailed":detailed,
-        "hidden_enemies":hidden_enemies,"g09_v25":hero_count,
-        "g09_v10":medium_count,"g09_v6":light_count}
+    return {
+        "visible":visible_count,"detailed":detailed,
+        "hidden_enemies":hidden_enemies,
+        "g09_v25":tank_count,"g09_close":hero_count,
+        "g09_v10":0,"g09_v6":0,
+        "g09_over_budget":placeholders,
+        "g09_hidden_micro":hidden_micro,
+        "g09_shadow_off":shadow_off,
+        "g09_shader_simplified":shader_simplified
+    }
 
 static func refresh_unit_lod(scene: Node3D,state: Dictionary,
         selected_id: String,camera_size: float,
         enable_g09_v25: bool = true) -> Dictionary:
-    # Swap ONLY unit visuals when zoom bands change. Never rebuild chunks,
-    # sample hidden enemies, change orders, or alter collision/picking.
-    if scene == null or not scene.has_meta("public_cells"):
+    # In-place quality adjustment, ZERO tank destruction or reconstruction
+    # when zooming. No tile, foliage, visibility, ID, order or model changed.
+    if scene==null or not scene.has_meta("public_cells"):
         return {}
-    var previous: Node3D = scene.find_child(
+    var holder: Node3D = scene.find_child(
         "UnidadesDinamicasG09",false,false) as Node3D
-    if previous != null:
-        scene.remove_child(previous)
-        previous.free()
-    var holder := Node3D.new()
-    holder.name = "UnidadesDinamicasG09"
-    scene.add_child(holder)
-    var stats: Dictionary = _make_units(
-        holder,state,scene.get_meta("public_cells"),selected_id,
-        camera_size,enable_g09_v25)
+    if holder==null:
+        return {}
     var counters: Dictionary = scene.get_meta("render_stats",{}).duplicate()
+    var stats: Dictionary = counters.get("units",{}).duplicate()
+    stats["g09_close"] = 0
+    stats["g09_hidden_micro"] = 0
+    stats["g09_shadow_off"] = 0
+    stats["g09_shader_simplified"] = 0
+    for model in holder.get_children():
+        if not model is Node3D:
+            continue
+        var unit_id: String = str(model.name).trim_prefix("Unidad3D_")
+        var selected: bool = unit_id==selected_id
+        model.set_meta("selected",selected)
+        if str(model.get_meta("battle_role",""))!="tank" or (
+                int(model.get_meta("battle_art_level",0))!=25):
+            continue
+        var quality: Dictionary = G09Quality.configure(
+            model as Node3D,camera_size,selected,enable_g09_v25)
+        if selected and int(quality.get("tier",1))==G09Quality.CLOSE:
+            stats["g09_close"] = int(stats["g09_close"])+1
+        stats["g09_hidden_micro"] = (
+            int(stats["g09_hidden_micro"])+int(quality.get("hidden_micro",0)))
+        stats["g09_shadow_off"] = (
+            int(stats["g09_shadow_off"])+int(quality.get("shadow_off",0)))
+        stats["g09_shader_simplified"] = (
+            int(stats["g09_shader_simplified"])
+            +int(quality.get("simplified_materials",0)))
     counters["units"] = stats
     scene.set_meta("render_stats",counters)
     scene.set_meta("battle_camera_size",camera_size)
