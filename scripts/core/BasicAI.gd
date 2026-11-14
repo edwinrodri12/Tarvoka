@@ -14,6 +14,7 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
+const ArmorProcurement = preload("res://scripts/core/GroundArmorProcurement.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -383,7 +384,7 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
     var strategy: Dictionary = SupplyStrategy.assess(knowledge, faction)
     var priorities := {
         "factory":["scout","assault","engineer","line","logistics"],
-        "armor_plant":["piercer","tank","bulwark","ifv","apc"],
+        "armor_plant":ArmorProcurement.ranking(knowledge,faction,counts),
         "artillery_depot":["mobile_aa","spg","sam","artillery","mlrs","ew"],
         "drone_center":["uav_recon","fpv","loitering"],
         "airbase":["attack_heli","fighter","ucav","bomber","transport_heli"],
@@ -397,7 +398,6 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
         priorities["artillery_depot"] = ["mobile_aa","sam","spg","artillery","mlrs","ew"]
         priorities["airbase"] = ["fighter","attack_heli","ucav","bomber","transport_heli"]
     if observed_armor:
-        priorities["armor_plant"] = ["piercer","tank","ifv","bulwark","apc"]
         priorities["drone_center"] = ["fpv","loitering","uav_recon"]
     for site in knowledge["economy"]["sites"]:
         if int(site.get("owner",-1)) != faction:
