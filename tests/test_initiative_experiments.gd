@@ -96,10 +96,24 @@ static func _battle(map_id: int, fog: bool, first: int, responder_bonus: int, sc
             assert(before == state)
             if not action.get("valid",false):
                 break
-            assert(action.get("action","") in ["move","attack","produce","resupply"])
+            assert(action.get("action","") in ["move","attack","produce","resupply","repair"])
             state = action["state"]
             assert(int(state["faction"]) == side)
             assert(Economy.valid(state["economy"],state["terrain"]))
+            if str(action["action"]) == "repair":
+                # An objective study must account for legal paid maintenance,
+                # not silently exclude a real action from the modern game.
+                assert(int(action["restored"]) in [1,2,3])
+                assert(int(action["cost"]) == 35*int(action["restored"]))
+                assert(int(before["economy"]["credits"][side]) -
+                    int(state["economy"]["credits"][side]) == int(action["cost"]))
+                var checked := false
+                for j in range(before["units"].size()):
+                    if str(before["units"][j]["id"]) == str(action["target_id"]):
+                        assert(int(state["units"][j]["hp"]) ==
+                            int(before["units"][j]["hp"])+int(action["restored"]))
+                        checked = true
+                assert(checked)
             actions += 1
             if int(state["winner"]) != -1:
                 break
