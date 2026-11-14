@@ -46,6 +46,7 @@ var _v23_preview := false
 var _v24_preview := false
 var _v25_preview := false
 var _tactical_view := false
+var _underside_view := false
 var _scenario_enabled := false
 var _scenario_terrain := 0
 var _scenario_light := 0
@@ -67,6 +68,7 @@ var v23_button: Button
 var v24_button: Button
 var v25_button: Button
 var tactical_button: Button
+var underside_button: Button
 var clay_button: Button
 var v17_quality_button: Button
 var comparison_button: Button
@@ -234,6 +236,7 @@ func _construct() -> void:
     _add_paired(column,"− Alejar",func(): _change_zoom(-1),
         "+ Acercar",func(): _change_zoom(1))
     tactical_button = _button(column,"CÁMARA: Cambiar a vista táctica",_toggle_tactical_camera)
+    underside_button = _button(column,"INSPECCIONAR ORUGAS · Vista inferior V29",_toggle_underside_camera)
     _title(column,"V26 · PRUEBAS EN CAMPO DE BATALLA",12)
     scenario_button = _button(column,"ESCENARIO: Activar campo de batalla",_toggle_scenario)
     _title(column,"TERRENO DE PRUEBA",12)
@@ -352,6 +355,7 @@ func _display_role(role: String) -> void:
     v24_button.visible = (_role == "tank")
     v25_button.visible = (_role == "tank")
     tactical_button.visible = (_role == "tank")
+    underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
     terrain_picker.visible = (_role == "tank")
     light_picker.visible = (_role == "tank")
@@ -366,6 +370,7 @@ func _display_role(role: String) -> void:
     v24_button.text = "COMPARAR: Volver a V23" if _v24_preview else "V24 · Pintura superior táctica"
     v25_button.text = "COMPARAR: Volver a V24" if _v25_preview else "NUEVO V25 · Esmalte y microdesgaste"
     tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
+    underside_button.text = "INSPECCIONAR ORUGAS · Volver a vista lateral" if _underside_view else "INSPECCIONAR ORUGAS · Vista inferior V29"
     v20_button.text = "COMPARAR: Volver a V19" if _v20_preview else "NUEVO V20 · Blindaje integrado y suspensión"
     v19_button.text = "COMPARAR: Volver a V18" if _v19_preview else "V19 · Techo, sensores y mantelete"
     clay_button.visible = (_role == "tank" and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview))
@@ -424,6 +429,10 @@ func _update_details() -> void:
     ]
     if _tactical_view:
         status_label.text += " · CÁMARA TÁCTICA"
+    if _underside_view:
+        status_label.text += " · VISTA INFERIOR DE ORUGAS"
+    if model_root.get_meta("tarvoka_mbt_track_final_v29",false):
+        status_label.text += " · RODAJE V29 CORREGIDO"
     if _scenario_enabled:
         status_label.text += " · %s / %s (V26)" % [
             str(BattleScenarioV26.TERRAIN_NAMES[_scenario_terrain]),
@@ -812,8 +821,22 @@ func _toggle_tactical_camera() -> void:
     if _role != "tank":
         return
     _tactical_view = not _tactical_view
+    _underside_view = false
     _update_camera()
     tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
+    underside_button.text = "INSPECCIONAR ORUGAS · Volver a vista lateral" if _underside_view else "INSPECCIONAR ORUGAS · Vista inferior V29"
+    _update_details()
+
+func _toggle_underside_camera() -> void:
+    # Inspect the REAL underside of G09 V29, both sprockets and no prototype
+    # square boxes. Never substitute a concept image for the geometry.
+    if _role!="tank":
+        return
+    _underside_view = not _underside_view
+    _tactical_view = false
+    _update_camera()
+    tactical_button.text = "CÁMARA: Cambiar a vista táctica"
+    underside_button.text = "INSPECCIONAR ORUGAS · Volver a vista lateral" if _underside_view else "INSPECCIONAR ORUGAS · Vista inferior V29"
     _update_details()
 
 func _toggle_scenario() -> void:
@@ -944,9 +967,14 @@ func _change_zoom(direction: int) -> void:
 
 func _update_camera() -> void:
     if camera != null:
-        camera.size = Models.preview_frame_height(_role)*(2.35 if _tactical_view and _role=="tank" else 1.10)/_zoom
-        camera.position = Vector3(5.2,10.6,6.4) if _tactical_view and _role=="tank" else Vector3(5.3,4.2,6.3)
-        camera.look_at(Vector3(0,0.35,0),Vector3.UP)
+        if _role=="tank" and _underside_view:
+            camera.size = Models.preview_frame_height(_role)*1.26/_zoom
+            camera.position = Vector3(6.0,-1.75,2.1)
+            camera.look_at(Vector3(0,0.32,0),Vector3.UP)
+        else:
+            camera.size = Models.preview_frame_height(_role)*(2.35 if _tactical_view and _role=="tank" else 1.10)/_zoom
+            camera.position = Vector3(5.2,10.6,6.4) if _tactical_view and _role=="tank" else Vector3(5.3,4.2,6.3)
+            camera.look_at(Vector3(0,0.35,0),Vector3.UP)
 
 func _reset_camera() -> void:
     _yaw = -32.0
