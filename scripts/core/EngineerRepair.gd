@@ -96,11 +96,11 @@ static func options(state: Dictionary, engineer_id: String) -> Array:
         var proposal: Dictionary = quote(state,engineer_id,str(unit.get("id","")))
         if bool(proposal.get("valid",false)):
             result.append(proposal)
+    # Meaningful decision order: larger actual repairs first, then stable ID.
     result.sort_custom(func(a,b):
-        # Meaningful decision order: bigger actual repairs first; then stable ID.
-        return int(a["restored"]) > int(b["restored"]) if
-            int(a["restored"]) != int(b["restored"]) else
-            str(a["target_id"]) < str(b["target_id"])
+        if int(a["restored"]) != int(b["restored"]):
+            return int(a["restored"]) > int(b["restored"])
+        return str(a["target_id"]) < str(b["target_id"])
     )
     return result
 
