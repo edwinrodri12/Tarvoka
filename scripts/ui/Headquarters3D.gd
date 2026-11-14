@@ -278,6 +278,23 @@ static func _building(parent: Node3D, level: int, color: Color) -> void:
         Vector3(2.30,2.20,4.16),CONCRETE)
     _box(structure,"GaleriaLateralDerecha",Vector3(4.06,1.10,0.35),
         Vector3(2.30,2.20,4.16),CONCRETE)
+    # V20: the front V12 wings projected their windows and curved roof 1.3 m
+    # FORWARD of the original gallery volume (z front=-1.73).
+    # Finish the solid wall BEHIND that glazing, not as floating slabs and
+    # never in front of the official command shield or tactical windows.
+    # Front face z=-3.06, while approved window glass is at z=-3.117.
+    # The rear overlaps original galleries, preventing see-through seams.
+    for side in [-1,1]:
+        var wing_x: float = float(side)*4.06
+        _box(structure,"MuroContinuoBajoVentanasAlaV20_%s" % side,
+            Vector3(wing_x,1.43,-2.39),
+            Vector3(2.30,2.86,1.34),CONCRETE,0.10)
+        # Solid narrow return into the main block; placed outside frontal
+        # original windows at x=+/-2.18 (half-width 0.36).
+        var joint_x: float = float(side)*2.77
+        _box(structure,"EncuentroEstructuralAlaCentralV20_%s" % side,
+            Vector3(joint_x,1.32,-2.59),
+            Vector3(0.28,2.64,0.96),WALL,0.08)
     for side in [-1,1]:
         var x: float = float(side)*4.06
         _box(structure,"TechoAla%s" % side,Vector3(x,2.28,0.35),

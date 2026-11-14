@@ -1,0 +1,87 @@
+name: TARVOKA HQ V20 Wall Closure and Release-Safe Weather GPU QA
+
+on:
+  push:
+    branches:
+      - feat/hq-v20-walls-weather-release-android-bench-20261114
+    paths:
+      - "scripts/ui/Headquarters3D.gd"
+      - "scripts/ui/HeadquartersClimateV17.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_hq_v20_walls_weather_release.gd"
+      - ".github/workflows/hq-v20-walls-weather-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/Headquarters3D.gd"
+      - "scripts/ui/HeadquartersClimateV17.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_hq_v20_walls_weather_release.gd"
+      - ".github/workflows/hq-v20-walls-weather-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bring the actual V15 PNGs from the Android game
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-android
+          persist-credentials: false
+      - name: Copy precisely nine approved PNGs and isolate Android code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          test -s source-android/assets/buildings/hq_v15/hq_neutral.png
+          cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf source-android
+          test "$(find assets/buildings/hq_v15 -name '*.png' | wc -l)" -eq 9
+      - name: Install native Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/hq20-godot.zip
+          unzip -q /tmp/hq20-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq20-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/hq20-import.log; then
+            echo "HQ V20 architectural lighting import failed" >&2; exit 1
+          fi
+      - name: Native GPU verify sealed wing walls and visible release-safe rain/snow
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_hq_v20_walls_weather_release.gd 2>&1 | tee /tmp/hq20-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/hq20-gpu.log; then
+            echo "HQ V20 architecture regression" >&2; exit 1
+          fi
+          grep -q "PASS HQ V20:" /tmp/hq20-gpu.log
+          for image in \
+            tarvoka_hq_v20_walls_day_clear.png \
+            tarvoka_hq_v20_walls_rain_release_fix.png \
+            tarvoka_hq_v20_walls_snow_release_fix.png; do
+            test -s "artifacts/$image"
+          done
+      - name: Archive real GPU visuals
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V20-Walls-Weather-Release-GPU
+          retention-days: 30
+          if-no-files-found: error
+          path: artifacts/tarvoka_hq_v20_*.png

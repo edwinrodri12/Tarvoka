@@ -179,9 +179,12 @@ func _sync_hq_wayfinding_v18() -> void:
     var weather: String = "clear"
     if hq_weather_picker != null and hq_weather_picker.selected >= 0:
         weather = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
-    assert(HQWayfindingV18.apply(lamps,_faction,level,condition,
+    # Never hide visual side effects inside assert(): release WebGL omits
+    # assertions and would otherwise leave the entire effect inactive.
+    var applied: bool = HQWayfindingV18.apply(lamps,_faction,level,condition,
         _hq_light_preset,weather,hq_wayfinding_toggle.button_pressed,
-        bool(model_root.get_meta("tarvoka_hq_map_distant",false))))
+        bool(model_root.get_meta("tarvoka_hq_map_distant",false)))
+    assert(applied)
 
 func _sync_hq_facade_v19() -> void:
     if _role != "headquarters" or model_root == null or hq_facade_v19_toggle == null:
@@ -192,10 +195,11 @@ func _sync_hq_facade_v19() -> void:
     var weather: String = "clear"
     if hq_weather_picker != null and hq_weather_picker.selected >= 0:
         weather = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
-    assert(HQFacadeV19.apply(stage,_faction,level_picker.selected+1,
+    var applied: bool = HQFacadeV19.apply(stage,_faction,level_picker.selected+1,
         str(BUILDING_STATES[building_state_picker.selected]),weather,
         hq_facade_v19_toggle.button_pressed,
-        bool(model_root.get_meta("tarvoka_hq_map_distant",false))))
+        bool(model_root.get_meta("tarvoka_hq_map_distant",false)))
+    assert(applied)
 
 func _change_hq_facade_v19(_enabled: bool) -> void:
     _sync_hq_facade_v19()
@@ -228,7 +232,10 @@ func _apply_hq_climate_v17() -> void:
     var level: int = maxi(1,level_picker.selected+1)
     var condition: String = str(BUILDING_STATES[maxi(0,building_state_picker.selected)])
     var sprite_mode: bool = hq_v15_mode_picker.selected == 2
-    assert(HQClimateV17.apply(hq_climate_stage,weather,terrain,level,condition,sprite_mode))
+    # UI events MUST execute in export-release too (no side effects in assert).
+    var climate_applied: bool = HQClimateV17.apply(
+        hq_climate_stage,weather,terrain,level,condition,sprite_mode)
+    assert(climate_applied)
     hq_climate_stage.visible = _role=="headquarters" and not hq_batch_toggle.button_pressed
     # The V17 set, puddles and precip are environment-only. The real
     # V12/V13 HQ mesh now gets the SAME reversible universal coating as G09.
@@ -256,6 +263,10 @@ func _apply_hq_climate_v17() -> void:
             str(HQClimateV17.WEATHER_NAMES[hq_weather_picker.selected]),
             str(HQClimateV17.TERRAIN_NAMES[hq_terrain_picker.selected]),
             HQClimateV17.active_mesh_count(hq_climate_stage)]
+        if hq_batch_toggle != null and hq_batch_toggle.button_pressed:
+            hq_climate_status.text = "Distrito agrupado: clima visual desactivado (prueba de rendimiento)."
+        elif sprite_mode:
+            hq_climate_status.text += " · El sprite no se modifica; solo el entorno."
         if actual_model:
             hq_climate_status.text += " · Modelo 3D: %d materiales húmedos / %d mallas nieve." % [
                 int(model_stats.get("wet",0)),int(model_stats.get("snow_nodes",0))]
@@ -785,6 +796,10 @@ func _display_headquarters() -> void:
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
     hq_stress_picker.visible = showing_batch
+    # Large districts are deliberately batched dry map proxies; disable
+    # climate selectors there instead of silently ignoring user clicks.
+    hq_weather_picker.disabled = showing_batch
+    hq_terrain_picker.disabled = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(_hq_grid_dimension,_hq_grid_dimension,15.5)
         assert(model_root != null)
