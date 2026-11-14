@@ -187,8 +187,8 @@ static func apply(model: Node3D) -> bool:
     # true taper through the shoulders and clipped engine stern. It is the
     # same primary G09 chassis node, NOT a new slab over the old surface.
     if _swap_loft(model,"CorazaSoldadaHermeticaV7",[
-        Vector2(-0.37,-1.75),Vector2(0.37,-1.75),
-        Vector2(0.70,-1.61),Vector2(0.97,-1.30),
+        Vector2(-0.22,-2.04),Vector2(0.22,-2.04),
+        Vector2(0.66,-1.72),Vector2(0.97,-1.30),
         Vector2(1.12,-0.82),Vector2(1.14,0.82),
         Vector2(0.89,1.37),Vector2(0.64,1.60),
         Vector2(-0.64,1.60),Vector2(-0.89,1.37),
@@ -203,8 +203,8 @@ static func apply(model: Node3D) -> bool:
     # old rectangular box hidden by cheek modules. Y levels are LOCAL to
     # the current yaw pivot and cannot alter gun recoil/elevation.
     if _swap_loft(model,"TorreBajaSoldadaV7",[
-        Vector2(-0.205,-1.38),Vector2(0.205,-1.38),
-        Vector2(0.56,-1.21),Vector2(0.88,-0.91),
+        Vector2(-0.165,-1.78),Vector2(0.165,-1.78),
+        Vector2(0.49,-1.53),Vector2(0.88,-0.91),
         Vector2(1.01,-0.39),Vector2(0.97,0.43),
         Vector2(0.83,0.99),Vector2(0.57,1.25),
         Vector2(-0.57,1.25),Vector2(-0.83,0.99),
