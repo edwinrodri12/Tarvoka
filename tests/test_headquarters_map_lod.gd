@@ -41,7 +41,7 @@ func _run() -> void:
     root.content_scale_size = Vector2i(1200,740)
     var packed: PackedScene = load("res://scenes/UnitArtStudioWeb.tscn")
     var studio: Control = packed.instantiate()
-    assert(studio.get_script() == Studio)
+    assert(studio.get_script() == preload("res://scripts/ui/EnvironmentArtStudioWeb.gd"))
     root.add_child(studio)
     for i in range(6):
         await process_frame
