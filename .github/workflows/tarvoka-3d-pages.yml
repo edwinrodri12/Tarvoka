@@ -20,9 +20,10 @@ permissions:
   id-token: write
 
 concurrency:
-  # A newer site publication supersedes an older version of the same site.
+  # Keep a verified V10 site publication from being cancelled by unrelated
+  # model/HQ automation. GitHub serializes page deployments in this group.
   group: tarvoka-public-studio-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
