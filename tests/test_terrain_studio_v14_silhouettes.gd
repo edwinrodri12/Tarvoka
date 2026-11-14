@@ -38,6 +38,9 @@ func _run() -> void:
     for f in range(6):
         await process_frame
     studio._switch_category(2)
+    # V15 must be off while testing geometry and screenshots of older finishes.
+    if studio._terrain_v11_enabled:
+        studio._toggle_v11_finish()
     for f in range(8):
         await process_frame
     assert(studio._role=="terrain")
@@ -168,6 +171,9 @@ func _run() -> void:
     studio._switch_category(3)
     assert(studio._role=="battle")
     studio._switch_category(2)
+    # V15 must be off while testing geometry and screenshots of older finishes.
+    if studio._terrain_v11_enabled:
+        studio._toggle_v11_finish()
     assert(studio._role=="terrain")
     studio.free()
     print("PASS TERRAIN_STUDIO_V14: elongated connected rock spines, real mesh silhouette differences, seam continuity, 3 biomes, same camera comparison and all legacy viewers")
