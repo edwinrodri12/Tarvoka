@@ -131,6 +131,23 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     # visibility rules as roads and shorelines. This is
                     # render data only; nothing is written into the battle.
                     var environment: Dictionary = {"cell":cell}
+                    if terrain in ["plain","forest","mountain"]:
+                        var biome_colors: Dictionary = {}
+                        for side in range(4):
+                            var neighbor: Vector2i = cell+Topology.DIRECTIONS[side]
+                            if neighbor.x < 0 or neighbor.y < 0 or (
+                                    neighbor.x >= dims.x or neighbor.y >= dims.y):
+                                continue
+                            if fog and not visible.has(neighbor):
+                                continue
+                            var neighbor_kind: String = str(
+                                state["terrain"][neighbor.y][neighbor.x])
+                            if neighbor_kind == terrain or (
+                                    neighbor_kind in ["road","water"]):
+                                continue
+                            biome_colors[side] = VisualStyle.terrain_color(
+                                neighbor_kind,neighbor.x,neighbor.y)
+                        environment["biome_colors"] = biome_colors
                     if terrain == "water":
                         environment["water_connections"] = Topology.neighbor_mask(
                             state["terrain"],cell,"water",true,visible,fog)
