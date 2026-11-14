@@ -20,6 +20,9 @@ on:
       - "scripts/ui/HeadquartersReadabilityV9.gd"
       - "scripts/ui/HeadquartersSurfaceV10.gd"
       - "scripts/ui/HeadquartersRefinementV11.gd"
+      - "scripts/ui/HeadquartersSilhouetteV12.gd"
+      - "tests/test_headquarters_v12_tactical_night.gd"
+      - "tests/export_headquarters_tactical_v12_glb.gd"
       - "tests/test_headquarters_v11_lighting.gd"
       - "tests/export_headquarters_refinement_v11_glb.gd"
       - "tests/test_headquarters_v10_surfaces.gd"
@@ -56,6 +59,7 @@ on:
       - feat/hq-v9-distance-readability-faction-gallery-20261113
       - feat/hq-v10-surface-transitions-20261113
       - feat/hq-v11-lighting-refinements-20261113
+      - feat/hq-v12-tactical-silhouette-night-20261114
       - main
     paths:
       - "scripts/ui/**"
@@ -302,6 +306,20 @@ jobs:
           test -s artifacts/tarvoka_hq_v11_sunset_godot.png
           test -s artifacts/tarvoka_hq_v11_night_godot.png
           test -s artifacts/tarvoka_hq_v11_curved_damage.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v12_tactical_night.gd 2>&1 | tee /tmp/hq-v12-tactical-night.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v12-tactical-night.log; then
+            echo "HQ V12 tactical sculpt, night brightness or eight faction gallery failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V12:" /tmp/hq-v12-tactical-night.log
+          test -s artifacts/tarvoka_hq_v12_eight_tactical_factions.png
+          test -s artifacts/tarvoka_hq_v11_vs_v12_tactical_same_camera.png
+          test -s artifacts/tarvoka_hq_v12_tactical_day.png
+          test -s artifacts/tarvoka_hq_v12_readable_night.png
+          test -s artifacts/tarvoka_hq_v12_night_detail.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -405,6 +423,20 @@ jobs:
           fi
           grep -q "PASS HQ V11 GLB export:" /tmp/hq-v11-glb.log
           test -s artifacts/TARVOKA_CuartelGeneral_V11_Nivel3_Editable.glb
+      - name: Export V12 HQ as editable Blender GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_headquarters_tactical_v12_glb.gd 2>&1 | tee /tmp/hq-v12-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v12-glb.log; then
+            echo "HQ V12 Blender GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V12 GLB export:" /tmp/hq-v12-glb.log
+          test -s artifacts/TARVOKA_CuartelGeneral_V12_Nivel3_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -457,6 +489,11 @@ jobs:
             artifacts/tarvoka_hq_v11_sunset_godot.png
             artifacts/tarvoka_hq_v11_night_godot.png
             artifacts/tarvoka_hq_v11_curved_damage.png
+            artifacts/tarvoka_hq_v12_eight_tactical_factions.png
+            artifacts/tarvoka_hq_v11_vs_v12_tactical_same_camera.png
+            artifacts/tarvoka_hq_v12_tactical_day.png
+            artifacts/tarvoka_hq_v12_readable_night.png
+            artifacts/tarvoka_hq_v12_night_detail.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
@@ -469,6 +506,7 @@ jobs:
             artifacts/TARVOKA_CuartelGeneral_V9_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V10_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V11_Nivel3_Editable.glb
+            artifacts/TARVOKA_CuartelGeneral_V12_Nivel3_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

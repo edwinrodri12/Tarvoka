@@ -14,6 +14,7 @@ const MaterialV8 = preload("res://scripts/ui/HeadquartersFinishV8.gd")
 const ReadabilityV9 = preload("res://scripts/ui/HeadquartersReadabilityV9.gd")
 const SurfaceV10 = preload("res://scripts/ui/HeadquartersSurfaceV10.gd")
 const RefinementV11 = preload("res://scripts/ui/HeadquartersRefinementV11.gd")
+const SilhouetteV12 = preload("res://scripts/ui/HeadquartersSilhouetteV12.gd")
 const CONDITIONS := ["operativo", "capturado", "danado", "destruido"]
 const BASE := Color("#788693")
 const CONCRETE := Color("#b3b9b5")
@@ -402,7 +403,8 @@ static func build(level: int = 1, faction: int = 0,
         pbr_v8_enabled: bool = true,
         readability_v9_enabled: bool = true,
         surface_v10_enabled: bool = true,
-        refinement_v11_enabled: bool = true) -> Node3D:
+        refinement_v11_enabled: bool = true,
+        tactical_v12_enabled: bool = true) -> Node3D:
     if not valid_spec(level,faction,condition):
         return null
     var model := Node3D.new()
@@ -444,6 +446,8 @@ static func build(level: int = 1, faction: int = 0,
                                 SurfaceV10.apply(model,level,accent,condition)
                                 if refinement_v11_enabled:
                                     RefinementV11.apply(model,level,accent,condition)
+                                    if tactical_v12_enabled:
+                                        SilhouetteV12.apply(model,level,accent,condition)
     return model
 
 # Zoom-adaptive fine detail for WebGL and Android. Architecture remains visible.

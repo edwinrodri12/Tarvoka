@@ -24,6 +24,9 @@ var hq_v8_toggle: CheckButton
 var hq_v9_toggle: CheckButton
 var hq_v10_toggle: CheckButton
 var hq_v11_toggle: CheckButton
+var hq_v12_toggle: CheckButton
+var hq_camera_picker: OptionButton
+var _hq_camera_preset := 0
 var hq_lighting_picker: OptionButton
 var hq_lighting_label: Label
 var hq_fill_light: DirectionalLight3D
@@ -81,8 +84,8 @@ func _setup_architecture_stage() -> void:
         lamp.name = "BalizaNocturnaEscenarioV11"
         lamp.position = lamp_data[0] as Vector3
         lamp.light_color = lamp_data[1] as Color
-        lamp.omni_range = float(lamp_data[2])
-        lamp.light_energy = 0.58
+        lamp.omni_range = float(lamp_data[2])*1.55
+        lamp.light_energy = 1.75
         lamp.shadow_enabled = false
         lamp.visible = false
         preview.add_child(lamp)
@@ -97,13 +100,13 @@ func _apply_hq_lighting(index: int) -> void:
     var preset: int = _hq_light_preset if active else 0
     # Three reproducible lighting rigs, same camera and exact 3D material.
     # Material response is measured instead of painted with false colors.
-    var sun_color := [Color("#fff3e4"),Color("#ffc289"),Color("#7597c0")]
-    var sky_color := [Color("#14232d"),Color("#493b38"),Color("#0a1427")]
-    var ambient_color := [Color("#c1d5de"),Color("#e1a789"),Color("#7297bd")]
-    var key_energy := [1.65,1.23,0.18]
-    var fill_energy := [0.80,0.37,0.12]
-    var ambient_energy := [0.84,0.61,0.39]
-    var pitch := [-46.0,-18.0,-9.0]
+    var sun_color := [Color("#fff3e4"),Color("#ffc289"),Color("#b5d2f5")]
+    var sky_color := [Color("#14232d"),Color("#493b38"),Color("#040b18")]
+    var ambient_color := [Color("#c1d5de"),Color("#e1a789"),Color("#b5cbe3")]
+    var key_energy := [1.65,1.23,0.61]
+    var fill_energy := [0.80,0.37,0.51]
+    var ambient_energy := [0.84,0.61,1.02]
+    var pitch := [-46.0,-18.0,-29.0]
     if hq_key_light != null:
         hq_key_light.rotation_degrees = Vector3(float(pitch[preset]),-32.0,0)
         hq_key_light.light_color = sun_color[preset]
@@ -119,6 +122,10 @@ func _apply_hq_lighting(index: int) -> void:
         scene.ambient_light_energy = float(ambient_energy[preset])
     for lamp in hq_night_lamps:
         lamp.visible = active and preset == 2
+    if hq_ground != null:
+        var ground_mat: StandardMaterial3D = hq_ground.material_override as StandardMaterial3D
+        if ground_mat != null:
+            ground_mat.albedo_color = Color("#171f2b") if active and preset == 2 else Color("#182d32")
 
 func _change_hq_lighting(index: int) -> void:
     _apply_hq_lighting(index)
@@ -180,7 +187,7 @@ func _add_building_mode() -> void:
     hq_version_picker = OptionButton.new()
     hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
     hq_version_picker.custom_minimum_size.y = 50
-    for name_version in ["V11 · Curvas y acabados bajo distintas luces",
+    for name_version in ["V12 · Silueta táctica y noche legible",
             "V3 · Arquitectura anterior",
             "V2 · Primera revisión",
             "V1 · Prototipo original"]:
@@ -218,6 +225,12 @@ func _add_building_mode() -> void:
     hq_v11_toggle.button_pressed = true
     hq_v11_toggle.toggled.connect(_change_hq_refinement_v11)
     building_controls.add_child(hq_v11_toggle)
+    hq_v12_toggle = CheckButton.new()
+    hq_v12_toggle.name = "SiluetaDistanciaHQV12"
+    hq_v12_toggle.text = "Silueta táctica V12 (comparar con V11)"
+    hq_v12_toggle.button_pressed = true
+    hq_v12_toggle.toggled.connect(_change_hq_silhouette_v12)
+    building_controls.add_child(hq_v12_toggle)
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
@@ -228,6 +241,15 @@ func _add_building_mode() -> void:
     hq_lighting_picker.select(0)
     hq_lighting_picker.item_selected.connect(_change_hq_lighting)
     building_controls.add_child(hq_lighting_picker)
+    _title(building_controls,"ENCUADRE PARA REVISAR LA SILUETA",13)
+    hq_camera_picker = OptionButton.new()
+    hq_camera_picker.name = "EncuadreDeBatallaHQ"
+    hq_camera_picker.custom_minimum_size.y = 49
+    hq_camera_picker.add_item("Inspección cercana")
+    hq_camera_picker.add_item("Distancia táctica real")
+    hq_camera_picker.select(0)
+    hq_camera_picker.item_selected.connect(_change_hq_camera)
+    building_controls.add_child(hq_camera_picker)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -414,6 +436,25 @@ func _change_hq_refinement_v11(_enabled: bool) -> void:
     if _role == "headquarters" and _hq_show_v4 and hq_v10_toggle.button_pressed:
         _display_headquarters()
 
+func _change_hq_silhouette_v12(_enabled: bool) -> void:
+    if _role == "headquarters" and _hq_show_v4 and hq_v11_toggle.button_pressed:
+        _display_headquarters()
+
+func _change_hq_camera(index: int) -> void:
+    if index < 0 or index > 1:
+        return
+    _hq_camera_preset = index
+    if _role != "headquarters" or hq_batch_toggle.button_pressed:
+        return
+    _zoom = 0.69 if index == 1 else 1.0
+    if camera != null:
+        camera.position = _hq_camera_position()
+        camera.look_at(Vector3(0,2.3,0),Vector3.UP)
+    _update_camera()
+
+func _hq_camera_position() -> Vector3:
+    return Vector3(-17.5,22.0,-19.5) if _hq_camera_preset == 1 else Vector3(-18.0,16.5,-19.0)
+
 func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -446,6 +487,8 @@ func _display_headquarters() -> void:
     hq_v9_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed and not showing_batch
     hq_v10_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed and hq_v9_toggle.button_pressed and not showing_batch
     hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
+    hq_v12_toggle.visible = hq_v11_toggle.visible and hq_v11_toggle.button_pressed
+    hq_camera_picker.visible = not showing_batch
     hq_fps_label.visible = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(7,7,15.5)
@@ -465,7 +508,8 @@ func _display_headquarters() -> void:
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
     model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4,
         hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,hq_v9_toggle.button_pressed,
-        hq_v10_toggle.button_pressed,hq_v11_toggle.button_pressed)
+        hq_v10_toggle.button_pressed,hq_v11_toggle.button_pressed,
+        hq_v12_toggle.button_pressed)
     assert(model_root != null)
     hq_map_lod_toggle.visible = _hq_show_v4
     if _hq_show_v4:
@@ -474,10 +518,10 @@ func _display_headquarters() -> void:
     preview.add_child(model_root)
     if initial:
         _yaw = 32.0
-        _zoom = 1.0
+        _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
     model_root.rotation_degrees.y = _yaw
     # Front-right camera reveals the command entrance, insignia, and helipad.
-    camera.position = Vector3(-18.0,16.5,-19.0)
+    camera.position = _hq_camera_position()
     camera.look_at(Vector3(0,2.3,0),Vector3.UP)
     _update_camera()
     _update_details()
@@ -485,7 +529,10 @@ func _display_headquarters() -> void:
 func _reset_camera() -> void:
     if _role == "headquarters":
         _yaw = 32.0
-        _zoom = 1.0
+        _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
+        if camera != null:
+            camera.position = _hq_camera_position()
+            camera.look_at(Vector3(0,2.3,0),Vector3.UP)
         if model_root != null:
             model_root.rotation_degrees.y = _yaw
         _update_camera()
@@ -529,6 +576,8 @@ func _update_details() -> void:
         detail_label.text = "Cuartel General · SUPERFICIES V10 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_visual_v11",false):
         detail_label.text = "Cuartel General · REMATES CURVOS V11 · Nivel %d · %d mallas 3D" % [level,meshes]
+    if model_root.get_meta("tarvoka_hq_visual_v12",false):
+        detail_label.text = "Cuartel General · SILUETA TÁCTICA V12 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_map_distant",false):
         detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
