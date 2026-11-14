@@ -10,6 +10,8 @@ const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
 const HQWayfindingV18 = preload("res://scripts/ui/HeadquartersWayfindingV18.gd")
 const HQFacadeV19 = preload("res://scripts/ui/HeadquartersFacadeV19.gd")
 const HQDamageV21 = preload("res://scripts/ui/HeadquartersDamageV21.gd")
+const HQDamageV22 = preload("res://scripts/ui/HeadquartersDamageV22.gd")
+const HQFireV22 = preload("res://scripts/ui/HeadquartersFireV22.gd")
 const HQImpactV21 = preload("res://scripts/ui/HeadquartersImpactV21.gd")
 const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
@@ -842,6 +844,16 @@ func _set_hq_map_lod(distant: bool) -> void:
             impact_fx.visible = not distant
             if distant:
                 impact_fx.stop()
+        # V22 permanent flames and smoke must stop processing when the
+        # tactical distant LOD hides high-poly building detail.
+        var ambient: TarvokaHeadquartersFireV22 = model_root.get_node_or_null(
+            HQFireV22.STAGE_NAME) as TarvokaHeadquartersFireV22
+        if ambient != null:
+            ambient.set_distant(distant)
+        var debris_layer: Node3D = model_root.get_node_or_null(
+            HQDamageV22.STAGE_NAME) as Node3D
+        if debris_layer != null:
+            debris_layer.visible = not distant
         if hq_bullet_test_button != null:
             hq_bullet_test_button.disabled = distant
             hq_explosive_test_button.disabled = distant
@@ -941,13 +953,32 @@ func _display_headquarters() -> void:
         model_root.add_child(HQFacadeV19.build())
         var added: bool = HQDamageV21.apply(model_root,damage_stage,level)
         assert(added)
+        # Apply V22 structural changes on top of the existing V21 scene.
+        # Do not run these in assert(): WebGL release must render them too.
+        var v22_added: bool = HQDamageV22.apply(model_root,damage_stage,level)
+        assert(v22_added)
+        if damage_stage in [2,3]:
+            var persistent: TarvokaHeadquartersFireV22 = HQFireV22.build(damage_stage)
+            model_root.add_child(persistent)
+            persistent.set_distant(hq_map_lod_toggle.button_pressed)
+        var structural: Node3D = model_root.get_node_or_null(
+            HQDamageV22.STAGE_NAME) as Node3D
+        if structural != null:
+            structural.visible = not hq_map_lod_toggle.button_pressed
         model_root.set_meta("visual_condition",condition)
         var impact_fx := HQImpactV21.new()
         model_root.add_child(impact_fx)
         impact_fx.visible = not hq_map_lod_toggle.button_pressed
         if hq_impact_status != null:
-            hq_impact_status.text = "Etapa %d: %s · dos animaciones 3D de impacto" % [
-                damage_stage,str(HQDamageV21.STAGES[damage_stage])]
+            var detail: String = [
+                "Sin daños estructurales",
+                "Antenas superiores derribadas",
+                "Cristales y techos rotos · humo animado",
+                "Ala colapsada · fuego y humo animados",
+                "Ruinas estructurales sin edificio intacto"
+            ][damage_stage]
+            hq_impact_status.text = "V22 · %s · %s · impactos de bala y explosión" % [
+                str(HQDamageV21.STAGES[damage_stage]),detail]
     _apply_hq_climate_v17()
     _sync_hq_wayfinding_v18()
     _sync_hq_facade_v19()
