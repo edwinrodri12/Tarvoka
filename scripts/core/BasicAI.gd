@@ -14,6 +14,7 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
+const EngineerRepair = preload("res://scripts/core/EngineerRepair.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -134,6 +135,37 @@ static func step(state: Dictionary) -> Dictionary:
             supply["action"] = "resupply"
             supply["reason"] = str(rearm["reason"])
             return supply
+
+    # One real repair order for the IA when restoring a costly chassis is
+    # economically preferable to replacing those HP. No free repairs, no
+    # hidden-enemy information and no automatic 1-HP micro-management.
+    var best_repair: Dictionary = {}
+    var best_repair_margin := 0
+    for ally in friends:
+        if str(ally.get("role","")) != "engineer":
+            continue
+        for offer in EngineerRepair.options(state,str(ally["id"])):
+            if int(offer["restored"]) < 2:
+                continue
+            var replacement_cost: int = Economy.cost(str(offer["target_role"]))
+            var value_recovered: int = int(round(
+                float(replacement_cost)*float(int(offer["restored"])) /
+                float(int(offer["maximum_hp"]))))
+            var margin: int = value_recovered-int(offer["cost"])
+            # Leave plenty of reason to build new equipment and to capture
+            # buildings. A repair must have a significant positive margin.
+            if margin < 25 or margin <= best_repair_margin:
+                continue
+            best_repair_margin = margin
+            best_repair = offer
+    if not best_repair.is_empty():
+        var maintained: Dictionary = Session.repair(
+            state,str(best_repair["engineer_id"]),str(best_repair["target_id"]))
+        if bool(maintained.get("valid",false)):
+            maintained["action"] = "repair"
+            maintained["reason"] = "economic_maintenance"
+            maintained["unit_id"] = str(best_repair["engineer_id"])
+            return maintained
 
     # A nearby fuel-and-ammunition truck can move toward a stranded ally.
     # Its destination and route are computed on observed terrain only.
