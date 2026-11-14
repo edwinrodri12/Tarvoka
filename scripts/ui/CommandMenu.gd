@@ -45,6 +45,7 @@ var battle_columns: BoxContainer
 var settings_columns: BoxContainer
 var settings_buttons: Dictionary = {}
 var operational_values: Dictionary = {}
+var _tab_transition: Tween
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
 # the map receives all touches until the player explicitly opens the drawer.
@@ -101,7 +102,26 @@ func _ready() -> void:
     army_body = _add_page("Ejercito")
     production_body = _add_page("Produccion")
     settings_body = _add_page("Ajustes")
+    tabs.tab_changed.connect(_on_tab_changed)
     hide()
+
+# A restrained 160ms content transition makes navigation feel more fluid,
+# but keeps every button interactive and is skipped in battery-saver mode.
+func _on_tab_changed(_index: int) -> void:
+    if tabs == null or not is_visible_in_tree():
+        return
+    if _tab_transition != null and _tab_transition.is_running():
+        _tab_transition.kill()
+    for page in tabs.get_children():
+        if page is Control:
+            page.modulate.a = 1.0
+    var page: Control = tabs.get_current_tab_control()
+    if page == null or (board != null and bool(board.battery_saver)):
+        return
+    page.modulate.a = 0.84
+    _tab_transition = create_tween()
+    _tab_transition.tween_property(page,"modulate:a",1.0,0.16).set_trans(
+        Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _add_page(name: String) -> VBoxContainer:
     var scroll := ScrollContainer.new()
