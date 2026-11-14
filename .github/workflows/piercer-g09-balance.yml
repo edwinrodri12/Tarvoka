@@ -7,6 +7,7 @@ on:
       - 'scripts/core/ModernArsenal.gd'
       - 'tests/test_piercer_g09_sensitivity.gd'
       - 'tests/test_piercer_g09_regression.gd'
+      - 'tests/test_piercer_g09_ai_economy.gd'
       - '.github/workflows/piercer-g09-balance.yml'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'scripts/core/ModernArsenal.gd'
       - 'tests/test_piercer_g09_sensitivity.gd'
       - 'tests/test_piercer_g09_regression.gd'
+      - 'tests/test_piercer_g09_ai_economy.gd'
       - '.github/workflows/piercer-g09-balance.yml'
   workflow_dispatch:
 
@@ -54,6 +56,15 @@ jobs:
             | tee /tmp/piercer-g09-regression.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/piercer-g09-regression.log; then exit 1; fi
           grep -F 'PASS piercer G09 regression:' /tmp/piercer-g09-regression.log
+      - name: Verify AI buys and fights with counter budget
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_piercer_g09_ai_economy.gd 2>&1 \
+            | tee /tmp/piercer-g09-ai-economy.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/piercer-g09-ai-economy.log; then exit 1; fi
+          grep -F 'PASS piercer G09 AI economy:' /tmp/piercer-g09-ai-economy.log
       - name: Upload auditable balance measurements
         if: always()
         uses: actions/upload-artifact@v4
@@ -63,4 +74,5 @@ jobs:
             /tmp/piercer-g09-sensitivity.log
             /tmp/piercer-g09-sensitivity.json
             /tmp/piercer-g09-regression.log
+            /tmp/piercer-g09-ai-economy.log
           if-no-files-found: warn
