@@ -357,12 +357,40 @@ static func build_water(grid: Array, observed: Dictionary = {},
                     observed_cell(grid,nearby,observed,restricted) and (
                     not _neighbor_water(grid,cell,shore_side,
                         observed,restricted))) else 0.0
-                _add_vertex(st,center,Color(0.35,0.64,0.71,0.0))
-                _add_vertex(st,Vector3(b.x,WATER_LEVEL,b.y),
-                    Color(0.54,0.79,0.83,bank_strength))
-                _add_vertex(st,Vector3(a.x,WATER_LEVEL,a.y),
-                    Color(0.54,0.79,0.83,bank_strength))
-                triangles += 1
+                if bank_strength > 0.0:
+                    # Keep the center of a wide river dark: using a
+                    # center-to-bank triangle with alpha=1 at the edge
+                    # painted an enormous triangular foam wedge.
+                    # Add only TWO extra triangles on known shore
+                    # segments, with a narrow outer ring for foam.
+                    var inner_a: Vector2 = a.lerp(
+                        Vector2(float(x)+0.5,float(y)+0.5),0.19)
+                    var inner_b: Vector2 = b.lerp(
+                        Vector2(float(x)+0.5,float(y)+0.5),0.19)
+                    var ia := Vector3(inner_a.x,WATER_LEVEL,inner_a.y)
+                    var ib := Vector3(inner_b.x,WATER_LEVEL,inner_b.y)
+                    var va := Vector3(a.x,WATER_LEVEL,a.y)
+                    var vb := Vector3(b.x,WATER_LEVEL,b.y)
+                    var deep := Color(0.35,0.64,0.71,0.0)
+                    var wet := Color(0.54,0.79,0.83,1.0)
+                    # Center fan remains fully deep-colored.
+                    for point in [center,ib,ia]:
+                        _add_vertex(st,point,deep)
+                    _add_vertex(st,ia,deep)
+                    _add_vertex(st,ib,deep)
+                    _add_vertex(st,vb,wet)
+                    _add_vertex(st,ia,deep)
+                    _add_vertex(st,vb,wet)
+                    _add_vertex(st,va,wet)
+                    triangles += 3
+                else:
+                    # Avoid extra geometry in deep river/bridge spans.
+                    _add_vertex(st,center,Color(0.35,0.64,0.71,0.0))
+                    _add_vertex(st,Vector3(b.x,WATER_LEVEL,b.y),
+                        Color(0.54,0.79,0.83,0.0))
+                    _add_vertex(st,Vector3(a.x,WATER_LEVEL,a.y),
+                        Color(0.54,0.79,0.83,0.0))
+                    triangles += 1
     if triangles == 0:
         return mesh
     st.generate_normals()
