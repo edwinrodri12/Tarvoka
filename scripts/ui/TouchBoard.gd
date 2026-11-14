@@ -28,6 +28,7 @@ const ThreatData = preload("res://scripts/ui/ThreatAwarenessData.gd")
 const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
 const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
+const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
@@ -488,6 +489,8 @@ func _draw() -> void:
             var half: float = tile * (0.30 if is_town else 0.35)
             draw_rect(Rect2(center-Vector2.ONE*half,Vector2.ONE*(half*2)),Color(0.03,0.07,0.10,0.82))
             draw_rect(Rect2(center-Vector2.ONE*half,Vector2.ONE*(half*2)),city_tint,false,maxf(2.0,tile*0.065))
+            if bool(marker.get("visual_command_city",false)):
+                CommandArt.draw_classic(self,center,tile,city_tint)
             if tile >= 20.0:
                 var markers := {"city":"C","factory":"F","armor_plant":"B","artillery_depot":"A","drone_center":"D","airbase":"H","shipyard":"P"}
                 var symbol: String = str(markers.get(str(marker["kind"]),"?"))
