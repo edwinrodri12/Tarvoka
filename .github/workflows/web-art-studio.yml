@@ -82,6 +82,19 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Parse integrated terrain modules with explicit diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 35s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_integrated_preflight.gd \
+            2>&1 | tee /tmp/integrated-terrain-preflight.log
+          if grep -E "SCRIPT ERROR:|ERROR:|FAILED_TO_LOAD_TERRAIN" /tmp/integrated-terrain-preflight.log; then
+            echo "Combined terrain V3+PBR+V4 scripts failed to load" >&2
+            exit 1
+          fi
+          grep -q "PASS integrated terrain preflight:" /tmp/integrated-terrain-preflight.log
       - name: Quick parse gate for V4 terrain module
         shell: bash
         run: |
