@@ -11,6 +11,7 @@ const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
+const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -51,9 +52,13 @@ var _v30_preview := false
 var _v31_preview := false
 var _apc_v1_preview := true
 var _apc_v2_preview := true
+var _apc_v3_preview := true
+var _apc_damage_stage := 0
 var apc_controls: VBoxContainer
 var apc_compare_button: Button
 var apc_v2_button: Button
+var apc_v3_button: Button
+var apc_damage_button: Button
 var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
@@ -247,6 +252,13 @@ func _construct() -> void:
         "APC V1 · Comparar prototipo original",_toggle_apc_version)
     apc_v2_button=_button(apc_controls,
         "APC P06 V2 · ARMADURA, NEUMÁTICOS Y ACABADO",_toggle_apc_v2)
+    apc_v3_button=_button(apc_controls,
+        "APC V3 · TECHO, JUNTAS, TORRETA Y DAÑOS",_toggle_apc_v3)
+    apc_damage_button=_button(apc_controls,
+        "APC V3 · MOSTRAR DAÑO LEVE",_cycle_apc_damage)
+    _add_paired(apc_controls,"APC V3 · Próximo nivel de daño",
+        _cycle_apc_damage,"APC V3 · Reparar",
+        func(): _set_apc_damage(0))
     _add_paired(apc_controls,"APC: Avanzar 6×6",
         func(): _play("move"),
         "APC: Girar torreta",func(): _play("turn_turret"))
@@ -364,7 +376,7 @@ func _display_role(role: String) -> void:
     if _v25_preview and _v30_preview and _v31_preview:
         art_level = 31
     if _role=="apc" and _apc_v1_preview:
-        art_level=12 if _apc_v2_preview else 11
+        art_level=(13 if _apc_v3_preview else 12) if _apc_v2_preview else 11
     model_root = Models.build(_role,_faction if _role in ["tank","apc"] else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
@@ -402,7 +414,11 @@ func _display_role(role: String) -> void:
     apc_controls.visible = (_role=="apc")
     apc_compare_button.text = ("APC P06 · Comparar con prototipo V0" if _apc_v1_preview else "APC P06 · Regresar a V1")
     apc_v2_button.text = ("APC V2/V1 · Ver versión V1 anterior" if _apc_v2_preview else "APC V2 · Ver blindaje y ruedas mejoradas")
+    apc_v3_button.text = ("APC V3/V2 · Ver V2 anterior" if _apc_v3_preview else "APC V3 · Ver techo y daño realistas")
+    apc_damage_button.text = "APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
+    if model_root.get_meta("tarvoka_apc_finish_v3",false):
+        APCFinishV3.apply_stage(model_root,_apc_damage_stage)
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -450,7 +466,10 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
-        if model_root.get_meta("tarvoka_apc_armor_v2",false):
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
+                + " · TORRETA REFINADA · DAÑO %d/4, HUMO Y FUEGO" % _apc_damage_stage)
+        elif model_root.get_meta("tarvoka_apc_armor_v2",false):
             status_label.text = ("APC P06 BASTIÓN V2 · BLINDAJE ANGULAR"
                 + " · 288 TACOS 3D COMPARTIDOS · PINTURA PBR"
                 + " · RAMPA, TORRETA Y 6 RUEDAS ANIMADAS")
@@ -995,6 +1014,7 @@ func _toggle_apc_version() -> void:
         return
     _apc_v1_preview=not _apc_v1_preview
     _apc_v2_preview=false
+    _apc_v3_preview=false
     var angle: float=_yaw
     var zoom: float=_zoom
     _display_role("apc")
@@ -1013,6 +1033,7 @@ func _toggle_apc_v2() -> void:
         "tarvoka_apc_ramp_open",false)) if model_root!=null else false
     _apc_v1_preview=true
     _apc_v2_preview=not _apc_v2_preview
+    _apc_v3_preview=false
     _display_role("apc")
     _yaw=angle
     _zoom=zoom
@@ -1024,6 +1045,43 @@ func _toggle_apc_v2() -> void:
             apc_ramp_button.text="APC: Cerrar rampa de tropas"
     _update_camera()
     _update_details()
+
+func _toggle_apc_v3() -> void:
+    if _role!="apc":
+        return
+    var angle: float=_yaw
+    var zoom: float=_zoom
+    var opened: bool=bool(model_root.get_meta(
+        "tarvoka_apc_ramp_open",false)) if model_root!=null else false
+    _stop_animation()
+    _apc_v1_preview=true
+    _apc_v2_preview=true
+    _apc_v3_preview=not _apc_v3_preview
+    _display_role("apc")
+    _yaw=angle
+    _zoom=zoom
+    if model_root!=null:
+        model_root.rotation_degrees.y=angle
+        if opened:
+            APCVisual.pose(model_root,"open_ramp",1.0)
+            APCVisual.restore(model_root)
+            apc_ramp_button.text="APC: Cerrar rampa de tropas"
+        if _apc_v3_preview:
+            APCFinishV3.apply_stage(model_root,_apc_damage_stage)
+    _update_camera()
+    _update_details()
+
+func _set_apc_damage(stage: int) -> void:
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _apc_damage_stage=clampi(stage,0,4)
+    if APCFinishV3.apply_stage(model_root,_apc_damage_stage):
+        apc_damage_button.text="APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
+        _update_details()
+
+func _cycle_apc_damage() -> void:
+    _set_apc_damage((_apc_damage_stage+1)%5)
 
 func _toggle_apc_ramp() -> void:
     if _role!="apc" or model_root==null or (
@@ -1091,6 +1149,9 @@ func _process(delta: float) -> void:
     if model_root==null:
         return
     if _role=="apc":
+        if model_root.get_meta("tarvoka_apc_finish_v3",false) and _apc_damage_stage>=2:
+            _effect_time+=delta
+            APCFinishV3.animate_damage(model_root,_effect_time)
         if not _animation.is_empty():
             _animation_time+=maxf(delta,0.0)
             var duration: float=(APCVisual.MOVE_DURATION if _animation=="move"
