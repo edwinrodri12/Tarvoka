@@ -236,6 +236,145 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     return true
 
+func open_from_board(board: Control) -> bool:
+    if board == null:
+        return false
+    var state: Variant = board.get("state")
+    if not state is Dictionary:
+        return false
+    if not open_from_state(state,str(board.get("selected_id"))):
+        return false
+    _live_board = board
+    _update_order_ui()
+    return true
+
+func _current_state() -> Dictionary:
+    if _live_board != null:
+        var live: Variant = _live_board.get("state")
+        if live is Dictionary:
+            return live
+    return _state_snapshot
+
+func _update_order_ui() -> void:
+    if _order_note == null:
+        return
+    var active: bool = Orders.can_control(_live_board)
+    var pending: bool = active and not _order_quote.is_empty()
+    _cancel_order_button.visible = pending
+    _confirm_order_button.visible = pending
+    _move_here_button.hide()
+    if not active:
+        _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
+        return
+    if pending:
+        _order_note.text = str(_order_quote.get("message","Orden pendiente de confirmación."))
+        var kind: String = str(_order_quote.get("order",{}).get("kind",""))
+        _confirm_order_button.text = "CONFIRMAR ATAQUE" if kind=="attack" else "CONFIRMAR MOVIMIENTO"
+        return
+    _order_note.text = "Selecciona aliada → destino azul o enemigo rojo. Solo CONFIRMAR ejecuta."
+    if _selected_cell.x >= 0:
+        var current: String = str(_live_board.get("selected_id"))
+        var possible: Dictionary = Orders.legal_intent(_current_state(),current,_selected_cell)
+        _move_here_button.visible = possible.get("kind","") == "move"
+
+func _drop_3d_quote() -> void:
+    if _live_board != null and not _order_quote.is_empty():
+        Orders.cancel_preview(_live_board,_order_quote)
+    _order_quote.clear()
+
+func _cancel_3d_order() -> void:
+    _drop_3d_quote()
+    _update_order_ui()
+
+func _select_3d_unit(unit_id: String) -> bool:
+    _drop_3d_quote()
+    if not Orders.select(_live_board,unit_id):
+        return false
+    _selected_hint_unit_id = unit_id
+    _refresh_ranges()
+    _update_order_ui()
+    return true
+
+func _preview_3d_intent(intent: Dictionary) -> bool:
+    if _live_board == null or intent.is_empty():
+        return false
+    _drop_3d_quote()
+    _order_quote = Orders.request_preview(_live_board,intent)
+    _update_order_ui()
+    return not _order_quote.is_empty()
+
+func _request_move_here() -> void:
+    if not Orders.can_control(_live_board) or _selected_cell.x < 0:
+        return
+    var current: String = str(_live_board.get("selected_id"))
+    var intent: Dictionary = Orders.legal_intent(_current_state(),current,_selected_cell)
+    if intent.get("kind","") == "move":
+        _preview_3d_intent(intent)
+
+func tap_battle_cell(cell: Vector2i) -> bool:
+    # Inspections are safe in detached mode. Live taps can ONLY preview.
+    if not _cells.has(cell):
+        return false
+    if _live_board == null:
+        return inspect_cell(cell)
+    if _current_state() != _state_snapshot:
+        _drop_3d_quote()
+        _refresh_from_board()
+        return false
+    var selected_before: String = str(_live_board.get("selected_id"))
+    var intent: Dictionary = Orders.legal_intent(_current_state(),selected_before,cell)
+    var friends: Array[Dictionary] = Orders.visible_friends(_current_state(),cell)
+    inspect_cell(cell)
+    if not Orders.can_control(_live_board):
+        _update_order_ui()
+        return true
+    # A legal target may share a coordinate with a friendly from another
+    # layer; use the exact engine target ID, not the first sprite in a cell.
+    if intent.get("kind","") == "attack":
+        _selected_hint_unit_id = selected_before
+        _refresh_ranges()
+        return _preview_3d_intent(intent)
+    if not friends.is_empty():
+        var chosen: String = Orders.next_friendly(_current_state(),cell,selected_before)
+        return _select_3d_unit(chosen)
+    if intent.get("kind","") == "move":
+        return _preview_3d_intent(intent)
+    _drop_3d_quote()
+    _update_order_ui()
+    return true
+
+func _confirm_3d_order() -> void:
+    if _live_board == null or _order_quote.is_empty():
+        return
+    var committed: bool = Orders.confirm(_live_board,_order_quote)
+    _order_quote.clear()
+    _refresh_from_board()
+    if _live_board == null:
+        return
+    if committed:
+        _order_note.text = str(_live_board.get("message"))
+    else:
+        _order_note.text = "Orden no ejecutada: el estado cambió o dejó de ser válida."
+
+func _refresh_from_board() -> void:
+    if _live_board == null:
+        return
+    var board: Control = _live_board
+    var focus: Vector3 = _look_at
+    var azimuth: float = _yaw
+    var zoom: float = _camera_size
+    var selected_cell: Vector2i = _selected_cell
+    if not open_from_board(board):
+        close_view()
+        return
+    _look_at = focus
+    _yaw = azimuth
+    _camera_size = zoom
+    _refresh_camera()
+    if _cells.has(selected_cell):
+        inspect_cell(selected_cell,false)
+    _update_order_ui()
+
 func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     if not _cells.has(cell):
         return false
