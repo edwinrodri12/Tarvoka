@@ -9,6 +9,7 @@ const Hero = preload("res://scripts/ui/TankHeroV7.gd")
 const FinalTracksV29 = preload("res://scripts/ui/TankFinalTracksV29.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const V14 = preload("res://scripts/ui/TankDetailV14.gd")
+const LegacyRig = preload("res://scripts/ui/TankLegacyRigV31.gd")
 
 const REST_META := "tarvoka_tank_rest_position"
 const TURRET_NAME := "TorretaGiratoria"
@@ -93,6 +94,11 @@ static func pose(model: Node3D,kind: String,progress: float,
         target_heading: Vector2i = Vector2i(0,-1)) -> bool:
     if not has_rig(model):
         return false
+    # Only the completed G09 V31/32 adopts cumulative tread phase and
+    # delayed cannon recoil. Historic V7–V30 models keep THEIR original
+    # authoring/QA animations and reversible UV behaviour.
+    if not model.get_meta("tarvoka_mbt_tracks_inboard_v31",false):
+        return LegacyRig.pose(model,kind,progress,target_heading)
     var t: float = clampf(progress,0.0,1.0)
     var turret: Node3D = model.find_child(TURRET_NAME,true,false) as Node3D
     var gun: Node3D = model.find_child(CANNON_NAME,true,false) as Node3D
@@ -174,6 +180,10 @@ static func pose(model: Node3D,kind: String,progress: float,
     return true
 
 static func restore(model: Node3D) -> void:
-    if model!=null:
-        # Preserve last shoe and wheel angle; only stop movement and FX.
-        pose(model,"idle",0.0)
+    if model==null:
+        return
+    if not model.get_meta("tarvoka_mbt_tracks_inboard_v31",false):
+        LegacyRig.restore(model)
+        return
+    # Preserve the FINAL V32 model's last track phase; only stop FX.
+    pose(model,"idle",0.0)
