@@ -4,6 +4,9 @@ extends SceneTree
 # --headless) and exports image captures that can be reviewed without APKs.
 # No screenshots are committed into git and no developer save is overwritten.
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 
 var _out_dir := ""
 var _manifest: Array[Dictionary] = []
@@ -86,6 +89,45 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     if not await _capture_landscape("07-batalla-1280x720",Vector2i(1280,720),"Batalla · tablero táctico horizontal"):
         _failed = true
+
+    # Visual QA of the REAL attack controller, not a painted mockup.
+    # The scenario stays in memory and its authoritative state is restored.
+    var battle_before_effect: Dictionary = main.board.state.duplicate(true)
+    var original_isometric: bool = main.board.iso_enabled
+    var original_confirmation: bool = main.board.require_order_confirmation
+    main.board.set_isometric(true)
+    var demo_own: Dictionary = Roles.make_unit("A",0,Vector2i(1,2),"tank")
+    var demo_enemy: Dictionary = Roles.make_unit("X",1,Vector2i(2,2),"tank")
+    main.board.state = Session.start([demo_own,demo_enemy],
+        Scenarios.terrain(0),0,false,false,true,true)
+    main.board.state[Identity.STATE_FIELD] = {"0":"union_verde","1":"orden_onix"}
+    main.board.selected_id = "A"
+    main.board.require_order_confirmation = true
+    main.board._request_order(Vector2i(2,2),{"id":"X"})
+    if main.board.pending_order.get("kind","") != "attack":
+        push_error("No legal attack was prepared for the visual QA scenario.")
+        _failed = true
+    main._process(0.0)
+    if not await _capture_landscape("20-ataque-pendiente-1280x720",Vector2i(1280,720),"Batalla · ataque preparado y confirmación"):
+        _failed = true
+    if not main.board.confirm_pending_order() or main.board.combat_effects.is_empty():
+        push_error("The real battle attack did not commit for visual QA.")
+        _failed = true
+    else:
+        main.board.combat_effects.back()["elapsed"] = 0.29
+        main.board.queue_redraw()
+        main._process(0.0)
+        if not await _capture_landscape("21-dano-confirmado-960x540",Vector2i(960,540),"Batalla · daño y contraataque confirmados"):
+            _failed = true
+    main.board.combat_effects.clear()
+    main.board.state = battle_before_effect
+    main.board.selected_id = ""
+    main.board.pending_order.clear()
+    main.board.require_order_confirmation = original_confirmation
+    main.board.set_isometric(original_isometric)
+    main.board.queue_redraw()
+    main._process(0.0)
+
     main._open_command_menu()
     if not await _capture_landscape("08-mando-1280x720",Vector2i(1280,720),"Centro de mando · operaciones"):
         _failed = true
@@ -166,11 +208,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 19:
-        push_error("Landscape UI QA incomplete: %d/19 captures" % _manifest.size())
+    if _failed or _manifest.size() != 21:
+        push_error("Landscape UI QA incomplete: %d/21 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 19 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 21 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
