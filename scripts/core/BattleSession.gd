@@ -10,12 +10,17 @@ const Relays = preload("res://scripts/core/RelayControl.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear") -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
+    # Clear weather omits the field to preserve byte-for-byte compatibility
+    # with legacy v1 battle states and existing no-climate tests.
+    if Weather.valid(weather) and weather != Weather.CLEAR:
+        state["weather"] = weather
     if relay_mode:
         var control: Dictionary = Relays.create(state["terrain"], Relays.DEFAULT_TARGET, modern_mode, faction)
         if not control.is_empty():
@@ -42,7 +47,7 @@ static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> D
     # this also prevents hidden occupancy from revealing enemy coordinates.
     if Visibility.enabled(state) and not Visibility.visible_cells(state, int(state["faction"])).has(destination):
         return {"valid": false, "state": state.duplicate(true)}
-    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"])
+    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state))
     return _apply(state, action)
 
 static func attack(state: Dictionary, attacker_id: String, defender_id: String) -> Dictionary:

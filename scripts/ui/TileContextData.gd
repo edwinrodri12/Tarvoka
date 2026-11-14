@@ -5,6 +5,7 @@ class_name TarvokaTileContextData
 # permission to act. Hidden land and site owners are filtered before any
 # economy or tactical detail is exposed.
 const Rules = preload("res://scripts/core/Rules.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 const Terrain = preload("res://scripts/core/TerrainTactics.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
@@ -12,9 +13,11 @@ const SiteOverlays = preload("res://scripts/ui/SiteOverlayData.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Inspect = preload("res://scripts/ui/InspectionData.gd")
 
-static func _cost(kind: String, domain: String) -> String:
-    var points: int = Rules.movement_cost_for(kind,domain)
-    return "—" if points < 0 else str(points)
+static func _cost(kind: String, domain: String, climate: String, chassis: String = "foot", motorized: bool = false) -> String:
+    var half: int = Rules.entry_cost_half(kind,domain,motorized,climate,chassis)
+    if half < 0:
+        return "—"
+    return str(half / 2) if half % 2 == 0 else "%.1f" % (float(half) / 2.0)
 
 static func snapshot(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dictionary:
     var empty := {"kind":"none"}
@@ -37,10 +40,13 @@ static func snapshot(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
         if candidate is Dictionary and candidate.get("pos",null) == cell:
             marker = candidate
             break
-    var ground: int = Rules.movement_cost_for(kind,Domains.GROUND)
-    var motor: String = "0.5" if kind == "road" else ("—" if ground < 0 else str(ground))
-    var movement: String = "INF %s  ·  VEH %s  ·  AIR %s  ·  MAR %s" % [
-        _cost(kind,Domains.GROUND),motor,_cost(kind,Domains.AIR),_cost(kind,Domains.NAVAL)]
+    var climate: String = Weather.from_state(state)
+    var movement: String = "INF %s  ·  VEH %s  ·  ORU %s  ·  AIR %s  ·  MAR %s" % [
+        _cost(kind,Domains.GROUND,climate,Weather.FOOT),
+        _cost(kind,Domains.GROUND,climate,Weather.WHEELED,true),
+        _cost(kind,Domains.GROUND,climate,Weather.TRACKED,true),
+        _cost(kind,Domains.AIR,climate,Weather.AIR),
+        _cost(kind,Domains.NAVAL,climate,Weather.NAVAL)]
     var cover: int = int(Terrain.COVER.get(kind,0))
     if str(marker.get("kind","")) == "city":
         cover += Terrain.CITY_COVER
@@ -49,7 +55,7 @@ static func snapshot(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
     if altitude > 0:
         defense += "  ·  ATQ +/-1 por desnivel"
     var title: String = Hints.terrain_name(kind).to_upper()
-    var status: String = "Costes por casilla; VEH 0.5 solo para unidades motorizadas."
+    var status: String = "Clima %s · costes de entrada por casilla, carretera más rápida para motor." % Weather.label(climate)
     var owner := ""
     var production := false
     var capture_pending := false

@@ -12,6 +12,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -217,7 +218,7 @@ static func step(state: Dictionary) -> Dictionary:
             continue
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = _reachable_for(knowledge, unit)
-        var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit)
+        var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit, Weather.from_state(knowledge))
         var from_route := int(route.get(unit["pos"], 999999))
         var from_direct := _closest_enemy_distance(unit["pos"], enemies)
         for y in range(Rules.map_size(knowledge["terrain"]).y):
@@ -306,7 +307,7 @@ static func _transit_for(knowledge: Dictionary, mover: Dictionary) -> Array[Vect
 
 static func _reachable_for(knowledge: Dictionary, mover: Dictionary) -> Dictionary:
     return Rules.reachable(mover["pos"], Logistics.movement_budget(mover), knowledge["terrain"],
-        _blocked_for(knowledge, mover), Domains.domain(mover), Logistics.road_fast(mover), _transit_for(knowledge, mover))
+        _blocked_for(knowledge, mover), Domains.domain(mover), Logistics.road_fast(mover), _transit_for(knowledge, mover), Weather.from_state(knowledge), Weather.traction(mover))
 
 static func _ground_occupied(knowledge: Dictionary, cell: Vector2i) -> bool:
     for occupant in knowledge.get("units", []):
@@ -459,7 +460,7 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friend
                 continue
             if target in blockers:
                 continue
-            var route: Dictionary = _route_to_relay(knowledge["terrain"],target,blockers)
+            var route: Dictionary = _route_to_relay(knowledge["terrain"],target,blockers,Weather.from_state(knowledge),Weather.traction(unit),Logistics.road_fast(unit))
             var current_cost: int = int(route.get(unit["pos"],999999))
             if current_cost == 0 or current_cost >= 999999:
                 continue
@@ -777,7 +778,7 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
             var target: Vector2i = relay["pos"]
             if target in blocked:
                 continue # No teleporting onto an occupied relay.
-            var route: Dictionary = _route_to_relay(knowledge["terrain"], target, blocked)
+            var route: Dictionary = _route_to_relay(knowledge["terrain"], target, blocked,Weather.from_state(knowledge),Weather.traction(unit),Logistics.road_fast(unit))
             var current_cost: int = int(route.get(unit["pos"], 999999))
             if current_cost >= 999999 or current_cost == 0:
                 continue
@@ -807,11 +808,11 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
 
 # Reverse Dijkstra: forward movement pays the cost of the entered tile.
 # Bounded by board dimensions; no heuristic path through impassable unknowns.
-static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vector2i]) -> Dictionary:
+static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vector2i], weather: String = "clear", traction: String = "foot", motorized: bool = false) -> Dictionary:
     var distances: Dictionary = {}
     if not Rules.valid_terrain(terrain) or not Rules.inside(target,terrain) or target in blocked:
         return distances
-    if Rules.movement_cost(str(terrain[target.y][target.x])) < 0:
+    if Rules.entry_cost_half(str(terrain[target.y][target.x]),"ground",motorized,weather,traction) < 0:
         return distances
     distances[target] = 0
     var queue: Array[Vector2i] = [target]
@@ -819,26 +820,32 @@ static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vec
     while cursor < queue.size():
         var current: Vector2i = queue[cursor]
         cursor += 1
-        var enter_cost: int = Rules.movement_cost(str(terrain[current.y][current.x]))
+        var enter_cost: int = Rules.entry_cost_half(str(terrain[current.y][current.x]),"ground",motorized,weather,traction)
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = current + direction
             if not Rules.inside(previous,terrain) or previous in blocked:
                 continue
-            if Rules.movement_cost(str(terrain[previous.y][previous.x])) < 0:
+            if Rules.entry_cost_half(str(terrain[previous.y][previous.x]),"ground",motorized,weather,traction) < 0:
                 continue
             var proposed: int = int(distances[current]) + enter_cost
             if not distances.has(previous) or proposed < int(distances[previous]):
                 distances[previous] = proposed
                 queue.append(previous)
+    # Expose whole-points, retaining the legacy scale while keeping exact
+    # half-point path preferences for motorized road routing internally.
+    for cell in distances:
+        distances[cell] = ceili(float(distances[cell]) / 2.0)
     return distances
 
-static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i], attacker: Dictionary) -> Dictionary:
+static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vector2i], attacker: Dictionary, weather: String = "clear") -> Dictionary:
     var distances: Dictionary = {}
     if not Rules.valid_terrain(terrain):
         return distances
     var queue: Array[Vector2i] = []
     var melee: bool = int(attacker.get("attack_min_range", 1)) == 1 and int(attacker.get("attack_range", 1)) == 1
     var domain: String = Domains.domain(attacker)
+    var road_fast: bool = Logistics.road_fast(attacker)
+    var traction: String = Weather.traction(attacker)
     if domain.is_empty():
         return distances
     for enemy in enemies:
@@ -863,7 +870,7 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
         for goal in candidates:
             if not Rules.inside(goal,terrain) or goal in blocked:
                 continue
-            if Rules.movement_cost_for(str(terrain[goal.y][goal.x]), domain) < 0:
+            if Rules.entry_cost_half(str(terrain[goal.y][goal.x]),domain,road_fast,weather,traction) < 0:
                 continue
             if not distances.has(goal):
                 distances[goal] = 0
@@ -872,17 +879,21 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
     while cursor < queue.size():
         var current: Vector2i = queue[cursor]
         cursor += 1
-        var enter_cost := Rules.movement_cost_for(str(terrain[current.y][current.x]), domain)
+        var enter_cost: int = Rules.entry_cost_half(str(terrain[current.y][current.x]),domain,road_fast,weather,traction)
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = current + direction
             if not Rules.inside(previous,terrain) or previous in blocked:
                 continue
-            if Rules.movement_cost_for(str(terrain[previous.y][previous.x]), domain) < 0:
+            if Rules.entry_cost_half(str(terrain[previous.y][previous.x]),domain,road_fast,weather,traction) < 0:
                 continue
             var proposed: int = int(distances[current]) + enter_cost
             if not distances.has(previous) or proposed < int(distances[previous]):
                 distances[previous] = proposed
                 queue.append(previous)
+    # Expose whole-points, retaining the legacy scale while keeping exact
+    # half-point path preferences for motorized road routing internally.
+    for cell in distances:
+        distances[cell] = ceili(float(distances[cell]) / 2.0)
     return distances
 
 static func _closest_enemy_distance(cell: Vector2i, enemies: Array) -> int:

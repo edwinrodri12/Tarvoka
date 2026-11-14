@@ -6,6 +6,8 @@ class_name TarvokaIsoRenderer
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
@@ -94,7 +96,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     unknown += 1
                     continue
                 var terrain: String = str(state["terrain"][y][x])
-                var tint: Color = VisualStyle.terrain_color(terrain,x,y)
+                var tint: Color = Weather.terrain_tint(VisualStyle.terrain_color(terrain,x,y), Weather.from_state(state))
                 _tile(canvas,vertices,tint)
                 if detail == VisualBudget.DETAIL_FULL:
                     canvas.draw_line(vertices[0],vertices[1],tint.lightened(0.20),
@@ -104,6 +106,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
                     decorated += 1
+                WeatherPainter.draw_iso(canvas,cell,c,hw,Weather.from_state(state),battery_saver)
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
     last_frame_stats = {

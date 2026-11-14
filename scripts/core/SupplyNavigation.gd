@@ -6,6 +6,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 
 # Conservative route-to-base planner. Uses observed terrain, own installations
 # and visible/known cells only. It never reads hidden enemy units or map tiles.
@@ -53,7 +54,7 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
     var move_budget: int = Logistics.movement_budget(unit)
     if move_budget <= 0:
         return none
-    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit), transit_only)
+    var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit), transit_only, Weather.from_state(observed), Weather.traction(unit))
     var best := none
     var best_distance := 1000000
     for site in observed["economy"]["sites"]:
@@ -64,7 +65,7 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
         var target: Vector2i = site["pos"]
         if target == origin or target in blocked or target in transit_only:
             continue
-        var dist: Dictionary = _distance_to_target(observed["terrain"], target, blocked, domain, known, Visibility.enabled(state))
+        var dist: Dictionary = _distance_to_target(observed["terrain"], target, blocked, domain, known, Visibility.enabled(state), Weather.from_state(observed), Weather.traction(unit), Logistics.road_fast(unit))
         if not dist.has(origin):
             continue
         var total: int = int(dist[origin])
@@ -130,7 +131,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
                 transit_only.append(occupant["pos"])
             else:
                 blocked.append(occupant["pos"])
-    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck), transit_only)
+    var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck), transit_only, Weather.from_state(observed), Weather.traction(truck))
     var best := none
     var best_cost := 1000000
     for recipient in observed["units"]:
@@ -156,7 +157,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
                 continue
             if fog and not known.has(staging):
                 continue
-            var distances: Dictionary = _distance_to_target(observed["terrain"], staging, blocked, Domains.GROUND, known, fog)
+            var distances: Dictionary = _distance_to_target(observed["terrain"], staging, blocked, Domains.GROUND, known, fog, Weather.from_state(observed), Weather.traction(truck), Logistics.road_fast(truck))
             if not distances.has(origin):
                 continue
             var whole: int = int(distances[origin])
@@ -186,7 +187,7 @@ static func _compatible(domain: String, kind: String) -> bool:
         return kind in ["airbase", "drone_center"]
     return domain == Domains.NAVAL and kind == "shipyard"
 
-static func _distance_to_target(terrain: Array, target: Vector2i, blocked: Array[Vector2i], domain: String, known: Dictionary, fog: bool) -> Dictionary:
+static func _distance_to_target(terrain: Array, target: Vector2i, blocked: Array[Vector2i], domain: String, known: Dictionary, fog: bool, weather: String = "clear", traction: String = "foot", motorized: bool = false) -> Dictionary:
     var distances := {}
     if not Rules.inside(target,terrain) or target in blocked:
         return distances
@@ -199,18 +200,21 @@ static func _distance_to_target(terrain: Array, target: Vector2i, blocked: Array
         var cell: Vector2i = frontier[cursor]
         cursor += 1
         # Reverse graph: moving from a neighbor into cell costs cell's terrain.
-        var entry: int = Rules.movement_cost_for(str(terrain[cell.y][cell.x]), domain)
+        var entry: int = Rules.entry_cost_half(str(terrain[cell.y][cell.x]), domain, motorized, weather, traction)
         if entry < 0:
             continue
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = cell + direction
             if not Rules.inside(previous,terrain) or previous in blocked or (fog and not known.has(previous)):
                 continue
-            if Rules.movement_cost_for(str(terrain[previous.y][previous.x]), domain) < 0:
+            if Rules.entry_cost_half(str(terrain[previous.y][previous.x]), domain, motorized, weather, traction) < 0:
                 continue
             var distance: int = int(distances[cell]) + entry
             if distances.has(previous) and int(distances[previous]) <= distance:
                 continue
             distances[previous] = distance
             frontier.append(previous)
+    # Costs were accumulated at half-point precision (including icy roads).
+    for cell in distances:
+        distances[cell] = ceili(float(distances[cell]) / 2.0)
     return distances
