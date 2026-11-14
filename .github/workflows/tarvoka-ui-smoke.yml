@@ -67,7 +67,7 @@ jobs:
             test_official_faction_art \
             test_landscape_only_ui \
             test_landscape_command_results \
-            test_army_production_landscape
+            test_army_production_landscape \
             test_saved_matches_landscape \
             test_road_command_menu \
             test_tactical_briefing \
