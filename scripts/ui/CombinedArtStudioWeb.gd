@@ -6,6 +6,7 @@ class_name TarvokaCombinedArtStudioWeb
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
+const OfficialEmblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const BUILDING_STATES := ["operativo","capturado","danado","destruido"]
 
@@ -20,6 +21,10 @@ var hq_v3_compare_button: Button
 var hq_version_picker: OptionButton
 var hq_v7_toggle: CheckButton
 var hq_v8_toggle: CheckButton
+var hq_v9_toggle: CheckButton
+var faction_view_grid: GridContainer
+var faction_view_label: Label
+var faction_view_buttons: Array[Button] = []
 var hq_map_lod_toggle: CheckButton
 var hq_batch_toggle: CheckButton
 var hq_fps_label: Label
@@ -114,7 +119,7 @@ func _add_building_mode() -> void:
     hq_version_picker = OptionButton.new()
     hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
     hq_version_picker.custom_minimum_size.y = 50
-    for name_version in ["V8 · Cuartel General: material final",
+    for name_version in ["V9 · Cuartel General: silueta y facciones",
             "V3 · Arquitectura anterior",
             "V2 · Primera revisión",
             "V1 · Prototipo original"]:
@@ -134,6 +139,12 @@ func _add_building_mode() -> void:
     hq_v8_toggle.button_pressed = true
     hq_v8_toggle.toggled.connect(_change_hq_materials_v8)
     building_controls.add_child(hq_v8_toggle)
+    hq_v9_toggle = CheckButton.new()
+    hq_v9_toggle.name = "SiluetaTacticaHQV9"
+    hq_v9_toggle.text = "Silueta V9 visible a distancia (comparar V8)"
+    hq_v9_toggle.button_pressed = true
+    hq_v9_toggle.toggled.connect(_change_hq_readability_v9)
+    building_controls.add_child(hq_v9_toggle)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -176,6 +187,66 @@ func _add_building_mode() -> void:
     var index: int = column.get_children().find(faction_picker)
     column.move_child(building_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
+    _install_faction_gallery(column)
+    _sync_faction_gallery(_faction)
+
+func _install_faction_gallery(column: VBoxContainer) -> void:
+    # Restore the eight *visible*, officially approved faction views.
+    # Keep the original full-name dropdown intact for accessibility.
+    var gallery_heading := _title(column,"VISTAS POR FACCIÓN · 8 ESCUDOS OFICIALES",12)
+    faction_view_label = _title(column,"",12)
+    faction_view_label.name = "NombreFaccionEnEstudio"
+    faction_view_grid = GridContainer.new()
+    faction_view_grid.name = "GaleriaOchoFacciones"
+    faction_view_grid.columns = 2
+    faction_view_grid.add_theme_constant_override("h_separation",6)
+    faction_view_grid.add_theme_constant_override("v_separation",6)
+    column.add_child(faction_view_grid)
+    for faction in range(VisualStyle.FACTIONS.size()):
+        var record: Dictionary = VisualStyle.FACTIONS[faction]
+        var button := Button.new()
+        button.name = "FaccionOficial_%d" % faction
+        # Compact labels fit the 306px scroll panel; tooltip and selected
+        # label always show the full, approved faction name.
+        var short_names := ["NORTE","ESCARLATA","VERDE","SOLAR",
+            "VIOLETA","ÁMBAR","TURQUESA","ÓNIX"]
+        button.text = str(short_names[faction])
+        button.tooltip_text = str(record["name"])
+        button.icon = OfficialEmblems.emblem_texture(faction)
+        button.expand_icon = true
+        button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+        button.custom_minimum_size = Vector2(143,52)
+        button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        button.toggle_mode = true
+        button.pressed.connect(_select_faction_view.bind(faction))
+        faction_view_grid.add_child(button)
+        faction_view_buttons.append(button)
+    # The entire gallery must remain visible for Units and Buildings;
+    # it is deliberately NOT in _unit_only_controls / building_controls.
+    var at: int = column.get_children().find(faction_picker)
+    column.move_child(gallery_heading,at+1)
+    column.move_child(faction_view_label,at+2)
+    column.move_child(faction_view_grid,at+3)
+
+func _select_faction_view(faction: int) -> void:
+    if faction < 0 or faction >= VisualStyle.FACTIONS.size():
+        return
+    faction_picker.select(faction)
+    # OptionButton.select() does not emit item_selected in Godot.
+    _on_faction(faction)
+    _refresh_building_faction(faction)
+
+func _sync_faction_gallery(index: int) -> void:
+    if faction_view_label == null:
+        return
+    if index < 0 or index >= VisualStyle.FACTIONS.size():
+        return
+    faction_view_label.text = "Mostrando: %s" % str(VisualStyle.FACTIONS[index]["name"])
+    for i in range(faction_view_buttons.size()):
+        var button: Button = faction_view_buttons[i]
+        button.set_pressed_no_signal(i == index)
+        button.modulate = Color.WHITE if i == index else Color(0.79,0.81,0.85,0.88)
 
 func _change_hq_version(index: int) -> void:
     if index < 0 or index > 3:
@@ -246,6 +317,10 @@ func _change_hq_materials_v8(_enabled: bool) -> void:
     if _role == "headquarters" and _hq_show_v4 and hq_v7_toggle.button_pressed:
         _display_headquarters()
 
+func _change_hq_readability_v9(_enabled: bool) -> void:
+    if _role == "headquarters" and _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed:
+        _display_headquarters()
+
 func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -256,6 +331,7 @@ func _set_hq_map_lod(distant: bool) -> void:
         _update_details()
 
 func _refresh_building_faction(_index: int) -> void:
+    _sync_faction_gallery(_faction)
     # UnitArtStudioWeb's handler owns _faction; we rebuild using that
     # selected paint colour rather than tinting an entire concrete building.
     if _role == "headquarters":
@@ -274,6 +350,7 @@ func _display_headquarters() -> void:
     hq_batch_toggle.visible = _hq_show_v4
     hq_v7_toggle.visible = _hq_show_v4 and not showing_batch
     hq_v8_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and not showing_batch
+    hq_v9_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and hq_v8_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(7,7,15.5)
@@ -292,7 +369,7 @@ func _display_headquarters() -> void:
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
     model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4,
-        hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed)
+        hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,hq_v9_toggle.button_pressed)
     assert(model_root != null)
     hq_map_lod_toggle.visible = _hq_show_v4
     if _hq_show_v4:
@@ -350,6 +427,8 @@ func _update_details() -> void:
         detail_label.text = "Cuartel General · ACABADO ESCULPIDO V7 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_visual_v8",false):
         detail_label.text = "Cuartel General · ACABADO PBR Y DAÑOS V8 · Nivel %d · %d mallas 3D" % [level,meshes]
+    if model_root.get_meta("tarvoka_hq_visual_v9",false):
+        detail_label.text = "Cuartel General · SILUETA V9 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_map_distant",false):
         detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
