@@ -12,6 +12,7 @@ const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/UnitArtGallery.gd")
 const Unit3DInspector = preload("res://scripts/ui/Unit3DInspector.gd")
 const VisualLab = preload("res://scripts/ui/VisualLab.gd")
+const Battle3DMap = preload("res://scripts/ui/Battle3DMapView.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
@@ -30,6 +31,9 @@ var unit_3d_inspector_button: Button
 var visual_laboratory: Control
 var visual_laboratory_button: Button
 var visual_laboratory_quick: Button
+var battle_3d_view: Control
+var battle_3d_button: Button
+var battle_3d_quick: Button
 var iso_view_button: Button
 var models_3d_button: Button
 var battery_saver_button: Button
@@ -154,6 +158,13 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    battle_3d_button = Button.new()
+    battle_3d_button.name = "AbrirMapa3DBatalla"
+    battle_3d_button.text = "Mapa de batalla 3D · inspección"
+    battle_3d_button.custom_minimum_size.y = 46
+    battle_3d_button.tooltip_text = "Ver esta partida y su niebla en 3D sin ejecutar órdenes"
+    battle_3d_button.pressed.connect(_open_battle_3d_map)
+    panel.add_child(battle_3d_button)
     models_3d_button = Button.new()
     models_3d_button.text = "Modelos 3D (8 clases): activados"
     models_3d_button.custom_minimum_size.y = 42
@@ -228,6 +239,10 @@ func _ready() -> void:
     visual_laboratory = VisualLab.new()
     visual_laboratory.name = "LaboratorioVisual"
     add_child(visual_laboratory)
+    battle_3d_view = Battle3DMap.new()
+    battle_3d_view.name = "VistaBatalla3D"
+    add_child(battle_3d_view)
+    battle_3d_view.connect("focus_requested",_on_3d_inspection_focus)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -694,10 +709,23 @@ func _build_battle_hud() -> void:
     visual_laboratory_quick.offset_bottom = 49
     visual_laboratory_quick.pressed.connect(_open_visual_lab)
     battle_hud_overlay.add_child(visual_laboratory_quick)
+    battle_3d_quick = Button.new()
+    battle_3d_quick.name = "Mapa3DCompacto"
+    battle_3d_quick.text = "Mapa 3D"
+    battle_3d_quick.tooltip_text = "Inspeccionar esta partida en 3D, sin órdenes"
+    battle_3d_quick.custom_minimum_size = Vector2(73,42)
+    battle_3d_quick.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    battle_3d_quick.offset_left = -451
+    battle_3d_quick.offset_right = -378
+    battle_3d_quick.offset_top = 7
+    battle_3d_quick.offset_bottom = 49
+    battle_3d_quick.pressed.connect(_open_battle_3d_map)
+    battle_hud_overlay.add_child(battle_3d_quick)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
     visual_laboratory_quick.hide()
+    battle_3d_quick.hide()
 
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
@@ -706,6 +734,7 @@ func _set_compact_hud(compact: bool) -> void:
     compact_center.visible = compact
     compact_iso.visible = compact
     visual_laboratory_quick.visible = compact
+    battle_3d_quick.visible = compact
     battle_hud_toggle.text = "Opciones" if compact else "Ampliar mapa"
     layout_for_size(get_viewport_rect().size)
 
@@ -1004,6 +1033,16 @@ func _toggle_isometric_view() -> void:
     _minimap_view_key = -1
     if board.iso_enabled:
         battle_minimap.queue_redraw()
+
+func _open_battle_3d_map() -> void:
+    if board == null or battle_3d_view == null:
+        return
+    battle_3d_view.call("open_from_state",board.state,board.selected_id)
+
+func _on_3d_inspection_focus(cell: Vector2i) -> void:
+    # Camera focus only. 3D taps never invoke TouchBoard._tap or confirm orders.
+    if board != null:
+        board.focus_view_cell(cell)
 
 func _open_visual_lab() -> void:
     if visual_laboratory != null:
