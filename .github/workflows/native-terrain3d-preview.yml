@@ -11,6 +11,7 @@ on:
       - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
       - "scripts/ui/Conifer3DMesh.gd"
+      - "tools/benchmark_forest3d.gd"
       - "scripts/ui/TerrainRockMaterials.gd"
       - "scripts/ui/LandscapeRegions.gd"
       - "tools/terrain3d_lab.gd"
@@ -34,6 +35,7 @@ on:
       - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
       - "scripts/ui/Conifer3DMesh.gd"
+      - "tools/benchmark_forest3d.gd"
       - "scripts/ui/TerrainRockMaterials.gd"
       - "scripts/ui/LandscapeRegions.gd"
       - "tools/terrain3d_lab.gd"
@@ -105,6 +107,23 @@ jobs:
             exit 1
           fi
           grep -F 'PASS battle 3D:' /tmp/tarvoka-real-3d-battle-input.log
+
+      - name: Benchmark 3D tree batches and mobile geometry budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tools/benchmark_forest3d.gd \
+            2>&1 | tee /tmp/tarvoka-forest3d-budget.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-forest3d-budget.log; then
+            echo 'Forest geometry/performance budget regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS forest 3D benchmark:' /tmp/tarvoka-forest3d-budget.log
+          test -s build/map3d-previews/forest3d-budget.json
 
       - name: Render native 3D scene into two real Godot screenshots
         shell: bash
