@@ -48,6 +48,13 @@ func _run() -> void:
             int(mobile["vegetation_triangles"])))
         assert(int(full["approx_total_triangles"]) > (
             int(mobile["approx_total_triangles"])))
+        assert(int(mobile["approx_total_triangles"])*2 < (
+            int(full["approx_total_triangles"])))
+        # Budget bounds for the synthetic 40x30 map. These represent
+        # static triangle counts, NEVER a device-FPS prediction.
+        if size == Vector2i(40,30):
+            assert(int(full["approx_total_triangles"]) < 340000)
+            assert(int(mobile["approx_total_triangles"]) < 115000)
         assert(int(full["forest_draw_batches"]) == 5)
         assert(int(mobile["forest_draw_batches"]) == 5)
         var fractions: Array = full["tree_profiles"]
