@@ -169,7 +169,7 @@ func _ready() -> void:
     _g09_detail_button = Button.new()
     _g09_detail_button.name = "CalidadG09EnBatalla"
     _g09_detail_button.text = "G09 V25 · AUTO"
-    _g09_detail_button.tooltip_text = "Un solo tanque completo al acercar. Desactivar para mejorar rendimiento."
+    _g09_detail_button.tooltip_text = "El G09 V25 mantiene su diseño final. AUTO ajusta microdetalles, materiales y sombras; ECO reduce más coste gráfico."
     _g09_detail_button.custom_minimum_size = Vector2(150,42)
     _g09_detail_button.pressed.connect(_toggle_g09_detail)
     commands.add_child(_g09_detail_button)
@@ -195,11 +195,11 @@ func _update_g09_stats() -> void:
     if stats.is_empty():
         return
     var units: Dictionary = stats.get("units",{})
-    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos) · G09 V25: %d · V10: %d · V6: %d"
+    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos) · G09 V25: %d · microdetalles omitidos: %d · límite: %d"
         % [_dims.x,_dims.y,int(stats.get("chunks",0)),
             int(units.get("visible",0)),int(units.get("detailed",0)),
-            int(units.get("g09_v25",0)),int(units.get("g09_v10",0)),
-            int(units.get("g09_v6",0))])
+            int(units.get("g09_v25",0)),int(units.get("g09_hidden_micro",0)),
+            int(units.get("g09_over_budget",0))])
     if _g09_detail_button!=null:
         _g09_detail_button.text = "G09 V25 · AUTO" if _g09_high_detail else "G09 V25 · ECO"
 
