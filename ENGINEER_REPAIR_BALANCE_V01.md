@@ -51,3 +51,13 @@ Estos cálculos son comparaciones parciales, no certificación de balance: deben
 5. Diseño de mejoras del Ingeniero de nivel II/III: ampliar a 4 HP requeriría costo de adquisición y contrapartida (por ejemplo más créditos por HP), nunca poder gratis ni curar todas las unidades.
 
 **No confundir:** el desbloqueo T1 de campaña es la introducción del rol, no una mejora estadística. Los niveles tecnológicos II/III de las 24 familias todavía no están implementados.
+
+## Resultados cuantitativos observados en CI (14 nov, 19:56 UTC)
+
+La prueba separada de mecánica/IA demuestra que un Ingeniero adyacente a un tanque dañado **sí decide y ejecuta** una reparación de 3 HP por 105 créditos; pasa la protección de niebla y los guardados. Las pruebas de menú móvil, elección explícita y cancelación también pasan.
+
+La simulación de **16 partidas emparejadas completas de 14 fases máximas** registró: **1.453 acciones, 281 compras, 18 reabastecimientos, 0 reparaciones y 0 créditos gastados en reparaciones**; 4 victorias del primer bando, 4 del segundo y 8 partidas no resueltas. Un test de 304 decisiones espejadas registró 0 divergencias. Las dos pruebas pasaron.
+
+**Interpretación importante:** pasar los invariantes **no equivale a demostrar que el Ingeniero sea útil regularmente**. Cero reparaciones orgánicas significa que en esas partidas la IA no encontró la combinación adecuada de Ingeniero libre, blindado herido y adyacente a precio razonable, o priorizó otras acciones; NO significa que la curación sea gratis, defectuosa o que 35 créditos/HP esté aprobado. Hay que observar partidas más extensas, posibles compras de ingenieros y movimientos de apoyo hacia vehículos dañados antes de ajustar precio o potencia. La igualdad 4/4 con 8 indecisos tampoco acredita paridad PvP.
+
+**Criterio para un próximo experimento de IA:** registrar por ronda cuántas reparaciones fueron posibles vs realizadas, cuánto crédito marginal ahorraron y cuántos turnos de combate sobrevivió el vehículo reparado. Prototipar un movimiento de apoyo del Ingeniero hacia un blindado dañado si es seguro y hay ganancia económica, antes de cambiar costos.
