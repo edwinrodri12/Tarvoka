@@ -60,6 +60,8 @@ var _hit_elapsed := 0.0
 var _shot_model_id := ""
 var _shot_elapsed := 0.0
 var _shot_heading := Vector2i(0,-1)
+var _damage_smoke_elapsed := 0.0
+var _damage_smoke_tick := 0.0
 
 func _ready() -> void:
     hide()
@@ -425,6 +427,22 @@ func tap_battle_cell(cell: Vector2i) -> bool:
 func _process(delta: float) -> void:
     if _scene==null or not visible:
         return
+    # Persistent damage is a live effect, not a static smoke mesh. Sample
+    # only 10 times per second and ONLY on the <=8 actual visible 3D units.
+    # Never query hidden enemies or alter a single BattleSession field.
+    _damage_smoke_elapsed+=maxf(delta,0.0)
+    _damage_smoke_tick+=maxf(delta,0.0)
+    if _damage_smoke_tick>=0.10:
+        _damage_smoke_tick=fposmod(_damage_smoke_tick,0.10)
+        var holder: Node3D = _scene.find_child(
+            "UnidadesDinamicasG09",false,false) as Node3D
+        if holder!=null:
+            for child in holder.get_children():
+                var visible_tank: Node3D = child as Node3D
+                if visible_tank!=null and (
+                        visible_tank.get_meta("tarvoka_damage_polished_v30",false)) and (
+                        TankDamage.current_stage(visible_tank)>=2):
+                    TankDamage.animate_smoke(visible_tank,_damage_smoke_elapsed)
     # Native cannon recoil follows a REAL authorized attack. The shooter
     # can fire even when the target is destroyed in the same transaction.
     if not _shot_model_id.is_empty():
@@ -776,6 +794,8 @@ func close_view() -> void:
     _hit_elapsed=0.0
     _shot_model_id=""
     _shot_elapsed=0.0
+    _damage_smoke_elapsed=0.0
+    _damage_smoke_tick=0.0
     _drop_3d_quote()
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
