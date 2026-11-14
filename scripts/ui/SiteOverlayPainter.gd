@@ -9,6 +9,10 @@ const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 # textures or repeated labels on zoomed-out maps; touches keep their tiles.
 
 static func owner_tint(owner: int, state: Dictionary = {}) -> Color:
+    # Presentation-only palette for eight-team QA. Real tactical ownership
+    # remains 0/1 until the multiplayer state engine is built and validated.
+    if bool(state.get("__qa_visual_eight_sides",false)) and owner >= 0 and owner < 8:
+        return VisualStyle.faction_color(owner)
     if owner in [0,1]:
         return Identity.color_for(state,owner)
     if owner == -1:
