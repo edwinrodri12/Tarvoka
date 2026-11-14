@@ -7,6 +7,7 @@ on:
       - 'scripts/core/GroundArmorProcurement.gd'
       - 'tests/test_ground_armor_role_matrix.gd'
       - 'tests/test_ground_armor_ai_procurement.gd'
+      - 'tests/test_ground_armor_ai_selfplay.gd'
       - '.github/workflows/ground-armor-matrix.yml'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'scripts/core/GroundArmorProcurement.gd'
       - 'tests/test_ground_armor_role_matrix.gd'
       - 'tests/test_ground_armor_ai_procurement.gd'
+      - 'tests/test_ground_armor_ai_selfplay.gd'
       - '.github/workflows/ground-armor-matrix.yml'
   workflow_dispatch:
 
@@ -66,6 +68,19 @@ jobs:
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}-ground-armor.log"; then exit 1; fi
             grep -F 'PASS ' "/tmp/${test}-ground-armor.log"
           done
+      - name: Measure organic production in 16 mirrored modern AI matches
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 105s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ground_armor_ai_selfplay.gd 2>&1 \
+            | tee /tmp/ground-armor-selfplay.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/ground-armor-selfplay.log; then exit 1; fi
+          grep -F 'PASS ground armor selfplay:' /tmp/ground-armor-selfplay.log
+          grep 'GROUND_ARMOR_SELFPLAY_JSON ' /tmp/ground-armor-selfplay.log \
+            | tail -1 | sed 's/^.*GROUND_ARMOR_SELFPLAY_JSON //' \
+            > /tmp/ground-armor-selfplay.json
+          python3 -m json.tool /tmp/ground-armor-selfplay.json >/dev/null
       - name: Upload audit data
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,5 +90,7 @@ jobs:
             /tmp/ground-armor-matrix.log
             /tmp/ground-armor-matrix.json
             /tmp/ground-armor-ai.log
+            /tmp/ground-armor-selfplay.log
+            /tmp/ground-armor-selfplay.json
             /tmp/*-ground-armor.log
           if-no-files-found: warn
