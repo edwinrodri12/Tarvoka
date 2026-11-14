@@ -220,11 +220,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 21:
-        push_error("Landscape UI QA incomplete: %d/21 captures" % _manifest.size())
+    if _failed or _manifest.size() != 22:
+        push_error("Landscape UI QA incomplete: %d/22 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 21 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 22 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
