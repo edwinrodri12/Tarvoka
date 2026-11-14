@@ -26,6 +26,7 @@ on:
       - "tests/test_g09_art_v14.gd"
       - "tests/test_g09_art_v15.gd"
       - "tests/test_g09_art_v16.gd"
+      - "tests/test_g09_art_v17.gd"
       - "tests/test_mbt_silhouette_v5.gd"
   push:
     branches:
@@ -366,6 +367,37 @@ jobs:
           fi
           grep -q "PASS G09 V16 GLB export:" /tmp/g09-v16-glb.log
           test -s artifacts/TARVOKA_G09_V16_Escultura_Editable.glb
+      - name: Verify G09 V17 organic smoke, full/eco FX budget and camera A-B
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v17.gd 2>&1 | tee /tmp/g09-v17-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v17-art.log; then
+            echo "G09 V17 smoke/fire, eco budget or native render failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V17:" /tmp/g09-v17-art.log
+          test -s artifacts/tarvoka_g09_v16_v17_fire_same_camera.png
+          test -s artifacts/tarvoka_g09_v16_v17_smoke_same_camera.png
+          test -s artifacts/tarvoka_g09_v17_full_eco_same_camera.png
+          test -s artifacts/tarvoka_g09_v17_four_angles.png
+      - name: Export editable G09 V17 model with shared smoke atlas
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v17_glb.gd 2>&1 | tee /tmp/g09-v17-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v17-glb.log; then
+            echo "G09 V17 editable GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V17 GLB export:" /tmp/g09-v17-glb.log
+          test -s artifacts/TARVOKA_G09_V17_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -411,6 +443,10 @@ jobs:
             artifacts/tarvoka_g09_v15_v16_same_camera.png
             artifacts/tarvoka_g09_v16_four_angles.png
             artifacts/tarvoka_g09_v15_v16_fire_same_camera.png
+            artifacts/tarvoka_g09_v16_v17_fire_same_camera.png
+            artifacts/tarvoka_g09_v16_v17_smoke_same_camera.png
+            artifacts/tarvoka_g09_v17_full_eco_same_camera.png
+            artifacts/tarvoka_g09_v17_four_angles.png
             artifacts/tarvoka_g09_v11_v12_closeup.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
@@ -421,6 +457,7 @@ jobs:
             artifacts/TARVOKA_G09_V14_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V15_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V16_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V17_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
