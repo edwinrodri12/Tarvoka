@@ -245,7 +245,12 @@ func _add_building_mode() -> void:
         item.name = "TerrenoFaccion_%d" % i
         item.text = str(short_names[i])
         item.tooltip_text = str(Factions.FACTIONS[i]["name"])
+        # Use original shield textures when bundled. This standalone V8/V9
+        # studio does not bundle the HQ branch's two emblem atlases, so
+        # its selector always retains the eight approved colors and labels.
         item.icon = Factions.emblem_texture(i)
+        item.add_theme_color_override("font_color",
+            Factions.faction_color(i).lightened(0.16))
         item.expand_icon = true
         item.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
         item.alignment = HORIZONTAL_ALIGNMENT_LEFT
