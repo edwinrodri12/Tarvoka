@@ -82,6 +82,7 @@ var iso_enabled := false
 var three_d_enabled := false
 var _battle_3d: TextureRect
 var _3d_sync_interval := 0.0
+var _3d_art_quality := 2 # 0 low / 1 selected high / 2 high (up to 6 G09 V23).
 var battery_saver := false
 var ambient_redraw_count := 0 # Test diagnostics, no save changes.
 var iso_zoom := 1.0
@@ -196,6 +197,7 @@ func set_3d_view(enabled: bool) -> void:
             add_child(_battle_3d)
             _battle_3d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
         _battle_3d.show()
+        _battle_3d.call("set_visual_quality",_3d_art_quality)
         _battle_3d.call("set_rendering",true)
         three_d_enabled = true
         _reset_touch_gesture()
@@ -209,6 +211,13 @@ func set_3d_view(enabled: bool) -> void:
             _battle_3d.hide()
         _reset_touch_gesture()
     queue_redraw()
+
+func set_3d_art_quality(level: int) -> void:
+    _3d_art_quality = clampi(level,0,2)
+    if _battle_3d != null:
+        _battle_3d.call("set_visual_quality",_3d_art_quality)
+        if three_d_enabled:
+            _sync_3d_visual()
 
 func _sync_3d_visual() -> void:
     if three_d_enabled and _battle_3d != null:
