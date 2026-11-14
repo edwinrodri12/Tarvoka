@@ -62,7 +62,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:.*(shader|texture|viewport|render)' "$TARVOKA_UI_CAPTURE_DIR/godot.log"; then
             echo "Godot visual QA returned a rendering/script error"; exit 1
           fi
-          grep -F 'PASS visual gallery: 32 rendered landscape PNG screens' "$TARVOKA_UI_CAPTURE_DIR/godot.log"
+          grep -F 'PASS visual gallery: 34 rendered landscape PNG screens' "$TARVOKA_UI_CAPTURE_DIR/godot.log"
       - name: Validate PNGs and generate offline review page
         run: python3 scripts/qa/build_gallery_index.py "$TARVOKA_UI_CAPTURE_DIR"
       - name: Publish reviewable PNG and HTML gallery
