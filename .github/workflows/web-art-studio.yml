@@ -14,6 +14,9 @@ on:
       - "scripts/ui/HeadquartersArchitectureV7.gd"
       - "scripts/ui/HeadquartersFinishV8.gd"
       - "scripts/ui/HeadquartersReadabilityV9.gd"
+      - "scripts/ui/HeadquartersSurfaceV10.gd"
+      - "tests/test_headquarters_v10_surfaces.gd"
+      - "tests/export_headquarters_surface_v10_glb.gd"
       - "tests/test_headquarters_v9_faction_gallery.gd"
       - "tests/export_headquarters_readability_v9_glb.gd"
       - "tests/test_headquarters_v8.gd"
@@ -44,6 +47,7 @@ on:
       - feat/browser-3d-model-lab-20261113
       - feat/hq-v8-pbr-weathering-studio-20261113
       - feat/hq-v9-distance-readability-faction-gallery-20261113
+      - feat/hq-v10-surface-transitions-20261113
       - main
     paths:
       - "scripts/ui/**"
@@ -254,6 +258,18 @@ jobs:
           test -s artifacts/tarvoka_hq_v9_eight_faction_views.png
           test -s artifacts/tarvoka_hq_v8_vs_v9_distance_architecture.png
           test -s artifacts/tarvoka_hq_v9_tactical_scale.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v10_surfaces.gd 2>&1 | tee /tmp/hq-v10-surfaces-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v10-surfaces-check.log; then
+            echo "HQ V10 real surfaces, fractured cladding or official faction gallery failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V10:" /tmp/hq-v10-surfaces-check.log
+          test -s artifacts/tarvoka_hq_v9_vs_v10_surface_realism.png
+          test -s artifacts/tarvoka_hq_v10_material_junction_close.png
+          test -s artifacts/tarvoka_hq_v10_exposed_rebar_damage.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -329,6 +345,20 @@ jobs:
           fi
           grep -q "PASS HQ V9 GLB export:" /tmp/hq-v9-glb.log
           test -s artifacts/TARVOKA_CuartelGeneral_V9_Nivel3_Editable.glb
+      - name: Export HQ V10 as Blender editable GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_headquarters_surface_v10_glb.gd 2>&1 | tee /tmp/hq-v10-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v10-glb.log; then
+            echo "HQ V10 GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V10 GLB export:" /tmp/hq-v10-glb.log
+          test -s artifacts/TARVOKA_CuartelGeneral_V10_Nivel3_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -372,6 +402,9 @@ jobs:
             artifacts/tarvoka_hq_v9_eight_faction_views.png
             artifacts/tarvoka_hq_v8_vs_v9_distance_architecture.png
             artifacts/tarvoka_hq_v9_tactical_scale.png
+            artifacts/tarvoka_hq_v9_vs_v10_surface_realism.png
+            artifacts/tarvoka_hq_v10_material_junction_close.png
+            artifacts/tarvoka_hq_v10_exposed_rebar_damage.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
@@ -382,6 +415,7 @@ jobs:
             artifacts/TARVOKA_CuartelGeneral_V7_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V8_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V9_Nivel3_Editable.glb
+            artifacts/TARVOKA_CuartelGeneral_V10_Nivel3_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
