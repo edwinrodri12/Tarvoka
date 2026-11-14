@@ -6,6 +6,8 @@ class_name TarvokaBattleMinimap
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
+const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
+const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
 
 var board: Control = null
 var last_state_hash := -1
@@ -19,7 +21,7 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     clip_contents = true
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    tooltip_text = "Toca el minimapa para centrar la cámara. No mueve unidades."
+    tooltip_text = "Toca para centrar. Rojo: crítico; ámbar: atención/base; cian: disponible. No mueve unidades."
 
 func set_board(target: Control) -> void:
     board = target
@@ -57,14 +59,15 @@ static func point_to_cell(point: Vector2, canvas_size: Vector2,
 
 # The snapshot is safe to hand to the UI, even when all enemy locations and
 # installation ownership are present in the underlying authoritative state.
-static func safe_snapshot(state: Dictionary) -> Dictionary:
+static func safe_snapshot(state: Dictionary, viewer: int = 0,
+        vs_ai: bool = false) -> Dictionary:
     var dims: Vector2i = dimensions(state)
-    var result: Dictionary = {"size":dims,"tiles":[],"units":[],"sites":[],"nodes":[]}
+    var result: Dictionary = {"size":dims,"tiles":[],"units":[],"sites":[],"nodes":[],"alerts":[]}
     if dims.x <= 0 or dims.y <= 0:
         return result
     var fog: bool = Visibility.enabled(state)
-    var visible: Dictionary = Visibility.visible_cells(state,0) if fog else {}
-    var explored: Dictionary = Visibility.explored_cells(state,0) if fog else {}
+    var visible: Dictionary = Visibility.visible_cells(state,viewer) if fog else {}
+    var explored: Dictionary = Visibility.explored_cells(state,viewer) if fog else {}
     for y in range(dims.y):
         for x in range(dims.x):
             var cell := Vector2i(x,y)
@@ -80,7 +83,7 @@ static func safe_snapshot(state: Dictionary) -> Dictionary:
             continue
         var cell: Vector2i = unit["pos"]
         var faction: int = int(unit.get("faction",-1))
-        if faction != 0 and fog and not visible.has(cell):
+        if faction != viewer and fog and not visible.has(cell):
             continue
         result["units"].append({"pos":cell,"faction":faction})
     if state.has("economy"):
@@ -88,7 +91,7 @@ static func safe_snapshot(state: Dictionary) -> Dictionary:
             var cell: Vector2i = site["pos"]
             if fog and not explored.has(cell):
                 continue
-            var owner: int = int(site["owner"]) if not fog or visible.has(cell) or int(site["owner"]) == 0 else -1
+            var owner: int = int(site["owner"]) if not fog or visible.has(cell) or int(site["owner"]) == viewer else -1
             result["sites"].append({"pos":cell,"owner":owner})
     if state.has("control"):
         for node in state["control"]["nodes"]:
@@ -97,6 +100,9 @@ static func safe_snapshot(state: Dictionary) -> Dictionary:
                 continue
             var owner: int = int(node["owner"]) if not fog or visible.has(cell) else -1
             result["nodes"].append({"pos":cell,"owner":owner})
+    # The alert feed uses only friendly units and sight-approved site markers.
+    # This snapshot is cached alongside terrain, never on camera panning.
+    result["alerts"] = TacticalAlerts.build(state,viewer,vs_ai).get("markers",[])
     return result
 
 static func viewport_corners(canvas_size: Vector2, state: Dictionary,
@@ -139,11 +145,13 @@ func _snapshot_for_state(state: Dictionary) -> Dictionary:
     # Hashing a map is cheaper than recreating 1,200 tile dictionaries and
     # all its draw commands every time the camera moves. Rebuild on any change
     # to authoritative content, including externally loaded/save-restored data.
-    var key: int = hash(state)
+    var vs_ai: bool = bool(board.get("ai_enabled")) if board != null else false
+    var viewer: int = 0 if vs_ai else int(state.get("faction",0))
+    var key: int = hash([state,viewer,vs_ai])
     if terrain_texture != null and key == last_state_hash:
         cache_reuse_count += 1
         return cached_snapshot
-    cached_snapshot = safe_snapshot(state)
+    cached_snapshot = safe_snapshot(state,viewer,vs_ai)
     terrain_texture = _rasterize_terrain(cached_snapshot)
     last_state_hash = key
     cache_rebuild_count += 1
@@ -186,6 +194,8 @@ func _draw() -> void:
         var faction: int = int(unit["faction"])
         var color: Color = VisualStyle.faction_color(faction)
         draw_circle(pos,maxf(2.0,minf(tile.x,tile.y)*0.24),color)
+    AlertPainter.draw_minimap(self,data.get("alerts",[]),bounds,dims,
+        bool(board.get("battery_saver")))
     var view: PackedVector2Array = viewport_corners(size,state,board.size,
         float(board.get("iso_zoom")),board.get("iso_pan"))
     if view.size() == 5:
