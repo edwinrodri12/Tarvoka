@@ -1,6 +1,7 @@
 # TARVOKA 3D Studio — local-only web server for the Godot WebGL export.
 # No admin rights, internet connection, Python, npm, Node, or installation.
 # Bind exclusively to Windows loopback: other devices cannot reach it.
+param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
 $Root = [System.IO.Path]::GetFullPath($PSScriptRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
 $RootPrefix = $Root + [System.IO.Path]::DirectorySeparatorChar
@@ -43,7 +44,7 @@ Write-Host "El servidor es privado: solo accesible en esta computadora."
 Write-Host "Manten esta ventana abierta mientras usas el Estudio."
 Write-Host "Cierra con Ctrl+C."
 Write-Host ""
-Start-Process $WebUrl
+if (-not $NoBrowser) { Start-Process $WebUrl }
 
 try {
     while ($Listener.Server.IsBound) {
