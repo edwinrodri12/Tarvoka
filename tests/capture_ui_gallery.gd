@@ -141,6 +141,8 @@ func _run_gallery() -> void:
     main._open_saved_matches_from_home()
     if not await _capture_landscape("11-guardados-1280x720",Vector2i(1280,720),"Partidas guardadas · dos ranuras reales"):
         _failed = true
+    if not await _capture_landscape("19-guardados-960x540",Vector2i(960,540),"Partidas guardadas · horizontal compacto"):
+        _failed = true
     if main.saved_matches_menu.slot_cards.vertical:
         push_error("Save slots are stacked on landscape.")
         _failed = true
@@ -164,11 +166,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 18:
-        push_error("Landscape UI QA incomplete: %d/18 captures" % _manifest.size())
+    if _failed or _manifest.size() != 19:
+        push_error("Landscape UI QA incomplete: %d/19 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 18 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 19 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
