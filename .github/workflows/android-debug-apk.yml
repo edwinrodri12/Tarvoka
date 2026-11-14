@@ -126,6 +126,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build
+          # PR builds use an ephemeral signing key and must never require
+          # uninstalling a tester's existing com.edwinrodri12.tarvoka app.
+          # Patch the runner's copy only; release/main package stays unchanged.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.qa"|' export_presets.cfg
+            sed -i 's|package/name="TARVOKA"|package/name="TARVOKA QA"|' export_presets.cfg
+            grep -q 'package/unique_name="com.edwinrodri12.tarvoka.qa"' export_presets.cfg
+          fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug Android build/TARVOKA-debug.apk
           test -s build/TARVOKA-debug.apk
