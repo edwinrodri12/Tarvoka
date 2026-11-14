@@ -54,6 +54,13 @@ var _warmup_seconds := 1.25
 var _measure_seconds := 6.0
 var _samples: Array[float] = []
 var _peak_mem_mb := 0.0
+var _memory_before_setup_mb := 0.0
+var _memory_after_setup_mb := 0.0
+var _map_generation_ms := 0.0
+var _unit_seed_ms := 0.0
+var _building_seed_ms := 0.0
+var _setup_total_ms := 0.0
+var _peak_draw_calls := 0
 var _last_stats: Dictionary = {}
 var _actual_tanks := 0
 var _actual_sites := 0
@@ -221,20 +228,35 @@ func _next_case() -> void:
     _effect_seconds = 0.0
     _samples.clear()
     _peak_mem_mb = 0.0
+    _peak_draw_calls = 0
+    _memory_before_setup_mb = float(
+        Performance.get_monitor(Performance.MEMORY_STATIC))/1048576.0
+    var setup_started: int = Time.get_ticks_usec()
     # Isolated test board: never touch the actual player's scene or autosave.
     board.new_game(Scenarios.RANDOM_SCENARIO_ID,true,false,true,true,true,true,
         0,SEED,config["dims"],{},str(config["weather"]))
+    _map_generation_ms = float(Time.get_ticks_usec()-setup_started)/1000.0
     board.set_isometric(true)
     board.set_battery_saver(bool(config["saver"]))
     board.iso_zoom = float(config["zoom"])
     _actual_teams = int(config.get("teams",2))
+    var units_started: int = Time.get_ticks_usec()
     _actual_tanks = _seed_tanks(int(config["tanks"]),_actual_teams)
+    _unit_seed_ms = float(Time.get_ticks_usec()-units_started)/1000.0
+    var buildings_started: int = Time.get_ticks_usec()
     _actual_sites = _seed_visual_sites(int(config.get("sites",0)),_actual_teams)
+    _building_seed_ms = float(Time.get_ticks_usec()-buildings_started)/1000.0
     board.focus_iso_cell(config["focus"])
     board._site_overlay_key = -1
     board.selected_id = ""
     board.combat_effects.clear()
     board.motion_effects.clear()
+    # These are synchronous CPU setup times, not asynchronous GPU upload or
+    # presentation time. Report the distinction explicitly to device testers.
+    _setup_total_ms = float(Time.get_ticks_usec()-setup_started)/1000.0
+    _memory_after_setup_mb = float(
+        Performance.get_monitor(Performance.MEMORY_STATIC))/1048576.0
+    _peak_mem_mb = _memory_after_setup_mb
     status_label.text = "%d/%d · %s\n%d equipos | %d tanques | %d edificios | %s" % [
         _case_index+1,CASES.size(),config["name"],_actual_teams,
         _actual_tanks,_actual_sites,config["weather"]]
@@ -280,6 +302,8 @@ func _process(delta: float) -> void:
         _samples.append(dt*1000.0)
     _peak_mem_mb = maxf(_peak_mem_mb,
         float(Performance.get_monitor(Performance.MEMORY_STATIC))/1048576.0)
+    _peak_draw_calls = maxi(_peak_draw_calls,int(
+        Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
     _last_stats = Renderer.last_frame_stats.duplicate(true)
     if _seconds >= _warmup_seconds + _measure_seconds:
         _record_case()
@@ -296,6 +320,8 @@ func _record_case() -> void:
             slow += 1
     avg_ms = avg_ms/maxf(1.0,float(samples.size()))
     var p95_ms: float = samples[clampi(int(ceil(float(samples.size())*0.95))-1,0,
+        maxi(0,samples.size()-1))] if not samples.is_empty() else 0.0
+    var p99_ms: float = samples[clampi(int(ceil(float(samples.size())*0.99))-1,0,
         maxi(0,samples.size()-1))] if not samples.is_empty() else 0.0
     var cfg: Dictionary = CASES[_case_index]
     var dims: Vector2i = cfg["dims"]
@@ -322,18 +348,31 @@ func _record_case() -> void:
         "effects":int(cfg["effects"]),"samples":samples.size(),
         "fps_avg":snappedf(1000.0/avg_ms,0.1) if avg_ms>0.0 else 0.0,
         "frame_p95_ms":snappedf(p95_ms,0.01),
+        "frame_p99_ms":snappedf(p99_ms,0.01),
         "frames_over_33ms_percent":snappedf(100.0*float(slow)/maxf(1.0,float(samples.size())),0.1),
+        "map_generation_cpu_ms":snappedf(_map_generation_ms,0.01),
+        "tank_population_cpu_ms":snappedf(_unit_seed_ms,0.01),
+        "building_population_cpu_ms":snappedf(_building_seed_ms,0.01),
+        "setup_total_cpu_ms":snappedf(_setup_total_ms,0.01),
+        "static_memory_before_setup_mb":snappedf(_memory_before_setup_mb,0.1),
+        "static_memory_after_setup_mb":snappedf(_memory_after_setup_mb,0.1),
+        "setup_static_memory_delta_mb":snappedf(
+            _memory_after_setup_mb-_memory_before_setup_mb,0.1),
         "max_static_memory_mb":snappedf(_peak_mem_mb,0.1),
+        "max_draw_calls_reported":_peak_draw_calls,
         "tiles_drawn":int(_last_stats.get("tiles_drawn",0)),
         "units_drawn":int(_last_stats.get("units_drawn",0)),
         "hq_baked_visible":hq_on_screen
     }
     results.append(result)
-    var row: String = "%s\n%d equipos, %d/%d tanques, %d/%d edificios visibles · %.1f FPS · p95 %.1f ms · %.1f%% cuadros >33 ms · %.1f MB\n" % [
+    var row: String = "%s\n%d equipos, %d/%d tanques, %d/%d edificios visibles · %.1f FPS · p95 %.1f ms · p99 %.1f ms · %.1f%% cuadros >33 ms\nGenerar mapa %.1f ms · poblar tropas %.1f ms · edificios %.1f ms · preparar total %.1f ms · memoria est. %.1f MB (cambio %+.1f MB) · llamadas GPU %d\n" % [
         result["case"],result["visual_factions"],result["units_drawn"],
         result["actual_tanks"],result["sites_drawn"],result["actual_sites"],
-        result["fps_avg"],result["frame_p95_ms"],
-        result["frames_over_33ms_percent"],result["max_static_memory_mb"]]
+        result["fps_avg"],result["frame_p95_ms"],result["frame_p99_ms"],
+        result["frames_over_33ms_percent"],result["map_generation_cpu_ms"],
+        result["tank_population_cpu_ms"],result["building_population_cpu_ms"],
+        result["setup_total_cpu_ms"],result["max_static_memory_mb"],
+        result["setup_static_memory_delta_mb"],result["max_draw_calls_reported"]]
     _result_text += row + "\n"
     output_label.text = _result_text
     print("TARVOKA_STRESS_CASE " + JSON.stringify(result))
@@ -343,7 +382,9 @@ func _finish() -> void:
     completed = true
     start_button.disabled = false
     status_label.text = "Prueba finalizada · %d escenarios" % results.size()
-    _result_text += "Resultados de cuadros completos; no son tiempos GPU aislados.\n"
+    _result_text += "Cuadros completos, no tiempo GPU; setup mide CPU sin subida GPU.\n"
+    _result_text += "Memoria estatica = contador Godot, NO RAM total del Android.\n"
+    _result_text += "Draw calls puede ser cero si el driver no ofrece datos.\n"
     _result_text += "Cargas sintéticas: tanque técnico actual + HQ 3D precalculado.\n"
     _result_text += "Los 8 equipos son visuales: no hay red, turnos ni niebla por jugador.\n"
     _result_text += "El modo ahorro y la niebla de guerra pueden cambiar la carga.\n"
@@ -353,6 +394,7 @@ func _finish() -> void:
         "display_server":DisplayServer.get_name(),
         "screen":str(get_viewport().get_visible_rect().size),
         "renderer":"Godot Compatibility",
+        "metrics_note":"FPS entre cuadros; setup CPU; static heap Godot, no RSS ni GPU time; draw calls si el driver expone monitor",
         "type":"visual_stress_8_visual_teams_not_multiplayer_not_gpu_timer",
         "cases":results
     }
