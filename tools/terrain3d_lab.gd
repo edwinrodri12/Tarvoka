@@ -20,6 +20,12 @@ var _water: MeshInstance3D
 var _banks: MeshInstance3D
 var _undergrowth: MultiMeshInstance3D
 var _canopies: MultiMeshInstance3D
+var _canopy_variants: Array[MultiMeshInstance3D] = []
+var _crown_cache: Dictionary = {}
+var _understory_cache: Dictionary = {}
+var _trunk_mesh: CylinderMesh
+var _last_build_us := 0
+var _vegetation_stats: Dictionary = {}
 var _trunks: MultiMeshInstance3D
 var _bridges: Node3D
 var _camera: Camera3D
@@ -64,8 +70,15 @@ func _ready() -> void:
     _undergrowth.name = "SlopeFollowingUnderstory"
     add_child(_undergrowth)
     _canopies = MultiMeshInstance3D.new()
-    _canopies.name = "ForestCanopies"
+    _canopies.name = "ForestCanopiesSpruce"
     add_child(_canopies)
+    _canopy_variants.append(_canopies)
+    for profile in range(1,Conifers.PROFILE_COUNT):
+        var variant := MultiMeshInstance3D.new()
+        variant.name = "ForestCanopiesFir" if profile == 1 else (
+            "ForestCanopiesYoung")
+        add_child(variant)
+        _canopy_variants.append(variant)
     _trunks = MultiMeshInstance3D.new()
     _trunks.name = "ForestTrunks"
     add_child(_trunks)
@@ -146,6 +159,7 @@ func _fit_camera() -> void:
 func rebuild(fit_camera: bool = true) -> void:
     if _ground == null or _water == null:
         return
+    var build_started_us: int = Time.get_ticks_usec()
     _ground.mesh = TerrainMesh.build_ground(
         terrain,observed,restrict_to_observed,divisions)
     _water.mesh = TerrainMesh.build_water(
@@ -158,8 +172,59 @@ func rebuild(fit_camera: bool = true) -> void:
     _generate_bridges()
     if fit_camera:
         _fit_camera()
+    _last_build_us = Time.get_ticks_usec()-build_started_us
+
+func _get_crown_mesh(profile: int) -> ArrayMesh:
+    var key: int = profile*2+(1 if divisions >= 4 else 0)
+    if not _crown_cache.has(key):
+        _crown_cache[key] = Conifers.build_crown(
+            divisions >= 4,profile)
+    return _crown_cache[key]
+
+func _get_understory_mesh() -> ArrayMesh:
+    var high_detail: bool = divisions >= 4
+    if not _understory_cache.has(high_detail):
+        _understory_cache[high_detail] = Understory.shrub_mesh(high_detail)
+    return _understory_cache[high_detail]
+
+func _get_trunk_mesh() -> CylinderMesh:
+    if _trunk_mesh == null:
+        _trunk_mesh = CylinderMesh.new()
+        _trunk_mesh.top_radius = 0.052
+        _trunk_mesh.bottom_radius = 0.073
+        _trunk_mesh.height = 0.44
+        _trunk_mesh.radial_segments = 6
+        var bark := StandardMaterial3D.new()
+        bark.albedo_color = Color("#70513D")
+        bark.roughness = 0.95
+        _trunk_mesh.material = bark
+    return _trunk_mesh
+
+func _triangles_per_instance(mesh: Mesh) -> int:
+    if mesh == null or mesh.get_surface_count() == 0:
+        return 0
+    var data: Array = mesh.surface_get_arrays(0)
+    var indices: PackedInt32Array = data[Mesh.ARRAY_INDEX]
+    return int(indices.size()/3) if not indices.is_empty() else (
+        int(data[Mesh.ARRAY_VERTEX].size()/3))
+
+# Cost estimates are geometry counts plus CPU rebuild duration; FPS can
+# only be measured on a running device, not inferred from these counters.
+func environment_metrics() -> Dictionary:
+    var figures := _vegetation_stats.duplicate()
+    figures["build_ms"] = float(_last_build_us)/1000.0
+    figures["quality_divisions"] = divisions
+    figures["ground_triangles"] = _triangles_per_instance(_ground.mesh)
+    figures["water_triangles"] = _triangles_per_instance(_water.mesh)
+    figures["shore_triangles"] = _triangles_per_instance(_banks.mesh)
+    figures["approx_total_triangles"] = int(
+        figures["ground_triangles"])+int(figures["water_triangles"])+(
+        int(figures["shore_triangles"])+int(
+        figures.get("vegetation_triangles",0)))
+    return figures
 
 func _generate_forest() -> void:
+    var trees_by_profile: Array = [[],[],[]]
     var trees: Array = []
     var shrubs: Array = []
     for y in range(terrain.size()):
@@ -172,9 +237,6 @@ func _generate_forest() -> void:
                 continue
             if str(terrain[y][x]) != "forest":
                 continue
-            # Vegetation density belongs to the SAME regional forest
-            # profile as the 2.5D artwork. Hidden neighbors may not
-            # affect count or reveal the edge of an unexplored forest.
             var known_links: int = Topology.neighbor_mask(
                 terrain,cell,"forest",true,observed,restrict_to_observed)
             var count: int = mini(5,Regions.forest_density(
@@ -182,16 +244,20 @@ func _generate_forest() -> void:
                 mini(3,Regions.forest_density(cell,known_links,1)))
             for j in range(count):
                 var seed: int = posmod(x*127+y*463+j*117,199)
-                var u: float = 0.16+float(posmod(seed*13+j*7,31))*0.022
-                var v: float = 0.17+float(posmod(seed*17+j*11,29))*0.022
-                var height: float = TerrainMesh.height_at(
-                    terrain,cell,u,v,observed,restrict_to_observed)
+                var local_u: float = 0.16+float(
+                    posmod(seed*13+j*7,31))*0.022
+                var local_v: float = 0.17+float(
+                    posmod(seed*17+j*11,29))*0.022
+                var elevation: float = TerrainMesh.height_at(
+                    terrain,cell,local_u,local_v,
+                    observed,restrict_to_observed)
                 var scale: float = 0.73+float(seed%9)*0.056
-                trees.append({"position":Vector3(
-                    float(x)+u,height,float(y)+v),
-                    "scale":scale,"seed":seed})
-            # Forest ground cover follows the same heightfield as trunks
-            # and stays inside known forest cells (never into water).
+                var tree := {"position":Vector3(float(x)+local_u,
+                    elevation,float(y)+local_v),
+                    "scale":scale,"seed":seed,
+                    "profile":Conifers.profile_for(cell,j)}
+                trees.append(tree)
+                trees_by_profile[int(tree["profile"])].append(tree)
             var shrub_count: int = 3 if divisions >= 4 else 1
             for plant in range(shrub_count):
                 var local: Vector2 = Understory.placement(cell,plant)
@@ -201,79 +267,96 @@ func _generate_forest() -> void:
                 shrubs.append({"position":Vector3(
                     float(x)+local.x,elevation,float(y)+local.y),
                     "seed":posmod(x*67+y*131+plant*37,109)})
+    var vegetation_triangles := 0
+    var tree_counts: Array = []
     if trees.is_empty():
-        # Keep the MultiMesh resources allocated while a forest is entirely
-        # behind fog. Clearing a live MultiMeshInstance3D.mesh to null can
-        # issue mesh_get_surface_count(null) on the headless renderer.
-        _canopies.visible = false
+        # Preserve already initialized MultiMesh resources when
+        # a forest disappears under fog: avoiding a null MultiMesh prevents
+        # rendering errors on Godot's headless dummy backend.
+        for instance in _canopy_variants:
+            instance.visible = false
         _trunks.visible = false
         _undergrowth.visible = false
+        _vegetation_stats = {"trees":0,"shrubs":0,
+            "tree_profiles":[0,0,0],"vegetation_triangles":0}
         return
-    _canopies.visible = true
     _trunks.visible = true
     _undergrowth.visible = true
-    # Reuse ONE serrated crown per quality tier. A single MultiMesh
-    # handles all trees, rather than three individual meshes per pine.
-    var leaf_mesh: ArrayMesh = Conifers.build_crown(divisions >= 4)
-    var trunk_mesh := CylinderMesh.new()
-    trunk_mesh.top_radius = 0.052
-    trunk_mesh.bottom_radius = 0.073
-    trunk_mesh.height = 0.44
-    trunk_mesh.radial_segments = 6
-    var bark := StandardMaterial3D.new()
-    bark.albedo_color = Color("#70513D")
-    bark.roughness = 0.95
-    trunk_mesh.material = bark
-    var leaf_instances := MultiMesh.new()
-    leaf_instances.transform_format = MultiMesh.TRANSFORM_3D
-    leaf_instances.use_colors = true
-    leaf_instances.mesh = leaf_mesh
-    # The shared crown mesh already contains all irregular branch tiers.
-    leaf_instances.instance_count = trees.size()
-    var trunk_instances := MultiMesh.new()
-    trunk_instances.transform_format = MultiMesh.TRANSFORM_3D
-    trunk_instances.mesh = trunk_mesh
-    trunk_instances.instance_count = trees.size()
-    for i in range(trees.size()):
-        var tree: Dictionary = trees[i]
-        var p: Vector3 = tree["position"]
+    for profile in range(Conifers.PROFILE_COUNT):
+        var trees_in_group: Array = trees_by_profile[profile]
+        var crowns: MultiMeshInstance3D = _canopy_variants[profile]
+        tree_counts.append(trees_in_group.size())
+        crowns.visible = not trees_in_group.is_empty()
+        if trees_in_group.is_empty():
+            continue
+        var mesh: ArrayMesh = _get_crown_mesh(profile)
+        var instances := MultiMesh.new()
+        instances.transform_format = MultiMesh.TRANSFORM_3D
+        instances.use_colors = true
+        instances.mesh = mesh
+        instances.instance_count = trees_in_group.size()
+        vegetation_triangles += _triangles_per_instance(
+            mesh)*trees_in_group.size()
+        for index in range(trees_in_group.size()):
+            var tree: Dictionary = trees_in_group[index]
+            var p: Vector3 = tree["position"]
+            var scale: float = tree["scale"]
+            var seed: int = tree["seed"]
+            var tint: Color = [
+                Color("#214F37"),Color("#2C6240"),
+                Color("#315D47"),Color("#416D4B")
+            ][seed%4]
+            var turn: float = float(seed)*0.27
+            var basis := Basis(Vector3.UP,turn).scaled(Vector3(
+                scale*(0.90+float(seed%5)*0.048),
+                scale*(0.89+float(seed%7)*0.043),
+                scale*(0.93+float(seed%3)*0.065)))
+            instances.set_instance_transform(index,Transform3D(
+                basis,p))
+            instances.set_instance_color(index,tint)
+        crowns.multimesh = instances
+
+    var trunk_mesh := _get_trunk_mesh()
+    var trunks := MultiMesh.new()
+    trunks.transform_format = MultiMesh.TRANSFORM_3D
+    trunks.mesh = trunk_mesh
+    trunks.instance_count = trees.size()
+    vegetation_triangles += _triangles_per_instance(trunk_mesh)*trees.size()
+    for index in range(trees.size()):
+        var tree: Dictionary = trees[index]
         var scale: float = tree["scale"]
-        var seed: int = tree["seed"]
-        var crown_tint: Color = [
-            Color("#214F37"),Color("#2C6240"),
-            Color("#315D47"),Color("#416D4B")
-        ][seed%4]
-        var turn: float = float(seed)*0.27
-        var crown_basis := Basis(Vector3.UP,turn).scaled(Vector3(
-            scale*(0.90+float(seed%5)*0.048),
-            scale*(0.89+float(seed%7)*0.043),
-            scale*(0.93+float(seed%3)*0.065)))
-        leaf_instances.set_instance_transform(i,Transform3D(
-            crown_basis,p))
-        leaf_instances.set_instance_color(i,crown_tint)
-        var trunk_basis := Basis().scaled(Vector3(scale,scale,scale))
-        trunk_instances.set_instance_transform(i,Transform3D(
-            trunk_basis,p+Vector3(0,scale*0.23,0)))
-    _canopies.multimesh = leaf_instances
-    _trunks.multimesh = trunk_instances
-    var shrub_instances := MultiMesh.new()
-    shrub_instances.transform_format = MultiMesh.TRANSFORM_3D
-    shrub_instances.use_colors = true
-    shrub_instances.mesh = Understory.shrub_mesh(divisions >= 4)
-    shrub_instances.instance_count = shrubs.size()
+        var p: Vector3 = tree["position"]
+        trunks.set_instance_transform(index,Transform3D(
+            Basis().scaled(Vector3.ONE*scale),
+            p+Vector3(0,scale*0.23,0)))
+    _trunks.multimesh = trunks
+
+    var shrubs_mesh: ArrayMesh = _get_understory_mesh()
+    var undergrowth := MultiMesh.new()
+    undergrowth.transform_format = MultiMesh.TRANSFORM_3D
+    undergrowth.use_colors = true
+    undergrowth.mesh = shrubs_mesh
+    undergrowth.instance_count = shrubs.size()
+    vegetation_triangles += _triangles_per_instance(
+        shrubs_mesh)*shrubs.size()
     for index in range(shrubs.size()):
-        var plant_data: Dictionary = shrubs[index]
-        var plant_pos: Vector3 = plant_data["position"]
-        var plant_seed: int = plant_data["seed"]
-        var angle: float = float(plant_seed)*0.41
-        var shrub_scale: float = 0.69+float(plant_seed%7)*0.055
-        shrub_instances.set_instance_transform(index,Transform3D(
-            Basis(Vector3.UP,angle).scaled(
-                Vector3.ONE*shrub_scale),plant_pos))
-        shrub_instances.set_instance_color(index,
-            Color("#7D955E") if plant_seed%3 == 0 else (
+        var item: Dictionary = shrubs[index]
+        var seed: int = item["seed"]
+        var scale: float = 0.69+float(seed%7)*0.055
+        undergrowth.set_instance_transform(index,Transform3D(
+            Basis(Vector3.UP,float(seed)*0.41).scaled(
+                Vector3.ONE*scale),item["position"]))
+        undergrowth.set_instance_color(index,
+            Color("#7D955E") if seed%3 == 0 else (
                 Color("#597E57")))
-    _undergrowth.multimesh = shrub_instances
+    _undergrowth.multimesh = undergrowth
+    _vegetation_stats = {
+        "trees":trees.size(),
+        "shrubs":shrubs.size(),
+        "tree_profiles":tree_counts,
+        "vegetation_triangles":vegetation_triangles,
+        "forest_draw_batches":Conifers.PROFILE_COUNT+2
+    }
 
 func _box(parent: Node3D, name: String, dimensions: Vector3,
         position: Vector3, material: Material) -> void:
