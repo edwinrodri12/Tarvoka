@@ -7,6 +7,7 @@ on:
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/TerrainStudio3D.gd"
       - "scripts/ui/TerrainTextures3D.gd"
+      - "scripts/ui/TerrainStudioPremiumFinish3D.gd"
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
@@ -179,6 +180,7 @@ jobs:
           test -s artifacts/tarvoka_terrain_studio_3d.png
           test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
           test -s artifacts/tarvoka_terrain_pbr_comparison.png
+          test -s artifacts/tarvoka_terrain_v4_premium_comparison.png
           for i in 00 01 02; do test -s "artifacts/tarvoka_terrain_scene_${i}.png"; done
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
@@ -223,6 +225,7 @@ jobs:
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_pbr_comparison.png
+            artifacts/tarvoka_terrain_v4_premium_comparison.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
