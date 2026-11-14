@@ -82,7 +82,8 @@ static func _installation(state: Dictionary, site: Dictionary, position: Vector2
     if owner_known:
         owner_text = "Neutral" if owner == -1 else ("Aliada" if owned_by_viewer else "Enemiga")
     var title: String = "%s · %s" % [str(SITE_NAMES.get(type,"Instalacion")),owner_text]
-    var body: String = "Casilla %d,%d  ·  Cobertura urbana +1 para tropas terrestres" % [position.x+1,position.y+1]
+    var urban_cover := "Cobertura urbana +1 para tropas terrestres" if type == "city" else "Cobertura según terreno; sin bonificación urbana adicional"
+    var body: String = "Casilla %d,%d  ·  %s" % [position.x+1,position.y+1,urban_cover]
     if type == "city":
         var income: int = Economy.MODERN_CITY_INCOME if bool(state.get("economy",{}).get("modern",false)) else Economy.CITY_INCOME
         body += "\nIngreso: +%d creditos por turno de su propietario" % income
