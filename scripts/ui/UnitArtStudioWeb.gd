@@ -445,8 +445,8 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
-        status_label.text = ("APC P06 BASTIÓN V1 · 6×6 · CASCO ESCULPIDO"
-            " · RAMPA Y TORRETA ANIMADAS · 8 FACCIONES"
+        status_label.text = (
+            "APC P06 BASTIÓN V1 · 6×6 · CASCO ESCULPIDO · RAMPA Y TORRETA ANIMADAS · 8 FACCIONES"
             if model_root.get_meta("tarvoka_apc_sculpt_v1",false)
             else "APC P06 · PROTOTIPO TÉCNICO ORIGINAL V0")
         return
