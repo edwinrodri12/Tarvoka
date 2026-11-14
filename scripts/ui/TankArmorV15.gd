@@ -25,7 +25,7 @@ static func _replace(model: Node3D, name: String,
     if original == null or original.mesh == null:
         return false
     var temporary: MeshInstance3D = Hero._loft(
-        original.get_parent(),"__V15_MESH_REPLACEMENT",outline,rings)
+        original.get_parent() as Node3D,"__V15_MESH_REPLACEMENT",outline,rings)
     original.mesh = temporary.mesh
     temporary.free()
     return true
@@ -68,7 +68,7 @@ static func apply(model: Node3D) -> bool:
                 "G09V14CarrilleraEscalonada_"]:
             required.append(prefix+str(side))
     for name in required:
-        if not model.find_child(name,true,false) is MeshInstance3D:
+        if not (model.find_child(name,true,false) is MeshInstance3D):
             return false
 
     for side in [-1,1]:
