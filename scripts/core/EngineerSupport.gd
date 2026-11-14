@@ -173,6 +173,10 @@ static func _reverse_costs(terrain: Array,goals: Array[Vector2i],
                     Domains.GROUND,false,weather,traction) < 0:
                 continue
             var next_distance: int = int(distance[current])+cost
+            # The AI refuses to pursue more than six movement points away;
+            # cap the reverse expansion too (important on 40x30/large armies).
+            if next_distance > MAX_ROUTE_COST:
+                continue
             if distance.has(previous) and int(distance[previous]) <= next_distance:
                 continue
             distance[previous] = next_distance
