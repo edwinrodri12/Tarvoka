@@ -21,6 +21,11 @@ func _run() -> void:
     var visual: TextureRect = board.get_node("Experimental3DTacticalView")
     var layer: Node3D = visual.get("_asset_layer")
     assert(layer != null and layer.name == "ModelosRealesEnPartida")
+    # Battle map, not just the web studio, uses V9 authored micro-textures.
+    var live_lab: Node3D = visual.get("_lab")
+    var surface: MeshInstance3D = live_lab.get("_ground")
+    var ground_mat: StandardMaterial3D = surface.mesh.surface_get_material(0) as StandardMaterial3D
+    assert(ground_mat != null and ground_mat.albedo_texture != null)
     var counts: Dictionary = board.get_3d_performance_snapshot()
     assert(int(counts.get("3d_visible_units",0)) >= 6)
     assert(int(counts.get("3d_g09_v23",0)) >= 1)
