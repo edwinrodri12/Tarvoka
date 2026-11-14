@@ -179,6 +179,7 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     preview.add_child(_scene)
     _cells = model.get_meta("public_cells")
     _dims = model.get_meta("board_size")
+    _look_at = Vector3.ZERO
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.66,
         16.0,70.0)
     _yaw = PI*0.25
@@ -244,6 +245,7 @@ func _friendly_unit_at(cell: Vector2i) -> String:
 
 func _refresh_ranges() -> void:
     if _ranges_node != null:
+        _ranges_node.get_parent().remove_child(_ranges_node)
         _ranges_node.queue_free()
         _ranges_node = null
     if _scene == null:
