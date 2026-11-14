@@ -160,9 +160,9 @@ func _ready() -> void:
     panel.add_child(iso_view_button)
     battle_3d_button = Button.new()
     battle_3d_button.name = "AbrirMapa3DBatalla"
-    battle_3d_button.text = "Mapa de batalla 3D · inspección"
+    battle_3d_button.text = "Batalla 3D · órdenes confirmadas"
     battle_3d_button.custom_minimum_size.y = 46
-    battle_3d_button.tooltip_text = "Ver esta partida y su niebla en 3D sin ejecutar órdenes"
+    battle_3d_button.tooltip_text = "Seleccionar unidades, preparar movimientos y ataques en 3D, y confirmar antes de ejecutar"
     battle_3d_button.pressed.connect(_open_battle_3d_map)
     panel.add_child(battle_3d_button)
     models_3d_button = Button.new()
@@ -712,7 +712,7 @@ func _build_battle_hud() -> void:
     battle_3d_quick = Button.new()
     battle_3d_quick.name = "Mapa3DCompacto"
     battle_3d_quick.text = "Mapa 3D"
-    battle_3d_quick.tooltip_text = "Inspeccionar esta partida en 3D, sin órdenes"
+    battle_3d_quick.tooltip_text = "Mapa 3D interactivo: movimientos y ataques requieren confirmación"
     battle_3d_quick.custom_minimum_size = Vector2(73,42)
     battle_3d_quick.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
     battle_3d_quick.offset_left = -451
