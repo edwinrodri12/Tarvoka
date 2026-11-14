@@ -59,6 +59,21 @@ static func _light(model: Node3D,part: Node3D,level: int) -> void:
     _detached_antenna(broken,"DeMando",
         Vector3(1.93,roof_y+0.27,1.42),
         1.20+float(level-1)*0.16)
+    # The parabolic radar is a SECOND conspicuous rooftop aerial, including
+    # level 1. Remove its authentic dish/arm (leave damaged pedestal) and
+    # lay the actual curved-equivalent thick dish in the roof foreground.
+    for item in ["PlatoExterior","CentroParabolica",
+            "AlimentadorRadar","BrazoInclinable"]:
+        _hide(model,item)
+    var dish: MeshInstance3D = HQ._cylinder(
+        broken,"PlatoRadarCaidoV22",
+        Vector3(-1.09,roof_y+0.23,0.64),
+        0.66 if level<3 else 0.88,
+        0.14,STEEL,0.23,16,Vector3(74,21,27))
+    dish.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    _box(broken,"SoporteRadarDesprendidoV22",
+        Vector3(-1.54,roof_y+0.18,0.81),
+        Vector3(0.12,0.83,0.15),OXIDE,Vector3(14,0,77))
     # On levels 2/3 the additional tower mast also falls. The underlying
     # communications TOWER remains undamaged, visible and recognizable.
     if level >= 2:
