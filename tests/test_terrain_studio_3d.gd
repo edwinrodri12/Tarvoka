@@ -18,6 +18,9 @@ func _run() -> void:
     assert(studio.category_picker.item_count == 4)
     assert(studio._role == "tank")
     studio._switch_category(2)
+    # This is a legacy baseline regression. The V7 erosion layer is
+    # verified independently and must not conceal its old reference meshes.
+    studio._toggle_v7_finish()
     for i in range(6):
         await process_frame
     assert(studio.category_picker.selected == 2)

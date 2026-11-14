@@ -13,6 +13,8 @@ const Bridge = preload("res://scripts/ui/TerrainStudioBridge3D.gd")
 const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
 const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
+const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
+const ClimateV8 = preload("res://scripts/ui/TerrainStudioWeatherV8.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -236,7 +238,8 @@ static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
     surface.set_uv(Vector2(c.x*0.05,c.z*0.05))
     surface.add_vertex(c)
 
-static func _continuous_ground(parent: Node3D, scene: int) -> void:
+static func _continuous_ground(parent: Node3D, scene: int,
+        softened_water_edge: bool = false) -> void:
     var land := SurfaceTool.new()
     land.begin(Mesh.PRIMITIVE_TRIANGLES)
     var water := SurfaceTool.new()
@@ -280,8 +283,10 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
                 var neighbor: Vector2i = [
                     Vector2i(0,-1),Vector2i(1,0),
                     Vector2i(0,1),Vector2i(-1,0)][i]
-                if kind(x+neighbor.x,z+neighbor.y,scene) in ["water","outside"]:
-                    # Exposed outer boundary or cliff down to the water.
+                var boundary: String = kind(x+neighbor.x,z+neighbor.y,scene)
+                if boundary == "outside" or (
+                        boundary == "water" and not softened_water_edge):
+                    # Outer-world boundary remains; V7 shore becomes a slope.
                     var below_a: Vector3 = corners[i]
                     var below_b: Vector3 = corners[nxt]
                     below_a.y = BASE_LEVEL
@@ -560,7 +565,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v5_shores: bool = false, v5_water: bool = false,
         v5_rocks: bool = false, show_bridges_v4: bool = true,
         v6_ridges: bool = false, v6_forest: bool = false,
-        v6_banks: bool = false) -> Node3D:
+        v6_banks: bool = false,
+        v7_ridges: bool = false, v7_shores: bool = false,
+        v7_waves: bool = false, climate_mode: String = "clear") -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -576,6 +583,10 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v6_ridges",continuous and show_scatter and v6_ridges)
     root.set_meta("terrain_studio_v6_forest",continuous and show_scatter and v6_forest)
     root.set_meta("terrain_studio_v6_banks",continuous and show_scatter and v6_banks)
+    root.set_meta("terrain_studio_v7_ridges",continuous and show_scatter and v7_ridges)
+    root.set_meta("terrain_studio_v7_shores",continuous and show_scatter and v7_shores)
+    root.set_meta("terrain_studio_v7_waves",continuous and show_scatter and v7_waves)
+    root.set_meta("terrain_studio_weather",climate_mode)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -584,10 +595,12 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     props.name = "RelieveVegetacionYDetalles"
     root.add_child(props)
     if continuous:
-        _continuous_ground(tiles,preset)
+        _continuous_ground(tiles,preset,
+            show_scatter and v7_shores)
         if not show_scatter:
             _scatter_grass(props,preset) # Exact legacy V2 comparison.
     var detail_cells: Array[Dictionary] = []
+    var climate_cells: Array[Dictionary] = []
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
@@ -597,6 +610,13 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
             counts[type] = int(counts[type])+1
             var shore_edges: Array[Vector2i] = []
             var surface_cell: Dictionary = {}
+            # V8 weather works in the natural V11 view AND old V1–V6
+            # comparison modes; no climate meshes exist in dry mode.
+            climate_cells.append({
+                "x":x,"z":z,"kind":type,"center":p,
+                "top":top,"corners":_cell_corner_heights(x,z,preset),
+                "half":CELL*0.5
+            })
             if continuous and show_scatter:
                 surface_cell = {
                     "x":x,"z":z,"kind":type,"center":p,
@@ -617,7 +637,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     Vector3(CELL*0.992,thickness,CELL*0.992),tint)
             match type:
                 "mountain":
-                    if not (continuous and show_scatter and v6_ridges):
+                    if not (continuous and show_scatter and (
+                            v6_ridges or v7_ridges)):
                         _mountain(props,p,top,seed,preset)
                 "forest":
                     if not (continuous and show_scatter and v6_forest):
@@ -627,7 +648,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                             var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
                             _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
                     if continuous and show_scatter:
-                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                        if not v7_shores:
+                            RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,3) != 0:
@@ -639,7 +661,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                         _box(props,"PiedraSuelo",p+Vector3(0.45,stone_y+0.08,-0.32),
                             Vector3(0.28,0.16,0.33),ROCK_LIGHT.darkened(0.13))
                     if continuous and show_scatter:
-                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                        if not v7_shores:
+                            RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,5) == 2:
@@ -652,12 +675,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                             "south":_road_connects(x,z,preset,0,1),
                             "west":_road_connects(x,z,preset,-1,0),
                             "east":_road_connects(x,z,preset,1,0)})
-                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                        if not v7_shores:
+                            RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
                         _road(props,x,z,preset,p,top)
                         _shore(props,x,z,preset,p,top)
                 "water":
-                    _water_details(props,p,x,z,preset)
+                    if not (continuous and show_scatter and v7_waves):
+                        _water_details(props,p,x,z,preset)
                     # Both east-west causeways remain visually continuous
                     # over the winding river at rows 5 and 8.
                     if preset == 1 and ((z == 5 and x in [4,5]) or
@@ -697,14 +722,23 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         # One optional ornamental pass per render. The original V1–V4
         # preview and all existing tactical/mesh tests remain unchanged.
         v5_stats = DetailV5.populate(props,detail_cells,preset,
-            v5_shores,v5_water,v5_rocks)
+            v5_shores and not v7_shores,
+            v5_water and not v7_waves,v5_rocks)
     root.set_meta("terrain_detail_v5",v5_stats)
     var v6_stats: Dictionary = {
         "ridges":0,"trees":0,"banks":0,"batches":0}
     if continuous and show_scatter and (v6_ridges or v6_forest or v6_banks):
         v6_stats = NaturalV6.populate(props,detail_cells,preset,
-            v6_ridges,v6_forest,v6_banks)
+            v6_ridges and not v7_ridges,v6_forest,
+            v6_banks and not v7_shores)
     root.set_meta("terrain_natural_v6",v6_stats)
+    var v7_stats := {
+        "mountain_cells":0,"ridge_triangles":0,"shore_edges":0,
+        "shore_triangles":0,"wave_strips":0,"wave_triangles":0,"batches":0}
+    if continuous and show_scatter and (v7_ridges or v7_shores or v7_waves):
+        v7_stats = ErosionV7.populate(props,detail_cells,preset,
+            v7_ridges,v7_shores,v7_waves)
+    root.set_meta("terrain_erosion_v7",v7_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
@@ -721,6 +755,10 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         var hq_cell: Vector2i = Vector2i(10,8) if preset == 1 else Vector2i(6,8)
         hq.position = _cell_center(hq_cell.x,hq_cell.y) + Vector3(0,height_at(hq_cell.x,hq_cell.y,preset),0)
         samples.add_child(hq)
+    # Adds at most two grouped weather meshes, after trees, mountains,
+    # and HQ samples. No changes to the topology, map kind or simulation.
+    ClimateV8.populate(root,climate_cells,preset,
+        climate_mode,continuous and show_scatter and v7_ridges)
     root.set_meta("terrain_counts",counts)
     root.set_meta("terrain_tile_count",WIDTH*HEIGHT)
     return root
