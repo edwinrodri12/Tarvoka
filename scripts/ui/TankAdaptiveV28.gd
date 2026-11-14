@@ -17,6 +17,10 @@ const MICRO_DISTANT := 0.18
 # actual V25 albedo/edge-wear image and paint textures.
 static var _medium_material: Dictionary = {}
 static var _far_material: Dictionary = {}
+const MAX_CACHED_SHADER_VARIANTS := 384
+static var _medium_order: Array[int] = []
+static var _far_order: Array[int] = []
+static var _protected_names: Dictionary = {}
 
 static func tier(camera_size: float, quality_enabled: bool = true) -> int:
     var out := CLOSE
@@ -34,11 +38,14 @@ static func _read_meshes(node: Node,into: Array) -> void:
         _read_meshes(child,into)
 
 static func _critical(part: MeshInstance3D) -> bool:
-    # Every original named faction plate and 17 V23+V24 roof/side
-    # camouflage plates ALWAYS survives every quality tier.
+    # Cache protected V25 armor labels once instead of building 17-element
+    # arrays for every mesh and every camera LOD transition.
+    if _protected_names.is_empty():
+        for row in Wear._targets():
+            _protected_names[str(row)] = true
     return part.name.begins_with("Faccion") or (
         part.has_meta("tarvoka_paint_zone")) or (
-        Wear._targets().has(String(part.name)))
+        _protected_names.has(str(part.name)))
 
 static func _cheap_material(source: StandardMaterial3D, far: bool) -> StandardMaterial3D:
     var key: int = source.get_instance_id()
@@ -54,6 +61,13 @@ static func _cheap_material(source: StandardMaterial3D, far: bool) -> StandardMa
         material.roughness_texture = null
         material.roughness = 0.89
     pool[key] = material
+    # Bounded cache: a long campaign may build/destroy many individual tanks.
+    # Evicted materials still used by an active mesh remain alive through
+    # Resource references, then free naturally with their owning nodes.
+    var order: Array[int] = _far_order if far else _medium_order
+    order.append(key)
+    while order.size()>MAX_CACHED_SHADER_VARIANTS:
+        pool.erase(order.pop_front())
     return material
 
 static func configure(model: Node3D,camera_size: float,
@@ -65,8 +79,10 @@ static func configure(model: Node3D,camera_size: float,
         0.0 if band==CLOSE
         else MICRO_MEDIUM if band==MEDIUM
         else MICRO_DISTANT)
-    var meshes: Array = []
-    _read_meshes(model,meshes)
+    var meshes: Array = model.get_meta("v28_mesh_cache",[])
+    if meshes.is_empty():
+        _read_meshes(model,meshes)
+        model.set_meta("v28_mesh_cache",meshes)
     var hidden := 0
     var shadow_off := 0
     var simplified := 0
