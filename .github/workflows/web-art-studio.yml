@@ -37,6 +37,7 @@ on:
       - "tests/test_headquarters_v3.gd"
       - "tests/test_headquarters_premium_v2.gd"
       - "tests/test_web_building_studio.gd"
+      - "tests/test_web_battle_studio_v8.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/Tank*.gd"
       - "scenes/UnitArtStudioWeb.tscn"
@@ -198,6 +199,21 @@ jobs:
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
           test -s artifacts/tarvoka_g09_v10_four_angles.png
           test -s artifacts/tarvoka_g09_v9_closeup_engine.png
+      - name: Verify full TARVOKA 3D battle mode inside the browser studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_battle_studio_v8.gd 2>&1 | tee /tmp/web-battle-studio-v8.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/web-battle-studio-v8.log; then
+            echo "Web Studio missing real battle 3D, controls, fog or confirmed orders" >&2
+            exit 1
+          fi
+          grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
+          test -s artifacts/tarvoka_studio_battle_3d_medium.png
+          test -s artifacts/tarvoka_studio_battle_3d_orders.png
       - name: Verify 3D terrain slopes and roads across all biomes
         shell: bash
         run: |
@@ -397,6 +413,8 @@ jobs:
             artifacts/tarvoka_battle_3d_live_40x30.png
             artifacts/tarvoka_battle_3d_v6_ranges.png
             artifacts/tarvoka_battle_3d_v7_confirmed_move.png
+            artifacts/tarvoka_studio_battle_3d_medium.png
+            artifacts/tarvoka_studio_battle_3d_orders.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
