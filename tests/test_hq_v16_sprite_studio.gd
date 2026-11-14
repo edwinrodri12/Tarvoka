@@ -97,7 +97,6 @@ func _run() -> void:
     studio._change_hq_v15_mode(2)
     await _frames()
     assert(studio.model_root.get_meta("tarvoka_hq_v15_sprite_card",false))
-    assert(studio.model_root.get_meta("tarvoka_hq_sprite_faction",0)==false)
     assert(int(studio.model_root.get_meta("tarvoka_hq_sprite_faction",-2))==-1)
     var card: Sprite3D = studio.model_root.find_child(
         "Sprite3DOriginalAndroid384",true,false) as Sprite3D
