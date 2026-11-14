@@ -4,6 +4,7 @@ class_name TarvokaCombinedArtStudioWeb
 # Add the approved Headquarters to the existing actual Godot Web studio.
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const TerrainStudio = preload("res://scripts/ui/TerrainStudio3D.gd")
 const BattleTerrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const BattleRanges = preload("res://scripts/ui/BattleRanges3D.gd")
@@ -56,10 +57,18 @@ var hq_compare_button: Button
 var hq_v3_compare_button: Button
 var _hq_show_v2 := true
 var _hq_show_v3 := true
+var _hq_tactical_v13 := false
+var _hq_v13_toggle: CheckButton
 
 func _ready() -> void:
     super._ready()
     _add_building_mode()
+    # Android entry point to return to the playable game without reinstalling.
+    var col: VBoxContainer = role_picker.get_parent() as VBoxContainer
+    if col != null and OS.has_feature("mobile"):
+        var back: Button = _button(col,"VOLVER AL JUEGO",func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
+        back.name = "VolverAJuegoDesdeEstudio3D"
+        col.move_child(back,0)
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -116,6 +125,16 @@ func _add_building_mode() -> void:
         "Comparar arquitectura V2 / V3",_toggle_hq_detail)
     hq_v3_compare_button.name = "ComparadorArquitecturaV3"
     hq_v3_compare_button.custom_minimum_size.y = 49
+    _hq_v13_toggle = CheckButton.new()
+    _hq_v13_toggle.name = "CompararHQV13Tactico"
+    _hq_v13_toggle.text = "HQ V13 · Perfil optimizado (2 mallas)"
+    _hq_v13_toggle.button_pressed = _hq_tactical_v13
+    _hq_v13_toggle.toggled.connect(func(enabled: bool):
+        _hq_tactical_v13 = enabled
+        if _role == "headquarters":
+            _display_headquarters()
+    )
+    building_controls.add_child(_hq_v13_toggle)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -637,7 +656,9 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3)
+    # V13 runtime (2 meshes) or latest production-quality V12 hero sculpture.
+    var render_quality: String = HQProduction.QUALITY_TACTICAL if _hq_tactical_v13 else HQProduction.QUALITY_HERO
+    model_root = HQProduction.build(level,_faction,condition,render_quality)
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
@@ -734,7 +755,7 @@ func _update_details() -> void:
     var condition: String = str(model_root.get_meta("visual_condition","operativo"))
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
-        ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2") if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
+        ("HQ V13 · Optimizado" if _hq_tactical_v13 else "HQ V12 · Detallado"),level,meshes]
     status_label.text = "%s · %s · Piezas de color: %d" % [
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),

@@ -814,6 +814,16 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_full_battle_results.gd
 
+      - name: Validate combined 3D studio and Android entry point
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_android_integrated_3d_studio.gd 2>&1 | tee /tmp/tarvoka-studio-integration.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-studio-integration.log; then
+            echo 'Combined studio integration regression'; exit 1
+          fi
+          grep -F 'PASS combined art Android studio integration' /tmp/tarvoka-studio-integration.log
+
       - name: Run user save-file regression tests
         shell: bash
         run: |

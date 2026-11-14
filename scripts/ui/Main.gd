@@ -843,6 +843,7 @@ func _ready() -> void:
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
+    home_menu.studio_requested.connect(_open_studio_3d)
 
     saved_matches_menu = SavedMatchesMenu.new()
     add_child(saved_matches_menu)
@@ -2316,6 +2317,11 @@ func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
         unit_art_gallery.open_for()
         _reveal_screen(unit_art_gallery)
+
+func _open_studio_3d() -> void:
+    # Accessible only from the home menu: studio is an isolated visual sandbox.
+    # Existing tactical save and rules are never modified by the preview.
+    get_tree().change_scene_to_file("res://scenes/UnitArtStudioWeb.tscn")
 
 func _open_campaign() -> void:
     # Main keeps the existing skirmish autosave unchanged. Campaign resumes
