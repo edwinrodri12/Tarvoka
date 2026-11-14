@@ -6,12 +6,14 @@ on:
       - feat/hq-v17-commercial-weather-terrain-20261114
     paths:
       - "scripts/ui/HeadquartersClimateV17.gd"
+      - "scripts/ui/WeatherCoating3D.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "tests/test_hq_v17_weather_terrain.gd"
       - ".github/workflows/hq-v17-climate-gpu.yml"
   pull_request:
     paths:
       - "scripts/ui/HeadquartersClimateV17.gd"
+      - "scripts/ui/WeatherCoating3D.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "tests/test_hq_v17_weather_terrain.gd"
       - ".github/workflows/hq-v17-climate-gpu.yml"
@@ -74,7 +76,8 @@ jobs:
             tarvoka_hq_v17_four_terrains_three_weathers_godot.png \
             tarvoka_hq_v17_rain_screen_with_controls.png \
             tarvoka_hq_v17_snow_screen_with_controls.png \
-            tarvoka_hq_v17_optimized_v13_rain.png; do
+            tarvoka_hq_v17_optimized_v13_rain.png \
+            tarvoka_hq_v17_universal_coating_v13_snow.png; do
             test -s "artifacts/$image"
           done
       - name: Archive real GPU visuals
