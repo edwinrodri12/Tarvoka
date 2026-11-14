@@ -376,9 +376,12 @@ static func _scatter_grass(parent: Node3D, scene: int) -> void:
             grass_mesh_tool.add_vertex(vertex)
     grass_mesh_tool.generate_normals()
     var mesh: ArrayMesh = grass_mesh_tool.commit()
-    var mat: StandardMaterial3D = _material(
-        Color("#527a46") if scene == 0 else (
-        Color("#99885e") if scene == 1 else Color("#3c7765"))
+    var grass_tint: Color = Color("#527a46")
+    if scene == 1:
+        grass_tint = Color("#99885e")
+    elif scene == 2:
+        grass_tint = Color("#3c7765")
+    var mat: StandardMaterial3D = _material(grass_tint)
     var grass_material := mat.duplicate() as StandardMaterial3D
     grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
     grass_material.roughness = 0.98
