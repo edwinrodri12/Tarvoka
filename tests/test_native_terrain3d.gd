@@ -58,6 +58,22 @@ func _run() -> void:
         assert(sample.b >= 0.0 and sample.b <= 1.0)
         rock_colors[sample.to_html()] = true
     assert(rock_colors.size() >= 3)
+    # The two sides of a KNOWN forest/plains seam must return the same
+    # world-space material color, while hidden neighbors may never
+    # influence the visible tile's tint or geometry.
+    var ecotone: Array = [["forest","plain"]]
+    var left_tint: Color = Terrain._color_for(
+        ecotone,Vector2i(0,0),1.0,0.5,0.35,{},false)
+    var right_tint: Color = Terrain._color_for(
+        ecotone,Vector2i(1,0),0.0,0.5,0.35,{},false)
+    assert(left_tint.is_equal_approx(right_tint))
+    var hidden: Dictionary = {Vector2i(0,0):true}
+    var hidden_color: Color = Terrain._color_for(
+        ecotone,Vector2i(0,0),1.0,0.5,0.35,hidden,true)
+    assert(not hidden_color.is_equal_approx(left_tint))
+    var altered_ecotone: Array = [["forest","mountain"]]
+    assert(Terrain._color_for(altered_ecotone,Vector2i(0,0),
+        1.0,0.5,0.35,hidden,true).is_equal_approx(hidden_color))
     assert(Rocks.strata(Vector3(1,1,1)) >= 0.0)
     assert(Rocks.strata(Vector3(1,1,1)) <= 1.0)
     assert(Terrain.build_water(grid,{},false,8).get_surface_count() == 1)
@@ -87,6 +103,8 @@ func _run() -> void:
         altered,Vector2i(0,0),known,true)
     assert(hidden_before[Mesh.ARRAY_VERTEX] == (
         hidden_after[Mesh.ARRAY_VERTEX]))
+    assert(hidden_before[Mesh.ARRAY_COLOR] == (
+        hidden_after[Mesh.ARRAY_COLOR]))
     assert(water_before == water_after)
     assert(Terrain.build_ground(altered,{},true,3).get_surface_count() == 0)
     assert(Terrain.build_water(altered,{},true,6).get_surface_count() == 0)
@@ -125,5 +143,5 @@ func _run() -> void:
     assert(grid_center.x == 2.5 and grid_center.z == 2.5)
     assert(Terrain.tactical_cell_from_world(grid,
         grid_center) == Vector2i(2,2))
-    print("PASS native terrain 3D: indexed smooth slopes and mineral colors, seam-safe heightfield, bridges, world-to-cell, fog privacy, 10x8/24x18/40x30, immutable tactics")
+    print("PASS native terrain 3D: smooth mineral rock, seamless visible biomes, fog-safe materials, indexed slopes, bridges, world-to-cell, 10x8/24x18/40x30, immutable tactics")
     quit(0)
