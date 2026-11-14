@@ -40,6 +40,9 @@ var selected_catalog_role := ""
 var comparison_catalog_role := ""
 var production_site_key := ""
 var comparison_preview: Control
+var battle_columns: BoxContainer
+var settings_columns: BoxContainer
+var settings_buttons: Dictionary = {}
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
 # the map receives all touches until the player explicitly opens the drawer.
@@ -119,6 +122,46 @@ func _clear(body: VBoxContainer) -> void:
     for child in body.get_children():
         body.remove_child(child)
         child.queue_free()
+
+# Two adjacent mission surfaces, rather than one full-width list of controls.
+# The root is still the original scrolling tab; no commands or callbacks are
+# duplicated, so landscape phones remain functional at smaller densities.
+func _dashboard_columns(parent: VBoxContainer, title: String) -> Dictionary:
+    var rail := BoxContainer.new()
+    rail.name = title
+    rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    rail.add_theme_constant_override("separation",12)
+    parent.add_child(rail)
+    var sections: Array[VBoxContainer] = []
+    for i in range(2):
+        var panel := PanelContainer.new()
+        panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        panel.size_flags_stretch_ratio = 1.08 if i == 0 else 0.92
+        panel.add_theme_stylebox_override("panel",Chrome.box_style(
+            Color("#102638") if i == 0 else Color("#0B2132"),
+            Chrome.EDGE if i == 0 else Chrome.EDGE_BRIGHT,8,10))
+        rail.add_child(panel)
+        var section := VBoxContainer.new()
+        section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        section.add_theme_constant_override("separation",8)
+        panel.add_child(section)
+        sections.append(section)
+    return {"rail":rail,"left":sections[0],"right":sections[1]}
+
+func refresh_settings_controls() -> void:
+    # Keep toggle labels in sync without rebuilding the entire scroll view
+    # after each press. The existing preferences remain saved by Main.gd.
+    if board == null or settings_buttons.is_empty():
+        return
+    if settings_buttons.has("view"):
+        settings_buttons["view"].text = "Vista: %s" % (
+            "isométrica" if bool(board.iso_enabled) else "clásica")
+    if settings_buttons.has("battery"):
+        settings_buttons["battery"].text = "Ahorro de batería: %s" % (
+            "activado" if bool(board.battery_saver) else "desactivado")
+    if settings_buttons.has("minimap"):
+        settings_buttons["minimap"].text = "Minimapa: %s" % (
+            "visible" if minimap_enabled else "oculto")
 
 func _heading(body: VBoxContainer, content: String) -> void:
     var label := Label.new()
@@ -246,15 +289,21 @@ func refresh() -> void:
             turn_text += "  ·  %d creditos" % int(funds[viewer])
     info_label.text = turn_text
     _clear(battle_body)
-    _heading(battle_body,"Situacion de batalla")
-    _description(battle_body,BattleReport.field_summary(state))
-    _action(battle_body,"Radar de objetivos, ciudades y alertas",func(): objectives_requested.emit())
-    _action(battle_body,"Volver al mapa",func(): close_requested.emit())
-    _action(battle_body,"Menu principal",func(): home_requested.emit())
-    _action(battle_body,"Guardar partida",func(): save_requested.emit())
-    _action(battle_body,"Cargar partida",func(): load_requested.emit())
-    _action(battle_body,"Preparar escaramuza nueva",func(): new_battle_requested.emit())
-    _action(battle_body,"Campana · Capitulo 01",func(): campaign_requested.emit())
+    var tactical: Dictionary = _dashboard_columns(battle_body,"SituacionYAcciones")
+    battle_columns = tactical["rail"]
+    var situation: VBoxContainer = tactical["left"]
+    var commands: VBoxContainer = tactical["right"]
+    _heading(situation,"SITUACIÓN TÁCTICA")
+    _description(situation,BattleReport.field_summary(state))
+    _description(situation,"Información del combate actual. No revela unidades ocultas por la niebla.")
+    _heading(commands,"ACCIONES DISPONIBLES")
+    _action(commands,"Radar de objetivos, ciudades y alertas",func(): objectives_requested.emit())
+    _action(commands,"Volver al mapa",func(): close_requested.emit())
+    _action(commands,"Menu principal",func(): home_requested.emit())
+    _action(commands,"Guardar partida",func(): save_requested.emit())
+    _action(commands,"Cargar partida",func(): load_requested.emit())
+    _action(commands,"Preparar escaramuza nueva",func(): new_battle_requested.emit())
+    _action(commands,"Campana · Capitulo 01",func(): campaign_requested.emit())
 
     _clear(army_body)
     _heading(army_body,"Unidades propias")
@@ -322,15 +371,22 @@ func refresh() -> void:
                 _description(production_body,"No hay unidades disponibles para esta instalacion.")
 
     _clear(settings_body)
-    _heading(settings_body,"Controles y visualizacion")
-    _description(settings_body,"Las opciones visuales no cambian las estadisticas ni el resultado de batalla.")
-    _action(settings_body,"Vista: %s" % ("isométrica" if bool(board.iso_enabled) else "clásica"),func(): change_view_requested.emit())
-    _action(settings_body,"Ahorro de batería: %s" % ("activado" if bool(board.battery_saver) else "desactivado"),func(): battery_requested.emit())
-    _action(settings_body,"Minimapa: %s" % ("visible" if minimap_enabled else "oculto"),func(): minimap_requested.emit())
-    _description(settings_body,"Se guardan en este dispositivo automáticamente. El minimapa solo se muestra en vista isométrica.")
-    _description(settings_body,"Gestos: pellizca con dos dedos para acercar y alejar; desliza para mover la camara. Toca una unidad para consultar y despues confirma las ordenes.")
-    _heading(settings_body,"Terreno y ventajas")
-    _description(settings_body,"Carretera: vehiculos terrestres motorizados recorren 2 casillas por punto de movimiento. Infanteria: 1 casilla por punto. Bosque: cobertura +1; montana +2 y bonificacion por altura; ciudad: +1 cobertura.")
+    settings_buttons.clear()
+    var visual: Dictionary = _dashboard_columns(settings_body,"AjustesYGuia")
+    settings_columns = visual["rail"]
+    var switches: VBoxContainer = visual["left"]
+    var tutorial: VBoxContainer = visual["right"]
+    _heading(switches,"CONTROLES Y VISUALIZACIÓN")
+    _description(switches,"Las preferencias no modifican el combate, las unidades ni la dificultad.")
+    settings_buttons["view"] = _action(switches,"Vista: clásica",func(): change_view_requested.emit())
+    settings_buttons["battery"] = _action(switches,"Ahorro de batería: desactivado",func(): battery_requested.emit())
+    settings_buttons["minimap"] = _action(switches,"Minimapa: visible",func(): minimap_requested.emit())
+    refresh_settings_controls()
+    _description(switches,"Los ajustes se guardan en este dispositivo. El minimapa solo se muestra en vista isométrica.")
+    _heading(tutorial,"GESTOS Y TERRENO")
+    _description(tutorial,"Pellizca con dos dedos para acercar o alejar. Desliza para mover la cámara. Toca una unidad para consultarla y confirma las órdenes antes de ejecutarlas.")
+    _heading(tutorial,"Ventajas defensivas")
+    _description(tutorial,"Carretera: vehículos motorizados recorren 2 casillas por punto de movimiento; infantería, 1. Bosque: cobertura +1. Montaña: +2 y ventaja de altura. Ciudad: +1.")
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):
