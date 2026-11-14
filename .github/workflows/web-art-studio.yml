@@ -5,6 +5,10 @@ on:
     paths:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/EnvironmentArtStudioWeb.gd"
+      - "tools/terrain3d_lab.gd"
+      - "scenes/Terrain3DLab.tscn"
+      - "tests/test_web_terrain_studio.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
       - "scripts/ui/HeadquartersDetail3D.gd"
@@ -169,6 +173,16 @@ jobs:
           fi
           grep -q "PASS unified web studio:" /tmp/studio-buildings-check.log
           test -s artifacts/tarvoka_headquarters_web_studio.png
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_terrain_studio.gd 2>&1 | tee /tmp/studio-environment-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-environment-check.log; then
+            echo "Unified 3D environment or other studio categories regressed" >&2
+            exit 1
+          fi
+          grep -F "PASS TARVOKA 3D studio terrain:" /tmp/studio-environment-check.log
+          test -s artifacts/tarvoka_environment_actual_web_studio.png
           timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
@@ -385,6 +399,7 @@ jobs:
             build/web/
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_headquarters_web_studio.png
+            artifacts/tarvoka_environment_actual_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
             artifacts/tarvoka_hq_v3_vs_v4_real_render.png
