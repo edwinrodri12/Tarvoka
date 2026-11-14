@@ -38,9 +38,15 @@ static func cast(cells: Dictionary, origin: Vector3,
     for cell in cells:
         if not cell is Vector2i:
             continue
-        var tile: Dictionary = cells[cell]
         var p: Vector3 = Terrain.world_at(cell)
-        var corner: PackedFloat32Array = Terrain._corners(cells,cell)
+        # Prune XZ first: do NOT sample four shared heights for every tile
+        # on a 40x30 board when a finger ray can only intersect one of them.
+        var reach: Vector3 = origin+ray*nearest
+        if maxf(origin.x,reach.x) < p.x-HALF or minf(origin.x,reach.x) > p.x+HALF:
+            continue
+        if maxf(origin.z,reach.z) < p.z-HALF or minf(origin.z,reach.z) > p.z+HALF:
+            continue
+        var tile: Dictionary = cells[cell]
         var biome: String = str(tile.get("kind","unknown"))
         var base_y: float = Terrain._cell_height(tile)
         var nw: Vector3
@@ -53,16 +59,11 @@ static func cast(cells: Dictionary, origin: Vector3,
             se = p+Vector3(HALF,base_y,HALF)
             sw = p+Vector3(-HALF,base_y,HALF)
         else:
+            var corner: PackedFloat32Array = Terrain._corners(cells,cell)
             nw = p+Vector3(-HALF,corner[0],-HALF)
             ne = p+Vector3(HALF,corner[1],-HALF)
             se = p+Vector3(HALF,corner[2],HALF)
             sw = p+Vector3(-HALF,corner[3],HALF)
-        # Fast reject: projected x-z ray segment must overlap this tile.
-        var reach: Vector3 = origin+ray*nearest
-        if maxf(origin.x,reach.x) < p.x-HALF or minf(origin.x,reach.x) > p.x+HALF:
-            continue
-        if maxf(origin.z,reach.z) < p.z-HALF or minf(origin.z,reach.z) > p.z+HALF:
-            continue
         var crossings: Array[float] = []
         if biome in ["water","unknown"]:
             crossings = [
