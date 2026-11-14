@@ -46,7 +46,7 @@ static func _smoke_atlas() -> ImageTexture:
 static func _copy_smoke(model: Node3D, index: int) -> bool:
     var original: MeshInstance3D = model.find_child(
         SMOKE_LABELS[index],true,false) as MeshInstance3D
-    if original == null or not original.mesh is QuadMesh:
+    if original == null or not (original.mesh is QuadMesh):
         return false
     var parent: Node3D = original.get_parent() as Node3D
     if parent == null:
