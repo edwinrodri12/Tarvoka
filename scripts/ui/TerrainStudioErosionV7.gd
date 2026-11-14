@@ -7,6 +7,18 @@ class_name TarvokaTerrainStudioErosionV7
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const WATER_LEVEL := -0.17
 const WORLD_CELL := 2.4
+static var _fracture_noise: FastNoiseLite
+
+static func _geology(at: Vector2, scene: int) -> float:
+    if _fracture_noise == null:
+        _fracture_noise = FastNoiseLite.new()
+        _fracture_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+        _fracture_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+        _fracture_noise.fractal_octaves = 4
+        _fracture_noise.frequency = 0.28
+        _fracture_noise.seed = 24701
+    return _fracture_noise.get_noise_2d(
+        at.x*4.3+float(scene)*67.0,at.y*4.3)
 
 static func _hash(n: int) -> float:
     return float(posmod(n*1327+17471,65521))/65521.0
@@ -31,7 +43,9 @@ static func _surface_node(parent: Node3D, name: String,
     node.mesh = tool.commit()
     var material := StandardMaterial3D.new()
     material.vertex_color_use_as_albedo = true
-    material.roughness = 0.92 if not translucent else 0.68
+    material.roughness = 0.98 if not translucent else 0.75
+    material.specular = 0.11 if not translucent else 0.18
+    material.metallic = 0.0
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
     if translucent:
         material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -62,7 +76,7 @@ static func _uplift(cell: Dictionary, offset: Vector2,
             var seed: int = (x+dx)*239+(z+dz)*467+scene*271
             var amplitude: float = 1.18+0.67*_hash(seed)
             elevation += amplitude*exp(-1.65*distance_squared)
-    elevation = minf(elevation*0.79,2.75)
+    elevation = minf(elevation*0.68,2.13)
     # Each outer mountain border fades to the exact V2 terrain surface,
     # rather than creating an exposed vertical wedge at the forest.
     var half: float = float(cell["half"])
@@ -75,9 +89,12 @@ static func _uplift(cell: Dictionary, offset: Vector2,
         fade *= smoothstep(0.0,0.72,offset.y+half)
     if not mountains.has(Vector2i(x,z+1)):
         fade *= smoothstep(0.0,0.72,half-offset.y)
-    var phase: float = world.x*1.45+sin(world.y*0.66+scene)*0.42
-    var striation: float = 0.08*sin(phase)*sin(world.y*1.73-world.x*0.34)
-    return maxf(0.0,elevation+striation)*fade
+    # Multi-scale simplex fractures prevent the unrealistically smooth
+    # monochrome glacier/dune silhouettes seen in the first V11 capture.
+    var large_fracture: float = _geology(world,scene)*0.40
+    var fine_fracture: float = _geology(world*2.2,scene)*0.17
+    var uplift: float = maxf(0.0,elevation+large_fracture+fine_fracture)
+    return uplift*fade
 
 static func ridge_height(cell: Dictionary, offset: Vector2,
         mountains: Dictionary, scene: int) -> float:
@@ -106,12 +123,13 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
                 var elevation: float = _uplift(cell,Vector2(dx,dz),mountains,scene)
                 var pos: Vector3 = _point(cell,dx,dz)+Vector3(0,elevation+0.016,0)
                 points.append(pos)
-                var tint: Color = Color("#738287") if scene != 1 else Color("#887c77")
-                var edge: float = clampf(elevation/2.2,0.0,1.0)
-                tint = tint.lerp(Color("#bdc5c4") if scene != 1
-                    else Color("#c2ab95"),pow(edge,1.65)*0.55)
-                var strata: float = 0.09*sin((pos.x*0.91+pos.z*1.06)*4.0)
-                tones.append(tint.lightened(strata) if strata >= 0 else
+                var tint: Color = Color("#53666b") if scene != 1 else Color("#776861")
+                var top: float = clampf(elevation/2.0,0.0,1.0)
+                tint = tint.lerp(Color("#829193") if scene != 1
+                    else Color("#9f8b7b"),pow(top,1.34)*0.28)
+                var strata: float = 0.064*_geology(
+                    Vector2(pos.x,pos.z)*1.9,scene)
+                tones.append(tint.lightened(strata) if strata >= 0.0 else
                     tint.darkened(-strata))
         for row in range(subdivisions):
             for col in range(subdivisions):
