@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/core/UnitRoles.gd'
+      - 'scripts/core/TerrainTactics.gd'
       - 'scripts/core/ModernArsenal.gd'
       - 'tests/test_piercer_g09_sensitivity.gd'
       - 'tests/test_piercer_g09_regression.gd'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/core/UnitRoles.gd'
+      - 'scripts/core/TerrainTactics.gd'
       - 'scripts/core/ModernArsenal.gd'
       - 'tests/test_piercer_g09_sensitivity.gd'
       - 'tests/test_piercer_g09_regression.gd'
