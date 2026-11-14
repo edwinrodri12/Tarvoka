@@ -50,7 +50,7 @@ static func _shared_export_material(mat: Material, cache: Dictionary) -> Materia
 
 func _run() -> void:
     var source: Node3D = Models.build("tank",0,true,22)
-    assert(source != null and source.get_meta("tarvoka_mbt_finish_v22",false))
+    assert(source != null and source.get_meta("tarvoka_mbt_gun_v22",false))
     root.add_child(source)
     var artist := Node3D.new()
     artist.name = "TARVOKA_G09_ESCULTURA_V22_EDITABLE"
