@@ -9,12 +9,14 @@ on:
       - "scripts/ui/Battle3DMapView.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "tests/test_g09_animation_final_v32.gd"
+      - "tests/test_g09_live_hits_v30.gd"
       - ".github/workflows/g09-final-animation-v32.yml"
   pull_request:
     paths:
       - "scripts/ui/Tank*.gd"
       - "scripts/ui/Battle3DMapView.gd"
       - "tests/test_g09_animation_final_v32.gd"
+      - "tests/test_g09_live_hits_v30.gd"
   workflow_dispatch:
 
 permissions:
