@@ -32,6 +32,9 @@ var battle_guidance: Label
 var _battle_seed: int = 22435
 var _battle_panoramic_center := Vector3.ZERO
 var terrain_scene_picker: OptionButton
+var terrain_weather_picker: OptionButton
+var terrain_weather_compare_button: Button
+var _terrain_last_wet_mode := 1
 var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
 var terrain_grid_toggle: CheckButton
@@ -165,6 +168,25 @@ func _add_building_mode() -> void:
         terrain_scene_picker.add_item(caption)
     terrain_scene_picker.item_selected.connect(_change_terrain_scene)
     terrain_controls.add_child(terrain_scene_picker)
+
+    _title(terrain_controls,"CLIMA · ACABADOS AMBIENTALES V8",13)
+    terrain_weather_picker = OptionButton.new()
+    terrain_weather_picker.name = "ClimaEntorno3D"
+    terrain_weather_picker.custom_minimum_size.y = 50
+    terrain_weather_picker.add_item("Despejado · comparar acabado original",0)
+    terrain_weather_picker.add_item("Lluvia · charcos, gotas y suelo húmedo",1)
+    terrain_weather_picker.add_item("Nieve · terreno, árboles y tejados",2)
+    terrain_weather_picker.select(0)
+    terrain_weather_picker.item_selected.connect(_change_terrain_weather)
+    terrain_controls.add_child(terrain_weather_picker)
+    terrain_weather_compare_button = _button(terrain_controls,
+        "COMPARAR CON CLIMA DESPEJADO",_compare_terrain_weather)
+    terrain_weather_compare_button.name = "CompararClimaV8MismaCamara"
+    terrain_weather_compare_button.custom_minimum_size.y = 49
+    _title(terrain_controls,
+        "El clima del Estudio 3D solo cambia el acabado visual. "
+        + "En el juego Android ya existen movilidad y pronóstico reales. "
+        + "Aquí puedes girar, acercar y comparar sin alterar partidas.",12)
 
     terrain_grid_toggle = CheckButton.new()
     terrain_grid_toggle.name = "MostrarCuadricula"
@@ -475,6 +497,22 @@ func _switch_category(index: int) -> void:
 func _change_terrain_scene(_index: int) -> void:
     _rebuild_terrain(false)
 
+func _change_terrain_weather(index: int) -> void:
+    if index not in [0,1,2]:
+        return
+    if index != 0:
+        _terrain_last_wet_mode = index
+    terrain_weather_compare_button.text = (
+        "VOLVER AL CLIMA %s" % ("LLUVIA" if _terrain_last_wet_mode == 1 else "NIEVE")
+        if index == 0 else "COMPARAR CON CLIMA DESPEJADO")
+    _rebuild_terrain(false)
+
+func _compare_terrain_weather() -> void:
+    var previous: int = terrain_weather_picker.selected
+    var selected: int = _terrain_last_wet_mode if previous == 0 else 0
+    terrain_weather_picker.select(selected)
+    _change_terrain_weather(selected)
+
 func _toggle_terrain_fullscreen() -> void:
     if _role != "terrain":
         return
@@ -572,12 +610,21 @@ func _restore_default_lighting() -> void:
 
 func _apply_terrain_lighting() -> void:
     var setting: int = terrain_light_picker.selected
+    var climate: int = terrain_weather_picker.selected if terrain_weather_picker != null and _role == "terrain" else 0
     for item in preview.get_children():
         if item is WorldEnvironment:
             var env: Environment = (item as WorldEnvironment).environment
             env.background_color = Color("#374c58") if setting == 1 else Color("#4b606c") if setting == 2 else Color("#526c75")
             env.ambient_light_color = Color("#f1c8a7") if setting == 1 else Color("#becdd6")
             env.ambient_light_energy = 0.37 if setting == 1 else 0.53 if setting == 2 else 0.46
+            if climate == 1:
+                env.background_color = Color("#3D5463")
+                env.ambient_light_color = Color("#B2C3D0")
+                env.ambient_light_energy *= 0.88
+            elif climate == 2:
+                env.background_color = Color("#A3BBCB")
+                env.ambient_light_color = Color("#DDE8ED")
+                env.ambient_light_energy *= 1.09
         elif item is DirectionalLight3D:
             var sun: DirectionalLight3D = item as DirectionalLight3D
             var is_key: bool = sun == preview.get_child(2)
@@ -585,6 +632,12 @@ func _apply_terrain_lighting() -> void:
                 sun.light_color = Color("#f5b98b") if setting == 1 else Color("#e3edf4") if setting == 2 else Color("#fff6dd")
                 sun.light_energy = 0.89 if setting == 0 else 0.76 if setting == 1 else 0.62
                 sun.rotation_degrees = Vector3(-27,-52,0) if setting == 1 else Vector3(-46,-32,0)
+                if climate == 1:
+                    sun.light_color = Color("#BBD0E1")
+                    sun.light_energy *= 0.77
+                elif climate == 2:
+                    sun.light_color = Color("#E7F2F8")
+                    sun.light_energy *= 0.90
                 sun.shadow_enabled = terrain_shadow_toggle.button_pressed
                 sun.shadow_blur = 1.18
             else:
@@ -616,7 +669,8 @@ func _display_terrain() -> void:
         _terrain_v6_enabled and terrain_banks_v6_toggle.button_pressed,
         _terrain_v7_enabled and terrain_ridges_v7_toggle.button_pressed,
         _terrain_v7_enabled and terrain_shores_v7_toggle.button_pressed,
-        _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed)
+        _terrain_v7_enabled and terrain_water_v7_toggle.button_pressed,
+        ["clear","rain","snow"][terrain_weather_picker.selected])
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -827,6 +881,13 @@ func _update_details() -> void:
                 int(v7.get("mountain_cells",0)),
                 int(v7.get("shore_edges",0)),
                 int(v7.get("wave_strips",0)),int(v7.get("batches",0))]
+        var climate_v8: Dictionary = model_root.get_meta("terrain_weather_v8",{})
+        if str(climate_v8.get("mode","clear")) != "clear":
+            status_label.text += " · V8 %s: %d charcos · %d nieve suelo · %d copas · %d tejados (%d lotes)" % [
+                "LLUVIA" if str(climate_v8["mode"]) == "rain" else "NIEVE",
+                int(climate_v8.get("puddles",0)),int(climate_v8.get("snow_patches",0)),
+                int(climate_v8.get("snow_canopies",0)),int(climate_v8.get("snow_roofs",0)),
+                int(climate_v8.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
