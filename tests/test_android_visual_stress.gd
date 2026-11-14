@@ -20,7 +20,7 @@ func _run() -> void:
     while not bench.completed:
         await process_frame
         if Time.get_ticks_msec()-start > 45000:
-            push_error("Stress screen did not complete the five work cases")
+            push_error("Stress screen did not complete the eleven work cases")
             quit(1)
             return
     assert(bench.results.size() == 11)
@@ -72,6 +72,15 @@ func _run() -> void:
     for result in bench.results:
         assert(int(result["samples"]) > 0)
         assert(float(result["frame_p95_ms"]) > 0.0)
+        assert(float(result["frame_p99_ms"]) >= float(result["frame_p95_ms"]))
+        assert(float(result["map_generation_cpu_ms"]) >= 0.0)
+        assert(float(result["tank_population_cpu_ms"]) >= 0.0)
+        assert(float(result["building_population_cpu_ms"]) >= 0.0)
+        assert(float(result["setup_total_cpu_ms"]) > 0.0)
+        assert(float(result["setup_total_cpu_ms"]) + 0.06 >= float(result["map_generation_cpu_ms"]) + float(result["tank_population_cpu_ms"]) + float(result["building_population_cpu_ms"]))
+        assert(float(result["max_static_memory_mb"]) >= float(result["static_memory_after_setup_mb"]) - 0.12)
+        assert(float(result["static_memory_before_setup_mb"]) >= 0.0)
+        assert(int(result["max_draw_calls_reported"]) >= 0)
         assert(int(result["tiles_drawn"]) > 0)
         assert(int(result["units_drawn"]) > 0)
         assert(int(result["units_sorted"]) <= int(result["actual_tanks"]))
@@ -84,6 +93,9 @@ func _run() -> void:
     var report: Variant = JSON.parse_string(raw)
     assert(report is Dictionary)
     assert(report["cases"].size() == 11)
+    assert(str(report["metrics_note"]).contains("no RSS"))
+    assert(float(report["cases"][8]["setup_total_cpu_ms"]) > 0.0)
+    assert(float(report["cases"][8]["map_generation_cpu_ms"]) >= 0.0)
     # Exercise Main integration without opening an autosave-changing scene.
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
@@ -101,5 +113,5 @@ func _run() -> void:
     overlay.queue_free()
     main.queue_free()
     bench.queue_free()
-    print("PASS TARVOKA Android stress QA: 11 visual workloads, 8 visual teams, 768 tanks, 256 buildings, camera culling, HQ, weather, VFX, report and untouched skirmish")
+    print("PASS TARVOKA Android stress QA: CPU setup+memory+p99 telemetry, 11 visual workloads, 8 visual teams, 768 tanks, 256 buildings, camera culling, HQ, weather, VFX, report and untouched skirmish")
     quit(0)
