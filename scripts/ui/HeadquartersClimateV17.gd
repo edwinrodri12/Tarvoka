@@ -117,7 +117,9 @@ static func _make_puddle(i: int) -> MeshInstance3D:
     cylinder.bottom_radius = cylinder.top_radius
     cylinder.height = 0.012
     cylinder.radial_segments = 18
-    cylinder.material = _material(Color(0.35,0.53,0.64,0.60),0.11,true)
+    var wet: StandardMaterial3D = _material(Color(0.16,0.27,0.35,0.45),0.17,true)
+    wet.metallic = 0.48
+    cylinder.material = wet
     puddle.mesh = cylinder
     var positions := [
         Vector3(-8.1,-0.177,2.8),Vector3(7.9,-0.177,3.5),
@@ -186,7 +188,9 @@ static func apply(stage: Node3D,weather: String,terrain: String,
         "MicrorrelieveTerreno44InstanciasV17") as MultiMeshInstance3D
     var stone: BoxMesh = scatter.multimesh.mesh as BoxMesh
     var tint: StandardMaterial3D = stone.material as StandardMaterial3D
-    tint.albedo_color = base.lightened(0.17) if weather=="snow" else base.darkened(0.20)
+    # Exposed rock/soil still identifies the underlying biome in snow.
+    tint.albedo_color = GROUND_COLORS[TERRAINS.find(terrain)].lerp(
+        Color("#d2dfe5"),0.36) if weather=="snow" else base.darkened(0.20)
     var rain: MeshInstance3D = stage.get_node("LluviaUnLoteV17") as MeshInstance3D
     var snow: MeshInstance3D = stage.get_node("CoposNieveUnLoteV17") as MeshInstance3D
     rain.visible = weather=="rain"
@@ -200,14 +204,33 @@ static func apply(stage: Node3D,weather: String,terrain: String,
         var cap: MeshInstance3D = stage.get_node(
             "NieveAcumuladaCubiertaV17_%d" % i) as MeshInstance3D
         cap.visible = deposits
-        if i==2:
-            cap.position = Vector3(0.0,2.87+0.91*float(level-1)+2.83,-1.9)
-        else:
-            cap.position = Vector3(-4.03 if i==0 else 4.03,3.65,-1.84)
+    stage.set_meta("tarvoka_visual_level",level)
+    orient_roof_caps(stage,0.0)
     stage.set_meta("tarvoka_weather_visual",weather)
     stage.set_meta("tarvoka_terrain_visual",terrain)
     stage.set_meta("tarvoka_precipitation_draws",1 if weather!="clear" else 0)
     return true
+
+
+static func orient_roof_caps(stage: Node3D,yaw_radians: float) -> void:
+    if stage==null:
+        return
+    var level: int = int(stage.get_meta("tarvoka_visual_level",2))
+    var rotation := Basis(Vector3.UP,yaw_radians)
+    for i in range(3):
+        var cap: MeshInstance3D = stage.get_node(
+            "NieveAcumuladaCubiertaV17_%d" % i) as MeshInstance3D
+        if not cap.visible:
+            continue
+        # Use the same world yaw as the V12/V13 building. Otherwise an
+        # inspection rotation would leave the snow deposits floating.
+        var base: Vector3
+        if i==2:
+            base = Vector3(0,2.87+0.91*float(level-1)+2.91,-2.61)
+        else:
+            base = Vector3(-4.03 if i==0 else 4.03,3.70,-2.63)
+        cap.position = rotation*base
+        cap.rotation = Vector3(0,yaw_radians,0)
 
 static func active_mesh_count(stage: Node3D) -> int:
     if stage==null:
