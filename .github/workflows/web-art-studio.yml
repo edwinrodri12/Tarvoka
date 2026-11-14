@@ -632,6 +632,7 @@ jobs:
             artifacts/tarvoka_terrain_v15_foothills.png
             artifacts/tarvoka_terrain_v15_profile.png
             artifacts/tarvoka_terrain_v15_v14_comparison.png
+            artifacts/tarvoka_v18b_*.png
             artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
