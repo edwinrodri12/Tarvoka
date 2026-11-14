@@ -18,6 +18,7 @@ var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
 var hq_version_picker: OptionButton
+var hq_v7_toggle: CheckButton
 var hq_map_lod_toggle: CheckButton
 var hq_batch_toggle: CheckButton
 var hq_fps_label: Label
@@ -112,7 +113,7 @@ func _add_building_mode() -> void:
     hq_version_picker = OptionButton.new()
     hq_version_picker.name = "SelectorAcabadoCuartelGeneral"
     hq_version_picker.custom_minimum_size.y = 50
-    for name_version in ["V4 · Centro de mando premium",
+    for name_version in ["V7 · Cuartel General esculpido",
             "V3 · Arquitectura anterior",
             "V2 · Primera revisión",
             "V1 · Prototipo original"]:
@@ -120,6 +121,12 @@ func _add_building_mode() -> void:
     hq_version_picker.select(0)
     hq_version_picker.item_selected.connect(_change_hq_version)
     building_controls.add_child(hq_version_picker)
+    hq_v7_toggle = CheckButton.new()
+    hq_v7_toggle.name = "AcabadoArquitectonicoV7"
+    hq_v7_toggle.text = "Acabado escultórico V7 (comparar con V4)"
+    hq_v7_toggle.button_pressed = true
+    hq_v7_toggle.toggled.connect(_change_hq_sculpt)
+    building_controls.add_child(hq_v7_toggle)
 
     _title(building_controls,"NIVEL ARQUITECTONICO",13)
     level_picker = OptionButton.new()
@@ -224,6 +231,10 @@ func _change_building_variant(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
 
+func _change_hq_sculpt(_enabled: bool) -> void:
+    if _role == "headquarters" and _hq_show_v4:
+        _display_headquarters()
+
 func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -250,6 +261,7 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     var showing_batch: bool = hq_batch_toggle.button_pressed and _hq_show_v4
     hq_batch_toggle.visible = _hq_show_v4
+    hq_v7_toggle.visible = _hq_show_v4 and not showing_batch
     hq_fps_label.visible = showing_batch
     if showing_batch:
         model_root = HQCityBatch.build_grid(7,7,15.5)
@@ -267,7 +279,8 @@ func _display_headquarters() -> void:
         return
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4)
+    model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4,
+        hq_v7_toggle.button_pressed)
     assert(model_root != null)
     hq_map_lod_toggle.visible = _hq_show_v4
     if _hq_show_v4:
@@ -321,6 +334,8 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Cuartel General · %s · Nivel %d · %d mallas 3D" % [
         ("ARQUITECTURA V4" if _hq_show_v4 else ("ARQUITECTURA V3" if _hq_show_v3 else "ARQUITECTURA V2")) if _hq_show_v2 else "PROTOTIPO V1",level,meshes]
+    if model_root.get_meta("tarvoka_hq_visual_v7",false):
+        detail_label.text = "Cuartel General · ACABADO ESCULPIDO V7 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_map_distant",false):
         detail_label.text = "Cuartel General · VISTA DE MAPA V5 · Nivel %d · 1 malla 3D / 6 superficies" % level
     status_label.text = "%s · %s · Piezas de color: %d" % [
