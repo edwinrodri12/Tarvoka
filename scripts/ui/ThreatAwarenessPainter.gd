@@ -4,7 +4,7 @@ class_name TarvokaThreatAwarenessPainter
 # Translucent *possible* threat and actual terrain cover for the selected
 # FRIENDLY unit. Kept separate from red legal attack squares and the current
 # unit's amber weapon footprint. All primitive shapes are noninteractive.
-const Projection = preload("res://scripts/ui/IsoProjection.gd")
+const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const DANGER := Color(1.0,0.30,0.28,0.85)
 const COVER := Color(0.34,0.94,0.67,0.92)
@@ -51,7 +51,7 @@ static func draw_iso(canvas: CanvasItem, snapshot: Dictionary,
         dims: Vector2i) -> void:
     if not bool(snapshot.get("valid",false)):
         return
-    var hw: float = Projection.half_width(view_size,zoom,dims)
+    var hw: float = IsoTransform.half_width(view_size,zoom,dims)
     if hw < 6.0:
         return
     var visible_bounds: Rect2i = VisualBudget.visible_grid_bounds(view_size,zoom,pan,dims)
@@ -59,13 +59,13 @@ static func draw_iso(canvas: CanvasItem, snapshot: Dictionary,
     for cell in snapshot.get("cells",{}):
         if not visible_bounds.has_point(cell):
             continue
-        var center: Vector2 = Projection.center(cell,view_size,zoom,pan,dims)
+        var center: Vector2 = IsoTransform.center(cell,view_size,zoom,pan,dims)
         if not VisualBudget.in_view(center,hw,view_size):
             continue
         var entry: Dictionary = snapshot["cells"][cell]
         var danger: int = int(entry["threats"])
         var cover: int = int(entry["cover"])
-        var poly: PackedVector2Array = Projection.diamond(cell,view_size,zoom,pan,dims)
+        var poly: PackedVector2Array = IsoTransform.diamond(cell,view_size,zoom,pan,dims)
         if danger > 0:
             canvas.draw_colored_polygon(poly,Color(DANGER.r,DANGER.g,DANGER.b,0.11))
             # Red outline is NOT a legal attack reticle: only corners are
