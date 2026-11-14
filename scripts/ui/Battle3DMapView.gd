@@ -140,6 +140,7 @@ func _ready() -> void:
     labels.add_child(_range_text)
     _order_note = Label.new()
     _order_note.text = "Visor de inspección; abre desde la batalla para ordenar."
+    _order_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     _order_note.add_theme_font_size_override("font_size",14)
     _order_note.add_theme_color_override("font_color",Color("#f6e1ab"))
     labels.add_child(_order_note)
@@ -370,6 +371,9 @@ func _confirm_3d_order() -> void:
     if _live_board == null or _order_quote.is_empty():
         return
     var committed: bool = Orders.confirm(_live_board,_order_quote)
+    if not committed:
+        # A rejected confirmation cannot leak a queued order into the 2D HUD.
+        Orders.cancel_preview(_live_board,_order_quote)
     _order_quote.clear()
     _refresh_from_board()
     if _live_board == null:
@@ -410,8 +414,9 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     var kind: String = str(tile.get("kind","unknown"))
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
     var visibility: String = " · Con niebla" if bool(tile.get("seen",false)) and not bool(tile.get("visible",false)) else ""
-    inspection.text = "Casilla (%d, %d) · %s%s · Inspección únicamente" % [
-        cell.x+1,cell.y+1,label_text,visibility]
+    inspection.text = "Casilla (%d, %d) · %s%s · %s" % [
+        cell.x+1,cell.y+1,label_text,visibility,
+        "Órdenes con confirmación" if _live_board != null else "Inspección únicamente"]
     if _cursor != null:
         _cursor.queue_free()
         _cursor = null
@@ -650,3 +655,6 @@ func close_view() -> void:
     if _selected_cell.x >= 0:
         focus_requested.emit(_selected_cell)
     _selected_cell = Vector2i(-1,-1)
+    _live_board = null
+    _order_quote.clear()
+    _update_order_ui()
