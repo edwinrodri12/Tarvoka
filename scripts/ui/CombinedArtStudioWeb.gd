@@ -45,6 +45,10 @@ var terrain_rocks_v5_toggle: CheckButton
 var terrain_camera_picker: OptionButton
 var terrain_compare_button: Button
 var terrain_faction_grid: GridContainer
+var terrain_side_panel: PanelContainer
+var terrain_fullscreen_button: Button
+var terrain_restore_panel_button: Button
+var _terrain_fullscreen := false
 var terrain_faction_buttons: Array[Button] = []
 var _terrain_v5_enabled := true
 var _unit_only_controls: Array[Control] = []
@@ -61,6 +65,8 @@ func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     assert(column != null)
+    terrain_side_panel = column.get_parent().get_parent() as PanelContainer
+    assert(terrain_side_panel != null)
     for node in column.get_children():
         if node is Label and (node as Label).text.begins_with("El mismo modelo de Godot"):
             (node as Label).text = "Visor 3D del motor Godot: las unidades se usan en Android; los edificios son prototipos visuales independientes. Arrastra para girar y pellizca para acercar."
@@ -221,6 +227,10 @@ func _add_building_mode() -> void:
     terrain_camera_picker.select(0)
     terrain_camera_picker.item_selected.connect(_change_terrain_camera)
     terrain_controls.add_child(terrain_camera_picker)
+    terrain_fullscreen_button = _button(terrain_controls,
+        "AMPLIAR VISUALIZACIÓN · SIN PANEL",_toggle_terrain_fullscreen)
+    terrain_fullscreen_button.name = "PantallaCompletaTerreno3D"
+    terrain_fullscreen_button.custom_minimum_size.y = 50
 
     _title(terrain_controls,"OCHO FACCIONES OFICIALES",13)
     terrain_faction_grid = GridContainer.new()
@@ -235,6 +245,10 @@ func _add_building_mode() -> void:
         item.name = "TerrenoFaccion_%d" % i
         item.text = str(short_names[i])
         item.tooltip_text = str(Factions.FACTIONS[i]["name"])
+        item.icon = Factions.emblem_texture(i)
+        item.expand_icon = true
+        item.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        item.alignment = HORIZONTAL_ALIGNMENT_LEFT
         item.custom_minimum_size = Vector2(134,45)
         item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         item.toggle_mode = true
@@ -313,6 +327,21 @@ func _add_building_mode() -> void:
         + "La demostración no modifica guardados de Android.",12)
     battle_controls.hide()
 
+    # The only return control when the sidebar is hidden is an overlay
+    # OUTSIDE the sidebar, so exiting expanded view always remains possible.
+    terrain_restore_panel_button = Button.new()
+    terrain_restore_panel_button.name = "RestaurarPanelTerreno3D"
+    terrain_restore_panel_button.text = "MOSTRAR CONTROLES 3D"
+    terrain_restore_panel_button.anchor_left = 1.0
+    terrain_restore_panel_button.anchor_right = 1.0
+    terrain_restore_panel_button.offset_left = -225.0
+    terrain_restore_panel_button.offset_right = -12.0
+    terrain_restore_panel_button.offset_top = 12.0
+    terrain_restore_panel_button.offset_bottom = 60.0
+    terrain_restore_panel_button.pressed.connect(_toggle_terrain_fullscreen)
+    terrain_restore_panel_button.hide()
+    add_child(terrain_restore_panel_button)
+
     # The battle simulation and interactive viewer are WebGL-compatible
     # Godot nodes. Hidden parent 2D UI and autosave are disabled.
     battle_sample_board = BattleBoard.new()
@@ -355,6 +384,8 @@ func _toggle_hq_finish() -> void:
 func _switch_category(index: int) -> void:
     if index < 0 or index > 3:
         return
+    if _terrain_fullscreen:
+        _leave_terrain_fullscreen()
     var building: bool = index == 1
     var terrain: bool = index == 2
     var battle: bool = index == 3
@@ -380,6 +411,21 @@ func _switch_category(index: int) -> void:
 
 func _change_terrain_scene(_index: int) -> void:
     _rebuild_terrain(false)
+
+func _toggle_terrain_fullscreen() -> void:
+    if _role != "terrain":
+        return
+    _terrain_fullscreen = not _terrain_fullscreen
+    if terrain_side_panel != null:
+        terrain_side_panel.visible = not _terrain_fullscreen
+    terrain_restore_panel_button.visible = _terrain_fullscreen
+
+func _leave_terrain_fullscreen() -> void:
+    _terrain_fullscreen = false
+    if terrain_side_panel != null:
+        terrain_side_panel.show()
+    if terrain_restore_panel_button != null:
+        terrain_restore_panel_button.hide()
 
 func _select_terrain_faction(index: int) -> void:
     if index < 0 or index >= Factions.FACTIONS.size():
