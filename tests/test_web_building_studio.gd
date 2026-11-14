@@ -13,13 +13,13 @@ func _run() -> void:
     var web_scene: PackedScene = load("res://scenes/UnitArtStudioWeb.tscn")
     assert(web_scene != null)
     var studio: Control = web_scene.instantiate()
-    assert(studio.get_script() == Combined)
+    assert(studio.get_script() == preload("res://scripts/ui/EnvironmentArtStudioWeb.gd"))
     root.add_child(studio)
     for frame in range(5):
         await process_frame
     assert(studio.model_root != null)
     assert(studio._role == "tank")
-    assert(studio.category_picker.item_count == 2)
+    assert(studio.category_picker.item_count == 3)
     assert(not studio.building_controls.visible)
 
     studio._switch_category(1)
