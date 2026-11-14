@@ -44,5 +44,18 @@ func _initialize() -> void:
         var routes: Dictionary = rules.reachable(origin, 2, terrain, blocked, "ground", true, allies, weather, "wheeled")
         if cost * 2 > 4:
             assert(not routes.has(Vector2i(3, 1)))
+    # Mountains remain enterable even when their nominal cost exceeds a slow unit's budget.
+    var mountain_origin := Vector2i(1, 1)
+    var slow_climb: Dictionary = rules.reachable(mountain_origin, 1, terrain, blocked, "ground", false)
+    assert(slow_climb.has(Vector2i(1, 2)))
+    assert(slow_climb[Vector2i(1, 2)] == 1)
+    # A climb consumes the allowance; it must not enable an extra step.
+    assert(not slow_climb.has(Vector2i(1, 3)))
+    # Invalid weather must not yield an apparently legal route.
+    assert(rules.reachable(origin, 2, terrain, blocked, "ground", true, allies, "hail", "wheeled").is_empty())
+    # Negative/zero budgets and blocked origins are rejected consistently.
+    assert(rules.reachable(origin, -1, terrain, blocked).is_empty())
+    var origin_blocked: Array[Vector2i] = [origin]
+    assert(rules.reachable(origin, 2, terrain, origin_blocked).is_empty())
     print("PASS: road/weather cost parity")
     quit()
