@@ -6,6 +6,7 @@ class_name TarvokaCombinedArtStudioWeb
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
+const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
 const OfficialEmblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
@@ -35,6 +36,11 @@ var hq_v15_zoom_picker: OptionButton
 var hq_v15_thumbnail: TextureRect
 var hq_v15_frame: CenterContainer
 var hq_v15_caption: Label
+var hq_weather_picker: OptionButton
+var hq_terrain_picker: OptionButton
+var hq_climate_stage: Node3D
+var hq_climate_status: Label
+var _hq_weather_time := 0.0
 var hq_camera_picker: OptionButton
 var _hq_camera_preset := 0
 var hq_lighting_picker: OptionButton
@@ -100,6 +106,9 @@ func _setup_architecture_stage() -> void:
         lamp.visible = false
         preview.add_child(lamp)
         hq_night_lamps.append(lamp)
+    hq_climate_stage = HQClimateV17.build()
+    preview.add_child(hq_climate_stage)
+    hq_climate_stage.visible = false
     _apply_hq_lighting(0)
 
 func _apply_hq_lighting(index: int) -> void:
@@ -136,9 +145,52 @@ func _apply_hq_lighting(index: int) -> void:
         var ground_mat: StandardMaterial3D = hq_ground.material_override as StandardMaterial3D
         if ground_mat != null:
             ground_mat.albedo_color = Color("#171f2b") if active and preset == 2 else Color("#182d32")
+    # Weather is visual: lower cloud cover and cooler ambient light without
+    # modifying canonical Android weather movement penalties.
+    if active and hq_weather_picker != null and hq_weather_picker.selected >= 0:
+        var weather: String = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
+        if weather == "rain":
+            hq_key_light.light_energy *= 0.64
+            hq_fill_light.light_energy *= 0.78
+            scene.background_color = scene.background_color.lerp(Color("#293d4c"),0.75)
+            scene.ambient_light_color = scene.ambient_light_color.lerp(Color("#a3b8c8"),0.55)
+        elif weather == "snow":
+            hq_key_light.light_energy *= 0.72
+            hq_fill_light.light_energy *= 0.90
+            scene.background_color = scene.background_color.lerp(Color("#8c9da9"),0.56)
+            scene.ambient_light_color = scene.ambient_light_color.lerp(Color("#dce6ec"),0.52)
 
 func _change_hq_lighting(index: int) -> void:
     _apply_hq_lighting(index)
+
+func _change_hq_weather_v17(index: int) -> void:
+    if index < 0 or index >= HQClimateV17.WEATHERS.size():
+        return
+    hq_weather_picker.select(index)
+    _apply_hq_climate_v17()
+    _apply_hq_lighting(_hq_light_preset)
+
+func _change_hq_terrain_v17(index: int) -> void:
+    if index < 0 or index >= HQClimateV17.TERRAINS.size():
+        return
+    hq_terrain_picker.select(index)
+    _apply_hq_climate_v17()
+
+func _apply_hq_climate_v17() -> void:
+    if hq_climate_stage == null or hq_weather_picker == null or hq_terrain_picker == null:
+        return
+    var weather: String = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
+    var terrain: String = str(HQClimateV17.TERRAINS[hq_terrain_picker.selected])
+    var level: int = maxi(1,level_picker.selected+1)
+    var condition: String = str(BUILDING_STATES[maxi(0,building_state_picker.selected)])
+    var sprite_mode: bool = hq_v15_mode_picker.selected == 2
+    assert(HQClimateV17.apply(hq_climate_stage,weather,terrain,level,condition,sprite_mode))
+    hq_climate_stage.visible = _role=="headquarters" and not hq_batch_toggle.button_pressed
+    if hq_climate_status != null:
+        hq_climate_status.text = "%s · %s · máximo %d lotes 3D de clima/entorno. Sprite V15: imagen seca original." % [
+            str(HQClimateV17.WEATHER_NAMES[hq_weather_picker.selected]),
+            str(HQClimateV17.TERRAIN_NAMES[hq_terrain_picker.selected]),
+            HQClimateV17.active_mesh_count(hq_climate_stage)]
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -224,6 +276,31 @@ func _add_building_mode() -> void:
     hq_v15_caption = _title(building_controls,
         "Sprite Android V15 · 384 px · exportado desde Godot V13",12)
     _refresh_hq_v15_sprite()
+    _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
+    var climate_row := HBoxContainer.new()
+    climate_row.name = "SelectorClimaYTerrenoHQV17"
+    climate_row.add_theme_constant_override("separation",5)
+    building_controls.add_child(climate_row)
+    hq_weather_picker = OptionButton.new()
+    hq_weather_picker.name = "ClimaVisualHQV17"
+    hq_weather_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_weather_picker.custom_minimum_size = Vector2(125,45)
+    for weather_name in HQClimateV17.WEATHER_NAMES:
+        hq_weather_picker.add_item(str(weather_name))
+    hq_weather_picker.select(0)
+    hq_weather_picker.item_selected.connect(_change_hq_weather_v17)
+    climate_row.add_child(hq_weather_picker)
+    hq_terrain_picker = OptionButton.new()
+    hq_terrain_picker.name = "TerrenoVisualHQV17"
+    hq_terrain_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_terrain_picker.custom_minimum_size = Vector2(125,45)
+    for terrain_name in HQClimateV17.TERRAIN_NAMES:
+        hq_terrain_picker.add_item(str(terrain_name))
+    hq_terrain_picker.select(0)
+    hq_terrain_picker.item_selected.connect(_change_hq_terrain_v17)
+    climate_row.add_child(hq_terrain_picker)
+    hq_climate_status = _title(building_controls,
+        "Comparación estética · lluvia/nieve con volúmenes 3D · sin cambios de jugabilidad",11)
 
     hq_compare_button = _button(building_controls,
         "Comparar con diseño anterior (V1)",_toggle_hq_finish)
@@ -458,6 +535,8 @@ func _switch_category(index: int) -> void:
     building_controls.visible = building
     if hq_ground != null:
         hq_ground.visible = building
+    if hq_climate_stage != null:
+        hq_climate_stage.visible = building and not hq_batch_toggle.button_pressed
     if hq_key_light != null:
         hq_key_light.shadow_enabled = building
     _apply_hq_lighting(_hq_light_preset)
@@ -589,6 +668,7 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     _refresh_hq_v15_sprite()
     var showing_batch: bool = hq_batch_toggle.button_pressed and _hq_show_v4
+    _apply_hq_climate_v17()
     hq_batch_toggle.visible = _hq_show_v4
     hq_v7_toggle.visible = _hq_show_v4 and not showing_batch
     hq_v8_toggle.visible = _hq_show_v4 and hq_v7_toggle.button_pressed and not showing_batch
@@ -726,6 +806,9 @@ func _update_details() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role == "headquarters" and hq_climate_stage != null and hq_climate_stage.visible:
+        _hq_weather_time += delta
+        HQClimateV17.animate(hq_climate_stage,_hq_weather_time)
     if _role != "headquarters" or hq_batch_toggle == null or not hq_batch_toggle.button_pressed:
         return
     _fps_refresh += delta
