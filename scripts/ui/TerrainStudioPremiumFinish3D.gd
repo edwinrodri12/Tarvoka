@@ -5,6 +5,7 @@ class_name TarvokaTerrainPremiumFinish3D
 # Unlike moving terrain rules, this only changes the preview meshes; the
 # names/transforms of landmarks and the tactical map remain untouched.
 const Terrain = preload("res://scripts/ui/TerrainStudio3D.gd")
+const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const Textures = preload("res://scripts/ui/TerrainTextures3D.gd")
 const WATER := Color("#62b0b8")
 const FOAM := Color("#8ac6c7")
@@ -224,37 +225,78 @@ static func _water_and_shore(parent: Node3D, scene: int) -> int:
     parent.add_child(item)
     return ribbons
 
+static func _road_point(origin: Vector3, cell: Dictionary,
+        dx: float, dz: float) -> Vector3:
+    var corners: PackedFloat32Array = cell["corners"]
+    var y: float = Sampler.height(float(cell["top"]),corners,
+        dx,dz,float(cell["half"]))
+    return origin+Vector3(dx,y+0.096,dz)
+
 static func _road_wear(parent: Node3D, scene: int) -> int:
+    # The existing V2 road is a box, while V3 has four triangulated arms
+    # sampled on the exact terrain. Support both without floating markings.
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var fragments: int = 0
     for node in parent.get_children():
-        if not (node is MeshInstance3D) or not str(node.name).begins_with("Calzada_"):
+        if not (node is MeshInstance3D):
             continue
         var item: MeshInstance3D = node as MeshInstance3D
-        var vertical: bool = str(item.name).ends_with("_true")
-        var seed: int = int(roundf(item.position.x*31.0+
-            item.position.z*53.0))
+        var name_text: String = str(item.name)
+        var v3: bool = name_text.begins_with("CalzadaContinuaV3_")
+        if not v3 and not name_text.begins_with("Calzada_"):
+            continue
         var center: Vector3 = item.position
-        var y: float = center.y+0.040
+        var cells: Dictionary = {}
+        var x: int = 0
+        var z: int = 0
+        if v3:
+            x = int(name_text.get_slice("_",1))
+            z = int(name_text.get_slice("_",2))
+            center = Terrain._cell_center(x,z)
+            cells = {
+                "top":Terrain.height_at(x,z,scene),
+                "half":Terrain.CELL*0.5,
+                "corners":PackedFloat32Array([
+                    Terrain._vertex_height(x,z,scene),
+                    Terrain._vertex_height(x+1,z,scene),
+                    Terrain._vertex_height(x+1,z+1,scene),
+                    Terrain._vertex_height(x,z+1,scene)])}
+        var vertical: bool = name_text.ends_with("_true")
+        if v3:
+            var along_z: bool = Terrain.kind(x,z-1,scene) == "road" or (
+                Terrain.kind(x,z+1,scene) == "road")
+            var along_x: bool = Terrain.kind(x-1,z,scene) == "road" or (
+                Terrain.kind(x+1,z,scene) == "road")
+            vertical = along_z or not along_x
+        var seed: int = int(roundf(center.x*31.0+center.z*53.0))
         for n in range(3):
-            var lateral: float = (-0.39 if n%2 == 0 else 0.41) + ((_hash(seed,n,10)-0.5)*0.06)
-            var longitudinal: float = (_hash(seed,n,7)-0.5)*1.62
-            var a := Vector3.ZERO
-            var b := Vector3.ZERO
-            var c := Vector3.ZERO
+            var lateral: float = (-0.37 if n%2 == 0 else 0.40) + (
+                (_hash(seed,n,10)-0.5)*0.05)
+            var longitudinal: float = (_hash(seed,n,7)-0.5)*0.66
+            var offsets: Array[Vector2] = []
             if vertical:
-                a = center+Vector3(lateral,y-center.y,longitudinal-0.19)
-                b = center+Vector3(lateral+0.05,y-center.y,longitudinal-0.06)
-                c = center+Vector3(lateral-0.04,y-center.y,longitudinal+0.18)
+                offsets = [
+                    Vector2(lateral,longitudinal-0.15),
+                    Vector2(lateral+0.05,longitudinal-0.05),
+                    Vector2(lateral-0.04,longitudinal+0.15)]
             else:
-                a = center+Vector3(longitudinal-0.19,y-center.y,lateral)
-                b = center+Vector3(longitudinal-0.06,y-center.y,lateral+0.05)
-                c = center+Vector3(longitudinal+0.18,y-center.y,lateral-0.04)
-            var tint: Color = Color("#464d4e").lightened(
-                _hash(seed,n,3)*0.16)
-            _ribbon_segment(tool,a,b,0.012,tint)
-            _ribbon_segment(tool,b,c,0.010,tint)
+                offsets = [
+                    Vector2(longitudinal-0.15,lateral),
+                    Vector2(longitudinal-0.05,lateral+0.05),
+                    Vector2(longitudinal+0.15,lateral-0.04)]
+            var points: Array[Vector3] = []
+            for o in offsets:
+                var p: Vector3 = Vector3.ZERO
+                if v3:
+                    p = _road_point(center,cells,o.x,o.y)
+                else:
+                    p = center+Vector3(o.x,0.040,o.y)
+                points.append(p)
+            var tint: Color = Color("#424b4b").lightened(
+                _hash(seed,n,3)*0.13)
+            _ribbon_segment(tool,points[0],points[1],0.011,tint)
+            _ribbon_segment(tool,points[1],points[2],0.009,tint)
             fragments += 2
     if fragments == 0:
         return 0
