@@ -57,6 +57,7 @@ var hq_compare_button: Button
 var hq_v3_compare_button: Button
 var _hq_show_v2 := true
 var _hq_show_v3 := true
+var _hq_show_v4 := true
 var _hq_tactical_v13 := false
 var _hq_v13_toggle: CheckButton
 
@@ -658,7 +659,12 @@ func _display_headquarters() -> void:
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
     # V13 runtime (2 meshes) or latest production-quality V12 hero sculpture.
     var render_quality: String = HQProduction.QUALITY_TACTICAL if _hq_tactical_v13 else HQProduction.QUALITY_HERO
-    model_root = HQProduction.build(level,_faction,condition,render_quality)
+    if _hq_tactical_v13:
+        model_root = HQProduction.build(level,_faction,condition,render_quality)
+    else:
+        # Preserve the historic v1/v2/v3/v4 comparisons in the shared viewer;
+        # with all switches on, this is the complete V12 detailed sculpture.
+        model_root = Headquarters.build(level,_faction,condition,_hq_show_v2,_hq_show_v3,_hq_show_v4)
     assert(model_root != null)
     preview.add_child(model_root)
     if initial:
