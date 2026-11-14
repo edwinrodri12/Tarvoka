@@ -56,7 +56,7 @@ func _run() -> void:
     main._open_stress_benchmark()
     var overlays := 0
     for child in main.get_children():
-        if child is TarvokaVisualStressBenchmark:
+        if child.get_script() == Benchmark:
             overlays += 1
     assert(overlays == 1)
     assert(main.board.state == before)
