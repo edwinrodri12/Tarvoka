@@ -35,7 +35,9 @@ const CASES := [
     {"name":"8 equipos: extremo", "dims":Vector2i(40,30), "tanks":768, "sites":256, "teams":8,
         "weather":"snow", "zoom":1.9, "focus":Vector2i(20,15), "effects":32, "saver":false},
     {"name":"8 equipos: ahorro", "dims":Vector2i(40,30), "tanks":768, "sites":256, "teams":8,
-        "weather":"snow", "zoom":1.9, "focus":Vector2i(20,15), "effects":32, "saver":true}
+        "weather":"snow", "zoom":1.9, "focus":Vector2i(20,15), "effects":32, "saver":true},
+    {"name":"8 equipos: culling cercano", "dims":Vector2i(40,30), "tanks":768, "sites":256, "teams":8,
+        "weather":"rain", "zoom":4.0, "focus":Vector2i(4,4), "effects":32, "saver":false}
 ]
 
 var board: Control
