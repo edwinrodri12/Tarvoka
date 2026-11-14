@@ -6,6 +6,8 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
+const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 
 # Read-only snapshot for classic/isometric map badges. Only confirmed sight
 # can disclose an enemy or neutral site's CURRENT owner. Previously explored
@@ -21,6 +23,7 @@ static func snapshots(state: Dictionary, viewer: int = 0) -> Array:
     var visible: Dictionary = Visibility.visible_cells(state,viewer) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state,viewer) if fog else {}
     var modern: bool = bool(economy.get("modern",false))
+    var grid_size: Vector2i = Rules.map_size(state.get("terrain",[]))
     var revenue: int = Economy.MODERN_CITY_INCOME if modern else Economy.CITY_INCOME
     for site in economy.get("sites",[]):
         if not site is Dictionary or not site.get("pos") is Vector2i:
@@ -36,7 +39,8 @@ static func snapshots(state: Dictionary, viewer: int = 0) -> Array:
             "pos":cell, "kind":kind, "owner":public_owner,
             "owner_known":owner_known,"income":revenue if kind == "city" else 0,
             "status":"city" if kind == "city" else "unknown",
-            "caption":"", "capture_pending":false
+            "caption":"", "capture_pending":false,
+            "visual_command_city":CommandArt.is_visual_command_city(kind,cell,grid_size)
         }
         # Only a friendly occupying capturer can create a capture hint. Capture
         # happens on end_turn, not gradually and not on the first tap.

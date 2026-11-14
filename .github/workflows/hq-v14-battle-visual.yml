@@ -1,0 +1,78 @@
+name: TARVOKA HQ V14 Actual Battle Integration
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/CommandCityArtV14.gd"
+      - "scripts/ui/SiteOverlayData.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "tests/test_headquarters_battle_bridge_v14.gd"
+      - ".github/workflows/hq-v14-battle-visual.yml"
+  push:
+    branches:
+      - feat/hq-v14-live-isometric-command-cities-20261114
+    paths:
+      - "scripts/ui/**"
+      - "tests/test_headquarters_battle_bridge_v14.gd"
+      - ".github/workflows/hq-v14-battle-visual.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and import the original faction atlases with Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/tarvoka-godot.zip
+          unzip -q /tmp/tarvoka-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq-v14-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Import failed" /tmp/hq-v14-import.log; then
+            exit 1
+          fi
+      - name: Prove battle rules, fog, ownership and map anchors unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_headquarters_battle_bridge_v14.gd 2>&1 | tee /tmp/hq-v14-headless.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v14-headless.log; then
+            exit 1
+          fi
+          grep -q "PASS HQ V14:" /tmp/hq-v14-headless.log
+      - name: Capture ACTUAL battle UI with and without the V14 capital HQ artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_battle_bridge_v14.gd 2>&1 | tee /tmp/hq-v14-gpu.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v14-gpu.log; then
+            exit 1
+          fi
+          grep -q "PASS HQ V14:" /tmp/hq-v14-gpu.log
+          test -s artifacts/tarvoka_hq_v14_battle_original_city_vs_command_city.png
+          test -s artifacts/tarvoka_hq_v14_real_isometric_battle.png
+          test -s artifacts/tarvoka_hq_v14_eight_factions_live_battle.png
+      - name: Upload verified real battle screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V14-Live-Battle
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            artifacts/tarvoka_hq_v14_battle_original_city_vs_command_city.png
+            artifacts/tarvoka_hq_v14_real_isometric_battle.png
+            artifacts/tarvoka_hq_v14_eight_factions_live_battle.png

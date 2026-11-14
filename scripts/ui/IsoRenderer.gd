@@ -15,6 +15,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
@@ -140,7 +141,16 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 continue
             var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
             var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
-            WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
+            if bool(marker.get("visual_command_city",false)):
+                # The two canonical capital CITIES receive a purely artistic
+                # command-HQ silhouette from our V13 sculpt. They remain
+                # regular city sites for captures, income and unit rules.
+                # Unknown fogged owners never receive a faction emblem.
+                var faction_id: int = CommandArt.faction_index(state,int(marker["owner"]))
+                CommandArt.draw_iso(canvas,c,hw,tint,faction_id,
+                    detail >= VisualBudget.DETAIL_MEDIUM)
+            else:
+                WorldArt.draw_site(canvas,str(marker["kind"]),c,hw*0.46,tint,phase)
             var selected: bool = cell == selected_factory_pos or cell == inspected_cell
             SiteOverlayPainter.draw_iso(canvas,marker,c,hw,selected,battery_saver,state)
             if selected:
