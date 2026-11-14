@@ -11,6 +11,7 @@ const Hero4 = preload("res://scripts/ui/HeadquartersHero4.gd")
 const Emblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
 const ArchitectureV7 = preload("res://scripts/ui/HeadquartersArchitectureV7.gd")
 const MaterialV8 = preload("res://scripts/ui/HeadquartersFinishV8.gd")
+const ReadabilityV9 = preload("res://scripts/ui/HeadquartersReadabilityV9.gd")
 const CONDITIONS := ["operativo", "capturado", "danado", "destruido"]
 const BASE := Color("#788693")
 const CONCRETE := Color("#b3b9b5")
@@ -396,7 +397,8 @@ static func build(level: int = 1, faction: int = 0,
         condition: String = "operativo", finish_enabled: bool = true,
         detail_enabled: bool = true, hero_enabled: bool = true,
         sculpt_enabled: bool = true,
-        pbr_v8_enabled: bool = true) -> Node3D:
+        pbr_v8_enabled: bool = true,
+        readability_v9_enabled: bool = true) -> Node3D:
     if not valid_spec(level,faction,condition):
         return null
     var model := Node3D.new()
@@ -432,6 +434,8 @@ static func build(level: int = 1, faction: int = 0,
                     ArchitectureV7.apply(model,level,accent,condition)
                     if pbr_v8_enabled:
                         MaterialV8.apply(model,level,accent,condition)
+                        if readability_v9_enabled:
+                            ReadabilityV9.apply(model,level,accent,condition)
     return model
 
 # Zoom-adaptive fine detail for WebGL and Android. Architecture remains visible.
@@ -440,3 +444,4 @@ static func set_render_detail(model: Node3D, near: bool) -> void:
         Hero4.set_near_detail(model,near)
         ArchitectureV7.set_near_detail(model,near)
         MaterialV8.set_near_detail(model,near)
+        ReadabilityV9.set_near_detail(model,near)
