@@ -15,6 +15,7 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 const EngineerRepair = preload("res://scripts/core/EngineerRepair.gd")
+const EngineerSupport = preload("res://scripts/core/EngineerSupport.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -206,6 +207,36 @@ static func step(state: Dictionary) -> Dictionary:
     var defense: Dictionary = _defend_relay(state, knowledge, friends, enemies, occupied)
     if defense.get("valid", false):
         return defense
+
+    # Tactical support comes after urgent attacks, withdrawals, supplies and
+    # relay defense, but before optional purchases and target-chasing.
+    # A sound engineer is worth preserving, and an armor repair must be
+    # genuinely worthwhile in price/HP even if the route succeeds.
+    var best_support: Dictionary = {}
+    var support_score := -99999999
+    for unit in friends:
+        if str(unit.get("role","")) != "engineer":
+            continue
+        var candidate: Dictionary = EngineerSupport.plan(state,knowledge,unit)
+        if not bool(candidate.get("valid",false)):
+            continue
+        var score: int = int(candidate["net_value"])*10 - int(candidate["remaining_cost"])*26
+        if int(candidate["remaining_cost"]) == 0:
+            score += 90
+        if score > support_score:
+            support_score = score
+            best_support = candidate
+    if not best_support.is_empty():
+        var escort: Dictionary = Session.move(
+            state,str(best_support["engineer_id"]),best_support["destination"])
+        if bool(escort.get("valid",false)):
+            escort["action"] = "move"
+            escort["reason"] = "engineer_support"
+            escort["unit_id"] = str(best_support["engineer_id"])
+            escort["recipient_id"] = str(best_support["target_id"])
+            escort["destination"] = best_support["destination"]
+            escort["remaining_cost"] = int(best_support["remaining_cost"])
+            return escort
 
     # Preserve a guard/scout that is ALREADY occupying an unclaimed site:
     # it will capture at phase end. This is a planner-only 'moved' marker
