@@ -1,0 +1,87 @@
+name: TARVOKA G09 V29 final articulated tracks and wheel alignment
+
+on:
+  push:
+    branches:
+      - feat/g09-v29-final-running-gear-20261114
+    paths:
+      - "scripts/ui/TankFinalTracksV29.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/TankVisualRig3D.gd"
+      - "tests/test_g09_track_final_v29.gd"
+      - ".github/workflows/g09-final-tracks-v29.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/TankFinalTracksV29.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/TankVisualRig3D.gd"
+      - "tests/test_g09_track_final_v29.gd"
+      - ".github/workflows/g09-final-tracks-v29.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-mechanical-track:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Godot 4.3 and virtual GL renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Preflight Godot import, native mesh and rig parsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/g09-v29-parser.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/g09-v29-parser.log; then
+            exit 1
+          fi
+      - name: Inspect real 3D undercarriage, wheels and animated end gears
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_track_final_v29.gd 2>&1 | tee /tmp/g09-v29-geometry.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v29-geometry.log; then
+            echo 'G09 V29 track geometry/alignment/rig acceptance FAILED' >&2
+            exit 1
+          fi
+          grep -q 'PASS G09 V29:' /tmp/g09-v29-geometry.log
+          for name in lateral inferior posterior frontal; do
+            test -s "artifacts/tarvoka_g09_v29_rodaje_${name}_real.png"
+          done
+      - name: Regression — real battle LOD keeps corrected model intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_battle_lod_v27.gd 2>&1 | tee /tmp/g09-v29-battle.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v29-battle.log; then
+            exit 1
+          fi
+          grep -q 'PASS G09 V28:' /tmp/g09-v29-battle.log
+      - name: Upload actual Godot screenshot inspection sheets
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-G09-V29-Final-Articulated-Undercarriage
+          path: |
+            artifacts/tarvoka_g09_v29_rodaje_lateral_real.png
+            artifacts/tarvoka_g09_v29_rodaje_inferior_real.png
+            artifacts/tarvoka_g09_v29_rodaje_posterior_real.png
+            artifacts/tarvoka_g09_v29_rodaje_frontal_real.png
+          if-no-files-found: error
