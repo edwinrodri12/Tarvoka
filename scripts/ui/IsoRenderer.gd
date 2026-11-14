@@ -146,9 +146,11 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             var cell: Vector2i = marker["pos"]
             if not bounds.has_point(cell):
                 continue
+            var c: Vector2 = _projected_center(cell,base_origin,hw)
+            if not VisualBudget.in_view(c,hw,canvas.size):
+                continue
             sites_drawn += 1
             var tint: Color = SiteOverlayPainter.owner_tint(int(marker["owner"]),state)
-            var c: Vector2 = _center(cell,canvas,zoom,pan,dims)
             if bool(marker.get("visual_command_city",false)):
                 # The two canonical capital CITIES receive a purely artistic
                 # command-HQ silhouette from our V13 sculpt. They remain
@@ -230,6 +232,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             continue
         var pos: Vector2i = candidate["pos"]
         if not bounds.has_point(pos):
+            continue
+        if not VisualBudget.in_view(_projected_center(pos,base_origin,hw),hw,canvas.size):
             continue
         if fog and int(candidate["faction"]) != 0 and not visible.has(pos):
             continue
