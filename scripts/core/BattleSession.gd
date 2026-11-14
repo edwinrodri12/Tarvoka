@@ -13,7 +13,7 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear") -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
@@ -21,6 +21,11 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
     # with legacy v1 battle states and existing no-climate tests.
     if Weather.valid(weather) and weather != Weather.CLEAR:
         state["weather"] = weather
+    if dynamic_weather:
+        # An explicit 'clear' field distinguishes dynamic clear from legacy
+        # static clear without affecting legacy saved game serialization.
+        state["weather"] = weather if Weather.valid(weather) else Weather.CLEAR
+        state["weather_cycle"] = {"remaining":Weather.CYCLE_INTERVAL}
     if relay_mode:
         var control: Dictionary = Relays.create(state["terrain"], Relays.DEFAULT_TARGET, modern_mode, faction)
         if not control.is_empty():
@@ -106,6 +111,9 @@ static func end_turn(state: Dictionary) -> Dictionary:
     # The responder and every later phase can order freely.
     next.erase("opening")
     next["faction"] = 1 - int(state["faction"])
+    # One deterministic half-turn elapsed; both factions see exactly the
+    # same forecast and new climate before their first action.
+    next = Weather.advance_after_turn(next)
     # Continue with the post-upkeep army, never restore the pre-consumption array.
     next["units"] = Turns.begin_turn(next["units"], next["faction"])
     if next.has("economy"):
