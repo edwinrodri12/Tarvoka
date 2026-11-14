@@ -68,8 +68,10 @@ func _run() -> void:
             changed_aabbs+=1
         var old_arrays: Array = old_part.mesh.surface_get_arrays(0)
         var new_arrays: Array = replacement.mesh.surface_get_arrays(0)
-        var old_vertex_count: int = (old_arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
-        var new_vertex_count: int = (new_arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+        var old_vertices: PackedVector3Array = old_arrays[Mesh.ARRAY_VERTEX]
+        var new_vertices: PackedVector3Array = new_arrays[Mesh.ARRAY_VERTEX]
+        var old_vertex_count: int = old_vertices.size()
+        var new_vertex_count: int = new_vertices.size()
         if old_vertex_count!=new_vertex_count:
             changed_topology+=1
     # Cosmetic housings are sculpted *within the same physical footprint*,
