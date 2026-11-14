@@ -22,14 +22,20 @@ static func region_variation(cell: Vector2i, salt: int = 0) -> float:
 static func summit_strength(cell: Vector2i, mask: int) -> float:
     var neighbors: int = connection_count(mask)
     var variation: float = region_variation(cell,7)
-    # A lone mountain must remain legible; inner mountain cells become
-    # shoulders as often as summits, creating ridge regions instead of
-    # independent snow-capped icons in every tile.
+    var summit_rank: int = posmod(cell.x*19+cell.y*23,5)
+    # Isolated mountains still read clearly, but a connected range only
+    # has one dominant summit every several tiles. Most connected cells
+    # form a lower rock shelf, not another identical triangular tower.
     if neighbors == 0:
         return 0.88+variation*0.17
-    if neighbors >= 3:
-        return 0.42+variation*0.42
-    return 0.50+variation*0.54
+    if neighbors == 1:
+        return 0.70+variation*0.22 if summit_rank <= 1 else (
+            0.49+variation*0.14)
+    if summit_rank == 0:
+        return 0.87+variation*0.16
+    if summit_rank == 1:
+        return 0.58+variation*0.13
+    return 0.40+variation*0.12
 
 static func forest_density(cell: Vector2i, mask: int, detail: int) -> int:
     if detail <= 0:
