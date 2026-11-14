@@ -177,7 +177,7 @@ func _sync_hq_wayfinding_v18() -> void:
         weather = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
     assert(HQWayfindingV18.apply(lamps,_faction,level,condition,
         _hq_light_preset,weather,hq_wayfinding_toggle.button_pressed,
-        hq_map_lod_toggle.button_pressed))
+        bool(model_root.get_meta("tarvoka_hq_map_distant",false))))
 
 func _change_hq_wayfinding_v18(_enabled: bool) -> void:
     _sync_hq_wayfinding_v18()
