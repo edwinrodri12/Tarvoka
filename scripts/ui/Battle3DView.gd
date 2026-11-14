@@ -263,8 +263,10 @@ func sync_battle(state: Dictionary, selected: String,
     var terrain_key: int = hash([state.get("terrain",[]),visible,fog,battery_saver])
     if terrain_key != _terrain_signature:
         _terrain_signature = terrain_key
-        _lab.set_quality(2 if battery_saver else 4)
-        _lab.set_terrain(state["terrain"],visible,fog)
+        # Batch the visibility/terrain/quality change. Previously a
+        # quality toggle rebuilt the entire world twice per turn.
+        _lab.set_battle_terrain(state["terrain"],visible,fog,
+            2 if battery_saver else 4)
         _unit_signature = -1
     var unit_key: int = hash([state.get("units",[]),selected,visible,fog,state.get("faction",-1)])
     if unit_key != _unit_signature:
