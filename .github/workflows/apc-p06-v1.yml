@@ -5,6 +5,8 @@ on:
       - feat/apc-v1-six-wheel-armored-transporter-20261114
     paths:
       - "scripts/ui/APC*.gd"
+      - "scripts/ui/TankLegacyRigV31.gd"
+      - "scripts/ui/TankVisualRig3D.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v1.gd"
@@ -13,6 +15,8 @@ on:
   pull_request:
     paths:
       - "scripts/ui/APC*.gd"
+      - "scripts/ui/TankLegacyRigV31.gd"
+      - "scripts/ui/TankVisualRig3D.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v1.gd"
@@ -77,6 +81,18 @@ jobs:
             --script res://tests/test_g09_animation_final_v32.gd 2>&1 | tee /tmp/apc-g09-regression.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-g09-regression.log; then exit 1; fi
           grep -q 'PASS G09 V32:' /tmp/apc-g09-regression.log
+      - name: Legacy G09 art levels must preserve their original animation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_g09_premium_finish_v8 test_mbt_finishing_animation; do
+            timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS' "/tmp/${test}.log"
+          done
       - name: Upload true Godot V0/V1 APC 3D review images
         uses: actions/upload-artifact@v4
         with:
