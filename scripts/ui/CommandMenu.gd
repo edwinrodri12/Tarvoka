@@ -26,6 +26,7 @@ const CompareData = preload("res://scripts/ui/UnitComparisonData.gd")
 const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
+const CommanderStrip = preload("res://scripts/ui/CommanderIdentityStrip.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -295,7 +296,14 @@ func refresh() -> void:
     var commands: VBoxContainer = tactical["right"]
     _heading(situation,"SITUACIÓN TÁCTICA")
     _description(situation,BattleReport.field_summary(state))
-    _description(situation,"Información del combate actual. No revela unidades ocultas por la niebla.")
+    # Reuse the official faction/commander art already loaded for the board.
+    # The strip displays only public identity and the active turn, never
+    # hidden enemies, troop positions or an unimplemented commander power.
+    var commanders := CommanderStrip.new()
+    commanders.name = "ComandantesDelCentroDeMando"
+    situation.add_child(commanders)
+    commanders.bind_state(state,bool(board.ai_enabled))
+    _description(situation,"Consulta los bandos y el turno actual. El radar respeta la niebla de guerra.")
     _heading(commands,"ACCIONES DISPONIBLES")
     _action(commands,"Radar de objetivos, ciudades y alertas",func(): objectives_requested.emit())
     _action(commands,"Volver al mapa",func(): close_requested.emit())
