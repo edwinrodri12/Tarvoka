@@ -50,8 +50,10 @@ var _v25_preview := false
 var _v30_preview := false
 var _v31_preview := false
 var _apc_v1_preview := true
+var _apc_v2_preview := true
 var apc_controls: VBoxContainer
 var apc_compare_button: Button
+var apc_v2_button: Button
 var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
@@ -243,6 +245,8 @@ func _construct() -> void:
     apc_heading.add_theme_color_override("font_color",Color("#E6C17C"))
     apc_compare_button=_button(apc_controls,
         "APC V1 · Comparar prototipo original",_toggle_apc_version)
+    apc_v2_button=_button(apc_controls,
+        "APC P06 V2 · ARMADURA, NEUMÁTICOS Y ACABADO",_toggle_apc_v2)
     _add_paired(apc_controls,"APC: Avanzar 6×6",
         func(): _play("move"),
         "APC: Girar torreta",func(): _play("turn_turret"))
@@ -360,7 +364,7 @@ func _display_role(role: String) -> void:
     if _v25_preview and _v30_preview and _v31_preview:
         art_level = 31
     if _role=="apc" and _apc_v1_preview:
-        art_level=11
+        art_level=12 if _apc_v2_preview else 11
     model_root = Models.build(_role,_faction if _role in ["tank","apc"] else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
@@ -374,7 +378,7 @@ func _display_role(role: String) -> void:
     model_root.rotation_degrees.y = _yaw
     role_picker.select(Models.ROLES.find(role))
     faction_picker.select(_faction)
-    faction_picker.visible = (_role == "tank")
+    faction_picker.visible = (_role in ["tank","apc"])
     damage_picker.visible = (_role == "tank")
     comparison_button.visible = (_role == "tank")
     previous_version_button.visible = (_role == "tank")
@@ -396,7 +400,8 @@ func _display_role(role: String) -> void:
     v30_button.visible = (_role == "tank")
     v31_button.visible = (_role == "tank")
     apc_controls.visible = (_role=="apc")
-    apc_compare_button.text = ("APC P06 V1 · Volver al prototipo V0" if _apc_v1_preview else "APC P06 V1 · Ver escultura 6×6")
+    apc_compare_button.text = ("APC P06 · Comparar con prototipo V0" if _apc_v1_preview else "APC P06 · Regresar a V1")
+    apc_v2_button.text = ("APC V2/V1 · Ver versión V1 anterior" if _apc_v2_preview else "APC V2 · Ver blindaje y ruedas mejoradas")
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
@@ -445,10 +450,15 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
-        status_label.text = (
-            "APC P06 BASTIÓN V1 · 6×6 · CASCO ESCULPIDO · RAMPA Y TORRETA ANIMADAS · 8 FACCIONES"
-            if model_root.get_meta("tarvoka_apc_sculpt_v1",false)
-            else "APC P06 · PROTOTIPO TÉCNICO ORIGINAL V0")
+        if model_root.get_meta("tarvoka_apc_armor_v2",false):
+            status_label.text = ("APC P06 BASTIÓN V2 · BLINDAJE ANGULAR"
+                + " · 288 TACOS 3D COMPARTIDOS · PINTURA PBR"
+                + " · RAMPA, TORRETA Y 6 RUEDAS ANIMADAS")
+        elif model_root.get_meta("tarvoka_apc_sculpt_v1",false):
+            status_label.text = ("APC P06 BASTIÓN V1 · CARROCERÍA 6×6"
+                + " · RAMPA Y TORRETA ANIMADAS")
+        else:
+            status_label.text = "APC P06 · PROTOTIPO TÉCNICO ORIGINAL V0"
         return
     if _role != "tank":
         status_label.text = "Modelo técnico 3D · misma librería de TARVOKA"
@@ -984,12 +994,34 @@ func _toggle_apc_version() -> void:
     if _role!="apc":
         return
     _apc_v1_preview=not _apc_v1_preview
+    _apc_v2_preview=false
     var angle: float=_yaw
     var zoom: float=_zoom
     _display_role("apc")
     _yaw=angle
     _zoom=zoom
     model_root.rotation_degrees.y=angle
+    _update_camera()
+    _update_details()
+
+func _toggle_apc_v2() -> void:
+    if _role!="apc":
+        return
+    var angle: float=_yaw
+    var zoom: float=_zoom
+    var opened: bool=bool(model_root.get_meta(
+        "tarvoka_apc_ramp_open",false)) if model_root!=null else false
+    _apc_v1_preview=true
+    _apc_v2_preview=not _apc_v2_preview
+    _display_role("apc")
+    _yaw=angle
+    _zoom=zoom
+    if model_root!=null:
+        model_root.rotation_degrees.y=angle
+        if opened:
+            APCVisual.pose(model_root,"open_ramp",1.0)
+            APCVisual.restore(model_root)
+            apc_ramp_button.text="APC: Cerrar rampa de tropas"
     _update_camera()
     _update_details()
 
