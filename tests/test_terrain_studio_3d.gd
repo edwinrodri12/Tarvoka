@@ -27,6 +27,57 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.terrain_scatter_toggle.button_pressed)
+    var detail: Dictionary = studio.model_root.get_meta("terrain_scatter_counts",{})
+    assert(int(detail.get("grass",0)) > 0)
+    assert(int(detail.get("reeds",0)) > 0)
+    assert(int(detail.get("batches",0)) <= 3)
+    var first_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+    assert(first_grass != null and first_grass.multimesh != null)
+    assert(first_grass.multimesh.instance_count == int(detail["grass"]))
+    var first_origin: Vector3 = first_grass.multimesh.get_instance_transform(0).origin
+    studio._rebuild_terrain(false)
+    var second_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+    assert(second_grass != null)
+    assert(second_grass.multimesh.get_instance_transform(0).origin.is_equal_approx(first_origin))
+    studio.terrain_scatter_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_studio_scatter"))
+    assert(studio.model_root.find_child("HierbaInstanciadaV3",true,false) == null)
+    assert(int(studio.model_root.get_meta("terrain_scatter_counts").get("grass",0)) == 0)
+    var old_grass: MultiMeshInstance3D = studio.model_root.find_child(
+        "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
+    assert(old_grass != null and old_grass.multimesh.instance_count >= 100)
+    for render_frame in range(6):
+        await process_frame
+    var v2_image: Image = studio.preview.get_texture().get_image()
+    assert(v2_image != null and not v2_image.is_empty())
+    studio.terrain_scatter_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    for render_frame in range(6):
+        await process_frame
+    var v3_image: Image = studio.preview.get_texture().get_image()
+    assert(v3_image != null and not v3_image.is_empty())
+    var old_sample := v2_image.duplicate()
+    var new_sample := v3_image.duplicate()
+    old_sample.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    new_sample.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var changed_pixels: int = 0
+    for py in range(0,330,5):
+        for px in range(0,480,5):
+            var c2: Color = old_sample.get_pixel(px,py)
+            var c3: Color = new_sample.get_pixel(px,py)
+            if absf(c2.r-c3.r)+absf(c2.g-c3.g)+absf(c2.b-c3.b) > 0.08:
+                changed_pixels += 1
+    assert(changed_pixels > 25)
+    var comparison_v3 := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    comparison_v3.blit_rect(old_sample,Rect2i(0,0,480,330),Vector2i.ZERO)
+    comparison_v3.blit_rect(new_sample,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(comparison_v3.save_png(
+        "res://artifacts/tarvoka_terrain_v2_v3_same_camera.png") == OK)
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)
@@ -49,10 +100,7 @@ func _run() -> void:
     assert(ground.mesh.get_surface_count() == 1)
     assert((ground.material_override as StandardMaterial3D).vertex_color_use_as_albedo)
     assert(studio.model_root.find_child("LaminaDeAguaContinua",true,false) != null)
-    var grass: MultiMeshInstance3D = studio.model_root.find_child(
-        "HierbaInstanciadaEnUnaMalla",true,false) as MultiMeshInstance3D
-    assert(grass != null and grass.multimesh != null)
-    assert(grass.multimesh.instance_count >= 100)
+    assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     var old_counts: Dictionary = studio.model_root.get_meta("terrain_counts")
     assert(int(old_counts.get("road",0)) > 0)
     assert(int(old_counts.get("water",0)) > 0)
@@ -68,6 +116,7 @@ func _run() -> void:
     studio.terrain_continuous_toggle.button_pressed = false
     studio._rebuild_terrain(false)
     assert(not studio.model_root.get_meta("terrain_studio_continuous"))
+    assert(not studio.model_root.get_meta("terrain_studio_scatter"))
     assert(studio.model_root.find_child("SueloContinuoConRelieve",true,false) == null)
     assert(studio.model_root.find_child("HierbaInstanciadaEnUnaMalla",true,false) == null)
     assert(studio.model_root.find_child("Casilla_00_00_mountain",true,false) != null)
@@ -121,6 +170,17 @@ func _run() -> void:
         assert(int(counts.get("road",0)) > 0)
         assert(int(counts.get("mountain",0)) > 0)
         assert(int(counts.get("forest",0)) > 0)
+        var scatter: Dictionary = studio.model_root.get_meta("terrain_scatter_counts",{})
+        assert(int(scatter.get("grass",0)) > 0)
+        assert(int(scatter.get("batches",0)) <= 3)
+        var visual_grass: MultiMeshInstance3D = studio.model_root.find_child(
+            "HierbaInstanciadaV3",true,false) as MultiMeshInstance3D
+        assert(visual_grass != null)
+        for sample in range(mini(visual_grass.multimesh.instance_count,20)):
+            var pos: Vector3 = visual_grass.multimesh.get_instance_transform(sample).origin
+            var grid_x: int = roundi(pos.x / Terrain.CELL + float(Terrain.WIDTH-1)*0.5)
+            var grid_z: int = roundi(pos.z / Terrain.CELL + float(Terrain.HEIGHT-1)*0.5)
+            assert(Terrain.kind(grid_x,grid_z,preset) in ["plain","forest"])
         assert(Terrain.kind(-1,0,preset) == "outside")
         if preset == 0:
             assert(studio.model_root.find_child("MacizoTallado_0",true,false) != null)

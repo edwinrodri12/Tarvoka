@@ -6,6 +6,9 @@ class_name TarvokaTerrainStudio3D
 # tactical height, fog-of-war, map saves or Android battle rendering.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const Scatter = preload("res://scripts/ui/TerrainStudioScatter3D.gd")
+const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -165,6 +168,29 @@ static func _vertex_height(grid_x: int, grid_z: int, scene: int) -> float:
     var average: float = sum / float(neighbors)
     # The road is a flattened cut through the ridge, not a floating slab.
     return minf(average,0.235) if near_road else average
+
+static func _cell_corner_heights(x: int, z: int, scene: int) -> PackedFloat32Array:
+    # Exactly the four shared corner heights used by _continuous_ground.
+    return PackedFloat32Array([
+        _vertex_height(x,z,scene),_vertex_height(x+1,z,scene),
+        _vertex_height(x+1,z+1,scene),_vertex_height(x,z+1,scene)])
+
+static func surface_height_at(x: int, z: int, scene: int,
+        dx: float = 0.0, dz: float = 0.0) -> float:
+    if kind(x,z,scene) == "water":
+        return WATER_LEVEL
+    return SurfaceSampler.height(height_at(x,z,scene),
+        _cell_corner_heights(x,z,scene),dx,dz,CELL*0.5)
+
+static func _road_connects(x: int, z: int, scene: int, dx: int, dz: int) -> bool:
+    if kind(x+dx,z+dz,scene) == "road":
+        return true
+    # Artistic bridge surface of the winding canyon; never alter routing.
+    if scene == 1 and dz == 0 and z == 5 and x+dx in [4,5]:
+        return true
+    if scene == 1 and dz == 0 and z == 8 and x+dx in [5,6]:
+        return true
+    return false
 
 static func _vertex_tint(grid_x: int, grid_z: int, scene: int) -> Color:
     var result := Color(0,0,0,0)
@@ -526,7 +552,7 @@ static func _water_details(parent: Node3D, origin: Vector3, x: int,
 
 static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
-        continuous: bool = true) -> Node3D:
+        continuous: bool = true, show_scatter: bool = true) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -534,6 +560,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_grid",show_grid)
     root.set_meta("terrain_studio_samples",show_samples)
     root.set_meta("terrain_studio_continuous",continuous)
+    root.set_meta("terrain_studio_scatter",continuous and show_scatter)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -543,7 +570,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.add_child(props)
     if continuous:
         _continuous_ground(tiles,preset)
-        _scatter_grass(props,preset)
+        if not show_scatter:
+            _scatter_grass(props,preset) # Exact legacy V2 comparison.
+    var detail_cells: Array[Dictionary] = []
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
@@ -551,6 +580,18 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
             var p: Vector3 = _cell_center(x,z)
             var seed: int = x*29+z*43
             counts[type] = int(counts[type])+1
+            var shore_edges: Array[Vector2i] = []
+            var surface_cell: Dictionary = {}
+            if continuous and show_scatter:
+                surface_cell = {
+                    "x":x,"z":z,"kind":type,"center":p,
+                    "top":top,"corners":_cell_corner_heights(x,z,preset),
+                    "half":CELL*0.5}
+                for side in [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]:
+                    if kind(x+side.x,z+side.y,preset) == "water":
+                        shore_edges.append(side)
+                surface_cell["water_edges"] = shore_edges
+                detail_cells.append(surface_cell)
             var tint: Color = WATER if type == "water" else _ground_tint(type,preset,seed)
             if not continuous:
                 # Opt-in baseline for same-camera comparison against the
@@ -564,23 +605,40 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     _mountain(props,p,top,seed,preset)
                 "forest":
                     for index in range(2):
-                        var displacement := Vector3(
-                            -0.43+float(index)*0.72,top,
-                            -0.28+float(posmod(seed+index*2,5))*0.13)
-                        _tree(props,p+displacement,seed+index,preset==2)
-                    _shore(props,x,z,preset,p,top)
+                        var tree_x: float = -0.43+float(index)*0.72
+                        var tree_z: float = -0.28+float(posmod(seed+index*2,5))*0.13
+                        var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
+                        _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
+                    if continuous and show_scatter:
+                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                    else:
+                        _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,3) != 0:
-                        _bush(props,p+Vector3(0.51,top,-0.49),seed+103,preset==2)
+                        var bush_y: float = surface_height_at(x,z,preset,0.51,-0.49) if show_scatter else top
+                        _bush(props,p+Vector3(0.51,bush_y,-0.49),seed+103,preset==2)
                 "plain":
                     if posmod(seed,3) == 0:
-                        _box(props,"PiedraSuelo",p+Vector3(0.45,top+0.08,-0.32),
+                        var stone_y: float = surface_height_at(x,z,preset,0.45,-0.32) if continuous and show_scatter else top
+                        _box(props,"PiedraSuelo",p+Vector3(0.45,stone_y+0.08,-0.32),
                             Vector3(0.28,0.16,0.33),ROCK_LIGHT.darkened(0.13))
-                    _shore(props,x,z,preset,p,top)
+                    if continuous and show_scatter:
+                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                    else:
+                        _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,5) == 2:
-                        _bush(props,p+Vector3(-0.31,top,0.43),seed+211,preset==2)
+                        var bush_y: float = surface_height_at(x,z,preset,-0.31,0.43) if show_scatter else top
+                        _bush(props,p+Vector3(-0.31,bush_y,0.43),seed+211,preset==2)
                 "road":
-                    _road(props,x,z,preset,p,top)
-                    _shore(props,x,z,preset,p,top)
+                    if continuous and show_scatter:
+                        RoadShore.road(props,p,surface_cell,{
+                            "north":_road_connects(x,z,preset,0,-1),
+                            "south":_road_connects(x,z,preset,0,1),
+                            "west":_road_connects(x,z,preset,-1,0),
+                            "east":_road_connects(x,z,preset,1,0)})
+                        RoadShore.shore(props,p,surface_cell,shore_edges,preset)
+                    else:
+                        _road(props,x,z,preset,p,top)
+                        _shore(props,x,z,preset,p,top)
                 "water":
                     _water_details(props,p,x,z,preset)
                     # Both east-west causeways remain visually continuous
@@ -596,6 +654,11 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                 _box(props,"GuiaCasillaO",
                     p+Vector3(-CELL*0.49,top+0.025,0),
                     Vector3(0.026,0.026,CELL*0.985),grid_tint)
+    var scatter_stats: Dictionary = {
+        "grass":0,"reeds":0,"gravel":0,"batches":0}
+    if continuous and show_scatter:
+        scatter_stats = Scatter.populate(props,detail_cells,preset)
+    root.set_meta("terrain_scatter_counts",scatter_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
