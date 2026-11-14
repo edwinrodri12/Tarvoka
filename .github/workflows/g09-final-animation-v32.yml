@@ -1,0 +1,65 @@
+name: TARVOKA G09 V32 final animation and Android QA
+
+on:
+  push:
+    branches:
+      - feat/g09-v32-final-animation-pass-20261114
+    paths:
+      - "scripts/ui/Tank*.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "tests/test_g09_animation_final_v32.gd"
+      - ".github/workflows/g09-final-animation-v32.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/Tank*.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "tests/test_g09_animation_final_v32.gd"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-native-animations:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and OpenGL 3 virtual display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import and parse native model, rig, FX and battle
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g09-v32-parser.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/g09-v32-parser.log; then exit 1; fi
+      - name: Verify complete G09 V32 keyframe, recoil, track and FX animations
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_animation_final_v32.gd 2>&1 | tee /tmp/g09-v32-final.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v32-final.log; then exit 1; fi
+          grep -q 'PASS G09 V32:' /tmp/g09-v32-final.log
+      - name: Regress actual G09 V31 physical gears, damage, live attacks and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_g09_track_alignment_v31 test_g09_art_v30 test_g09_live_hits_v30 test_g09_battle_lod_v27; do
+            timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS G09' "/tmp/${test}.log"
+          done
