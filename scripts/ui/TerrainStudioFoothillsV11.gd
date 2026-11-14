@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudioFoothillsV11
 # unchanged. Two batched surfaces maximum for the whole 12x10 study.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const Spines = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
+const BiomePaletteV14 = preload("res://scripts/ui/TerrainStudioBiomePaletteV14.gd")
 const DIRECTIONS := [
     Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]
 
@@ -78,7 +79,8 @@ static func _apron_vertex(cell: Dictionary, mountain: Dictionary,
 
 static func _apron(mesh: SurfaceTool, cell: Dictionary,
         mountain: Dictionary, direction: Vector2i, scene: int,
-        mountains: Dictionary, seed: int) -> int:
+        mountains: Dictionary, seed: int,
+        biome_surface: bool = false) -> int:
     var facing := Vector2(float(direction.x),float(direction.y))
     var tangent := Vector2(-facing.y,facing.x)
     var half: float = float(cell["half"])
@@ -105,6 +107,9 @@ static func _apron(mesh: SurfaceTool, cell: Dictionary,
                 tint = tint.lightened(mineral)
             else:
                 tint = tint.darkened(-mineral)
+            if biome_surface:
+                tint = BiomePaletteV14.foothill_color(
+                    tint,at,scene,str(cell["kind"])=="forest",inward)
             contour.append({"at":at,"color":tint})
         rows.append(contour)
     for j in range(3):
@@ -164,7 +169,7 @@ static func _outcrop(mesh: SurfaceTool, cell: Dictionary,
 
 static func populate(parent: Node3D, cells: Array[Dictionary],
         scene: int, aprons: bool = true,
-        rocks: bool = true) -> Dictionary:
+        rocks: bool = true, biome_surface: bool = false) -> Dictionary:
     var index: Dictionary = {}
     var mountain_index: Dictionary = {}
     for cell in cells:
@@ -201,7 +206,8 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                 direction.x*109+direction.y*61)+scene*179
             if aprons:
                 triangles += _apron(apron_tool,cell,
-                    mountain_index[next],direction,scene,mountain_index,seed)
+                    mountain_index[next],direction,scene,mountain_index,seed,
+                    biome_surface)
             if rocks:
                 pieces += _outcrop(outcrop_tool,cell,direction,scene,seed)
     var batches := 0
@@ -214,6 +220,7 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
     var stats := {
         "mountain_edges":edges,"apron_triangles":triangles,
         "boulders":pieces,"road_cells_skipped":skipped_roads,
-        "water_cells_skipped":skipped_water,"batches":batches}
+        "water_cells_skipped":skipped_water,"batches":batches,
+        "biome_apron_vertices":edges*4*9 if aprons and biome_surface else 0}
     parent.set_meta("terrain_foothills_v11",stats)
     return stats
