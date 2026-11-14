@@ -38,6 +38,11 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_ridges_v6_toggle: CheckButton
+var terrain_forest_v6_toggle: CheckButton
+var terrain_banks_v6_toggle: CheckButton
+var terrain_compare_v6_button: Button
+var _terrain_v6_enabled := true
 var terrain_bridge_v4_toggle: CheckButton
 var terrain_shore_v5_toggle: CheckButton
 var terrain_water_v5_toggle: CheckButton
@@ -217,6 +222,30 @@ func _add_building_mode() -> void:
         "COMPARAR: volver a acabado V4",_toggle_v5_finish)
     terrain_compare_button.name = "ComparacionTerrenoV4V5"
     terrain_compare_button.custom_minimum_size.y = 50
+
+    _title(terrain_controls,"CORDILLERAS, BOSQUES Y RÍOS V6",13)
+    terrain_ridges_v6_toggle = CheckButton.new()
+    terrain_ridges_v6_toggle.name = "CordillerasNaturalesV6"
+    terrain_ridges_v6_toggle.text = "Cordilleras conectadas (sin picos clonados)"
+    terrain_ridges_v6_toggle.button_pressed = true
+    terrain_ridges_v6_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_ridges_v6_toggle)
+    terrain_forest_v6_toggle = CheckButton.new()
+    terrain_forest_v6_toggle.name = "BosqueMixtoV6"
+    terrain_forest_v6_toggle.text = "Bosques de 3 especies y tamaños"
+    terrain_forest_v6_toggle.button_pressed = true
+    terrain_forest_v6_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_forest_v6_toggle)
+    terrain_banks_v6_toggle = CheckButton.new()
+    terrain_banks_v6_toggle.name = "OrillasSinuosasV6"
+    terrain_banks_v6_toggle.text = "Orillas curvas y estuarios"
+    terrain_banks_v6_toggle.button_pressed = true
+    terrain_banks_v6_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_banks_v6_toggle)
+    terrain_compare_v6_button = _button(terrain_controls,
+        "COMPARAR: volver al terreno V5",_toggle_v6_finish)
+    terrain_compare_v6_button.name = "ComparadorTerrenoV5V6"
+    terrain_compare_v6_button.custom_minimum_size.y = 50
 
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
@@ -450,6 +479,13 @@ func _change_terrain_camera(_index: int) -> void:
     if _role == "terrain":
         _update_camera()
 
+func _toggle_v6_finish() -> void:
+    _terrain_v6_enabled = not _terrain_v6_enabled
+    terrain_compare_v6_button.text = (
+        "COMPARAR: volver al terreno V5" if _terrain_v6_enabled
+        else "VOLVER AL TERRENO V6")
+    _rebuild_terrain(false)
+
 func _toggle_v5_finish() -> void:
     _terrain_v5_enabled = not _terrain_v5_enabled
     terrain_compare_button.text = (
@@ -523,7 +559,10 @@ func _display_terrain() -> void:
         _terrain_v5_enabled and terrain_shore_v5_toggle.button_pressed,
         _terrain_v5_enabled and terrain_water_v5_toggle.button_pressed,
         _terrain_v5_enabled and terrain_rocks_v5_toggle.button_pressed,
-        terrain_bridge_v4_toggle.button_pressed)
+        terrain_bridge_v4_toggle.button_pressed,
+        _terrain_v6_enabled and terrain_ridges_v6_toggle.button_pressed,
+        _terrain_v6_enabled and terrain_forest_v6_toggle.button_pressed,
+        _terrain_v6_enabled and terrain_banks_v6_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -723,6 +762,11 @@ func _update_details() -> void:
             status_label.text += " · V5: %d riberas, %d corrientes, %d rocas (%d lotes)" % [
                 int(finish.get("banks",0)),int(finish.get("ripples",0)),
                 int(finish.get("rocks",0)),int(finish.get("batches",0))]
+        var v6: Dictionary = model_root.get_meta("terrain_natural_v6",{})
+        if int(v6.get("batches",0)) > 0:
+            status_label.text += " · V6: %d crestas, %d árboles, %d orillas (%d lotes)" % [
+                int(v6.get("ridges",0)),int(v6.get("trees",0)),
+                int(v6.get("banks",0)),int(v6.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()

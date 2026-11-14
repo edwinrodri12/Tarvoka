@@ -12,6 +12,7 @@ const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Bridge = preload("res://scripts/ui/TerrainStudioBridge3D.gd")
 const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
+const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -557,7 +558,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
         continuous: bool = true, show_scatter: bool = true,
         v5_shores: bool = false, v5_water: bool = false,
-        v5_rocks: bool = false, show_bridges_v4: bool = true) -> Node3D:
+        v5_rocks: bool = false, show_bridges_v4: bool = true,
+        v6_ridges: bool = false, v6_forest: bool = false,
+        v6_banks: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -570,6 +573,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v5_water",continuous and show_scatter and v5_water)
     root.set_meta("terrain_studio_v5_rocks",continuous and show_scatter and v5_rocks)
     root.set_meta("terrain_studio_bridge_v4",continuous and show_scatter and show_bridges_v4)
+    root.set_meta("terrain_studio_v6_ridges",continuous and show_scatter and v6_ridges)
+    root.set_meta("terrain_studio_v6_forest",continuous and show_scatter and v6_forest)
+    root.set_meta("terrain_studio_v6_banks",continuous and show_scatter and v6_banks)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -611,13 +617,15 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     Vector3(CELL*0.992,thickness,CELL*0.992),tint)
             match type:
                 "mountain":
-                    _mountain(props,p,top,seed,preset)
+                    if not (continuous and show_scatter and v6_ridges):
+                        _mountain(props,p,top,seed,preset)
                 "forest":
-                    for index in range(2):
-                        var tree_x: float = -0.43+float(index)*0.72
-                        var tree_z: float = -0.28+float(posmod(seed+index*2,5))*0.13
-                        var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
-                        _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
+                    if not (continuous and show_scatter and v6_forest):
+                        for index in range(2):
+                            var tree_x: float = -0.43+float(index)*0.72
+                            var tree_z: float = -0.28+float(posmod(seed+index*2,5))*0.13
+                            var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
+                            _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
                     if continuous and show_scatter:
                         RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
@@ -691,6 +699,12 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v5_stats = DetailV5.populate(props,detail_cells,preset,
             v5_shores,v5_water,v5_rocks)
     root.set_meta("terrain_detail_v5",v5_stats)
+    var v6_stats: Dictionary = {
+        "ridges":0,"trees":0,"banks":0,"batches":0}
+    if continuous and show_scatter and (v6_ridges or v6_forest or v6_banks):
+        v6_stats = NaturalV6.populate(props,detail_cells,preset,
+            v6_ridges,v6_forest,v6_banks)
+    root.set_meta("terrain_natural_v6",v6_stats)
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"
