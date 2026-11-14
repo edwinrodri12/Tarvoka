@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
+const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
 const OfficialEmblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
@@ -28,6 +29,12 @@ var hq_v11_toggle: CheckButton
 var hq_v12_toggle: CheckButton
 var hq_production_toggle: CheckButton
 var hq_production_metric_label: Label
+var hq_v15_mode_picker: OptionButton
+var hq_v15_neutral_toggle: CheckButton
+var hq_v15_zoom_picker: OptionButton
+var hq_v15_thumbnail: TextureRect
+var hq_v15_frame: CenterContainer
+var hq_v15_caption: Label
 var hq_camera_picker: OptionButton
 var _hq_camera_preset := 0
 var hq_lighting_picker: OptionButton
@@ -243,6 +250,48 @@ func _add_building_mode() -> void:
     hq_production_metric_label = _title(building_controls,
         "Perfil V13: 2 mallas · 10 superficies · 8 escudos oficiales",12)
     hq_production_metric_label.visible = false
+
+    _title(building_controls,"V15 · ARTE REAL UTILIZADO EN ANDROID",13)
+    hq_v15_mode_picker = OptionButton.new()
+    hq_v15_mode_picker.name = "ModoVisorModelo3DYSpriteV15"
+    hq_v15_mode_picker.custom_minimum_size.y = 48
+    hq_v15_mode_picker.add_item("3D real + sprite V15 (comparar)")
+    hq_v15_mode_picker.add_item("Solo 3D real (ocultar sprite)")
+    hq_v15_mode_picker.add_item("Mostrar sprite V15 en escenario 3D")
+    hq_v15_mode_picker.select(0)
+    hq_v15_mode_picker.item_selected.connect(_change_hq_v15_mode)
+    building_controls.add_child(hq_v15_mode_picker)
+
+    hq_v15_neutral_toggle = CheckButton.new()
+    hq_v15_neutral_toggle.name = "V15NeutralNieblaSinEscudo"
+    hq_v15_neutral_toggle.text = "Sprite neutral (niebla sin insignia)"
+    hq_v15_neutral_toggle.toggled.connect(_change_hq_v15_neutral)
+    building_controls.add_child(hq_v15_neutral_toggle)
+
+    hq_v15_zoom_picker = OptionButton.new()
+    hq_v15_zoom_picker.name = "ZoomVisualAndroidV15"
+    hq_v15_zoom_picker.custom_minimum_size.y = 42
+    for zoom_text in HQSpriteV16.ZOOM_LABELS:
+        hq_v15_zoom_picker.add_item(str(zoom_text))
+    hq_v15_zoom_picker.select(0)
+    hq_v15_zoom_picker.item_selected.connect(_change_hq_v15_zoom)
+    building_controls.add_child(hq_v15_zoom_picker)
+
+    hq_v15_frame = CenterContainer.new()
+    hq_v15_frame.name = "ComparacionSpriteV15EnEstudio3D"
+    hq_v15_frame.custom_minimum_size = Vector2(270,230)
+    hq_v15_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    building_controls.add_child(hq_v15_frame)
+    hq_v15_thumbnail = TextureRect.new()
+    hq_v15_thumbnail.name = "TexturaHQV15RealAndroid"
+    hq_v15_thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hq_v15_thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hq_v15_thumbnail.custom_minimum_size = Vector2(220,220)
+    hq_v15_thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hq_v15_frame.add_child(hq_v15_thumbnail)
+    hq_v15_caption = _title(building_controls,
+        "Sprite Android V15 · 384 px · exportado desde Godot V13",12)
+    _refresh_hq_v15_sprite()
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
@@ -467,6 +516,47 @@ func _change_hq_camera(index: int) -> void:
 func _hq_camera_position() -> Vector3:
     return Vector3(-17.5,22.0,-19.5) if _hq_camera_preset == 1 else Vector3(-18.0,16.5,-19.0)
 
+func _change_hq_v15_mode(index: int) -> void:
+    if index < 0 or index > 2:
+        return
+    hq_v15_mode_picker.select(index)
+    _refresh_hq_v15_sprite()
+    if _role == "headquarters":
+        _display_headquarters()
+
+func _change_hq_v15_neutral(_enabled: bool) -> void:
+    _refresh_hq_v15_sprite()
+    if _role == "headquarters" and hq_v15_mode_picker.selected == 2:
+        _display_headquarters()
+
+func _change_hq_v15_zoom(index: int) -> void:
+    if index < 0 or index >= HQSpriteV16.ZOOM_PIXELS.size():
+        return
+    hq_v15_zoom_picker.select(index)
+    _refresh_hq_v15_sprite()
+
+func _refresh_hq_v15_sprite() -> void:
+    if hq_v15_thumbnail == null:
+        return
+    var faction: int = -1 if hq_v15_neutral_toggle.button_pressed else _faction
+    var texture: Texture2D = HQSpriteV16.texture_for(faction)
+    hq_v15_thumbnail.texture = texture
+    var index: int = clampi(hq_v15_zoom_picker.selected,0,HQSpriteV16.ZOOM_PIXELS.size()-1)
+    var dimension: int = int(HQSpriteV16.ZOOM_PIXELS[index])
+    hq_v15_thumbnail.custom_minimum_size = Vector2(dimension,dimension)
+    var display_sprite: bool = hq_v15_mode_picker.selected != 1
+    hq_v15_frame.visible = display_sprite
+    hq_v15_zoom_picker.visible = display_sprite
+    hq_v15_caption.visible = display_sprite
+    if texture == null:
+        hq_v15_caption.text = "Sprite V15 no importado · conservando el modelo 3D."
+    elif faction < 0:
+        hq_v15_caption.text = "V15 neutral · niebla sin insignia · 384 px"
+    elif index == 2:
+        hq_v15_caption.text = "Zoom lejano: TARVOKA Android usa dibujo vectorial V14"
+    else:
+        hq_v15_caption.text = "V15 desde modelo V13 · %s · 384 px (nivel 2 operativo)" % str(VisualStyle.FACTIONS[faction]["name"])
+
 func _change_hq_production_v13(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -482,6 +572,7 @@ func _set_hq_map_lod(distant: bool) -> void:
 
 func _refresh_building_faction(_index: int) -> void:
     _sync_faction_gallery(_faction)
+    _refresh_hq_v15_sprite()
     # UnitArtStudioWeb's handler owns _faction; we rebuild using that
     # selected paint colour rather than tinting an entire concrete building.
     if _role == "headquarters":
@@ -496,6 +587,7 @@ func _display_headquarters() -> void:
         preview.remove_child(model_root)
         model_root.queue_free()
     _role = "headquarters"
+    _refresh_hq_v15_sprite()
     var showing_batch: bool = hq_batch_toggle.button_pressed and _hq_show_v4
     hq_batch_toggle.visible = _hq_show_v4
     hq_v7_toggle.visible = _hq_show_v4 and not showing_batch
@@ -505,6 +597,11 @@ func _display_headquarters() -> void:
     hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
     hq_v12_toggle.visible = hq_v11_toggle.visible and hq_v11_toggle.button_pressed
     hq_camera_picker.visible = not showing_batch
+    hq_v15_mode_picker.visible = not showing_batch
+    hq_v15_neutral_toggle.visible = not showing_batch
+    hq_v15_frame.visible = not showing_batch and hq_v15_mode_picker.selected != 1
+    hq_v15_zoom_picker.visible = hq_v15_frame.visible
+    hq_v15_caption.visible = hq_v15_frame.visible
     hq_production_toggle.visible = _hq_show_v4 and not showing_batch
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
@@ -524,7 +621,15 @@ func _display_headquarters() -> void:
         return
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
-    if hq_production_toggle.button_pressed and _hq_show_v4:
+    if hq_v15_mode_picker.selected == 2 and _hq_show_v4:
+        var sprite_faction: int = -1 if hq_v15_neutral_toggle.button_pressed else _faction
+        model_root = HQSpriteV16.build_billboard(sprite_faction,_faction)
+        if model_root == null:
+            # Do not hide the architectural 3D model when PNGs are absent.
+            model_root = HQProduction.build(level,_faction,condition,
+                HQProduction.QUALITY_TACTICAL,false)
+        hq_map_lod_toggle.visible = false
+    elif hq_production_toggle.button_pressed and _hq_show_v4:
         model_root = HQProduction.build(level,_faction,condition,
             HQProduction.QUALITY_TACTICAL,true)
         hq_map_lod_toggle.visible = false
@@ -577,6 +682,10 @@ func _update_details() -> void:
         super._update_details()
         return
     if model_root == null:
+        return
+    if model_root.get_meta("tarvoka_hq_v15_sprite_card",false):
+        detail_label.text = "V15 · Sprite Android real de 384 px dentro del escenario Godot 3D"
+        status_label.text = "Imagen horneada desde HQ V13 · NO es una malla 3D; girar no cambia la vista impresa"
         return
     if model_root.get_meta("tarvoka_building_kind","") == "headquarters_city":
         var buildings: int = int(model_root.get_meta("tarvoka_studio_building_count",0))
