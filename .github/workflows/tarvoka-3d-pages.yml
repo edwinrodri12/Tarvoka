@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v17-commercial-weather-terrain-20261114
-      - feat/terrain-studio-v13-material-light-20261114
+      - feat/terrain-studio-v14-silhouettes-20261114
       - feat/g09-v26-battle-lighting-terrain-qa-20261114
       - feat/g09-v27-live-battle-android-lod-20261114
 
@@ -126,13 +126,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out validated V13 sculpted rock and studio lighting with interactive battle
+      - name: Check out verified V14 connected mountain spines and confirmed battle 3D
         uses: actions/checkout@v4
         with:
-          ref: feat/terrain-studio-v13-material-light-20261114
+          ref: feat/terrain-studio-v14-silhouettes-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export Battle and Material/Lighting Terrain V13 to the same public /batalla/ viewer
+      - name: Export Battle and Sculpted Mountain Terrain V14 to the existing /batalla/ viewer
         shell: bash
         run: |
           set -euo pipefail
@@ -144,6 +144,11 @@ jobs:
           test -s battle-source/scripts/ui/TerrainStudioErosionV7.gd
           test -s battle-source/scripts/ui/TerrainStudioEcotonesV8.gd
           test -s battle-source/scripts/ui/TerrainStudioMaterialsV9.gd
+          test -s battle-source/scripts/ui/TerrainStudioRidgeV10.gd
+          test -s battle-source/tests/test_terrain_studio_v14_silhouettes.gd
+          grep -q 'ComparadorTerrenoV9V10' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'VistaPerfilCordilleraV10' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'strongest' battle-source/scripts/ui/TerrainStudioRidgeV10.gd
           test -s battle-source/tests/test_terrain_studio_v13_material_light.gd
           grep -q 'ComparadorTerrenoV8V9' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'VistaDistanciaRealV9' battle-source/scripts/ui/CombinedArtStudioWeb.gd
