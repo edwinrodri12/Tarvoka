@@ -557,7 +557,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
         continuous: bool = true, show_scatter: bool = true,
         v5_shores: bool = false, v5_water: bool = false,
-        v5_rocks: bool = false) -> Node3D:
+        v5_rocks: bool = false, show_bridges_v4: bool = true) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -569,6 +569,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v5_shores",continuous and show_scatter and v5_shores)
     root.set_meta("terrain_studio_v5_water",continuous and show_scatter and v5_water)
     root.set_meta("terrain_studio_v5_rocks",continuous and show_scatter and v5_rocks)
+    root.set_meta("terrain_studio_bridge_v4",continuous and show_scatter and show_bridges_v4)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -663,7 +664,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     p+Vector3(-CELL*0.49,top+0.025,0),
                     Vector3(0.026,0.026,CELL*0.985),grid_tint)
     var bridge_count: int = 0
-    if preset == 1 and continuous and show_scatter:
+    if preset == 1 and continuous and show_scatter and show_bridges_v4:
         # Draw each causeway once, from land road center to land road center.
         # Unlike individual box tiles, ramps meet the real road height.
         for row in [5,8]:
