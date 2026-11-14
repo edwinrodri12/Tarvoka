@@ -5,9 +5,10 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 
 # Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
-static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array) -> Dictionary:
+static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array, weather: String = "clear") -> Dictionary:
     var rejected := {"valid": false, "units": units.duplicate(true)}
     if not Rules.inside(destination,terrain) or unit_id.is_empty():
         return rejected
@@ -57,7 +58,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
         return rejected
     var points := Logistics.movement_budget(mover)
     var origin: Vector2i = mover["pos"]
-    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain, Logistics.road_fast(mover), transit_only)
+    var reachable: Dictionary = Rules.reachable(origin, points, terrain, blockers, mover_domain, Logistics.road_fast(mover), transit_only, weather, Weather.traction(mover))
     if not reachable.has(destination):
         return rejected
     Logistics.consume_move(mover, int(reachable[destination]))
