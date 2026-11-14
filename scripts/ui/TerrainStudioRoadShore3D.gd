@@ -62,10 +62,10 @@ static func road(parent: Node3D, at: Vector3, cell: Dictionary,
     var border_width: float = 0.76
     var half: float = float(cell["half"])
     # Draw the shoulder beneath the asphalt, with visible narrow edges.
-    for pass in range(2):
-        var width: float = border_width if pass == 0 else center_width
-        var material: Color = SHOULDER if pass == 0 else ASPHALT
-        var lift: float = 0.033 if pass == 0 else 0.060
+    for layer in range(2):
+        var width: float = border_width if layer == 0 else center_width
+        var material: Color = SHOULDER if layer == 0 else ASPHALT
+        var lift: float = 0.033 if layer == 0 else 0.060
         _rect(asphalt,at,cell,-width,width,-width,width,material,lift)
         if bool(connected.get("north",false)):
             _rect(asphalt,at,cell,-width,width,-half,-width,material,lift)
