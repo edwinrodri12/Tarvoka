@@ -82,6 +82,16 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Import official faction WebP atlases before Godot scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq-atlas-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Import failed" /tmp/hq-atlas-import.log; then
+            echo "Original faction WebP textures failed Godot import" >&2
+            exit 1
+          fi
+          test -d .godot/imported
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
