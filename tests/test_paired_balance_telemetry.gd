@@ -81,7 +81,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,relay,true,true)
     var report := {
         "winner":-1, "phases":0, "actions":0,
-        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0],
+        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0], "repaired":[0,0], "repair_spent":[0,0],
         "attacks":[0,0], "low_supply":[0,0],
         "relay_moves":[0,0], "urban_moves":[0,0], "cities":[0,0], "relays":[0,0]
     }
@@ -97,7 +97,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
             assert(before == state)
             if not step.get("valid",false):
                 break
-            assert(str(step.get("action","")) in ["move","attack","produce","resupply"])
+            assert(str(step.get("action","")) in ["move","attack","produce","resupply","repair"])
             var next: Dictionary = step["state"]
             assert(next["faction"] == side and Economy.valid(next["economy"],next["terrain"]))
             var before_credits: int = int(state["economy"]["credits"][side])
@@ -112,6 +112,19 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
                 expected_spend = int(step["cost"])
                 report["rearm_spent"][side] += expected_spend
                 assert(next["units"].size() == state["units"].size())
+            elif str(step["action"]) == "repair":
+                expected_spend = int(step["cost"])
+                report["repaired"][side] += 1
+                report["repair_spent"][side] += expected_spend
+                assert(int(step["restored"]) >= 1 and int(step["restored"]) <= 3)
+                assert(expected_spend == int(step["restored"])*35)
+                assert(next["units"].size() == state["units"].size())
+                var repaired_target := false
+                for j in range(state["units"].size()):
+                    if str(state["units"][j]["id"]) == str(step["target_id"]):
+                        assert(int(next["units"][j]["hp"]) == int(state["units"][j]["hp"])+int(step["restored"]))
+                        repaired_target = true
+                assert(repaired_target)
             elif str(step["action"]) == "attack":
                 report["attacks"][side] += 1
             elif str(step["action"]) == "move":
