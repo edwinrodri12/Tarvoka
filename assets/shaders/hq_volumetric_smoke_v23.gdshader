@@ -8,6 +8,7 @@ uniform float drift_speed : hint_range(0.0, 1.0) = 0.12;
 uniform float turbulence : hint_range(0.0, 2.0) = 0.84;
 varying vec3 local_pos;
 varying float per_puff_seed;
+varying float puff_age;
 
 float hash3(vec3 p) {
     p = fract(p * 0.1031);
@@ -34,6 +35,7 @@ float smooth_noise(vec3 p) {
 void vertex() {
     local_pos = VERTEX;
     per_puff_seed = INSTANCE_CUSTOM.r;
+    puff_age = INSTANCE_CUSTOM.g;
 }
 
 void fragment() {
@@ -43,9 +45,10 @@ void fragment() {
     float small = smooth_noise(uv*2.14 + vec3(8.91,-3.12,1.92));
     float density = mix(large,small,0.30)*turbulence;
     float body = 1.0-smoothstep(0.31,1.22,length(local_pos*1.40));
-    float wave = smoothstep(0.10,0.58,density+0.20);
+    float wave = smoothstep(0.17,0.68,density+0.18);
     // Internal density and smooth silhouette; reject hollow black spheres.
     float shade = mix(0.70,1.09,large);
     ALBEDO = smoke_tint.rgb*shade;
-    ALPHA = clamp(smoke_tint.a*body*wave,0.0,0.68);
+    float age_fade = 1.0-0.78*smoothstep(0.48,1.0,puff_age);
+    ALPHA = clamp(smoke_tint.a*body*wave*age_fade,0.0,0.56);
 }
