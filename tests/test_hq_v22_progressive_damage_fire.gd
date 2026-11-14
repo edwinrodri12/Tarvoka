@@ -61,7 +61,8 @@ func _run() -> void:
         assert(light.find_child("MastilCaidoDeMandoV22",true,false)!=null)
         assert(light.find_child("BaseAntenaRasgadaV22",true,false)!=null)
         assert(not light.find_child("PlatoExterior",true,false).visible)
-        assert(light.find_child("PlatoRadarCaidoV22",true,false)!=null)
+        assert(light.find_child("PlatoParabolicoCaidoV22",true,false)!=null)
+        assert(not light.find_child("RadarPremium3D",true,false).visible)
         assert(light.find_child("MuroPosteriorCentralContinuoV21",true,false).visible)
         assert(not light.has_node(Fire.STAGE_NAME))
         if level>=2:
