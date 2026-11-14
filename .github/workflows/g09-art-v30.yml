@@ -1,0 +1,68 @@
+name: TARVOKA G09 V30 wide tracks and combat hit art acceptance
+on:
+  push:
+    branches:
+      - feat/g09-v30-wide-tracks-combat-hit-reactions-20261114
+    paths:
+      - "scripts/ui/Tank*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "tests/test_g09_art_v30.gd"
+      - "tests/test_g09_live_hits_v30.gd"
+      - ".github/workflows/g09-art-v30.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-g09-v30:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Parse and import full Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g09-v30-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/g09-v30-import.log; then exit 1; fi
+      - name: Test both attack families, new treads and every damage level
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v30.gd 2>&1 | tee /tmp/g09-v30.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v30.log; then exit 1; fi
+          grep -q 'PASS G09 V30:' /tmp/g09-v30.log
+      - name: Verify real battlefield damage reactions and G09 V28 identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_g09_live_hits_v30 test_g09_battle_lod_v27; do
+            timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS' "/tmp/${test}.log"
+          done
+      - name: Check corrected sprocket and 168-tread animation regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_track_final_v29.gd 2>&1 | tee /tmp/g09-v29-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g09-v29-regression.log; then exit 1; fi
+          grep -q 'PASS G09 V29:' /tmp/g09-v29-regression.log

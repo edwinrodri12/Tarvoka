@@ -11,6 +11,9 @@ const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
+const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
+const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -51,6 +54,9 @@ var _choose_unit_button: Button
 var _g09_detail_button: Button
 var _g09_high_detail := true
 var _g09_lod_band := -1
+var _hit_model_id := ""
+var _hit_type := ""
+var _hit_elapsed := 0.0
 
 func _ready() -> void:
     hide()
@@ -413,9 +419,41 @@ func tap_battle_cell(cell: Vector2i) -> bool:
     _update_order_ui()
     return true
 
+func _process(delta: float) -> void:
+    # Only animate an actually visible, surviving G09 model after the
+    # authoritative 3D order has committed through BattleSession.
+    # Never turn a miss, invalid order or fog-hidden unit into an impact.
+    if _hit_model_id.is_empty() or _scene==null or not visible:
+        return
+    var target: Node3D = _scene.find_child(
+        "Unidad3D_"+_hit_model_id,true,false) as Node3D
+    if target==null or not target.get_meta("tarvoka_hit_v30",false):
+        _hit_model_id=""
+        return
+    _hit_elapsed+=maxf(delta,0.0)
+    var t: float = minf(1.0,_hit_elapsed/HitV30.duration(_hit_type))
+    TankRig.pose(target,_hit_type,t,Vector2i.ZERO)
+    var stage: int = TankDamage.current_stage(target)
+    TankDamage.apply_stage(target,stage)
+    if t>=1.0:
+        TankRig.restore(target)
+        TankDamage.apply_stage(target,stage)
+        _hit_model_id=""
+        _hit_type=""
+
 func _confirm_3d_order() -> void:
     if _live_board == null or _order_quote.is_empty():
         return
+    var order: Dictionary = _order_quote.get("order",{})
+    var target_id: String = str(order.get("target_id",""))
+    var strike: String = ""
+    if str(order.get("kind",""))=="attack":
+        var attacker_id: String = str(order.get("unit_id",""))
+        for candidate in _current_state().get("units",[]):
+            if candidate is Dictionary and str(candidate.get("id",""))==attacker_id:
+                strike=HitV30.classify_weapon(str(candidate.get("role","")),
+                    str(candidate.get("weapon","")))
+                break
     var committed: bool = Orders.confirm(_live_board,_order_quote)
     if not committed:
         # A rejected confirmation cannot leak a queued order into the 2D HUD.
@@ -424,6 +462,13 @@ func _confirm_3d_order() -> void:
     _refresh_from_board()
     if _live_board == null:
         return
+    if committed and not strike.is_empty() and not target_id.is_empty() and _scene!=null:
+        var target: Node3D = _scene.find_child(
+            "Unidad3D_"+target_id,true,false) as Node3D
+        if target!=null and target.get_meta("tarvoka_hit_v30",false):
+            _hit_model_id=target_id
+            _hit_type=strike
+            _hit_elapsed=0.0
     if committed:
         _order_note.text = str(_live_board.get("message"))
     else:
@@ -689,6 +734,9 @@ func _on_viewport_input(event: InputEvent) -> void:
         accept_event()
 
 func close_view() -> void:
+    _hit_model_id=""
+    _hit_type=""
+    _hit_elapsed=0.0
     _drop_3d_quote()
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED

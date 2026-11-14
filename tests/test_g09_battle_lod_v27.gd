@@ -23,7 +23,10 @@ func _unit(id: String,x: int,y: int,role: String="tank",
 func _tank(scene: Node3D,id: String) -> Node3D:
     var model: Node3D = scene.find_child("Unidad3D_"+id,true,false) as Node3D
     assert(model!=null)
-    assert(int(model.get_meta("battle_art_level",-1))==25)
+    assert(int(model.get_meta("battle_art_level",-1))==30)
+    assert(model.get_meta("tarvoka_hit_v30",false))
+    assert(model.get_meta("tarvoka_damage_polished_v30",false))
+    assert(model.get_meta("tarvoka_mbt_track_wide_v30",false))
     assert(model.get_meta("tarvoka_mbt_wear_v25",false))
     assert(model.get_meta("battle_g09_v25",false))
     assert(Models.paintable_count(model)==14)
