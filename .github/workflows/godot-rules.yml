@@ -144,6 +144,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Rules CI runs CLI scripts without an editor import. PNGs must first
+          # be imported just as Android and the dedicated GPU test do.
+          timeout --signal=TERM --kill-after=5s 130s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/tarvoka-hq-v15-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/tarvoka-hq-v15-import.log; then
+            echo 'HQ V15 offline baked sprite import failed'; exit 1
+          fi
           timeout --signal=TERM --kill-after=5s 110s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_hq_v15_baked_mobile.gd 2>&1 | tee /tmp/tarvoka-hq-v15-android-baked.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-hq-v15-android-baked.log; then
             echo 'HQ V15 3D-baked city sprites, emblem identity or fog regression'; exit 1
