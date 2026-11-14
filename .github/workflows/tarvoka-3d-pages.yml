@@ -7,13 +7,13 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V30-28 live battle fidelity and Android QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V31 3D Studio final track QA and GLB", "TARVOKA G09 V31 final inboard track alignment"]
     types: [completed]
     branches:
       - feat/hq-v20-walls-weather-release-android-bench-20261114
       - feat/terrain-v17-battle-seam-blending-20261114
-      - feat/g09-v30-studio-wide-tracks-hit-effects-20261114
-      - feat/g09-v30-wide-tracks-combat-hit-reactions-20261114
+      - feat/g09-v31-studio-inboard-track-alignment-20261114
+      - feat/g09-v31-tracks-inboard-alignment-20261114
 
 permissions:
   contents: read
@@ -224,15 +224,15 @@ jobs:
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla/$asset"
           done
-      # Export the actual G09 V30 feature branch as an independent browser scene.
+      # Export the actual G09 V31 feature branch as an independent browser scene.
       # Preserve the existing HQ V11 root and Battle V8 at /batalla/ unchanged.
-      - name: Check out finished G09 V30 native tank source
+      - name: Check out finished G09 V31 native tank source
         uses: actions/checkout@v4
         with:
-          ref: feat/g09-v30-studio-wide-tracks-hit-effects-20261114
+          ref: feat/g09-v31-studio-inboard-track-alignment-20261114
           path: tank-source
           persist-credentials: false
-      - name: Export G09 V30 tank into TARVOKA Estudio 3D at /tanque/
+      - name: Export G09 V31 tank into TARVOKA Estudio 3D at /tanque/
         shell: bash
         run: |
           set -euo pipefail
@@ -241,6 +241,8 @@ jobs:
           test -s tank-source/scripts/ui/TankTacticalV24.gd
           test -s tank-source/scripts/ui/TankWearV25.gd
           test -s tank-source/scripts/ui/TankFinalTracksV29.gd
+          test -s tank-source/scripts/ui/TankTrackAlignmentV31.gd
+          test -s tank-source/tests/test_g09_track_alignment_v31.gd
           test -s tank-source/scripts/ui/TankDamagePolishV30.gd
           test -s tank-source/scripts/ui/TankHitReactionV30.gd
           test -s tank-source/tests/test_g09_art_v30.gd
@@ -264,6 +266,9 @@ jobs:
           grep -q 'var _v25_preview := true' tank-source/scripts/ui/UnitArtStudioWeb.gd
           sed -i 's/var _v30_preview := false/var _v30_preview := true/' tank-source/scripts/ui/UnitArtStudioWeb.gd
           grep -q 'var _v30_preview := true' tank-source/scripts/ui/UnitArtStudioWeb.gd
+          sed -i 's/var _v31_preview := false/var _v31_preview := true/' tank-source/scripts/ui/UnitArtStudioWeb.gd
+          grep -q 'var _v31_preview := true' tank-source/scripts/ui/UnitArtStudioWeb.gd
+          grep -q '_toggle_v31' tank-source/scripts/ui/UnitArtStudioWeb.gd
           grep -q '_toggle_underside_camera' tank-source/scripts/ui/UnitArtStudioWeb.gd
           # Publish this review on a forest battlefield in daylight from an
           # elevated tactical camera; Android's runtime defaults stay stable.
@@ -276,14 +281,14 @@ jobs:
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
             --path tank-source --import --quit 2>&1 | tee /tmp/tank-pages-import.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/tank-pages-import.log; then
-            echo 'G09 V30 import or script validation failed' >&2
+            echo 'G09 V31 import or script validation failed' >&2
             exit 1
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path tank-source --export-release 'Web Studio' \
             build/web/index.html 2>&1 | tee /tmp/tank-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/tank-pages-export.log; then
-            echo 'G09 V30 WebGL export failed' >&2
+            echo 'G09 V31 WebGL export failed' >&2
             exit 1
           fi
           cp -a tank-source/build/web/. build/web/tanque/
@@ -292,10 +297,10 @@ jobs:
           done
       # The dedicated V27 demo uses the ACTUAL 3D orders view and tank
       # LOD source, without replacing newer terrain and HQ galleries.
-      - name: Check out playable G09 V30 battle branch
+      - name: Check out playable G09 V31 battle branch
         uses: actions/checkout@v4
         with:
-          ref: feat/g09-v30-wide-tracks-combat-hit-reactions-20261114
+          ref: feat/g09-v31-tracks-inboard-alignment-20261114
           path: battle-g09-source
           persist-credentials: false
       - name: Export tested G09 V25 live-battle LOD demo at /batalla-g09/
@@ -307,6 +312,8 @@ jobs:
           test -s battle-g09-source/scripts/ui/TankBattleLOD27.gd
           test -s battle-g09-source/scripts/ui/TankWearV25.gd
           test -s battle-g09-source/scripts/ui/TankFinalTracksV29.gd
+          test -s battle-g09-source/scripts/ui/TankTrackAlignmentV31.gd
+          test -s battle-g09-source/tests/test_g09_track_alignment_v31.gd
           test -s battle-g09-source/scripts/ui/TankDamagePolishV30.gd
           test -s battle-g09-source/scripts/ui/TankHitReactionV30.gd
           test -s battle-g09-source/tests/test_g09_battle_lod_v27.gd
@@ -329,21 +336,21 @@ jobs:
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
             --path battle-g09-source --import --quit 2>&1 | tee /tmp/g09-v27-pages-import.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/g09-v27-pages-import.log; then
-            echo 'G09 V30 live-battle source import failed' >&2
+            echo 'G09 V31 live-battle source import failed' >&2
             exit 1
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path battle-g09-source --export-release 'Web Studio' \
             build/web/index.html 2>&1 | tee /tmp/g09-v27-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/g09-v27-pages-export.log; then
-            echo 'G09 V30 live battle WebGL export failed' >&2
+            echo 'G09 V31 live battle WebGL export failed' >&2
             exit 1
           fi
           cp -a battle-g09-source/build/web/. build/web/batalla-g09/
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla-g09/$asset"
           done
-      - name: Add visible navigation among HQ V12, Battle V8 and G09 V30 studios
+      - name: Add visible navigation among HQ V12, Battle V8 and G09 V31 studios
         shell: bash
         run: |
           set -euo pipefail
@@ -373,14 +380,14 @@ jobs:
                    'batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
                    'Abre el mapa 3D interactivo, terreno y ordenes confirmadas')
           add_link(Path('build/web/index.html'),
-                   'tanque/', 'TANQUE G09 V30 · ESTUDIO 3D',
-                   'Revisa cadenas anchas y efectos realistas de daño; prueba balas y explosivos', 76)
+                   'tanque/', 'TANQUE G09 V31 · ESTUDIO 3D',
+                   'Revisa V31: cadenas anchas alineadas hacia dentro y engranajes sincronizados', 76)
           add_link(Path('build/web/batalla/index.html'),
                    '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
                    'Volver al Estudio principal con Cuartel General V11')
           add_link(Path('build/web/batalla/index.html'),
-                   '../tanque/', 'TANQUE G09 V30 · MODELO REAL',
-                   'Ver G09 V30 corregido desde abajo, frontal y trasero sin instalar APK', 76)
+                   '../tanque/', 'TANQUE G09 V31 · MODELO REAL',
+                   'Ver G09 V31 corregido desde abajo, frontal y trasero sin instalar APK', 76)
           add_link(Path('build/web/tanque/index.html'),
                    '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
                    'Abrir Cuartel General y facciones')
@@ -388,13 +395,13 @@ jobs:
                    '../batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
                    'Ver terreno y combate en 3D', 76)
           add_link(Path('build/web/index.html'),
-                   'batalla-g09/', 'BATALLA G09 V30 · JUGABLE',
+                   'batalla-g09/', 'BATALLA G09 V31 · JUGABLE',
                    'Prueba G09 V25 final con LOD invisible: sin cambios de silueta entre distancias', 136)
           add_link(Path('build/web/batalla/index.html'),
-                   '../batalla-g09/', 'PROBAR G09 V30 EN BATALLA',
+                   '../batalla-g09/', 'PROBAR G09 V31 EN BATALLA',
                    'Comprobar mismo diseño V25 al acercar, alejar y activar ECO', 136)
           add_link(Path('build/web/tanque/index.html'),
-                   '../batalla-g09/', 'G09 V30 · PARTIDA REAL',
+                   '../batalla-g09/', 'G09 V31 · PARTIDA REAL',
                    'Abrir G09 V25 uniforme en batalla real, incluso en modo ECO', 136)
           add_link(Path('build/web/batalla-g09/index.html'),
                    '../', 'ESTUDIO · EDIFICIOS Y UNIDADES',
@@ -408,12 +415,12 @@ jobs:
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
-          grep -q 'TANQUE G09 V30' build/web/index.html
+          grep -q 'TANQUE G09 V31' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/tanque/index.html
           grep -q 'BATALLA 3D' build/web/tanque/index.html
-          grep -q 'BATALLA G09 V30' build/web/index.html
-          grep -q 'G09 V30' build/web/batalla/index.html
-          grep -q 'G09 V30' build/web/tanque/index.html
+          grep -q 'BATALLA G09 V31' build/web/index.html
+          grep -q 'G09 V31' build/web/batalla/index.html
+          grep -q 'G09 V31' build/web/tanque/index.html
           grep -q 'ESTUDIO' build/web/batalla-g09/index.html
           grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
           touch build/web/.nojekyll
