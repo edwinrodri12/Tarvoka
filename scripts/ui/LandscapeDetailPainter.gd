@@ -147,6 +147,20 @@ static func _mountain_peak(canvas: CanvasItem, center: Vector2,
                 _line(canvas,ridge[i].lerp(base[i],0.17),
                     ridge[i].lerp(base[i],0.69),
                     Color("#4C5964"),hw*0.010)
+            # Lateral sedimentary seams and subtle mineral highlights
+            # break the flat triangular surface into layered shale.
+            # Sample from the same facet vertices to avoid free-floating
+            # strokes or hard outlines between grid cells.
+            if (i+variant)%3 != 1:
+                var seam_start: Vector2 = ridge[i].lerp(
+                    base[i],0.48+float(i%2)*0.06)
+                var seam_end: Vector2 = ridge[i+1].lerp(
+                    base[i+1],0.50+float((i+variant)%2)*0.04)
+                _line(canvas,seam_start,seam_end,
+                    Color(0.18,0.25,0.29,0.43),hw*0.011)
+                _line(canvas,seam_start+Vector2(0,-hw*0.011),
+                    seam_start.lerp(seam_end,0.68)+Vector2(0,-hw*0.011),
+                    Color(0.72,0.77,0.75,0.27),hw*0.008)
             # Irregular patches of snow cling to the steep summit,
             # rather than forming a repeated triangular cap.
             if snow and i >= 2 and i <= 5 and (
@@ -238,6 +252,9 @@ static func draw_mountain(canvas: CanvasItem, c: Vector2, hw: float,
             var foothill_at := c+Vector2(hw*0.29,hw*0.16)
             _mountain_peak(canvas,foothill_at,hw,
                 0.23+variation*0.07,seed+43+style,detail,false)
+    # Weathered loose stone sits in front of the main facets, keeping
+    # the rock mass connected but not a flat rigid silhouette.
+    Regions.draw_rock_scree(canvas,c,hw,cell,detail)
 
 static func draw_bridge(canvas: CanvasItem, c: Vector2, hw: float,
         axis: int, detail: int) -> void:
