@@ -118,7 +118,7 @@ func _run() -> void:
     assert(studio.faction_picker.selected == 6)
     assert(studio.terrain_faction_buttons[6].button_pressed)
     assert(not studio.terrain_faction_buttons[0].button_pressed)
-    assert(studio.terrain_faction_buttons[6].icon != null)
+    assert(studio.terrain_faction_buttons[6].get_theme_color("font_color") != Color.WHITE)
     var samples: Node3D = studio.model_root.find_child(
         "MuestrasDeEscalaUnidadYEdificio",true,false) as Node3D
     assert(samples != null)
