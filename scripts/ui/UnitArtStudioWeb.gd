@@ -10,6 +10,7 @@ const Factions = preload("res://scripts/ui/VisualStyle.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
+const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 
 var model_root: Node3D
 var preview: SubViewport
@@ -32,6 +33,8 @@ var _v15_preview := false
 var _v16_preview := false
 var _v17_preview := false
 var _v18_preview := false
+var _v19_preview := false
+var _clay_review := false
 var _v17_eco := false
 var v11_button: Button
 var v12_button: Button
@@ -41,6 +44,8 @@ var v15_button: Button
 var v16_button: Button
 var v17_button: Button
 var v18_button: Button
+var v19_button: Button
+var clay_button: Button
 var v17_quality_button: Button
 var comparison_button: Button
 var previous_version_button: Button
@@ -168,6 +173,8 @@ func _construct() -> void:
     v16_button = _button(column,"V16 · Pintura mate, acero y fuego",_toggle_v16)
     v17_button = _button(column,"V17 · Humo orgánico y rendimiento",_toggle_v17)
     v18_button = _button(column,"V18 · Reconstrucción del casco y la torreta",_toggle_v18)
+    v19_button = _button(column,"V19 · Techo, sensores y mantelete",_toggle_v19)
+    clay_button = _button(column,"MODO ARCILLA · Ver geometría sin materiales",_toggle_clay)
     v17_quality_button = _button(column,"V17 · Efectos completos",_toggle_v17_quality)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
     previous_version_button = _button(column,"COMPARAR: V9 anterior / V10 nuevo",_toggle_previous)
@@ -228,9 +235,11 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
     _role = role
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
-        _final_detail,18 if _v18_preview else (17 if _v17_preview else (16 if _v16_preview else (15 if _v15_preview else (14 if _v14_preview else (13 if _v13_preview else (12 if _v12_preview else (11 if _v11_preview else (9 if _previous_version else 10)))))))))
-    if _v17_preview or _v18_preview:
+        _final_detail,19 if _v19_preview else (18 if _v18_preview else (17 if _v17_preview else (16 if _v16_preview else (15 if _v15_preview else (14 if _v14_preview else (13 if _v13_preview else (12 if _v12_preview else (11 if _v11_preview else (9 if _previous_version else 10))))))))))
+    if _v17_preview or _v18_preview or _v19_preview:
         TankV17.set_quality(model_root,_v17_eco)
+    if _clay_review and (_v18_preview or _v19_preview):
+        ClayV19.set_enabled(model_root,true)
     preview.add_child(model_root)
     _yaw = -32.0
     _zoom = 1.0
@@ -250,8 +259,12 @@ func _display_role(role: String) -> void:
     v16_button.visible = (_role == "tank")
     v17_button.visible = (_role == "tank")
     v18_button.visible = (_role == "tank")
+    v19_button.visible = (_role == "tank")
+    v19_button.text = "COMPARAR: Volver a V18" if _v19_preview else "V19 · Techo, sensores y mantelete"
+    clay_button.visible = (_role == "tank" and (_v18_preview or _v19_preview))
+    clay_button.text = "MODO ARCILLA · Volver a materiales" if _clay_review else "MODO ARCILLA · Ver geometría sin materiales"
     v18_button.text = "COMPARAR: Volver a V17" if _v18_preview else "V18 · Reconstrucción del casco y la torreta"
-    v17_quality_button.visible = (_role == "tank" and (_v17_preview or _v18_preview))
+    v17_quality_button.visible = (_role == "tank" and (_v17_preview or _v18_preview or _v19_preview))
     v17_button.text = "COMPARAR: Volver a V16" if _v17_preview else "V17 · Humo orgánico y rendimiento"
     v17_quality_button.text = "EFECTOS: ECO (6 planos)" if _v17_eco else "EFECTOS: COMPLETOS (11 planos)"
     v16_button.text = "COMPARAR: Volver a V15" if _v16_preview else "V16 · Pintura mate, acero y fuego"
@@ -273,7 +286,7 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     status_label.text = "G09 · %s · %s · %s" % [
-        ("ESCULTURA V18" if _v18_preview else ("EFECTOS V17" if _v17_preview else ("ACABADO V16" if _v16_preview else ("INTEGRACION V15" if _v15_preview else ("ESCULTURA V14" if _v14_preview else ("ESCULTURA V13" if _v13_preview else ("REFINAMIENTO V12" if _v12_preview else ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL"))))))))) if _final_detail else "MODELO BASE",
+        ("ESCULTURA V19" if _v19_preview else ("ESCULTURA V18" if _v18_preview else ("EFECTOS V17" if _v17_preview else ("ACABADO V16" if _v16_preview else ("INTEGRACION V15" if _v15_preview else ("ESCULTURA V14" if _v14_preview else ("ESCULTURA V13" if _v13_preview else ("REFINAMIENTO V12" if _v12_preview else ("PROPUESTA V11" if _v11_preview else ("ACABADO V9 ANTERIOR" if _previous_version else "ACABADO V10 ACTUAL")))))))))) if _final_detail else "MODELO BASE",
         str(Factions.FACTIONS[_faction]["name"]),
         str(TankDamage.STAGES[TankDamage.current_stage(model_root)])] if _role == "tank" else "Modelo técnico 3D · misma librería de TARVOKA"
 
@@ -295,6 +308,7 @@ func _toggle_previous() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _final_detail = true
     _reload_tank_same_camera()
 
@@ -309,6 +323,7 @@ func _toggle_v11() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _previous_version = false
     _final_detail = true
     _reload_tank_same_camera()
@@ -323,6 +338,7 @@ func _toggle_v12() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _v11_preview = not _v12_preview
     _previous_version = false
     _final_detail = true
@@ -339,6 +355,7 @@ func _toggle_v13() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _v12_preview = not _v13_preview
     _v11_preview = true
     _previous_version = false
@@ -353,6 +370,7 @@ func _toggle_v14() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _v13_preview = not _v14_preview
     _v12_preview = false
     _v11_preview = true
@@ -368,6 +386,7 @@ func _toggle_v15() -> void:
     _v16_preview = false
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _v14_preview = not _v15_preview
     _v13_preview = false
     _v12_preview = false
@@ -383,6 +402,7 @@ func _toggle_v16() -> void:
     _v16_preview = not _v16_preview
     _v17_preview = false
     _v18_preview = false
+    _v19_preview = false
     _v15_preview = not _v16_preview
     _v14_preview = false
     _v13_preview = false
@@ -397,6 +417,7 @@ func _toggle_v17() -> void:
         return
     _v17_preview = not _v17_preview
     _v18_preview = false
+    _v19_preview = false
     _v16_preview = not _v17_preview
     _v15_preview = false
     _v14_preview = false
@@ -413,6 +434,7 @@ func _toggle_v18() -> void:
     # Same-camera A/B of the actual V17 vs V18 meshes: no APK reinstall,
     # no combat data or Android default art-level changes.
     _v18_preview = not _v18_preview
+    _v19_preview = false
     _v17_preview = not _v18_preview
     _v16_preview = false
     _v15_preview = false
@@ -424,8 +446,34 @@ func _toggle_v18() -> void:
     _final_detail = true
     _reload_tank_same_camera()
 
+func _toggle_v19() -> void:
+    if _role != "tank":
+        return
+    # Preserve camera, zoom, HP stage and clay preview when alternating
+    # between actual original V18 and mechanically cleaned V19 geometry.
+    _v19_preview = not _v19_preview
+    _v18_preview = not _v19_preview
+    _v17_preview = false
+    _v16_preview = false
+    _v15_preview = false
+    _v14_preview = false
+    _v13_preview = false
+    _v12_preview = false
+    _v11_preview = true
+    _previous_version = false
+    _final_detail = true
+    _reload_tank_same_camera()
+
+func _toggle_clay() -> void:
+    if _role != "tank" or not (_v18_preview or _v19_preview) or model_root == null:
+        return
+    _clay_review = not _clay_review
+    ClayV19.set_enabled(model_root,_clay_review)
+    clay_button.text = "MODO ARCILLA · Volver a materiales" if _clay_review else "MODO ARCILLA · Ver geometría sin materiales"
+    _update_details()
+
 func _toggle_v17_quality() -> void:
-    if _role != "tank" or not (_v17_preview or _v18_preview) or model_root == null:
+    if _role != "tank" or not (_v17_preview or _v18_preview or _v19_preview) or model_root == null:
         return
     _v17_eco = not _v17_eco
     TankV17.set_quality(model_root,_v17_eco)
@@ -457,7 +505,12 @@ func _on_faction(index: int) -> void:
         return
     _faction = index
     if _role == "tank" and model_root != null:
+        var clay_was_on: bool = ClayV19.is_enabled(model_root)
+        if clay_was_on:
+            ClayV19.set_enabled(model_root,false)
         Models.apply_faction_palette(model_root,index)
+        if clay_was_on:
+            ClayV19.set_enabled(model_root,true)
     _update_details()
 
 func _on_damage(index: int) -> void:
