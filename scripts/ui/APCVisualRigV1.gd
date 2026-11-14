@@ -33,7 +33,7 @@ static func _wheels(model: Node3D,phase: float) -> void:
             var wheel: Node3D=hull.find_child(
                 "RuedaMotorizadaP06_%d_%d" % [side,i],false,false) as Node3D
             if wheel!=null:
-                wheel.rotation_degrees.x=float(side)*phase*WHEEL_TRAVEL*57.29578
+                wheel.rotation_degrees.x=phase*WHEEL_TRAVEL*57.29578
 
 static func pose(model: Node3D,kind: String,t: float,
         yaw_degrees: float=35.0) -> bool:
@@ -55,7 +55,7 @@ static func pose(model: Node3D,kind: String,t: float,
         return false
     turret.rotation_degrees.y=0.0
     gun.rotation_degrees.x=0.0
-    ramp.rotation_degrees.x=8.0
+    ramp.rotation_degrees.x=78.0 if model.get_meta("tarvoka_apc_ramp_open",false) else 8.0
     flash.visible=false
     flash.scale=Vector3.ONE
 
@@ -93,6 +93,10 @@ static func pose(model: Node3D,kind: String,t: float,
             model.rotation_degrees.z=sin(PI*t*5.0)*0.8*(1.0-t)
         _:
             pass
+    if t>=1.0 and kind=="open_ramp":
+        model.set_meta("tarvoka_apc_ramp_open",true)
+    elif t>=1.0 and kind=="close_ramp":
+        model.set_meta("tarvoka_apc_ramp_open",false)
     model.set_meta("tarvoka_apc_v1_last_pose",kind)
     return true
 
