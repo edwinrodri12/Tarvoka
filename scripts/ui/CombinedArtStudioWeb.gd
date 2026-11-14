@@ -39,6 +39,10 @@ var terrain_grid_toggle: CheckButton
 var terrain_continuous_toggle: CheckButton
 var terrain_scatter_toggle: CheckButton
 var terrain_samples_toggle: CheckButton
+var terrain_silhouette_v10_toggle: CheckButton
+var terrain_compare_v10_button: Button
+var terrain_ridge_profile_button: Button
+var _terrain_v10_enabled := true
 var terrain_rock_v9_toggle: CheckButton
 var terrain_vegetation_v9_toggle: CheckButton
 var terrain_light_v9_toggle: CheckButton
@@ -336,6 +340,18 @@ func _add_building_mode() -> void:
     terrain_compare_v9_button.name = "ComparadorTerrenoV8V9"
     terrain_compare_v9_button.custom_minimum_size.y = 50
 
+    _title(terrain_controls,"CRESTAS Y SILUETAS NATURALES V10",13)
+    terrain_silhouette_v10_toggle = CheckButton.new()
+    terrain_silhouette_v10_toggle.name = "CrestasConectadasV10"
+    terrain_silhouette_v10_toggle.text = "Cordilleras estrechas y laderas asimétricas"
+    terrain_silhouette_v10_toggle.button_pressed = true
+    terrain_silhouette_v10_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_silhouette_v10_toggle)
+    terrain_compare_v10_button = _button(terrain_controls,
+        "COMPARAR: volver al relieve V9",_toggle_v10_finish)
+    terrain_compare_v10_button.name = "ComparadorTerrenoV9V10"
+    terrain_compare_v10_button.custom_minimum_size.y = 50
+
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
     terrain_camera_picker.name = "CamarasDeTerreno"
@@ -349,6 +365,10 @@ func _add_building_mode() -> void:
         "VISTA DE JUEGO · DISTANCIA NORMAL",_view_normal_game_distance)
     terrain_game_view_button.name = "VistaDistanciaRealV9"
     terrain_game_view_button.custom_minimum_size.y = 48
+    terrain_ridge_profile_button = _button(terrain_controls,
+        "VER PERFIL DE LAS MONTAÑAS",_view_ridge_profile)
+    terrain_ridge_profile_button.name = "VistaPerfilCordilleraV10"
+    terrain_ridge_profile_button.custom_minimum_size.y = 48
     terrain_fullscreen_button = _button(terrain_controls,
         "AMPLIAR VISUALIZACIÓN · SIN PANEL",_toggle_terrain_fullscreen)
     terrain_fullscreen_button.name = "PantallaCompletaTerreno3D"
@@ -582,11 +602,39 @@ func _view_normal_game_distance() -> void:
         model_root.rotation_degrees.y = _yaw
     _update_camera()
 
+func _view_ridge_profile() -> void:
+    # Use the existing low-angle preset so this can be compared with
+    # the terrain overview without adding a new independent camera rig.
+    terrain_camera_picker.select(2)
+    _zoom = 1.0
+    _update_camera()
+
 func _change_terrain_light_toggle(_checked: bool) -> void:
     if _role == "terrain":
         _apply_terrain_lighting()
 
+func _toggle_v10_finish() -> void:
+    _terrain_v10_enabled = not _terrain_v10_enabled
+    if _terrain_v10_enabled:
+        # Old comparisons may have disabled the shared base art.
+        _terrain_v5_enabled = true
+        _terrain_v6_enabled = true
+        _terrain_v7_enabled = true
+        _terrain_v8_enabled = true
+        _terrain_v9_enabled = true
+        terrain_compare_button.text = "COMPARAR: volver a acabado V4"
+        terrain_compare_v6_button.text = "COMPARAR: volver al terreno V5"
+        terrain_compare_v7_button.text = "COMPARAR: volver al terreno V6"
+        terrain_compare_v8_button.text = "COMPARAR: volver al acabado V7"
+        terrain_compare_v9_button.text = "COMPARAR: volver al acabado V8"
+    terrain_compare_v10_button.text = (
+        "COMPARAR: volver al relieve V9" if _terrain_v10_enabled
+        else "VOLVER A CRESTAS V10")
+    _rebuild_terrain(false)
+
 func _toggle_v9_finish() -> void:
+    _terrain_v10_enabled = false
+    terrain_compare_v10_button.text = "VOLVER A CRESTAS V10"
     _terrain_v9_enabled = not _terrain_v9_enabled
     if _terrain_v9_enabled:
         _terrain_v5_enabled = true
@@ -603,6 +651,8 @@ func _toggle_v9_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v8_finish() -> void:
+    _terrain_v10_enabled = false
+    terrain_compare_v10_button.text = "VOLVER A CRESTAS V10"
     _terrain_v9_enabled = false
     terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = not _terrain_v8_enabled
@@ -620,6 +670,8 @@ func _toggle_v8_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v7_finish() -> void:
+    _terrain_v10_enabled = false
+    terrain_compare_v10_button.text = "VOLVER A CRESTAS V10"
     _terrain_v9_enabled = false
     terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
@@ -638,6 +690,8 @@ func _toggle_v7_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v6_finish() -> void:
+    _terrain_v10_enabled = false
+    terrain_compare_v10_button.text = "VOLVER A CRESTAS V10"
     _terrain_v9_enabled = false
     terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
@@ -653,6 +707,8 @@ func _toggle_v6_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v5_finish() -> void:
+    _terrain_v10_enabled = false
+    terrain_compare_v10_button.text = "VOLVER A CRESTAS V10"
     _terrain_v9_enabled = false
     terrain_compare_v9_button.text = "VOLVER AL ACABADO V9"
     _terrain_v8_enabled = false
@@ -746,7 +802,8 @@ func _display_terrain() -> void:
         _terrain_v8_enabled and terrain_talus_v8_toggle.button_pressed,
         _terrain_v8_enabled and terrain_ecotone_v8_toggle.button_pressed,
         _terrain_v9_enabled and terrain_rock_v9_toggle.button_pressed,
-        _terrain_v9_enabled and terrain_vegetation_v9_toggle.button_pressed)
+        _terrain_v9_enabled and terrain_vegetation_v9_toggle.button_pressed,
+        _terrain_v10_enabled and terrain_silhouette_v10_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -971,6 +1028,10 @@ func _update_details() -> void:
             status_label.text += " · transiciones matizadas"
         if _terrain_v9_enabled and terrain_light_v9_toggle.button_pressed:
             status_label.text += " · iluminación lateral"
+        if bool(model_root.get_meta("terrain_studio_v10_sculpted_ridges",false)):
+            status_label.text += " · V10: %d crestas, %d triángulos" % [
+                int(v7.get("silhouette_cells",0)),
+                int(v7.get("ridge_triangles",0))]
         return
     if _role != "headquarters":
         super._update_details()
