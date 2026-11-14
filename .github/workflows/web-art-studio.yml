@@ -11,6 +11,8 @@ on:
       - "scripts/ui/HeadquartersHero4.gd"
       - "scripts/ui/HeadquartersMapLOD3D.gd"
       - "scripts/ui/HeadquartersEmblems3D.gd"
+      - "scripts/ui/HeadquartersArchitectureV7.gd"
+      - "tests/test_headquarters_v7.gd"
       - "scripts/ui/HeadquartersCityBatch3D.gd"
       - "tests/test_headquarters_v6.gd"
       - "assets/factions/**"
@@ -206,6 +208,18 @@ jobs:
           grep -q "PASS HQ V6:" /tmp/hq-v6-approval.log
           test -s artifacts/tarvoka_hq_v6_49_buildings_map_scale.png
           test -s artifacts/tarvoka_hq_v6_official_shield.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v7.gd 2>&1 | tee /tmp/hq-v7-sculpt-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v7-sculpt-check.log; then
+            echo "HQ V7 sculpted geometry or screenshot test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V7:" /tmp/hq-v7-sculpt-check.log
+          test -s artifacts/tarvoka_hq_v4_vs_v7_sculpted_front.png
+          test -s artifacts/tarvoka_hq_v7_level3.png
+          test -s artifacts/tarvoka_hq_v7_damaged.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -272,6 +286,9 @@ jobs:
             artifacts/tarvoka_hq_v4_vs_v5_map_lod.png
             artifacts/tarvoka_hq_v6_49_buildings_map_scale.png
             artifacts/tarvoka_hq_v6_official_shield.png
+            artifacts/tarvoka_hq_v4_vs_v7_sculpted_front.png
+            artifacts/tarvoka_hq_v7_level3.png
+            artifacts/tarvoka_hq_v7_damaged.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
