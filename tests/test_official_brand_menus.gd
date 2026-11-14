@@ -25,7 +25,7 @@ func _run() -> void:
     assert(home.visible)
     var baseline: Dictionary = screen.board.state.duplicate(true)
 
-    # Portrait and landscape use the same working controls.
+    # Landscape navigation uses the same real save and battle controls.
     home._reflow()
     home.primary_buttons["Partidas guardadas"].pressed.emit()
     var slots = screen.saved_matches_menu
@@ -83,8 +83,11 @@ func _run() -> void:
     assert(home.visible and not screen.command_menu.visible)
     home.primary_buttons["Arsenal"].pressed.emit()
     assert(screen._gallery_from_home and not home.visible)
-    screen.unit_art_gallery.confirmed.emit()
-    screen.unit_art_gallery.hide()
+    # The new official full-screen landscape Arsenal is a themed
+    # PanelContainer, not the retired AcceptDialog with a confirmed signal.
+    assert(screen.unit_art_gallery.visible)
+    screen.unit_art_gallery.close_requested.emit()
+    assert(not screen.unit_art_gallery.visible)
     assert(home.visible and not screen._gallery_from_home)
     screen._continue_from_home()
     assert(not home.visible)
