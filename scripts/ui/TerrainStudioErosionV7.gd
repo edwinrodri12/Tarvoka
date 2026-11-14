@@ -7,6 +7,7 @@ class_name TarvokaTerrainStudioErosionV7
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
 const RidgeV10 = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
+const BiomePaletteV14 = preload("res://scripts/ui/TerrainStudioBiomePaletteV14.gd")
 const WATER_LEVEL := -0.17
 const WORLD_CELL := 2.4
 static var _fracture_noise: FastNoiseLite
@@ -147,7 +148,7 @@ static func lithology_color(pos: Vector3, elevation: float,
 static func _ridge(parent: Node3D, cells: Array[Dictionary],
         mountains: Dictionary, scene: int,
         layered: bool = false, facets: bool = false,
-        sculpted: bool = false) -> Dictionary:
+        sculpted: bool = false, biome_surface: bool = false) -> Dictionary:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count := 0
@@ -160,6 +161,8 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
         var center: Vector3 = cell["center"]
         var points: Array[Vector3] = []
         var tones: Array[Color] = []
+        var rises: Array[float] = []
+        var contacts: Array[float] = []
         for row in range(subdivisions+1):
             for col in range(subdivisions+1):
                 var dx: float = lerpf(-half,half,float(col)/subdivisions)
@@ -170,6 +173,10 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
                 var pos: Vector3 = _point(cell,dx,dz)+Vector3(0,elevation+0.016,0)
                 points.append(pos)
                 tones.append(lithology_color(pos,elevation,scene,layered))
+                if biome_surface:
+                    rises.append(elevation)
+                    contacts.append(1.0-RidgeV10._fade_to_open_ground(
+                        cell,Vector2(dx,dz),mountains))
         if facets:
             # Height-based central differences reveal broad cracks and
             # ridges at normal gameplay scale, with no extra polygons.
@@ -188,6 +195,12 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
                         maxf(0.01,points[di].z-points[ui].z))
                     tones[idx] = MaterialsV9.rock_color(
                         tones[idx],points[idx],Vector2(rise_x,rise_z),scene)
+        if biome_surface:
+            # V18b: tint ALL actual ridge vertices. The visual finish is
+            # part of this exact collision-free ridge mesh, not under it.
+            for idx in range(tones.size()):
+                tones[idx] = BiomePaletteV14.mountain_color(
+                    tones[idx],points[idx],rises[idx],scene,contacts[idx])
         for row in range(subdivisions):
             for col in range(subdivisions):
                 var a: int = row*(subdivisions+1)+col
@@ -202,7 +215,8 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
         _surface_node(parent,"MacizosErosionadosContinuosV7",tool)
     return {"mountain_cells":count,"ridge_triangles":
         count*subdivisions*subdivisions*2,"ridge_batches":1 if count>0 else 0,
-        "crest_subdivisions":subdivisions,"silhouette_cells":count if sculpted else 0}
+        "crest_subdivisions":subdivisions,"silhouette_cells":count if sculpted else 0,
+        "biome_surface_vertices":count*(subdivisions+1)*(subdivisions+1) if biome_surface else 0}
 
 static func _bank(parent: Node3D, cells: Array[Dictionary],
         scene: int) -> Dictionary:
@@ -305,7 +319,7 @@ static func _wave(parent: Node3D, cells: Array[Dictionary],
 static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
         rock: bool = true, shores: bool = true, water: bool = true,
         lithology: bool = false, facets: bool = false,
-        sculpted: bool = false) -> Dictionary:
+        sculpted: bool = false,biome_surface: bool = false) -> Dictionary:
     var kinds: Dictionary = {}
     var mountains: Dictionary = {}
     for cell in cells:
@@ -317,16 +331,18 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
         "mountain_cells":0,"ridge_triangles":0,"shore_edges":0,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,
         "lithology_cells":0,"facet_cells":0,
-        "crest_subdivisions":8,"silhouette_cells":0,"batches":0}
+        "crest_subdivisions":8,"silhouette_cells":0,"batches":0,
+        "biome_surface_vertices":0}
     if rock and not mountains.is_empty():
         var stats: Dictionary = _ridge(parent,cells,mountains,scene,
-            lithology,facets,sculpted)
+            lithology,facets,sculpted,biome_surface)
         result["crest_subdivisions"] = stats["crest_subdivisions"]
         result["silhouette_cells"] = stats["silhouette_cells"]
         result["facet_cells"] = int(stats["mountain_cells"]) if facets else 0
         result["lithology_cells"] = int(stats["mountain_cells"]) if lithology else 0
         result["mountain_cells"] = stats["mountain_cells"]
         result["ridge_triangles"] = stats["ridge_triangles"]
+        result["biome_surface_vertices"] = stats["biome_surface_vertices"]
         result["batches"] += int(stats["ridge_batches"])
     if shores:
         var stats: Dictionary = _bank(parent,cells,scene)

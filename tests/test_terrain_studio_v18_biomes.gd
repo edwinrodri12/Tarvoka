@@ -85,6 +85,11 @@ func _run() -> void:
     for i in range(5):
         await process_frame
     assert(studio._role=="terrain")
+    # V18 legacy comparisons deliberately disable the V18b direct-pigment
+    # replacement to preserve their original (overlay) test contract.
+    assert(studio.terrain_baked_biome_v14_toggle.button_pressed)
+    studio.terrain_baked_biome_v14_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
     assert(studio._terrain_v13_enabled)
     assert(studio.terrain_mineral_v13_toggle.button_pressed)
     assert(studio.terrain_habitat_v13_toggle.button_pressed)

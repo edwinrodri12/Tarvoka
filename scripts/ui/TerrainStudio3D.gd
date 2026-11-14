@@ -577,7 +577,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v10_sculpted_ridges: bool = false,
         v11_aprons: bool = false, v11_outcrops: bool = false,
         v12_deposits: bool = false, v12_shoulders: bool = false,
-        v13_facets: bool = false, v13_ecotones: bool = false) -> Node3D:
+        v13_facets: bool = false, v13_ecotones: bool = false,
+        v14_baked_biomes: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -608,6 +609,11 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v12_shoulders",continuous and show_scatter and v10_sculpted_ridges and v11_aprons and v12_shoulders)
     root.set_meta("terrain_studio_v13_facets",continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and v13_facets)
     root.set_meta("terrain_studio_v13_ecotones",continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and v13_ecotones)
+    var direct_biome_finish: bool = (
+        continuous and show_scatter and v7_ridges and
+        v10_sculpted_ridges and v11_aprons and v13_facets and
+        v14_baked_biomes)
+    root.set_meta("terrain_studio_v14_baked_biomes",direct_biome_finish)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -751,7 +757,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     if continuous and show_scatter and (v7_ridges or v7_shores or v7_waves):
         v7_stats = ErosionV7.populate(props,detail_cells,preset,
             v7_ridges,v7_shores,v7_waves,v8_lithology,v9_rock_facets,
-            v10_sculpted_ridges)
+            v10_sculpted_ridges,direct_biome_finish)
     root.set_meta("terrain_erosion_v7",v7_stats)
     var v8_stats := {
         "transition_edges":0,"scree_stones":0,"undergrowth":0,
@@ -766,7 +772,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     if continuous and show_scatter and v7_ridges and v10_sculpted_ridges and (
             v11_aprons or v11_outcrops):
         v11_stats = FoothillsV11.populate(props,detail_cells,preset,
-            v11_aprons,v11_outcrops)
+            v11_aprons,v11_outcrops,direct_biome_finish)
     root.set_meta("terrain_foothills_v11",v11_stats)
     var v12_stats := {
         "sediment_patches":0,"road_verges":0,
@@ -784,8 +790,13 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     if continuous and show_scatter and v7_ridges and v10_sculpted_ridges and v11_aprons and (
             v13_facets or v13_ecotones):
         v13_stats = MountainBiomesV13.populate(props,detail_cells,preset,
-            v13_facets,v13_ecotones)
+            v13_facets and not direct_biome_finish,v13_ecotones)
     root.set_meta("terrain_mountain_biomes_v13",v13_stats)
+    root.set_meta("terrain_biome_v14",{
+        "enabled":direct_biome_finish,
+        "mountain_vertices":int(v7_stats.get("biome_surface_vertices",0)),
+        "foothill_vertices":int(v11_stats.get("biome_apron_vertices",0)),
+        "extra_batches":0})
     if show_samples:
         var samples := Node3D.new()
         samples.name = "MuestrasDeEscalaUnidadYEdificio"

@@ -51,6 +51,7 @@ var terrain_mineral_v13_toggle: CheckButton
 var terrain_habitat_v13_toggle: CheckButton
 var terrain_compare_v13_button: Button
 var _terrain_v13_enabled := true
+var terrain_baked_biome_v14_toggle: CheckButton
 var terrain_silhouette_v10_toggle: CheckButton
 var terrain_compare_v10_button: Button
 var terrain_ridge_profile_button: Button
@@ -417,6 +418,16 @@ func _add_building_mode() -> void:
         "COMPARAR: montañas V13 frente a V12",_toggle_v13_finish)
     terrain_compare_v13_button.name = "ComparadorTerrenoV12V13"
     terrain_compare_v13_button.custom_minimum_size.y = 50
+    _title(terrain_controls,"CORRECCIÓN V18b · MATERIAL REAL DE MONTAÑA",13)
+    terrain_baked_biome_v14_toggle = CheckButton.new()
+    terrain_baked_biome_v14_toggle.name = "MaterialDirectoMontanaV18b"
+    terrain_baked_biome_v14_toggle.text = "APLICAR COLOR A LA MONTAÑA REAL (sin capas ocultas)"
+    terrain_baked_biome_v14_toggle.button_pressed = true
+    terrain_baked_biome_v14_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_baked_biome_v14_toggle)
+    _title(terrain_controls,
+        "Activo: bosque verde, cañón cálido, costa húmeda; cambia de "
+        + "ambiente arriba para comparar. Desactiva para ver la capa V18 original.",12)
 
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
@@ -959,7 +970,8 @@ func _display_terrain() -> void:
         _terrain_v12_enabled and terrain_deposits_v12_toggle.button_pressed,
         _terrain_v12_enabled and terrain_verges_v12_toggle.button_pressed,
         _terrain_v13_enabled and terrain_mineral_v13_toggle.button_pressed,
-        _terrain_v13_enabled and terrain_habitat_v13_toggle.button_pressed)
+        _terrain_v13_enabled and terrain_habitat_v13_toggle.button_pressed,
+        _terrain_v13_enabled and terrain_baked_biome_v14_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -1209,6 +1221,11 @@ func _update_details() -> void:
                 int(v13.get("mantle_triangles",0)),
                 int(v13.get("ecotone_pieces",0)),
                 int(v13.get("batches",0))]
+        var direct: Dictionary = model_root.get_meta("terrain_biome_v14",{})
+        if bool(direct.get("enabled",false)):
+            status_label.text += " · V18b MATERIAL REAL: %d vértices de montaña, %d de ladera (+0 mallas)" % [
+                int(direct.get("mountain_vertices",0)),
+                int(direct.get("foothill_vertices",0))]
         return
     if _role != "headquarters":
         super._update_details()
