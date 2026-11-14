@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudio3D
 # tactical height, fog-of-war, map saves or Android battle rendering.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const Textures = preload("res://scripts/ui/TerrainTextures3D.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -615,3 +616,53 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_counts",counts)
     root.set_meta("terrain_tile_count",WIDTH*HEIGHT)
     return root
+
+# Preview material pass. Every node is inspected only under terrain/props:
+# sample units/buildings retain their original faction and finish materials.
+static func apply_texture_finish(root: Node3D) -> int:
+    var stack: Array[Node] = [
+        root.get_node("TerrenoDeCasillas"),
+        root.get_node("RelieveVegetacionYDetalles")]
+    var count: int = 0
+    while not stack.is_empty():
+        var node: Node = stack.pop_back()
+        if node is MeshInstance3D:
+            var item: MeshInstance3D = node as MeshInstance3D
+            var original: StandardMaterial3D = item.material_override as StandardMaterial3D
+            var kind_name: String = _texture_surface(item.name)
+            if not kind_name.is_empty() and original != null:
+                var is_vertex_color: bool = original.vertex_color_use_as_albedo
+                var tint: Color = Color.WHITE if is_vertex_color else original.albedo_color
+                item.material_override = Textures.material(
+                    kind_name,tint,is_vertex_color)
+                count += 1
+        for child in node.get_children():
+            stack.append(child)
+    root.set_meta("terrain_textures_pbr",true)
+    root.set_meta("terrain_textured_meshes",count)
+    return count
+
+static func _texture_surface(mesh_name: String) -> String:
+    if mesh_name == "SueloContinuoConRelieve":
+        return "soil"
+    if mesh_name == "LaminaDeAguaContinua":
+        return "water"
+    if mesh_name.begins_with("Casilla_"):
+        if mesh_name.ends_with("_water"):
+            return "water"
+        if mesh_name.ends_with("_mountain"):
+            return "rock"
+        if mesh_name.ends_with("_road"):
+            return "asphalt"
+        return "soil"
+    if mesh_name.begins_with("Calzada_") or mesh_name.begins_with("PuenteElevado_"):
+        return "asphalt"
+    if mesh_name.begins_with("MacizoTallado_") or mesh_name.begins_with("CrestaSecundaria_"):
+        return "rock"
+    if mesh_name.begins_with("RocaLateral_") or mesh_name == "PiedraSuelo":
+        return "rock"
+    if mesh_name == "OrillaNatural":
+        return "sand"
+    if mesh_name == "ArcénLateral" or mesh_name == "BordeVial":
+        return "gravel"
+    return ""
