@@ -150,6 +150,37 @@ static func draw_forest_floor(canvas: CanvasItem, center: Vector2,
             canvas.draw_circle(p,maxf(1.0,hw*0.024),
                 Color(0.42,0.63,0.33,0.37))
 
+# Foreground scree breaks up the large flat triangular rock silhouette.
+# Its very small stones remain inside the parent diamond; draw AFTER the
+# main massif so the mountain has a clear weathered base, not square tiles.
+static func draw_rock_scree(canvas: CanvasItem, center: Vector2,
+        hw: float, cell: Vector2i, detail: int) -> void:
+    if detail < 2 or hw <= 8.0:
+        return
+    for i in range(9):
+        var scatter: int = posmod(
+            cell.x*83+cell.y*127+i*67,101)
+        var lateral: float = float(
+            posmod(scatter*17+i*11,73)-36)/100.0
+        var depth: float = 0.13+float(
+            posmod(scatter*7+i*19,41))*0.004
+        # The isometric diamond contract: |x|/hw+|y|/(hw/2)<1.
+        # 0.06 margin leaves room for each tiny polygon to sit inside.
+        depth = minf(depth,0.44-0.5*absf(lateral))
+        var at := center+Vector2(lateral*hw,depth*hw)
+        var radius: float = hw*(0.024+float(scatter%6)*0.004)
+        var base := Color("#58676B") if i%3 == 0 else Color("#7C8989")
+        canvas.draw_colored_polygon(PackedVector2Array([
+            at+Vector2(-radius,0),
+            at+Vector2(radius*0.11,-radius*0.54),
+            at+Vector2(radius,radius*0.15),
+            at+Vector2(radius*0.12,radius*0.52)
+        ]),base)
+        canvas.draw_line(
+            at+Vector2(-radius*0.60,-radius*0.03),
+            at+Vector2(radius*0.11,-radius*0.47),
+            base.lightened(0.24),maxf(1.0,hw*0.009),true)
+
 static func draw_rock_foothills(canvas: CanvasItem, center: Vector2,
         hw: float, cell: Vector2i, mask: int, detail: int) -> void:
     if detail <= 0 or hw <= 0.0:
