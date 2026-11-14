@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
 const G09Quality = preload("res://scripts/ui/TankAdaptiveV28.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -356,6 +357,10 @@ static func _make_units(parent: Node3D,state: Dictionary,
                 # Quality changes only microdetails, shaders and shadows.
                 model = Models.build(role,faction,true,30)
                 art_level = 30
+                if model!=null:
+                    var life: int = int(unit.get("hp",10))
+                    var max_life: int = maxi(1,int(unit.get("max_hp",10)))
+                    TankDamage.apply_stage(model,TankDamage.stage_for_hp(life,max_life))
                 if model!=null and model.get_meta("tarvoka_mbt_wear_v25",false):
                     tank_count += 1
                     var qa: Dictionary = G09Quality.configure(
