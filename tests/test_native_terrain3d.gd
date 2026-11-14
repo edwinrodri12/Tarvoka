@@ -114,6 +114,9 @@ func _run() -> void:
     assert(water_full.shader.code.find("river_world") >= 0)
     assert(water_full.get_shader_parameter("detail_scale") > (
         water_mobile.get_shader_parameter("detail_scale")))
+    assert(water_full.shader.code.find("fresnel") >= 0)
+    assert(water_full.get_shader_parameter("secondary_wave_strength") > (
+        water_mobile.get_shader_parameter("secondary_wave_strength")))
     # Foam is generated ONLY along a boundary with land that is
     # explicitly observed. Fogged land cannot reveal the river's coast.
     var known_water: Array = [["water","plain"]]
