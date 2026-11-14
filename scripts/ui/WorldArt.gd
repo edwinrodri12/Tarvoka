@@ -7,6 +7,7 @@ const SITE_KINDS := ["city","factory","armor_plant","artillery_depot","drone_cen
 const Landscape = preload("res://scripts/ui/LandscapeDetailPainter.gd")
 const Transitions = preload("res://scripts/ui/LandscapeTransitions.gd")
 const Continuity = preload("res://scripts/ui/LandscapeContinuity.gd")
+const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 
 static func supports_site(kind: String) -> bool:
     return kind in SITE_KINDS
@@ -92,6 +93,12 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
     if hw <= 0.0:
         return
     var s: float = hw * 0.58
+    # Blend only already observed land neighbors; never inspect fogged
+    # cells here or overprint tactical roads, rivers and unit indicators.
+    if kind in ["plain","forest","mountain"]:
+        Regions.draw_biome_fringe(canvas,c,hw,
+            context.get("cell",Vector2i.ZERO),
+            kind,context.get("biome_colors",{}),detail)
     # Material transition strips are always inside the currently visible
     # tile. Masks are provided by fog-filtered topology in IsoRenderer.
     if kind != "water":
@@ -103,7 +110,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
                 int(context.get("mountain_edges",0)),detail)
     match kind:
         "forest":
-            Landscape.draw_forest(canvas,c,hw,seed,terrain_neighbors,detail)
+            Landscape.draw_forest(canvas,c,hw,seed,terrain_neighbors,detail,
+                context.get("cell",Vector2i.ZERO))
         "mountain":
             Landscape.draw_mountain(canvas,c,hw,seed,terrain_neighbors,detail,
                 int(context.get("exposed_edges",0)),
