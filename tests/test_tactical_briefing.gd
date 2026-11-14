@@ -66,6 +66,15 @@ func _run() -> void:
     assert(menu.operational_values["attack"].text == str(expected["attack_ready"]))
     assert(menu.operational_values["contacts"].text == str(expected["contacts"]))
     assert(menu.battle_columns.get_child_count() == 2)
+    # Navigation fades only the newly selected tab; all buttons remain live.
+    menu.tabs.current_tab = 3
+    assert(menu.tabs.get_current_tab_control().modulate.a < 1.0)
+    # The animation is skipped in battery saver, preserving responsiveness
+    # on low-end devices without changing a turn or spending resources.
+    main.board.battery_saver = true
+    menu.tabs.current_tab = 0
+    assert(menu.tabs.get_current_tab_control().modulate.a == 1.0)
+    main.board.battery_saver = false
     assert(main.board.state == baseline)
     main.queue_free()
     print("PASS tactical briefing: 4 viewer-specific counters, strict fog privacy, correct second player and read-only command UI")
