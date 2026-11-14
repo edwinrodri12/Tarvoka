@@ -14,6 +14,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const DetailV5 = preload("res://scripts/ui/TerrainStudioDetailV5.gd")
 const NaturalV6 = preload("res://scripts/ui/TerrainStudioNaturalV6.gd")
 const ErosionV7 = preload("res://scripts/ui/TerrainStudioErosionV7.gd")
+const ClimateV8 = preload("res://scripts/ui/TerrainStudioWeatherV8.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -566,7 +567,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v6_ridges: bool = false, v6_forest: bool = false,
         v6_banks: bool = false,
         v7_ridges: bool = false, v7_shores: bool = false,
-        v7_waves: bool = false) -> Node3D:
+        v7_waves: bool = false, climate_mode: String = "clear") -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -585,6 +586,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v7_ridges",continuous and show_scatter and v7_ridges)
     root.set_meta("terrain_studio_v7_shores",continuous and show_scatter and v7_shores)
     root.set_meta("terrain_studio_v7_waves",continuous and show_scatter and v7_waves)
+    root.set_meta("terrain_studio_weather",climate_mode)
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -598,6 +600,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         if not show_scatter:
             _scatter_grass(props,preset) # Exact legacy V2 comparison.
     var detail_cells: Array[Dictionary] = []
+    var climate_cells: Array[Dictionary] = []
     for z in range(HEIGHT):
         for x in range(WIDTH):
             var type: String = kind(x,z,preset)
@@ -607,6 +610,13 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
             counts[type] = int(counts[type])+1
             var shore_edges: Array[Vector2i] = []
             var surface_cell: Dictionary = {}
+            # V8 weather works in the natural V11 view AND old V1–V6
+            # comparison modes; no climate meshes exist in dry mode.
+            climate_cells.append({
+                "x":x,"z":z,"kind":type,"center":p,
+                "top":top,"corners":_cell_corner_heights(x,z,preset),
+                "half":CELL*0.5
+            })
             if continuous and show_scatter:
                 surface_cell = {
                     "x":x,"z":z,"kind":type,"center":p,
@@ -745,6 +755,10 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         var hq_cell: Vector2i = Vector2i(10,8) if preset == 1 else Vector2i(6,8)
         hq.position = _cell_center(hq_cell.x,hq_cell.y) + Vector3(0,height_at(hq_cell.x,hq_cell.y,preset),0)
         samples.add_child(hq)
+    # Adds at most two grouped weather meshes, after trees, mountains,
+    # and HQ samples. No changes to the topology, map kind or simulation.
+    ClimateV8.populate(root,climate_cells,preset,
+        climate_mode,continuous and show_scatter and v7_ridges)
     root.set_meta("terrain_counts",counts)
     root.set_meta("terrain_tile_count",WIDTH*HEIGHT)
     return root
