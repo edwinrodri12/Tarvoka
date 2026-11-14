@@ -295,6 +295,51 @@ static func _building(parent: Node3D, level: int, color: Color) -> void:
         _box(structure,"EncuentroEstructuralAlaCentralV20_%s" % side,
             Vector3(joint_x,1.32,-2.59),
             Vector3(0.28,2.64,0.96),WALL,0.08)
+    # V21: opaque, continuous BACK enclosure. Prior art stopped its rear
+    # wings at z=2.43 and left see-through voids at oblique/orbital angles.
+    # The middle wall meets the 5.82 m command block (back z=2.81);
+    # both wing return walls close at z=2.57 and meet the side galleries.
+    # These are real closed Godot box meshes, not a single-sided overlay.
+    var rear := _group(structure,"CerramientoTraseroEstructuralV21")
+    _box(rear,"MuroPosteriorCentralContinuoV21",
+        Vector3(0,roof_y*0.50,2.865),
+        Vector3(5.82,roof_y,0.20),WALL,0.10)
+    _box(rear,"ZocaloPosteriorCentralV21",
+        Vector3(0,0.33,3.012),
+        Vector3(5.89,0.33,0.12),BASE,0.21)
+    _box(rear,"CornisaPosteriorCentralV21",
+        Vector3(0,roof_y+0.09,2.963),
+        Vector3(6.02,0.16,0.20),ROOF,0.28)
+    for side in [-1,1]:
+        var rear_x: float = float(side)*4.06
+        _box(rear,"MuroPosteriorAlaV21_%s" % side,
+            Vector3(rear_x,1.12,2.55),
+            Vector3(2.30,2.24,0.26),CONCRETE,0.13)
+        _box(rear,"ZocaloTraseroAlaV21_%s" % side,
+            Vector3(rear_x,0.31,2.719),
+            Vector3(2.39,0.35,0.12),BASE,0.20)
+        _box(rear,"DintelTraseroAlaV21_%s" % side,
+            Vector3(rear_x,2.22,2.710),
+            Vector3(2.48,0.19,0.17),ROOF,0.25)
+        # Real perpendicular returns close the steps from wings to the
+        # taller central core, without covering the front-facing windows.
+        _box(rear,"RetornoUnionPosteriorV21_%s" % side,
+            Vector3(float(side)*2.90,1.12,2.705),
+            Vector3(0.23,2.24,0.43),WALL,0.12)
+        for corner in [-1,1]:
+            _box(rear,"ContrafuertePosteriorV21_%s_%s" % [side,corner],
+                Vector3(rear_x+float(corner)*1.035,1.17,2.735),
+                Vector3(0.17,2.34,0.24),BASE,0.30)
+    # Physical ventilation hatches support the empty rear wall visually,
+    # but they remain backed by an opaque mass: nothing is cut through.
+    for k in range(3):
+        _box(rear,"RejillaTecnicaTraseraV21_%s" % k,
+            Vector3(-0.75+float(k)*0.75,1.44,2.998),
+            Vector3(0.51,0.35,0.040),DARK,0.32)
+        for line in range(3):
+            _box(rear,"LamaRejillaTraseraV21_%s_%s" % [k,line],
+                Vector3(-0.75+float(k)*0.75,1.35+float(line)*0.090,3.027),
+                Vector3(0.44,0.026,0.023),LIGHT,0.29)
     for side in [-1,1]:
         var x: float = float(side)*4.06
         _box(structure,"TechoAla%s" % side,Vector3(x,2.28,0.35),

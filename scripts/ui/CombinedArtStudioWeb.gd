@@ -9,6 +9,8 @@ const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
 const HQWayfindingV18 = preload("res://scripts/ui/HeadquartersWayfindingV18.gd")
 const HQFacadeV19 = preload("res://scripts/ui/HeadquartersFacadeV19.gd")
+const HQDamageV21 = preload("res://scripts/ui/HeadquartersDamageV21.gd")
+const HQImpactV21 = preload("res://scripts/ui/HeadquartersImpactV21.gd")
 const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
@@ -20,6 +22,10 @@ var category_picker: OptionButton
 var building_picker: OptionButton
 var level_picker: OptionButton
 var building_state_picker: OptionButton
+var hq_damage_stage_picker: OptionButton
+var hq_bullet_test_button: Button
+var hq_explosive_test_button: Button
+var hq_impact_status: Label
 var building_controls: VBoxContainer
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
@@ -497,8 +503,37 @@ func _add_building_mode() -> void:
     building_state_picker.custom_minimum_size.y = 49
     for condition in ["Operativo","Capturado","Dañado","Destruido"]:
         building_state_picker.add_item(condition)
-    building_state_picker.item_selected.connect(_change_building_variant)
+    building_state_picker.item_selected.connect(_change_hq_installation_state)
     building_controls.add_child(building_state_picker)
+    _title(building_controls,"NIVELES DE DAÑO ESTRUCTURAL · V21",13)
+    hq_damage_stage_picker = OptionButton.new()
+    hq_damage_stage_picker.name = "CincoNivelesDanoFisicoHQV21"
+    hq_damage_stage_picker.custom_minimum_size.y = 49
+    for label in HQDamageV21.STAGES:
+        hq_damage_stage_picker.add_item(label)
+    hq_damage_stage_picker.select(0)
+    hq_damage_stage_picker.item_selected.connect(_change_hq_damage_stage)
+    building_controls.add_child(hq_damage_stage_picker)
+    var attacks := HBoxContainer.new()
+    attacks.name = "PruebaImpactoBalasYExplosivosHQV21"
+    attacks.add_theme_constant_override("separation",6)
+    building_controls.add_child(attacks)
+    hq_bullet_test_button = Button.new()
+    hq_bullet_test_button.name = "ProbarDisparoDeBalasHQV21"
+    hq_bullet_test_button.text = "Impacto de balas"
+    hq_bullet_test_button.custom_minimum_size.y = 48
+    hq_bullet_test_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_bullet_test_button.pressed.connect(_play_hq_bullet_v21)
+    attacks.add_child(hq_bullet_test_button)
+    hq_explosive_test_button = Button.new()
+    hq_explosive_test_button.name = "ProbarImpactoExplosivoHQV21"
+    hq_explosive_test_button.text = "Ataque explosivo"
+    hq_explosive_test_button.custom_minimum_size.y = 48
+    hq_explosive_test_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hq_explosive_test_button.pressed.connect(_play_hq_explosion_v21)
+    attacks.add_child(hq_explosive_test_button)
+    hq_impact_status = _title(building_controls,
+        "Impactos 3D de prueba · no alteran HP ni la partida.",12)
     hq_map_lod_toggle = CheckButton.new()
     hq_map_lod_toggle.name = "VistaTacticaOptimizadaHQ"
     hq_map_lod_toggle.text = "Vista lejana optimizada (mapa)"
@@ -656,6 +691,50 @@ func _change_building_variant(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
 
+func _change_hq_installation_state(index: int) -> void:
+    if index < 0 or index >= BUILDING_STATES.size():
+        return
+    # Keep the historical 4-state selector compatible with V17 tests.
+    # The full 5-stage damage readout is a separate, explicit 3D choice.
+    var stage: int = 2 if index == 2 else 4 if index == 3 else 0
+    hq_damage_stage_picker.select(stage)
+    if _role == "headquarters":
+        _display_headquarters()
+
+func _change_hq_damage_stage(index: int) -> void:
+    if index < 0 or index >= HQDamageV21.STAGES.size():
+        return
+    hq_damage_stage_picker.select(index)
+    if index == 4:
+        building_state_picker.select(3)
+    elif index > 0:
+        building_state_picker.select(2)
+    elif building_state_picker.selected >= 2:
+        building_state_picker.select(0)
+    if _role == "headquarters":
+        _display_headquarters()
+
+func _play_hq_bullet_v21() -> void:
+    _play_hq_impact_v21(HQImpactV21.BULLET)
+
+func _play_hq_explosion_v21() -> void:
+    _play_hq_impact_v21(HQImpactV21.EXPLOSIVE)
+
+func _play_hq_impact_v21(kind: String) -> void:
+    if model_root == null or _role != "headquarters":
+        return
+    var fx: TarvokaHeadquartersImpactV21 = model_root.get_node_or_null(
+        HQImpactV21.STAGE_NAME) as TarvokaHeadquartersImpactV21
+    if fx == null or not fx.visible:
+        return
+    var started: bool = fx.trigger(kind)
+    if started and hq_impact_status != null:
+        hq_impact_status.text = (
+            "Balas: chispas y metralla fina · 0,62 s" if kind == HQImpactV21.BULLET
+            else "Explosivo: onda de choque, mampostería y humo · 1,75 s")
+    # Attack VFX are visual only: no HP or structural damage is applied
+    # unless the user explicitly chooses a new damage stage.
+
 func _change_hq_sculpt(_enabled: bool) -> void:
     if _role == "headquarters" and _hq_show_v4:
         _display_headquarters()
@@ -757,6 +836,15 @@ func _set_hq_map_lod(distant: bool) -> void:
         HQMapLOD.set_distant(model_root,distant)
         _sync_hq_wayfinding_v18()
         _sync_hq_facade_v19()
+        var impact_fx: TarvokaHeadquartersImpactV21 = model_root.get_node_or_null(
+            HQImpactV21.STAGE_NAME) as TarvokaHeadquartersImpactV21
+        if impact_fx != null:
+            impact_fx.visible = not distant
+            if distant:
+                impact_fx.stop()
+        if hq_bullet_test_button != null:
+            hq_bullet_test_button.disabled = distant
+            hq_explosive_test_button.disabled = distant
         _update_details()
 
 func _refresh_building_faction(_index: int) -> void:
@@ -796,6 +884,10 @@ func _display_headquarters() -> void:
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
     hq_fps_label.visible = showing_batch
     hq_stress_picker.visible = showing_batch
+    var hero_mode: bool = not showing_batch and hq_v15_mode_picker.selected != 2 and not hq_production_toggle.button_pressed
+    hq_damage_stage_picker.disabled = not hero_mode
+    hq_bullet_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
+    hq_explosive_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
     # Large districts are deliberately batched dry map proxies; disable
     # climate selectors there instead of silently ignoring user clicks.
     hq_weather_picker.disabled = showing_batch
@@ -816,6 +908,10 @@ func _display_headquarters() -> void:
         return
     var level: int = level_picker.selected + 1
     var condition: String = str(BUILDING_STATES[building_state_picker.selected])
+    var damage_stage: int = hq_damage_stage_picker.selected
+    # HQ V21 stages 1..3 build a sound structural baseline so damage is
+    # physically progressive, not old V8 rubble piled on each stage.
+    var construction_condition: String = "operativo" if condition == "danado" and damage_stage in [1,2,3] else condition
     if hq_v15_mode_picker.selected == 2 and _hq_show_v4:
         var sprite_faction: int = -1 if hq_v15_neutral_toggle.button_pressed else _faction
         model_root = HQSpriteV16.build_billboard(sprite_faction,_faction)
@@ -829,7 +925,7 @@ func _display_headquarters() -> void:
             HQProduction.QUALITY_TACTICAL,true)
         hq_map_lod_toggle.visible = false
     else:
-        model_root = Headquarters.build(level,_faction,condition,
+        model_root = Headquarters.build(level,_faction,construction_condition,
             _hq_show_v2,_hq_show_v3,_hq_show_v4,
             hq_v7_toggle.button_pressed,hq_v8_toggle.button_pressed,
             hq_v9_toggle.button_pressed,hq_v10_toggle.button_pressed,
@@ -843,6 +939,15 @@ func _display_headquarters() -> void:
     if model_root.get_meta("tarvoka_hq_visual_v12",false):
         model_root.add_child(HQWayfindingV18.build())
         model_root.add_child(HQFacadeV19.build())
+        var added: bool = HQDamageV21.apply(model_root,damage_stage,level)
+        assert(added)
+        model_root.set_meta("visual_condition",condition)
+        var impact_fx := HQImpactV21.new()
+        model_root.add_child(impact_fx)
+        impact_fx.visible = not hq_map_lod_toggle.button_pressed
+        if hq_impact_status != null:
+            hq_impact_status.text = "Etapa %d: %s · dos animaciones 3D de impacto" % [
+                damage_stage,str(HQDamageV21.STAGES[damage_stage])]
     _apply_hq_climate_v17()
     _sync_hq_wayfinding_v18()
     _sync_hq_facade_v19()
@@ -911,7 +1016,7 @@ func _update_details() -> void:
     if model_root.get_meta("tarvoka_hq_visual_v11",false):
         detail_label.text = "Cuartel General · REMATES CURVOS V11 · Nivel %d · %d mallas 3D" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_visual_v12",false):
-        detail_label.text = "Cuartel General · SILUETA TÁCTICA V12 · Nivel %d · %d mallas 3D" % [level,meshes]
+        detail_label.text = "Cuartel General · V21 CERRAMIENTO TOTAL + DAÑO 3D · Nivel %d · %d mallas" % [level,meshes]
     if model_root.get_meta("tarvoka_hq_production_v13",false):
         var budget: Dictionary = HQProduction.render_budget(model_root)
         detail_label.text = "Cuartel General · PERFIL V13 · Nivel %d · %d mallas / %d superficies" % [
