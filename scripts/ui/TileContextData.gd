@@ -41,7 +41,7 @@ static func snapshot(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
             marker = candidate
             break
     var climate: String = Weather.from_state(state)
-    var movement: String = "INF %s  ·  RUEDAS %s  ·  ORUGAS %s  ·  AIR %s  ·  MAR %s" % [
+    var movement: String = "INF %s  ·  VEH %s  ·  ORU %s  ·  AIR %s  ·  MAR %s" % [
         _cost(kind,Domains.GROUND,climate,Weather.FOOT),
         _cost(kind,Domains.GROUND,climate,Weather.WHEELED,true),
         _cost(kind,Domains.GROUND,climate,Weather.TRACKED,true),
