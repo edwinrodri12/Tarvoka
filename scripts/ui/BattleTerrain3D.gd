@@ -12,9 +12,13 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
+const Climate = preload("res://scripts/ui/WeatherCoating3D.gd")
+const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
+const MAX_CLIMATIC_HQ := 1
+const CLIMATIC_HQ_ZOOM := 23.0
 const WATER_LEVEL := -0.17
 const FOG_LEVEL := -0.23
 const ROAD_LIFT := 0.065
@@ -77,9 +81,20 @@ static func height_at(cells: Dictionary, cell: Vector2i,
     return SurfaceSampler.height(_cell_height(record),_corners(cells,cell),
         x,z,CELL*0.5)
 
-static func _tint(record: Dictionary) -> Color:
-    var tint: Color = COLORS.get(str(record.get("kind","unknown")),
-        COLORS["unknown"])
+static func _weather(state: Dictionary) -> String:
+    var mode: String = str(state.get("weather","clear"))
+    return mode if mode in Climate.MODES else "clear"
+
+static func _tint(record: Dictionary, weather: String = "clear") -> Color:
+    var kind: String = str(record.get("kind","unknown"))
+    var tint: Color = COLORS.get(kind,COLORS["unknown"])
+    # NEVER reveal fogged tile types through weather tints: unknown
+    # remains opaque, explored-but-unseen terrain retains its dark shade.
+    if kind not in ["unknown","water"]:
+        if weather == "rain":
+            tint = tint.lerp(Color("#385d6b"),0.28)
+        elif weather == "snow":
+            tint = tint.lerp(Color("#dce9ed"),0.58)
     if not bool(record.get("visible",false)) and bool(record.get("seen",false)):
         tint = tint.darkened(0.60)
     return tint
@@ -116,7 +131,7 @@ static func _finish(parent: Node3D, label: String,
     parent.add_child(mesh)
 
 static func _build_chunk(parent: Node3D, data: Dictionary,
-        cells: Dictionary) -> Dictionary:
+        cells: Dictionary, weather: String = "clear") -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -134,7 +149,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var kind: String = str(tile["kind"])
         var at: Vector3 = world_at(cell)
         var half: float = CELL*0.5
-        var tinted: Color = _tint(tile)
+        var tinted: Color = _tint(tile,weather)
         if kind == "unknown":
             var flat: Vector3 = at+Vector3(0,FOG_LEVEL,0)
             _panel(unknown,flat+Vector3(-half,0,-half),
@@ -206,6 +221,12 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
     parent.add_child(chunk)
     _finish(chunk,"SueloVisible",ground,land_count,"soil")
+    if weather == "rain":
+        var land: MeshInstance3D = chunk.find_child("SueloVisible",false,false) as MeshInstance3D
+        if land != null:
+            var finish: StandardMaterial3D = land.material_override as StandardMaterial3D
+            finish.roughness = 0.32
+            finish.metallic_specular = 0.58
     _finish(chunk,"AguaVisible",water,water_count,"water")
     # Unknown terrain stays an opaque, untextured solid dark surface.
     if hidden_count > 0:
@@ -312,6 +333,51 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         drawn += 1
     return drawn
 
+# Real headquarters are visible ONLY where the public site is currently
+# visible. Preserve original site markers (for picking/old tests), and keep
+# one high-detail HQ maximum on zoomed tactical views.
+static func refresh_hq_weather_lod(scene: Node3D,state: Dictionary,
+        camera_size: float) -> Dictionary:
+    var old: Node3D = scene.find_child("HQClimaticoVisible",false,false) as Node3D
+    if old != null:
+        scene.remove_child(old)
+        old.free()
+    var result := {"visible":0,"snow_meshes":0,"wet_models":0}
+    var group := Node3D.new()
+    group.name = "HQClimaticoVisible"
+    scene.add_child(group)
+    if camera_size > CLIMATIC_HQ_ZOOM:
+        scene.set_meta("battle_hq_weather_stats",result)
+        return result
+    var cells: Dictionary = scene.get_meta("public_cells",{})
+    var economy: Dictionary = state.get("economy",{})
+    for site in economy.get("sites",[]):
+        if str(site.get("kind","")) != "city":
+            continue
+        var cell: Vector2i = site.get("pos",Vector2i(-1,-1))
+        if not cells.has(cell) or not bool(cells[cell].get("visible",false)):
+            continue
+        var owner: int = int(site.get("owner",-1))
+        if owner not in [0,1]:
+            continue
+        var model: Node3D = Headquarters.build(1,owner,"operativo",true,true)
+        if model == null:
+            continue
+        model.name = "CuartelGeneralVisible_%d_%d" % [cell.x,cell.y]
+        model.scale = Vector3.ONE*0.16
+        model.position = world_at(cell)+Vector3(0,height_at(cells,cell),0)
+        model.set_meta("battle_cell",cell)
+        model.set_meta("battle_owner_public",owner)
+        group.add_child(model)
+        var applied: Dictionary = Climate.apply(model,_weather(state),true)
+        result["snow_meshes"] += int(applied.get("snow_nodes",0))
+        result["wet_models"] += int(applied.get("wet",0))
+        result["visible"] += 1
+        if int(result["visible"]) >= MAX_CLIMATIC_HQ:
+            break
+    scene.set_meta("battle_hq_weather_stats",result)
+    return result
+
 static func _make_units(parent: Node3D,state: Dictionary,
         cells: Dictionary, selected_id: String,camera_size: float,
         enable_g09_v25: bool) -> Dictionary:
@@ -322,6 +388,10 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var medium_count := 0
     var light_count := 0
     var player: int = 0
+    var climate_mode: String = _weather(state)
+    var coated := 0
+    var snow_nodes := 0
+    var snow_triangles := 0
     # Prioritize the selected unit for the eight-detailed-model GPU budget,
     # without changing, disclosing or reordering the authoritative state.
     var ordered: Array = []
@@ -391,11 +461,22 @@ static func _make_units(parent: Node3D,state: Dictionary,
         model.set_meta("battle_art_level",actual_art)
         model.set_meta("battle_g09_v25",
             role=="tank" and actual_art==TankBudget.HERO_ART)
+        # Coatings are created ONLY after visibility filtering and LOD
+        # selection. Far-distance stand-ins stay free of extra 3D meshes.
+        if camera_size <= TankBudget.MEDIUM_CUTOFF and climate_mode != "clear" and model != null:
+            var eco: bool = actual_art < TankBudget.HERO_ART or camera_size > 18.0
+            var coating: Dictionary = Climate.apply(model,climate_mode,eco)
+            if bool(coating.get("valid",false)):
+                coated += 1
+                snow_nodes += int(coating.get("snow_nodes",0))
+                snow_triangles += int(coating.get("snow_triangles",0))
         parent.add_child(model)
         visible_count += 1
     return {"visible":visible_count,"detailed":detailed,
         "hidden_enemies":hidden_enemies,"g09_v25":hero_count,
-        "g09_v10":medium_count,"g09_v6":light_count}
+        "g09_v10":medium_count,"g09_v6":light_count,
+        "weather":climate_mode,"weather_models":coated,
+        "snow_meshes":snow_nodes,"snow_triangles":snow_triangles}
 
 static func refresh_unit_lod(scene: Node3D,state: Dictionary,
         selected_id: String,camera_size: float,
@@ -421,6 +502,8 @@ static func refresh_unit_lod(scene: Node3D,state: Dictionary,
     scene.set_meta("battle_camera_size",camera_size)
     scene.set_meta("battle_v25_enabled",enable_g09_v25)
     scene.set_meta("selected_unit_id",selected_id)
+    scene.set_meta("battle_weather",_weather(state))
+    refresh_hq_weather_lod(scene,state,camera_size)
     return stats
 
 static func build(state: Dictionary, selected_id: String = "",
@@ -450,7 +533,7 @@ static func build(state: Dictionary, selected_id: String = "",
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
         "roads":0,"shore_edges":0}
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,_weather(state))
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
     counters["trees"] = _make_cone_trees(scene,cells)
@@ -468,4 +551,6 @@ static func build(state: Dictionary, selected_id: String = "",
     scene.set_meta("selected_unit_id",selected_id)
     scene.set_meta("battle_camera_size",camera_size)
     scene.set_meta("battle_v25_enabled",enable_g09_v25)
+    scene.set_meta("battle_weather",_weather(state))
+    refresh_hq_weather_lod(scene,state,camera_size)
     return scene

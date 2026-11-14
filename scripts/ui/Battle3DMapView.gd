@@ -188,6 +188,16 @@ func _ready() -> void:
     _confirm_order_button.hide()
     commands.add_child(_confirm_order_button)
 
+func _process(_delta: float) -> void:
+    # End-turn weather is authoritative; a viewer open during an AI turn
+    # follows the real battle instead of retaining stale snowy/rainy meshes.
+    if not visible or _live_board == null or _scene == null:
+        return
+    var current: Variant = _live_board.get("state")
+    if current is Dictionary and Terrain._weather(current) != \
+            str(_scene.get_meta("battle_weather","clear")):
+        _refresh_from_board()
+
 func _update_g09_stats() -> void:
     if _scene==null or stats_label==null:
         return
@@ -195,11 +205,16 @@ func _update_g09_stats() -> void:
     if stats.is_empty():
         return
     var units: Dictionary = stats.get("units",{})
-    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos) · G09 V25: %d · V10: %d · V6: %d"
+    var climate: String = str(_scene.get_meta("battle_weather","clear"))
+    var climate_label: String = "DESPEJADO" if climate == "clear" else (
+        "LLUVIA" if climate == "rain" else "NIEVE")
+    var hq: Dictionary = _scene.get_meta("battle_hq_weather_stats",{})
+    stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos) · G09 V25: %d · V10: %d · V6: %d · %s (%d acabados, %d HQ)"
         % [_dims.x,_dims.y,int(stats.get("chunks",0)),
             int(units.get("visible",0)),int(units.get("detailed",0)),
             int(units.get("g09_v25",0)),int(units.get("g09_v10",0)),
-            int(units.get("g09_v6",0))])
+            int(units.get("g09_v6",0)),climate_label,
+            int(units.get("weather_models",0)),int(hq.get("visible",0))])
     if _g09_detail_button!=null:
         _g09_detail_button.text = "G09 V25 · AUTO" if _g09_high_detail else "G09 V25 · ECO"
 
