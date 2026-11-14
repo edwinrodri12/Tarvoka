@@ -117,6 +117,8 @@ jobs:
           test -s battle-source/scripts/ui/TerrainStudioErosionV7.gd
           test -s battle-source/tests/test_terrain_studio_v11_erosion.gd
           grep -q 'MacizosErosionadosContinuosV7' battle-source/scripts/ui/TerrainStudioErosionV7.gd
+          grep -q 'FastNoiseLite' battle-source/scripts/ui/TerrainStudioErosionV7.gd
+          grep -q 'too_bright == 0' battle-source/tests/test_terrain_studio_v11_erosion.gd
           grep -q 'SedimentosYOrillasSinParedV7' battle-source/scripts/ui/TerrainStudioErosionV7.gd
           grep -q 'ComparadorTerrenoV6V7' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           test -s battle-source/tests/test_terrain_studio_v10_natural.gd
