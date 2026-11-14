@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaTerrainScatter3D
 
+const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+
 # A deterministic, render-only detail pass for the browser art studio.
 # Repeated grass, reeds and stones use three MultiMesh batches instead of
 # hundreds of separate nodes. No collision or tactical terrain is created.
@@ -56,6 +58,10 @@ static func _placement(at: Vector3, yaw: float, dimensions: Vector3) -> Transfor
     var basis := Basis(Vector3.UP, yaw).scaled(dimensions)
     return Transform3D(basis, at)
 
+static func _surface_y(cell: Dictionary, dx: float, dz: float) -> float:
+    var heights: PackedFloat32Array = cell["corners"]
+    return SurfaceSampler.height(float(cell["top"]),heights,dx,dz,float(cell["half"]))
+
 static func populate(parent: Node3D, cells: Array[Dictionary],
         preset: int) -> Dictionary:
     var grass: Array[Transform3D] = []
@@ -66,7 +72,6 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
         var z: int = int(cell["z"])
         var kind: String = str(cell["kind"])
         var center: Vector3 = cell["center"]
-        var top: float = float(cell["top"])
         var seed: int = x * 7349 + z * 9283 + preset * 5671
         if kind == "plain" or kind == "forest":
             # Leave enough empty ground for roads, vehicles and buildings.
@@ -76,8 +81,10 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
             for i in range(quantity):
                 var rx: float = _variation(seed,i*7+2)
                 var rz: float = _variation(seed,i*11+19)
+                var ox: float = (rx-0.5)*1.50
+                var oz: float = (rz-0.5)*1.50
                 var at: Vector3 = center + Vector3(
-                    (rx-0.5)*1.50,top+0.025,(rz-0.5)*1.50)
+                    ox,_surface_y(cell,ox,oz)+0.025,oz)
                 var size: float = 0.70+_variation(seed,i+43)*0.57
                 grass.append(_placement(at,_variation(seed,i+67)*TAU,
                     Vector3(size,size,size)))
@@ -95,7 +102,7 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                         dz += tangent
                     else:
                         dx += tangent
-                    var at := center+Vector3(dx,top+0.01,dz)
+                    var at := center+Vector3(dx,_surface_y(cell,dx,dz)+0.01,dz)
                     var size: float = 0.82+_variation(seed,i+131)*0.48
                     reeds.append(_placement(at,_variation(seed,i+151)*TAU,
                         Vector3(size,size,size)))
@@ -106,7 +113,7 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                 var pz: float = (_variation(seed,i+211)-0.5)*1.38
                 var size: float = 0.54+_variation(seed,i+223)*0.60
                 gravel.append(_placement(
-                    center+Vector3(px,top+0.065,pz),
+                    center+Vector3(px,_surface_y(cell,px,pz)+0.065,pz),
                     _variation(seed,i+251)*TAU,
                     Vector3(size,0.42*size,0.76*size)))
     var grass_tint: Color = Color("#879c69") if preset == 0 else (
