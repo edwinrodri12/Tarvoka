@@ -1,0 +1,56 @@
+name: TARVOKA V18b direct mountain preview (GPU)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/TerrainStudioBiomePaletteV14.gd"
+      - "scripts/ui/TerrainStudioErosionV7.gd"
+      - "scripts/ui/TerrainStudioFoothillsV11.gd"
+      - "scripts/ui/TerrainStudio3D.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_terrain_v18b_direct_mountain_material.gd"
+      - ".github/workflows/terrain-v18b-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview-real-mesh:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load Godot 4.3 renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fsSL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot43.zip
+          unzip -q /tmp/godot43.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/terrain-v18b-import.log
+          if grep -E 'SCRIPT ERROR:|Import failed' /tmp/terrain-v18b-import.log; then exit 1; fi
+      - name: Inspect actual mountain mesh and capture 3 biome comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_v18b_direct_mountain_material.gd \
+            2>&1 | tee /tmp/terrain-v18b-actual-surfaces.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-v18b-actual-surfaces.log; then exit 1; fi
+          grep -q 'PASS TERRAIN_V18B_DIRECT_MATERIAL:' /tmp/terrain-v18b-actual-surfaces.log
+          test -s artifacts/tarvoka_v18b_actual_surface_comparison.png
+      - name: Upload actual OpenGL screenshots and numerical mesh verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-V18b-Montanas-3-Biomas-Pruebas-Reales
+          path: |
+            artifacts/tarvoka_v18b_*.png
+            /tmp/terrain-v18b-actual-surfaces.log
+          if-no-files-found: warn
+          retention-days: 30
