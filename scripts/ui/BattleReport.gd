@@ -4,6 +4,38 @@ class_name TarvokaBattleReport
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 
+# Faction-aware facts for the landscape command dashboard. This is a
+# display-only observer: the owning side can see its full army, while enemy
+# numbers under fog count VISIBLE contacts only. Never calculate opponent
+# total HP or covert unit readiness from the authoritative state.
+static func operational_snapshot(state: Dictionary, viewer: int) -> Dictionary:
+    var summary := {
+        "allies":0, "move_ready":0, "attack_ready":0,
+        "hp":0, "contacts":0, "fog":Visibility.enabled(state)
+    }
+    if viewer not in [0,1]:
+        return summary
+    var troops = state.get("units",[])
+    if not troops is Array:
+        return summary
+    var fog: bool = bool(summary["fog"])
+    var visible: Dictionary = Visibility.visible_cells(state,viewer) if fog else {}
+    for unit in troops:
+        if not unit is Dictionary or int(unit.get("hp",0)) <= 0:
+            continue
+        var side: int = int(unit.get("faction",-1))
+        if side == viewer:
+            summary["allies"] += 1
+            summary["hp"] += int(unit.get("hp",0))
+            if not bool(unit.get("acted",true)):
+                summary["attack_ready"] += 1
+                if not bool(unit.get("moved",false)):
+                    summary["move_ready"] += 1
+        elif side == 1 - viewer:
+            if not fog or visible.has(unit.get("pos",Vector2i(-1,-1))):
+                summary["contacts"] += 1
+    return summary
+
 # Presentation-only statistics. This never changes battle state or save data.
 # During fog, do not disclose unseen enemies or their total surviving HP.
 static func field_summary(state: Dictionary) -> String:
