@@ -46,6 +46,7 @@ var _order_note: Label
 var _confirm_order_button: Button
 var _cancel_order_button: Button
 var _move_here_button: Button
+var _choose_unit_button: Button
 
 func _ready() -> void:
     hide()
@@ -152,6 +153,14 @@ func _ready() -> void:
     _move_here_button.pressed.connect(_request_move_here)
     _move_here_button.hide()
     commands.add_child(_move_here_button)
+    _choose_unit_button = Button.new()
+    _choose_unit_button.name = "ElegirUnidad3D"
+    _choose_unit_button.text = "Elegir unidad"
+    _choose_unit_button.tooltip_text = "Cambiar entre unidades terrestres y aéreas en una misma casilla"
+    _choose_unit_button.custom_minimum_size = Vector2(126,42)
+    _choose_unit_button.pressed.connect(_choose_unit_here)
+    _choose_unit_button.hide()
+    commands.add_child(_choose_unit_button)
     _cancel_order_button = Button.new()
     _cancel_order_button.name = "CancelarOrden3D"
     _cancel_order_button.text = "Cancelar orden"
@@ -263,9 +272,13 @@ func _update_order_ui() -> void:
     _cancel_order_button.visible = pending
     _confirm_order_button.visible = pending
     _move_here_button.hide()
+    _choose_unit_button.hide()
     if not active:
         _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
         return
+    if _selected_cell.x >= 0:
+        _choose_unit_button.visible = not Orders.visible_friends(
+            _current_state(),_selected_cell).is_empty()
     if pending:
         _order_note.text = str(_order_quote.get("message","Orden pendiente de confirmación."))
         var kind: String = str(_order_quote.get("order",{}).get("kind",""))
@@ -303,6 +316,14 @@ func _preview_3d_intent(intent: Dictionary) -> bool:
     _update_order_ui()
     return not _order_quote.is_empty()
 
+func _choose_unit_here() -> void:
+    if not Orders.can_control(_live_board) or _selected_cell.x < 0:
+        return
+    var chosen: String = Orders.next_friendly(_current_state(),
+        _selected_cell,str(_live_board.get("selected_id")))
+    if not chosen.is_empty():
+        _select_3d_unit(chosen)
+
 func _request_move_here() -> void:
     if not Orders.can_control(_live_board) or _selected_cell.x < 0:
         return
@@ -334,11 +355,13 @@ func tap_battle_cell(cell: Vector2i) -> bool:
         _selected_hint_unit_id = selected_before
         _refresh_ranges()
         return _preview_3d_intent(intent)
+    if intent.get("kind","") == "move":
+        _selected_hint_unit_id = selected_before
+        _refresh_ranges()
+        return _preview_3d_intent(intent)
     if not friends.is_empty():
         var chosen: String = Orders.next_friendly(_current_state(),cell,selected_before)
         return _select_3d_unit(chosen)
-    if intent.get("kind","") == "move":
-        return _preview_3d_intent(intent)
     _drop_3d_quote()
     _update_order_ui()
     return true
@@ -553,7 +576,7 @@ func _on_viewport_input(event: InputEvent) -> void:
                 if short_tap:
                     var picked: Vector2i = pick_from_preview(event.position)
                     if picked.x >= 0:
-                        inspect_cell(picked)
+                        tap_battle_cell(picked)
                 _pinch_previous_distance = 0.0
                 _touch_suppressed = false
             elif _touch_points.size() == 1:
@@ -591,7 +614,7 @@ func _on_viewport_input(event: InputEvent) -> void:
                         _mouse_start.distance_to(event.position) <= GESTURE_DRAG_LIMIT:
                     var picked: Vector2i = pick_from_preview(event.position)
                     if picked.x >= 0:
-                        inspect_cell(picked)
+                        tap_battle_cell(picked)
                 _mouse_down = false
             accept_event()
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
