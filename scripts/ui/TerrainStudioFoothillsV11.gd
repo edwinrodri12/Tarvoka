@@ -1,7 +1,7 @@
 extends RefCounted
 class_name TarvokaTerrainStudioFoothillsV11
 
-# Entirely artistic V15 footslope treatment. The land/water/road tiles,
+# Entirely artistic V15b footslope treatment (safer rock margins). The land/water/road tiles,
 # tactical heights, occupancy, movement, cover, fog and save state remain
 # unchanged. Two batched surfaces maximum for the whole 12x10 study.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
@@ -64,7 +64,7 @@ static func _apron_vertex(cell: Dictionary, mountain: Dictionary,
         sin(along*2.6+float(seed%13))*0.067+
         sin(along*5.1+float(seed%17))*0.027)*sin(PI*inward)
     var reach: float = 0.84+0.21*_hash(seed+19)
-    var span: float = 0.035+inward*reach+wobble
+    var span: float = 0.070+inward*reach+wobble
     var offset: Vector2 = facing*(half-span)+tangent*along
     # Use the neighboring mountain's real continuous uplift at the
     # shared world border; this is a visible material transition only.
@@ -72,8 +72,8 @@ static func _apron_vertex(cell: Dictionary, mountain: Dictionary,
     var mountain_rise: float = Spines.uplift(
         mountain,source_offset,mountains,scene)
     var height: float = (
-        clampf(mountain_rise*0.69+0.06,0.05,0.38)*
-        pow(1.0-inward,2.0)+0.018)
+        clampf(mountain_rise*0.64+0.05,0.045,0.34)*
+        pow(1.0-inward,2.2)+0.009)
     return _point(cell,offset,height)
 
 static func _apron(mesh: SurfaceTool, cell: Dictionary,
@@ -98,6 +98,9 @@ static func _apron(mesh: SurfaceTool, cell: Dictionary,
                 Vector2(at.x,at.z)*1.5,scene)
             var tint: Color = rock.lerp(ground,
                 smoothstep(0.03,0.98,inward))
+            # Subtle mineral banding follows the slope, not a tile grid.
+            var strata: float = sin(along*12.0+float(seed%19)*0.7)*0.027
+            tint = tint.darkened(maxf(0.0,strata))
             if mineral>0.0:
                 tint = tint.lightened(mineral)
             else:
@@ -122,31 +125,41 @@ static func _outcrop(mesh: SurfaceTool, cell: Dictionary,
     var tangent := Vector2(-facing.y,facing.x)
     var pieces := 4
     var mineral: Color = _stone_color(scene)
+    var half: float = float(cell["half"])
+    # V15b: stratified, low-profile fragments instead of four identical
+    # upright cones. Each rock is kept back from all FOUR tile boundaries,
+    # including edges next to a road, river or bridge.
     for i in range(pieces):
-        # Every stone stays strictly within its open/forest tile. No rock
-        # gets placed on roads, rivers or neighbouring combat cells.
-        var along: float = (_hash(seed+19*i)-0.5)*1.63
-        var distance: float = 0.27+0.50*_hash(seed+53*i+7)
-        var offset: Vector2 = facing*(float(cell["half"])-distance)+tangent*along
-        var phi: float = TAU*_hash(seed+37*i+11)
+        var along: float = lerpf(-0.66,0.66,float(i)/3.0)
+        along += (_hash(seed+i*31+12)-0.5)*0.13
+        var distance: float = 0.33+0.36*_hash(seed+i*53+7)
+        var offset: Vector2 = facing*(half-distance)+tangent*along
+        var phi: float = TAU*_hash(seed+i*37+11)
         var axis := Vector2(cos(phi),sin(phi))
         var sideways := Vector2(-axis.y,axis.x)
-        var radius: float = 0.095+0.075*_hash(seed+43*i+5)
-        var tall: float = 0.15+0.22*_hash(seed+29*i+3)
-        var apex := _point(cell,offset,0.025+tall)
-        apex.x += (_hash(seed+i*7)-0.5)*radius*0.53
-        apex.z += (_hash(seed+i*13)-0.5)*radius*0.53
+        var radius: float = 0.103+0.059*_hash(seed+i*43+5)
+        var tall: float = 0.105+0.21*_hash(seed+i*29+3)
+        var rim_margin: float = radius*1.30+0.11
+        offset.x = clampf(offset.x,-half+rim_margin,half-rim_margin)
+        offset.y = clampf(offset.y,-half+rim_margin,half-rim_margin)
+        var apex := _point(cell,offset,0.015+tall)
+        apex.x += (_hash(seed+i*7)-0.5)*radius*0.58
+        apex.z += (_hash(seed+i*13)-0.5)*radius*0.58
         var ring: Array[Vector3] = []
         for k in range(5):
             var angle: float = TAU*float(k)/5.0
             var edge: Vector2 = (
                 axis*cos(angle)+sideways*sin(angle)) * (
-                radius*(0.76+0.38*_hash(seed+i*41+k*7)))
-            ring.append(_point(cell,offset+edge,0.027))
+                radius*(0.75+0.40*_hash(seed+i*41+k*7)))
+            var at: Vector2 = offset+edge
+            # Anchor every fragment on the exact same continuous four-fan
+            # ground as the valley. No hovering pebbles or terrain punches.
+            ring.append(_point(cell,at,0.013+0.019*_hash(seed+i*23+k*17)))
         for k in range(5):
-            var c: Color = mineral.darkened(0.055*float(k%3))
+            var fleck: float = _hash(seed+i*59+k*37)
+            var c: Color = mineral.darkened(0.025+fleck*0.15)
             _tri(mesh,ring[k],ring[(k+1)%5],apex,
-                c.darkened(0.06),c,c.lightened(0.12))
+                c.darkened(0.10),c,c.lightened(0.08+fleck*0.06))
     return pieces
 
 static func populate(parent: Node3D, cells: Array[Dictionary],

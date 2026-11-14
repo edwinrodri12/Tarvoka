@@ -246,7 +246,7 @@ jobs:
             echo "V15 valley rocks, land-only bounds, old comparisons or batched geometry regressed" >&2
             exit 1
           fi
-          grep -q 'PASS TERRAIN_STUDIO_V15:' /tmp/terrain-studio-v15.log
+          grep -q 'PASS TERRAIN_STUDIO_V15B:' /tmp/terrain-studio-v15.log
           test -s artifacts/tarvoka_terrain_v15_foothills.png
           test -s artifacts/tarvoka_terrain_v15_profile.png
           test -s artifacts/tarvoka_terrain_v15_v14_comparison.png
