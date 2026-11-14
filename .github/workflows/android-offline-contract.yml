@@ -1,0 +1,26 @@
+name: Android offline contract
+on:
+  pull_request:
+    paths:
+      - 'export_presets.cfg'
+      - 'scripts/**'
+      - 'tests/test_android_offline_permissions.py'
+      - '.github/workflows/android-offline-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'export_presets.cfg'
+      - 'scripts/**'
+      - 'tests/test_android_offline_permissions.py'
+      - '.github/workflows/android-offline-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no network permissions or runtime clients
+        run: python3 -m unittest discover -s tests -p 'test_android_offline_permissions.py' -v
