@@ -1,0 +1,104 @@
+name: TARVOKA V15 Bake Real 3D HQ Sprites
+
+on:
+  push:
+    branches:
+      - feat/hq-v15-baked-isometric-sprites-20261114
+    paths:
+      - "tests/bake_hq_3d_sprites_v15.gd"
+      - ".github/workflows/hq-v15-bake-sprites.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bake:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    steps:
+      - name: Checkout battle game V15 integration
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Checkout frozen verified V13 3D source assets separately
+        uses: actions/checkout@v4
+        with:
+          ref: feat/hq-v13-production-ready-runtime-lod-20261114
+          path: source_hq
+          persist-credentials: false
+      - name: Install matching official Godot 4.3 native GPU exporter
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-hq-v15.zip
+          unzip -q /tmp/godot-hq-v15.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Import original official faction atlas and V13 runtime geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tests/bake_hq_3d_sprites_v15.gd source_hq/tests/bake_hq_3d_sprites_v15.gd
+          timeout --signal=TERM --kill-after=5s 150s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path source_hq --import --quit 2>&1 | tee /tmp/hq-v15-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/hq-v15-import.log; then
+            echo "V15 sprite source geometry import failed" >&2
+            exit 1
+          fi
+      - name: Bake nine REAL HQ V13 mesh-derived sprites on transparent backgrounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path source_hq \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/bake_hq_3d_sprites_v15.gd 2>&1 | tee /tmp/hq-v15-bake.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/hq-v15-bake.log; then
+            echo "HQ V15 GPU baking had runtime errors" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V15 sprite bake:" /tmp/hq-v15-bake.log
+          test -s source_hq/artifacts/hq-v15-bake/hq_v15_original_3d_contact_sheet.png
+          mkdir -p assets/buildings/hq_v15
+          cp source_hq/artifacts/hq-v15-bake/hq_*.png assets/buildings/hq_v15/
+          rm -f assets/buildings/hq_v15/hq_v15_original_3d_contact_sheet.png
+          python3 - <<'PY'
+          import pathlib, struct
+          folder=pathlib.Path("assets/buildings/hq_v15")
+          names={f"hq_{i}.png" for i in range(8)}|{"hq_neutral.png"}
+          actual={p.name for p in folder.glob("*.png")}
+          assert actual==names, (actual,names)
+          for path in sorted(folder.glob("*.png")):
+              payload=path.read_bytes()
+              assert payload[:8]==b"\x89PNG\r\n\x1a\n", path.name
+              width,height=struct.unpack(">II",payload[16:24])
+              assert (width,height)==(384,384),(path.name,width,height)
+              assert len(payload)>8000,(path.name,len(payload))
+              print("Baked official HQ:",path.name,len(payload))
+          PY
+      - name: Archive inspected source renders and shipped game sprites
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V15-Real-3D-Baked-Sprites
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            assets/buildings/hq_v15/*.png
+            source_hq/artifacts/hq-v15-bake/hq_v15_original_3d_contact_sheet.png
+      - name: Commit generated offline PNG resources to the V15 GAME branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/buildings/hq_v15/
+          if git diff --cached --quiet; then
+            echo "HQ V15 baked textures already committed"
+          else
+            git commit -m "art(HQ): offline 3D Godot baked eight approved HQ faction sprites and neutral alpha sprite"
+            git push origin HEAD:feat/hq-v15-baked-isometric-sprites-20261114
+          fi
