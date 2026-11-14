@@ -159,17 +159,30 @@ static func _ground_point(grid: Array, cell: Vector2i, u: float, v: float,
         float(cell.y)+v)
 
 static func build_ground(grid: Array, observed: Dictionary = {},
-        restricted: bool = false, divisions: int = 5) -> ArrayMesh:
+        restricted: bool = false, divisions: int = 5,
+        region: Rect2i = Rect2i()) -> ArrayMesh:
     var mesh := ArrayMesh.new()
     if divisions < 1:
         return mesh
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count := 0
-    for y in range(grid.size()):
+    # Rect2i() means the original complete map. A nonempty region
+    # limits the emitted cells while all height and fog lookups still
+    # use the full authoritative grid and world coordinates.
+    var y_from: int = maxi(0,region.position.y) if (
+        region.has_area()) else 0
+    var y_until: int = mini(grid.size(),region.end.y) if (
+        region.has_area()) else grid.size()
+    for y in range(y_from,y_until):
         if not (grid[y] is Array):
             continue
-        for x in range((grid[y] as Array).size()):
+        var x_from: int = maxi(0,region.position.x) if (
+            region.has_area()) else 0
+        var x_until: int = mini(
+            (grid[y] as Array).size(),region.end.x) if (
+            region.has_area()) else (grid[y] as Array).size()
+        for x in range(x_from,x_until):
             var cell := Vector2i(x,y)
             if not observed_cell(grid,cell,observed,restricted):
                 continue
@@ -318,15 +331,28 @@ static func bridge_water_outline(grid: Array, cell: Vector2i,
     return outline
 
 static func build_water(grid: Array, observed: Dictionary = {},
-        restricted: bool = false, divisions: int = 8) -> ArrayMesh:
+        restricted: bool = false, divisions: int = 8,
+        region: Rect2i = Rect2i()) -> ArrayMesh:
     var mesh := ArrayMesh.new()
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var triangles := 0
-    for y in range(grid.size()):
+    # Rect2i() means the original complete map. A nonempty region
+    # limits the emitted cells while all height and fog lookups still
+    # use the full authoritative grid and world coordinates.
+    var y_from: int = maxi(0,region.position.y) if (
+        region.has_area()) else 0
+    var y_until: int = mini(grid.size(),region.end.y) if (
+        region.has_area()) else grid.size()
+    for y in range(y_from,y_until):
         if not (grid[y] is Array):
             continue
-        for x in range((grid[y] as Array).size()):
+        var x_from: int = maxi(0,region.position.x) if (
+            region.has_area()) else 0
+        var x_until: int = mini(
+            (grid[y] as Array).size(),region.end.x) if (
+            region.has_area()) else (grid[y] as Array).size()
+        for x in range(x_from,x_until):
             var cell := Vector2i(x,y)
             var crossing: bool = Topology.bridge_axis(
                 grid,cell,observed,restricted) != 0
