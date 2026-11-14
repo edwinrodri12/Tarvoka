@@ -94,6 +94,33 @@ func _run_gallery() -> void:
     if main.command_menu.operational_values.size() != 4:
         push_error("Operational command tiles are not present in compact landscape.")
         _failed = true
+
+    main.command_menu.open_for(main.board,"Ejercito")
+    if not await _capture_landscape("15-ejercito-1280x720",Vector2i(1280,720),"Ejército · catálogo propio y ficha"):
+        _failed = true
+    if not await _capture_landscape("16-ejercito-960x540",Vector2i(960,540),"Ejército · visor horizontal compacto"):
+        _failed = true
+    if main.command_menu.army_columns.vertical or main.command_menu.army_list_body == null:
+        push_error("Army roster does not use two landscape panels.")
+        _failed = true
+
+    # An isolated battle setup gives the production panel an actual
+    # player-owned base. Restore its authoritative state and selection after
+    # rendering; none of these previews issues a real purchase.
+    var original_factory_pos: Vector2i = main.board.selected_factory_pos
+    var prior_state: Dictionary = main.board.state.duplicate(true)
+    main.board.new_game(0,false,false,false,true,true,true)
+    main.board.selected_factory_pos = Vector2i(0,3)
+    main.command_menu.open_for(main.board,"Produccion")
+    if not await _capture_landscape("17-produccion-1280x720",Vector2i(1280,720),"Producción · precios y comparador reales"):
+        _failed = true
+    if not await _capture_landscape("18-produccion-960x540",Vector2i(960,540),"Producción · lista de compra horizontal"):
+        _failed = true
+    if main.command_menu.production_columns.vertical or main.command_menu.production_purchase_buttons.is_empty():
+        push_error("Production preview must show authorized models in two columns.")
+        _failed = true
+    main.board.state = prior_state
+    main.board.selected_factory_pos = original_factory_pos
     main.command_menu.open_for(main.board,"Ajustes")
     if not await _capture_landscape("09-ajustes-1280x720",Vector2i(1280,720),"Ajustes · configuraciones tácticas"):
         _failed = true
@@ -137,11 +164,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 14:
-        push_error("Landscape UI QA incomplete: %d/14 captures" % _manifest.size())
+    if _failed or _manifest.size() != 18:
+        push_error("Landscape UI QA incomplete: %d/18 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 14 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 18 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
