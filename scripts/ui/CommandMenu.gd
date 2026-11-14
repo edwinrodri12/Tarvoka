@@ -246,6 +246,34 @@ func _action(body: Container, name: String, callable: Callable, enabled: bool = 
 
 # A nested scroll leaves both the catalog and the dossier visible at
 # 1280x720; narrow horizontal Android devices can use the same layout.
+func _domain_label(value: String) -> String:
+    match value:
+        "ground":
+            return "Tierra"
+        "air":
+            return "Aire"
+        "naval":
+            return "Mar"
+    return value
+
+func _installation_label(value: String) -> String:
+    match value:
+        "factory":
+            return "Fábrica"
+        "armor_plant":
+            return "Planta de blindados"
+        "artillery_depot":
+            return "Depósito de artillería"
+        "drone_center":
+            return "Centro de drones"
+        "airbase":
+            return "Base aérea"
+        "shipyard":
+            return "Astillero"
+        "city":
+            return "Ciudad"
+    return value
+
 func _catalog_scroll(parent: VBoxContainer, title: String) -> VBoxContainer:
     _heading(parent,title)
     var scroller := ScrollContainer.new()
@@ -333,7 +361,7 @@ func _select_army_unit(uid: String) -> void:
     text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_child(text_column)
     _description(text_column,"%s · %s" % [uid,Roles.label(str(selected.get("role","")))])
-    _description(text_column,"Dominio: %s" % str(Domains.domain(selected)))
+    _description(text_column,"Dominio: %s" % _domain_label(str(Domains.domain(selected))))
     var stats := GridContainer.new()
     stats.name = "EstadisticasUnidades"
     stats.columns = 2
@@ -623,7 +651,7 @@ func refresh() -> void:
             var credits: Array = economy.get("credits",[])
             var funds: int = int(credits[viewer]) if credits.size() > viewer and viewer >= 0 else 0
             _description(shop_summary,"INSTALACIÓN · %s  (%d,%d)" % [
-                kind,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1
+                _installation_label(kind),board.selected_factory_pos.x+1,board.selected_factory_pos.y+1
             ])
             _description(shop_summary,"FONDOS PROPIOS: %d CRÉDITOS" % funds)
             var modern: bool = bool(economy.get("modern",false))
