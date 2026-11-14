@@ -102,6 +102,30 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     main._process(0.0)
 
+    # Read-only verified factory preview in compact mode. Preserve the
+    # authoritative match and restore selection after this gallery frame.
+    var before_terrain_frame: Dictionary = main.board.state.duplicate(true)
+    var inspected_before_frame: Vector2i = main.board.inspected_cell
+    var factory_before_frame: Vector2i = main.board.selected_factory_pos
+    main.board.new_game(0,false,false,false,true,true,true)
+    main.board.inspected_cell = Vector2i(0,3)
+    main.board.selected_id = ""
+    main.board.selected_factory_pos = Vector2i(-1,-1)
+    main._set_compact_hud(true)
+    main._process(0.0)
+    if not await _capture_landscape("23-edificio-terreno-960x540",Vector2i(960,540),
+            "Inspección · cobertura, movilidad y estado de instalación"):
+        _failed = true
+    if not main.compact_tile_context.visible or not main.compact_site_actions.visible:
+        push_error("The terrain/site fact card is missing in compact landscape.")
+        _failed = true
+    main.board.state = before_terrain_frame
+    main.board.inspected_cell = inspected_before_frame
+    main.board.selected_factory_pos = factory_before_frame
+    main.board.selected_id = selected_before_gallery
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Visual QA of the REAL attack controller, not a painted mockup.
     # The scenario stays in memory and its authoritative state is restored.
     var battle_before_effect: Dictionary = main.board.state.duplicate(true)
@@ -220,11 +244,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 22:
-        push_error("Landscape UI QA incomplete: %d/22 captures" % _manifest.size())
+    if _failed or _manifest.size() != 23:
+        push_error("Landscape UI QA incomplete: %d/23 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 22 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 23 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
