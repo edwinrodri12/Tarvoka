@@ -207,7 +207,7 @@ static func _running_gear(root: Node3D,
 
 static func _details(root: Node3D,paint: Material,
         base: Material,glass: Material,black: Material,
-        steel: Material,signal: Material) -> void:
+        steel: Material,signal_mat: Material) -> void:
     # Real windshield facets, no car-sized glass on military armor.
     _box(root,"MarcoFrontalReforzado",
         Vector3(0.0,1.13,-1.02),Vector3(1.04,0.10,0.12),steel,
@@ -242,7 +242,7 @@ static func _details(root: Node3D,paint: Material,
                 Vector3(0.055,0.10,0.18),steel)
         _box(root,"FaroRecessed_%d" % side,
             Vector3(sign*0.47,0.77,-1.47),
-            Vector3(0.18,0.10,0.025),signal)
+            Vector3(0.18,0.10,0.025),signal_mat)
         _box(root,"RejillaRefrigeracion_%d" % side,
             Vector3(sign*0.79,1.02,0.76),
             Vector3(0.035,0.13,0.35),black)
@@ -349,10 +349,10 @@ static func apply(model: Node3D,color: Color) -> bool:
     var tire: StandardMaterial3D=_mat(Color("#222629"),0.06,0.98)
     var rim: StandardMaterial3D=_mat(Color("#4D5456"),0.60,0.78)
     var glass: StandardMaterial3D=_mat(Color("#60899B"),0.13,0.31)
-    var signal: StandardMaterial3D=_mat(Color("#EDD2A1"),0.01,0.42)
+    var signal_mat: StandardMaterial3D=_mat(Color("#EDD2A1"),0.01,0.42)
     _hull(root,armor)
     _running_gear(root,tire,rim,black,lower)
-    _details(root,armor,lower,glass,black,steel,signal)
+    _details(root,armor,lower,glass,black,steel,signal_mat)
     _remote_turret(root,armor,steel,glass,black)
     model.set_meta("tarvoka_apc_sculpt_v1",true)
     model.set_meta("tarvoka_apc_paint_color",color)
