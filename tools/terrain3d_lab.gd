@@ -204,9 +204,15 @@ func _triangles_per_instance(mesh: Mesh) -> int:
     if mesh == null or mesh.get_surface_count() == 0:
         return 0
     var data: Array = mesh.surface_get_arrays(0)
-    var indices: PackedInt32Array = data[Mesh.ARRAY_INDEX]
-    return int(indices.size()/3) if not indices.is_empty() else (
-        int(data[Mesh.ARRAY_VERTEX].size()/3))
+    # Primitive meshes (e.g. CylinderMesh trunks) can return NIL in
+    # ARRAY_INDEX even though their vertex data is perfectly valid.
+    var indices: Variant = data[Mesh.ARRAY_INDEX]
+    if indices is PackedInt32Array and not indices.is_empty():
+        return int(indices.size()/3)
+    var vertices: Variant = data[Mesh.ARRAY_VERTEX]
+    if vertices is PackedVector3Array:
+        return int(vertices.size()/3)
+    return 0
 
 # Cost estimates are geometry counts plus CPU rebuild duration; FPS can
 # only be measured on a running device, not inferred from these counters.
