@@ -5,6 +5,8 @@ on:
     paths:
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/WeatherCoating3D.gd"
+      - "tests/test_battle_weather_3d_v28.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/Tank*.gd"
       - "tests/test_g09_battle_lod_v27.gd"
@@ -57,6 +59,27 @@ jobs:
             exit 1
           fi
           grep -q 'PASS G09 V27:' /tmp/g09-battle-lod-v27.log
+      - name: Validate live 3D rainfall, snowfall, G09 hero/eco and command HQ
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 170s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_weather_3d_v28.gd 2>&1 | tee /tmp/battle-weather-v28.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-weather-v28.log; then
+            echo "Actual G09/HQ rain or snow, fog, LOD or weather HUD regression" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_WEATHER_3D:' /tmp/battle-weather-v28.log
+          test -s artifacts/tarvoka_battle_weather_snow_3d.png
+          test -s artifacts/tarvoka_battle_weather_rain_3d.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TARVOKA-Batalla3D-Clima-Real
+          if-no-files-found: ignore
+          path: artifacts/tarvoka_battle_weather_*.png
       - name: Confirm fog proof and battle 3D picker/order lifecycle
         shell: bash
         run: |
