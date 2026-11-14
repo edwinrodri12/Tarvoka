@@ -65,6 +65,10 @@ func _run() -> void:
     assert(not menu.battle_columns.vertical)
     assert(menu.battle_columns.get_child_count() == 2)
     assert(menu.battle_body.get_child_count() == 1)
+    var portraits: Control = menu.battle_columns.find_child("ComandantesDelCentroDeMando",true,false)
+    assert(portraits != null and portraits.portraits.size() == 2)
+    assert(portraits.portraits[0].texture != null)
+    assert(portraits.portraits[1].texture != null)
     assert(main.board.state == state_before)
 
     var terminal: Dictionary = state_before.duplicate(true)
