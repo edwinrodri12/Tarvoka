@@ -15,6 +15,38 @@ const Radar = preload("res://scripts/ui/ObjectivesRadarData.gd")
 
 const MAX_ROWS := 24
 const MAX_OBJECTIVES := 6
+const MAX_MAP_MARKERS := 80
+
+# Markers are a compact presentation-only subset of the same alerts displayed
+# in the drawer. Never generate them from enemy units or private site state.
+static func _map_markers(rows: Array[Dictionary]) -> Array[Dictionary]:
+    var markers: Array[Dictionary] = []
+    var visited: Dictionary = {}
+    for row in rows:
+        var urgency: int = int(row.get("urgency",5))
+        if urgency > 3:
+            continue # Objective pins are already rendered separately.
+        var kind: String = str(row.get("kind",""))
+        var pos: Vector2i = row.get("pos",Vector2i(-1,-1))
+        var uid: String = str(row.get("id",""))
+        var key: String = ("unit:"+uid) if kind == "unit" else (
+            "site:%d:%d" % [pos.x,pos.y])
+        if visited.has(key):
+            continue # Critical supply always wins over idle on the same unit.
+        visited[key] = true
+        var tone := "idle"
+        if urgency == 0:
+            tone = "critical"
+        elif kind == "site" and urgency == 1:
+            tone = "production"
+        elif kind == "site" and urgency == 2:
+            tone = "capture"
+        elif urgency == 1:
+            tone = "warning"
+        markers.append({"kind":kind,"pos":pos,"id":uid,"tone":tone})
+        if markers.size() == MAX_MAP_MARKERS:
+            break
+    return markers
 
 static func _add(rows: Array[Dictionary], category: String, id: String,
         pos: Vector2i, title: String, description: String, priority: int) -> void:
@@ -27,7 +59,7 @@ static func build(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> Di
     var output := {
         "valid":false,"active":false,"total":0,"urgent":0,"supplies":0,
         "ready_units":0,"ready_bases":0,"objectives":0,"capture_pending":0,
-        "rows":[],"overflow":0
+        "rows":[],"overflow":0,"markers":[],"marker_count":0
     }
     if viewer not in [0,1] or not state.get("terrain") is Array or not Rules.valid_terrain(state["terrain"]) or not state.get("units") is Array:
         return output
@@ -140,6 +172,10 @@ static func build(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> Di
         return str(a.get("id","")) < str(b.get("id",""))
     )
     output["total"] = rows.size()
+    # Derive before truncating the drawer's rows: a 40x30 battle may have
+    # dozens of ready units beyond the first 24 text entries.
+    output["markers"] = _map_markers(rows)
+    output["marker_count"] = output["markers"].size()
     output["overflow"] = maxi(0,rows.size()-MAX_ROWS)
     if rows.size() > MAX_ROWS:
         rows.resize(MAX_ROWS)
