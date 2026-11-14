@@ -4,6 +4,8 @@ const Viewer=preload("res://scripts/ui/Battle3DMapView.gd")
 const Session=preload("res://scripts/core/BattleSession.gd")
 const Scenarios=preload("res://scripts/core/Scenarios.gd")
 const Hit=preload("res://scripts/ui/TankHitReactionV30.gd")
+const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
+const Damage=preload("res://scripts/ui/TankDamage3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -45,6 +47,21 @@ func _run() -> void:
         assert(v._hit_model_id.is_empty())
         assert(not spark.visible and not boom.visible)
     assert(state==snapshot)
+    # Real HP -> permanent damage stages, entirely cosmetic.
+    var wounded: Dictionary=state.duplicate(true)
+    for item in wounded["units"]:
+        if item["id"]=="TARGET":
+            item["hp"]=4
+    var wounded_scene: Node3D=Terrain.build(wounded,"FRIEND",12.0,true)
+    var wounded_model: Node3D=wounded_scene.find_child(
+        "Unidad3D_TARGET",true,false) as Node3D
+    assert(wounded_model!=null)
+    assert(Damage.current_stage(wounded_model)==2)
+    assert(wounded_model.get_meta("tarvoka_damage_polished_v30",false))
+    var fragment: MeshInstance3D=wounded_model.find_child(
+        "BlindajeDesgarradoReal",true,false) as MeshInstance3D
+    assert(fragment!=null and fragment.visible)
+    wounded_scene.free()
     v.close_view()
     assert(v._hit_model_id.is_empty())
     v.queue_free()
