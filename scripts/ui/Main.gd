@@ -8,6 +8,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const EngineerRepair = preload("res://scripts/core/EngineerRepair.gd")
 const FactionGallery = preload("res://scripts/ui/FactionGallery.gd")
 const UnitArtGallery = preload("res://scripts/ui/ArsenalHomeScreen.gd")
 const MinimapScript = preload("res://scripts/ui/BattleMinimap.gd")
@@ -139,6 +140,9 @@ var production_picker: OptionButton
 var _production_catalog_key := ""
 var produce_button: Button
 var resupply_button: Button
+var repair_button: Button
+var repair_popup: PopupMenu
+var _repair_targets: Array = []
 var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
@@ -169,6 +173,7 @@ var compact_confirm: Button
 var compact_cancel: Button
 var compact_end_turn: Button
 var compact_resupply: Button
+var compact_repair: Button
 var compact_top_shortcuts: HBoxContainer
 var compact_options_button: Button
 var compact_center: Button
@@ -572,6 +577,15 @@ func _ready() -> void:
     resupply_button.visible = false
     resupply_button.pressed.connect(_resupply_unit)
     panel.add_child(resupply_button)
+
+    repair_button = Button.new()
+    repair_button.name = "EngineerRepairSidebar"
+    repair_button.text = "Reparar blindado cercano"
+    repair_button.custom_minimum_size.y = 52
+    repair_button.visible = false
+    repair_button.tooltip_text = "Ingeniero: +1 a +3 HP a un blindado aliado adyacente por 35 créditos/HP. Consume su acción."
+    repair_button.pressed.connect(_open_repair_targets)
+    panel.add_child(repair_button)
 
     cancel_button = Button.new()
     cancel_button.text = "Cancelar seleccion"
@@ -984,7 +998,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     orders_title.text = "ACCIONES DISPONIBLES"
     GameUiTheme.section(orders_title)
     orders.add_child(orders_title)
-    for widget in [confirm_button,cancel_button,end_button,resupply_button, factory_status,production_picker,produce_button]:
+    for widget in [confirm_button,cancel_button,end_button,resupply_button,repair_button, factory_status,production_picker,produce_button]:
         widget.reparent(orders,false)
     GameUiTheme.emphasize(confirm_button,"success")
     GameUiTheme.emphasize(end_button,"danger")
@@ -1177,6 +1191,20 @@ func _build_battle_hud() -> void:
     compact_resupply.pressed.connect(_resupply_unit)
     actions.add_child(compact_resupply)
 
+    compact_repair = Button.new()
+    compact_repair.name = "EngineerRepairMobile"
+    compact_repair.text = "Reparar"
+    compact_repair.custom_minimum_size.y = 48
+    compact_repair.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_repair.visible = false
+    compact_repair.pressed.connect(_open_repair_targets)
+    actions.add_child(compact_repair)
+
+    repair_popup = PopupMenu.new()
+    repair_popup.name = "EngineerRepairChoices"
+    repair_popup.id_pressed.connect(_repair_chosen)
+    add_child(repair_popup)
+
     compact_end_turn = Button.new()
     compact_end_turn.text = "Fin turno"
     compact_end_turn.custom_minimum_size.y = 48
@@ -1189,7 +1217,7 @@ func _build_battle_hud() -> void:
     other_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
     other_actions.add_theme_constant_override("separation",5)
     action_rows.add_child(other_actions)
-    for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply]:
+    for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply,compact_repair]:
         shortcut.reparent(other_actions,false)
     compact_compare_button = Button.new()
     compact_compare_button.name = "CompararHastaTresDestinosMovil"
@@ -1642,6 +1670,18 @@ func _process(_delta: float) -> void:
     if not compact_resupply.disabled:
         var compact_order: Dictionary = Logistics.quote(board.state, board.selected_id)
         compact_resupply.text = "Cargar M/F" if int(compact_order.get("fuel", 0)) + int(compact_order.get("cargo_fuel", 0)) > 0 else "Cargar mun."
+    # The repair choice shares the exact authoritative quote for desktop
+    # and Android; never execute a repair merely on button activation.
+    var chosen_engineer := false
+    if board.state.has("economy") and bool(board.state["economy"].get("modern",false)):
+        for unit in board.state.get("units",[]):
+            if str(unit.get("id","")) == board.selected_id:
+                chosen_engineer = str(unit.get("role","")) == "engineer"
+                break
+    repair_button.visible = chosen_engineer and board.inspected_enemy_id.is_empty()
+    repair_button.disabled = board.repair_options_selected().is_empty() if repair_button.visible else true
+    compact_repair.visible = repair_button.visible
+    compact_repair.disabled = repair_button.disabled
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")
@@ -2000,6 +2040,32 @@ func _confirm_order() -> void:
 
 func _resupply_unit() -> void:
     board.resupply_selected()
+
+func _open_repair_targets() -> void:
+    if board == null or repair_popup == null:
+        return
+    var available: Array = board.repair_options_selected()
+    if available.is_empty():
+        board.message = "Ingeniero: necesita un blindado aliado dañado junto a él y créditos suficientes."
+        return
+    _repair_targets = available.duplicate(true)
+    repair_popup.clear()
+    for i in range(available.size()):
+        var choice: Dictionary = available[i]
+        repair_popup.add_item("%s · +%d HP · %d cr. (queda %d/%d)" % [
+            str(choice["target_role"]),int(choice["restored"]),int(choice["cost"]),
+            int(choice["after_hp"]),int(choice["maximum_hp"])],i)
+    repair_popup.popup_centered(Vector2i(420,mini(350,available.size()*44+35)))
+
+func _repair_chosen(index: int) -> void:
+    if index < 0 or index >= _repair_targets.size():
+        return
+    var target_id: String = str(_repair_targets[index]["target_id"])
+    _repair_targets.clear()
+    repair_popup.hide()
+    board.repair_selected_target(target_id)
+    _unit_summary_cache_key = -1
+    _process(0.0)
 
 func _produce_unit() -> void:
     if not board.state.has("economy") or production_picker.get_selected_id() < 0:
