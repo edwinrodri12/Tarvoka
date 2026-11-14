@@ -12,6 +12,8 @@ on:
       - "scripts/ui/TerrainStudioEcotonesV8.gd"
       - "scripts/ui/TerrainStudioMaterialsV9.gd"
       - "scripts/ui/TerrainStudioRidgeV10.gd"
+      - "scripts/ui/TerrainStudioFoothillsV11.gd"
+      - "tests/test_terrain_studio_v15_foothills.gd"
       - "tests/test_terrain_studio_v14_silhouettes.gd"
       - "tests/test_terrain_studio_v13_material_light.gd"
       - "tests/test_terrain_studio_v12_lithology.gd"
@@ -229,6 +231,22 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V15 organic mountain foothills and outcrops in real 3D Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v15_foothills.gd 2>&1 | tee /tmp/terrain-studio-v15.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-studio-v15.log; then
+            echo "V15 valley rocks, land-only bounds, old comparisons or batched geometry regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V15:' /tmp/terrain-studio-v15.log
+          test -s artifacts/tarvoka_terrain_v15_foothills.png
+          test -s artifacts/tarvoka_terrain_v15_profile.png
+          test -s artifacts/tarvoka_terrain_v15_v14_comparison.png
       - name: Verify V14 rock silhouette topology and mountain seam continuity in 3D Studio
         shell: bash
         run: |
@@ -535,6 +553,9 @@ jobs:
             artifacts/tarvoka_terrain_v14_normal_distance.png
             artifacts/tarvoka_terrain_v14_ridge_profile.png
             artifacts/tarvoka_terrain_v14_v13_comparison.png
+            artifacts/tarvoka_terrain_v15_foothills.png
+            artifacts/tarvoka_terrain_v15_profile.png
+            artifacts/tarvoka_terrain_v15_v14_comparison.png
             artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
