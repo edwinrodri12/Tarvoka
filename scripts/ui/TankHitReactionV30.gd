@@ -107,6 +107,13 @@ static func apply(model: Node3D) -> bool:
     for i in range(6):
         _card(root,"FragmentoExplosion_%d" % i,
             Vector3(0.53,1.13,-0.62),Vector2(0.075,0.18),false)
+    # Runtime animations must never search the 800+ mesh tank hierarchy
+    # twenty times PER FRAME. Bind each lightweight FX node once.
+    var nodes: Dictionary = {}
+    for fx in root.get_children():
+        if fx is MeshInstance3D:
+            nodes[str(fx.name)]=fx
+    model.set_meta("tarvoka_v32_hit_nodes",nodes)
     model.set_meta("tarvoka_hit_v30",true)
     model.set_meta("tarvoka_hit_v30_type","")
     return true
@@ -114,8 +121,8 @@ static func apply(model: Node3D) -> bool:
 static func _one(model: Node3D,name: String,visible: bool,
         scale_value: float = 1.0,offset: Vector3 = Vector3.ZERO,
         opacity: float = 1.0) -> void:
-    var node: MeshInstance3D = model.find_child(
-        name,true,false) as MeshInstance3D
+    var nodes: Dictionary = model.get_meta("tarvoka_v32_hit_nodes",{})
+    var node: MeshInstance3D = nodes.get(name,null) as MeshInstance3D
     if node==null:
         return
     node.visible=visible
@@ -123,13 +130,16 @@ static func _one(model: Node3D,name: String,visible: bool,
     node.position=(node.get_meta("v30_home",node.position) as Vector3)+offset
     node.transparency=clampf(1.0-opacity,0.0,1.0)
 
+static func _ease_in_smoke(value: float) -> float:
+    var x: float = clampf(value,0.0,1.0)
+    return x*x*(3.0-2.0*x)
+
 static func pose(model: Node3D,kind: String,t: float) -> void:
     if model==null or not model.get_meta("tarvoka_hit_v30",false):
         return
     t=clampf(t,0.0,1.0)
     var bullet: bool = kind==BULLET
     var explosive: bool = kind==EXPLOSIVE
-    var pulse: float = sin(PI*minf(1.0,t*2.15))
     for i in range(7):
         var angle: float = TAU*float(i)/7.0
         var travel: float = 0.08+0.35*t
@@ -148,7 +158,8 @@ static func pose(model: Node3D,kind: String,t: float) -> void:
             explosive and t>0.12 and t<0.95,
             0.8+1.08*t,
             Vector3(0.02*float(i),0.49*t+0.12*float(i),0.13*t),
-            clampf(0.82-t*0.73,0.0,1.0))
+            clampf(0.82-t*0.73,0.0,1.0)
+            *_ease_in_smoke((t-0.12)/0.13))
     for i in range(6):
         var a: float = TAU*float(i)/6.0
         _one(model,"FragmentoExplosion_%d" % i,
