@@ -56,6 +56,28 @@ func _portrait(parent: Container, data: Dictionary, side: String, tint: Color) -
     if not logistics.is_empty():
         _text(cell," · ".join(logistics),12,Color("#B3D2C3"))
 
+# Fixed-width labels avoid the Godot GridContainer shrink-to-one-character
+# issue when attribute names and two values share a compact landscape panel.
+func _metric_row(parent: VBoxContainer, title: String, a: String, b: String = "", header: bool = false) -> void:
+    var row := HBoxContainer.new()
+    row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    row.add_theme_constant_override("separation",8)
+    parent.add_child(row)
+    var metric := _text(row,title,12,Color("#F1D58C") if header else Color("#B3CEDD"))
+    metric.custom_minimum_size.x = 148
+    metric.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    metric.autowrap_mode = TextServer.AUTOWRAP_OFF
+    metric.clip_text = true
+    var value_a := _text(row,a,14,Color("#F1D58C") if header else Color("#E0E9EF"))
+    value_a.custom_minimum_size.x = 62
+    value_a.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    value_a.autowrap_mode = TextServer.AUTOWRAP_OFF
+    if not b.is_empty():
+        var value_b := _text(row,b,14,Color("#F1D58C") if header else Color("#E0E9EF"))
+        value_b.custom_minimum_size.x = 62
+        value_b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        value_b.autowrap_mode = TextServer.AUTOWRAP_OFF
+
 # Render ONLY actual producer-eligible roles already authorized by the model.
 # The comparison is informational: there are no clickable purchase surfaces.
 func show_comparison(result: Dictionary, tint: Color = Color("#2375F3")) -> void:
@@ -75,22 +97,16 @@ func show_comparison(result: Dictionary, tint: Color = Color("#2375F3")) -> void
     _portrait(columns,left,"A · Selección",tint)
     if not right.is_empty():
         _portrait(columns,right,"B · Comparación",tint)
-    var grid := GridContainer.new()
-    grid.columns = 3 if not right.is_empty() else 2
-    grid.add_theme_constant_override("h_separation",12)
-    grid.add_theme_constant_override("v_separation",3)
-    _content.add_child(grid)
-    _text(grid,"ATRIBUTO",12,Color("#AFC5D2"))
-    _text(grid,"A",12,Color("#F1D58C"))
-    if not right.is_empty():
-        _text(grid,"B",12,Color("#F1D58C"))
+    var metrics := VBoxContainer.new()
+    metrics.name = "TablaComparativa"
+    metrics.add_theme_constant_override("separation",5)
+    _content.add_child(metrics)
+    _metric_row(metrics,"ATRIBUTO","A","B" if not right.is_empty() else "",true)
     for entry in result.get("rows",[]):
         if not entry is Dictionary:
             continue
-        _text(grid,str(entry["metric"]),13)
-        _text(grid,str(entry["left"]),14)
-        if not right.is_empty():
-            _text(grid,str(entry["right"]),14)
+        _metric_row(metrics,str(entry["metric"]),str(entry["left"]),
+            str(entry["right"]) if not right.is_empty() else "")
     _text(_content,"A: %s" % str(left.get("reason","")),13,
         Color("#A9DBAF") if bool(left.get("available",false)) else Color("#EEBC91"))
     _text(_content,"Función A: %s" % str(left.get("note","")),13)
