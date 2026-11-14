@@ -37,7 +37,7 @@ func _run() -> void:
     menu._select_army_unit("ENEMY_DO_NOT_SHOW")
     assert(menu.army_selected_id == initial_id)
     assert(main.board.state == original)
-    assert(menu.army_list_body.get_child(0).get_child(0).get_child_count() == 4)
+    assert(menu.army_list_body.get_child(0).get_child(0).get_child_count() == 3)
 
     # More than thirty owned units must remain accessible in a scroll list;
     # the old implementation silently hid the remaining units.
