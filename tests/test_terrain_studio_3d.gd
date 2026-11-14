@@ -15,7 +15,7 @@ func _run() -> void:
     root.add_child(studio)
     for i in range(5):
         await process_frame
-    assert(studio.category_picker.item_count == 3)
+    assert(studio.category_picker.item_count == 4)
     assert(studio._role == "tank")
     studio._switch_category(2)
     for i in range(6):
