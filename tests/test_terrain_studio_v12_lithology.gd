@@ -23,6 +23,9 @@ func _run() -> void:
     for frame in range(6):
         await process_frame
     studio._switch_category(2)
+    # Legacy visual regression: V14 changes mountain geometry intentionally.
+    # Switch it off so V1–V13 mesh and comparison assertions stay meaningful.
+    studio._toggle_v10_finish()
     for frame in range(6):
         await process_frame
     assert(studio.category_picker.item_count == 4)
