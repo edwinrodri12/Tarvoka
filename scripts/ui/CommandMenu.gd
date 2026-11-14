@@ -221,7 +221,7 @@ func _heading(body: VBoxContainer, content: String) -> void:
     Chrome.section(label)
     body.add_child(label)
 
-func _description(body: VBoxContainer, content: String) -> void:
+func _description(body: Container, content: String) -> void:
     var label := Label.new()
     label.text = content
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -452,7 +452,8 @@ func _update_comparison_preview() -> void:
         return
     var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",0))
     comparison_preview.show_comparison(CompareData.compare(
-        board.state,board.selected_factory_pos,selected_catalog_role,comparison_catalog_role,viewer))
+        board.state,board.selected_factory_pos,selected_catalog_role,comparison_catalog_role,viewer),
+        Identity.color_for(board.state,viewer))
 
 func open_for(source: Control, section: String = "") -> void:
     board = source
