@@ -3,6 +3,7 @@ extends SceneTree
 # GPU smoke test for the exact shared Web studio (units/buildings/environment).
 # Does not touch battle rules or Android save files.
 const Terrain = preload("res://scripts/ui/TerrainStudio3D.gd")
+const Textures = preload("res://scripts/ui/TerrainTextures3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -27,6 +28,60 @@ func _run() -> void:
     assert(not studio.role_picker.visible)
     assert(studio.model_root.get_meta("terrain_tile_count") == Terrain.WIDTH*Terrain.HEIGHT)
     assert(studio.terrain_continuous_toggle.button_pressed)
+    assert(studio.terrain_textures_toggle.button_pressed)
+    assert(studio.model_root.get_meta("terrain_textures_pbr",false))
+    assert(int(studio.model_root.get_meta("terrain_textured_meshes",0)) >= 20)
+    var textured_ground: MeshInstance3D = studio.model_root.find_child(
+        "SueloContinuoConRelieve",true,false) as MeshInstance3D
+    assert(textured_ground != null)
+    var ground_pbr: StandardMaterial3D = textured_ground.material_override as StandardMaterial3D
+    assert(ground_pbr != null and ground_pbr.albedo_texture != null)
+    assert(ground_pbr.normal_enabled and ground_pbr.normal_texture != null)
+    assert(ground_pbr.vertex_color_use_as_albedo)
+    assert(Textures.texture_size("soil") == Vector2i(96,96))
+    assert(Textures.texture_size("asphalt") == Vector2i(96,96))
+    assert(Textures.texture_identity("soil") != Textures.texture_identity("rock"))
+    assert(Textures.texture_identity("rock") != Textures.texture_identity("asphalt"))
+    var exact_road: MeshInstance3D = studio.model_root.find_child(
+        "Calzada_*",true,false) as MeshInstance3D
+    assert(exact_road != null)
+    assert((exact_road.material_override as StandardMaterial3D).albedo_texture ==
+        Textures.texture_identity("asphalt"))
+    # Control for art quality: compare exactly the same scene, light and camera.
+    for frame in range(6):
+        await process_frame
+    var textured_capture: Image = studio.preview.get_texture().get_image()
+    assert(textured_capture != null and not textured_capture.is_empty())
+    studio.terrain_textures_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_textures_pbr",false))
+    var plain_ground: MeshInstance3D = studio.model_root.find_child(
+        "SueloContinuoConRelieve",true,false) as MeshInstance3D
+    assert((plain_ground.material_override as StandardMaterial3D).albedo_texture == null)
+    for frame in range(6):
+        await process_frame
+    var plain_capture: Image = studio.preview.get_texture().get_image()
+    assert(plain_capture != null and not plain_capture.is_empty())
+    var texture_before := plain_capture.duplicate()
+    var texture_after := textured_capture.duplicate()
+    texture_before.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    texture_after.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var texture_difference: int = 0
+    for ty in range(0,330,4):
+        for tx in range(0,480,4):
+            var before_col: Color = texture_before.get_pixel(tx,ty)
+            var after_col: Color = texture_after.get_pixel(tx,ty)
+            if absf(before_col.r-after_col.r)+absf(before_col.g-after_col.g)+absf(before_col.b-after_col.b) > 0.07:
+                texture_difference += 1
+    assert(texture_difference > 20)
+    var pbr_comparison := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    pbr_comparison.blit_rect(texture_before,Rect2i(0,0,480,330),Vector2i.ZERO)
+    pbr_comparison.blit_rect(texture_after,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(pbr_comparison.save_png("res://artifacts/tarvoka_terrain_pbr_comparison.png") == OK)
+    studio.terrain_textures_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+    assert(studio.model_root.get_meta("terrain_textures_pbr",false))
     var key_light: DirectionalLight3D = studio.preview.get_child(2) as DirectionalLight3D
     assert(key_light != null)
     assert(studio.terrain_shadow_toggle.button_pressed)

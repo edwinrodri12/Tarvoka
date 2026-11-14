@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudio3D
 # tactical height, fog-of-war, map saves or Android battle rendering.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const Textures = preload("res://scripts/ui/TerrainTextures3D.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
@@ -197,13 +198,13 @@ static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
     # Deliberately unindexed: faceted normals describe readable low-poly relief.
     surface.set_color(ca)
-    surface.set_uv(Vector2(a.x*0.05,a.z*0.05))
+    surface.set_uv(Vector2(a.x*0.05+a.y*0.004,a.z*0.05+a.y*0.007))
     surface.add_vertex(a)
     surface.set_color(cb)
-    surface.set_uv(Vector2(b.x*0.05,b.z*0.05))
+    surface.set_uv(Vector2(b.x*0.05+b.y*0.004,b.z*0.05+b.y*0.007))
     surface.add_vertex(b)
     surface.set_color(cc)
-    surface.set_uv(Vector2(c.x*0.05,c.z*0.05))
+    surface.set_uv(Vector2(c.x*0.05+c.y*0.004,c.z*0.05+c.y*0.007))
     surface.add_vertex(c)
 
 static func _continuous_ground(parent: Node3D, scene: int) -> void:
@@ -262,7 +263,9 @@ static func _continuous_ground(parent: Node3D, scene: int) -> void:
                     _triangle(land,corners[nxt],below_a,below_b,
                         shades[nxt].darkened(0.17),cliff_tint,cliff_tint)
     land.generate_normals()
+    land.generate_tangents()
     water.generate_normals()
+    water.generate_tangents()
     var ground := MeshInstance3D.new()
     ground.name = "SueloContinuoConRelieve"
     ground.mesh = land.commit()
@@ -443,6 +446,7 @@ static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
             face_tint.lightened(0.02),SNOW if snow else face_tint.lightened(0.17),
             face_tint.lightened(0.08))
     rock_surface.generate_normals()
+    rock_surface.generate_tangents()
     var mountain := MeshInstance3D.new()
     mountain.name = name
     mountain.mesh = rock_surface.commit()
@@ -615,3 +619,53 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_counts",counts)
     root.set_meta("terrain_tile_count",WIDTH*HEIGHT)
     return root
+
+# Preview material pass. Every node is inspected only under terrain/props:
+# sample units/buildings retain their original faction and finish materials.
+static func apply_texture_finish(root: Node3D) -> int:
+    var stack: Array[Node] = [
+        root.get_node("TerrenoDeCasillas"),
+        root.get_node("RelieveVegetacionYDetalles")]
+    var count: int = 0
+    while not stack.is_empty():
+        var node: Node = stack.pop_back()
+        if node is MeshInstance3D:
+            var item: MeshInstance3D = node as MeshInstance3D
+            var original: StandardMaterial3D = item.material_override as StandardMaterial3D
+            var kind_name: String = _texture_surface(item.name)
+            if not kind_name.is_empty() and original != null:
+                var is_vertex_color: bool = original.vertex_color_use_as_albedo
+                var tint: Color = Color.WHITE if is_vertex_color else original.albedo_color
+                item.material_override = Textures.material(
+                    kind_name,tint,is_vertex_color)
+                count += 1
+        for child in node.get_children():
+            stack.append(child)
+    root.set_meta("terrain_textures_pbr",true)
+    root.set_meta("terrain_textured_meshes",count)
+    return count
+
+static func _texture_surface(mesh_name: String) -> String:
+    if mesh_name == "SueloContinuoConRelieve":
+        return "soil"
+    if mesh_name == "LaminaDeAguaContinua":
+        return "water"
+    if mesh_name.begins_with("Casilla_"):
+        if mesh_name.ends_with("_water"):
+            return "water"
+        if mesh_name.ends_with("_mountain"):
+            return "rock"
+        if mesh_name.ends_with("_road"):
+            return "asphalt"
+        return "soil"
+    if mesh_name.begins_with("Calzada_") or mesh_name.begins_with("PuenteElevado_"):
+        return "asphalt"
+    if mesh_name.begins_with("MacizoTallado_") or mesh_name.begins_with("CrestaSecundaria_"):
+        return "rock"
+    if mesh_name.begins_with("RocaLateral_") or mesh_name == "PiedraSuelo":
+        return "rock"
+    if mesh_name == "OrillaNatural":
+        return "sand"
+    if mesh_name == "ArcénLateral" or mesh_name == "BordeVial":
+        return "gravel"
+    return ""
