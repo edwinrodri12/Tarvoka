@@ -38,8 +38,7 @@ func _run() -> void:
     assert(first["dynamic_canopy_shadows"] == false)
     var chunks: Dictionary = lab.get("_chunk_parts")
     assert(chunks.has(Vector2i(0,0)))
-    var original_ground: Mesh = (chunks[Vector2i(0,0)][0] as (
-        MeshInstance3D)).mesh
+    var original_ground: Mesh = (chunks[Vector2i(0,0)][0] as MeshInstance3D).mesh
     var original_forest: MultiMesh = (
         lab.get_node("ForestCanopiesSpruce") as MultiMeshInstance3D).multimesh
     var baseline_forest_rebuilds: int = int(
@@ -54,10 +53,8 @@ func _run() -> void:
     assert(after_reveal["fog_chunks_updated"] > 0)
     assert(after_reveal["fog_chunks_updated"] < (
         after_reveal["fog_chunks_total"]))
-    assert((lab.get("_chunk_parts")[Vector2i(0,0)][0] as (
-        MeshInstance3D)).mesh == original_ground)
-    assert((lab.get_node("ForestCanopiesSpruce") as (
-        MultiMeshInstance3D)).multimesh == original_forest)
+    assert((lab.get("_chunk_parts")[Vector2i(0,0)][0] as MeshInstance3D).mesh == original_ground)
+    assert((lab.get_node("ForestCanopiesSpruce") as MultiMeshInstance3D).multimesh == original_forest)
     assert(after_reveal["forest_build_count"] == (
         baseline_forest_rebuilds))
     assert(after_reveal["forest_reuse_count"] > baseline_reuse)
@@ -70,8 +67,7 @@ func _run() -> void:
     assert(after_hidden["fog_chunks_updated"] == 0)
     assert(after_hidden["forest_build_count"] == (
         baseline_forest_rebuilds))
-    assert((lab.get("_chunk_parts")[Vector2i(0,0)][0] as (
-        MeshInstance3D)).mesh == original_ground)
+    assert((lab.get("_chunk_parts")[Vector2i(0,0)][0] as MeshInstance3D).mesh == original_ground)
     assert(grid == immutable)
     # One visible forest removal must invalidate the local cache; no
     # hidden areas and no separate tactical map are ever generated.
@@ -86,8 +82,7 @@ func _run() -> void:
     var full: Array = changed.duplicate(true)
     lab.set_battle_terrain(changed,{},false,3)
     assert((lab.get_node("VisibleTerrainChunks") as Node3D).visible == false)
-    assert((lab.get_node("ContinuousTerrain") as (
-        MeshInstance3D)).visible == true)
+    assert((lab.get_node("ContinuousTerrain") as MeshInstance3D).visible == true)
     assert(lab.environment_metrics()["fog_chunks_total"] == 0)
     var bypass_before: int = int(
         lab.environment_metrics()["skipped_unchanged_updates"])
