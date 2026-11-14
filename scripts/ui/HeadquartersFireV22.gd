@@ -7,8 +7,8 @@ class_name TarvokaHeadquartersFireV22
 const STAGE_NAME := "HumoYFuegoProgresivosHQV22"
 const MAX_FLAMES := 10
 const MAX_SMOKE := 5
-const DARK_SMOKE := Color(0.16,0.18,0.20,0.50)
-const MODERATE_SMOKE := Color(0.31,0.34,0.35,0.40)
+const DARK_SMOKE := Color(0.14,0.16,0.18,0.79)
+const MODERATE_SMOKE := Color(0.21,0.25,0.27,0.73)
 const FLAME_COLORS := [
     Color("#ff952e"), Color("#ffca43"), Color("#ee5424"), Color("#ffb937")]
 
@@ -100,12 +100,12 @@ func advance(delta: float) -> void:
         var puff: MeshInstance3D = _smoke[i]
         var phase: float = fposmod(_time*0.35+float(i)*0.23,1.0)
         var left: bool = damage_stage == 3 and i < 3
-        var origin := Vector3(-4.35,2.0,-3.16) if left else Vector3(3.91,2.22,-3.01)
+        var origin := Vector3(-4.35,2.18,-3.27) if left else Vector3(3.91,2.54,-3.25)
         var drift := Vector3(sin(_time*0.72+float(i))*0.32,
             phase*2.15,cos(_time*0.46+float(i)*1.5)*0.19)
         puff.position = origin+drift+Vector3(float(i%3)*0.20,0,0)
-        puff.scale = Vector3.ONE*(0.42+phase*(1.14 if damage_stage==3 else 0.78))
-        puff.transparency = clampf(0.18+phase*0.71,0.0,0.97)
+        puff.scale = Vector3.ONE*(0.61+phase*(1.52 if damage_stage==3 else 1.18))
+        puff.transparency = clampf(0.08+phase*0.70,0.0,0.97)
     if _fire != null:
         for i in range(MAX_FLAMES):
             var is_left: bool = i < 8
