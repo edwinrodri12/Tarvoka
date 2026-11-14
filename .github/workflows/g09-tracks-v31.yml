@@ -66,7 +66,7 @@ jobs:
               --rendering-driver opengl3 --audio-driver Dummy \
               --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
-            grep -q 'PASS G09 V30:' "/tmp/${test}.log"
+            grep -q 'PASS G09 V30' "/tmp/${test}.log"
           done
       - name: Archive true Godot V30/V31 visual A/B and underside views
         uses: actions/upload-artifact@v4
