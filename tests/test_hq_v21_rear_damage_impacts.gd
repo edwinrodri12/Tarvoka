@@ -59,8 +59,10 @@ func _run() -> void:
         assert(Damage.apply(model,stage,2))
         var details: Node3D = model.get_node_or_null(Damage.STAGE_NAME)
         assert(details != null and details.get_meta("tarvoka_hq_damage_v21",-1)==stage)
-        if stage < 4:
+        if stage < 3:
             _inspect_walls(model,2)
+        if stage < 4:
+            assert(model.find_child("MuroPosteriorCentralContinuoV21",true,false)!=null)
             assert(model.find_child("AnilloMetalImpactoHQV21_0",true,false)!=null)
         if stage>=2 and stage<4:
             assert(model.find_child("CristaleriaAbiertaYFragmentosHQV21",true,false)!=null)
