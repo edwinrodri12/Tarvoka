@@ -12,12 +12,27 @@ func _frames(n: int = 6) -> void:
     for _i in range(n):
         await process_frame
 
-func _shot(studio: Control,filename: String) -> void:
+func _shot(studio: Control,filename: String) -> Image:
     var image: Image = studio.preview.get_texture().get_image()
     assert(image != null and image.get_width() > 500)
     assert(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://artifacts")) == OK)
     assert(image.save_png("res://artifacts/"+filename) == OK)
+    return image
+
+func _pixel_difference(a: Image,b: Image) -> int:
+    var first: Image = a.duplicate()
+    var second: Image = b.duplicate()
+    first.resize(205,194)
+    second.resize(205,194)
+    var difference := 0
+    for y in range(0,194,2):
+        for x in range(0,205,2):
+            var p: Color = first.get_pixel(x,y)
+            var q: Color = second.get_pixel(x,y)
+            if absf(p.r-q.r)+absf(p.g-q.g)+absf(p.b-q.b)>0.14:
+                difference+=1
+    return difference
 
 func _hit(id: String,before: int,after: int,role: String) -> Dictionary:
     return {"valid":true,"target_kind":"headquarters","target_id":id,
@@ -107,7 +122,12 @@ func _run() -> void:
     var medium: TarvokaHeadquartersSmokeV23 = studio.model_root.get_node(
         Smoke.STAGE_NAME) as TarvokaHeadquartersSmokeV23
     assert(medium.is_animating() and medium.source_count()==3)
-    _shot(studio,"tarvoka_hq_v23_2_soft_smoke.png")
+    var with_smoke: Image = _shot(studio,"tarvoka_hq_v23_2_soft_smoke.png")
+    medium.visible = false
+    await _frames(4)
+    var without_smoke: Image = _shot(studio,"tarvoka_hq_v23_2_no_smoke_reference.png")
+    medium.visible = true
+    assert(_pixel_difference(with_smoke,without_smoke)>5)
     studio._change_hq_damage_stage(3)
     await _frames(12)
     var smoke: TarvokaHeadquartersSmokeV23 = studio.model_root.get_node(
