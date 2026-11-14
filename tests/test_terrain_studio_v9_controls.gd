@@ -52,9 +52,26 @@ func _run() -> void:
     assert(studio.status_label.text.contains("V5:"))
     assert(studio.model_root.get_meta("terrain_tile_count") == 120)
 
-    # V4/V5 comparison must be a purely artistic switch, preserving tile
-    # data and the V3 batched grass/reed/gravel logic exactly.
+    # V4/V5 comparison must be a purely artistic switch. Capture exactly
+    # the same camera, lighting, faction and scenario to compare finishes.
+    for i in range(5):
+        await process_frame
+    var v5_before: Image = studio.preview.get_texture().get_image()
     studio._toggle_v5_finish()
+    for i in range(5):
+        await process_frame
+    var v4_before: Image = studio.preview.get_texture().get_image()
+    assert(v4_before != null and not v4_before.is_empty())
+    assert(v5_before != null and not v5_before.is_empty())
+    var v4_small: Image = v4_before.duplicate()
+    var v5_small: Image = v5_before.duplicate()
+    v4_small.resize(680,460,Image.INTERPOLATE_LANCZOS)
+    v5_small.resize(680,460,Image.INTERPOLATE_LANCZOS)
+    var montage: Image = Image.create(1360,460,false,Image.FORMAT_RGBA8)
+    montage.blit_rect(v4_small,Rect2i(Vector2i.ZERO,Vector2i(680,460)),Vector2i.ZERO)
+    montage.blit_rect(v5_small,Rect2i(Vector2i.ZERO,Vector2i(680,460)),Vector2i(680,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(montage.save_png("res://artifacts/tarvoka_terrain_v4_v5_same_camera.png")==OK)
     assert(not studio._terrain_v5_enabled)
     var off: Dictionary = studio.model_root.get_meta("terrain_detail_v5")
     assert(int(off["batches"]) == 0)
