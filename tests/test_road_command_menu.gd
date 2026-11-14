@@ -99,7 +99,13 @@ func _run() -> void:
     var state_before: Dictionary = board.state.duplicate(true)
     scene._open_command_menu()
     assert(menu.tabs.current_tab == 2)
-    assert(menu.production_body.get_child_count() > 2)
+    # Production is now one two-column dashboard instead of a long list of
+    # direct children. Validate its real catalog and purchase permissions.
+    assert(menu.production_body.get_child_count() == 1)
+    assert(menu.production_columns != null and menu.production_columns.get_child_count() == 2)
+    assert(not menu.production_columns.vertical)
+    assert(menu.comparison_preview != null)
+    assert(not menu.production_purchase_buttons.is_empty())
     assert(board.state == state_before)
     menu.close_requested.emit()
     # In Android's full-map HUD, a playable supply order is visible without
