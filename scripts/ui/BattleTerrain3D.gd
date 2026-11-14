@@ -463,7 +463,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
             role=="tank" and actual_art==TankBudget.HERO_ART)
         # Coatings are created ONLY after visibility filtering and LOD
         # selection. Far-distance stand-ins stay free of extra 3D meshes.
-        if actual_art != 0 and climate_mode != "clear" and model != null:
+        if camera_size <= TankBudget.MEDIUM_CUTOFF and climate_mode != "clear" and model != null:
             var eco: bool = actual_art < TankBudget.HERO_ART or camera_size > 18.0
             var coating: Dictionary = Climate.apply(model,climate_mode,eco)
             if bool(coating.get("valid",false)):
