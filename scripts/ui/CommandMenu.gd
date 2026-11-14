@@ -44,6 +44,7 @@ var comparison_preview: Control
 var battle_columns: BoxContainer
 var settings_columns: BoxContainer
 var settings_buttons: Dictionary = {}
+var operational_values: Dictionary = {}
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
 # the map receives all touches until the player explicitly opens the drawer.
@@ -148,6 +149,26 @@ func _dashboard_columns(parent: VBoxContainer, title: String) -> Dictionary:
         panel.add_child(section)
         sections.append(section)
     return {"rail":rail,"left":sections[0],"right":sections[1]}
+
+func _operational_tile(parent: GridContainer, heading: String, value: String, tint: Color) -> Label:
+    var card := PanelContainer.new()
+    card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    card.add_theme_stylebox_override("panel",Chrome.box_style(Color("#0C2232"),Chrome.EDGE,7,6))
+    parent.add_child(card)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation",2)
+    card.add_child(column)
+    var name := Label.new()
+    name.text = heading
+    name.add_theme_color_override("font_color",Chrome.MUTED)
+    name.add_theme_font_size_override("font_size",12)
+    column.add_child(name)
+    var number := Label.new()
+    number.text = value
+    number.add_theme_color_override("font_color",tint)
+    number.add_theme_font_size_override("font_size",24)
+    column.add_child(number)
+    return number
 
 func refresh_settings_controls() -> void:
     # Keep toggle labels in sync without rebuilding the entire scroll view
@@ -295,7 +316,26 @@ func refresh() -> void:
     var situation: VBoxContainer = tactical["left"]
     var commands: VBoxContainer = tactical["right"]
     _heading(situation,"SITUACIÓN TÁCTICA")
-    _description(situation,BattleReport.field_summary(state))
+    operational_values.clear()
+    var overview: Dictionary = BattleReport.operational_snapshot(state,viewer)
+    var indicators := GridContainer.new()
+    indicators.columns = 2
+    indicators.name = "IndicadoresTacticos"
+    indicators.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    indicators.add_theme_constant_override("h_separation",8)
+    indicators.add_theme_constant_override("v_separation",8)
+    situation.add_child(indicators)
+    var own_tint: Color = Identity.color_for(state,viewer)
+    operational_values["allies"] = _operational_tile(indicators,"UNIDADES PROPIAS",str(overview["allies"]),own_tint.lightened(0.2))
+    operational_values["move"] = _operational_tile(indicators,"PUEDEN MOVER",str(overview["move_ready"]),Chrome.EDGE_BRIGHT)
+    operational_values["attack"] = _operational_tile(indicators,"PUEDEN ATACAR",str(overview["attack_ready"]),Chrome.GOLD)
+    operational_values["contacts"] = _operational_tile(indicators,
+        "CONTACTOS VISIBLES" if bool(overview["fog"]) else "ENEMIGOS",
+        str(overview["contacts"]),Chrome.RED)
+    _description(situation,"Integridad propia: %d HP · %s" % [
+        int(overview["hp"]),
+        "Las fuerzas enemigas ocultas no se contabilizan." if bool(overview["fog"]) else "Campo visible."
+    ])
     # Reuse the official faction/commander art already loaded for the board.
     # The strip displays only public identity and the active turn, never
     # hidden enemies, troop positions or an unimplemented commander power.
