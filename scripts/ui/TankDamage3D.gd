@@ -28,6 +28,7 @@ const GUN := "ElevacionCanon"
 const STAGE_META := "tarvoka_visual_damage_stage"
 const ACCENT := Color("#E8A34F")
 const V16 = preload("res://scripts/ui/TankFinishV16.gd")
+const V17 = preload("res://scripts/ui/TankFXV17.gd")
 
 static func _material(color: Color, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -127,7 +128,9 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
             var swish: float = elapsed*3.2+float(index)*1.8
             flame.rotation_degrees.z = [-18.0,12.0,23.0][index] + 4.5*sin(swish)
             flame.scale = Vector3.ONE * (0.92 + 0.11*sin(swish*1.7))
-        if model.get_meta("tarvoka_mbt_finish_v16",false):
+        if model.get_meta("tarvoka_mbt_fx_v17",false):
+            V17.animate_effects(model,elapsed)
+        elif model.get_meta("tarvoka_mbt_finish_v16",false):
             V16.animate_fire(model,elapsed)
 
 # Angled, light-emitting flame tongues instead of a fire effect made
