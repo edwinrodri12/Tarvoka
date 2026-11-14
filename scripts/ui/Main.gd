@@ -242,7 +242,7 @@ func _ready() -> void:
     battle_3d_view = Battle3DMap.new()
     battle_3d_view.name = "VistaBatalla3D"
     add_child(battle_3d_view)
-    battle_3d_view.focus_requested.connect(_on_3d_inspection_focus)
+    battle_3d_view.connect("focus_requested",_on_3d_inspection_focus)
 
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
