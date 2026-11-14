@@ -15,6 +15,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
@@ -36,6 +37,8 @@ static func encode(state: Dictionary) -> String:
         "terrain": state["terrain"],
         "units": units
     }
+    if state.has("weather"):
+        snapshot["weather"] = state["weather"]
     if state.has(Identity.STATE_FIELD):
         snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
     if state.has("map_seed"):
@@ -218,11 +221,14 @@ static func decode(raw: String) -> Dictionary:
                     next_side[enemy_id] = position
                 contacts[str(faction)] = next_side
             state["contacts"] = contacts
+    # Malformed/tampered weather data must not enter a match silently.
     if not _valid_state(state):
         return {}
     return state
 
 static func _valid_state(state: Dictionary) -> bool:
+    if state.has("weather") and not Weather.valid(state["weather"]):
+        return false
     if state.has(Identity.STATE_FIELD) and not Identity.is_valid(state[Identity.STATE_FIELD]):
         return false
     if not state.get("terrain") is Array or not Rules.valid_terrain(state["terrain"]):
