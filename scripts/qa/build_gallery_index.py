@@ -36,8 +36,8 @@ def main(folder: Path) -> None:
         raise SystemExit("Falta manifest.json: Godot no entregó las capturas.")
     data = json.loads(manifest.read_text(encoding="utf-8"))
     shots = data.get("screens", [])
-    if len(shots) != 21:
-        raise SystemExit(f"Se esperaban 21 capturas, hay {len(shots)}")
+    if len(shots) != 22:
+        raise SystemExit(f"Se esperaban 22 capturas, hay {len(shots)}")
     if data.get("orientation") != "landscape":
         raise SystemExit("El manifiesto no declara orientación horizontal.")
     if any(int(item["width"]) <= int(item["height"]) for item in shots):

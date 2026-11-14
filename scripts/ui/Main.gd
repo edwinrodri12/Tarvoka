@@ -30,6 +30,7 @@ const ResultsPanel = preload("res://scripts/ui/ResultsPanel.gd")
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
+const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 
 var board: Control
 var status_label: Label
@@ -120,6 +121,7 @@ var battle_hud_overlay: Control
 var battle_hud_toggle: Button
 var battle_hud_commands: VBoxContainer
 var compact_status: Label
+var compact_turn_cue: Label
 var compact_detail: Label
 var commander_sidebar_strip: Control
 var commander_compact_strip: Control
@@ -136,6 +138,11 @@ var compact_center: Button
 var compact_iso: Button
 var expanded_header: PanelContainer
 var expanded_summary: Label
+var expanded_turn_cue: Label
+var turn_banner: PanelContainer
+var turn_banner_label: Label
+var _turn_banner_tween: Tween
+var _last_turn_side := -2
 var expanded_actions: PanelContainer
 var expanded_confirm: Button
 var expanded_cancel: Button
@@ -911,6 +918,13 @@ func _build_battle_hud() -> void:
     compact_status.add_theme_color_override("font_color",Color("#F5E6B1"))
     compact_status.clip_text = true
     title_row.add_child(compact_status)
+    compact_turn_cue = Label.new()
+    compact_turn_cue.name = "EstadoDeUnidadMovil"
+    compact_turn_cue.clip_text = true
+    compact_turn_cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    compact_turn_cue.add_theme_font_size_override("font_size",12)
+    compact_turn_cue.add_theme_color_override("font_color",Color("#75DFB0"))
+    title_row.add_child(compact_turn_cue)
     commander_compact_strip = CommanderIdentityStrip.new()
     commander_compact_strip.compact = true
     commander_compact_strip.name = "ComandantesEnPantallaMovil"
@@ -1059,15 +1073,25 @@ func _build_battle_hud() -> void:
     expanded_header.offset_left = 12
     expanded_header.offset_right = -145
     expanded_header.offset_top = 8
-    expanded_header.offset_bottom = 63
-    expanded_header.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#09263F"),GameUiTheme.EDGE_BRIGHT,8,10))
+    expanded_header.offset_bottom = 82
+    expanded_header.add_theme_stylebox_override("panel",GameUiTheme.box_style(Color("#09263F"),GameUiTheme.EDGE_BRIGHT,6,9))
     battle_hud_overlay.add_child(expanded_header)
+    var header_column := VBoxContainer.new()
+    header_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    header_column.add_theme_constant_override("separation",3)
+    expanded_header.add_child(header_column)
     expanded_summary = Label.new()
     expanded_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
     expanded_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    expanded_summary.add_theme_font_size_override("font_size",18)
+    expanded_summary.add_theme_font_size_override("font_size",15)
     expanded_summary.add_theme_color_override("font_color",GameUiTheme.TEXT)
-    expanded_header.add_child(expanded_summary)
+    header_column.add_child(expanded_summary)
+    expanded_turn_cue = Label.new()
+    expanded_turn_cue.name = "EstadoDeUnidadExpandido"
+    expanded_turn_cue.clip_text = true
+    expanded_turn_cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    expanded_turn_cue.add_theme_font_size_override("font_size",13)
+    header_column.add_child(expanded_turn_cue)
 
     expanded_actions = PanelContainer.new()
     expanded_actions.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1122,6 +1146,26 @@ func _build_battle_hud() -> void:
     battle_hud_toggle.offset_bottom = 53
     battle_hud_toggle.pressed.connect(_toggle_battle_hud)
     battle_hud_overlay.add_child(battle_hud_toggle)
+
+    # A non-interactive turn announcement appears briefly over the battlefield.
+    # No screen-wide scrim, no timer and no blocked taps.
+    turn_banner = PanelContainer.new()
+    turn_banner.name = "AvisoDeCambioDeTurno"
+    turn_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    turn_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+    turn_banner.offset_left = -205
+    turn_banner.offset_right = 205
+    turn_banner.offset_top = 129
+    turn_banner.offset_bottom = 174
+    turn_banner.add_theme_stylebox_override("panel",GameUiTheme.box_style(
+        Color("#10283A"),GameUiTheme.GOLD,8,10))
+    battle_hud_overlay.add_child(turn_banner)
+    turn_banner_label = Label.new()
+    turn_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    turn_banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    turn_banner_label.add_theme_font_size_override("font_size",19)
+    turn_banner.add_child(turn_banner_label)
+    turn_banner.hide()
 
     # Separate responsive camera shortcut row avoids overlaying commander
     # portraits and the status label on narrow Android displays.
@@ -1225,6 +1269,23 @@ func _process(_delta: float) -> void:
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
+        var readout: Dictionary = TurnReadout.snapshot(
+            board.state,board.selected_id,board.pending_order,board.ai_enabled)
+        var active_side: int = int(board.state.get("faction",-1))
+        if _last_turn_side == -2:
+            _last_turn_side = active_side
+        elif _last_turn_side != active_side:
+            _last_turn_side = active_side
+            if int(board.state.get("winner",-1)) == -1:
+                _show_turn_banner(str(readout["title"])+" · "+str(readout["turn_text"]),
+                    readout["tint"])
+        var cue: String = str(readout["title"])+"  ·  "+str(readout["detail"])
+        _update_text(compact_turn_cue,cue)
+        compact_turn_cue.tooltip_text = cue
+        compact_turn_cue.add_theme_color_override("font_color",readout["tint"])
+        _update_text(expanded_turn_cue,cue)
+        expanded_turn_cue.tooltip_text = cue
+        expanded_turn_cue.add_theme_color_override("font_color",readout["tint"])
         # Source of truth is the current match, including restored saves.
         # Portrait ribbons remain presentation-only and fog-safe.
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
@@ -1432,13 +1493,40 @@ func _update_text(label: Label, content: String) -> void:
     if label.text != content:
         label.text = content
 
+func _show_turn_banner(message: String, tint: Color) -> void:
+    if turn_banner == null or board == null:
+        return
+    if _turn_banner_tween != null and _turn_banner_tween.is_running():
+        _turn_banner_tween.kill()
+    turn_banner.hide()
+    if board.battery_saver or message.is_empty():
+        return
+    turn_banner_label.text = message
+    turn_banner_label.add_theme_color_override("font_color",tint)
+    turn_banner.modulate.a = 1.0
+    turn_banner.show()
+    _turn_banner_tween = create_tween()
+    _turn_banner_tween.tween_interval(0.42)
+    _turn_banner_tween.tween_property(turn_banner,"modulate:a",0.0,0.32).set_trans(
+        Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    _turn_banner_tween.tween_callback(turn_banner.hide)
+
 func _end_turn() -> void:
     # Never discard an unconfirmed attack or movement with an accidental tap.
     # Players can explicitly confirm or cancel and then finish the turn.
     if not board.pending_order.is_empty():
         board.message = "Confirma o cancela la orden antes de terminar turno."
         return
+    var prior: Dictionary = board.state
     board.finish_turn()
+    # Single-player AI finishes synchronously and returns to the same side:
+    # the observed faction need not change, but a valid end turn still deserves
+    # feedback. The normal _process change detector covers local hotseat.
+    if board.state != prior and int(board.state.get("faction",-1)) == int(prior.get("faction",-2)) and int(board.state.get("winner",-1)) == -1:
+        var readout: Dictionary = TurnReadout.snapshot(
+            board.state,board.selected_id,board.pending_order,board.ai_enabled)
+        _show_turn_banner(str(readout["title"])+" · "+str(readout["turn_text"]),
+            readout["tint"])
 
 func _save_game() -> void:
     board.save_game()

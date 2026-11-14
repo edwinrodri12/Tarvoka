@@ -90,6 +90,18 @@ func _run_gallery() -> void:
     if not await _capture_landscape("07-batalla-1280x720",Vector2i(1280,720),"Batalla · tablero táctico horizontal"):
         _failed = true
 
+    # Mobile selection is a real, non-destructive unit state. The status strip
+    # must remain readable at 960x540 in fullscreen HUD.
+    var selected_before_gallery: String = main.board.selected_id
+    main._set_compact_hud(true)
+    main.board.selected_id = "A"
+    main._process(0.0)
+    if not await _capture_landscape("22-unidad-seleccionada-960x540",Vector2i(960,540),"Batalla · unidad activa y acciones disponibles"):
+        _failed = true
+    main.board.selected_id = selected_before_gallery
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Visual QA of the REAL attack controller, not a painted mockup.
     # The scenario stays in memory and its authoritative state is restored.
     var battle_before_effect: Dictionary = main.board.state.duplicate(true)
@@ -208,11 +220,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 21:
-        push_error("Landscape UI QA incomplete: %d/21 captures" % _manifest.size())
+    if _failed or _manifest.size() != 22:
+        push_error("Landscape UI QA incomplete: %d/22 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 21 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 22 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
