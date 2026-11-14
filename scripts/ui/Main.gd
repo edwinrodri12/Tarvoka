@@ -1037,10 +1037,10 @@ func _toggle_isometric_view() -> void:
 func _open_battle_3d_map() -> void:
     if board == null or battle_3d_view == null:
         return
-    battle_3d_view.call("open_from_state",board.state,board.selected_id)
+    battle_3d_view.call("open_from_board",board)
 
 func _on_3d_inspection_focus(cell: Vector2i) -> void:
-    # Camera focus only. 3D taps never invoke TouchBoard._tap or confirm orders.
+    # Return-to-board camera focus only. Explicit 3D confirmation is handled\n    # through the exact same TouchBoard pending-order lifecycle as the 2D HUD.
     if board != null:
         board.focus_view_cell(cell)
 
