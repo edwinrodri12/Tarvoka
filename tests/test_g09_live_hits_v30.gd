@@ -6,6 +6,7 @@ const Scenarios=preload("res://scripts/core/Scenarios.gd")
 const Hit=preload("res://scripts/ui/TankHitReactionV30.gd")
 const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
 const Damage=preload("res://scripts/ui/TankDamage3D.gd")
+const Rig=preload("res://scripts/ui/TankVisualRig3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -29,6 +30,28 @@ func _run() -> void:
     assert(target!=null and target.get_meta("tarvoka_hit_v30",false))
     assert(target.get_meta("tarvoka_mbt_track_wide_v30",false))
     var identity: int=target.get_instance_id()
+    # The G09 itself now aims and fires in the LIVE battle viewer after
+    # orders succeed, not only when previewed in the art studio.
+    var shooter: Node3D=v._scene.find_child(
+        "Unidad3D_FRIEND",true,false) as Node3D
+    assert(shooter!=null and shooter.get_meta("tarvoka_hit_v30",false))
+    var muzzle: Node3D=shooter.find_child(
+        "EfectoFogonazoCanon",true,false) as Node3D
+    var turret: Node3D=shooter.find_child(
+        "TorretaGiratoria",true,false) as Node3D
+    assert(muzzle!=null and turret!=null)
+    v._shot_model_id="FRIEND"
+    v._shot_heading=Vector2i(1,0)
+    v._shot_elapsed=0.0
+    v._process(0.005)
+    assert(not muzzle.visible)
+    v._process(Rig.SHOT_DURATION*0.44)
+    assert(muzzle.visible)
+    assert(absf(turret.rotation_degrees.y)>25.0)
+    v._process(Rig.SHOT_DURATION*2.0)
+    assert(v._shot_model_id.is_empty())
+    assert(not muzzle.visible)
+
     for kind in [Hit.BULLET,Hit.EXPLOSIVE]:
         v._hit_model_id="TARGET"
         v._hit_type=kind
@@ -63,7 +86,16 @@ func _run() -> void:
     assert(fragment!=null and fragment.visible)
     wounded_scene.free()
     v.close_view()
+    assert(v.open_from_state(wounded,"FRIEND"))
+    assert(v._damage_smoke_elapsed==0.0)
+    v._process(0.23)
+    assert(v._damage_smoke_elapsed>0.20)
+    var damaged_tank: Node3D=v._scene.find_child(
+        "Unidad3D_TARGET",true,false) as Node3D
+    assert(damaged_tank!=null and Damage.current_stage(damaged_tank)==2)
+    assert(state==snapshot)
+    v.close_view()
     assert(v._hit_model_id.is_empty())
     v.queue_free()
-    print("PASS G09 V30 LIVE: native 3D battle target gets independent bullet/explosive reactions without changing combat state")
+    print("PASS G09 V30 LIVE: battle tank fires, target receives ballistic/explosive shock, damaged smoke animates and combat state stays unchanged")
     quit(0)
