@@ -50,6 +50,19 @@ static func movement_cost_for(terrain: String, domain: String = "ground") -> int
         return 1 if terrain == "water" else -1
     return movement_cost(terrain)
 
+# Single per-tile source of truth for AI long-range navigation and supply
+# return routes. A motor vehicle pays 1 half-point on a clear road; other
+# units pay 2 half-points per full movement point.
+static func entry_cost_half(kind: String, domain: String = "ground",
+        motorized: bool = false, weather: String = "clear",
+        traction: String = "foot") -> int:
+    var base: int = movement_cost_for(kind,domain)
+    if base < 0 or not Weather.valid(weather) or traction not in Weather.TRACTIONS:
+        return -1
+    var road_fast: bool = motorized and domain == Domains.GROUND
+    var cost: int = 1 if road_fast and kind == "road" else base*2
+    return cost + Weather.penalty(weather,kind,traction)*2
+
 # Vehicle routing uses half-point precision internally. Roads cost 0.5 for
 # motorized ground units, while ordinary ground/air/naval rules remain intact.
 # A full movement point therefore covers TWO road cells for a vehicle.
@@ -77,13 +90,10 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
             if not inside(next, terrain) or next in blocked:
                 continue
             var kind: String = str(terrain[next.y][next.x])
-            var base: int = movement_cost_for(kind, domain)
-            if base < 0:
+            var half_cost: int = entry_cost_half(kind,domain,road_bonus,weather,traction)
+            if half_cost < 0:
                 continue
-            var cost: int = (1 if road_bonus and kind == "road" else base * scale)
-            # Weather surcharge is charged on every entered cell, using
-            # the same half-point precision as road travel. No UI-only cost.
-            cost += Weather.penalty(weather,kind,traction) * scale
+            var cost: int = half_cost if road_bonus else half_cost / 2
             # A slow unit can climb ONE adjacent mountain, using its whole
             # move allowance. No chain of mountain shortcuts is permitted.
             if domain == Domains.GROUND and kind == "mountain" and current == origin and points > 0 and cost > budget:
