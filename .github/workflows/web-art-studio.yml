@@ -9,6 +9,11 @@ on:
       - "scripts/ui/TerrainStudioBridge3D.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/BattleTerrainPicker3D.gd"
+      - "scripts/ui/BattleRanges3D.gd"
+      - "tests/test_battle_3d_picking_v6.gd"
+      - "tests/test_battle_3d_ranges_v6.gd"
+      - "tests/test_battle_3d_gestures_v6.gd"
       - "scripts/ui/TerrainVisualMapBridge3D.gd"
       - "scripts/ui/Main.gd"
       - "tests/test_battle_terrain_3d_v5.gd"
@@ -256,6 +261,46 @@ jobs:
           grep -q 'PASS LIVE_BATTLE_3D_UI_V5:' /tmp/live-battle-3d-ui.log
           test -s artifacts/tarvoka_battle_3d_live_10x8.png
           test -s artifacts/tarvoka_battle_3d_live_40x30.png
+      - name: Verify exact mountain ray-picking on real fogged battle maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_picking_v6.gd 2>&1 | tee /tmp/battle-3d-picking-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-picking-v6.log; then
+            echo "Terrain 3D ray-to-triangle intersection failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_PICKING_V6:' /tmp/battle-3d-picking-v6.log
+      - name: Verify TacticalHints-only 3D ranges and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 105s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_ranges_v6.gd 2>&1 | tee /tmp/battle-3d-ranges-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-ranges-v6.log; then
+            echo "3D overlay leaked fog or changed legal rules" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_RANGES_V6:' /tmp/battle-3d-ranges-v6.log
+      - name: Verify mobile multitouch gestures and screenshot highlights
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 105s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_gestures_v6.gd 2>&1 | tee /tmp/battle-3d-gestures-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-gestures-v6.log; then
+            echo "3D touch gestures could trigger unintended actions" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_GESTURES_V6:' /tmp/battle-3d-gestures-v6.log
+          test -s artifacts/tarvoka_battle_3d_v6_ranges.png
       - name: Verify native 3D terrain and unified studio scenes
         shell: bash
         run: |
@@ -320,6 +365,7 @@ jobs:
             artifacts/tarvoka_canyon_v2_v4_same_camera.png
             artifacts/tarvoka_battle_3d_live_10x8.png
             artifacts/tarvoka_battle_3d_live_40x30.png
+            artifacts/tarvoka_battle_3d_v6_ranges.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
