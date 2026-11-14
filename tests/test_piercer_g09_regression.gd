@@ -12,8 +12,22 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Doctrine = preload("res://scripts/core/CombatDoctrine.gd")
+const Terrain = preload("res://scripts/core/TerrainTactics.gd")
 
 func _initialize() -> void:
+    # The older counterfire preview API is allowed to omit terrain.
+    # An omitted array must be neutral, not produce an index exception.
+    assert(Terrain.tile_at([],Vector2i(2,2)) == "")
+    assert(Terrain.tile_at([],Vector2i(-1,2)) == "")
+    assert(Terrain.tile_at([["plain"]],Vector2i(5,0)) == "")
+    assert(Terrain.tile_at([["plain"]],Vector2i(0,0)) == "plain")
+    var no_map: Dictionary = Session.start([
+        Roles.make_unit("P",0,Vector2i(2,2),"piercer"),
+        Roles.make_unit("G",1,Vector2i(3,2),"tank")
+    ],Scenarios.terrain(0),0,false,false,true,true)
+    var old_preview: Dictionary = Actions.preview_exchange(
+        no_map["units"][0],no_map["units"][1])
+    assert(old_preview["valid"] and old_preview["damage"] == 4)
     assert(Roles.BONUSES["piercer"] == {"bulwark":4,"tank":2})
     assert(Roles.PROFILES["piercer"] == {
         "label":"Rompedor","hp":8,"move_points":3,"attack":4,"defense":0,
