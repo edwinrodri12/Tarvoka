@@ -47,6 +47,26 @@ siendo el modo predeterminado.
 - Las cifras de `build_ms` del artefacto provienen del entorno
   x86_64/Mesa en GitHub Actions. **NO equivalen a tiempos ni FPS en
   un Galaxy/Android real**: aún hace falta QA en hardware físico.
+
+### Medición verificada del artefacto de esta fase
+
+Con el mapa **sintético** de 40×30 generado por
+`tools/benchmark_forest3d.gd`, en
+[CI 43554365032](https://github.com/edwinrodri12/Tarvoka/actions/runs/43554365032),
+se registró:
+
+| Presupuesto | Calidad completa | Calidad móvil |
+|---|---:|---:|
+| Triángulos totales aproximados | 309 567 | 104 044 |
+| Árboles | 1 575 | 907 |
+| Arbustos | 1 446 | 724 |
+| Reconstrucción CPU en runner Mesa | 4,75 s | 1,22 s |
+
+El modo móvil utiliza aproximadamente un **66 % menos de triángulos**.
+La reconstrucción de un mapa grande sigue siendo un coste importante,
+incluso en el runner, y debe perfilarse en teléfonos físicos. El
+benchmark no representa un FPS medido ni garantiza un rendimiento
+comercial en Android.
 - La medición inicial detectó coste innecesario en setos de borde;
   se redujo su densidad para no penalizar mapas de gran tamaño.
 - La escena sigue siendo prototipo: estas siluetas y sombras no
