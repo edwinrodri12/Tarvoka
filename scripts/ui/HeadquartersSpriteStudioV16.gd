@@ -16,7 +16,7 @@ const ZOOM_LABELS := [
     "65% · Distancia táctica",
     "38% · Zoom lejano (V14 en Android)"
 ]
-const ZOOM_PIXELS := [220,148,85]
+const ZOOM_PIXELS := [188,124,74]
 
 static var _cache: Dictionary = {}
 
