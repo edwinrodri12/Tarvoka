@@ -15,6 +15,7 @@ on:
       - 'tests/test_modern_mirror_decisions.gd'
       - 'scripts/core/EngineerSupport.gd'
       - 'tests/test_engineer_support_navigation.gd'
+      - 'tests/test_initiative_experiments.gd'
       - '.github/workflows/engineer-repair.yml'
   push:
     branches: [main]
@@ -31,6 +32,7 @@ on:
       - 'tests/test_modern_mirror_decisions.gd'
       - 'scripts/core/EngineerSupport.gd'
       - 'tests/test_engineer_support_navigation.gd'
+      - 'tests/test_initiative_experiments.gd'
       - '.github/workflows/engineer-repair.yml'
   workflow_dispatch:
 
@@ -85,6 +87,15 @@ jobs:
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
             grep -F 'PASS ' "/tmp/${test}.log"
           done
+      - name: Recheck 72 first-player and objective threshold simulations
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_initiative_experiments.gd 2>&1 \
+            | tee /tmp/engineer-initiative-study.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/engineer-initiative-study.log; then exit 1; fi
+          grep -F 'PASS initiative study:' /tmp/engineer-initiative-study.log
       - name: Upload repro logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -97,4 +108,5 @@ jobs:
             /tmp/test_paired_balance_telemetry.log
             /tmp/test_modern_coastal_self_play.log
             /tmp/test_modern_mirror_decisions.log
+            /tmp/engineer-initiative-study.log
           if-no-files-found: warn
