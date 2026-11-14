@@ -3,6 +3,7 @@ extends SceneTree
 const Terrain = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Lab = preload("res://tools/terrain3d_lab.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
+const Rocks = preload("res://scripts/ui/TerrainRockMaterials.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -34,9 +35,31 @@ func _run() -> void:
                     assert(absf(bottom-next) < 0.0001)
     var mesh := Terrain.build_ground(grid,{},false,4)
     assert(mesh.get_surface_count() == 1)
-    var vertex_data: PackedVector3Array = mesh.surface_get_arrays(
-        0)[Mesh.ARRAY_VERTEX]
-    assert(vertex_data.size() == 4*4*4*4*6)
+    var ground_arrays: Array = mesh.surface_get_arrays(0)
+    var vertex_data: PackedVector3Array = ground_arrays[Mesh.ARRAY_VERTEX]
+    var triangle_ids: PackedInt32Array = ground_arrays[Mesh.ARRAY_INDEX]
+    var surface_normals: PackedVector3Array = ground_arrays[Mesh.ARRAY_NORMAL]
+    assert(triangle_ids.size() == 4*4*4*4*6)
+    assert(vertex_data.size() < triangle_ids.size())
+    assert(surface_normals.size() == vertex_data.size())
+    for normal in surface_normals:
+        assert(normal.is_finite())
+        assert(normal.y > -0.001)
+    var rock_colors: Dictionary = {}
+    for point in [
+        Vector3(0.2,0.7,0.4),Vector3(0.9,1.4,0.7),
+        Vector3(2.8,1.9,2.2),Vector3(7.1,2.5,3.8),
+        Vector3(9.8,3.0,1.2)
+    ]:
+        var sample: Color = Rocks.rock_color(point,0.8)
+        assert(sample == Rocks.rock_color(point,0.8))
+        assert(sample.r >= 0.0 and sample.r <= 1.0)
+        assert(sample.g >= 0.0 and sample.g <= 1.0)
+        assert(sample.b >= 0.0 and sample.b <= 1.0)
+        rock_colors[sample.to_html()] = true
+    assert(rock_colors.size() >= 3)
+    assert(Rocks.strata(Vector3(1,1,1)) >= 0.0)
+    assert(Rocks.strata(Vector3(1,1,1)) <= 1.0)
     assert(Terrain.build_water(grid,{},false,8).get_surface_count() == 1)
     var flat_water := Terrain.water_outline(grid,Vector2i(2,2))
     assert(flat_water.size() == 32)
@@ -80,8 +103,13 @@ func _run() -> void:
         var before: Array = rows.duplicate(true)
         var m: ArrayMesh = Terrain.build_ground(rows,{},false,2)
         assert(m.get_surface_count() == 1)
-        assert(m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() == (
+        var arrays: Array = m.surface_get_arrays(0)
+        assert(arrays[Mesh.ARRAY_INDEX].size() == (
             dims.x*dims.y*2*2*6))
+        assert(arrays[Mesh.ARRAY_VERTEX].size() < (
+            dims.x*dims.y*2*2*6))
+        assert(arrays[Mesh.ARRAY_NORMAL].size() == (
+            arrays[Mesh.ARRAY_VERTEX].size()))
         assert(rows == before)
     assert(grid == immutable)
     var lab_grid: Array = Lab.sample_terrain()
@@ -97,5 +125,5 @@ func _run() -> void:
     assert(grid_center.x == 2.5 and grid_center.z == 2.5)
     assert(Terrain.tactical_cell_from_world(grid,
         grid_center) == Vector2i(2,2))
-    print("PASS native terrain 3D: seam-safe heightfield, bridges, world-to-cell, fog privacy, 10x8/24x18/40x30, immutable tactics")
+    print("PASS native terrain 3D: indexed smooth slopes and mineral colors, seam-safe heightfield, bridges, world-to-cell, fog privacy, 10x8/24x18/40x30, immutable tactics")
     quit(0)
