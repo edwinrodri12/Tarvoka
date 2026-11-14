@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v13-production-ready-runtime-lod-20261114
-      - feat/terrain-studio-v10-ridges-forest-banks-20261114
+      - feat/terrain-studio-v11-erosion-water-20261114
       - feat/g09-v25-enamel-edge-wear-20261114
 
 permissions:
@@ -99,13 +99,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out verified V10 battle and natural ridge/forest/shore studio for Godot WebGL build
+      - name: Check out V11 eroded landscape and confirmed 3D battle studio for Godot WebGL build
         uses: actions/checkout@v4
         with:
-          ref: feat/terrain-studio-v10-ridges-forest-banks-20261114
+          ref: feat/terrain-studio-v11-erosion-water-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export enhanced Battle and Terrain V10 to the existing site at /batalla/
+      - name: Export enhanced Battle and Eroded Terrain V11 to the existing site at /batalla/
         shell: bash
         run: |
           set -euo pipefail
@@ -114,6 +114,11 @@ jobs:
           test -s battle-source/scripts/ui/BattleTerrain3D.gd
           test -s battle-source/scripts/ui/TerrainStudioDetailV5.gd
           test -s battle-source/scripts/ui/TerrainStudioNaturalV6.gd
+          test -s battle-source/scripts/ui/TerrainStudioErosionV7.gd
+          test -s battle-source/tests/test_terrain_studio_v11_erosion.gd
+          grep -q 'MacizosErosionadosContinuosV7' battle-source/scripts/ui/TerrainStudioErosionV7.gd
+          grep -q 'SedimentosYOrillasSinParedV7' battle-source/scripts/ui/TerrainStudioErosionV7.gd
+          grep -q 'ComparadorTerrenoV6V7' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           test -s battle-source/tests/test_terrain_studio_v10_natural.gd
           grep -q 'BosqueMixtoV6' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'CordilleraContinuaV6' battle-source/scripts/ui/TerrainStudioNaturalV6.gd
