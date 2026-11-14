@@ -273,6 +273,33 @@ func _generate_forest() -> void:
                 shrubs.append({"position":Vector3(
                     float(x)+local.x,elevation,float(y)+local.y),
                     "seed":posmod(x*67+y*131+plant*37,109)})
+            # Small shrubs along KNOWN land-side forest boundaries hide
+            # the hard right-angle footprint. Unseen neighbors cause no
+            # extra sprouts (fog never leaks a forest edge).
+            const EDGE_OFFSETS := [
+                Vector2i(0,-1),Vector2i(1,0),
+                Vector2i(0,1),Vector2i(-1,0)
+            ]
+            for edge in range(4):
+                var next_cell: Vector2i = cell+EDGE_OFFSETS[edge]
+                if not TerrainMesh.observed_cell(
+                        terrain,next_cell,observed,
+                        restrict_to_observed):
+                    continue
+                var kind: String = str(
+                    terrain[next_cell.y][next_cell.x])
+                if kind not in ["plain","mountain"]:
+                    continue
+                var count_at_edge: int = 2 if divisions >= 4 else 1
+                for shrub_index in range(count_at_edge):
+                    var local: Vector2 = Understory.edge_placement(
+                        cell,edge,shrub_index)
+                    var elevation: float = TerrainMesh.height_at(
+                        terrain,cell,local.x,local.y,observed,
+                        restrict_to_observed)
+                    shrubs.append({"position":Vector3(
+                        float(x)+local.x,elevation,float(y)+local.y),
+                        "seed":posmod(x*79+y*41+edge*17+shrub_index*83,109)})
     var vegetation_triangles := 0
     var tree_counts: Array = []
     if trees.is_empty():
