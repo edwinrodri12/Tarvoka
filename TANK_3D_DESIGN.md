@@ -113,3 +113,61 @@ En esta ejecución se completa una pasada de detalle y articulaciones compatible
 `tests/test_mbt_art_finish.gd` valida geometría, grupos MultiMesh, colores de ocho facciones, ópticas, cañón y restauración del estado destruido. `tests/test_tank_damage_laboratory.gd` exige QuadMesh transparente con textura suave y un desplazamiento de humo reproducible. Las pruebas existentes continúan protegiendo animación de orugas, disparo, retroceso, inspector en Android, render de cuatro ángulos y cinco fases de destrucción. El render `artifacts/tarvoka_mbt_detail_turntable.png` es un render real de Godot, no un concepto.
 
 **Alcance honesto del cierre:** es un modelo 3D detallado, animable y utilizable en Android, elaborado proceduralmente. Aún no se puede certificar como arte comercial final sin una aceptación estética del usuario de la APK más reciente y sin presupuesto medido de FPS/temperatura en su teléfono. Tampoco se debe confundir este acabado con un paquete externo de GLB/UV y texturas 2K de estudio; el proyecto mantiene su sistema PBR reproducible actual. No bloquear la jugabilidad ni el trabajo sobre otros modelos por pendientes visuales de este tipo, pero conservarlos como checklist de pulido artístico opcional.
+
+
+## Revisión visual 242346 + capturas del visor web: reconstrucción G09 V5 (13 nov 2026)
+
+**Diagnóstico comprobado:** los detalles V4 añadían mallas pero no modificaban suficientemente la silueta; desde atrás la torreta y cubierta parecían huecas, algunos cubos y barandillas estaban desconectados, y el blindaje parecía un prototipo en vez de una máquina hermética. Por ello el G09 no ha obtenido aprobación de acabado definitivo.
+
+**Solución implementada en `scripts/ui/TankSilhouetteV5.gd`:**
+- Geometría principal reconstruida como **dos volúmenes triangulados completamente cerrados** (`CascoHermeticoV5`, `TorreHermeticaV5`) con cubiertas superior e inferior, caras laterales y cierre trasero. Cada uno tiene 10 esquinas articuladas en anillo y forma de cuña; se conserva el casco anterior internamente como fuente de compatibilidad.
+- Viga delantera integrada, dos placas de glacis, faldones laterales continuos sobre las 14 zonas pintables, portón de cierre trasero y cubierta de motor, rejillas movidas al techo real.
+- Torre modernizada con silueta baja y gruesa, mejillas grandes de compuesto, techo hermético y cesta/bastidor trasero conectados. El mantlete se reconstruyó en el pivote `ElevacionCanon`, manteniendo giro/disparo/recoil.
+- Mallas obsoletas visibles (`CestaEquipamiento`, ERA cúbico, mejillas anteriores, mantlete rectangular) se ocultan sin borrarlas; el inspector y combate usan el mismo nuevo G09. La opción **Comparar** conserva el modelo inicial al construirlo con `finish_enabled=false`.
+- Los cinco estados de daño incluyen marcas en la nueva cota de cubierta, pérdida de mejilla y sensor, reparación que **nunca reexpone** los cubos antiguos y cañón destruido. No cambia reglas, HP, fuego, facciones ni IA.
+
+**Prueba estricta antihuguos**: `tests/test_mbt_silhouette_v5.gd` recorre **cada triángulo** de las mallas del casco y torreta y comprueba que cada arista geométrica pertenezca a exactamente **dos** caras. También verifica el pivote del cañón, los 14 paneles, las mallas del modelo anterior y el daño reversible. Se ejecuta en CI del estudio web antes de exportar; si falla, no se publica.
+
+**Evidencia visual**: `artifacts/tarvoka_mbt_before_after_same_camera.png` compara la misma toma real del modelo base y el V5, y `artifacts/tarvoka_mbt_detail_turntable.png` presenta cuatro ángulos V5 del renderizador Godot 4.3. El visor HTML5 se publica con el SHA exacto de GitHub.
+
+**Estado artístico**: primera reconstrucción estructural integrada y probada; **NO se certifica todavía como textura/material/pulido comercial definitivo** sin nueva evaluación en visor web. Siguiente fase: tratamiento de materiales de alta legibilidad, señales de uso PBR con normal/roughness y moderar accesorios restantes; después validar tamaño de icono y rendimiento Android. No repetir largas rondas de APK por unidad.
+
+
+## G09 V8 — pulido implementado en el modelo real de Godot (13 nov 2026)
+
+El usuario rechazó renders conceptuales como entregables. Las siguientes modificaciones afectan a la fuente real scripts/ui/TankHeroV7.gd, invocada desde UnitModels3D.build('tank') por Android, el visor y las capturas de combate. NO sustituir código por imágenes generadas.
+
+- Pintura de acero grafito mate con blindaje cerámico de otro pigmento. Mapa original neutro de 256 px y microtexturas de normales y rugosidad compartidas entre instancias, sin fuentes externas.
+- Las dos orugas tienen 84 zapatas modeladas con biseles y costillas, no cajas. TankVisualRig.pose mueve realmente estas zapatas por una trayectoria cerrada alrededor de sprockets e idlers; al parar regresa a posición inicial. Se conservan dos MultiMesh de orugas.
+- Cuatro ruedas motrices de 32 segmentos, bujes y 48 dientes agrupados en un solo MultiMesh para móviles; se conservan las 14 ruedas de rodaje.
+- Dos grupos de faros delanteros protegidos y emisivos, luces rojas posteriores, ceja frontal de protección y paneles cerámicos de torreta. Las 14 zonas originales de color para ocho facciones y el cañón articulado siguen intactos.
+- Tests/test_g09_premium_finish_v8.gd valida pigmentos, mapas PBR, geometría de orugas, su circulación y restauración, luces, sprockets, facciones y 5 etapas de daño. CI browser obliga a pasar este test antes de crear WebGL o GLB.
+- El único estado aprobado hasta ahora es integración estructural. Faltan valoración artística en el navegador, presupuesto de rendimiento Android y, si corresponde, acabado DCC UV más refinado. CI verde NO equivale a perfecto comercial.
+
+
+## G09 V9 — acabados y revisión de cerca en el juego (13 nov 2026)
+
+**Código de juego y web (no concept art):** `scripts/ui/TankProductionV9.gd` se aplica desde `UnitModels3D.build("tank")` tras construir la carrocería V8 y antes de `TankSurface.apply_finish`. `restore_materials` reinstala los materiales PBR con pigmentación propia después del procesamiento general. La variable `art_level` compara V8 (8) y V9 (9), sin afectar el comportamiento de otras unidades.
+
+**Mejoras modeladas:** torus lateral de goma para cada una de las 14 ruedas, 84 tornillos de buje en una sola instancia `MultiMesh`, cubiertas de mantenimiento del motor, paneles cerámicos del glacis y torreta, escotilla y bisagras de techo, sensores laterales protegidos con lente encastrada, juntas de faldones y cables de remolque, cubierta de escapes. Después de ver la captura ampliada de Godot se ocultaron los dos módulos ópticos sobredimensionados V7 y se sustituyeron por housings bajos de acero y cristales insertados, incluyendo estación del arma remota sobre su mismo pivote animado.
+
+**Rendimiento:** 14 neumáticos y 84 tornillos agrupados en DOS draw submissions; no se añaden 98 nodos individuales. 14 paneles oficiales pintables y ocho facciones se conservan. Los 168 eslabones de oruga siguen circulando en los dos `MultiMesh` V8. Detección de daño y reparación de V9 en `TankDamage3D.gd` sin revivir el prototipo.
+
+**Pruebas verificables:** `tests/test_g09_production_v9.gd` verifica nativamente todas estas mallas, UV/PBR, dos ópticas compactas, material por familia, 5 fases HP y 8 facciones. `tests/test_web_art_studio.gd` genera `tarvoka_mbt_v8_vs_v9_same_camera.png` y `tarvoka_g09_v9_closeup_engine.png` desde la cámara real del visor. La acción `web-art-studio.yml` bloquea publicación si cualquiera de estas comprobaciones falla. El exportador GLB de autoría ahora se llama `TARVOKA_G09_V9_Produccion_Editable.glb` para mantener clara su procedencia.
+
+**Aceptación comercial:** todavía NO aprobado; después de validación de Godot y publicación WebGL falta revisar escala de combate en un teléfono real, textura y rendimiento sostenido, y si corresponde pulido DCC de autor. El usuario pidió explícitamente trabajar **sobre el diseño 3D incorporado al juego**, nunca sustitutos en imagen.
+
+
+## G09 V10 — rediseño profundo integrado (13 nov 2026)
+
+El usuario observa que la V9 aún parece prototipo. Se priorizó sustituir grandes superficies, no agregar más tornillos o arte conceptual.
+
+- scripts/ui/TankArmorV10.gd sustituye **de verdad** las mallas originales del casco y torreta usadas por UnitModels3D, conservando sus identificadores, articulación y nombre. El casco utiliza siete anillos y la torreta ocho, con cierres superior/inferior triangulados.
+- Mejillas cerámicas reemplazadas por mallas facetadas cerradas de seis sectores, no cubos inclinados. Blindaje frontal y lateral conectado con soldaduras y guarniciones. Motor y techo integran paneles funcionales y ventilación, sin tapar los 14 identificadores oficiales de facción.
+- Acero y cerámica: máscaras de desgaste 256 px originales e independientes, materiales PBR con relieve y rugosidad propia, tonos de gris militar más coherentes, sin logos ni emblemas.
+- TankDamage3D.gd incorpora desprendimiento y restauración reversible de las placas V10 en HP 3–4, con casco y torreta todavía herméticos.
+- LOD Android para tornillos y soldaduras menores a escala de píxel, sin perder detalles en cámara cercana. El motor conserva los dos lotes MultiMesh de orugas y los lotes de neumáticos.
+- El visor web alterna V9/V10 sin APK. CI Godot exige mallas físicamente cerradas, comparación de vértices respecto a la V9, separación de materiales, ocho facciones, 14 paneles, cinco estados de destrucción y LOD.
+- Renders reales de Godot: artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png y artifacts/tarvoka_g09_v10_four_angles.png. Fuente editable en artifacts/TARVOKA_G09_V10_Escultura_Editable.glb.
+
+**Pendiente antes de certificar producto comercial:** revisión visual humana en cuatro ángulos y con zoom, rendimiento/FPS/temperatura sostenida en Android, corrección de arte DCC/texturas donde siga notándose procedural. CI funcional no equivale a aprobación estética; conservar PR en borrador hasta esa revisión.

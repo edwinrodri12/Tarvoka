@@ -4,7 +4,10 @@ class_name TarvokaTankSurface3D
 # Authored, deterministic 3D surface treatment for the existing MBT model.
 # Small seamless albedo and tangent-space normal textures; no external
 # subscriptions, premade art, or random gameplay/state changes.
-const TILE_SIZE := 96
+# The same authored 128px weathering maps are reused by every instance,
+# avoiding hundreds of repeated ImageTexture uploads on Android.
+const TILE_SIZE := 128
+static var _shared_maps: Dictionary = {}
 const SURFACE_ARMOR := "armor"
 const SURFACE_METAL := "metal"
 const SURFACE_RUBBER := "rubber"
@@ -21,6 +24,12 @@ static func _height(x: int, y: int, finish: String) -> float:
     var xx: int = posmod(x,TILE_SIZE)
     var yy: int = posmod(y,TILE_SIZE)
     var grit: float = _hash_noise(xx,yy,17)
+    # Coarse paint-grain patches and directional rain/dust streaks are
+    # legible at zoom without importing copyrighted camouflage decals.
+    var coarse_x: int = int(xx/16)
+    var coarse_y: int = int(yy/16)
+    var macro: float = _hash_noise(coarse_x,coarse_y,73)
+    var streak: float = _hash_noise(int(xx/9),int(yy/32),97)
     var scratches: float = 0.0
     if finish == SURFACE_METAL or finish == SURFACE_ARMOR:
         scratches = -0.20 if posmod(xx*13+yy*5,89) == 0 and grit > 0.48 else 0.0
@@ -28,18 +37,23 @@ static func _height(x: int, y: int, finish: String) -> float:
         scratches = -0.16 if posmod(xx+yy*3,17) < 2 else 0.0
     elif finish == SURFACE_FACTION:
         scratches = -0.12 if posmod(xx+yy*9,173) == 0 else 0.0
-    return clampf(0.50+(grit-0.50)*0.46+scratches,0.05,0.95)
+    return clampf(0.50+(grit-0.50)*0.23+
+        (macro-0.50)*0.39+(streak-0.50)*0.10+scratches,0.05,0.95)
 
 static func make_albedo(finish: String) -> ImageTexture:
     var image := Image.create(TILE_SIZE,TILE_SIZE,false,Image.FORMAT_RGBA8)
     for y in range(TILE_SIZE):
         for x in range(TILE_SIZE):
             var value: float = _height(x,y,finish)
-            var brightness: float = 0.92+(value-0.5)*0.24
+            var brightness: float = 0.92+(value-0.5)*0.34
             if finish == SURFACE_RUBBER:
-                brightness = 0.85+(value-0.5)*0.25
+                brightness = 0.83+(value-0.5)*0.21
+            elif finish == SURFACE_METAL:
+                brightness = 0.89+(value-0.5)*0.28
+            elif finish == SURFACE_FACTION:
+                brightness = 0.96+(value-0.5)*0.13
             elif finish == SURFACE_OPTIC:
-                brightness = 0.93+(value-0.5)*0.05
+                brightness = 0.96+(value-0.5)*0.025
             image.set_pixel(x,y,Color(brightness,brightness,brightness,1))
     return ImageTexture.create_from_image(image)
 
@@ -58,6 +72,27 @@ static func make_normal(finish: String) -> ImageTexture:
             image.set_pixel(x,y,Color(vector.x*0.5+0.5,vector.y*0.5+0.5,vector.z*0.5+0.5,1))
     return ImageTexture.create_from_image(image)
 
+static func make_roughness(finish: String) -> ImageTexture:
+    # Gray values modulate per-material roughness; aged armor catches light
+    # differently from painted enamel, exposed metal and blue-black optics.
+    var image := Image.create(TILE_SIZE,TILE_SIZE,false,Image.FORMAT_RGBA8)
+    for y in range(TILE_SIZE):
+        for x in range(TILE_SIZE):
+            var value: float = _height(x,y,finish)
+            var rough: float = 0.79+0.16*(value-0.50)
+            if finish == SURFACE_METAL:
+                rough = 0.71+0.25*(value-0.50)
+            elif finish == SURFACE_RUBBER:
+                rough = 0.94+0.06*(value-0.50)
+            elif finish == SURFACE_OPTIC:
+                rough = 0.28+0.04*(value-0.50)
+            elif finish == SURFACE_FACTION:
+                rough = 0.84+0.12*(value-0.50)
+            rough = clampf(rough,0.10,1.0)
+            image.set_pixel(x,y,Color(rough,rough,rough,1.0))
+    return ImageTexture.create_from_image(image)
+
+
 static func material_family(node_name: String) -> String:
     if node_name.begins_with("Faccion"):
         return SURFACE_FACTION
@@ -75,7 +110,8 @@ static func _material_finish(material: StandardMaterial3D, finish: String,
     material.albedo_texture = maps[str(finish)+"_albedo"]
     material.normal_enabled = true
     material.normal_texture = maps[str(finish)+"_normal"]
-    material.normal_scale = 0.32 if finish == SURFACE_RUBBER else 0.19
+    material.roughness_texture = maps[str(finish)+"_roughness"]
+    material.normal_scale = 0.36 if finish == SURFACE_RUBBER else 0.28
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     match finish:
         SURFACE_RUBBER:
@@ -97,10 +133,12 @@ static func _material_finish(material: StandardMaterial3D, finish: String,
 static func apply_finish(model: Node3D) -> Dictionary:
     if model == null:
         return {}
-    var maps: Dictionary = {}
-    for finish in [SURFACE_ARMOR,SURFACE_METAL,SURFACE_RUBBER,SURFACE_OPTIC,SURFACE_FACTION]:
-        maps[str(finish)+"_albedo"] = make_albedo(str(finish))
-        maps[str(finish)+"_normal"] = make_normal(str(finish))
+    if _shared_maps.is_empty():
+        for finish in [SURFACE_ARMOR,SURFACE_METAL,SURFACE_RUBBER,SURFACE_OPTIC,SURFACE_FACTION]:
+            _shared_maps[str(finish)+"_albedo"] = make_albedo(str(finish))
+            _shared_maps[str(finish)+"_normal"] = make_normal(str(finish))
+            _shared_maps[str(finish)+"_roughness"] = make_roughness(str(finish))
+    var maps: Dictionary = _shared_maps
     var stats: Dictionary = {
         SURFACE_ARMOR:0,SURFACE_METAL:0,SURFACE_RUBBER:0,
         SURFACE_OPTIC:0,SURFACE_FACTION:0

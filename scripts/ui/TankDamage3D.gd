@@ -182,6 +182,13 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.28,0.045,0.22),Color("#2A2C2D"),Vector3(0,-18,9))
     _box(light,"MetalExpuestoGlacis",Vector3(-0.24,1.165,-0.85),
         Vector3(0.10,0.02,0.11),Color("#B19C7B"),Vector3(0,-18,9))
+    # V5's truly sealed glacis sits slightly higher than the prototype,
+    # so first-impact scrapes need to be physically visible on the new roof.
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        _box(light,"RaspadoCorazaHermeticaV5",Vector3(-0.37,1.092,-1.12),
+            Vector3(0.26,0.025,0.15),Color("#33393B"),Vector3(0,13,0))
+        _box(light,"AceroDescubiertoHermeticoV5",Vector3(-0.40,1.113,-1.14),
+            Vector3(0.12,0.018,0.045),Color("#A29A87"),Vector3(0,13,0))
     # The default Android camera observes the rear-right of the vehicle.
     # Include a readable but modest scuff there, otherwise stage 1 appears
     # almost identical to "intact" even when the player selects it.
@@ -211,6 +218,9 @@ static func prepare(model: Node3D) -> bool:
         Vector3(0.35,0.038,0.25),Color("#373939"),Vector3(-5,-12,9))
     _box(medium,"BaseExpuestaRejilla",Vector3(0.19,1.142,1.05),
         Vector3(0.16,0.029,0.11),Color("#897F70"),Vector3(0,16,0))
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        _box(medium,"FugaSelladoTraseroV5",Vector3(-0.30,1.148,1.22),
+            Vector3(0.25,0.044,0.27),Color("#30383B"),Vector3(-6,10,8))
     _cloud(medium,"HumoGrisMotor",Vector3(-0.09,1.37,1.01),
         Vector3(0.54,0.77,0.55),Color(0.25,0.28,0.29,0.26))
     _cloud(medium,"VahoMotor",Vector3(0.12,1.71,1.16),
@@ -322,7 +332,8 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             "CristalPanoramicoLateral","BastidorTrasero-1",
             "VisorTermicoProtegido","LenteTermicoPrincipal",
             "BarraCestaSuperior1","BolsaLonaEstiba1",
-            "AroBocaPrincipal","InteriorOscuroCanon"]:
+            "AroBocaPrincipal","InteriorOscuroCanon",
+            "AroSelladoCanonV5"]:
         var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if upper_piece != null:
             upper_piece.visible = stage < 4
@@ -333,4 +344,112 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         turret.position.y = 1.11 if stage < 4 else 0.93
     if gun != null:
         gun.rotation_degrees.x = -18.0 if stage >= 4 else (5.0 if stage == 3 else 0.0)
+    # The V5 overhaul deliberately hides obsolete prototype blocks even at
+    # full HP. Damage stage changes must never resurrect those old shapes.
+    if model.get_meta("tarvoka_mbt_silhouette_v5",false):
+        for obsolete_name in ["MejillaCeramicaBiselada1",
+                "ERACompuestaBiselada1_1","ERACompuestaBiselada1_2"]:
+            var obsolete: Node3D = model.find_child(obsolete_name,true,false) as Node3D
+            if obsolete != null:
+                obsolete.visible = false
+        for wreck_name in ["MejillaPrincipalV5_1","LaminaExteriorTorreV5_1"]:
+            var blown: Node3D = model.find_child(wreck_name,true,false) as Node3D
+            if blown != null:
+                blown.visible = stage < 3
+        var grille: Node3D = model.find_child("CerrojoPortonV5_1",true,false) as Node3D
+        if grille != null:
+            grille.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_art_v6",false):
+        # The V6 ceramic nose permanently replaces V5 cheek and mantlet.
+        # Never resurrect the earlier pieces during a repair cycle.
+        for obsolete_name in ["MejillaPrincipalV5_-1","MejillaPrincipalV5_1",
+                "MantleteMonoliticoV5","AroSelladoCanonV5",
+                "CristalPanoramicoFrontal","CristalPanoramicoLateral",
+                "ModuloVisionPanoramica","VisorTermicoProtegido",
+                "LenteTermicoPrincipal"]:
+            var prototype: Node3D = model.find_child(obsolete_name,true,false) as Node3D
+            if prototype != null:
+                prototype.visible = false
+        for armor_name in ["MejillaMonoliticaV6_1","CantoBlindajeMejillaV6_1",
+                "ModuloCeramicoLateralV6_1_0","ModuloCeramicoLateralV6_1_1"]:
+            var armor: Node3D = model.find_child(armor_name,true,false) as Node3D
+            if armor != null:
+                armor.visible = stage < 3
+        for optics_name in ["ModuloOpticoPanoramicoV6",
+                "VentanaOpticaPanoramicaV6","SensorDeApuntamientoV6",
+                "LenteDeApuntamientoV6","BordeMantleteCeramicoV6",
+                "BastidorCanonIntegradoV6"]:
+            var broken: Node3D = model.find_child(optics_name,true,false) as Node3D
+            if broken != null:
+                broken.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_hero_v7",false):
+        # V7 armor permanently supersedes V5/V6. Never revive the original
+        # prototype on hit, destroy or repair. Keep the actual V7 model as the
+        # only visible hull and turret for every hit-point band.
+        for name in ["CascoHermeticoV5","TorreHermeticaV5",
+                "MejillaMonoliticaV6_-1","MejillaMonoliticaV6_1",
+                "BastidorCanonIntegradoV6","BordeMantleteCeramicoV6",
+                "ModuloOpticoPanoramicoV6","VentanaOpticaPanoramicaV6",
+                "SensorDeApuntamientoV6","LenteDeApuntamientoV6"]:
+            var old_part: Node3D = model.find_child(name,true,false) as Node3D
+            if old_part != null:
+                old_part.visible = false
+        for name in ["ModuloBlindajeCeramicoV7_1",
+                "HombroBastidorV7_1","FaldonBlindadoIntegradoV7_1"]:
+            var armor: Node3D = model.find_child(name,true,false) as Node3D
+            if armor != null:
+                armor.visible = stage < 3
+        for name in ["MantleteConjuntoV7","CollarBlindajeCanonV7",
+                "AnilloAceroCanonV7_0","AnilloAceroCanonV7_1",
+                "AnilloAceroCanonV7_2",
+                "ModuloVisionIntegradoV7_1","CristalVisionIntegradoV7_1"]:
+            var destroyed: Node3D = model.find_child(name,true,false) as Node3D
+            if destroyed != null:
+                destroyed.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_production_v9",false):
+        # The same authored V9 pieces must be truly damaged, and restored
+        # cleanly without exposing obsolete V5/V6 geometry on repair.
+        for label in ["G09PlacaCeramicaMandibulaV9_1",
+                "G09PanelTechoDelanteroV9_1","G09JuntaMejillaV9_1",
+                "G09FundaSensorLateralV9_1","G09LenteSensorLateralV9_1"]:
+            var cheek_part: Node3D = model.find_child(label,true,false) as Node3D
+            if cheek_part != null:
+                cheek_part.visible = stage < 3
+        for label in ["G09PanelServicioTorreV9",
+                "G09PlacaCentralGlacisV9","G09NeumaticosRuedasV9",
+                "G09TornillosRuedasV9","G09CabezalPanoramicoCompactoV9",
+                "G09PanoramicoCristalRebajadoV9","G09EstacionArmaRasanteV9",
+                "G09CamaraArmaCompactaV9"]:
+            var impact_part: Node3D = model.find_child(label,true,false) as Node3D
+            if impact_part != null:
+                impact_part.visible = stage < 4
+    if model.get_meta("tarvoka_mbt_sculpted_v10",false):
+        # New cast-welded hull/turret remain sealed at all HP levels, while
+        # individual ceramic modules crack/detach on the exposed right side.
+        # The older V7/V9 cheeks stay retired even after full restoration.
+        for old in ["ModuloBlindajeCeramicoV7_1",
+                "ModuloBlindajeCeramicoV7_-1",
+                "GlacisCeramicoV7_1","GlacisCeramicoV7_-1",
+                "G09PlacaCeramicaMandibulaV9_1",
+                "G09PlacaCeramicaMandibulaV9_-1"]:
+            var retired: Node3D = model.find_child(old,true,false) as Node3D
+            if retired != null:
+                retired.visible = false
+        for part_name in ["G09V10MejillaCompuesta_1",
+                "G09V10PlanchaMejillaExterior_1",
+                "G09V10BlindajeLateral_1",
+                "G09V10CosturaBlindaje_1_0","G09V10CosturaBlindaje_1_1",
+                "G09V10CosturaBlindaje_1_2",
+                "G09V10GlacisSuperior_1"]:
+            var armored_part: Node3D = model.find_child(part_name,true,false) as Node3D
+            if armored_part != null:
+                armored_part.visible = stage < 3
+        for part_name in ["G09V10ModuloAnteriorTorre","G09V10PanelServicioTecho",
+                "G09V10PanelAnteriorTecho_1","G09V10PanelPosteriorTecho_1",
+                "G09V10TornillosTecho",
+                "G09V10BisagraPanelTecho","G09V10CubiertaMotorBlindada",
+                "G09V10RejillaRefrigeracion_02","G09V10RejillaRefrigeracion_03"]:
+            var damaged_part: Node3D = model.find_child(part_name,true,false) as Node3D
+            if damaged_part != null:
+                damaged_part.visible = stage < 4
     return true
