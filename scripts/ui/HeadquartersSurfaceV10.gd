@@ -80,7 +80,7 @@ static func _material_junctions(model: Node3D,level: int) -> void:
 
     # Reveal a lightweight horizontal window band around the high tower,
     # limited to its outer panes so the central approved crest is untouched.
-    top: float = 2.87+float(level-1)*0.91
+    var top: float = 2.87+float(level-1)*0.91
     for side in [-1,1]:
         var sx: float = float(side)
         _box(root,"JuntaPerimetralCristalComando_%s" % side,
