@@ -256,15 +256,16 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 var terrain: Array = state["terrain"]
                 if Rules.valid_terrain(terrain):
                     var kind: String = str(terrain[location.y][location.x])
-                    var move_cost: int = Rules.movement_cost_for(kind, Domains.domain(unit))
-                    if move_cost >= 0:
+                    var entry_half: int = Rules.entry_cost_half(kind, Domains.domain(unit),
+                        Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit))
+                    if entry_half >= 0:
                         var role: String = Roles.label(str(unit.get("role", ""))) if unit.has("role") else ("Explorador" if int(unit.get("vision", Visibility.DEFAULT_VISION)) >= 5 else "Soldado")
-                        var cost_label: String = "0.5" if kind == "road" and Logistics.road_fast(unit) else str(move_cost)
+                        var cost_label: String = str(entry_half / 2) if entry_half % 2 == 0 else "%.1f" % (float(entry_half) / 2.0)
                         text += "\nRol: %s | Terreno: %s (entrar cuesta %s) | Cobertura unidad: %d" % [
                             role, terrain_name(kind), cost_label, int(unit.get("cover", 0))
                         ]
-                        if kind == "road" and Logistics.road_fast(unit):
-                            text += " | Vehiculo motorizado: 2 casillas por punto en carretera"
+                        if kind == "road" and Logistics.road_fast(unit) and Weather.penalty(Weather.from_state(state),kind,Weather.traction(unit)) == 0:
+                            text += " | Vehiculo motorizado: 2 casillas por punto en carretera despejada"
                         text += "\n" + TerrainTactics.defensive_description(unit,terrain,state.get("economy",{}))
         if Roles.valid(str(unit.get("role", ""))):
             text += "\n" + Roles.counter_description(str(unit["role"]))
