@@ -225,15 +225,17 @@ func _next_case() -> void:
     board.set_isometric(true)
     board.set_battery_saver(bool(config["saver"]))
     board.iso_zoom = float(config["zoom"])
-    _actual_tanks = _seed_tanks(int(config["tanks"]))
+    _actual_teams = int(config.get("teams",2))
+    _actual_tanks = _seed_tanks(int(config["tanks"]),_actual_teams)
+    _actual_sites = _seed_visual_sites(int(config.get("sites",0)),_actual_teams)
     board.focus_iso_cell(config["focus"])
     board._site_overlay_key = -1
     board.selected_id = ""
     board.combat_effects.clear()
     board.motion_effects.clear()
-    status_label.text = "%d/%d · %s\n%d tanques | %s | %s" % [
-        _case_index+1,CASES.size(),config["name"],_actual_tanks,
-        config["weather"],"ahorro" if bool(config["saver"]) else "normal"]
+    status_label.text = "%d/%d · %s\n%d equipos | %d tanques | %d edificios | %s" % [
+        _case_index+1,CASES.size(),config["name"],_actual_teams,
+        _actual_tanks,_actual_sites,config["weather"]]
     board.queue_redraw()
     _last_stats = {}
 
@@ -300,13 +302,20 @@ func _record_case() -> void:
         float(cfg["zoom"]),board.iso_pan,dims)
     var hq_on_screen := false
     if HQ.prefer(hw,bool(cfg["saver"])):
-        for site in SiteData.snapshots(board.state):
+        var markers: Array = (board.state.get("__qa_site_markers",[])
+            if bool(board.state.get("__qa_visual_eight_sides",false))
+            else SiteData.snapshots(board.state))
+        for site in markers:
             if bool(site.get("visual_command_city",false)) and bounds.has_point(site["pos"]):
                 hq_on_screen = true
                 break
     var result := {
         "case":str(cfg["name"]), "map":"%dx%d" % [dims.x,dims.y],
         "requested_tanks":int(cfg["tanks"]),"actual_tanks":_actual_tanks,
+        "visual_factions":_actual_teams,
+        "requested_sites":int(cfg.get("sites",0)),"actual_sites":_actual_sites,
+        "sites_drawn":int(_last_stats.get("sites_drawn",0)),
+        "units_sorted":int(_last_stats.get("units_sorted",0)),
         "weather":str(cfg["weather"]),"battery_saver":bool(cfg["saver"]),
         "effects":int(cfg["effects"]),"samples":samples.size(),
         "fps_avg":snappedf(1000.0/avg_ms,0.1) if avg_ms>0.0 else 0.0,
@@ -318,8 +327,9 @@ func _record_case() -> void:
         "hq_baked_visible":hq_on_screen
     }
     results.append(result)
-    var row: String = "%s\n%d tanques, %d visibles · %.1f FPS · p95 %.1f ms · %.1f%% cuadros >33 ms · %.1f MB\n" % [
-        result["case"],result["actual_tanks"],result["units_drawn"],
+    var row: String = "%s\n%d equipos, %d/%d tanques, %d/%d edificios visibles · %.1f FPS · p95 %.1f ms · %.1f%% cuadros >33 ms · %.1f MB\n" % [
+        result["case"],result["visual_factions"],result["units_drawn"],
+        result["actual_tanks"],result["sites_drawn"],result["actual_sites"],
         result["fps_avg"],result["frame_p95_ms"],
         result["frames_over_33ms_percent"],result["max_static_memory_mb"]]
     _result_text += row + "\n"
@@ -333,6 +343,7 @@ func _finish() -> void:
     status_label.text = "Prueba finalizada · %d escenarios" % results.size()
     _result_text += "Resultados de cuadros completos; no son tiempos GPU aislados.\n"
     _result_text += "Cargas sintéticas: tanque técnico actual + HQ 3D precalculado.\n"
+    _result_text += "Los 8 equipos son visuales: no hay red, turnos ni niebla por jugador.\n"
     _result_text += "El modo ahorro y la niebla de guerra pueden cambiar la carga.\n"
     output_label.text = _result_text
     var report: Dictionary = {
@@ -340,7 +351,7 @@ func _finish() -> void:
         "display_server":DisplayServer.get_name(),
         "screen":str(get_viewport().get_visible_rect().size),
         "renderer":"Godot Compatibility",
-        "type":"visual_stress_not_gameplay_not_gpu_timer",
+        "type":"visual_stress_8_visual_teams_not_multiplayer_not_gpu_timer",
         "cases":results
     }
     var file := FileAccess.open("user://tarvoka_stress_report.json",FileAccess.WRITE)
