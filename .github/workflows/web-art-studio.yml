@@ -1,0 +1,540 @@
+name: TARVOKA Browser 3D Art Studio
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/TerrainStudio3D.gd"
+      - "scripts/ui/TerrainStudioDetailV5.gd"
+      - "tests/test_terrain_studio_v9_controls.gd"
+      - "scripts/ui/TerrainStudioBridge3D.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/BattleTerrainPicker3D.gd"
+      - "scripts/ui/BattleRanges3D.gd"
+      - "scripts/ui/Battle3DOrders.gd"
+      - "tests/test_battle_3d_orders_v7.gd"
+      - "tests/test_battle_3d_live_orders_v7.gd"
+      - "tests/test_battle_3d_picking_v6.gd"
+      - "tests/test_battle_3d_ranges_v6.gd"
+      - "tests/test_battle_3d_gestures_v6.gd"
+      - "scripts/ui/TerrainVisualMapBridge3D.gd"
+      - "scripts/ui/Main.gd"
+      - "tests/test_battle_terrain_3d_v5.gd"
+      - "tests/test_battle_3d_map_ui_v5.gd"
+      - "scripts/ui/TerrainSurfaceFinish3D.gd"
+      - "tests/test_terrain_studio_bridge_v4.gd"
+      - "scripts/ui/TerrainVisualMapBridge3D.gd"
+      - "tests/test_terrain_visual_map_bridge_v4.gd"
+      - "tests/test_terrain_studio_3d.gd"
+      - "scripts/ui/TerrainStudioScatter3D.gd"
+      - "tests/test_terrain_studio_preflight.gd"
+      - "tests/test_terrain_studio_slope_transitions.gd"
+      - "scripts/ui/TerrainStudioRoadShore3D.gd"
+      - "scripts/ui/TerrainSurfaceSampler3D.gd"
+      - "scripts/ui/Headquarters3D.gd"
+      - "scripts/ui/HeadquartersFinish3D.gd"
+      - "scripts/ui/HeadquartersDetail3D.gd"
+      - "tests/test_headquarters_v3.gd"
+      - "tests/test_headquarters_premium_v2.gd"
+      - "tests/test_web_building_studio.gd"
+      - "tests/test_web_battle_studio_v8.gd"
+      - "tools/web-studio/**"
+      - "assets/art_studio_revision.txt"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/Tank*.gd"
+      - "scenes/UnitArtStudioWeb.tscn"
+      - "export_presets.cfg"
+      - ".github/workflows/web-art-studio.yml"
+      - "tests/test_web_art_studio.gd"
+      - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_g09_production_v9.gd"
+      - "tests/test_g09_sculpted_v10.gd"
+      - "tests/test_mbt_silhouette_v5.gd"
+  push:
+    branches:
+      - feat/browser-3d-model-lab-20261113
+      - feat/battle-3d-web-studio-v8-20261113
+      - main
+    paths:
+      - "scripts/ui/**"
+      - "scenes/UnitArtStudioWeb.tscn"
+      - "export_presets.cfg"
+      - ".github/workflows/web-art-studio.yml"
+      - "tests/test_g09_premium_finish_v8.gd"
+      - "tests/test_g09_production_v9.gd"
+      - "tests/test_g09_sculpted_v10.gd"
+      - "tests/test_mbt_silhouette_v5.gd"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-art-studio:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3 and web export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/tpl.tpz
+          mkdir -p /tmp/tpl
+          unzip -q /tmp/tpl.tpz -d /tmp/tpl
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/tpl/templates/web_*.zip "$T/"
+          test -s "$T/web_nothreads_release.zip"
+          test -s "$T/web_nothreads_debug.zip"
+          printf '4.3.stable\n' > "$T/version.txt"
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Mark exact Git revision in browser viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Preflight terrain GDScript imports before heavy GPU tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit 2>&1 | tee /tmp/terrain-import-editor.log
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_studio_preflight.gd 2>&1 | tee /tmp/terrain-import-check.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-import-check.log; then
+            echo "Terrain script import failure" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_PREFLIGHT:' /tmp/terrain-import-check.log
+      - name: Validate native Godot 3D art studio interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mbt_silhouette_v5.gd 2>&1 | tee /tmp/watertight-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/watertight-check.log; then
+            echo "G09 body topology or visual damage restoration failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V7:" /tmp/watertight-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_premium_finish_v8.gd 2>&1 | tee /tmp/premium-g09-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/premium-g09-check.log; then
+            echo "New premium G09 geometry or PBR test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 premium V8:" /tmp/premium-g09-check.log
+          test -s artifacts/tarvoka_g09_premium_v8_engine.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_production_v9.gd 2>&1 | tee /tmp/production-g09-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/production-g09-check.log; then
+            echo "Production G09 V9 body/paint/HP test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 production V9:" /tmp/production-g09-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_sculpted_v10.gd 2>&1 | tee /tmp/sculpted-g09-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/sculpted-g09-check.log; then
+            echo "G09 V10 closed armor or art integration QA failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V10:" /tmp/sculpted-g09-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_art_studio.gd 2>&1 | tee /tmp/studio-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-check.log; then
+            echo "Model studio parsing, scene or functional test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS native web studio:" /tmp/studio-check.log
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_building_studio.gd 2>&1 | tee /tmp/studio-buildings-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/studio-buildings-check.log; then
+            echo "Unified 3D studio building viewer regression" >&2
+            exit 1
+          fi
+          grep -q "PASS unified web studio:" /tmp/studio-buildings-check.log
+          test -s artifacts/tarvoka_headquarters_web_studio.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_premium_v2.gd 2>&1 | tee /tmp/hq-premium-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-premium-check.log; then
+            echo "Headquarters V2 architecture regression" >&2
+            exit 1
+          fi
+          grep -q "PASS headquarters premium V2:" /tmp/hq-premium-check.log
+          test -s artifacts/tarvoka_headquarters_v1_v2_comparison.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v3.gd 2>&1 | tee /tmp/hq-v3-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v3-check.log; then
+            echo "Headquarters V3 GPU comparison or model test failed" >&2
+            exit 1
+          fi
+          grep -q "PASS headquarters V3:" /tmp/hq-v3-check.log
+          test -s artifacts/tarvoka_headquarters_v2_v3_comparison.png
+          test -s artifacts/tarvoka_web_3d_studio.png
+          test -s artifacts/tarvoka_mbt_before_after_same_camera.png
+          test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
+          test -s artifacts/tarvoka_g09_v10_four_angles.png
+          test -s artifacts/tarvoka_g09_v9_closeup_engine.png
+      - name: Verify full TARVOKA 3D battle mode inside the browser studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_web_battle_studio_v8.gd 2>&1 | tee /tmp/web-battle-studio-v8.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/web-battle-studio-v8.log; then
+            echo "Web Studio missing real battle 3D, controls, fog or confirmed orders" >&2
+            exit 1
+          fi
+          grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
+          test -s artifacts/tarvoka_studio_battle_3d_medium.png
+          test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V9 terrain art controls and screenshot in native Godot Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v9_controls.gd 2>&1 | tee /tmp/terrain-studio-v9.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-studio-v9.log; then
+            echo "V9 terrain studio visual detail or previous view modes regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V9:' /tmp/terrain-studio-v9.log
+          test -s artifacts/tarvoka_terrain_v5_delta_studio.png
+          test -s artifacts/tarvoka_terrain_v4_v5_same_camera.png
+      - name: Verify 3D terrain slopes and roads across all biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 80s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_slope_transitions.gd 2>&1 | tee /tmp/terrain-slopes-check.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-slopes-check.log; then
+            echo "Terrain slopes or generated road shoreline meshes failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_SLOPES:' /tmp/terrain-slopes-check.log
+      - name: Verify visual map bridge for three tactical board sizes and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 50s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_visual_map_bridge_v4.gd 2>&1 | tee /tmp/map-adapter-v4.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/map-adapter-v4.log; then
+            echo "Visual map bridge broke source board dimensions or fog masks" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_MAP_ADAPTER_V4:' /tmp/map-adapter-v4.log
+      - name: Verify V4 continuous canyon bridge ramps and microtexture contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 80s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_bridge_v4.gd 2>&1 | tee /tmp/terrain-bridge-v4.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-bridge-v4.log; then
+            echo "Bridge ramp continuity or 3D material regression" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_BRIDGE_V4:' /tmp/terrain-bridge-v4.log
+      - name: Validate live battle 3D terrain with three real board sizes and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_terrain_3d_v5.gd 2>&1 | tee /tmp/live-battle-3d-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/live-battle-3d-contract.log; then
+            echo "Live battlefield 3D rules/fog state contract failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_TERRAIN_3D_V5:' /tmp/live-battle-3d-contract.log
+      - name: Run real Android battle 3D GPU UI and screenshot proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_map_ui_v5.gd 2>&1 | tee /tmp/live-battle-3d-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/live-battle-3d-ui.log; then
+            echo "Live 3D battle UI rendered nothing or changed tactical orders" >&2
+            exit 1
+          fi
+          grep -q 'PASS LIVE_BATTLE_3D_UI_V5:' /tmp/live-battle-3d-ui.log
+          test -s artifacts/tarvoka_battle_3d_live_10x8.png
+          test -s artifacts/tarvoka_battle_3d_live_40x30.png
+      - name: Verify exact mountain ray-picking on real fogged battle maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_picking_v6.gd 2>&1 | tee /tmp/battle-3d-picking-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-picking-v6.log; then
+            echo "Terrain 3D ray-to-triangle intersection failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_PICKING_V6:' /tmp/battle-3d-picking-v6.log
+      - name: Verify TacticalHints-only 3D ranges and fog
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 105s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_ranges_v6.gd 2>&1 | tee /tmp/battle-3d-ranges-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-ranges-v6.log; then
+            echo "3D overlay leaked fog or changed legal rules" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_RANGES_V6:' /tmp/battle-3d-ranges-v6.log
+      - name: Verify mobile multitouch gestures and screenshot highlights
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 105s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_gestures_v6.gd 2>&1 | tee /tmp/battle-3d-gestures-v6.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-gestures-v6.log; then
+            echo "3D touch gestures could trigger unintended actions" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_GESTURES_V6:' /tmp/battle-3d-gestures-v6.log
+          test -s artifacts/tarvoka_battle_3d_v6_ranges.png
+      - name: Test authoritative 3D order preview and confirmed attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_orders_v7.gd 2>&1 | tee /tmp/battle-3d-orders-v7.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-orders-v7.log; then
+            echo "Battle 3D order security, fog or combat regression" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_ORDERS_V7:' /tmp/battle-3d-orders-v7.log
+      - name: Test real Godot Android scene 3D confirmed move and screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 115s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_live_orders_v7.gd 2>&1 | tee /tmp/battle-3d-live-orders-v7.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-live-orders-v7.log; then
+            echo "Live 3D battle orders clicked or committed outside confirmation" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_LIVE_ORDERS_V7:' /tmp/battle-3d-live-orders-v7.log
+          test -s artifacts/tarvoka_battle_3d_v7_confirmed_move.png
+      - name: Verify native 3D terrain and unified studio scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_3d.gd 2>&1 | tee /tmp/terrain-studio-check.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-studio-check.log; then
+            echo "Native 3D environment preview failed" >&2
+            exit 1
+          fi
+          grep -q "PASS TARVOKA 3D environment studio:" /tmp/terrain-studio-check.log
+          test -s artifacts/tarvoka_terrain_studio_3d.png
+          test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
+          test -s artifacts/tarvoka_terrain_v2_v3_same_camera.png
+          test -s artifacts/tarvoka_canyon_v2_v4_same_camera.png
+          for i in 00 01 02; do test -s "artifacts/tarvoka_terrain_scene_${i}.png"; done
+      - name: Export actual G09 V10 to portable Blender-compatible GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_hero_glb.gd 2>&1 | tee /tmp/tarvoka-hero-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/tarvoka-hero-glb.log; then
+            echo "G09 glTF export contains invalid geometry or material" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V10 GLB export:" /tmp/tarvoka-hero-glb.log
+          test -s artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+      - name: Export actual Godot 3D studio to WebGL 2.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-export.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-export.log; then
+            echo "Godot web export failed" >&2
+            exit 1
+          fi
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.js
+          test -s build/web/index.pck
+          touch build/web/.nojekyll
+          du -h build/web/*
+      - name: Bundle a no-install Windows PC launcher for the 3D studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tools/web-studio/Start-Tarvoka-Studio.ps1 build/web/
+          cp tools/web-studio/ABRIR_TARVOKA_ESTUDIO_3D.cmd build/web/
+          cp tools/web-studio/LEEME_ESTUDIO_3D_PC.txt build/web/
+          test -s build/web/ABRIR_TARVOKA_ESTUDIO_3D.cmd
+          test -s build/web/Start-Tarvoka-Studio.ps1
+          test -s build/web/LEEME_ESTUDIO_3D_PC.txt
+      - name: Archive live browser viewer and source render
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Native-3D-Web-Studio
+          path: |
+            build/web/
+            artifacts/tarvoka_web_3d_studio.png
+            artifacts/tarvoka_terrain_studio_3d.png
+            artifacts/tarvoka_terrain_v5_delta_studio.png
+            artifacts/tarvoka_terrain_v4_v5_same_camera.png
+            artifacts/tarvoka_terrain_scene_*.png
+            artifacts/tarvoka_terrain_v1_v2_same_camera.png
+            artifacts/tarvoka_terrain_v2_v3_same_camera.png
+            artifacts/tarvoka_canyon_v2_v4_same_camera.png
+            artifacts/tarvoka_battle_3d_live_10x8.png
+            artifacts/tarvoka_battle_3d_live_40x30.png
+            artifacts/tarvoka_battle_3d_v6_ranges.png
+            artifacts/tarvoka_battle_3d_v7_confirmed_move.png
+            artifacts/tarvoka_studio_battle_3d_medium.png
+            artifacts/tarvoka_studio_battle_3d_orders.png
+            artifacts/tarvoka_headquarters_web_studio.png
+            artifacts/tarvoka_headquarters_v1_v2_comparison.png
+            artifacts/tarvoka_headquarters_v2_v3_comparison.png
+            artifacts/tarvoka_mbt_before_after_same_camera.png
+            artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
+            artifacts/tarvoka_g09_v10_four_angles.png
+            artifacts/tarvoka_g09_v9_closeup_engine.png
+            artifacts/tarvoka_g09_premium_v8_engine.png
+            artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive Windows ready-to-open offline TARVOKA 3D Studio
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Estudio-3D-PC-Windows
+          path: build/web/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload GitHub Pages publishing payload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web/
+
+
+  windows-pc-launcher-smoke:
+    name: Verify no-install Windows browser launcher
+    needs: build-art-studio
+    runs-on: windows-2022
+    timeout-minutes: 6
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TARVOKA-Estudio-3D-PC-Windows
+          path: studio
+      - name: Serve Godot WASM and PCK over local-only HTTP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $app = (Resolve-Path "studio/Start-Tarvoka-Studio.ps1").Path
+          $launchArguments = "-NoProfile -ExecutionPolicy Bypass -File `"$app`" -NoBrowser"
+          $stdout = Join-Path $pwd "studio-stdout.log"
+          $stderr = Join-Path $pwd "studio-stderr.log"
+          $server = Start-Process powershell.exe -ArgumentList $launchArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 14; $i++) {
+              if ($server.HasExited) { break }
+              try {
+                $page = Invoke-WebRequest "http://127.0.0.1:8765/index.html" -TimeoutSec 2
+                if ($page.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) {
+              Write-Host "Windows server output:"
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Write-Host "Windows server errors:"
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw "Windows Studio server did not start"
+            }
+            if ($page.Content.Length -lt 100) { throw "Empty Godot WebGL HTML" }
+            foreach ($asset in @("index.wasm","index.pck","index.js")) {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:8765/$asset" -Method Head -TimeoutSec 15
+              if ($response.StatusCode -ne 200) { throw "Failed to serve $asset" }
+            }
+            $wasm = Invoke-WebRequest "http://127.0.0.1:8765/index.wasm" -Method Head
+            if ($wasm.Headers["Content-Type"] -ne "application/wasm") {
+              throw "Incorrect WebAssembly MIME type"
+            }
+            Write-Host "PASS TARVOKA WINDOWS PC LAUNCHER: Godot HTML, JS, WASM and PCK load from localhost with no admin or Python."
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
+
+  deploy-preview:
+    # Publish the SAME validated WebGL files as the artifact. Do not deploy
+    # speculative previews from untrusted pull-request events.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build-art-studio
+    runs-on: ubuntu-22.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy TARVOKA art studio on GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
