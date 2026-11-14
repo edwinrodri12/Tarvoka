@@ -142,13 +142,26 @@ static func draw_forest_floor(canvas: CanvasItem, center: Vector2,
             exit+perpendicular*width
         ]),shade.darkened(0.11))
     if detail >= 2:
-        for i in range(5):
-            var seed: int = posmod(cell.x*47+cell.y*89+i*29,101)
-            var xx: float = float(seed%23-11)*hw*0.041
-            var yy: float = float((seed/7)%17-8)*hw*0.019
+        # Low shrubs and fallen needles make the forest perimeter more
+        # irregular, without any large object crossing into unseen tiles.
+        for i in range(13):
+            var seed: int = posmod(
+                cell.x*47+cell.y*89+i*29,101)
+            var xx: float = float(
+                posmod(seed*7+i*11,81)-40)*hw*0.011
+            var yy: float = float(
+                posmod(seed*13+i*17,49)-24)*hw*0.006
             var p: Vector2 = center+Vector2(xx,yy)
-            canvas.draw_circle(p,maxf(1.0,hw*0.024),
-                Color(0.42,0.63,0.33,0.37))
+            var radius: float = hw*(0.020+float(seed%5)*0.008)
+            var tint := Color(0.20,0.41,0.27,0.32) if i%3 == 0 else (
+                Color(0.43,0.60,0.33,0.23))
+            canvas.draw_circle(p,maxf(1.0,radius),tint)
+        for side in range(4):
+            if (links & (1 << side)) == 0:
+                continue
+            var connector: Vector2 = center+reaches[side]*hw*0.73
+            canvas.draw_circle(connector,hw*0.078,
+                Color(0.14,0.29,0.22,0.41))
 
 # Foreground scree breaks up the large flat triangular rock silhouette.
 # Its very small stones remain inside the parent diamond; draw AFTER the
