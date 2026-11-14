@@ -13,6 +13,7 @@ const PALETTE := {
     "mark": Color("#eff0e8")
 }
 static var _cache: Dictionary = {}
+static var _geometry_cache: Dictionary = {}
 
 static func _mat(key: String, color: Color) -> StandardMaterial3D:
     var tint: Color = color.darkened(0.17) if key == "faction" else PALETTE[key]
@@ -67,6 +68,12 @@ static func _dish(st: SurfaceTool, center: Vector3, radius: float) -> void:
             st.add_vertex(vertex)
 
 static func _build(level: int, faction: int, condition: String) -> MeshInstance3D:
+    var cache_key: String = "%d/%d/%s" % [level,faction,condition]
+    if _geometry_cache.has(cache_key):
+        var clone := MeshInstance3D.new()
+        clone.name = "MallaConsolidadaMapaV5"
+        clone.mesh = _geometry_cache[cache_key]
+        return clone
     var color: Color = Style.faction_color(faction)
     var surfaces: Dictionary = {}
     for key in MATERIALS:
@@ -141,6 +148,7 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
     var instance := MeshInstance3D.new()
     instance.name = "MallaConsolidadaMapaV5"
     instance.mesh = mesh
+    _geometry_cache[cache_key] = mesh
     return instance
 
 static func install(model: Node3D, level: int, faction: int,
@@ -175,3 +183,38 @@ static func set_distant(model: Node3D, distant: bool) -> bool:
     far.visible = distant
     model.set_meta("tarvoka_hq_map_distant",distant)
     return true
+
+# Standalone distance-mode node. Unlike install(), this never constructs V4:
+# mobile maps can show dozens of HQs without retaining hidden hero meshes.
+static func build_map_only(level: int, faction: int,
+        condition: String = "operativo") -> Node3D:
+    if level < 1 or level > 3 or faction < 0 or faction >= 8:
+        return null
+    if not condition in ["operativo","capturado","danado","destruido"]:
+        return null
+    var node := Node3D.new()
+    node.name = "CuartelGeneralMapaV6"
+    node.set_meta("tarvoka_building_kind","headquarters")
+    node.set_meta("visual_level",level)
+    node.set_meta("visual_faction",faction)
+    node.set_meta("visual_condition",condition)
+    node.set_meta("visual_only",true)
+    node.set_meta("tarvoka_hq_map_only_v6",true)
+    node.add_child(_build(level,faction,condition))
+    return node
+
+static func shared_mesh(level: int, faction: int,
+        condition: String = "operativo") -> ArrayMesh:
+    if level < 1 or level > 3 or faction < 0 or faction >= 8:
+        return null
+    if not condition in ["operativo","capturado","danado","destruido"]:
+        return null
+    var cache_key: String = "%d/%d/%s" % [level,faction,condition]
+    if not _geometry_cache.has(cache_key):
+        var disposable: MeshInstance3D = _build(level,faction,condition)
+        assert(disposable.mesh is ArrayMesh)
+        disposable.free()
+    return _geometry_cache[cache_key] as ArrayMesh
+
+static func cached_variant_count() -> int:
+    return _geometry_cache.size()
