@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio"]
     types: [completed]
     branches:
-      - feat/hq-v13-production-ready-runtime-lod-20261114
+      - feat/hq-v16-studio-v15-sprite-live-preview-20261114
       - feat/terrain-studio-v11-erosion-water-20261114
       - feat/g09-v25-enamel-edge-wear-20261114
 
@@ -31,11 +31,30 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 50
     steps:
-      - name: Check out the verified HQ V12 studio with all eight approved factions
+      - name: Check out the verified HQ V16 studio with actual V15 Android HQ sprite preview and all eight approved factions
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v13-production-ready-runtime-lod-20261114
+          ref: feat/hq-v16-studio-v15-sprite-live-preview-20261114
           persist-credentials: false
+      - name: Check out nine APPROVED V15 Android sprites for the 3D showroom
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: hq-android-v15
+          persist-credentials: false
+      - name: Include exact V15 PNGs in the native 3D web viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "hq-android-v15/assets/buildings/hq_v15/hq_${i}.png"
+            cp "hq-android-v15/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          test -s hq-android-v15/assets/buildings/hq_v15/hq_neutral.png
+          cp hq-android-v15/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf hq-android-v15
+          test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
@@ -58,7 +77,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v13-production-ready-runtime-lod-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v13-production-ready-runtime-lod-20261114)"
+          test "$(git branch --show-current)" = "feat/hq-v16-studio-v15-sprite-live-preview-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v16-studio-v15-sprite-live-preview-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -72,6 +91,11 @@ jobs:
           test -s scripts/ui/HeadquartersSilhouetteV12.gd
           test -s scripts/ui/HeadquartersProductionV13.gd
           test -s tests/test_headquarters_v13_production.gd
+          test -s scripts/ui/HeadquartersSpriteStudioV16.gd
+          test -s tests/test_hq_v16_sprite_studio.gd
+          test -s assets/buildings/hq_v15/hq_0.png
+          test -s assets/buildings/hq_v15/hq_7.png
+          test -s assets/buildings/hq_v15/hq_neutral.png
           test -s tests/test_headquarters_v12_tactical_night.gd
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
