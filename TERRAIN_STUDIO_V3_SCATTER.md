@@ -34,3 +34,36 @@ terreno táctico ficticio ni cambios en los modelos de tanque y Cuartel General.
 No modifica ataques en altura, movilidad, puentes tácticos, niebla de guerra,
 guardados, IA ni economía. La integración al motor de batalla se hará con
 validaciones independientes después de aprobar el arte.
+
+## Segunda prioridad: pendientes, carreteras y costas (V3.1)
+
+1. `TerrainSurfaceSampler3D.gd` obtiene la altura exacta de la malla
+   original de **cuatro triángulos por casilla**, usando el centro y las
+   cuatro esquinas compartidas; evita bases a alturas arbitrarias.
+2. La hierba, grava y juncos instanciados ahora se apoyan sobre el relieve
+   real en sus posiciones locales. También se ajustan árboles, arbustos y
+   piedras decorativas del estudio.
+3. `TerrainStudioRoadShore3D.gd` genera calzada con **brazos de conexión**
+   según vecinos, arcén y línea discontinua solo en tramos rectos, usando
+   subdivisiones y muestras de pendiente. Los labios arenosos de costa
+   siguen el mismo terreno. No hay colisiones ni puentes jugables.
+4. Al apagar V3 se conservan los caminos y la vegetación V2 para comparación;
+   al elegir el mapa V1 se conservan los bloques de la vista inicial.
+5. `tests/test_terrain_studio_slope_transitions.gd` comprueba continuidad
+   geométrica entre casillas vecinas, posición de los detalles, altura de
+   carreteras y presencia de costa en tres escenarios. El workflow ejecuta
+   además preflight de GDScript antes de pruebas GPU para evitar falsos
+   errores de dependencias sin importar.
+
+**Presupuesto de dibujo:** la vegetación repetida usa como máximo tres
+`MultiMeshInstance3D` de detalle. Cada casilla de carretera construye
+una sola malla combinada de arcén, asfalto y marcas; cada casilla de litoral
+consolida sus tramos en una malla. Esto reduce nodos frente a piezas separadas,
+pero no constituye todavía medición de FPS en un dispositivo Android real.
+
+**Riesgos abiertos:** al aproximarse a los puentes del cañón puede requerirse
+un perfil vertical específico de acceso; hay que medir WebGL y revisar las
+capturas a idéntica cámara. Falta adaptar los niveles de detalle a mapas
+grandes y conservar la lectura de tropas en casillas densas. Nada de esta
+revisión modifica movilidad, costes de combustible, defensa por altura,
+guardados, IA, niebla de guerra ni rutas jugables.
