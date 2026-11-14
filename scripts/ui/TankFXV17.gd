@@ -106,18 +106,18 @@ static func _tune_fire(model: Node3D) -> int:
 static func set_quality(model: Node3D, eco: bool) -> bool:
     if model == null or not model.get_meta("tarvoka_mbt_fx_v17",false):
         return false
-    # Exactly 11 transparent cards in normal mode, 6 in eco mode. The
-    # same arrays are reused, no instantiation/deletion during gameplay.
-    for i in range(SMOKE_COUNT):
-        var smoke: MeshInstance3D = model.find_child(
-            "G09V17Humo_%02d" % i,true,false) as MeshInstance3D
+    # Reuse cached Node references. Toggling Eco never searches the tree,
+    # creates or deletes meshes, or changes gameplay/collision data.
+    var smoke_nodes: Array = model.get_meta("tarvoka_fx_v17_smoke_refs",[])
+    var fire_nodes: Array = model.get_meta("tarvoka_fx_v17_fire_refs",[])
+    for i in range(smoke_nodes.size()):
+        var smoke: MeshInstance3D = smoke_nodes[i] as MeshInstance3D
         if smoke != null:
             smoke.visible = not eco or i in SMOKE_ECO
-    for i in range(FIRE_COUNT):
-        var fire: MeshInstance3D = model.find_child(
-            "G09V16FuegoLamina_%02d" % i,true,false) as MeshInstance3D
-        if fire != null:
-            fire.visible = not eco or i in FIRE_ECO
+    for i in range(fire_nodes.size()):
+        var flame: MeshInstance3D = fire_nodes[i] as MeshInstance3D
+        if flame != null:
+            flame.visible = not eco or i in FIRE_ECO
     model.set_meta("tarvoka_mbt_fx_v17_eco",eco)
     return true
 
@@ -125,28 +125,27 @@ static func count_transparent_cards(model: Node3D) -> int:
     if model == null or not model.get_meta("tarvoka_mbt_fx_v17",false):
         return 0
     var count: int = 0
-    for i in range(SMOKE_COUNT):
-        var smoke: Node3D = model.find_child(
-            "G09V17Humo_%02d" % i,true,false) as Node3D
-        if smoke != null and smoke.visible:
+    var smoke_nodes: Array = model.get_meta("tarvoka_fx_v17_smoke_refs",[])
+    var fire_nodes: Array = model.get_meta("tarvoka_fx_v17_fire_refs",[])
+    for node in smoke_nodes:
+        if node is Node3D and (node as Node3D).visible:
             count+=1
-    for i in range(FIRE_COUNT):
-        var fire: Node3D = model.find_child(
-            "G09V16FuegoLamina_%02d" % i,true,false) as Node3D
-        if fire != null and fire.visible:
+    for node in fire_nodes:
+        if node is Node3D and (node as Node3D).visible:
             count+=1
     return count
 
 static func animate_effects(model: Node3D,elapsed: float) -> void:
     if model == null or not model.get_meta("tarvoka_mbt_fx_v17",false):
         return
-    # Animate only active layers. No GPU/CPU particle allocation.
+    # No find_child() per frame: each of the 11 cached nodes is resolved
+    # only once during construction, saving CPU on crowded battle maps.
     var stage: int = int(model.get_meta("tarvoka_visual_damage_stage",0))
-    for i in range(SMOKE_COUNT):
+    var smoke_nodes: Array = model.get_meta("tarvoka_fx_v17_smoke_refs",[])
+    for i in range(smoke_nodes.size()):
         if stage < STAGE_LABELS[i]:
             continue
-        var smoke: Node3D = model.find_child(
-            "G09V17Humo_%02d" % i,true,false) as Node3D
+        var smoke: Node3D = smoke_nodes[i] as Node3D
         if smoke == null or not smoke.visible:
             continue
         var home: Vector3 = smoke.get_meta("tarvoka_fx_v17_home",smoke.position)
@@ -160,9 +159,9 @@ static func animate_effects(model: Node3D,elapsed: float) -> void:
             1.0+0.06*sin(phase*0.52+1.2),1.0)
     if stage != 4:
         return
-    for i in range(FIRE_COUNT):
-        var flame: MeshInstance3D = model.find_child(
-            "G09V16FuegoLamina_%02d" % i,true,false) as MeshInstance3D
+    var fire_nodes: Array = model.get_meta("tarvoka_fx_v17_fire_refs",[])
+    for i in range(fire_nodes.size()):
+        var flame: MeshInstance3D = fire_nodes[i] as MeshInstance3D
         if flame == null or not flame.visible:
             continue
         var origin: Vector3 = flame.get_meta("tarvoka_v16_fire_rest",flame.position)
@@ -189,6 +188,16 @@ static func apply(model: Node3D) -> bool:
         if _copy_smoke(model,i):
             smoke_count+=1
     var fire_count: int = _tune_fire(model)
+    var smoke_refs: Array = []
+    var fire_refs: Array = []
+    for i in range(SMOKE_COUNT):
+        smoke_refs.append(model.find_child(
+            "G09V17Humo_%02d" % i,true,false))
+    for i in range(FIRE_COUNT):
+        fire_refs.append(model.find_child(
+            "G09V16FuegoLamina_%02d" % i,true,false))
+    model.set_meta("tarvoka_fx_v17_smoke_refs",smoke_refs)
+    model.set_meta("tarvoka_fx_v17_fire_refs",fire_refs)
     model.set_meta("tarvoka_mbt_fx_v17",true)
     model.set_meta("tarvoka_mbt_fx_v17_smoke_count",smoke_count)
     model.set_meta("tarvoka_mbt_fx_v17_fire_count",fire_count)
