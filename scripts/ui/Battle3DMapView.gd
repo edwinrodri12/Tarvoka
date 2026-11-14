@@ -13,6 +13,7 @@ const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -432,8 +433,11 @@ func _process(delta: float) -> void:
     _hit_elapsed+=maxf(delta,0.0)
     var t: float = minf(1.0,_hit_elapsed/HitV30.duration(_hit_type))
     TankRig.pose(target,_hit_type,t,Vector2i.ZERO)
+    var stage: int = TankDamage.current_stage(target)
+    TankDamage.apply_stage(target,stage)
     if t>=1.0:
         TankRig.restore(target)
+        TankDamage.apply_stage(target,stage)
         _hit_model_id=""
         _hit_type=""
 
