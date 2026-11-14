@@ -10,6 +10,10 @@ on:
       - "scripts/ui/HeadquartersDetail3D.gd"
       - "scripts/ui/HeadquartersHero4.gd"
       - "scripts/ui/HeadquartersMapLOD3D.gd"
+      - "scripts/ui/HeadquartersEmblems3D.gd"
+      - "scripts/ui/HeadquartersCityBatch3D.gd"
+      - "tests/test_headquarters_v6.gd"
+      - "assets/factions/**"
       - "tests/test_headquarters_map_lod.gd"
       - "tests/test_headquarters_v4.gd"
       - "tests/export_headquarters_hero_glb.gd"
@@ -78,6 +82,16 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Import official faction WebP atlases before Godot scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq-atlas-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Import failed" /tmp/hq-atlas-import.log; then
+            echo "Original faction WebP textures failed Godot import" >&2
+            exit 1
+          fi
+          test -d .godot/imported
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
@@ -181,6 +195,17 @@ jobs:
           fi
           grep -q "PASS HQ V5 map LOD:" /tmp/hq-v5-map-lod-check.log
           test -s artifacts/tarvoka_hq_v4_vs_v5_map_lod.png
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v6.gd 2>&1 | tee /tmp/hq-v6-approval.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v6-approval.log; then
+            echo "HQ V6 official shields or multi-building GPU regression" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V6:" /tmp/hq-v6-approval.log
+          test -s artifacts/tarvoka_hq_v6_49_buildings_map_scale.png
+          test -s artifacts/tarvoka_hq_v6_official_shield.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -245,6 +270,8 @@ jobs:
             artifacts/tarvoka_hq_v3_vs_v4_real_render.png
             artifacts/tarvoka_hq_v4_level3_render.png
             artifacts/tarvoka_hq_v4_vs_v5_map_lod.png
+            artifacts/tarvoka_hq_v6_49_buildings_map_scale.png
+            artifacts/tarvoka_hq_v6_official_shield.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png

@@ -8,6 +8,7 @@ const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Finish = preload("res://scripts/ui/HeadquartersFinish3D.gd")
 const Detail = preload("res://scripts/ui/HeadquartersDetail3D.gd")
 const Hero4 = preload("res://scripts/ui/HeadquartersHero4.gd")
+const Emblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
 const CONDITIONS := ["operativo", "capturado", "danado", "destruido"]
 const BASE := Color("#788693")
 const CONCRETE := Color("#b3b9b5")
@@ -422,6 +423,7 @@ static func build(level: int = 1, faction: int = 0,
             Detail.apply(model,level,accent,condition)
             if hero_enabled:
                 Hero4.apply(model,level,accent,condition)
+                Emblems.apply(model,faction)
     return model
 
 # Zoom-adaptive fine detail for WebGL and Android. Architecture remains visible.
