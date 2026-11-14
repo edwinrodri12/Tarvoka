@@ -23,6 +23,8 @@ on:
       - "tests/test_incremental_map3d.gd"
       - "tests/test_battle_3d_view.gd"
       - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/Battle3DAssetLayer.gd"
+      - "tests/test_live_battle_graphics.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
       - "scripts/ui/WorldArt.gd"
@@ -49,6 +51,8 @@ on:
       - "tests/test_incremental_map3d.gd"
       - "tests/test_battle_3d_view.gd"
       - "scripts/ui/Battle3DView.gd"
+      - "scripts/ui/Battle3DAssetLayer.gd"
+      - "tests/test_live_battle_graphics.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/Main.gd"
       - "scripts/ui/WorldArt.gd"
@@ -127,6 +131,23 @@ jobs:
             exit 1
           fi
           grep -F 'PASS battle 3D:' /tmp/tarvoka-real-3d-battle-input.log
+
+      - name: Validate real V23 units and HQ V13 inside playable battle (GPU)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 155s \\
+            xvfb-run -a -s "-screen 0 1280x800x24" \\
+            /tmp/Godot_v4.3-stable_linux.x86_64 \\
+              --path . --rendering-driver opengl3 --audio-driver Dummy \\
+              --script res://tests/test_live_battle_graphics.gd \\
+            2>&1 | tee /tmp/tarvoka-real-battle-models.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-real-battle-models.log; then
+            echo 'Live-model battle regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS live battle graphics:' /tmp/tarvoka-real-battle-models.log
+          test -s build/battle3d-previews/battle-real-graphics.png
 
       - name: Benchmark 3D tree batches and mobile geometry budgets
         shell: bash
