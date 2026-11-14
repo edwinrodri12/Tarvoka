@@ -10,6 +10,8 @@ on:
       - "scripts/ui/IsoRenderer.gd"
       - "scripts/ui/VisualStyle.gd"
       - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tests/test_landscape_regions.gd"
       - "scripts/ui/LandscapeContinuity.gd"
       - "scripts/ui/LandscapeTransitions.gd"
       - "scripts/ui/TerrainTextureAtlas.gd"
@@ -20,6 +22,8 @@ on:
       - "scripts/ui/WorldArt.gd"
       - "scripts/ui/IsoRenderer.gd"
       - "scripts/ui/LandscapeDetailPainter.gd"
+      - "scripts/ui/LandscapeRegions.gd"
+      - "tests/test_landscape_regions.gd"
       - "scripts/ui/LandscapeContinuity.gd"
       - "scripts/ui/LandscapeTransitions.gd"
       - "scripts/ui/TerrainSurfaceMaterials.gd"
@@ -75,6 +79,21 @@ jobs:
             exit 1
           fi
           grep -F 'PASS continuous world seams:' /tmp/tarvoka-world-seams.log
+
+      - name: Validate regional forest, mountain and ground transitions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --path . --audio-driver Dummy \
+            --script res://tests/test_landscape_regions.gd \
+            2>&1 | tee /tmp/tarvoka-regional-landscape.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-regional-landscape.log; then
+            echo 'Regional landscape regression failed' >&2
+            exit 1
+          fi
+          grep -F 'PASS landscape regions:' /tmp/tarvoka-regional-landscape.log
 
       - name: Rasterize environment at full and medium mobile detail
         shell: bash
