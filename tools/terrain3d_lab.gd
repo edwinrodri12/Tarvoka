@@ -6,6 +6,7 @@ class_name TarvokaTerrain3DLab
 # Native 3D textures/lighting and mesh resources; NOT a screenshot mock-up.
 const TerrainMesh = preload("res://scripts/ui/Terrain3DMesh.gd")
 const Topology = preload("res://scripts/ui/TerrainTopology.gd")
+const Regions = preload("res://scripts/ui/LandscapeRegions.gd")
 var terrain: Array = []
 var observed: Dictionary = {}
 var restrict_to_observed := false
@@ -151,15 +152,21 @@ func _generate_forest() -> void:
                 continue
             if str(terrain[y][x]) != "forest":
                 continue
-            # The tree centers are read from local terrain coordinates,
-            # never from strategic defense/cover or hidden territory.
-            for j in range(2 if divisions < 4 else 3):
+            # Vegetation density belongs to the SAME regional forest
+            # profile as the 2.5D artwork. Hidden neighbors may not
+            # affect count or reveal the edge of an unexplored forest.
+            var known_links: int = Topology.neighbor_mask(
+                terrain,cell,"forest",true,observed,restrict_to_observed)
+            var count: int = mini(5,Regions.forest_density(
+                cell,known_links,2)) if divisions >= 4 else (
+                mini(3,Regions.forest_density(cell,known_links,1)))
+            for j in range(count):
                 var seed: int = posmod(x*127+y*463+j*117,199)
-                var u: float = 0.25+float(seed%12)*0.041
-                var v: float = 0.24+float((seed/11)%12)*0.042
+                var u: float = 0.16+float(posmod(seed*13+j*7,31))*0.022
+                var v: float = 0.17+float(posmod(seed*17+j*11,29))*0.022
                 var height: float = TerrainMesh.height_at(
                     terrain,cell,u,v,observed,restrict_to_observed)
-                var scale: float = 0.74+float(seed%7)*0.055
+                var scale: float = 0.73+float(seed%9)*0.056
                 trees.append({"position":Vector3(
                     float(x)+u,height,float(y)+v),
                     "scale":scale,"seed":seed})
@@ -194,7 +201,9 @@ func _generate_forest() -> void:
     leaf_instances.transform_format = MultiMesh.TRANSFORM_3D
     leaf_instances.use_colors = true
     leaf_instances.mesh = leaf_mesh
-    leaf_instances.instance_count = trees.size()
+    # Two canopy tiers per pine produce a stepped crown with the same
+    # single GPU batched MultiMesh, avoiding hundreds of individual nodes.
+    leaf_instances.instance_count = trees.size()*2
     var trunk_instances := MultiMesh.new()
     trunk_instances.transform_format = MultiMesh.TRANSFORM_3D
     trunk_instances.mesh = trunk_mesh
@@ -204,14 +213,20 @@ func _generate_forest() -> void:
         var p: Vector3 = tree["position"]
         var scale: float = tree["scale"]
         var seed: int = tree["seed"]
-        var crown_basis := Basis().scaled(Vector3(
-            scale,scale*(1.0+float(seed%3)*0.075),scale))
-        leaf_instances.set_instance_transform(i,Transform3D(
-            crown_basis,p+Vector3(0,scale*0.68,0)))
-        leaf_instances.set_instance_color(i,[
+        var lower_basis := Basis().scaled(Vector3(
+            scale*1.02,scale*0.88,scale*1.02))
+        var upper_basis := Basis().scaled(Vector3(
+            scale*0.70,scale*0.74,scale*0.70))
+        var foliage: Color = [
             Color("#214F37"),Color("#2C6240"),
             Color("#315D47"),Color("#416D4B")
-        ][seed%4])
+        ][seed%4]
+        leaf_instances.set_instance_transform(i*2,Transform3D(
+            lower_basis,p+Vector3(0,scale*0.52,0)))
+        leaf_instances.set_instance_color(i*2,foliage.darkened(0.12))
+        leaf_instances.set_instance_transform(i*2+1,Transform3D(
+            upper_basis,p+Vector3(0,scale*0.80,0)))
+        leaf_instances.set_instance_color(i*2+1,foliage.lightened(0.14))
         var trunk_basis := Basis().scaled(Vector3(scale,scale,scale))
         trunk_instances.set_instance_transform(i,Transform3D(
             trunk_basis,p+Vector3(0,scale*0.23,0)))
