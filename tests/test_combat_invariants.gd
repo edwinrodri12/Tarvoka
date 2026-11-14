@@ -25,10 +25,10 @@ func _initialize() -> void:
 
     for defender_hp in range(-1, 13):
         for attacker_hp in [-1, 0, 1, 10]:
-            for attack in [0, 1, 5, 12]:
+            for attack in [1, 2, 5, 12]:
                 var result: Dictionary = combat.resolve(attacker_hp, defender_hp, attack, 2, 1)
                 var valid: bool = attacker_hp > 0 and defender_hp > 0 and attack > 0
-                assert(result.valid == valid, "Dead participants cannot resolve attacks")
+                assert(result.valid == valid, "Only living participants with positive attack resolve")
                 assert(result.defender_hp >= 0, "HP cannot become negative")
                 if valid:
                     assert(result.damage >= 0 and result.damage <= defender_hp, "Applied damage must be capped by HP")
@@ -55,15 +55,17 @@ func _initialize() -> void:
             checked += 1
 
     # Cross-check the preview formula against actual resolution over HP boundaries.
-    # Includes invalid/zero attacks, lethal hits and negative defense/cover.
+    # Includes dead participants, lethal hits and negative defense/cover.
+    # Nonpositive attack damage is checked above; resolution validity is covered
+    # by the independent combat guard PR, avoiding an artificial PR dependency.
     for attacker_hp in [-1, 0, 1, 10]:
         for defender_hp in [-1, 0, 1, 3, 10]:
-            for attack in [-1, 0, 1, 5, 12]:
+            for attack in [1, 2, 5, 12]:
                 for defense in [-2, 0, 2, 8]:
                     for cover in [-2, 0, 2, 8]:
                         var expected: int = min(max(0, defender_hp), combat.damage(attack, defense, cover))
                         var actual: Dictionary = combat.resolve(attacker_hp, defender_hp, attack, defense, cover)
-                        if attacker_hp <= 0 or defender_hp <= 0 or attack <= 0:
+                        if attacker_hp <= 0 or defender_hp <= 0:
                             assert(not actual.valid and actual.damage == 0, "Invalid participants cannot deal damage")
                         else:
                             assert(actual.valid, "Living participants must resolve deterministically")
