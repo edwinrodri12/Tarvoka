@@ -65,6 +65,13 @@ func _run() -> void:
     assert(str(slots.slot_summaries["auto"].text).contains("Batalla"))
     assert(screen.board.state == baseline)
     slots.slot_buttons["manual"].pressed.emit()
+    assert(slots.visible and slots.confirmation_panel.visible)
+    assert(screen.board.state == baseline) # Preview alone never loads.
+    slots.cancel_load_button.pressed.emit()
+    assert(slots.visible and not slots.confirmation_panel.visible)
+    assert(screen.board.state == baseline)
+    slots.slot_buttons["manual"].pressed.emit()
+    slots.confirm_load_button.pressed.emit()
     assert(not slots.visible and screen.board.state == baseline)
 
     # A rejected arbitrary save path cannot reach disk through this UI.
