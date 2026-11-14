@@ -125,6 +125,28 @@ func _run() -> void:
     assert(viewer.open_from_state(clear,"T0"))
     assert(viewer.stats_label.text.contains("DESPEJADO"))
     assert(viewer._scene.get_meta("battle_weather") == "clear")
+    assert(viewer.weather_preview_picker.item_count == 4)
+    assert(viewer.weather_preview_picker.selected == 0)
+    var real_state: Dictionary = viewer._state_snapshot.duplicate(true)
+    var old_camera: float = viewer._camera_size
+    var old_yaw: float = viewer._yaw
+    # Public PC/Android Web demo can PREVIEW rain/snow even on legacy
+    # sessions which did not yet have the climatic game modes. Never saves
+    # this visual-only setting in gameplay state.
+    viewer._choose_visual_weather(3)
+    assert(viewer._scene.get_meta("battle_weather") == "snow")
+    assert(viewer.stats_label.text.contains("VISTA ARTÍSTICA"))
+    assert(viewer._camera_size == old_camera and viewer._yaw == old_yaw)
+    assert(viewer._state_snapshot == real_state)
+    viewer._refresh_g09_lod()
+    assert(viewer._scene.get_meta("render_stats")["units"]["weather"] == "snow")
+    viewer._choose_visual_weather(2)
+    assert(viewer._scene.get_meta("battle_weather") == "rain")
+    assert(viewer._state_snapshot == real_state)
+    viewer._choose_visual_weather(0)
+    assert(viewer._scene.get_meta("battle_weather") == "clear")
+    assert(not viewer.stats_label.text.contains("VISTA ARTÍSTICA"))
+    assert(viewer._state_snapshot == real_state)
     viewer.close_view()
     viewer.queue_free()
     assert(state == preserved)
