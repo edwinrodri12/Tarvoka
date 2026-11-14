@@ -173,6 +173,11 @@ static func build_ground(grid: Array, observed: Dictionary = {},
             var cell := Vector2i(x,y)
             if not observed_cell(grid,cell,observed,restricted):
                 continue
+            # A confirmed road bridge covers a real river in the native
+            # 3D view. Leave its ground surface out so visible water can
+            # flow beneath the deck. The tactical road tile is untouched.
+            if Topology.bridge_axis(grid,cell,observed,restricted) != 0:
+                continue
             for j in range(divisions):
                 for i in range(divisions):
                     var u0: float = float(i)/float(divisions)
@@ -221,8 +226,13 @@ static func _neighbor_water(grid: Array, cell: Vector2i, direction: int,
         Vector2i(0,1),Vector2i(-1,0)
     ]
     var target: Vector2i = cell+SHIFTS[direction]
-    return observed_cell(grid,target,observed,restricted) and (
-        str(grid[target.y][target.x]) == "water")
+    if not observed_cell(grid,target,observed,restricted):
+        return false
+    if str(grid[target.y][target.x]) == "water":
+        return true
+    # A road known to bridge a river is water for VISUAL outline
+    # continuity, while remaining 'road' to the tactical simulation.
+    return Topology.bridge_axis(grid,target,observed,restricted) != 0
 
 static func water_outline(grid: Array, cell: Vector2i,
         observed: Dictionary = {}, restricted: bool = false,
@@ -277,6 +287,36 @@ static func water_outline(grid: Array, cell: Vector2i,
                 float(cell.y)+v))
     return outline
 
+static func bridge_water_outline(grid: Array, cell: Vector2i,
+        observed: Dictionary = {}, restricted: bool = false,
+        divisions: int = 8) -> PackedVector2Array:
+    var outline := PackedVector2Array()
+    if divisions < 2 or Topology.bridge_axis(
+            grid,cell,observed,restricted) == 0:
+        return outline
+    # Canonical four sides meet neighboring water exactly. Water replaces
+    # only the VISUAL floor below the decorative bridge and never the
+    # original strategic road cell.
+    for side in range(4):
+        for index in range(divisions):
+            var t: float = float(index)/float(divisions)
+            var u := 0.0
+            var v := 0.0
+            match side:
+                0:
+                    u = t
+                1:
+                    u = 1.0
+                    v = t
+                2:
+                    u = 1.0-t
+                    v = 1.0
+                _:
+                    v = 1.0-t
+            outline.append(Vector2(float(cell.x)+u,
+                float(cell.y)+v))
+    return outline
+
 static func build_water(grid: Array, observed: Dictionary = {},
         restricted: bool = false, divisions: int = 8) -> ArrayMesh:
     var mesh := ArrayMesh.new()
@@ -288,8 +328,12 @@ static func build_water(grid: Array, observed: Dictionary = {},
             continue
         for x in range((grid[y] as Array).size()):
             var cell := Vector2i(x,y)
-            var outline: PackedVector2Array = water_outline(
-                grid,cell,observed,restricted,divisions)
+            var crossing: bool = Topology.bridge_axis(
+                grid,cell,observed,restricted) != 0
+            var outline: PackedVector2Array = (
+                bridge_water_outline(grid,cell,observed,restricted,divisions)
+                if crossing else water_outline(
+                grid,cell,observed,restricted,divisions))
             if outline.is_empty():
                 continue
             var center := Vector3(float(x)+0.5,WATER_LEVEL,float(y)+0.5)
@@ -309,6 +353,7 @@ static func build_water(grid: Array, observed: Dictionary = {},
                 ]
                 var nearby: Vector2i = cell+BANK_DIRS[shore_side]
                 var bank_strength: float = 1.0 if (
+                    not crossing and
                     observed_cell(grid,nearby,observed,restricted) and (
                     not _neighbor_water(grid,cell,shore_side,
                         observed,restricted))) else 0.0
