@@ -23,7 +23,7 @@ func _run() -> void:
             push_error("Stress screen did not complete the five work cases")
             quit(1)
             return
-    assert(bench.results.size() == 5)
+    assert(bench.results.size() == 10)
     assert(not bench.running)
     assert(bench.results[0]["map"] == "24x18")
     assert(bench.results[0]["actual_tanks"] == 24)
@@ -35,17 +35,47 @@ func _run() -> void:
     assert(bench.results[3]["actual_tanks"] == 150)
     assert(bench.results[3]["effects"] == 16)
     assert(bench.results[4]["battery_saver"])
+    assert(bench.results[5]["visual_factions"] == 8)
+    assert(bench.results[5]["actual_tanks"] == 160)
+    assert(bench.results[5]["actual_sites"] == 64)
+    assert(bench.results[6]["actual_tanks"] == 320)
+    assert(bench.results[6]["actual_sites"] == 128)
+    assert(bench.results[7]["actual_tanks"] == 512)
+    assert(bench.results[7]["actual_sites"] == 192)
+    assert(bench.results[8]["actual_tanks"] == 768)
+    assert(bench.results[8]["actual_sites"] == 256)
+    assert(bench.results[9]["actual_tanks"] == 768)
+    assert(bench.results[9]["actual_sites"] == 256)
+    assert(bench.results[9]["battery_saver"])
+    # All eight identities share the actual Godot renderer, but NOT the
+    # authoritative multiplayer/turn engine. Full 8-team participation is QA.
+    assert(bool(bench.board.state.get("__qa_visual_eight_sides",false)))
+    var present: Dictionary = {}
+    for unit in bench.board.state.get("units",[]):
+        present[int(unit["faction"])] = true
+    assert(present.size() == 8)
+    for team in range(8):
+        assert(present.has(team))
+    var visual_sites: Array = bench.board.state.get("__qa_site_markers",[])
+    assert(visual_sites.size() == 256)
+    for team in range(8):
+        assert(int(visual_sites[team]["owner"]) == team)
+        assert(bool(visual_sites[team]["visual_command_city"]))
     for result in bench.results:
         assert(int(result["samples"]) > 0)
         assert(float(result["frame_p95_ms"]) > 0.0)
         assert(int(result["tiles_drawn"]) > 0)
         assert(int(result["units_drawn"]) > 0)
+        assert(int(result["units_sorted"]) <= int(result["actual_tanks"]))
+        assert(int(result["sites_drawn"]) > 0)
+        if int(result["visual_factions"]) == 8:
+            assert(int(result["actual_sites"]) > 0)
     assert(bench.report_text().contains("HQ detallado"))
     assert(FileAccess.file_exists("user://tarvoka_stress_report.json"))
     var raw := FileAccess.get_file_as_string("user://tarvoka_stress_report.json")
     var report: Variant = JSON.parse_string(raw)
     assert(report is Dictionary)
-    assert(report["cases"].size() == 5)
+    assert(report["cases"].size() == 10)
     # Exercise Main integration without opening an autosave-changing scene.
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
@@ -63,5 +93,5 @@ func _run() -> void:
     overlay.queue_free()
     main.queue_free()
     bench.queue_free()
-    print("PASS TARVOKA Android stress QA: 5 visual workloads, 24/60/100/150/150 tanks, 3D HQ, weather, VFX, report and untouched skirmish")
+    print("PASS TARVOKA Android stress QA: 10 visual workloads, 8 visual teams, 768 tanks, 256 buildings, HQ, weather, VFX, report and untouched skirmish")
     quit(0)
