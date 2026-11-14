@@ -73,6 +73,22 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var detail: int = VisualBudget.detail_level(hw,battery_saver)
     var bounds: Rect2i = VisualBudget.visible_grid_bounds(canvas.size,zoom,pan,dims)
     var base_origin: Vector2 = IsoTransform.origin(canvas.size,zoom,pan,dims)
+    var weather_now: String = Weather.from_state(state)
+    # Only OBSERVED entities may influence a visual-quality decision.
+    # Counting a hidden hostile army would leak its existence under fog.
+    var estimated_visible_units := 0
+    for candidate in state.get("units",[]):
+        if not candidate is Dictionary or int(candidate.get("hp",0))<=0:
+            continue
+        var at: Vector2i = candidate["pos"]
+        if not bounds.has_point(at):
+            continue
+        if fog and int(candidate["faction"])!=0 and not visible.has(at):
+            continue
+        if VisualBudget.in_view(_projected_center(at,base_origin,hw),hw,canvas.size):
+            estimated_visible_units += 1
+    var environment_stride: int = VisualBudget.environment_stride(estimated_visible_units)
+    var precipitation_cells := 0
     var drawn := 0
     var decorated := 0
     var unknown := 0
@@ -99,23 +115,29 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 var terrain: String = str(state["terrain"][y][x])
                 var tint: Color = Weather.blended_tint(
                     VisualStyle.terrain_color(terrain,x,y),
-                    weather_before,Weather.from_state(state),weather_blend)
+                    weather_before,weather_now,weather_blend)
                 _tile(canvas,vertices,tint)
                 if detail == VisualBudget.DETAIL_FULL:
                     canvas.draw_line(vertices[0],vertices[1],tint.lightened(0.20),
                         maxf(1.0,hw*0.025),true)
                     canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
                         maxf(1.0,hw*0.025),true)
-                if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
+                if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain) and posmod(x+2*y,environment_stride)==0:
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
                     decorated += 1
-                WeatherPainter.draw_iso(canvas,cell,c,hw,Weather.from_state(state),battery_saver)
+                if (not fog or visible.has(cell)) and posmod(x*2+y*3,environment_stride)==0:
+                    WeatherPainter.draw_iso(canvas,cell,c,hw,weather_now,battery_saver)
+                    if weather_now != Weather.CLEAR and not battery_saver and hw>=12.0:
+                        precipitation_cells += 1
                 if fog and not visible.has(cell):
                     _tile(canvas,vertices,Color(0.025,0.035,0.05,0.73))
     last_frame_stats = {
         "size":dims,"candidate_tiles":bounds.size.x*bounds.size.y,
         "tiles_drawn":drawn,"unknown_tiles":unknown,
-        "terrain_detail_cells":decorated,"detail_level":detail
+        "terrain_detail_cells":decorated,"detail_level":detail,
+        "environment_stride":environment_stride,
+        "visible_unit_load":estimated_visible_units,
+        "precipitation_cells":precipitation_cells
     }
 
     # Objective and installation overlays must never expose an unseen owner.
