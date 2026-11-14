@@ -215,7 +215,8 @@ func _add_building_mode() -> void:
     battle_fog_toggle = CheckButton.new()
     battle_fog_toggle.name = "NieblaDeGuerra3D"
     battle_fog_toggle.text = "Niebla de guerra real"
-    battle_fog_toggle.button_pressed = true
+    # Studio default is a complete art showcase; users can enable real fog.
+    battle_fog_toggle.button_pressed = false
     battle_controls.add_child(battle_fog_toggle)
     battle_modern_toggle = CheckButton.new()
     battle_modern_toggle.name = "UnidadesModernas3D"
