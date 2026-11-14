@@ -510,6 +510,13 @@ func _change_terrain_camera(_index: int) -> void:
 
 func _toggle_v7_finish() -> void:
     _terrain_v7_enabled = not _terrain_v7_enabled
+    if _terrain_v7_enabled:
+        # Returning from V4 or V5 restores the shared V6 forest and V5
+        # geology, while V7 replaces only their rock, banks and water.
+        _terrain_v6_enabled = true
+        _terrain_v5_enabled = true
+        terrain_compare_v6_button.text = "COMPARAR: volver al terreno V5"
+        terrain_compare_button.text = "COMPARAR: volver a acabado V4"
     terrain_compare_v7_button.text = (
         "COMPARAR: volver al terreno V6" if _terrain_v7_enabled
         else "VOLVER AL TERRENO V7")
