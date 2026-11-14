@@ -42,7 +42,7 @@ static func _shared(mat: Material,cache: Dictionary) -> Material:
     return cache[id]
 
 func _run() -> void:
-    var source: Node3D = HQ.build(3,0,"operativo",true,true,true,true,true,true,true)
+    var source: Node3D = HQ.build(3,0,"operativo",true,true,true,true,true,true,true,false)
     assert(source != null and source.get_meta("tarvoka_hq_visual_v10",false))
     root.add_child(source)
     HQ.set_render_detail(source,true)
