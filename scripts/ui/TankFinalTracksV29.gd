@@ -99,7 +99,7 @@ static func _sprockets(model: Node3D) -> int:
             var hub: MeshInstance3D = model.find_child(
                 "EjeMotrizG09_%s_%s" % [side,end],
                 true,false) as MeshInstance3D
-            if drum==null or hub==null or not drum.mesh is CylinderMesh:
+            if drum==null or hub==null or not (drum.mesh is CylinderMesh):
                 return changed
             # Share the material; duplicate the underlying CylinderMesh, so
             # changing its diameter doesn't alter any other mesh instances.
