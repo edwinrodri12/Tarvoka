@@ -68,6 +68,11 @@ func _run() -> void:
     assert(not menu.production_columns.vertical)
     assert(menu.production_list_body != null and menu.production_list_scroll != null)
     assert(menu.comparison_preview != null)
+    var rows: VBoxContainer = menu.comparison_preview.find_child("TablaComparativa",true,false)
+    assert(rows != null and rows.get_child_count() >= 8)
+    for line in rows.get_children():
+        assert(line is HBoxContainer)
+        assert(line.get_child(0).custom_minimum_size.x >= 148)
     assert(not menu.production_purchase_buttons.is_empty())
     for role in menu.production_purchase_buttons:
         var candidate: Dictionary = CompareData.candidate(
