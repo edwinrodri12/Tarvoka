@@ -12,6 +12,12 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    assert(Budget.environment_stride(0)==1)
+    assert(Budget.environment_stride(94)==1)
+    assert(Budget.environment_stride(95)==2)
+    assert(Budget.environment_stride(209)==2)
+    assert(Budget.environment_stride(210)==3)
+    assert(Budget.environment_stride(768)==3)
     assert(Budget.detail_level(8.0)==Budget.DETAIL_COMPACT)
     assert(Budget.detail_level(15.0)==Budget.DETAIL_MEDIUM)
     assert(Budget.detail_level(32.0)==Budget.DETAIL_FULL)

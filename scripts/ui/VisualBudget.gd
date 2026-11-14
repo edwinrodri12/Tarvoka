@@ -17,6 +17,18 @@ static func detail_level(half_width: float, battery_saver: bool = false) -> int:
         return DETAIL_MEDIUM
     return DETAIL_FULL
 
+# Reduce repeated, non-tactical decorative weather and foliage commands
+# when a crowded viewport becomes fill-rate / draw-call limited.
+# Roads, buildings, troops, fog and combat feedback remain fully visible.
+# Map-coverage estimate is conservative; the screen does not need to
+# inspect or expose hidden enemy identities to pick an environment budget.
+static func environment_stride(estimated_on_screen_units: int) -> int:
+    if estimated_on_screen_units >= 210:
+        return 3
+    if estimated_on_screen_units >= 95:
+        return 2
+    return 1
+
 static func ambient_interval(map_size: Vector2i, battery_saver: bool = false) -> float:
     if battery_saver:
         return 0.50

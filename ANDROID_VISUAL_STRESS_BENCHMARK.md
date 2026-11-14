@@ -57,11 +57,14 @@ El benchmark fuerza un repintado de tablero **cada cuadro**, más exigente que l
 ## Métricas y límites
 
 Cada caso registra:
-- FPS medio estimado a partir del tiempo entre cuadros completos;
-- percentil 95 del tiempo entre cuadros (p95 ms), más útil que un máximo puntual;
+- FPS medio estimado a partir del tiempo entre cuadros completos; percentiles 95 y 99 de latencia (p95/p99 ms);
 - porcentaje de cuadros con más de 33.3 ms;
-- máximo de memoria estática medido por Godot;
+- **tiempo CPU de generación del mapa**, población de tanques y de edificios, y preparación completa del escenario (ms);
+- memoria estática informada por Godot antes y después de preparar cada escenario, variación de memoria y pico observado (MB); estos contadores permiten detectar crecimiento **pero no son la RAM total consumida por el proceso Android**;
+- máximo de llamadas de dibujo (*draw calls*) reportadas por Godot durante la muestra; puede ser cero cuando el controlador no expone el monitor;
 - unidades/casillas efectivamente dibujadas y si se mostró el HQ V15.
+
+Las etapas de generación se cronometran con `Time.get_ticks_usec()` durante operaciones síncronas de CPU: **no incluyen la subida asíncrona de recursos a GPU ni garantizan el tiempo hasta el primer cuadro visible**. Para estudiar memoria acumulativa, comparar la memoria al inicio de cada caso con la observada en el anterior; el gestor de memoria puede conservar reservas aun después de liberar recursos. Los FPS y p95/p99 incluyen el tiempo entre cuadros reales de la pantalla, no son mediciones de GPU aisladas.
 
 No es una captura de GPU time, memoria total del SO ni uso térmico. Para interpretar datos en un teléfono hay que comparar el FPS p95 con la temperatura percibida, brillo, batería, resolución y uso tras 15–30 minutos. Registrar al menos dos corridas con el mismo dispositivo y condiciones. Los FPS de GitHub Actions Linux NO son predicciones de FPS en Android.
 
@@ -74,6 +77,34 @@ No es una captura de GPU time, memoria total del SO ni uso térmico. Para interp
 
 ## Validación automatizada
 
-\`tests/test_android_visual_stress.gd\` ejecuta las cinco cargas con una duración breve para verificar imports, HQ, atlas, clima, VFX, métricas, salida JSON y aislamiento de la partida. \`.github/workflows/android-visual-stress.yml\` ejecuta smoke headless y escritorio virtual en Godot 4.3.
+\`tests/test_android_visual_stress.gd\` ejecuta las once cargas con una duración breve para verificar imports, HQ, atlas, clima, VFX, métricas, salida JSON y aislamiento de la partida. \`.github/workflows/android-visual-stress.yml\` ejecuta smoke headless y escritorio virtual en Godot 4.3.
 
 **No declarar rendimiento apto para lanzamiento sin resultados de Android real.** Después de incorporar el tanque definitivo y más edificios, repetir con sus sprites horneados reales y un escenario de duración prolongada; la repetición del tanque técnico sirve como primera línea base, no como certificado final.
+
+## Telemetría V2 (14-XI-2026)
+
+El informe JSON del teléfono añade `map_generation_cpu_ms`, `tank_population_cpu_ms`, `building_population_cpu_ms`, `setup_total_cpu_ms`, `frame_p99_ms`, `static_memory_before_setup_mb`, `static_memory_after_setup_mb`, `setup_static_memory_delta_mb` y `max_draw_calls_reported`. El botón **COPIAR INFORME** también expone las cifras, para poder comparar dispositivos y detectar incrementos de preparación o memoria conforme pasamos de 64 a 256 edificios. La prueba continúa sin modificar guardados reales.
+
+**Lectura de resultados:** GitHub Actions verifica que Godot pueda ejecutar el benchmark, pero los FPS y MB del runner Linux/Xvfb no describen el rendimiento de un Galaxy real. Sólo la pantalla QA ejecutada en Android puede aportar esos números. La prueba con ocho equipos **sigue siendo carga visual**, no implementación de partidas o red con ocho jugadores. El catálogo gráfico del benchmark actual contiene tanques técnicos y edificios con imágenes horneadas, no todos los modelos finales del estudio 3D; se necesita otra medición tras su integración efectiva al juego.
+
+## Reducción adaptativa de carga gráfica
+
+Las mediciones preliminares del entorno Linux OpenGL por software mostraron muchas llamadas de dibujo al representar cientos de entidades; **no son FPS comparables a Android**. Se añadió un presupuesto para ornamentos ambientales que usa **sólo unidades visibles** dentro del encuadre actual: menos de 95 mantiene todos los detalles, entre 95 y 209 dibuja uno de cada dos grupos de decoración/precipitación, y con 210 o más dibuja aproximadamente uno de cada tres. El muestreo es determinista por coordenadas y no depende de la identidad ni posición de tropas ocultas por niebla.
+
+No se omite ninguna casilla, unidad, instalación, indicador de HP, marcador táctico, control o efecto de combate; tampoco cambia la intensidad reglamentaria de lluvia/nieve, movimiento o defensa. Sólo se reducen detalles de follaje/suelo y las gotas/copos *decorativos* de la pantalla durante cargas extremas. El informe registra `environment_stride`, `precipitation_cells` y `visible_unit_load` para explicar cualquier cambio de calidad y permitir A/B por escenario. Se mantienen los modos completos para batallas normales.
+
+**Verificación pendiente:** confirmar cuánto disminuyen las llamadas de dibujo y si mejora el p95 en Android físico. El renderizador OpenGL por software de CI es útil para hallar errores y tendencias, no para publicar una cifra garantizada de FPS en teléfonos.
+
+## Comparación inicial reproducible en escritorio virtual (no Android)
+
+Medición sobre Godot 4.3 con OpenGL por software/Xvfb, en las mismas pruebas sintéticas de estrés, antes y después de aplicar la densidad adaptativa. Estos números describen **llamadas de dibujo del runner CI**, no FPS ni memoria de un dispositivo Android:
+
+| Carga visual | Draw calls antes | Después | Reducción aproximada |
+|---|---:|---:|---:|
+| 150 tanques con nieve | 10,527 | 7,666 | 27.2% |
+| 320 tanques, 128 edificios | 8,113 | 6,491 | 20.0% |
+| 512 tanques, 192 edificios y lluvia | 9,750 | 7,479 | 23.3% |
+| 768 tanques, 256 edificios y nieve | 13,510 | 9,928 | 26.5% |
+| 768 tanques con ahorro | 10,197 | 8,666 | 15.0% |
+
+Fuentes de comparación: ejecuciones de QA en GitHub Actions [antes](https://github.com/edwinrodri12/Tarvoka/actions/runs/43631951421) y [después](https://github.com/edwinrodri12/Tarvoka/actions/runs/43632322671). Se comparan los resultados de escritorio (no el modo headless). **El FPS del runner virtual permanece bajo y no mejoró consistentemente**, por lo que la reducción de comandos de dibujo no garantiza aumentar FPS. Todavía faltan medidas Android reales a temperatura estable, con brillo y frecuencia configurados, y repetir tras integrar modelos definitivos.
