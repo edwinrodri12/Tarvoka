@@ -605,26 +605,29 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     _mountain(props,p,top,seed,preset)
                 "forest":
                     for index in range(2):
-                        var displacement := Vector3(
-                            -0.43+float(index)*0.72,top,
-                            -0.28+float(posmod(seed+index*2,5))*0.13)
-                        _tree(props,p+displacement,seed+index,preset==2)
+                        var tree_x: float = -0.43+float(index)*0.72
+                        var tree_z: float = -0.28+float(posmod(seed+index*2,5))*0.13
+                        var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
+                        _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
                     if continuous and show_scatter:
                         RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,3) != 0:
-                        _bush(props,p+Vector3(0.51,top,-0.49),seed+103,preset==2)
+                        var bush_y: float = surface_height_at(x,z,preset,0.51,-0.49) if show_scatter else top
+                        _bush(props,p+Vector3(0.51,bush_y,-0.49),seed+103,preset==2)
                 "plain":
                     if posmod(seed,3) == 0:
-                        _box(props,"PiedraSuelo",p+Vector3(0.45,top+0.08,-0.32),
+                        var stone_y: float = surface_height_at(x,z,preset,0.45,-0.32) if continuous and show_scatter else top
+                        _box(props,"PiedraSuelo",p+Vector3(0.45,stone_y+0.08,-0.32),
                             Vector3(0.28,0.16,0.33),ROCK_LIGHT.darkened(0.13))
                     if continuous and show_scatter:
                         RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,5) == 2:
-                        _bush(props,p+Vector3(-0.31,top,0.43),seed+211,preset==2)
+                        var bush_y: float = surface_height_at(x,z,preset,-0.31,0.43) if show_scatter else top
+                        _bush(props,p+Vector3(-0.31,bush_y,0.43),seed+211,preset==2)
                 "road":
                     if continuous and show_scatter:
                         RoadShore.road(props,p,surface_cell,{
