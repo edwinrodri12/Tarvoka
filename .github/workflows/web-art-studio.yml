@@ -17,6 +17,9 @@ on:
       - "scripts/ui/HeadquartersSurfaceV10.gd"
       - "scripts/ui/HeadquartersRefinementV11.gd"
       - "scripts/ui/HeadquartersSilhouetteV12.gd"
+      - "scripts/ui/HeadquartersProductionV13.gd"
+      - "tests/test_headquarters_v13_production.gd"
+      - "tests/export_headquarters_production_v13_glb.gd"
       - "tests/test_headquarters_v12_tactical_night.gd"
       - "tests/export_headquarters_tactical_v12_glb.gd"
       - "tests/test_headquarters_v11_lighting.gd"
@@ -56,6 +59,7 @@ on:
       - feat/hq-v10-surface-transitions-20261113
       - feat/hq-v11-lighting-refinements-20261113
       - feat/hq-v12-tactical-silhouette-night-20261114
+      - feat/hq-v13-production-ready-runtime-lod-20261114
       - main
     paths:
       - "scripts/ui/**"
@@ -306,6 +310,19 @@ jobs:
           test -s artifacts/tarvoka_hq_v12_tactical_day.png
           test -s artifacts/tarvoka_hq_v12_readable_night.png
           test -s artifacts/tarvoka_hq_v12_night_detail.png
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_headquarters_v13_production.gd 2>&1 | tee /tmp/hq-v13-production.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v13-production.log; then
+            echo "HQ V13 96 production assets, official emblems, selection or mesh budget failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V13:" /tmp/hq-v13-production.log
+          test -s artifacts/tarvoka_hq_v12_hero_vs_v13_tactical_runtime.png
+          test -s artifacts/tarvoka_hq_v13_optimized_tactical.png
+          test -s artifacts/tarvoka_hq_v13_eight_official_faction_lods.png
+          test -s artifacts/tarvoka_hq_v13_tactical_damage.png
           test -s artifacts/tarvoka_web_3d_studio.png
           test -s artifacts/tarvoka_mbt_before_after_same_camera.png
           test -s artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
@@ -423,6 +440,20 @@ jobs:
           fi
           grep -q "PASS HQ V12 GLB export:" /tmp/hq-v12-glb.log
           test -s artifacts/TARVOKA_CuartelGeneral_V12_Nivel3_Editable.glb
+      - name: Export optimized production HQ V13 as Blender GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_headquarters_production_v13_glb.gd 2>&1 | tee /tmp/hq-v13-production-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/hq-v13-production-glb.log; then
+            echo "HQ V13 production Blender GLB export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS HQ V13 GLB export:" /tmp/hq-v13-production-glb.log
+          test -s artifacts/TARVOKA_CuartelGeneral_V13_Nivel3_Tactico_Optimizado.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -479,6 +510,10 @@ jobs:
             artifacts/tarvoka_hq_v12_tactical_day.png
             artifacts/tarvoka_hq_v12_readable_night.png
             artifacts/tarvoka_hq_v12_night_detail.png
+            artifacts/tarvoka_hq_v12_hero_vs_v13_tactical_runtime.png
+            artifacts/tarvoka_hq_v13_optimized_tactical.png
+            artifacts/tarvoka_hq_v13_eight_official_faction_lods.png
+            artifacts/tarvoka_hq_v13_tactical_damage.png
             artifacts/tarvoka_mbt_before_after_same_camera.png
             artifacts/tarvoka_mbt_v9_vs_v10_same_camera.png
             artifacts/tarvoka_g09_v10_four_angles.png
@@ -492,6 +527,7 @@ jobs:
             artifacts/TARVOKA_CuartelGeneral_V10_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V11_Nivel3_Editable.glb
             artifacts/TARVOKA_CuartelGeneral_V12_Nivel3_Editable.glb
+            artifacts/TARVOKA_CuartelGeneral_V13_Nivel3_Tactico_Optimizado.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
