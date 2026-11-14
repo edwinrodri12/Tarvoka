@@ -237,6 +237,52 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     main._process(0.0)
 
+    # True climate battles, not an overlay mock: the weather flag belongs
+    # to the authoritative session and changes legal vehicle movement.
+    var old_weather_scene: Dictionary = main.board.state.duplicate(true)
+    var weather_original_iso: bool = main.board.iso_enabled
+    var weather_original_minimap: bool = main._minimap_preference
+    var weather_original_selection: String = main.board.selected_id
+    var vehicle: Dictionary = Roles.make_unit("W",0,Vector2i(1,3),"apc")
+    vehicle["move_points"] = 5
+    var climate_enemy: Dictionary = Roles.make_unit("X",1,Vector2i(6,3),"tank")
+    main.board.state = Session.start([vehicle,climate_enemy],risk_terrain,0,
+        false,false,false,false,false,"rain")
+    main.board.selected_id = "W"
+    main.board.threat_preview_enabled = false
+    main.board.set_isometric(false)
+    main._set_compact_hud(true)
+    main.board.queue_redraw()
+    main._process(0.0)
+    if not main.compact_weather.text.contains("Lluvia") or main.board.legal_action_hints()["moves"].is_empty():
+        push_error("Rain battle is not connected to real Android HUD/mobility.")
+        _failed = true
+    if not await _capture_landscape("33-lluvia-movilidad-960x540",Vector2i(960,540),
+            "Clima lluvia · barro y menor movilidad de vehículos sobre ruedas"):
+        _failed = true
+    main.board.state = Session.start([vehicle,climate_enemy],risk_terrain,0,
+        false,false,false,false,false,"snow")
+    main.board.set_isometric(true)
+    main._minimap_preference = true
+    main._apply_minimap_visibility()
+    main._set_compact_hud(false)
+    main.board.queue_redraw()
+    main.battle_minimap.queue_redraw()
+    main._process(0.0)
+    if not main.weather_status.text.contains("Nieve") or not main.battle_minimap.visible:
+        push_error("Snow battle is not shown on desktop/isometric minimap.")
+        _failed = true
+    if not await _capture_landscape("34-nieve-movilidad-isometrica-1280x720",Vector2i(1280,720),
+            "Clima nieve · suelo helado, unidades y mapa isométrico con minimapa"):
+        _failed = true
+    main.board.state = old_weather_scene
+    main.board.selected_id = weather_original_selection
+    main.board.set_isometric(weather_original_iso)
+    main._minimap_preference = weather_original_minimap
+    main._apply_minimap_visibility()
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Priority list on an actual modern match: friendly units, available
     # producers and visible objectives. No fake alerts or committed actions.
     var before_alert_frame: Dictionary = main.board.state.duplicate(true)
@@ -437,11 +483,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 32:
-        push_error("Landscape UI QA incomplete: %d/32 captures" % _manifest.size())
+    if _failed or _manifest.size() != 34:
+        push_error("Landscape UI QA incomplete: %d/34 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 32 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 34 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
