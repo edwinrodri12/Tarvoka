@@ -6,6 +6,9 @@ on:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/TerrainStudio3D.gd"
+      - "scripts/ui/TerrainStudioBridge3D.gd"
+      - "scripts/ui/TerrainSurfaceFinish3D.gd"
+      - "tests/test_terrain_studio_bridge_v4.gd"
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/TerrainStudioScatter3D.gd"
       - "tests/test_terrain_studio_preflight.gd"
@@ -192,6 +195,19 @@ jobs:
             exit 1
           fi
           grep -q 'PASS TERRAIN_SLOPES:' /tmp/terrain-slopes-check.log
+      - name: Verify V4 continuous canyon bridge ramps and microtexture contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 80s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_bridge_v4.gd 2>&1 | tee /tmp/terrain-bridge-v4.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-bridge-v4.log; then
+            echo "Bridge ramp continuity or 3D material regression" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_BRIDGE_V4:' /tmp/terrain-bridge-v4.log
       - name: Verify native 3D terrain and unified studio scenes
         shell: bash
         run: |
@@ -208,6 +224,7 @@ jobs:
           test -s artifacts/tarvoka_terrain_studio_3d.png
           test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
           test -s artifacts/tarvoka_terrain_v2_v3_same_camera.png
+          test -s artifacts/tarvoka_canyon_v2_v4_same_camera.png
           for i in 00 01 02; do test -s "artifacts/tarvoka_terrain_scene_${i}.png"; done
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
@@ -252,6 +269,7 @@ jobs:
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_v2_v3_same_camera.png
+            artifacts/tarvoka_canyon_v2_v4_same_camera.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
