@@ -55,6 +55,12 @@ func _run() -> void:
         assert(standalone.get_node("CharcoFisicoV17_%d" % i).visible)
     assert(Climate.apply(standalone,"snow","desert",1))
     assert(standalone.get_node("CoposNieveUnLoteV17").visible)
+    var roof_before: Vector3 = standalone.get_node("NieveAcumuladaCubiertaV17_0").position
+    Climate.orient_roof_caps(standalone,PI*0.5)
+    var roof_after: Vector3 = standalone.get_node("NieveAcumuladaCubiertaV17_0").position
+    assert(roof_before.distance_to(roof_after)>2.0)
+    Climate.orient_roof_caps(standalone,0.0)
+    assert(standalone.get_node("NieveAcumuladaCubiertaV17_0").position.is_equal_approx(roof_before))
     for i in range(3):
         assert(standalone.get_node("NieveAcumuladaCubiertaV17_%d" % i).visible)
     assert(Climate.apply(standalone,"snow","desert",2,"destruido"))
@@ -81,6 +87,8 @@ func _run() -> void:
     assert(studio.hq_terrain_picker.item_count==4)
     assert(studio.hq_weather_picker.selected==0)
     assert(studio.hq_terrain_picker.selected==0)
+    assert(studio.hq_weather_picker.global_position.y < 480.0)
+    assert(studio.hq_terrain_picker.global_position.y < 480.0)
     assert(studio.hq_climate_stage!=null and studio.hq_climate_stage.visible)
     assert(studio.hq_climate_stage.get_meta("tarvoka_hq_climate_stage_v17",false))
     assert(studio.hq_v15_thumbnail.texture==Sprites.texture_for(0))
@@ -91,7 +99,7 @@ func _run() -> void:
 
     # Preview actual 12 combinations with a fixed 3D camera; retain primary
     # V12 model without building a 3D mesh for each weather transition.
-    var contact := Image.create(1440,960,false,Image.FORMAT_RGBA8)
+    var contact := Image.create(1440,720,false,Image.FORMAT_RGBA8)
     for terrain_index in range(4):
         studio._change_hq_terrain_v17(terrain_index)
         for weather_index in range(3):
@@ -116,6 +124,7 @@ func _run() -> void:
                 _save("tarvoka_hq_v17_snow_on_grass_and_roof_3d_studio.png")
             if terrain_index==2 and weather_index==2:
                 _save("tarvoka_hq_v17_snow_desert_studio.png")
+    assert(contact.get_width()==1440 and contact.get_height()==720)
     assert(contact.save_png(
         "res://artifacts/tarvoka_hq_v17_four_terrains_three_weathers_godot.png")==OK)
     studio._change_hq_terrain_v17(0)
