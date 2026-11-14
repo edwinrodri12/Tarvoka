@@ -37,6 +37,10 @@ func _run() -> void:
         "BajoCascoEnV",true,false) as MeshInstance3D
     assert(v_belly!=null and v_belly.mesh is ArrayMesh)
     assert(v_belly.mesh.get_surface_count()==1)
+    assert(car.find_child("MarcoRampaPosterior",true,false)==null)
+    assert(car.find_child("PisoAntideslizanteCompartimento",true,false)!=null)
+    assert(car.find_child("BancoTropas_-1",true,false)!=null)
+    assert(car.find_child("BancoTropas_1",true,false)!=null)
     var roof: Node3D=car.find_child(
         "EstacionRemotaP06",true,false) as Node3D
     var hinge: Node3D=car.find_child(
