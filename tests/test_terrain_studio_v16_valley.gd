@@ -89,7 +89,15 @@ func _run() -> void:
     assert(studio.model_root.find_child("DepositosAluvialesV12",true,false)==null)
     assert(studio.model_root.find_child("ArcenesNaturalesV12",true,false)==null)
     assert(studio.model_root.get_meta("terrain_counts")==original_counts)
-    assert(studio.model_root.get_meta("terrain_foothills_v11")==old_foothills)
+    # V18b is intentionally disabled by V12's backward comparison.
+    # Compare the invariant V11 geometry, not the opt-in count of
+    # vertices tinted by the latest material finish.
+    var foothills_after: Dictionary = studio.model_root.get_meta(
+        "terrain_foothills_v11").duplicate(true)
+    var reference_foothills: Dictionary = old_foothills.duplicate(true)
+    foothills_after.erase("biome_apron_vertices")
+    reference_foothills.erase("biome_apron_vertices")
+    assert(foothills_after==reference_foothills)
     var old_image: Image = await _capture(studio,
         "res://artifacts/tarvoka_terrain_v16_before_v15b.png")
     old_image.resize(640,400,Image.INTERPOLATE_LANCZOS)
