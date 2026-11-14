@@ -9,7 +9,7 @@ const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
-const Projection = preload("res://scripts/ui/IsoProjection.gd")
+const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const HQ = preload("res://scripts/ui/HeadquartersSpriteV15.gd")
 const Renderer = preload("res://scripts/ui/IsoRenderer.gd")
 const SiteData = preload("res://scripts/ui/SiteOverlayData.gd")
@@ -228,7 +228,7 @@ func _record_case() -> void:
         maxi(0,samples.size()-1))] if not samples.is_empty() else 0.0
     var cfg: Dictionary = CASES[_case_index]
     var dims: Vector2i = cfg["dims"]
-    var hw: float = Projection.half_width(board.size,float(cfg["zoom"]),dims)
+    var hw: float = IsoTransform.half_width(board.size,float(cfg["zoom"]),dims)
     var bounds: Rect2i = VisualBudget.visible_grid_bounds(board.size,
         float(cfg["zoom"]),board.iso_pan,dims)
     var hq_on_screen := false
