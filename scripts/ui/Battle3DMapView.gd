@@ -57,6 +57,9 @@ var _g09_lod_band := -1
 var _hit_model_id := ""
 var _hit_type := ""
 var _hit_elapsed := 0.0
+var _shot_model_id := ""
+var _shot_elapsed := 0.0
+var _shot_heading := Vector2i(0,-1)
 
 func _ready() -> void:
     hide()
@@ -420,24 +423,37 @@ func tap_battle_cell(cell: Vector2i) -> bool:
     return true
 
 func _process(delta: float) -> void:
-    # Only animate an actually visible, surviving G09 model after the
-    # authoritative 3D order has committed through BattleSession.
-    # Never turn a miss, invalid order or fog-hidden unit into an impact.
-    if _hit_model_id.is_empty() or _scene==null or not visible:
+    if _scene==null or not visible:
         return
+    # Native cannon recoil follows a REAL authorized attack. The shooter
+    # can fire even when the target is destroyed in the same transaction.
+    if not _shot_model_id.is_empty():
+        var shooter: Node3D = _scene.find_child(
+            "Unidad3D_"+_shot_model_id,true,false) as Node3D
+        if shooter==null or not shooter.get_meta("tarvoka_hit_v30",false):
+            _shot_model_id=""
+        else:
+            _shot_elapsed+=maxf(delta,0.0)
+            var shot_t: float = minf(1.0,_shot_elapsed/TankRig.SHOT_DURATION)
+            TankRig.pose(shooter,"attack",shot_t,_shot_heading)
+            if shot_t>=1.0:
+                TankRig.restore(shooter)
+                _shot_model_id=""
+    if _hit_model_id.is_empty():
+        return
+    # Separate impact effects play on the surviving visible recipient,
+    # never on a fog-hidden or eliminated unit.
     var target: Node3D = _scene.find_child(
         "Unidad3D_"+_hit_model_id,true,false) as Node3D
     if target==null or not target.get_meta("tarvoka_hit_v30",false):
         _hit_model_id=""
+        _hit_type=""
         return
     _hit_elapsed+=maxf(delta,0.0)
     var t: float = minf(1.0,_hit_elapsed/HitV30.duration(_hit_type))
     TankRig.pose(target,_hit_type,t,Vector2i.ZERO)
-    var stage: int = TankDamage.current_stage(target)
-    TankDamage.apply_stage(target,stage)
     if t>=1.0:
         TankRig.restore(target)
-        TankDamage.apply_stage(target,stage)
         _hit_model_id=""
         _hit_type=""
 
@@ -446,14 +462,26 @@ func _confirm_3d_order() -> void:
         return
     var order: Dictionary = _order_quote.get("order",{})
     var target_id: String = str(order.get("target_id",""))
+    var attacker_id: String = str(order.get("unit_id",""))
     var strike: String = ""
+    var attack_heading := Vector2i(0,-1)
+    var origin := Vector2i.ZERO
+    var destination := Vector2i.ZERO
+    var origin_found := false
+    var destination_found := false
     if str(order.get("kind",""))=="attack":
-        var attacker_id: String = str(order.get("unit_id",""))
         for candidate in _current_state().get("units",[]):
-            if candidate is Dictionary and str(candidate.get("id",""))==attacker_id:
-                strike=HitV30.classify_weapon(str(candidate.get("role","")),
-                    str(candidate.get("weapon","")))
-                break
+            if candidate is Dictionary:
+                if str(candidate.get("id",""))==attacker_id:
+                    strike=HitV30.classify_weapon(str(candidate.get("role","")),
+                        str(candidate.get("weapon","")))
+                    origin=candidate.get("pos",Vector2i.ZERO)
+                    origin_found=true
+                if str(candidate.get("id",""))==target_id:
+                    destination=candidate.get("pos",Vector2i.ZERO)
+                    destination_found=true
+        if origin_found and destination_found and origin!=destination:
+            attack_heading=destination-origin
     var committed: bool = Orders.confirm(_live_board,_order_quote)
     if not committed:
         # A rejected confirmation cannot leak a queued order into the 2D HUD.
@@ -462,6 +490,15 @@ func _confirm_3d_order() -> void:
     _refresh_from_board()
     if _live_board == null:
         return
+    if committed and not strike.is_empty() and _scene!=null:
+        # Attach the native V32 firing animation after the real rules accept
+        # the shot; never fire on a rejected attack preview.
+        var shooter: Node3D = _scene.find_child(
+            "Unidad3D_"+attacker_id,true,false) as Node3D
+        if shooter!=null and shooter.get_meta("tarvoka_hit_v30",false):
+            _shot_model_id=attacker_id
+            _shot_elapsed=0.0
+            _shot_heading=attack_heading
     if committed and not strike.is_empty() and not target_id.is_empty() and _scene!=null:
         var target: Node3D = _scene.find_child(
             "Unidad3D_"+target_id,true,false) as Node3D
@@ -737,6 +774,8 @@ func close_view() -> void:
     _hit_model_id=""
     _hit_type=""
     _hit_elapsed=0.0
+    _shot_model_id=""
+    _shot_elapsed=0.0
     _drop_3d_quote()
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
