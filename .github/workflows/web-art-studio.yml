@@ -641,6 +641,23 @@ jobs:
           fi
           grep -q "PASS G09 V25 GLB export:" /tmp/g09-v25-glb.log
           test -s artifacts/TARVOKA_G09_V25_Escultura_Editable.glb
+      - name: Verify G09 V26 battlefield lighting and terrain across twelve conditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v26.gd 2>&1 | tee /tmp/g09-v26-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v26-art.log; then
+            echo "G09 V26 terrain/day-dusk-night comparison or faction visibility failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V26:" /tmp/g09-v26-art.log
+          test -s artifacts/tarvoka_g09_v26_12_lighting_terrain.png
+          test -s artifacts/tarvoka_g09_v25_day_vs_night.png
+          test -s artifacts/tarvoka_g09_v24_v25_night_forest.png
+          test -s artifacts/tarvoka_g09_v26_eight_factions_night.png
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -715,6 +732,10 @@ jobs:
             artifacts/tarvoka_g09_v24_v25_pbr_same_camera.png
             artifacts/tarvoka_g09_v24_v25_tactical.png
             artifacts/tarvoka_g09_v25_eight_factions_weathered.png
+            artifacts/tarvoka_g09_v26_12_lighting_terrain.png
+            artifacts/tarvoka_g09_v25_day_vs_night.png
+            artifacts/tarvoka_g09_v24_v25_night_forest.png
+            artifacts/tarvoka_g09_v26_eight_factions_night.png
             artifacts/tarvoka_g09_v11_v12_closeup.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
