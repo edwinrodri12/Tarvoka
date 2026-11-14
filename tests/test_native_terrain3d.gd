@@ -6,6 +6,8 @@ const Topology = preload("res://scripts/ui/TerrainTopology.gd")
 const Rocks = preload("res://scripts/ui/TerrainRockMaterials.gd")
 const WaterMaterial = preload("res://scripts/ui/TerrainWaterMaterial.gd")
 const Conifers = preload("res://scripts/ui/Conifer3DMesh.gd")
+const Shores = preload("res://scripts/ui/TerrainShore3D.gd")
+const Understory = preload("res://scripts/ui/TerrainUnderstory3D.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -95,6 +97,17 @@ func _run() -> void:
     for vertex in detailed_vertices:
         assert(vertex.is_finite())
         assert(vertex.y >= 0.0 and vertex.y <= 1.2)
+    var lush: ArrayMesh = Understory.shrub_mesh(true)
+    var sparse: ArrayMesh = Understory.shrub_mesh(false)
+    assert(lush.get_surface_count() == 1)
+    assert(sparse.get_surface_count() == 1)
+    assert(lush.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() > (
+        sparse.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size()))
+    for index in range(15):
+        var spot: Vector2 = Understory.placement(Vector2i(7,3),index)
+        assert(spot == Understory.placement(Vector2i(7,3),index))
+        assert(spot.x >= 0.15 and spot.x <= 0.85)
+        assert(spot.y >= 0.15 and spot.y <= 0.85)
     var water_full: ShaderMaterial = WaterMaterial.make_material(true)
     var water_mobile: ShaderMaterial = WaterMaterial.make_material(false)
     assert(water_full.shader != null)
@@ -118,6 +131,31 @@ func _run() -> void:
             found_foam = true
             break
     assert(found_foam)
+    # New beach geometry follows the true heightfield and remains fully
+    # inside the visible LAND tile. No hidden water creates any strip.
+    var beach_grid: Array = [["water","plain","forest"]]
+    var shore: PackedVector3Array = Shores.bank_strip(
+        beach_grid,Vector2i(1,0),3,{},false,8)
+    assert(shore.size() == 18)
+    for p in shore:
+        assert(p.x >= 1.0-0.0001 and p.x <= 2.0001)
+        assert(p.z >= -0.0001 and p.z <= 1.0001)
+        assert(p.y > Terrain.WATER_LEVEL)
+    var beach_mesh: ArrayMesh = Shores.build_banks(
+        beach_grid,{},false,8)
+    assert(beach_mesh.get_surface_count() == 1)
+    assert(beach_mesh.surface_get_material(0) != null)
+    var only_land := {Vector2i(1,0):true}
+    assert(Shores.bank_strip(beach_grid,Vector2i(1,0),
+        3,only_land,true,8).is_empty())
+    assert(Shores.build_banks(
+        beach_grid,only_land,true,8).get_surface_count() == 0)
+    # Changing a hidden water tile to rock must not affect any
+    # visible shoreline, even its vertex colors or surface count.
+    var changed_grid: Array = beach_grid.duplicate(true)
+    changed_grid[0][0] = "mountain"
+    assert(Shores.build_banks(changed_grid,only_land,true,8
+        ).get_surface_count() == 0)
     for color in hidden_colors:
         assert(color.a <= 0.001)
     var flat_water := Terrain.water_outline(grid,Vector2i(2,2))
@@ -209,5 +247,5 @@ func _run() -> void:
     assert(grid_center.x == 2.5 and grid_center.z == 2.5)
     assert(Terrain.tactical_cell_from_world(grid,
         grid_center) == Vector2i(2,2))
-    print("PASS native terrain 3D: river flows under bridge, wave foam, conifer LOD, visible banks, smooth rock, fog-safe selection, 10x8/24x18/40x30")
+    print("PASS native terrain 3D: height-aware eroded shores, fog-safe bank mesh, instanced undergrowth LOD, continuous bridges, immutable 10x8/24x18/40x30")
     quit(0)
