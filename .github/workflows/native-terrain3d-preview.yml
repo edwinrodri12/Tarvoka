@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
       - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/Terrain3DChunkCache.gd"
       - "scripts/ui/TerrainShore3D.gd"
       - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
@@ -19,6 +20,7 @@ on:
       - "tools/terrain3d-gallery.html"
       - "scenes/Terrain3DLab.tscn"
       - "tests/test_native_terrain3d.gd"
+      - "tests/test_incremental_map3d.gd"
       - "tests/test_battle_3d_view.gd"
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
@@ -31,6 +33,7 @@ on:
     paths:
       - ".github/workflows/native-terrain3d-preview.yml"
       - "scripts/ui/Terrain3DMesh.gd"
+      - "scripts/ui/Terrain3DChunkCache.gd"
       - "scripts/ui/TerrainShore3D.gd"
       - "scripts/ui/TerrainUnderstory3D.gd"
       - "scripts/ui/TerrainWaterMaterial.gd"
@@ -43,6 +46,7 @@ on:
       - "tools/terrain3d-gallery.html"
       - "scenes/Terrain3DLab.tscn"
       - "tests/test_native_terrain3d.gd"
+      - "tests/test_incremental_map3d.gd"
       - "tests/test_battle_3d_view.gd"
       - "scripts/ui/Battle3DView.gd"
       - "scripts/ui/TouchBoard.gd"
@@ -92,6 +96,22 @@ jobs:
             exit 1
           fi
           grep -F 'PASS native terrain 3D:' /tmp/tarvoka-terrain3d-test.log
+      - name: Verify incremental fog chunks, no hidden biome leaks and 2D fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --path . --rendering-driver opengl3 --audio-driver Dummy \
+              --script res://tests/test_incremental_map3d.gd \
+            2>&1 | tee /tmp/tarvoka-incremental-fog.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-incremental-fog.log; then
+            echo 'Incremental fog visibility regression' >&2
+            exit 1
+          fi
+          grep -F 'PASS incremental map3d:' /tmp/tarvoka-incremental-fog.log
+
       - name: Verify battle 3D camera ray picks tactical cells using real OpenGL
         shell: bash
         run: |
