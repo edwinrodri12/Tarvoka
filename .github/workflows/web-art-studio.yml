@@ -7,6 +7,7 @@ on:
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "scripts/ui/TerrainStudio3D.gd"
       - "scripts/ui/TerrainTextures3D.gd"
+      - "scripts/ui/TerrainStudioPremiumFinish3D.gd"
       - "tests/test_terrain_studio_3d.gd"
       - "scripts/ui/Headquarters3D.gd"
       - "scripts/ui/HeadquartersFinish3D.gd"
@@ -76,6 +77,19 @@ jobs:
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+      - name: Quick parse gate for V4 terrain module
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 35s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_premium_v4_preflight.gd \
+            2>&1 | tee /tmp/terrain-v4-preflight.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/terrain-v4-preflight.log; then
+            echo "V4 terrain script failed to parse" >&2
+            exit 1
+          fi
+          grep -q "PASS terrain premium V4 preload" /tmp/terrain-v4-preflight.log
       - name: Validate native Godot 3D art studio interface
         shell: bash
         run: |
@@ -179,6 +193,7 @@ jobs:
           test -s artifacts/tarvoka_terrain_studio_3d.png
           test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
           test -s artifacts/tarvoka_terrain_pbr_comparison.png
+          test -s artifacts/tarvoka_terrain_v4_premium_comparison.png
           for i in 00 01 02; do test -s "artifacts/tarvoka_terrain_scene_${i}.png"; done
       - name: Export actual G09 V10 to portable Blender-compatible GLB
         shell: bash
@@ -223,6 +238,7 @@ jobs:
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_pbr_comparison.png
+            artifacts/tarvoka_terrain_v4_premium_comparison.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
