@@ -582,6 +582,35 @@ jobs:
           fi
           grep -q "PASS G09 V23 GLB export:" /tmp/g09-v23-glb.log
           test -s artifacts/TARVOKA_G09_V23_Escultura_Editable.glb
+      - name: Validate V24 roof color across eight factions at tactical distance
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_art_v24.gd 2>&1 | tee /tmp/g09-v24-art.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v24-art.log; then
+            echo "V24 tactical visibility, eight faction palettes or geometry check failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V24:" /tmp/g09-v24-art.log
+          test -s artifacts/tarvoka_g09_v23_v24_tactical_same_camera.png
+          test -s artifacts/tarvoka_g09_v24_eight_factions_tactical.png
+      - name: Export V24 real roof-painted armor to editable 3D GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_g09_v24_glb.gd 2>&1 | tee /tmp/g09-v24-glb.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g09-v24-glb.log; then
+            echo "V24 native GLB authoring export failed" >&2
+            exit 1
+          fi
+          grep -q "PASS G09 V24 GLB export:" /tmp/g09-v24-glb.log
+          test -s artifacts/TARVOKA_G09_V24_Escultura_Editable.glb
       - name: Export actual Godot 3D studio to WebGL 2.0
         shell: bash
         run: |
@@ -651,6 +680,8 @@ jobs:
             artifacts/tarvoka_g09_v22_four_angles.png
             artifacts/tarvoka_g09_v22_v23_same_camera.png
             artifacts/tarvoka_g09_v23_four_angles.png
+            artifacts/tarvoka_g09_v23_v24_tactical_same_camera.png
+            artifacts/tarvoka_g09_v24_eight_factions_tactical.png
             artifacts/tarvoka_g09_v11_v12_closeup.png
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
@@ -668,6 +699,7 @@ jobs:
             artifacts/TARVOKA_G09_V21_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V22_Escultura_Editable.glb
             artifacts/TARVOKA_G09_V23_Escultura_Editable.glb
+            artifacts/TARVOKA_G09_V24_Escultura_Editable.glb
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
