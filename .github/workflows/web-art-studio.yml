@@ -469,17 +469,26 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $app = (Resolve-Path "studio/Start-Tarvoka-Studio.ps1").Path
-          $args = "-NoProfile -ExecutionPolicy Bypass -File `"$app`" -NoBrowser"
-          $server = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru
+          $launchArguments = "-NoProfile -ExecutionPolicy Bypass -File `"$app`" -NoBrowser"
+          $stdout = Join-Path $pwd "studio-stdout.log"
+          $stderr = Join-Path $pwd "studio-stderr.log"
+          $server = Start-Process powershell.exe -ArgumentList $launchArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
           try {
             $ready = $false
-            for ($i = 0; $i -lt 30; $i++) {
+            for ($i = 0; $i -lt 14; $i++) {
+              if ($server.HasExited) { break }
               try {
-                $page = Invoke-WebRequest "http://127.0.0.1:8765/index.html" -TimeoutSec 3
+                $page = Invoke-WebRequest "http://127.0.0.1:8765/index.html" -TimeoutSec 2
                 if ($page.StatusCode -eq 200) { $ready = $true; break }
               } catch { Start-Sleep -Seconds 1 }
             }
-            if (-not $ready) { throw "Windows Studio server did not start" }
+            if (-not $ready) {
+              Write-Host "Windows server output:"
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Write-Host "Windows server errors:"
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw "Windows Studio server did not start"
+            }
             if ($page.Content.Length -lt 100) { throw "Empty Godot WebGL HTML" }
             foreach ($asset in @("index.wasm","index.pck","index.js")) {
               $response = Invoke-WebRequest -Uri "http://127.0.0.1:8765/$asset" -Method Head -TimeoutSec 15
