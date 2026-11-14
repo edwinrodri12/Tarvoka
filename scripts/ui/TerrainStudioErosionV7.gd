@@ -5,6 +5,7 @@ class_name TarvokaTerrainStudioErosionV7
 # straight exposed river cliffs and identical per-tile white foam marks.
 # All tile types, navigation, elevation rules, combat and saves are untouched.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
 const WATER_LEVEL := -0.17
 const WORLD_CELL := 2.4
 static var _fracture_noise: FastNoiseLite
@@ -142,7 +143,7 @@ static func lithology_color(pos: Vector3, elevation: float,
 
 static func _ridge(parent: Node3D, cells: Array[Dictionary],
         mountains: Dictionary, scene: int,
-        layered: bool = false) -> Dictionary:
+        layered: bool = false, facets: bool = false) -> Dictionary:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count := 0
@@ -163,6 +164,24 @@ static func _ridge(parent: Node3D, cells: Array[Dictionary],
                 var pos: Vector3 = _point(cell,dx,dz)+Vector3(0,elevation+0.016,0)
                 points.append(pos)
                 tones.append(lithology_color(pos,elevation,scene,layered))
+        if facets:
+            # Height-based central differences reveal broad cracks and
+            # ridges at normal gameplay scale, with no extra polygons.
+            for row in range(subdivisions+1):
+                for col in range(subdivisions+1):
+                    var idx: int = row*(subdivisions+1)+col
+                    var li: int = row*(subdivisions+1)+maxi(0,col-1)
+                    var ri: int = row*(subdivisions+1)+mini(subdivisions,col+1)
+                    var ui: int = maxi(0,row-1)*(subdivisions+1)+col
+                    var di: int = mini(subdivisions,row+1)*(subdivisions+1)+col
+                    var rise_x: float = (
+                        (points[ri].y-points[li].y) /
+                        maxf(0.01,points[ri].x-points[li].x))
+                    var rise_z: float = (
+                        (points[di].y-points[ui].y) /
+                        maxf(0.01,points[di].z-points[ui].z))
+                    tones[idx] = MaterialsV9.rock_color(
+                        tones[idx],points[idx],Vector2(rise_x,rise_z),scene)
         for row in range(subdivisions):
             for col in range(subdivisions):
                 var a: int = row*(subdivisions+1)+col
@@ -278,7 +297,7 @@ static func _wave(parent: Node3D, cells: Array[Dictionary],
 
 static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
         rock: bool = true, shores: bool = true, water: bool = true,
-        lithology: bool = false) -> Dictionary:
+        lithology: bool = false, facets: bool = false) -> Dictionary:
     var kinds: Dictionary = {}
     var mountains: Dictionary = {}
     for cell in cells:
@@ -289,9 +308,11 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
     var result := {
         "mountain_cells":0,"ridge_triangles":0,"shore_edges":0,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,
-        "lithology_cells":0,"batches":0}
+        "lithology_cells":0,"facet_cells":0,"batches":0}
     if rock and not mountains.is_empty():
-        var stats: Dictionary = _ridge(parent,cells,mountains,scene,lithology)
+        var stats: Dictionary = _ridge(parent,cells,mountains,scene,
+            lithology,facets)
+        result["facet_cells"] = int(stats["mountain_cells"]) if facets else 0
         result["lithology_cells"] = int(stats["mountain_cells"]) if lithology else 0
         result["mountain_cells"] = stats["mountain_cells"]
         result["ridge_triangles"] = stats["ridge_triangles"]
