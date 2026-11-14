@@ -91,6 +91,10 @@ static func select(board: Control, unit_id: String) -> bool:
             break
     if not found:
         return false
+    # Changing the selected unit invalidates any older 2D/3D preview,
+    # matching TouchBoard._tap's normal selection lifecycle.
+    var pending: Dictionary = board.get("pending_order")
+    pending.clear()
     # UI selection is not a serialized battle action.
     board.set("selected_id",unit_id)
     board.set("inspected_enemy_id","")
