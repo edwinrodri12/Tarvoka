@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/apc-v2-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/apc-v2-import.log; then exit 1; fi
-      - name: Real APC P06 V2 geometry and render: tires, PBR, 8 factions, troop bay
+      - name: "Real APC P06 V2 geometry and render - tires, PBR, 8 factions, troop bay"
         shell: bash
         run: |
           set -euo pipefail
