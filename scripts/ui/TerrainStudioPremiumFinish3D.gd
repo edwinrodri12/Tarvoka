@@ -229,7 +229,7 @@ static func _road_wear(parent: Node3D, scene: int) -> int:
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var fragments: int = 0
     for node in parent.get_children():
-        if not node is MeshInstance3D or not str(node.name).begins_with("Calzada_"):
+        if not (node is MeshInstance3D) or not str(node.name).begins_with("Calzada_"):
             continue
         var item: MeshInstance3D = node as MeshInstance3D
         var vertical: bool = str(item.name).ends_with("_true")
@@ -238,8 +238,7 @@ static func _road_wear(parent: Node3D, scene: int) -> int:
         var center: Vector3 = item.position
         var y: float = center.y+0.040
         for n in range(3):
-            var lateral: float = (-0.39 if n%2==0 else 0.41)+
-                (_hash(seed,n,10)-0.5)*0.06
+            var lateral: float = (-0.39 if n%2 == 0 else 0.41) + ((_hash(seed,n,10)-0.5)*0.06)
             var longitudinal: float = (_hash(seed,n,7)-0.5)*1.62
             var a := Vector3.ZERO
             var b := Vector3.ZERO
@@ -276,7 +275,7 @@ static func apply(root: Node3D, scene: int) -> Dictionary:
     var foliage: int = 0
     var suppressed: int = 0
     for node in props.get_children():
-        if not node is MeshInstance3D:
+        if not (node is MeshInstance3D):
             continue
         var item: MeshInstance3D = node as MeshInstance3D
         var label: String = str(item.name)
