@@ -11,6 +11,9 @@ on:
       - "scripts/ui/Battle3DMapView.gd"
       - "scripts/ui/BattleTerrainPicker3D.gd"
       - "scripts/ui/BattleRanges3D.gd"
+      - "scripts/ui/Battle3DOrders.gd"
+      - "tests/test_battle_3d_orders_v7.gd"
+      - "tests/test_battle_3d_live_orders_v7.gd"
       - "tests/test_battle_3d_picking_v6.gd"
       - "tests/test_battle_3d_ranges_v6.gd"
       - "tests/test_battle_3d_gestures_v6.gd"
@@ -301,6 +304,33 @@ jobs:
           fi
           grep -q 'PASS BATTLE_3D_GESTURES_V6:' /tmp/battle-3d-gestures-v6.log
           test -s artifacts/tarvoka_battle_3d_v6_ranges.png
+      - name: Test authoritative 3D order preview and confirmed attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_orders_v7.gd 2>&1 | tee /tmp/battle-3d-orders-v7.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-orders-v7.log; then
+            echo "Battle 3D order security, fog or combat regression" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_ORDERS_V7:' /tmp/battle-3d-orders-v7.log
+      - name: Test real Godot Android scene 3D confirmed move and screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 115s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_battle_3d_live_orders_v7.gd 2>&1 | tee /tmp/battle-3d-live-orders-v7.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/battle-3d-live-orders-v7.log; then
+            echo "Live 3D battle orders clicked or committed outside confirmation" >&2
+            exit 1
+          fi
+          grep -q 'PASS BATTLE_3D_LIVE_ORDERS_V7:' /tmp/battle-3d-live-orders-v7.log
+          test -s artifacts/tarvoka_battle_3d_v7_confirmed_move.png
       - name: Verify native 3D terrain and unified studio scenes
         shell: bash
         run: |
@@ -366,6 +396,7 @@ jobs:
             artifacts/tarvoka_battle_3d_live_10x8.png
             artifacts/tarvoka_battle_3d_live_40x30.png
             artifacts/tarvoka_battle_3d_v6_ranges.png
+            artifacts/tarvoka_battle_3d_v7_confirmed_move.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
             artifacts/tarvoka_headquarters_v2_v3_comparison.png
