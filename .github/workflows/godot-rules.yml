@@ -150,6 +150,16 @@ jobs:
           fi
           grep -F 'PASS continuous world seams:' /tmp/tarvoka-continuous-seams.log
 
+      - name: Validate regional forest mountain and biome morphology
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 70s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_landscape_regions.gd 2>&1 | tee /tmp/tarvoka-regional-landscape.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-regional-landscape.log; then
+            echo 'Regional landscape regression'; exit 1
+          fi
+          grep -F 'PASS landscape regions:' /tmp/tarvoka-regional-landscape.log
+
       - name: Verify continuous isometric roads, shorelines, fog privacy and all map sizes
         shell: bash
         run: |
