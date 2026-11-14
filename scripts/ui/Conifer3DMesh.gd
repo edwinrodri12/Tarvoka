@@ -33,8 +33,14 @@ void vertex() {
 void fragment() {
     float needles = sin(local_leaf.y * 27.0 +
         local_leaf.x * 18.0 - local_leaf.z * 13.0);
-    ALBEDO = COLOR.rgb * (0.91 + needles * 0.045);
-    ROUGHNESS = 0.91;
+    // Small-scale needle tonal detail without any texture download.
+    // Layered boughs also receive a soft, position-based darkening at
+    // their lower edge; conventional scene shadows remain enabled.
+    float branch_underside = smoothstep(0.22, 0.91, local_leaf.y);
+    float fine_variation = 0.935 + needles * 0.046;
+    ALBEDO = COLOR.rgb * fine_variation *
+        mix(0.80, 1.05, branch_underside);
+    ROUGHNESS = 0.88 + 0.045 * (1.0 - branch_underside);
     METALLIC = 0.0;
 }
 """
@@ -94,8 +100,12 @@ static func build_crown(high_detail: bool = true,
                 sin(az1)*width*mod1+offset.z)
             var roughness: float = 0.86+0.13*sin(
                 oscillation*0.72)
+            # Self-shading is built into vertex tones for low-end
+            # devices where dynamic canopy shadows are disabled.
             var branch_tint := Color(
-                roughness,roughness*0.95,roughness*0.90,1.0)
+                roughness*(0.91+0.08*level),
+                roughness*(0.89+0.10*level),
+                roughness*(0.79+0.15*level),1.0)
             st.set_color(branch_tint.lightened(0.08))
             st.add_vertex(apex)
             st.set_color(branch_tint)
