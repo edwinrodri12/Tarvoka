@@ -279,15 +279,17 @@ static func _enamel_recolor(model: Node3D,color: Color) -> int:
     var main: Material=_coated(_main_color(color))
     var shade: Material=_coated(_main_color(color).darkened(0.13),0.30,0.88)
     var painted:=0
+    # All V2 parts, including the ANIMATED turret (which is a child of
+    # V1's turret node), must update. Scanning only the static V2 shell
+    # would leave the turret in an obsolete faction color.
     for part in base.find_children("*","MeshInstance3D",true,false):
-        if part.get_meta(V1.PAINT_META,false) or (
-                part.get_meta("tarvoka_apc_primary_hull",false)):
-            (part as MeshInstance3D).material_override=main
-            painted+=1
-    for part in v2.find_children("*","MeshInstance3D",true,false):
         if part.has_meta(PAINT_META):
             var region: String=str(part.get_meta(PAINT_META,"main"))
             (part as MeshInstance3D).material_override=shade if region=="dark" else main
+            painted+=1
+        elif part.get_meta(V1.PAINT_META,false) or (
+                part.get_meta("tarvoka_apc_primary_hull",false)):
+            (part as MeshInstance3D).material_override=main
             painted+=1
     model.set_meta("tarvoka_apc_v2_finish_color",color)
     return painted
