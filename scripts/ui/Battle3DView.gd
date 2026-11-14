@@ -55,6 +55,19 @@ func _resize_viewport() -> void:
         _last_size = dimensions
         _viewport.size = dimensions
 
+# Optional live diagnostics for the upcoming physical Android QA.
+# FPS is the actual running Godot frame rate, not estimated from triangles.
+# No background logging, network traffic or changes to battle state.
+func runtime_metrics() -> Dictionary:
+    if _lab == null or _viewport == null:
+        return {}
+    var metrics: Dictionary = _lab.environment_metrics()
+    metrics["engine_fps"] = Engine.get_frames_per_second()
+    metrics["viewport_resolution"] = _viewport.size
+    metrics["live_renderer_active"] = is_visible_in_tree()
+    metrics["fps_sample_source"] = "running Godot instance"
+    return metrics
+
 func set_rendering(active: bool) -> void:
     if _viewport != null:
         _viewport.render_target_update_mode = (
