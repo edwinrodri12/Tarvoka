@@ -9,6 +9,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Factions = preload("res://scripts/ui/VisualStyle.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
+const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -45,6 +46,7 @@ var _v22_preview := false
 var _v23_preview := false
 var _v24_preview := false
 var _v25_preview := false
+var _v30_preview := false
 var _tactical_view := false
 var _underside_view := false
 var _scenario_enabled := false
@@ -67,6 +69,7 @@ var v22_button: Button
 var v23_button: Button
 var v24_button: Button
 var v25_button: Button
+var v30_button: Button
 var tactical_button: Button
 var underside_button: Button
 var clay_button: Button
@@ -211,6 +214,7 @@ func _construct() -> void:
     v23_button = _button(column,"V23 · Identificación de facción",_toggle_v23)
     v24_button = _button(column,"V24 · Pintura superior táctica",_toggle_v24)
     v25_button = _button(column,"NUEVO V25 · Esmalte, bordes y microdesgaste",_toggle_v25)
+    v30_button = _button(column,"V30 · CADENAS ANCHAS Y DAÑO REALISTA",_toggle_v30)
     clay_button = _button(column,"MODO ARCILLA · Ver geometría sin materiales",_toggle_clay)
     v17_quality_button = _button(column,"V17 · Efectos completos",_toggle_v17_quality)
     comparison_button = _button(column,"COMPARAR: Ver modelo base",_toggle_details)
@@ -259,6 +263,9 @@ func _construct() -> void:
         "Disparo",func(): _play("attack"))
     _add_paired(column,"Recibir impacto",func(): _play("damaged"),
         "Detener",_stop_animation)
+    _title(column,"V30 · DOS TIPOS DE IMPACTO",12)
+    _add_paired(column,"RECIBIR BALAS",func(): _play(HitV30.BULLET),
+        "RECIBIR EXPLOSIVO",func(): _play(HitV30.EXPLOSIVE))
 
     _title(column,"CONDICION DEL TANQUE",12)
     damage_picker = OptionButton.new()
@@ -322,6 +329,8 @@ func _display_role(role: String) -> void:
         art_level = 24
     if _v25_preview:
         art_level = 25
+    if _v25_preview and _v30_preview:
+        art_level = 30
     model_root = Models.build(_role,_faction if _role == "tank" else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
@@ -354,6 +363,7 @@ func _display_role(role: String) -> void:
     v23_button.visible = (_role == "tank")
     v24_button.visible = (_role == "tank")
     v25_button.visible = (_role == "tank")
+    v30_button.visible = (_role == "tank")
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -369,6 +379,7 @@ func _display_role(role: String) -> void:
     v23_button.text = "COMPARAR: Volver a V22" if _v23_preview else "V23 · Identificación de facción"
     v24_button.text = "COMPARAR: Volver a V23" if _v24_preview else "V24 · Pintura superior táctica"
     v25_button.text = "COMPARAR: Volver a V24" if _v25_preview else "NUEVO V25 · Esmalte y microdesgaste"
+    v30_button.text = "COMPARAR V30/V25 · Volver a V25" if _v30_preview else "V30 · CADENAS ANCHAS Y DAÑO REALISTA"
     tactical_button.text = "CÁMARA: Volver a vista de estudio" if _tactical_view else "CÁMARA: Cambiar a vista táctica"
     underside_button.text = "INSPECCIONAR ORUGAS · Volver a vista lateral" if _underside_view else "INSPECCIONAR ORUGAS · Vista inferior V29"
     v20_button.text = "COMPARAR: Volver a V19" if _v20_preview else "NUEVO V20 · Blindaje integrado y suspensión"
@@ -433,6 +444,8 @@ func _update_details() -> void:
         status_label.text += " · VISTA INFERIOR DE ORUGAS"
     if model_root.get_meta("tarvoka_mbt_track_final_v29",false):
         status_label.text += " · RODAJE V29 CORREGIDO"
+    if model_root.get_meta("tarvoka_hit_v30",false):
+        status_label.text += " · V30: CADENAS ANCHAS, DAÑO PBR, BALAS/EXPLOSIVOS"
     if _scenario_enabled:
         status_label.text += " · %s / %s (V26)" % [
             str(BattleScenarioV26.TERRAIN_NAMES[_scenario_terrain]),
@@ -797,6 +810,7 @@ func _toggle_v25() -> void:
     # V24/V25 is a real PBR texture comparison: identical native geometry,
     # lighting, camera, faction, tactical zoom, animation and damage stage.
     _v25_preview = not _v25_preview
+    _v30_preview = false
     _v24_preview = not _v25_preview
     _v23_preview = false
     _v22_preview = false
@@ -813,6 +827,16 @@ func _toggle_v25() -> void:
     _v11_preview = true
     _previous_version = false
     _final_detail = true
+    _reload_tank_same_camera()
+
+func _toggle_v30() -> void:
+    if _role!="tank":
+        return
+    _v30_preview=not _v30_preview
+    _v25_preview=true
+    _v24_preview=false
+    _previous_version=false
+    _final_detail=true
     _reload_tank_same_camera()
 
 func _toggle_tactical_camera() -> void:
@@ -948,7 +972,9 @@ func _process(delta: float) -> void:
     if _animation.is_empty():
         return
     _animation_time += maxf(delta,0.0)
-    var duration: float = TankRig.MOVE_DURATION if _animation == "move" else TankRig.SHOT_DURATION
+    var duration: float = TankRig.MOVE_DURATION if _animation=="move" else (
+        HitV30.duration(_animation) if _animation in [HitV30.BULLET,HitV30.EXPLOSIVE]
+        else TankRig.SHOT_DURATION)
     var ratio: float = minf(_animation_time/maxf(0.01,duration),1.0)
     TankRig.pose(model_root,_animation,ratio,Vector2i(1,-1))
     TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
