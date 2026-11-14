@@ -150,9 +150,16 @@ static func _armor_panel(parent: Node3D,name: String,
 
 static func _running_gear(root: Node3D,
         rubber: Material,rim: Material,hub: Material,steel: Material) -> void:
-    var underside:=_box(root,"BajoCascoEnV",
-        Vector3(0.0,0.41,0.0),Vector3(1.24,0.22,2.55),steel)
-    underside.rotation_degrees.z=0.0
+    # Sculpt the blast-deflecting V belly instead of leaving a square block
+    # between the wheels. Visible from underneath and at low camera angles.
+    _sculpt(root,"BajoCascoEnV",[
+        Vector3(-0.58,0.52,-1.23),Vector3(0.0,0.22,-1.23),Vector3(0.0,0.22,1.23),
+        Vector3(-0.58,0.52,-1.23),Vector3(0.0,0.22,1.23),Vector3(-0.58,0.52,1.23),
+        Vector3(0.0,0.22,-1.23),Vector3(0.58,0.52,-1.23),Vector3(0.58,0.52,1.23),
+        Vector3(0.0,0.22,-1.23),Vector3(0.58,0.52,1.23),Vector3(0.0,0.22,1.23),
+        Vector3(-0.58,0.52,-1.23),Vector3(0.58,0.52,-1.23),Vector3(0.0,0.22,-1.23),
+        Vector3(-0.58,0.52,1.23),Vector3(0.0,0.22,1.23),Vector3(0.58,0.52,1.23)
+    ],steel)
     for side in [-1,1]:
         var sign: float=float(side)
         for i in range(3):
