@@ -38,6 +38,8 @@ on:
       - "tests/test_headquarters_premium_v2.gd"
       - "tests/test_web_building_studio.gd"
       - "tests/test_web_battle_studio_v8.gd"
+      - "tools/web-studio/**"
+      - "assets/art_studio_revision.txt"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/Tank*.gd"
       - "scenes/UnitArtStudioWeb.tscn"
@@ -397,6 +399,16 @@ jobs:
           test -s build/web/index.pck
           touch build/web/.nojekyll
           du -h build/web/*
+      - name: Bundle a no-install Windows PC launcher for the 3D studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tools/web-studio/Start-Tarvoka-Studio.ps1 build/web/
+          cp tools/web-studio/ABRIR_TARVOKA_ESTUDIO_3D.cmd build/web/
+          cp tools/web-studio/LEEME_ESTUDIO_3D_PC.txt build/web/
+          test -s build/web/ABRIR_TARVOKA_ESTUDIO_3D.cmd
+          test -s build/web/Start-Tarvoka-Studio.ps1
+          test -s build/web/LEEME_ESTUDIO_3D_PC.txt
       - name: Archive live browser viewer and source render
         uses: actions/upload-artifact@v4
         with:
@@ -424,6 +436,14 @@ jobs:
             artifacts/tarvoka_g09_v9_closeup_engine.png
             artifacts/tarvoka_g09_premium_v8_engine.png
             artifacts/TARVOKA_G09_V10_Escultura_Editable.glb
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive Windows ready-to-open offline TARVOKA 3D Studio
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Estudio-3D-PC-Windows
+          path: build/web/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
