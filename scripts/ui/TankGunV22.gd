@@ -30,8 +30,8 @@ static func _lathe(sections: Array, sides: int = 28) -> ArrayMesh:
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     for row in range(sections.size()-1):
-        var lower: Vector2 = sections[row]
-        var upper: Vector2 = sections[row+1]
+        var lower := Vector2(float(sections[row][0]),float(sections[row][1]))
+        var upper := Vector2(float(sections[row+1][0]),float(sections[row+1][1]))
         for i in range(sides):
             var a: float = TAU*float(i)/float(sides)
             var b: float = TAU*float(i+1)/float(sides)
