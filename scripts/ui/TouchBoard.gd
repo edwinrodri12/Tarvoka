@@ -24,6 +24,8 @@ const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
+const ThreatData = preload("res://scripts/ui/ThreatAwarenessData.gd")
+const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 const IsoProjection = preload("res://scripts/ui/IsoProjection.gd")
 const IsoRenderer = preload("res://scripts/ui/IsoRenderer.gd")
@@ -51,6 +53,9 @@ var _site_overlay_key := -1
 var _site_overlay_snapshot: Array = []
 var _alert_marker_cache_key := -1
 var _alert_marker_snapshot: Array = []
+var threat_preview_enabled := false
+var _threat_preview_key := -1
+var _threat_preview_snapshot: Dictionary = {}
 var message := "Selecciona una unidad."
 var last_enemy_turn_report := ""
 var last_economy_report := ""
@@ -315,11 +320,21 @@ func alert_marker_snapshots() -> Array:
             state,viewer,ai_enabled).get("markers",[])
     return _alert_marker_snapshot
 
+func threat_preview() -> Dictionary:
+    if not threat_preview_enabled:
+        return {"valid":false,"cells":{}}
+    var viewer: int = 0 if ai_enabled else int(state.get("faction",0))
+    var key: int = hash([state,selected_id,ai_enabled,viewer])
+    if key != _threat_preview_key:
+        _threat_preview_key = key
+        _threat_preview_snapshot = ThreatData.preview(state,selected_id,viewer,ai_enabled)
+    return _threat_preview_snapshot
+
 func _draw() -> void:
     if iso_enabled:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
-            inspected_enemy_id,site_overlay_snapshots(),inspected_cell)
+            inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview())
         _draw_campaign_markers()
         AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
             iso_zoom,iso_pan,map_dimensions(),battery_saver)
@@ -440,6 +455,10 @@ func _draw() -> void:
         var attack_pos: Vector2 = origin + Vector2(attack_cell) * tile
         draw_rect(Rect2(attack_pos, Vector2.ONE * tile), VisualStyle.attack_fill())
         draw_rect(Rect2(attack_pos, Vector2.ONE * tile), Color(1.0, 0.32, 0.24), false, 2.0)
+    # Show possible incoming attack coverage separately from legal action
+    # previews. Green bars are actual defensive terrain bonuses for the
+    # selected unit; an unmarked cell is not guaranteed to be safe.
+    ThreatPainter.draw_classic(self,threat_preview(),origin,tile,size)
     # Surface units are always painted first, aircraft last. Independent
     # air/surface glyph positions make stacks readable on a small phone.
     var draw_units: Array = state.get("units", []).duplicate()

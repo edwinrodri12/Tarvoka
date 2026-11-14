@@ -59,6 +59,9 @@ var sidebar_attention_unit: Button
 var compact_next_unit: Button
 var compact_attention_unit: Button
 var sidebar_navigation_row: HBoxContainer
+var sidebar_threat_button: Button
+var compact_threat_button: Button
+var expanded_threat_button: Button
 var home_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
@@ -194,7 +197,8 @@ func _bind_touch_feedback() -> void:
             compact_confirm,compact_cancel,compact_end_turn,compact_resupply,
             expanded_confirm,expanded_cancel,expanded_end_turn,battle_hud_toggle,
             sidebar_alerts_button,compact_alerts_button,expanded_alerts_button,
-            sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit]:
+            sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit,
+            sidebar_threat_button,compact_threat_button,expanded_threat_button]:
         var button: Button = control
         if button == null:
             continue
@@ -345,6 +349,12 @@ func _ready() -> void:
     sidebar_attention_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     sidebar_attention_unit.pressed.connect(_next_attention_unit)
     sidebar_navigation_row.add_child(sidebar_attention_unit)
+    sidebar_threat_button = Button.new()
+    sidebar_threat_button.name = "InteligenciaDeAmenazaLateral"
+    sidebar_threat_button.text = "MOSTRAR AMENAZAS Y COBERTURA"
+    sidebar_threat_button.custom_minimum_size.y = 46
+    sidebar_threat_button.pressed.connect(_toggle_threat_preview)
+    panel.add_child(sidebar_threat_button)
     var camera_row := HBoxContainer.new()
     camera_row.add_theme_constant_override("separation",5)
     panel.add_child(camera_row)
@@ -929,7 +939,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     # scenario controls remain accessible farther down the scroll but no
     # longer displace combat status and unit actions from the first viewport.
     var priority: Array = [heading,commander_sidebar_strip,polished_status_card,command_menu_button,objectives_button,
-        sidebar_alerts_button,sidebar_navigation_row,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
+        sidebar_alerts_button,sidebar_navigation_row,sidebar_threat_button,minimap_shell,polished_unit_card,polished_actions_card,result_banner,
         camera_row,iso_view_button,battery_saver_button]
     for index in range(priority.size()):
         panel.move_child(priority[index],index)
@@ -1154,6 +1164,12 @@ func _build_battle_hud() -> void:
     expanded_alerts_button.custom_minimum_size = Vector2(126,40)
     expanded_alerts_button.pressed.connect(_open_tactical_alerts)
     alert_header_row.add_child(expanded_alerts_button)
+    expanded_threat_button = Button.new()
+    expanded_threat_button.name = "InteligenciaDeAmenazaExpandida"
+    expanded_threat_button.text = "Riesgo"
+    expanded_threat_button.custom_minimum_size = Vector2(108,40)
+    expanded_threat_button.pressed.connect(_toggle_threat_preview)
+    alert_header_row.add_child(expanded_threat_button)
 
     expanded_actions = PanelContainer.new()
     expanded_actions.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1270,6 +1286,13 @@ func _build_battle_hud() -> void:
     compact_attention_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_attention_unit.pressed.connect(_next_attention_unit)
     compact_top_shortcuts.add_child(compact_attention_unit)
+    compact_threat_button = Button.new()
+    compact_threat_button.name = "InteligenciaDeAmenazaMovil"
+    compact_threat_button.text = "Riesgo"
+    compact_threat_button.custom_minimum_size.y = 44
+    compact_threat_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_threat_button.pressed.connect(_toggle_threat_preview)
+    compact_top_shortcuts.add_child(compact_threat_button)
     GameUiTheme.emphasize(compact_options_button,"primary")
     battle_hud_commands.hide()
     compact_center.hide()
@@ -1287,6 +1310,7 @@ func _set_compact_hud(compact: bool) -> void:
     compact_alerts_button.visible = compact
     compact_next_unit.visible = compact
     compact_attention_unit.visible = compact
+    compact_threat_button.visible = compact
     compact_top_shortcuts.visible = compact
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
@@ -1345,7 +1369,7 @@ func _process(_delta: float) -> void:
     # The previous implementation recalculated Dijkstra movement ranges on
     # every rendered frame (~60 times/second), even with no player input.
     # A battle-state snapshot hash updates the tactical summary only on change.
-    var summary_key: int = hash([board.state, board.ai_enabled, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order])
+    var summary_key: int = hash([board.state, board.ai_enabled, board.selected_id, board.inspected_enemy_id, board.selected_factory_pos, board.inspected_cell, board.pending_order,board.threat_preview_enabled])
     var minimap_key: int = hash([summary_key,board.iso_enabled,board.iso_zoom,board.iso_pan,
         board.view_zoom,board.view_pan,board.size,board.map_dimensions()])
     if battle_minimap != null and minimap_key != _minimap_view_key:
@@ -1388,6 +1412,7 @@ func _process(_delta: float) -> void:
         _update_navigation_button(compact_attention_unit,"Atenc. %d" % needs_count,needs_count,can_navigate)
         _update_navigation_button(sidebar_next_unit,"SIGUIENTE · %d" % ready_count,ready_count,can_navigate)
         _update_navigation_button(sidebar_attention_unit,"ATENCIÓN · %d" % needs_count,needs_count,can_navigate)
+        _update_threat_controls()
         # Source of truth is the current match, including restored saves.
         # Portrait ribbons remain presentation-only and fog-safe.
         commander_sidebar_strip.bind_state(board.state,board.ai_enabled)
@@ -1635,6 +1660,37 @@ func _update_navigation_button(button: Button, title: String, count: int,
     button.tooltip_text = ("Confirma o cancela la orden antes de navegar."
         if not board.pending_order.is_empty()
         else "Solo centra y selecciona la unidad. No ejecuta órdenes.")
+
+func _toggle_threat_preview() -> void:
+    if board == null:
+        return
+    board.threat_preview_enabled = not board.threat_preview_enabled
+    # Turn off without affecting this battle, map position, pending orders or
+    # the player's preferred layout. Visual intel is opt-in and unsaved.
+    board.queue_redraw()
+    if battle_minimap != null:
+        battle_minimap.queue_redraw()
+    _unit_summary_cache_key = -1
+    _process(0.0)
+
+func _update_threat_controls() -> void:
+    var active: bool = board.threat_preview_enabled
+    var snapshot: Dictionary = board.threat_preview() if active else {}
+    var valid: bool = bool(snapshot.get("valid",false))
+    var count: int = int(snapshot.get("danger",0)) if valid else 0
+    var label_text: String = "Riesgo %d" % count if active and valid else ("Riesgo ON" if active else "Riesgo")
+    var explanation := ("Rojo: ataques POSIBLES de rivales visibles, incluidos movimientos teóricos. "
+        + "Verde: cobertura real de la unidad seleccionada. No revela enemigos ocultos "
+        + "ni garantiza casillas seguras.")
+    for button in [compact_threat_button,expanded_threat_button,sidebar_threat_button]:
+        if button == null:
+            continue
+        button.text = ("OCULTAR RIESGOS · %d" % count if active and valid else
+            "OCULTAR RIESGOS" if active else "AMENAZAS Y COBERTURA") if button == sidebar_threat_button else label_text
+        button.tooltip_text = explanation
+        button.add_theme_color_override("font_color",
+            Color("#FF9F83") if active and count > 0 else
+            (Color("#8EE3B1") if active and valid else Color("#C6DCE5")))
 
 func _next_ready_unit() -> void:
     _navigate_unit("ready")

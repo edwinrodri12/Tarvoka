@@ -17,6 +17,7 @@ const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
+const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const SiteOverlayPainter = preload("res://scripts/ui/SiteOverlayPainter.gd")
 static var last_frame_stats: Dictionary = {}
@@ -51,7 +52,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         selected_factory_pos: Vector2i, pending_order: Dictionary,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
         unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
-        site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1)) -> void:
+        site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1),
+        threat_preview: Dictionary = {}) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -185,6 +187,9 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         canvas.draw_colored_polygon(poly, VisualStyle.attack_fill())
         canvas.draw_polyline(_ring(poly), Color("#FF6655"), maxf(2.0, hw * 0.035), true)
 
+    # Threats are theoretical footprints from observed enemies. Apply them
+    # over legal movement previews, beneath soldiers and aircraft.
+    ThreatPainter.draw_iso(canvas,threat_preview,canvas.size,zoom,pan,dims)
     # Units are depth-sorted; aircraft have a separate offset and outline.
     var draw_units: Array = state.get("units", []).duplicate()
     draw_units.sort_custom(func(a, b):

@@ -8,6 +8,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const AlertPainter = preload("res://scripts/ui/TacticalAlertPainter.gd")
+const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
 
 var board: Control = null
 var last_state_hash := -1
@@ -196,6 +197,7 @@ func _draw() -> void:
         draw_circle(pos,maxf(2.0,minf(tile.x,tile.y)*0.24),color)
     AlertPainter.draw_minimap(self,data.get("alerts",[]),bounds,dims,
         bool(board.get("battery_saver")))
+    ThreatPainter.draw_minimap(self,board.call("threat_preview"),bounds,dims)
     var view: PackedVector2Array = viewport_corners(size,state,board.size,
         float(board.get("iso_zoom")),board.get("iso_pan"))
     if view.size() == 5:
