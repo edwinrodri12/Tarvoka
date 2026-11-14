@@ -17,6 +17,9 @@ func _run() -> void:
         await process_frame
     assert(studio.category_picker.item_count == 4)
     studio._switch_category(2)
+    # V15 must be off while testing geometry and screenshots of older finishes.
+    if studio._terrain_v11_enabled:
+        studio._toggle_v11_finish()
     # Legacy visual regression: V14 changes mountain geometry intentionally.
     # Switch it off so V1–V13 mesh and comparison assertions stay meaningful.
     studio._toggle_v10_finish()
@@ -122,6 +125,9 @@ func _run() -> void:
     studio._switch_category(3)
     assert(studio._role=="battle")
     studio._switch_category(2)
+    # V15 must be off while testing geometry and screenshots of older finishes.
+    if studio._terrain_v11_enabled:
+        studio._toggle_v11_finish()
     assert(studio._role=="terrain")
     studio.free()
     print("PASS TERRAIN_STUDIO_V10: ridges replace repeated peaks, 3 tree species batched, curved waterbanks and V1–V6 comparisons across three biomes")
