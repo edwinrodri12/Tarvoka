@@ -116,6 +116,57 @@ func _run_gallery() -> void:
     main._set_compact_hud(false)
     main._process(0.0)
 
+    # Two real renderer captures of the opt-in enemy-threat and real
+    # terrain-cover overlays. All preview input is isolated and restored.
+    var before_risk_gallery: Dictionary = main.board.state.duplicate(true)
+    var risk_previous_selection: String = main.board.selected_id
+    var risk_previous_iso: bool = main.board.iso_enabled
+    var risk_previous_enabled: bool = main.board.threat_preview_enabled
+    var risk_previous_minimap: bool = main._minimap_preference
+    var risk_terrain: Array = Scenarios.terrain(0).duplicate(true)
+    risk_terrain[3][4] = "forest"
+    risk_terrain[2][3] = "mountain"
+    var risk_friend: Dictionary = Roles.make_unit("A",0,Vector2i(3,3),"line")
+    var risk_enemy: Dictionary = Roles.make_unit("X",1,Vector2i(5,3),"tank")
+    risk_enemy["move_points"] = 0
+    main.board.state = Session.start([risk_friend,risk_enemy],risk_terrain,
+        0,false,false,false,false)
+    main.board.selected_id = "A"
+    main.board.threat_preview_enabled = true
+    main.board.set_isometric(false)
+    main._set_compact_hud(true)
+    main.board.queue_redraw()
+    main._process(0.0)
+    var risk_preview: Dictionary = main.board.threat_preview()
+    if not bool(risk_preview.get("valid",false)) or int(risk_preview.get("danger",0)) <= 0:
+        push_error("Real threat preview did not detect the exposed flank.")
+        _failed = true
+    if not await _capture_landscape("27-amenazas-cobertura-clasica-960x540",Vector2i(960,540),
+            "Batalla clásica · posible amenaza roja y cobertura verde con botón Riesgo"):
+        _failed = true
+    main.board.set_isometric(true)
+    main._minimap_preference = true
+    main._apply_minimap_visibility()
+    main._set_compact_hud(false)
+    main.board.frame_player_force()
+    main._process(0.0)
+    main.board.queue_redraw()
+    main.battle_minimap.queue_redraw()
+    if not main.battle_minimap.visible or not main.board.threat_preview()["valid"]:
+        push_error("Risk minimap preview is missing in isometric battle.")
+        _failed = true
+    if not await _capture_landscape("28-amenazas-cobertura-isometrica-1280x720",Vector2i(1280,720),
+            "Batalla isométrica · amenazas teóricas y cobertura sobre minimapa"):
+        _failed = true
+    main.board.state = before_risk_gallery
+    main.board.selected_id = risk_previous_selection
+    main.board.threat_preview_enabled = risk_previous_enabled
+    main.board.set_isometric(risk_previous_iso)
+    main._minimap_preference = risk_previous_minimap
+    main._apply_minimap_visibility()
+    main._set_compact_hud(false)
+    main._process(0.0)
+
     # Priority list on an actual modern match: friendly units, available
     # producers and visible objectives. No fake alerts or committed actions.
     var before_alert_frame: Dictionary = main.board.state.duplicate(true)
@@ -316,11 +367,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 26:
-        push_error("Landscape UI QA incomplete: %d/26 captures" % _manifest.size())
+    if _failed or _manifest.size() != 28:
+        push_error("Landscape UI QA incomplete: %d/28 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 26 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 28 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
