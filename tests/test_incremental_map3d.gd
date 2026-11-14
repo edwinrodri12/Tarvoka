@@ -33,7 +33,9 @@ func _run() -> void:
     lab.set_battle_terrain(grid,visible,true,3)
     var first: Dictionary = lab.environment_metrics()
     assert(first["fog_chunks_total"] == 9)
-    assert(first["fog_chunks_updated"] == 9)
+    # The other eight sectors are fully hidden; no empty GPU meshes
+    # should be instantiated for them.
+    assert(first["fog_chunks_updated"] == 1)
     assert(first["trees"] > 0)
     assert(first["dynamic_canopy_shadows"] == false)
     var chunks: Dictionary = lab.get("_chunk_parts")
@@ -59,6 +61,13 @@ func _run() -> void:
         baseline_forest_rebuilds))
     assert(after_reveal["forest_reuse_count"] > baseline_reuse)
     assert(grid == immutable)
+    var far_parts: Array = lab.get("_chunk_parts")[
+        Vector2i(16,16)]
+    lab.set_battle_terrain(grid,visible,true,3)
+    assert(not (far_parts[0] as MeshInstance3D).visible)
+    assert((lab.get("_chunk_parts")[Vector2i(0,0)][0] as MeshInstance3D).mesh == original_ground)
+    lab.set_battle_terrain(grid,distant,true,3)
+    assert((far_parts[0] as MeshInstance3D).visible)
     # Terrain behind fog may change without changing ANY visible mesh.
     var hidden_changed: Array = grid.duplicate(true)
     hidden_changed[23][23] = "mountain"
