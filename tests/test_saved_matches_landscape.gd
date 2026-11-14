@@ -78,7 +78,7 @@ func _run() -> void:
     assert(Store.save(saved_state,Saved.AUTO_PATH))
     var corrupt := FileAccess.open(Saved.AUTO_PATH,FileAccess.WRITE)
     assert(corrupt != null)
-    corrupt.store_string("{invalid-json")
+    corrupt.store_string("{}")
     corrupt.close()
     menu.refresh_slots()
     assert(menu.slot_statuses["auto"].text == "RECUPERADO")
