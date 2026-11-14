@@ -568,7 +568,9 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         v6_banks: bool = false,
         v7_ridges: bool = false, v7_shores: bool = false,
         v7_waves: bool = false, v8_lithology: bool = false,
-        v8_talus: bool = false, v8_ecotone: bool = false) -> Node3D:
+        v8_talus: bool = false, v8_ecotone: bool = false,
+        v9_rock_facets: bool = false,
+        v9_ecotone_tones: bool = false) -> Node3D:
     var preset: int = clampi(scene,0,SCENES.size()-1)
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
@@ -590,6 +592,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     root.set_meta("terrain_studio_v8_lithology",continuous and show_scatter and v7_ridges and v8_lithology)
     root.set_meta("terrain_studio_v8_talus",continuous and show_scatter and v8_talus)
     root.set_meta("terrain_studio_v8_ecotone",continuous and show_scatter and v8_ecotone)
+    root.set_meta("terrain_studio_v9_rock_facets",continuous and show_scatter and v7_ridges and v9_rock_facets)
+    root.set_meta("terrain_studio_v9_ecotone_tones",continuous and show_scatter and v9_ecotone_tones and (v8_talus or v8_ecotone))
     var counts: Dictionary = {"water":0,"mountain":0,"forest":0,"road":0,"plain":0}
     var tiles := Node3D.new()
     tiles.name = "TerrenoDeCasillas"
@@ -732,14 +736,14 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
         "shore_triangles":0,"wave_strips":0,"wave_triangles":0,"batches":0}
     if continuous and show_scatter and (v7_ridges or v7_shores or v7_waves):
         v7_stats = ErosionV7.populate(props,detail_cells,preset,
-            v7_ridges,v7_shores,v7_waves,v8_lithology)
+            v7_ridges,v7_shores,v7_waves,v8_lithology,v9_rock_facets)
     root.set_meta("terrain_erosion_v7",v7_stats)
     var v8_stats := {
         "transition_edges":0,"scree_stones":0,"undergrowth":0,
         "water_edges_skipped":0,"roads_skipped":0,"batches":0}
     if continuous and show_scatter and (v8_talus or v8_ecotone):
         v8_stats = EcotonesV8.populate(props,detail_cells,preset,
-            v8_talus,v8_ecotone)
+            v8_talus,v8_ecotone,v9_ecotone_tones)
     root.set_meta("terrain_ecotones_v8",v8_stats)
     if show_samples:
         var samples := Node3D.new()
