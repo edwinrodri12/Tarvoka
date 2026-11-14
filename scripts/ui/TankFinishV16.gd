@@ -75,7 +75,7 @@ static func refine_faction_paint(model: Node3D, faction_tint: Color) -> int:
         if stripe.mesh is BoxMesh:
             var box: BoxMesh = stripe.mesh as BoxMesh
             # Duplicating the shared mesh avoids altering other tanks.
-            if not stripe.has_meta("tarvoka_v16_slim_enamel",false):
+            if not stripe.has_meta("tarvoka_v16_slim_enamel"):
                 var reduced: BoxMesh = box.duplicate(true) as BoxMesh
                 reduced.size = Vector3(box.size.x,0.083,0.345)
                 stripe.mesh = reduced
