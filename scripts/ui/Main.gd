@@ -35,6 +35,8 @@ const DisplayPrefs = preload("res://scripts/ui/DisplayPreferences.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
+const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
+const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
 
 var board: Control
 var status_label: Label
@@ -71,6 +73,9 @@ var faction_selector: Control
 var _pending_visual_factions: Dictionary = {}
 var compact_combat_preview: Control
 var sidebar_combat_preview: Control
+var compact_move_risk_card: Control
+var sidebar_move_risk_card: Control
+var _last_move_risk_snapshot: Dictionary = {}
 var command_menu_button: Button
 var compact_menu_button: Button
 var inspection_title: Label
@@ -908,6 +913,10 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     polished_unit_card.add_child(dossier_column)
     for widget in [unit_heading,inspection_title,sidebar_dossier,sidebar_site_actions,inspection_detail,unit_label,order_preview_label,sidebar_combat_preview]:
         widget.reparent(dossier_column,false)
+    sidebar_move_risk_card = MoveRiskCard.new()
+    sidebar_move_risk_card.name = "ComparacionDeMovimientoLateral"
+    dossier_column.add_child(sidebar_move_risk_card)
+    dossier_column.move_child(sidebar_move_risk_card,order_preview_label.get_index()+1)
     sidebar_tile_context = TileContextCard.new()
     sidebar_tile_context.name = "TerrenoYEdificiosExpanded"
     dossier_column.add_child(sidebar_tile_context)
@@ -1009,6 +1018,11 @@ func _build_battle_hud() -> void:
     compact_combat_preview = CombatPanel.new()
     compact_combat_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
     battle_hud_commands.add_child(compact_combat_preview)
+    compact_move_risk_card = MoveRiskCard.new()
+    compact_move_risk_card.name = "ComparacionDeMovimientoMovil"
+    compact_move_risk_card.compact = true
+    compact_move_risk_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    battle_hud_commands.add_child(compact_move_risk_card)
 
     # Read-only context card: always below the battlefield and above actions.
     # Mouse events pass through it so pinch-zoom and map taps still work.
@@ -1480,8 +1494,14 @@ func _process(_delta: float) -> void:
         _update_text(order_preview_label, BattleReport.pending_preview(board.state, board.pending_order))
         sidebar_combat_preview.update_forecast(board.state,board.pending_order)
         compact_combat_preview.update_forecast(board.state,board.pending_order)
-        if str(board.pending_order.get("kind","")) == "attack":
-            compact_info_panel.hide() # Avoid stacking two overlapping cards on phones.
+        # This card is evaluated once per changed state/selection/order,
+        # regardless of whether the optional full-map Risk overlay is active.
+        _last_move_risk_snapshot = MoveRiskData.evaluate(
+            board.state,board.pending_order,_radar_viewer(),board.ai_enabled)
+        sidebar_move_risk_card.bind_comparison(_last_move_risk_snapshot)
+        compact_move_risk_card.bind_comparison(_last_move_risk_snapshot)
+        if str(board.pending_order.get("kind","")) in ["attack","move"]:
+            compact_info_panel.hide() # Avoid stacking redundant cards on small phones.
         var action_kind := str(board.pending_order.get("kind", ""))
         var button_text := "Confirmar ataque" if action_kind == "attack" else ("Confirmar movimiento" if action_kind == "move" else "Confirmar orden")
         if confirm_button.text != button_text:

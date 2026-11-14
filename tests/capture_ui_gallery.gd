@@ -123,6 +123,7 @@ func _run_gallery() -> void:
     var risk_previous_iso: bool = main.board.iso_enabled
     var risk_previous_enabled: bool = main.board.threat_preview_enabled
     var risk_previous_minimap: bool = main._minimap_preference
+    var risk_previous_confirmation: bool = main.board.require_order_confirmation
     var risk_terrain: Array = Scenarios.terrain(0).duplicate(true)
     risk_terrain[3][4] = "forest"
     risk_terrain[2][3] = "mountain"
@@ -158,6 +159,41 @@ func _run_gallery() -> void:
     if not await _capture_landscape("28-amenazas-cobertura-isometrica-1280x720",Vector2i(1280,720),
             "Batalla isométrica · amenazas teóricas y cobertura sobre minimapa"):
         _failed = true
+
+    # Compare a TRUE legal move into forest, where cover increases but a
+    # visible enemy can now reach the destination. Do NOT execute the move:
+    # the same pending order must survive both landscape screenshots.
+    main.board.require_order_confirmation = true
+    main.board._request_order(Vector2i(4,3),{})
+    if str(main.board.pending_order.get("kind","")) != "move":
+        push_error("No legal pending move was created for the risk comparison gallery.")
+        _failed = true
+    main.board.set_isometric(false)
+    main._set_compact_hud(true)
+    main.board.queue_redraw()
+    main._process(0.0)
+    var before_move_gallery: Dictionary = main.board.state.duplicate(true)
+    if not main.compact_move_risk_card.visible or int(main._last_move_risk_snapshot.get("threat_delta",0)) != 1:
+        push_error("Compact move-risk card did not calculate the real exposed forest.")
+        _failed = true
+    if not await _capture_landscape("29-riesgo-antes-de-mover-960x540",Vector2i(960,540),
+            "Movimiento pendiente · comparación visible de amenazas y cobertura en Android"):
+        _failed = true
+    main.board.set_isometric(true)
+    main._set_compact_hud(false)
+    main.board.queue_redraw()
+    main._process(0.0)
+    if not main.sidebar_move_risk_card.visible:
+        push_error("Desktop move-risk card is missing from expanded battle sidebar.")
+        _failed = true
+    if not await _capture_landscape("30-riesgo-movimiento-pc-1280x720",Vector2i(1280,720),
+            "Movimiento pendiente · cobertura y amenazas en panel táctico de PC"):
+        _failed = true
+    if main.board.state != before_move_gallery or str(main.board.pending_order.get("kind","")) != "move":
+        push_error("Two read-only movement comparisons changed the battle or committed the move.")
+        _failed = true
+    main.board.pending_order.clear()
+    main.board.require_order_confirmation = risk_previous_confirmation
     main.board.state = before_risk_gallery
     main.board.selected_id = risk_previous_selection
     main.board.threat_preview_enabled = risk_previous_enabled
@@ -367,11 +403,11 @@ func _run_gallery() -> void:
         },"  "))
         file.close()
     main.queue_free()
-    if _failed or _manifest.size() != 28:
-        push_error("Landscape UI QA incomplete: %d/28 captures" % _manifest.size())
+    if _failed or _manifest.size() != 30:
+        push_error("Landscape UI QA incomplete: %d/30 captures" % _manifest.size())
         quit(1)
         return
-    print("PASS visual gallery: 28 rendered landscape PNG screens with nonblank checks and manifest")
+    print("PASS visual gallery: 30 rendered landscape PNG screens with nonblank checks and manifest")
     quit(0)
 
 func _capture_landscape(stem: String, resolution: Vector2i, caption: String) -> bool:
