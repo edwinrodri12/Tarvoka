@@ -50,6 +50,12 @@ func _run() -> void:
     assert(bench.results[10]["visual_factions"] == 8)
     assert(bench.results[10]["actual_tanks"] == 768)
     assert(bench.results[10]["actual_sites"] == 256)
+    assert(int(bench.results[0]["environment_stride"]) == 1)
+    assert(int(bench.results[8]["environment_stride"]) >= 2)
+    assert(int(bench.results[8]["visible_unit_load"]) >= 210)
+    assert(int(bench.results[3]["precipitation_cells"]) > 0)
+    assert(int(bench.results[4]["precipitation_cells"]) == 0)
+    assert(int(bench.results[10]["visible_unit_load"]) < 768)
     # Only the visible area should be sorted/drawn at maximum zoom:
     # establishes a real culling regression guard for 8-party-scale maps.
     assert(int(bench.results[10]["units_sorted"]) < 768)
@@ -85,6 +91,8 @@ func _run() -> void:
         assert(int(result["units_drawn"]) > 0)
         assert(int(result["units_sorted"]) <= int(result["actual_tanks"]))
         assert(int(result["sites_drawn"]) > 0)
+        assert(int(result["environment_stride"]) in [1,2,3])
+        assert(int(result["visible_unit_load"]) <= int(result["actual_tanks"]))
         if int(result["visual_factions"]) == 8:
             assert(int(result["actual_sites"]) > 0)
     assert(bench.report_text().contains("HQ detallado"))
