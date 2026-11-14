@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/ModernArsenal.gd'
       - 'scripts/core/GroundArmorProcurement.gd'
       - 'tests/test_ground_armor_role_matrix.gd'
       - 'tests/test_ground_armor_ai_procurement.gd'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/ModernArsenal.gd'
       - 'scripts/core/GroundArmorProcurement.gd'
       - 'tests/test_ground_armor_role_matrix.gd'
       - 'tests/test_ground_armor_ai_procurement.gd'
