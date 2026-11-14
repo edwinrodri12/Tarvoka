@@ -241,6 +241,8 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
         % [_dims.x,_dims.y,int(statistics["chunks"]),
             int(units["visible"]),int(units["detailed"])])
+    stats_label.text += " · relieve V17 %d sectores de suelo" % [
+        int(statistics.get("blended_tiles",0))]
     show()
     move_to_front()
     preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
