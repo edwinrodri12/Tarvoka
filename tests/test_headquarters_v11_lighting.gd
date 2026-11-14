@@ -52,7 +52,7 @@ func _run() -> void:
         var previous: Node3D = HQ.build(level,0,"operativo",
             true,true,true,true,true,true,true,false)
         var polished: Node3D = HQ.build(level,0,"operativo",
-            true,true,true,true,true,true,true,true)
+            true,true,true,true,true,true,true,true,false)
         assert(previous != null and polished != null)
         assert(previous.get_meta("tarvoka_hq_visual_v10",false))
         assert(not previous.get_meta("tarvoka_hq_visual_v11",false))
@@ -96,6 +96,9 @@ func _run() -> void:
     for i in range(8):
         await process_frame
     studio._switch_category(1)
+    studio.hq_v12_toggle.set_pressed_no_signal(false)
+    studio._change_hq_silhouette_v12(false)
+    assert(not studio.model_root.get_meta("tarvoka_hq_visual_v12",false))
     assert(studio.hq_v11_toggle.button_pressed)
     assert(studio.model_root.get_meta("tarvoka_hq_visual_v11",false))
     assert(studio.hq_lighting_picker.item_count==3)
