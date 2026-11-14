@@ -11,6 +11,7 @@ const WaterMaterial = preload("res://scripts/ui/TerrainWaterMaterial.gd")
 const Conifers = preload("res://scripts/ui/Conifer3DMesh.gd")
 const Shores = preload("res://scripts/ui/TerrainShore3D.gd")
 const Understory = preload("res://scripts/ui/TerrainUnderstory3D.gd")
+const Chunks = preload("res://scripts/ui/Terrain3DChunkCache.gd")
 var terrain: Array = []
 var observed: Dictionary = {}
 var restrict_to_observed := false
@@ -18,6 +19,17 @@ var divisions := 5
 var _ground: MeshInstance3D
 var _water: MeshInstance3D
 var _banks: MeshInstance3D
+var _chunk_root: Node3D
+var _chunk_parts: Dictionary = {}
+var _chunk_signatures: Dictionary = {}
+var _forest_signature := -1
+var _bridges_signature := -1
+var _last_chunks_updated := 0
+var _last_chunks_total := 0
+var _forest_build_count := 0
+var _forest_reuse_count := 0
+var _bridge_reuse_count := 0
+var _skipped_view_updates := 0
 var _undergrowth: MultiMeshInstance3D
 var _canopies: MultiMeshInstance3D
 var _canopy_variants: Array[MultiMeshInstance3D] = []
@@ -66,6 +78,9 @@ func _ready() -> void:
     _banks = MeshInstance3D.new()
     _banks.name = "HeightfieldShorelineErosion"
     add_child(_banks)
+    _chunk_root = Node3D.new()
+    _chunk_root.name = "VisibleTerrainChunks"
+    add_child(_chunk_root)
     _undergrowth = MultiMeshInstance3D.new()
     _undergrowth.name = "SlopeFollowingUnderstory"
     add_child(_undergrowth)
@@ -124,25 +139,96 @@ func _grid_dimensions(grid: Array) -> Vector2i:
 
 func set_terrain(grid: Array,
         visible: Dictionary = {}, restrict: bool = false) -> void:
-    # The complete battle state is never accepted or modified here.
-    # Fog and unit movement must NOT reset a manually panned camera.
-    var previous_dimensions: Vector2i = _grid_dimensions(terrain)
+    set_battle_terrain(grid,visible,restrict,divisions)
+
+# Atomic update avoids rebuilding a large map TWICE when both the
+# mobile quality and the visible fog cells change at the same time.
+func set_battle_terrain(grid: Array, visible: Dictionary = {},
+        restrict: bool = false, requested_divisions: int = 5) -> void:
+    var quality: int = clampi(requested_divisions,2,7)
+    if terrain == grid and observed == visible and (
+            restrict_to_observed == restrict and divisions == quality):
+        _skipped_view_updates += 1
+        _last_chunks_updated = 0
+        _last_build_us = 0
+        return
+    var old_dimensions: Vector2i = _grid_dimensions(terrain)
     terrain = grid.duplicate(true)
     observed = visible.duplicate()
     restrict_to_observed = restrict
+    if quality != divisions:
+        divisions = quality
+        if _water != null:
+            _water.material_override = WaterMaterial.make_material(
+                divisions >= 4)
+        _apply_foliage_shadow_budget()
+    if old_dimensions != _grid_dimensions(terrain):
+        _reset_chunk_cache()
     if is_inside_tree() and _ground != null:
-        rebuild(previous_dimensions != _grid_dimensions(terrain))
+        rebuild(old_dimensions != _grid_dimensions(terrain))
 
 func set_quality(segments: int) -> void:
-    var next_divisions: int = clampi(segments,2,7)
-    if next_divisions == divisions:
-        return
-    divisions = next_divisions
-    if _water != null:
-        _water.material_override = WaterMaterial.make_material(
-            divisions >= 4)
-    if is_inside_tree() and _ground != null:
-        rebuild(false)
+    set_battle_terrain(terrain,observed,
+        restrict_to_observed,segments)
+
+func _apply_foliage_shadow_budget() -> void:
+    # Every canopy receives REAL sun shadows in full detail.
+    # Mobile avoids expensive animated conifer shadow maps; the
+    # undersides remain shaded by baked vertex color in both modes.
+    var setting: int = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if (
+        divisions >= 4) else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    for variant in _canopy_variants:
+        variant.cast_shadow = setting
+    if _trunks != null:
+        _trunks.cast_shadow = setting
+    if _undergrowth != null:
+        _undergrowth.cast_shadow = (
+            GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+
+func _reset_chunk_cache() -> void:
+    _chunk_signatures.clear()
+    for key in _chunk_parts:
+        for instance in _chunk_parts[key]:
+            instance.queue_free()
+    _chunk_parts.clear()
+
+func _rebuild_visible_chunks() -> void:
+    var regions: Array = Chunks.regions(terrain)
+    _last_chunks_total = regions.size()
+    _last_chunks_updated = 0
+    for region in regions:
+        var tile_region: Rect2i = region
+        var key: Vector2i = tile_region.position
+        var stamp: int = hash([divisions,Chunks.signature(
+            terrain,tile_region,observed,restrict_to_observed)])
+        if _chunk_signatures.get(key,-1) == stamp:
+            continue
+        if not _chunk_parts.has(key):
+            var ground := MeshInstance3D.new()
+            ground.name = "Ground_%s_%s" % [key.x,key.y]
+            var river := MeshInstance3D.new()
+            river.name = "Water_%s_%s" % [key.x,key.y]
+            var shore := MeshInstance3D.new()
+            shore.name = "Shore_%s_%s" % [key.x,key.y]
+            _chunk_root.add_child(ground)
+            _chunk_root.add_child(river)
+            _chunk_root.add_child(shore)
+            _chunk_parts[key] = [ground,river,shore]
+        var parts: Array = _chunk_parts[key]
+        (parts[0] as MeshInstance3D).mesh = TerrainMesh.build_ground(
+            terrain,observed,restrict_to_observed,divisions,
+            tile_region)
+        (parts[1] as MeshInstance3D).mesh = TerrainMesh.build_water(
+            terrain,observed,restrict_to_observed,
+            maxi(6,divisions*2),tile_region)
+        (parts[1] as MeshInstance3D).material_override = (
+            _water.material_override)
+        (parts[2] as MeshInstance3D).mesh = Shores.build_banks(
+            terrain,observed,restrict_to_observed,
+            8 if divisions >= 4 else 4,tile_region)
+        _chunk_signatures[key] = stamp
+        _last_chunks_updated += 1
+
 
 func _fit_camera() -> void:
     var h: int = terrain.size()
@@ -159,20 +245,46 @@ func _fit_camera() -> void:
 func rebuild(fit_camera: bool = true) -> void:
     if _ground == null or _water == null:
         return
-    var build_started_us: int = Time.get_ticks_usec()
-    _ground.mesh = TerrainMesh.build_ground(
-        terrain,observed,restrict_to_observed,divisions)
-    _water.mesh = TerrainMesh.build_water(
-        terrain,observed,restrict_to_observed,
-        maxi(6,divisions*2))
-    _banks.mesh = Shores.build_banks(
-        terrain,observed,restrict_to_observed,
-        8 if divisions >= 4 else 4)
-    _generate_forest()
-    _generate_bridges()
+    var started: int = Time.get_ticks_usec()
+    _apply_foliage_shadow_budget()
+    if restrict_to_observed:
+        _ground.visible = false
+        _water.visible = false
+        _banks.visible = false
+        _chunk_root.visible = true
+        _rebuild_visible_chunks()
+    else:
+        _chunk_root.visible = false
+        _ground.visible = true
+        _water.visible = true
+        _banks.visible = true
+        _ground.mesh = TerrainMesh.build_ground(
+            terrain,observed,false,divisions)
+        _water.mesh = TerrainMesh.build_water(
+            terrain,observed,false,maxi(6,divisions*2))
+        _banks.mesh = Shores.build_banks(
+            terrain,observed,false,8 if divisions >= 4 else 4)
+        _last_chunks_updated = 0
+        _last_chunks_total = 0
+    var forest_stamp: int = Chunks.local_landscape_signature(
+        terrain,observed,restrict_to_observed,"forest",divisions)
+    if forest_stamp != _forest_signature:
+        _generate_forest()
+        _forest_signature = forest_stamp
+        _forest_build_count += 1
+    else:
+        _forest_reuse_count += 1
+    var bridge_stamp: int = Chunks.local_landscape_signature(
+        terrain,observed,restrict_to_observed,"road",divisions)
+    if bridge_stamp != _bridges_signature:
+        _generate_bridges()
+        _bridges_signature = bridge_stamp
+    else:
+        _bridge_reuse_count += 1
     if fit_camera:
         _fit_camera()
-    _last_build_us = Time.get_ticks_usec()-build_started_us
+    _last_build_us = Time.get_ticks_usec()-started
+
 
 func _get_crown_mesh(profile: int) -> ArrayMesh:
     var key: int = profile*2+(1 if divisions >= 4 else 0)
@@ -220,13 +332,35 @@ func environment_metrics() -> Dictionary:
     var figures := _vegetation_stats.duplicate()
     figures["build_ms"] = float(_last_build_us)/1000.0
     figures["quality_divisions"] = divisions
-    figures["ground_triangles"] = _triangles_per_instance(_ground.mesh)
-    figures["water_triangles"] = _triangles_per_instance(_water.mesh)
-    figures["shore_triangles"] = _triangles_per_instance(_banks.mesh)
-    figures["approx_total_triangles"] = int(
-        figures["ground_triangles"])+int(figures["water_triangles"])+(
-        int(figures["shore_triangles"])+int(
-        figures.get("vegetation_triangles",0)))
+    var ground_triangles := 0
+    var water_triangles := 0
+    var shore_triangles := 0
+    if restrict_to_observed:
+        for key in _chunk_parts:
+            var parts: Array = _chunk_parts[key]
+            ground_triangles += _triangles_per_instance(
+                (parts[0] as MeshInstance3D).mesh)
+            water_triangles += _triangles_per_instance(
+                (parts[1] as MeshInstance3D).mesh)
+            shore_triangles += _triangles_per_instance(
+                (parts[2] as MeshInstance3D).mesh)
+    else:
+        ground_triangles = _triangles_per_instance(_ground.mesh)
+        water_triangles = _triangles_per_instance(_water.mesh)
+        shore_triangles = _triangles_per_instance(_banks.mesh)
+    figures["ground_triangles"] = ground_triangles
+    figures["water_triangles"] = water_triangles
+    figures["shore_triangles"] = shore_triangles
+    figures["approx_total_triangles"] = ground_triangles+(
+        water_triangles+shore_triangles+
+        int(figures.get("vegetation_triangles",0)))
+    figures["fog_chunks_total"] = _last_chunks_total
+    figures["fog_chunks_updated"] = _last_chunks_updated
+    figures["forest_build_count"] = _forest_build_count
+    figures["forest_reuse_count"] = _forest_reuse_count
+    figures["bridge_reuse_count"] = _bridge_reuse_count
+    figures["skipped_unchanged_updates"] = _skipped_view_updates
+    figures["dynamic_canopy_shadows"] = divisions >= 4
     return figures
 
 func _generate_forest() -> void:
