@@ -100,6 +100,7 @@ var unit_art_gallery: Control
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
+var three_d_view_button: Button
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -385,6 +386,12 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    three_d_view_button = Button.new()
+    three_d_view_button.text = "Vista 3D · Experimental"
+    three_d_view_button.custom_minimum_size.y = 46
+    three_d_view_button.tooltip_text = "Alterna terreno y unidades 3D en la batalla actual, sin cambiar reglas ni guardados"
+    three_d_view_button.pressed.connect(_toggle_battle_3d_view)
+    panel.add_child(three_d_view_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -2305,6 +2312,8 @@ func _toggle_battery_saver() -> void:
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
+    if three_d_view_button != null:
+        three_d_view_button.text = "Vista 3D · Experimental"
     board.frame_player_force()
     iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
@@ -2312,6 +2321,14 @@ func _toggle_isometric_view() -> void:
     _save_display_preferences()
     if command_menu != null:
         command_menu.refresh_settings_controls()
+
+func _toggle_battle_3d_view() -> void:
+    board.set_3d_view(not board.three_d_enabled)
+    if three_d_view_button != null:
+        three_d_view_button.text = "Volver a vista isométrica" if board.three_d_enabled else "Vista 3D · Experimental"
+    iso_view_button.text = "Vista clásica" if board.iso_enabled else "Vista isométrica"
+    camera_reset.text = "Centrar cámara 3D" if board.three_d_enabled else ("Centrar isométrico" if board.iso_enabled else "Centrar cámara")
+    _apply_minimap_visibility()
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
