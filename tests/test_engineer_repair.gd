@@ -7,6 +7,8 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const AI = preload("res://scripts/core/BasicAI.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 func _initialize() -> void:
     var engineer: Dictionary = Roles.make_unit("ENG",0,Vector2i(2,2),"engineer")
@@ -96,5 +98,45 @@ func _initialize() -> void:
     blocked["opening"] = {"starter":0,"used":2,"limit":2}
     assert(not Session.repair(blocked,"ENG","TANK")["valid"])
 
-    print("PASS engineer repair: paid 3HP cap, partial budgets, no free heal, one action, live save, rules and opening")
+    # The computer must use exactly the player's paid mechanic, with
+    # economic judgment: repair valuable armor, not everything indiscriminately.
+    var ai_game: Dictionary = original.duplicate(true)
+    ai_game["units"][1]["hp"] = 5
+    var unchanged_ai: Dictionary = ai_game.duplicate(true)
+    var ai_action: Dictionary = AI.step(ai_game)
+    assert(ai_action["valid"] and ai_action["action"] == "repair")
+    assert(ai_action["reason"] == "economic_maintenance")
+    assert(ai_action["unit_id"] == "ENG" and ai_action["target_id"] == "TANK")
+    assert(int(ai_action["state"]["economy"]["credits"][0]) ==
+        Economy.MODERN_START_CREDITS-105)
+    assert(ai_action["state"]["units"][1]["hp"] == 8)
+    assert(ai_game == unchanged_ai and Codec.decode(Codec.encode(ai_action["state"])) == ai_action["state"])
+
+    # When the repair is no longer affordable, AI cannot fabricate resources.
+    var ai_broke: Dictionary = ai_game.duplicate(true)
+    ai_broke["economy"]["credits"][0] = 0
+    assert(str(AI.step(ai_broke).get("action","none")) != "repair")
+    var low_value: Dictionary = ai_game.duplicate(true)
+    low_value["units"][1] = Roles.make_unit("TANK",0,Vector2i(3,2),"bulwark")
+    low_value["units"][1]["hp"] = 5
+    assert(str(AI.step(low_value).get("action","none")) != "repair")
+
+    # All planning uses own visible data only, never hidden enemy HP/treasury.
+    var fog: Dictionary = Session.start([engineer,tank,rival],
+        Scenarios.terrain(0),0,true,false,true,true)
+    fog["units"][1]["hp"] = 5
+    var faked_intel: Dictionary = fog.duplicate(true)
+    faked_intel["units"][2]["hp"] = 1
+    faked_intel["units"][2]["pos"] = Vector2i(9,6)
+    faked_intel["economy"]["credits"][1] = 99999
+    assert(not Visibility.is_unit_visible(fog,0,"ENEMY"))
+    assert(not Visibility.is_unit_visible(faked_intel,0,"ENEMY"))
+    var fog_a: Dictionary = AI.step(fog)
+    var fog_b: Dictionary = AI.step(faked_intel)
+    assert(fog_a["valid"] and fog_a["action"] == "repair")
+    assert(fog_b["valid"] and fog_b["action"] == "repair")
+    assert(fog_a["target_id"] == fog_b["target_id"])
+    assert(fog_a["cost"] == fog_b["cost"])
+
+    print("PASS engineer repair: paid 3HP cap, budget, saves, AI valuation, fog privacy, turn guards")
     quit(0)
