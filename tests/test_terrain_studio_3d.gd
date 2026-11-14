@@ -36,6 +36,47 @@ func _run() -> void:
     assert(studio.model_root.find_child("OrillaConPendienteV3_*",true,false) != null)
     assert(studio.terrain_premium_toggle.button_pressed)
     assert(studio.model_root.get_meta("terrain_premium_finish_v4",false))
+    assert(studio.terrain_coast_toggle.button_pressed)
+    assert(studio.model_root.get_meta("terrain_organic_coast_v5",false))
+    var coast: Dictionary = studio.model_root.get_meta("terrain_coast_v5_stats")
+    assert(int(coast.get("edges",0)) > 2)
+    assert(int(coast.get("triangles",0)) > 30)
+    assert(int(coast.get("ripples",0)) > 0)
+    assert(studio.model_root.find_child("RiberaEsculpidaV5",true,false) != null)
+    assert(studio.model_root.find_child("TransicionAguaSomeraV5",true,false) != null)
+    assert(studio.model_root.find_child("DestellosDeMareaV5",true,false) != null)
+    for i in range(6):
+        await process_frame
+    var v5_capture: Image = studio.preview.get_texture().get_image()
+    assert(v5_capture != null and not v5_capture.is_empty())
+    studio.terrain_coast_toggle.button_pressed = false
+    studio._rebuild_terrain(false)
+    assert(not studio.model_root.get_meta("terrain_organic_coast_v5",false))
+    assert(studio.model_root.find_child("RiberaEsculpidaV5",true,false) == null)
+    for i in range(6):
+        await process_frame
+    var v4_capture: Image = studio.preview.get_texture().get_image()
+    assert(v4_capture != null and not v4_capture.is_empty())
+    var coast_old: Image = v4_capture.duplicate()
+    var coast_new: Image = v5_capture.duplicate()
+    coast_old.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    coast_new.resize(480,330,Image.INTERPOLATE_LANCZOS)
+    var coastline_pixels: int = 0
+    for py in range(0,330,4):
+        for px in range(0,480,4):
+            var old_pixel: Color = coast_old.get_pixel(px,py)
+            var new_pixel: Color = coast_new.get_pixel(px,py)
+            if absf(old_pixel.r-new_pixel.r)+absf(old_pixel.g-new_pixel.g)+absf(old_pixel.b-new_pixel.b) > 0.09:
+                coastline_pixels += 1
+    assert(coastline_pixels > 25)
+    var coast_ab := Image.create(960,330,false,Image.FORMAT_RGBA8)
+    coast_ab.blit_rect(coast_old,Rect2i(0,0,480,330),Vector2i.ZERO)
+    coast_ab.blit_rect(coast_new,Rect2i(0,0,480,330),Vector2i(480,0))
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(coast_ab.save_png("res://artifacts/tarvoka_terrain_v4_v5_coast_comparison.png") == OK)
+    studio.terrain_coast_toggle.button_pressed = true
+    studio._rebuild_terrain(true)
+
     var finish_stats: Dictionary = studio.model_root.get_meta("terrain_premium_stats")
     assert(int(finish_stats.get("geology",0)) > 10)
     assert(int(finish_stats.get("foliage",0)) > 20)

@@ -8,6 +8,7 @@ on:
       - "scripts/ui/TerrainStudio3D.gd"
       - "scripts/ui/TerrainTextures3D.gd"
       - "scripts/ui/TerrainStudioPremiumFinish3D.gd"
+      - "scripts/ui/TerrainStudioOrganicCoast3D.gd"
       - "scripts/ui/TerrainSurfaceSampler3D.gd"
       - "scripts/ui/TerrainStudioScatter3D.gd"
       - "scripts/ui/TerrainStudioRoadShore3D.gd"
@@ -221,6 +222,7 @@ jobs:
           test -s artifacts/tarvoka_terrain_v1_v2_same_camera.png
           test -s artifacts/tarvoka_terrain_pbr_comparison.png
           test -s artifacts/tarvoka_terrain_v4_premium_comparison.png
+          test -s artifacts/tarvoka_terrain_v4_v5_coast_comparison.png
           test -s artifacts/tarvoka_terrain_v2_v3_same_camera.png
           timeout --signal=TERM --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
@@ -277,6 +279,7 @@ jobs:
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_pbr_comparison.png
             artifacts/tarvoka_terrain_v4_premium_comparison.png
+            artifacts/tarvoka_terrain_v4_v5_coast_comparison.png
             artifacts/tarvoka_terrain_v2_v3_same_camera.png
             artifacts/tarvoka_headquarters_web_studio.png
             artifacts/tarvoka_headquarters_v1_v2_comparison.png
