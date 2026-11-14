@@ -1900,6 +1900,7 @@ func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
         balance_picker.select(1 if board.symmetric_setup else 0)
         roster_picker.select(2 if board.modern_roster else (1 if board.specialized_roster else 0))
         fog_picker.select(1 if board.state.get("fog_enabled", false) else 0)
+        weather_picker.select(Weather.TYPES.find(Weather.from_state(board.state)))
         relay_picker.select(1 if board.state.has("control") else 0)
         economy_picker.select(1 if board.state.has("economy") else 0)
         if board.state.has("map_seed"):
