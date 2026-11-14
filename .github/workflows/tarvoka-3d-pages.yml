@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/hq-v17-commercial-weather-terrain-20261114
-      - feat/terrain-studio-v14-silhouettes-20261114
+      - feat/terrain-studio-v15-foothills-outcrops-20261114
       - feat/g09-v26-battle-lighting-terrain-qa-20261114
       - feat/g09-v28-single-design-adaptive-quality-20261114
 
@@ -126,13 +126,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out verified V14 connected mountain spines and confirmed battle 3D
+      - name: Check out verified V15 foothills and battle 3D studio
         uses: actions/checkout@v4
         with:
-          ref: feat/terrain-studio-v14-silhouettes-20261114
+          ref: feat/terrain-studio-v15-foothills-outcrops-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export Battle and Sculpted Mountain Terrain V14 to the existing /batalla/ viewer
+      - name: Export Battle and Organic Foothill Terrain V15 to existing /batalla/ viewer
         shell: bash
         run: |
           set -euo pipefail
@@ -145,6 +145,11 @@ jobs:
           test -s battle-source/scripts/ui/TerrainStudioEcotonesV8.gd
           test -s battle-source/scripts/ui/TerrainStudioMaterialsV9.gd
           test -s battle-source/scripts/ui/TerrainStudioRidgeV10.gd
+          test -s battle-source/scripts/ui/TerrainStudioFoothillsV11.gd
+          test -s battle-source/tests/test_terrain_studio_v15_foothills.gd
+          grep -q 'ComparadorTerrenoV10V11' battle-source/scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'TaludesTransicionV11' battle-source/scripts/ui/TerrainStudioFoothillsV11.gd
+          grep -q 'AfloramientosDeValleV11' battle-source/scripts/ui/TerrainStudioFoothillsV11.gd
           test -s battle-source/tests/test_terrain_studio_v14_silhouettes.gd
           grep -q 'ComparadorTerrenoV9V10' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'VistaPerfilCordilleraV10' battle-source/scripts/ui/CombinedArtStudioWeb.gd
