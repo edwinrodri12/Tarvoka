@@ -233,6 +233,7 @@ jobs:
           fi
           grep -q 'PASS TERRAIN_STUDIO_V9:' /tmp/terrain-studio-v9.log
           test -s artifacts/tarvoka_terrain_v5_delta_studio.png
+          test -s artifacts/tarvoka_terrain_v4_v5_same_camera.png
       - name: Verify 3D terrain slopes and roads across all biomes
         shell: bash
         run: |
@@ -435,6 +436,7 @@ jobs:
             artifacts/tarvoka_web_3d_studio.png
             artifacts/tarvoka_terrain_studio_3d.png
             artifacts/tarvoka_terrain_v5_delta_studio.png
+            artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png
             artifacts/tarvoka_terrain_v2_v3_same_camera.png
