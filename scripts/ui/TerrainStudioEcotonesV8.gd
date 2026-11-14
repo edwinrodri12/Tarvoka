@@ -5,6 +5,7 @@ class_name TarvokaTerrainStudioEcotonesV8
 # grid, collision, fuel, movement, water or save dictionaries. Two batched
 # surfaces maximum across the entire 12x10 artistic study.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
 const NEIGHBORS := [
     Vector2i(-1,0),Vector2i(1,0),Vector2i(0,-1),Vector2i(0,1)]
 
@@ -41,7 +42,7 @@ static func _finish(parent: Node3D,label: String,
     return node
 
 static func _talus(tool: SurfaceTool, cell: Dictionary, toward: Vector2i,
-        scene: int, seed: int) -> int:
+        scene: int, seed: int, toned: bool = false) -> int:
     # Small angular scree banks radiate FROM a mountain neighbor onto
     # safe non-road land, without forming flat rectangular tile borders.
     var direction := Vector2(float(toward.x),float(toward.y))
@@ -65,16 +66,19 @@ static func _talus(tool: SurfaceTool, cell: Dictionary, toward: Vector2i,
         var c: Vector3 = _ground(cell,center+spread*radius*0.76,0.023)
         p.y += radius*(0.33+0.62*_hash(seed+i*11))
         var shade: float = 0.06+0.17*_hash(seed+i*7)
-        _triangle(tool,a,b,p,mineral.darkened(shade),
+        var tint: Color = MaterialsV9.edge_color(
+            mineral,p,scene,false) if toned else mineral
+        _triangle(tool,a,b,p,tint.darkened(shade),
             mineral.darkened(0.08),mineral.lightened(0.07))
-        _triangle(tool,b,c,p,mineral.darkened(0.16),
-            mineral.lightened(0.06),mineral)
-        _triangle(tool,c,a,p,mineral, mineral.darkened(0.08),
-            mineral.lightened(0.12))
+        _triangle(tool,b,c,p,tint.darkened(0.16),
+            tint.lightened(0.06),tint)
+        _triangle(tool,c,a,p,tint,tint.darkened(0.08),
+            tint.lightened(0.12))
     return count
 
 static func _undergrowth(tool: SurfaceTool, cell: Dictionary,
-        facing: Vector2i, scene: int, seed: int) -> int:
+        facing: Vector2i, scene: int, seed: int,
+        toned: bool = false) -> int:
     # A transitional forest belt, not three identical bushes at every
     # corner. The band fades into the neighboring open biome.
     var direction := Vector2(float(facing.x),float(facing.y))
@@ -99,12 +103,15 @@ static func _undergrowth(tool: SurfaceTool, cell: Dictionary,
             (_hash(seed+i*47)-0.5)*0.11,height,
             (_hash(seed+i*53)-0.5)*0.11)
         var tint: Color = greens[posmod(seed+i,greens.size())]
+        if toned:
+            tint = MaterialsV9.edge_color(tint,p,scene,true)
         _triangle(tool,a,b,tip,tint.darkened(0.17),
             tint.darkened(0.06),tint.lightened(0.15))
     return count
 
 static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
-        talus: bool = true,ecotone: bool = true) -> Dictionary:
+        talus: bool = true,ecotone: bool = true,
+        toned: bool = false) -> Dictionary:
     var by_cell: Dictionary = {}
     for cell in cells:
         by_cell[Vector2i(int(cell["x"]),int(cell["z"]))] = cell
@@ -139,11 +146,11 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
                 continue
             var seed: int = base_seed+direction.x*151+direction.y*71
             if next_type == "mountain" and talus:
-                mineral_pieces += _talus(mineral_mesh,cell,direction,scene,seed)
+                mineral_pieces += _talus(mineral_mesh,cell,direction,scene,seed,toned)
                 transition_edges += 1
             if ecotone and (next_type == "forest" and type == "plain" or
                     next_type == "plain" and type == "forest"):
-                plants += _undergrowth(plant_mesh,cell,direction,scene,seed)
+                plants += _undergrowth(plant_mesh,cell,direction,scene,seed,toned)
                 transition_edges += 1
     var batches := 0
     if mineral_pieces > 0:
@@ -156,6 +163,6 @@ static func populate(parent: Node3D,cells: Array[Dictionary],scene: int,
         "transition_edges":transition_edges,
         "scree_stones":mineral_pieces,"undergrowth":plants,
         "water_edges_skipped":touches_water,"roads_skipped":touches_road,
-        "batches":batches}
+        "toned":toned and batches>0,"batches":batches}
     parent.set_meta("terrain_ecotones_v8",stats)
     return stats
