@@ -10,7 +10,7 @@ on:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA"]
     types: [completed]
     branches:
-      - feat/hq-v22-progressive-fire-antennas-20261114
+      - feat/hq-v23-smoke-combat-bridge-android-20261114
       - fix/terrain-v18b-direct-mountain-material-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -36,7 +36,7 @@ jobs:
       - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/hq-v22-progressive-fire-antennas-20261114
+          ref: feat/hq-v23-smoke-combat-bridge-android-20261114
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/hq-v22-progressive-fire-antennas-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v22-progressive-fire-antennas-20261114)"
+          test "$(git branch --show-current)" = "feat/hq-v23-smoke-combat-bridge-android-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/hq-v23-smoke-combat-bridge-android-20261114)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -107,6 +107,15 @@ jobs:
           test -s scripts/ui/HeadquartersDamageV22.gd
           test -s scripts/ui/HeadquartersFireV22.gd
           test -s tests/test_hq_v22_progressive_damage_fire.gd
+          test -s scripts/ui/HeadquartersSmokeV23.gd
+          test -s scripts/ui/HeadquartersCombatVisualV23.gd
+          test -s assets/shaders/hq_volumetric_smoke_v23.gdshader
+          test -s tests/test_hq_v23_smoke_combat_bridge.gd
+          grep -q 'HQSmokeV23.build(damage_stage)' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'volume.set_distant(distant)' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'accept_confirmed_structure_hit' scripts/ui/HeadquartersCombatVisualV23.gd
+          grep -q 'noise' assets/shaders/hq_volumetric_smoke_v23.gdshader
+          ! grep -q 'assert(HQSmokeV23.build' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'AntenasDerribadasPorImpactosLevesV22' scripts/ui/HeadquartersDamageV22.gd
           grep -q 'TechoRotoYVariosPanelesDesprendidosV22' scripts/ui/HeadquartersDamageV22.gd
           grep -q 'AlaCompletamenteHundidaAntesDeDestruccionV22' scripts/ui/HeadquartersDamageV22.gd
