@@ -11,6 +11,7 @@ on:
       - 'tests/test_landscape_only_ui.gd'
       - 'tests/test_landscape_command_results.gd'
       - 'tests/test_army_production_landscape.gd'
+      - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
       - 'tests/test_unit_art.gd'
       - 'tests/test_display_preferences.gd'
@@ -31,6 +32,7 @@ on:
       - 'tests/test_landscape_only_ui.gd'
       - 'tests/test_landscape_command_results.gd'
       - 'tests/test_army_production_landscape.gd'
+      - 'tests/test_road_command_menu.gd'
       - 'tests/test_tactical_briefing.gd'
       - 'tests/test_unit_art.gd'
       - 'tests/test_display_preferences.gd'
@@ -65,6 +67,7 @@ jobs:
             test_landscape_only_ui \
             test_landscape_command_results \
             test_army_production_landscape \
+            test_road_command_menu \
             test_tactical_briefing \
             test_unit_art \
             test_display_preferences \
