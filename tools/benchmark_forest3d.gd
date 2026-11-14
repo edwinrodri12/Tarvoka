@@ -73,7 +73,40 @@ func _run() -> void:
         print("BENCH forest3d %dx%d full=%s mobile=%s" % [
             size.x,size.y,str(full["approx_total_triangles"]),
             str(mobile["approx_total_triangles"])])
+    # A real local reveal on 40x30 measures the new chunk update.
+    # These are software-renderer CPU figures, never Android FPS.
+    var fog_grid: Array = _sample_grid(Vector2i(40,30))
+    var known: Dictionary = {}
+    for y in range(20):
+        for x in range(21):
+            known[Vector2i(x,y)] = true
+    lab.call("set_battle_terrain",fog_grid,known,true,3)
+    var fog_initial: Dictionary = lab.call("environment_metrics")
+    var enlarged: Dictionary = known.duplicate()
+    enlarged[Vector2i(38,28)] = true
+    lab.call("set_battle_terrain",fog_grid,enlarged,true,3)
+    var fog_reveal: Dictionary = lab.call("environment_metrics")
+    assert(int(fog_initial["fog_chunks_updated"]) > 1)
+    assert(int(fog_reveal["fog_chunks_updated"]) > 0)
+    assert(int(fog_reveal["fog_chunks_updated"]) <= 4)
+    assert(int(fog_reveal["fog_chunks_updated"]) < (
+        int(fog_reveal["fog_chunks_total"])))
+    var fog_delta: Dictionary = {
+        "map":"40x30",
+        "renderer":"mobile 3D",
+        "initial_visible_cells":known.size(),
+        "revealed_visible_cells":enlarged.size(),
+        "initial_chunks_generated":fog_initial["fog_chunks_updated"],
+        "total_chunks":fog_reveal["fog_chunks_total"],
+        "changed_chunks_rebuilt":fog_reveal["fog_chunks_updated"],
+        "initial_build_ms_runner":fog_initial["build_ms"],
+        "local_reveal_build_ms_runner":fog_reveal["build_ms"]
+    }
+    print("BENCH fog chunks %s/%s after local reveal" % [
+        str(fog_delta["changed_chunks_rebuilt"]),
+        str(fog_delta["total_chunks"])])
     var report := {
+        "fog_incremental":fog_delta,
         "measurement":"Godot 4.3 geometry and CPU rebuild time",
         "environment":"GitHub Actions x86_64 Mesa software OpenGL",
         "not_android_fps":true,
