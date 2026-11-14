@@ -7,6 +7,7 @@ const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
+const HQWayfindingV18 = preload("res://scripts/ui/HeadquartersWayfindingV18.gd")
 const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
@@ -41,6 +42,7 @@ var hq_weather_picker: OptionButton
 var hq_terrain_picker: OptionButton
 var hq_climate_stage: Node3D
 var hq_climate_status: Label
+var hq_wayfinding_toggle: CheckButton
 var _hq_weather_time := 0.0
 var hq_camera_picker: OptionButton
 var _hq_camera_preset := 0
@@ -160,6 +162,25 @@ func _apply_hq_lighting(index: int) -> void:
             hq_fill_light.light_energy *= 0.90
             scene.background_color = scene.background_color.lerp(Color("#8c9da9"),0.56)
             scene.ambient_light_color = scene.ambient_light_color.lerp(Color("#dce6ec"),0.52)
+    _sync_hq_wayfinding_v18()
+
+func _sync_hq_wayfinding_v18() -> void:
+    if _role != "headquarters" or model_root == null or hq_wayfinding_toggle == null:
+        return
+    var lamps: Node3D = model_root.get_node_or_null(HQWayfindingV18.STAGE_NAME) as Node3D
+    if lamps == null:
+        return
+    var level: int = level_picker.selected + 1
+    var condition: String = str(BUILDING_STATES[building_state_picker.selected])
+    var weather: String = "clear"
+    if hq_weather_picker != null and hq_weather_picker.selected >= 0:
+        weather = str(HQClimateV17.WEATHERS[hq_weather_picker.selected])
+    assert(HQWayfindingV18.apply(lamps,_faction,level,condition,
+        _hq_light_preset,weather,hq_wayfinding_toggle.button_pressed,
+        hq_map_lod_toggle.button_pressed))
+
+func _change_hq_wayfinding_v18(_enabled: bool) -> void:
+    _sync_hq_wayfinding_v18()
 
 func _change_hq_lighting(index: int) -> void:
     _apply_hq_lighting(index)
@@ -404,6 +425,12 @@ func _add_building_mode() -> void:
     hq_lighting_picker.select(0)
     hq_lighting_picker.item_selected.connect(_change_hq_lighting)
     building_controls.add_child(hq_lighting_picker)
+    hq_wayfinding_toggle = CheckButton.new()
+    hq_wayfinding_toggle.name = "SenalizacionArquitectonicaHQV18"
+    hq_wayfinding_toggle.text = "V18 · Accesos iluminados y balizas 3D agrupadas"
+    hq_wayfinding_toggle.button_pressed = true
+    hq_wayfinding_toggle.toggled.connect(_change_hq_wayfinding_v18)
+    building_controls.add_child(hq_wayfinding_toggle)
     _title(building_controls,"ENCUADRE PARA REVISAR LA SILUETA",13)
     hq_camera_picker = OptionButton.new()
     hq_camera_picker.name = "EncuadreDeBatallaHQ"
@@ -672,6 +699,7 @@ func _change_building_batch(_enabled: bool) -> void:
 func _set_hq_map_lod(distant: bool) -> void:
     if _role == "headquarters" and _hq_show_v4 and model_root != null:
         HQMapLOD.set_distant(model_root,distant)
+        _sync_hq_wayfinding_v18()
         _update_details()
 
 func _refresh_building_faction(_index: int) -> void:
@@ -750,7 +778,10 @@ func _display_headquarters() -> void:
             HQMapLOD.set_distant(model_root,hq_map_lod_toggle.button_pressed)
     assert(model_root != null)
     preview.add_child(model_root)
+    if model_root.get_meta("tarvoka_hq_visual_v12",false):
+        model_root.add_child(HQWayfindingV18.build())
     _apply_hq_climate_v17()
+    _sync_hq_wayfinding_v18()
     if initial:
         _yaw = 32.0
         _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
