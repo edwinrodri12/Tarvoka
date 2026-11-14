@@ -5,6 +5,12 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const TerrainStudio = preload("res://scripts/ui/TerrainStudio3D.gd")
+const BattleTerrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const BattleRanges = preload("res://scripts/ui/BattleRanges3D.gd")
+const BattleBoard = preload("res://scripts/ui/TouchBoard.gd")
+const BattleFull = preload("res://scripts/ui/Battle3DMapView.gd")
+const BattleScenarios = preload("res://scripts/core/Scenarios.gd")
+const BattleOrders = preload("res://scripts/ui/Battle3DOrders.gd")
 const BUILDING_STATES := ["operativo","capturado","danado","destruido"]
 
 var category_picker: OptionButton
@@ -13,6 +19,18 @@ var level_picker: OptionButton
 var building_state_picker: OptionButton
 var building_controls: VBoxContainer
 var terrain_controls: VBoxContainer
+var battle_controls: VBoxContainer
+var battle_scenario_picker: OptionButton
+var battle_size_picker: OptionButton
+var battle_fog_toggle: CheckButton
+var battle_modern_toggle: CheckButton
+var battle_sample_board: Control
+var battle_full_view: Control
+var battle_launch_button: Button
+var battle_reset_button: Button
+var battle_guidance: Label
+var _battle_seed: int = 22435
+var _battle_panoramic_center := Vector3.ZERO
 var terrain_scene_picker: OptionButton
 var terrain_light_picker: OptionButton
 var terrain_shadow_toggle: CheckButton
@@ -43,6 +61,7 @@ func _add_building_mode() -> void:
     category_picker.add_item("UNIDADES 3D")
     category_picker.add_item("EDIFICIOS 3D")
     category_picker.add_item("ENTORNO Y MAPA 3D")
+    category_picker.add_item("BATALLA 3D · INTERACTIVA")
     category_picker.select(0)
     category_picker.item_selected.connect(_switch_category)
     column.add_child(category_picker)
@@ -169,10 +188,74 @@ func _add_building_mode() -> void:
         + "Usa girar, acercar y restablecer cámara.",12)
     terrain_controls.visible = false
 
+    # Fourth Studio category: a sandbox copy of the REAL Android battle
+    # state, with no autosave or AI. The preview shares the established
+    # WebGL Godot camera, while the fullscreen view reuses V5–V7 picking,
+    # drag/zoom and safe confirmed combat orders.
+    battle_controls = VBoxContainer.new()
+    battle_controls.name = "OpcionesDeBatalla3D"
+    battle_controls.add_theme_constant_override("separation",8)
+    column.add_child(battle_controls)
+    _title(battle_controls,"CAMPO DE BATALLA 3D",14)
+    battle_scenario_picker = OptionButton.new()
+    battle_scenario_picker.name = "EscenarioBatalla3D"
+    battle_scenario_picker.custom_minimum_size.y = 50
+    for caption in BattleScenarios.LABELS:
+        battle_scenario_picker.add_item(caption)
+    battle_scenario_picker.add_item("Mapa aleatorio · semilla 22435")
+    battle_scenario_picker.selected = 1
+    battle_controls.add_child(battle_scenario_picker)
+    battle_size_picker = OptionButton.new()
+    battle_size_picker.name = "TamanoBatalla3D"
+    battle_size_picker.custom_minimum_size.y = 50
+    for caption in ["10 × 8 · rápido","24 × 18 · mediano","40 × 30 · grande"]:
+        battle_size_picker.add_item(caption)
+    battle_size_picker.select(0)
+    battle_controls.add_child(battle_size_picker)
+    battle_fog_toggle = CheckButton.new()
+    battle_fog_toggle.name = "NieblaDeGuerra3D"
+    battle_fog_toggle.text = "Niebla de guerra real"
+    battle_fog_toggle.button_pressed = true
+    battle_controls.add_child(battle_fog_toggle)
+    battle_modern_toggle = CheckButton.new()
+    battle_modern_toggle.name = "UnidadesModernas3D"
+    battle_modern_toggle.text = "Tanques, infantería y aeronaves"
+    battle_modern_toggle.button_pressed = true
+    battle_controls.add_child(battle_modern_toggle)
+    battle_reset_button = _button(battle_controls,
+        "CREAR / REINICIAR MAPA 3D",_reset_battle_demo)
+    battle_reset_button.name = "ReiniciarPartida3DEstudio"
+    battle_reset_button.custom_minimum_size.y = 50
+    battle_launch_button = _button(battle_controls,
+        "ABRIR BATALLA 3D INTERACTIVA",_open_battle_fullscreen)
+    battle_launch_button.name = "AbrirBatalla3DDesdeEstudio"
+    battle_launch_button.custom_minimum_size.y = 58
+    battle_guidance = _title(battle_controls,
+        "Vista de laboratorio basada en la partida real de Godot. "
+        + "Abre el visor interactivo para tocar unidades y destinos, "
+        + "girar, acercar y confirmar movimientos o ataques. "
+        + "La demostración no modifica guardados de Android.",12)
+    battle_controls.hide()
+
+    # The battle simulation and interactive viewer are WebGL-compatible
+    # Godot nodes. Hidden parent 2D UI and autosave are disabled.
+    battle_sample_board = BattleBoard.new()
+    battle_sample_board.name = "PartidaDePruebaAislada"
+    battle_sample_board.ai_enabled = false
+    battle_sample_board.autosave_enabled = false
+    battle_sample_board.require_order_confirmation = true
+    battle_sample_board.visible = false
+    add_child(battle_sample_board)
+    battle_full_view = BattleFull.new()
+    battle_full_view.name = "PantallaBatalla3DDelEstudio"
+    add_child(battle_full_view)
+    battle_full_view.connect("focus_requested",_return_from_battle_fullscreen)
+
     # Place above the shared faction selector.
     var index: int = column.get_children().find(faction_picker)
     column.move_child(building_controls,maxi(0,index-1))
     column.move_child(terrain_controls,maxi(0,index-1))
+    column.move_child(battle_controls,maxi(0,index-1))
     faction_picker.item_selected.connect(_refresh_building_faction)
 
 func _toggle_hq_detail() -> void:
@@ -194,20 +277,24 @@ func _toggle_hq_finish() -> void:
         _display_headquarters()
 
 func _switch_category(index: int) -> void:
-    if index < 0 or index > 2:
+    if index < 0 or index > 3:
         return
     var building: bool = index == 1
     var terrain: bool = index == 2
+    var battle: bool = index == 3
     building_controls.visible = building
     terrain_controls.visible = terrain
+    battle_controls.visible = battle
     for widget in _unit_only_controls:
-        widget.visible = not building and not terrain
+        widget.visible = not building and not terrain and not battle
     faction_picker.visible = building or terrain
     if building:
         _restore_default_lighting()
         _display_headquarters()
     elif terrain:
         _display_terrain()
+    elif battle:
+        _display_battle()
     else:
         _restore_default_lighting()
         camera.position = Vector3(5.3,4.2,6.3)
@@ -292,6 +379,86 @@ func _display_terrain() -> void:
     _update_camera()
     _update_details()
 
+func _battle_dimensions() -> Vector2i:
+    match battle_size_picker.selected:
+        1:
+            return Vector2i(24,18)
+        2:
+            return Vector2i(40,30)
+    return Vector2i(10,8)
+
+func _reset_battle_demo() -> void:
+    # Keep each browser demo independent from the user's Android save,
+    # offline, and always requiring a separate confirmation.
+    var scenario: int = battle_scenario_picker.selected
+    var modern: bool = battle_modern_toggle.button_pressed
+    battle_sample_board.ai_enabled = false
+    battle_sample_board.autosave_enabled = false
+    battle_sample_board.require_order_confirmation = true
+    battle_sample_board.new_game(scenario,true,battle_fog_toggle.button_pressed,
+        modern,modern,modern,modern,0,_battle_seed,_battle_dimensions())
+    if _role == "battle":
+        _display_battle()
+
+func _preview_selected_unit() -> String:
+    var selected: String = str(battle_sample_board.selected_id)
+    if not selected.is_empty():
+        return selected
+    for unit in battle_sample_board.state.get("units",[]):
+        if unit is Dictionary and int(unit.get("faction",-1)) == 0 and \
+                int(unit.get("hp",0)) > 0:
+            selected = str(unit.get("id",""))
+            if BattleOrders.select(battle_sample_board,selected):
+                return selected
+    return ""
+
+func _display_battle() -> void:
+    if preview == null:
+        return
+    var initial: bool = _role != "battle"
+    _stop_animation()
+    if initial:
+        _reset_battle_demo()
+    if model_root != null:
+        preview.remove_child(model_root)
+        model_root.queue_free()
+    _role = "battle"
+    var selected: String = _preview_selected_unit()
+    model_root = BattleTerrain.build(battle_sample_board.state,selected)
+    if model_root == null:
+        status_label.text = "No se pudo construir el mapa de batalla 3D."
+        return
+    var dims: Vector2i = model_root.get_meta("board_size")
+    _battle_panoramic_center = Vector3(
+        float(dims.x-1)*BattleTerrain.CELL*0.5,0,
+        float(dims.y-1)*BattleTerrain.CELL*0.5)
+    # The tactical engine's original coordinates remain unchanged. Only
+    # the exhibited model is centered for the shared rotating studio camera.
+    model_root.position = -_battle_panoramic_center
+    preview.add_child(model_root)
+    var cells: Dictionary = model_root.get_meta("public_cells")
+    BattleRanges.build(model_root,battle_sample_board.state,selected,cells)
+    if initial:
+        _yaw = -32.0
+        _zoom = 1.0
+    _apply_terrain_lighting()
+    _update_camera()
+    _update_details()
+
+func _open_battle_fullscreen() -> void:
+    if battle_full_view == null or battle_sample_board == null:
+        return
+    # The Studio preview and fullscreen battle share a sandbox state, but
+    # only the latter can issue orders. No real player save is read/written.
+    preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
+    if not bool(battle_full_view.call("open_from_board",battle_sample_board)):
+        preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+func _return_from_battle_fullscreen(_cell: Vector2i) -> void:
+    preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    if _role == "battle":
+        _display_battle()
+
 func _change_building_variant(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -329,6 +496,17 @@ func _display_headquarters() -> void:
     _update_details()
 
 func _update_camera() -> void:
+    if _role == "battle":
+        if camera == null or model_root == null:
+            return
+        var dims: Vector2i = model_root.get_meta("board_size",Vector2i(10,8))
+        var span: float = float(maxi(dims.x,dims.y))*BattleTerrain.CELL
+        camera.size = span*1.24/_zoom
+        var angle: float = deg_to_rad(_yaw)
+        camera.position = Vector3(sin(angle)*span*0.78,
+            span*0.98,cos(angle)*span*0.78)
+        camera.look_at(Vector3(0,0.08,0),Vector3.UP)
+        return
     if _role == "terrain":
         if camera != null:
             camera.size = 30.5 / _zoom
@@ -340,6 +518,20 @@ func _update_camera() -> void:
     super._update_camera()
 
 func _update_details() -> void:
+    if _role == "battle":
+        if model_root == null:
+            return
+        var dims: Vector2i = model_root.get_meta("board_size")
+        var stats: Dictionary = model_root.get_meta("render_stats",{})
+        var units: Dictionary = stats.get("units",{})
+        detail_label.text = "BATALLA 3D · %d × %d · %d sectores · %d mallas reales" % [
+            dims.x,dims.y,int(stats.get("chunks",0)),
+            Models.inspect_meshes(model_root)]
+        status_label.text = "Unidades visibles %d · Detalladas %d · Niebla %d · Bosques %d · Caminos %d" % [
+            int(units.get("visible",0)),int(units.get("detailed",0)),
+            int(stats.get("unknown",0)),int(stats.get("trees",0)),
+            int(stats.get("roads",0))]
+        return
     if _role == "terrain":
         if model_root == null:
             return
@@ -372,3 +564,21 @@ func _update_details() -> void:
         str(Factions.FACTIONS[faction]["name"]),
         condition.capitalize(),
         Headquarters.paintable_count(model_root)]
+
+# The common Web studio orbit/zoom buttons remain available in battle mode;
+# unlike the model-gallery geometry, the grid MUST NOT rotate independently
+# of its logical world-coordinate axes.
+func _rotate(degrees: float) -> void:
+    if _role == "battle":
+        _yaw = fposmod(_yaw+degrees,360.0)
+        _update_camera()
+    else:
+        super._rotate(degrees)
+
+func _reset_camera() -> void:
+    if _role == "battle":
+        _yaw = -32.0
+        _zoom = 1.0
+        _update_camera()
+    else:
+        super._reset_camera()
