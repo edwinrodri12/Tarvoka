@@ -163,6 +163,12 @@ static func build_ground(grid: Array, observed: Dictionary = {},
                     count += 6
     if count == 0:
         return mesh
+    # Share duplicate vertices across adjacent triangles (including
+    # matching biome tiles) BEFORE generating normals. This replaces
+    # per-triangle flat shading with averaged slopes and reduces the
+    # number of unique vertices in mobile meshes without changing
+    # any triangle, world position, tactical cell or UV.
+    st.index()
     st.generate_normals()
     st.commit(mesh)
     var material := StandardMaterial3D.new()
