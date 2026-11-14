@@ -1,0 +1,20 @@
+name: TARVOKA Android signing contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/android-debug-apk.yml"
+      - ".github/workflows/android-signing-contract.yml"
+      - "tests/test_android_signing_contract.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signing-contract:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signing isolation and APK checks
+        run: python3 -m unittest discover -s tests -p 'test_android_signing_contract.py' -v
