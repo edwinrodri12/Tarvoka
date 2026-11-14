@@ -354,8 +354,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
             if role=="tank":
                 # The real final G09 V25 is the source at EVERY zoom.
                 # Quality changes only microdetails, shaders and shadows.
-                model = Models.build(role,faction,true,25)
-                art_level = 25
+                model = Models.build(role,faction,true,30)
+                art_level = 30
                 if model!=null and model.get_meta("tarvoka_mbt_wear_v25",false):
                     tank_count += 1
                     var qa: Dictionary = G09Quality.configure(
@@ -397,7 +397,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         model.set_meta("selected",selected)
         model.set_meta("battle_role",role)
         model.set_meta("battle_art_level",art_level)
-        model.set_meta("battle_g09_v25",role=="tank" and art_level==25)
+        model.set_meta("battle_g09_v25",role=="tank" and art_level>=25)
         parent.add_child(model)
         visible_count += 1
     return {
@@ -435,7 +435,7 @@ static func refresh_unit_lod(scene: Node3D,state: Dictionary,
         var selected: bool = unit_id==selected_id
         model.set_meta("selected",selected)
         if str(model.get_meta("battle_role",""))!="tank" or (
-                int(model.get_meta("battle_art_level",0))!=25):
+                int(model.get_meta("battle_art_level",0))<25):
             continue
         var quality: Dictionary = G09Quality.configure(
             model as Node3D,camera_size,selected,enable_g09_v25)
