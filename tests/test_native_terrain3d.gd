@@ -177,6 +177,29 @@ func _run() -> void:
     assert(lab_grid.size() == 10)
     assert((lab_grid[0] as Array).size() == 15)
     assert(Topology.bridge_axis(lab_grid,Vector2i(9,5)) == 1)
+    assert(str(lab_grid[5][9]) == "road")
+    assert(Terrain.water_outline(lab_grid,Vector2i(9,5)).is_empty())
+    var bridge_outline: PackedVector2Array = Terrain.bridge_water_outline(
+        lab_grid,Vector2i(9,5),{},false,8)
+    assert(bridge_outline.size() == 32)
+    assert(Terrain.bridge_water_outline(
+        lab_grid,Vector2i(8,5)).is_empty())
+    var river_mesh: ArrayMesh = Terrain.build_water(
+        lab_grid,{},false,8)
+    var river_vertices: PackedVector3Array = (
+        river_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+    var water_under_bridge := false
+    for point in river_vertices:
+        if point.distance_to(Vector3(9.5,Terrain.WATER_LEVEL,5.5)) < 0.0001:
+            water_under_bridge = true
+            break
+    assert(water_under_bridge)
+    # A hidden crossing must not leak a river or pier through the fog:
+    # without all four observed neighbor cells it is still tactical road.
+    var only_bridge_visible := {Vector2i(9,5):true}
+    assert(Terrain.bridge_water_outline(
+        lab_grid,Vector2i(9,5),only_bridge_visible,true).is_empty())
+    assert(str(lab_grid[5][9]) == "road")
     assert(Terrain.tactical_cell_from_world(grid,
         Vector3(1.4,31.0,2.7)) == Vector2i(1,2))
     assert(Terrain.tactical_cell_from_world(grid,
@@ -186,5 +209,5 @@ func _run() -> void:
     assert(grid_center.x == 2.5 and grid_center.z == 2.5)
     assert(Terrain.tactical_cell_from_world(grid,
         grid_center) == Vector2i(2,2))
-    print("PASS native terrain 3D: animated water foam, serrated pine LOD, visible banks, smooth rock, seamless biomes, fog-safe selection, 10x8/24x18/40x30")
+    print("PASS native terrain 3D: river flows under bridge, wave foam, conifer LOD, visible banks, smooth rock, fog-safe selection, 10x8/24x18/40x30")
     quit(0)
