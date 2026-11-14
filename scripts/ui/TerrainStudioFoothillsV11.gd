@@ -140,8 +140,8 @@ static func _outcrop(mesh: SurfaceTool, cell: Dictionary,
         for k in range(5):
             var angle: float = TAU*float(k)/5.0
             var edge: Vector2 = (
-                axis*cos(angle)+sideways*sin(angle))*
-                radius*(0.76+0.38*_hash(seed+i*41+k*7))
+                axis*cos(angle)+sideways*sin(angle)) * (
+                radius*(0.76+0.38*_hash(seed+i*41+k*7)))
             ring.append(_point(cell,offset+edge,0.027))
         for k in range(5):
             var c: Color = mineral.darkened(0.055*float(k%3))
