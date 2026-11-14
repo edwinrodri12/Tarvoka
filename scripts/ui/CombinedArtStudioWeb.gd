@@ -43,6 +43,10 @@ var terrain_aprons_v11_toggle: CheckButton
 var terrain_outcrops_v11_toggle: CheckButton
 var terrain_compare_v11_button: Button
 var _terrain_v11_enabled := true
+var terrain_deposits_v12_toggle: CheckButton
+var terrain_verges_v12_toggle: CheckButton
+var terrain_compare_v12_button: Button
+var _terrain_v12_enabled := true
 var terrain_silhouette_v10_toggle: CheckButton
 var terrain_compare_v10_button: Button
 var terrain_ridge_profile_button: Button
@@ -374,6 +378,24 @@ func _add_building_mode() -> void:
     terrain_compare_v11_button.name = "ComparadorTerrenoV10V11"
     terrain_compare_v11_button.custom_minimum_size.y = 50
 
+    _title(terrain_controls,"SEDIMENTOS Y CAMINOS DEL VALLE V12",13)
+    terrain_deposits_v12_toggle = CheckButton.new()
+    terrain_deposits_v12_toggle.name = "DepositosDeValleV12"
+    terrain_deposits_v12_toggle.text = "Aluviones minerales en valles y riberas"
+    terrain_deposits_v12_toggle.button_pressed = true
+    terrain_deposits_v12_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_deposits_v12_toggle)
+    terrain_verges_v12_toggle = CheckButton.new()
+    terrain_verges_v12_toggle.name = "ArcenesIntegradosV12"
+    terrain_verges_v12_toggle.text = "Márgenes naturales junto a carreteras"
+    terrain_verges_v12_toggle.button_pressed = true
+    terrain_verges_v12_toggle.toggled.connect(_rebuild_terrain)
+    terrain_controls.add_child(terrain_verges_v12_toggle)
+    terrain_compare_v12_button = _button(terrain_controls,
+        "COMPARAR: volver al acabado V11",_toggle_v12_finish)
+    terrain_compare_v12_button.name = "ComparadorTerrenoV11V12"
+    terrain_compare_v12_button.custom_minimum_size.y = 50
+
     _title(terrain_controls,"CAMARAS Y ENCUADRES",13)
     terrain_camera_picker = OptionButton.new()
     terrain_camera_picker.name = "CamarasDeTerreno"
@@ -635,7 +657,29 @@ func _change_terrain_light_toggle(_checked: bool) -> void:
     if _role == "terrain":
         _apply_terrain_lighting()
 
+func _disable_v12_finish() -> void:
+    _terrain_v12_enabled = false
+    terrain_compare_v12_button.text = "VOLVER A SEDIMENTOS V12"
+
+func _toggle_v12_finish() -> void:
+    _terrain_v12_enabled = not _terrain_v12_enabled
+    if _terrain_v12_enabled:
+        _terrain_v5_enabled = true
+        _terrain_v6_enabled = true
+        _terrain_v7_enabled = true
+        _terrain_v8_enabled = true
+        _terrain_v9_enabled = true
+        _terrain_v10_enabled = true
+        _terrain_v11_enabled = true
+        terrain_compare_v11_button.text = "COMPARAR: volver al acabado V10"
+        terrain_compare_v10_button.text = "COMPARAR: volver al relieve V9"
+    terrain_compare_v12_button.text = (
+        "COMPARAR: volver al acabado V11" if _terrain_v12_enabled
+        else "VOLVER A SEDIMENTOS V12")
+    _rebuild_terrain(false)
+
 func _toggle_v11_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = not _terrain_v11_enabled
     if _terrain_v11_enabled:
         _terrain_v5_enabled = true
@@ -656,6 +700,7 @@ func _toggle_v11_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v10_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = not _terrain_v10_enabled
@@ -677,6 +722,7 @@ func _toggle_v10_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v9_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = false
@@ -697,6 +743,7 @@ func _toggle_v9_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v8_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = false
@@ -718,6 +765,7 @@ func _toggle_v8_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v7_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = false
@@ -740,6 +788,7 @@ func _toggle_v7_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v6_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = false
@@ -759,6 +808,7 @@ func _toggle_v6_finish() -> void:
     _rebuild_terrain(false)
 
 func _toggle_v5_finish() -> void:
+    _disable_v12_finish()
     _terrain_v11_enabled = false
     terrain_compare_v11_button.text = "VOLVER A LADERAS V11"
     _terrain_v10_enabled = false
@@ -859,7 +909,9 @@ func _display_terrain() -> void:
         _terrain_v9_enabled and terrain_vegetation_v9_toggle.button_pressed,
         _terrain_v10_enabled and terrain_silhouette_v10_toggle.button_pressed,
         _terrain_v11_enabled and terrain_aprons_v11_toggle.button_pressed,
-        _terrain_v11_enabled and terrain_outcrops_v11_toggle.button_pressed)
+        _terrain_v11_enabled and terrain_outcrops_v11_toggle.button_pressed,
+        _terrain_v12_enabled and terrain_deposits_v12_toggle.button_pressed,
+        _terrain_v12_enabled and terrain_verges_v12_toggle.button_pressed)
     preview.add_child(model_root)
     if initial:
         _yaw = -32.0
@@ -1093,6 +1145,12 @@ func _update_details() -> void:
             status_label.text += " · V11: %d taludes, %d rocas (%d lotes)" % [
                 int(v11.get("apron_triangles",0)),
                 int(v11.get("boulders",0)),int(v11.get("batches",0))]
+        var v12: Dictionary = model_root.get_meta("terrain_sediments_v12",{})
+        if int(v12.get("batches",0)) > 0:
+            status_label.text += " · V12: %d aluviones, %d arcenes (%d lotes)" % [
+                int(v12.get("sediment_patches",0)),
+                int(v12.get("road_verges",0)),
+                int(v12.get("batches",0))]
         return
     if _role != "headquarters":
         super._update_details()
