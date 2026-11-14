@@ -21,7 +21,7 @@ var _elapsed := 0.0
 var _duration := 0.0
 var _kind := ""
 var _running := false
-var _hit := Vector3(0.45,2.17,-4.18)
+var _hit := Vector3(4.03,2.04,-3.55)
 var _rng := RandomNumberGenerator.new()
 
 static func _material(tint: Color,glow: float = 0.0,
@@ -100,14 +100,14 @@ func _ready() -> void:
         orb.radial_segments = 10
         orb.rings = 5
         puff.mesh = orb
-        puff.material_override = _material(Color(0.28,0.28,0.29,0.42),0.0,true)
+        puff.material_override = _material(Color(0.24,0.25,0.27,0.63),0.0,true)
         puff.visible = false
         puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         add_child(puff)
         _smoke.append(puff)
     set_process(false)
 
-func trigger(kind: String,hit: Vector3 = Vector3(0.45,2.17,-4.18)) -> bool:
+func trigger(kind: String,hit: Vector3 = Vector3(4.03,2.04,-3.55)) -> bool:
     if kind not in [BULLET,EXPLOSIVE]:
         return false
     _kind = kind
@@ -163,13 +163,13 @@ func _animate(time: float) -> void:
         # Shallow, focused spall + quick expanding spark burst.
         for i in range(SPARK_COUNT):
             var direction: float = TAU*float(i)/float(SPARK_COUNT)
-            var radius: float = progress*(0.43+float(i%3)*0.095)
+            var radius: float = progress*(0.86+float(i%3)*0.16)
             var pos := _hit+Vector3(
                 cos(direction)*radius,
                 sin(direction)*radius*0.75-progress*progress*0.15,
                 -0.12-progress*0.39)
             var fade: float = maxf(0.014,1.0-progress)
-            var scale := Vector3(0.042*fade,0.024+0.10*fade,0.035*fade)
+            var scale := Vector3(0.076*fade,0.056+0.16*fade,0.044*fade)
             _sparks.multimesh.set_instance_transform(i,
                 Transform3D(Basis().scaled(scale),pos))
     elif _kind == EXPLOSIVE:
@@ -178,12 +178,12 @@ func _animate(time: float) -> void:
         var flash: float = clampf(1.0-time/0.28,0.0,1.0)
         _flash.visible = flash > 0.02
         _flash.position = _hit+Vector3(0.0,0.06,-0.45)
-        _flash.scale = Vector3.ONE*(0.18+1.15*sqrt(maxf(0.0,1.0-flash)))
+        _flash.scale = Vector3.ONE*(0.38+2.25*sqrt(maxf(0.0,1.0-flash)))
         _flash.transparency = 1.0-flash
         var wave: float = clampf(time/0.47,0.0,1.0)
         _shock.visible = wave < 0.99
         _shock.position = _hit+Vector3(0,0,-0.33)
-        _shock.scale = Vector3.ONE*(0.15+2.05*wave)
+        _shock.scale = Vector3.ONE*(0.24+3.15*wave)
         _shock.transparency = wave
         for i in range(DEBRIS_COUNT):
             var dir: float = TAU*float(i)/float(DEBRIS_COUNT)
@@ -204,9 +204,9 @@ func _animate(time: float) -> void:
             var puff: MeshInstance3D = _smoke[i]
             var offset: float = float(i)*0.29
             puff.position = _hit+Vector3((-1.0+float(i))*0.35,
-                0.20+time*(0.87+offset),
+                0.28+time*(0.97+offset),
                 -0.42-float(i%2)*0.27)
-            puff.scale = Vector3.ONE*(0.11+time*(0.68+float(i)*0.16))
+            puff.scale = Vector3.ONE*(0.22+time*(0.99+float(i)*0.23))
             puff.transparency = clampf(0.23+progress*0.78,0.0,1.0)
             puff.visible = progress < 0.97
 
