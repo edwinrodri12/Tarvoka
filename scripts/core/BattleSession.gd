@@ -9,6 +9,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const EngineerRepair = preload("res://scripts/core/EngineerRepair.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 
@@ -86,6 +87,16 @@ static func resupply(state: Dictionary, unit_id: String) -> Dictionary:
         return {"valid":false, "state":state.duplicate(true)}
     var action: Dictionary = Logistics.resupply(state, unit_id)
     if action.get("valid",false):
+        Opening.record(action["state"])
+    return action
+
+# Paid field maintenance is an explicit engineer action, not a free or
+# passive HP bonus. Production, saves and the game's two-faction rules stay intact.
+static func repair(state: Dictionary, engineer_id: String, target_id: String) -> Dictionary:
+    if not _active(state) or not Opening.can_order(state):
+        return {"valid":false, "state":state.duplicate(true)}
+    var action: Dictionary = EngineerRepair.apply(state,engineer_id,target_id)
+    if bool(action.get("valid",false)):
         Opening.record(action["state"])
     return action
 
