@@ -69,7 +69,17 @@ func _run() -> void:
     main.command_menu.open_for(board,"Ajustes")
     main.command_menu.refresh()
     assert(main.command_menu.minimap_enabled)
-    assert(main.command_menu.settings_body.get_child_count() > 5)
+    # Settings now presents one structured two-column dashboard instead of
+    # the retired long vertical button list. Verify real controls, not an old
+    # implementation's direct child count.
+    assert(main.command_menu.settings_columns != null)
+    assert(main.command_menu.settings_columns.get_child_count() == 2)
+    assert(not main.command_menu.settings_columns.vertical)
+    assert(main.command_menu.settings_body.get_child_count() == 1)
+    assert(main.command_menu.settings_buttons.size() == 3)
+    assert(main.command_menu.settings_buttons["view"].text == "Vista: isométrica")
+    assert(main.command_menu.settings_buttons["battery"].text == "Ahorro de batería: activado")
+    assert(main.command_menu.settings_buttons["minimap"].text == "Minimapa: visible")
     main.command_menu.hide()
     main.queue_free()
     await process_frame

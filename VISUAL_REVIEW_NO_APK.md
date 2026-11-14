@@ -7,11 +7,11 @@
 Un artefacto descargable llamado **`tarvoka-ui-visual-review`**, que contiene:
 
 - `index.html`: galería navegable offline y adaptable a móvil o PC.
-- Doce PNG reales **exclusivamente horizontales**: Inicio y Escaramuza (1280×720, 960×540), Facciones (ambos tamaños), batalla, Centro de mando, Ajustes, Resultados, Partidas guardadas y Arsenal.
+- Catorce PNG reales **exclusivamente horizontales**: Inicio y Escaramuza (1280×720, 960×540), Facciones (ambos tamaños), batalla, Centro de mando, Ajustes, Resultados, Partidas guardadas y Arsenal.
 - `manifest.json`: nombre, tamaño y comprobaciones básicas de contenido por captura.
 - `godot.log`: registro de la captura; útil para depurar avisos de renderizado.
 
-Las revisiones usan **1280×720** y **960×540**, siempre horizontales (16:9). Android se bloquea en esta orientación mediante `project.godot`; una captura vertical no es un objetivo de producto. Las capturas de Resultados utilizan una **victoria simulada en la instancia de QA exclusivamente**: no representan una partida jugada o guardada.
+Las revisiones usan **1280×720** y **960×540**, siempre horizontales (16:9), incluyendo Centro de mando y Resultados en ambos tamaños. Android se bloquea en esta orientación mediante `project.godot`; una captura vertical no es un objetivo de producto. Las capturas de Resultados utilizan una **victoria simulada en la instancia de QA exclusivamente**: no representan una partida jugada o guardada.
 
 ## Para verlo sin instalar nada
 
