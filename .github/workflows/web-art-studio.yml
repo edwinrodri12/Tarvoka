@@ -53,6 +53,7 @@ on:
   push:
     branches:
       - feat/browser-3d-model-lab-20261113
+      - feat/battle-3d-web-studio-v8-20261113
       - main
     paths:
       - "scripts/ui/**"
@@ -497,7 +498,7 @@ jobs:
     # Publish the SAME validated WebGL files as the artifact. Do not deploy
     # speculative previews from untrusted pull-request events.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: build-art-studio
+    needs: [build-art-studio, windows-pc-launcher-smoke]
     runs-on: ubuntu-22.04
     permissions:
       pages: write
