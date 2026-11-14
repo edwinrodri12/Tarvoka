@@ -50,8 +50,10 @@ func _run() -> void:
     assert(river[road.y][road.x] == "road")
     assert(river[bridge.y][bridge.x] == "road")
     assert(river[water.y][water.x] == "water")
-    var initially_seen := {road:true,near_shore:true}
-    var initially_visible := {road:true,near_shore:true}
+    var initially_seen: Dictionary = {}
+    initially_seen[road] = true
+    initially_seen[near_shore] = true
+    var initially_visible: Dictionary = initially_seen.duplicate()
     var masked: Dictionary = Adapter.collect(river,Vector2i.ZERO,
         Vector2i(8,8),initially_seen,initially_visible,true)
     assert(masked["known"] == 2 and masked["hidden"] == 62)
@@ -59,8 +61,10 @@ func _run() -> void:
     assert(not _tile(masked,bridge)["details"])
     assert(not _tile(masked,road)["roads"]["east"])
     assert(not _tile(masked,near_shore)["shore"]["east"])
-    var seen_more := {road:true,bridge:true,near_shore:true,water:true}
-    var shown_more := {road:true,near_shore:true}
+    var seen_more: Dictionary = initially_seen.duplicate()
+    seen_more[bridge] = true
+    seen_more[water] = true
+    var shown_more: Dictionary = initially_seen.duplicate()
     var known: Dictionary = Adapter.collect(river,Vector2i.ZERO,
         Vector2i(8,8),seen_more,shown_more,true)
     assert(_tile(known,road)["roads"]["east"])
