@@ -653,9 +653,9 @@ func _ready() -> void:
     command_menu.load_requested.connect(func(): _load_game(); command_menu.refresh())
     command_menu.new_battle_requested.connect(_prepare_skirmish)
     command_menu.campaign_requested.connect(_open_campaign)
-    command_menu.change_view_requested.connect(func(): _toggle_isometric_view(); command_menu.refresh())
-    command_menu.battery_requested.connect(func(): _toggle_battery_saver(); command_menu.refresh())
-    command_menu.minimap_requested.connect(func(): _toggle_minimap(); command_menu.refresh())
+    command_menu.change_view_requested.connect(_toggle_isometric_view)
+    command_menu.battery_requested.connect(_toggle_battery_saver)
+    command_menu.minimap_requested.connect(_toggle_minimap)
     command_menu.inspect_unit_requested.connect(_focus_command_unit)
     command_menu.purchase_requested.connect(_purchase_command_unit)
     command_menu.home_requested.connect(_show_home_menu)
@@ -1782,12 +1782,16 @@ func _toggle_minimap() -> void:
     _minimap_preference = not _minimap_preference
     _apply_minimap_visibility()
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _toggle_battery_saver() -> void:
     board.set_battery_saver(not board.battery_saver)
     battery_saver_button.text = ("Ahorro de batería: activado"
         if board.battery_saver else "Ahorro de batería: desactivado")
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)
@@ -1796,6 +1800,8 @@ func _toggle_isometric_view() -> void:
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
     _apply_minimap_visibility()
     _save_display_preferences()
+    if command_menu != null:
+        command_menu.refresh_settings_controls()
 
 func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:

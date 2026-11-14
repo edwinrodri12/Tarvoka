@@ -9,6 +9,7 @@ on:
       - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_landscape_only_ui.gd'
+      - 'tests/test_landscape_command_results.gd'
       - 'tests/test_landscape_arsenal_ui.gd'
       - 'project.godot'
       - 'tests/test_official_faction_art.gd'
@@ -23,6 +24,7 @@ on:
       - 'tests/test_battle_focus_hud.gd'
       - 'tests/test_mobile_menu_polish.gd'
       - 'tests/test_landscape_only_ui.gd'
+      - 'tests/test_landscape_command_results.gd'
       - 'tests/test_landscape_arsenal_ui.gd'
       - 'project.godot'
       - 'tests/test_official_faction_art.gd'
@@ -51,6 +53,7 @@ jobs:
           for test in \
             test_official_faction_art \
             test_landscape_only_ui \
+            test_landscape_command_results \
             test_landscape_arsenal_ui \
             test_battle_focus_hud \
             test_mobile_menu_polish \
