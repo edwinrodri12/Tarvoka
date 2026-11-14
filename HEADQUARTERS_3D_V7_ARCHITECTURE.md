@@ -8,6 +8,7 @@ Retomar el **modelado 3D inacabado** del Cuartel General, priorizando arquitectu
 
 - **Portal y acceso:** marquesina frontal curva con 16 tramos 3D, espesor, cara inferior, cornisa continua, nervios metálicos y borde con color de facción. Portón profundo con hojas de cristal blindado, marco, umbral, tiradores, paneles de control, celosías, puntales y banda antideslizante.
 - **Centro elevado de mando:** envolvente de ventanas panorámicas con parteluces y viseras; dintel escultural, señalización lateral, espinazos de techo y galería coherente con la insignia tridimensional original.
+- **Cubiertas de las alas:** dos faldones delanteros convexos en malla 3D, con profundidad, nervios continuos, cornisa protectora y guías iluminadas. Cambian físicamente la silueta que antes era una caja plana.
 - **Azoteas técnicas:** dos conjuntos HVAC con carcasas biseladas, cuatro rejillas cada uno, extractor circular doble, ductos protegidos y franjas de seguridad. Los niveles 2 y 3 añaden equipamiento y riostras exclusivos.
 - **Antena radar:** conjunto mecánico de horquilla, rodamiento de azimut, amortiguadores y caja de accionamiento; conserva plato cóncavo reflectante V4.
 - **Helipuerto:** bordes horizontales y balizas de aproximación, señalización y armario contraincendios; ninguna barandilla alta que invada el área de rotores.
@@ -27,6 +28,7 @@ El workflow del Estudio 3D genera:
 - `artifacts/tarvoka_hq_v4_vs_v7_sculpted_front.png`
 - `artifacts/tarvoka_hq_v7_level3.png`
 - `artifacts/tarvoka_hq_v7_damaged.png`
+- `artifacts/tarvoka_hq_v7_entrance_closeup.png` (cámara de Godot realmente acercada)
 
 ## Límites reales
 
