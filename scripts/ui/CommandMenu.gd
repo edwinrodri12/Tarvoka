@@ -524,38 +524,68 @@ func refresh() -> void:
     _action(commands,"Preparar escaramuza nueva",func(): new_battle_requested.emit())
     _action(commands,"Campana · Capitulo 01",func(): campaign_requested.emit())
 
+    # Army uses two independent landscape surfaces: owned roster and
+    # read-only unit details. Selection does not execute a movement or attack.
     _clear(army_body)
-    _heading(army_body,"Unidades propias")
-    _description(army_body,"Toca una unidad para centrar el mapa y consultar sus datos; no ejecuta una orden.")
-    var owned: int = 0
-    var visible_count: int = 0
+    army_list_body = null
+    army_details_body = null
+    var army_layout: Dictionary = _dashboard_columns(army_body,"EjercitoYFicha")
+    army_columns = army_layout["rail"]
+    var roster: VBoxContainer = army_layout["left"]
+    army_details_body = army_layout["right"]
+    var owned_units: Array[Dictionary] = []
     for unit in state.get("units",[]):
-        if not unit is Dictionary or int(unit.get("faction",-1)) != viewer or int(unit.get("hp",0)) <= 0:
-            continue
-        owned += 1
-        if visible_count >= 30:
-            continue
-        visible_count += 1
-        var uid: String = str(unit.get("id",""))
-        var role: String = str(unit.get("role",""))
-        var state_text: String = " · lista" if not bool(unit.get("acted",false)) else " · usada"
-        _unit_action(army_body,role,"%s  ·  %s  ·  %d HP%s" % [uid,Roles.label(role),int(unit.get("hp",0)),state_text],
-            func(): inspect_unit_requested.emit(uid),true,viewer)
-    if owned == 0:
-        _description(army_body,"No hay unidades aliadas activas.")
-    elif owned > visible_count:
-        _description(army_body,"Mostrando %d de %d unidades; ampliaremos el listado por grupos." % [visible_count,owned])
+        if unit is Dictionary and int(unit.get("faction",-1)) == viewer and int(unit.get("hp",0)) > 0:
+            owned_units.append(unit)
+    _heading(roster,"EJÉRCITO  ·  %d ACTIVAS" % owned_units.size())
+    _description(roster,"Ficha muestra estadísticas; Mapa localiza sin dar una orden.")
+    army_list_body = _catalog_scroll(roster,"UNIDADES EN SERVICIO")
+    for unit in owned_units:
+        _army_row(unit,viewer)
+    if owned_units.is_empty():
+        _description(army_list_body,"No hay unidades propias activas.")
+        army_selected_id = ""
+        _heading(army_details_body,"FICHA DE UNIDAD")
+        _description(army_details_body,"Selecciona una unidad propia en el catálogo.")
+    else:
+        var chosen := ""
+        for unit in owned_units:
+            if str(unit.get("id","")) == army_selected_id:
+                chosen = army_selected_id
+                break
+        if chosen.is_empty():
+            var focused: String = str(board.selected_id) if board.selected_id != null else ""
+            for unit in owned_units:
+                if str(unit.get("id","")) == focused:
+                    chosen = focused
+                    break
+        if chosen.is_empty():
+            chosen = str(owned_units[0].get("id",""))
+        _select_army_unit(chosen)
 
+    # Real producer-specific candidate collection. Purchase eligibility,
+    # amount, domain and blocking reason always come from CompareData and
+    # ultimately Economy.can_purchase, not duplicated UI rules.
     _clear(production_body)
-    _heading(production_body,"Produccion de unidades")
+    production_purchase_buttons.clear()
     comparison_preview = null
+    production_list_body = null
+    var shop_layout: Dictionary = _dashboard_columns(production_body,"InstalacionYCatalogo")
+    production_columns = shop_layout["rail"]
+    var shop_summary: VBoxContainer = shop_layout["left"]
+    var shop_catalog: VBoxContainer = shop_layout["right"]
+    _heading(shop_summary,"CENTRO DE PRODUCCIÓN")
     var economy: Dictionary = state.get("economy",{})
     if economy.is_empty():
-        _description(production_body,"La economia no esta activada en esta batalla.")
+        _description(shop_summary,"La economía no está activada en esta batalla.")
+        _heading(shop_catalog,"CATÁLOGO NO DISPONIBLE")
+        _description(shop_catalog,"La producción depende del escenario y sus instalaciones.")
     else:
         var site: Dictionary = Economy.site_at(economy,board.selected_factory_pos)
         if site.is_empty() or int(site.get("owner",-1)) != viewer or str(site.get("kind","")) == "city":
-            _description(production_body,"Selecciona primero una base propia en el mapa. Aqui apareceran solo las unidades que esa instalacion puede fabricar.")
+            _description(shop_summary,"Selecciona una instalación propia en el mapa para abrir su catálogo de producción.")
+            _heading(shop_catalog,"SELECCIONA UNA BASE")
+            _description(shop_catalog,"Al seleccionar una base propia aparecerán aquí los modelos que realmente puede construir.")
         else:
             var kind: String = str(site.get("kind",""))
             var next_key: String = "%s:%s" % [str(board.selected_factory_pos),kind]
@@ -563,31 +593,43 @@ func refresh() -> void:
                 production_site_key = next_key
                 selected_catalog_role = ""
                 comparison_catalog_role = ""
-            _description(production_body,"Instalación: %s · (%d,%d)" % [kind,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1])
+            var credits: Array = economy.get("credits",[])
+            var funds: int = int(credits[viewer]) if credits.size() > viewer and viewer >= 0 else 0
+            _description(shop_summary,"INSTALACIÓN · %s  (%d,%d)" % [
+                kind,board.selected_factory_pos.x+1,board.selected_factory_pos.y+1
+            ])
+            _description(shop_summary,"FONDOS PROPIOS: %d CRÉDITOS" % funds)
             var modern: bool = bool(economy.get("modern",false))
             var roles: Array = Roles.ORDER.duplicate()
             if modern:
                 roles.append_array(Arsenal.ORDER)
-            var available := 0
             var filtered: Array[String] = []
             for candidate in roles:
                 var role: String = str(candidate)
-                if Economy.producer_for(role,modern) != kind:
-                    continue
-                available += 1
-                filtered.append(role)
+                if Economy.producer_for(role,modern) == kind:
+                    filtered.append(role)
             if selected_catalog_role not in filtered:
                 selected_catalog_role = str(filtered[0]) if not filtered.is_empty() else ""
             if comparison_catalog_role not in filtered or comparison_catalog_role == selected_catalog_role:
                 comparison_catalog_role = str(filtered[1]) if filtered.size() > 1 and selected_catalog_role == str(filtered[0]) else ""
+            _heading(shop_summary,"COMPARADOR A / B")
+            var preview_scroll := ScrollContainer.new()
+            preview_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            preview_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+            preview_scroll.custom_minimum_size.y = 330
+            preview_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+            shop_summary.add_child(preview_scroll)
             comparison_preview = CompareView.new()
-            production_body.add_child(comparison_preview)
+            comparison_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            preview_scroll.add_child(comparison_preview)
             _update_comparison_preview()
-            _description(production_body,"Pulsa Ficha para seleccionar A o Comparar para elegir B. Comprar es independiente.")
+            _description(shop_summary,"Ficha A selecciona el modelo; Comparar B lo contrasta con otro.")
+            production_list_body = _catalog_scroll(shop_catalog,"CATÁLOGO · %d MODELOS" % filtered.size())
             for role in filtered:
                 _production_unit_row(role,viewer)
-            if available == 0:
-                _description(production_body,"No hay unidades disponibles para esta instalacion.")
+            if filtered.is_empty():
+                _description(production_list_body,"Esta instalación no produce unidades en este escenario.")
+            _description(shop_catalog,"Comprar usa el saldo real y respeta los bloqueos del motor.")
 
     _clear(settings_body)
     settings_buttons.clear()
