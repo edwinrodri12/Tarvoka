@@ -31,17 +31,19 @@ void fragment() {
         river_world.x * 5.9) * detail_scale + drift * 1.64);
     float soft = clamp(shore_factor * 0.82 +
         fine_wave * 0.08 + large_wave * 0.06, 0.0, 1.0);
-    float foam = smoothstep(0.54, 0.97, shore_factor) *
-        (0.32 + 0.68 * smoothstep(-0.10, 0.88, large_wave));
+    // A narrow, irregular bank line rather than a bright scalloped
+    // ribbon around every water tile.
+    float foam = smoothstep(0.79, 1.0, shore_factor) *
+        (0.22 + 0.44 * smoothstep(-0.10, 0.88, large_wave));
     vec3 water_color = mix(deep_color.rgb, shallow_color.rgb, soft);
-    water_color = mix(water_color, foam_color.rgb, foam * 0.50);
+    water_color = mix(water_color, foam_color.rgb, foam * 0.23);
     float reflection = pow(max(0.0,
-        large_wave * 0.67 + fine_wave * 0.33), 7.0) * 0.12;
+        large_wave * 0.67 + fine_wave * 0.33), 7.0) * 0.065;
     ALBEDO = water_color;
     ROUGHNESS = 0.21;
     METALLIC = 0.02;
     SPECULAR = 0.69;
-    EMISSION = foam_color.rgb * (reflection + foam * 0.043);
+    EMISSION = foam_color.rgb * (reflection + foam * 0.020);
     ALPHA = 0.88;
 }
 """
