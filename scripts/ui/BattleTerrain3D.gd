@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const TankBudget = preload("res://scripts/ui/TankBattleLOD27.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
@@ -312,13 +313,26 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     return drawn
 
 static func _make_units(parent: Node3D,state: Dictionary,
-        cells: Dictionary, selected_id: String) -> Dictionary:
+        cells: Dictionary, selected_id: String,camera_size: float,
+        enable_g09_v25: bool) -> Dictionary:
     var visible_count := 0
     var detailed := 0
     var hidden_enemies := 0
+    var hero_count := 0
+    var medium_count := 0
+    var light_count := 0
     var player: int = 0
-    for unit in state.get("units",[]):
-        if not unit is Dictionary or int(unit.get("hp",0))<=0:
+    # Prioritize the selected unit for the eight-detailed-model GPU budget,
+    # without changing, disclosing or reordering the authoritative state.
+    var ordered: Array = []
+    for entry in state.get("units",[]):
+        if entry is Dictionary and str(entry.get("id",""))==selected_id:
+            ordered.append(entry)
+    for entry in state.get("units",[]):
+        if entry is Dictionary and str(entry.get("id",""))!=selected_id:
+            ordered.append(entry)
+    for unit in ordered:
+        if int(unit.get("hp",0))<=0:
             continue
         var cell: Vector2i = unit["pos"]
         var faction: int = int(unit.get("faction",-1))
@@ -329,9 +343,28 @@ static func _make_units(parent: Node3D,state: Dictionary,
         if not cells.has(cell) or not bool(cells[cell].get("seen",false)):
             continue
         var role: String = str(unit.get("role","line"))
+        var selected: bool = str(unit.get("id",""))==selected_id
         var model: Node3D = null
+        var actual_art: int = 0
         if detailed < MAX_DETAILED_UNITS and Models.supports(role):
-            model = Models.build(role,faction,false,6)
+            if role == "tank":
+                actual_art = TankBudget.tank_art_level(
+                    camera_size,selected,enable_g09_v25,hero_count,medium_count)
+                model = Models.build(role,faction,actual_art>=10,actual_art)
+                if model != null and actual_art == TankBudget.HERO_ART:
+                    if model.get_meta("tarvoka_mbt_wear_v25",false):
+                        hero_count += 1
+                    else:
+                        model.free()
+                        actual_art = TankBudget.MEDIUM_ART
+                        model = Models.build(role,faction,true,actual_art)
+                if actual_art == TankBudget.MEDIUM_ART:
+                    medium_count += 1
+                if actual_art == TankBudget.FAR_ART:
+                    light_count += 1
+            else:
+                model = Models.build(role,faction,false,6)
+                actual_art = 6
             if model != null:
                 detailed += 1
         if model == null:
@@ -348,21 +381,50 @@ static func _make_units(parent: Node3D,state: Dictionary,
             disc.mesh = disk
             model.add_child(disc)
         model.name = "Unidad3D_%s" % str(unit["id"])
-        # Distinct layers may share exactly one logical grid coordinate.
-        # Air models must be visibly ABOVE ground/naval models rather than
-        # clipping through another unit when both occupy the same cell.
+        # Distinct layers may occupy one logical tile without clipping.
         var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
-        model.set_meta("selected",str(unit["id"])==selected_id)
+        model.set_meta("selected",selected)
+        model.set_meta("battle_art_level",actual_art)
+        model.set_meta("battle_g09_v25",
+            role=="tank" and actual_art==TankBudget.HERO_ART)
         parent.add_child(model)
         visible_count += 1
     return {"visible":visible_count,"detailed":detailed,
-        "hidden_enemies":hidden_enemies}
+        "hidden_enemies":hidden_enemies,"g09_v25":hero_count,
+        "g09_v10":medium_count,"g09_v6":light_count}
 
-static func build(state: Dictionary, selected_id: String = "") -> Node3D:
+static func refresh_unit_lod(scene: Node3D,state: Dictionary,
+        selected_id: String,camera_size: float,
+        enable_g09_v25: bool = true) -> Dictionary:
+    # Swap ONLY unit visuals when zoom bands change. Never rebuild chunks,
+    # sample hidden enemies, change orders, or alter collision/picking.
+    if scene == null or not scene.has_meta("public_cells"):
+        return {}
+    var previous: Node3D = scene.find_child(
+        "UnidadesDinamicasG09",false,false) as Node3D
+    if previous != null:
+        scene.remove_child(previous)
+        previous.free()
+    var holder := Node3D.new()
+    holder.name = "UnidadesDinamicasG09"
+    scene.add_child(holder)
+    var stats: Dictionary = _make_units(
+        holder,state,scene.get_meta("public_cells"),selected_id,
+        camera_size,enable_g09_v25)
+    var counters: Dictionary = scene.get_meta("render_stats",{}).duplicate()
+    counters["units"] = stats
+    scene.set_meta("render_stats",counters)
+    scene.set_meta("battle_camera_size",camera_size)
+    scene.set_meta("battle_v25_enabled",enable_g09_v25)
+    scene.set_meta("selected_unit_id",selected_id)
+    return stats
+
+static func build(state: Dictionary, selected_id: String = "",
+        camera_size: float = 48.0,enable_g09_v25: bool = false) -> Node3D:
     var terrain: Array = state.get("terrain",[])
     if not Rules.valid_terrain(terrain):
         return null
@@ -393,11 +455,17 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
             counters[key] = int(counters[key])+int(stats[key])
     counters["trees"] = _make_cone_trees(scene,cells)
     counters["sites"] = _make_sites(scene,state,cells)
-    counters["units"] = _make_units(scene,state,cells,selected_id)
+    var unit_holder := Node3D.new()
+    unit_holder.name = "UnidadesDinamicasG09"
+    scene.add_child(unit_holder)
+    counters["units"] = _make_units(
+        unit_holder,state,cells,selected_id,camera_size,enable_g09_v25)
     counters["chunks"] = chunks.size()
     scene.set_meta("board_size",dims)
     scene.set_meta("visual_only",true)
     scene.set_meta("public_cells",cells)
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)
+    scene.set_meta("battle_camera_size",camera_size)
+    scene.set_meta("battle_v25_enabled",enable_g09_v25)
     return scene
