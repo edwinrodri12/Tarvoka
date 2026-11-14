@@ -83,6 +83,34 @@ static func _tint(record: Dictionary) -> Color:
         tint = tint.darkened(0.60)
     return tint
 
+# V17: every visible LAND corner gets one deterministic, world-space
+# palette sample. Neighbouring 8x8 chunks cannot assign different colours
+# to a shared corner, and unexplored tiles never enter the sample.
+# Water reads as alluvial shoreline and roads as a dusty verge, instead of
+# spilling water-blue or dark asphalt across the surrounding ground.
+static func _shared_corner_tint(cells: Dictionary, corner: Vector2i) -> Color:
+    var total := Color(0.0,0.0,0.0,0.0)
+    var weight_sum := 0.0
+    for dy in [-1,0]:
+        for dx in [-1,0]:
+            var tile: Dictionary = cells.get(corner+Vector2i(dx,dy),{})
+            if not bool(tile.get("details",false)):
+                continue
+            var kind: String = str(tile.get("kind","unknown"))
+            var tint: Color = COLORS.get(kind,COLORS["plain"])
+            var weight := 1.0
+            if kind == "water":
+                tint = Color("#bbaa89")
+                weight = 0.74
+            elif kind == "road":
+                tint = Color("#999481")
+                weight = 0.88
+            total += tint*weight
+            weight_sum += weight
+    if weight_sum <= 0.0:
+        return COLORS["plain"]
+    return total*(1.0/weight_sum)
+
 static func _vertex(tool: SurfaceTool, at: Vector3,
         color: Color) -> void:
     tool.set_color(color)
@@ -94,6 +122,12 @@ static func _tri(tool: SurfaceTool, a: Vector3,b: Vector3,c: Vector3,
     _vertex(tool,a,color)
     _vertex(tool,b,color)
     _vertex(tool,c,color)
+
+static func _tri_tinted(tool: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,
+        ca: Color,cb: Color,cc: Color) -> void:
+    _vertex(tool,a,ca)
+    _vertex(tool,b,cb)
+    _vertex(tool,c,cc)
 
 static func _panel(tool: SurfaceTool, nw: Vector3,ne: Vector3,
         se: Vector3,sw: Vector3,color: Color) -> void:
@@ -128,6 +162,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     var hidden_count := 0
     var roads_count := 0
     var shores_count := 0
+    var blended_count := 0
     for tile in data["cells"]:
         var cell: Vector2i = tile["cell"]
         var kind: String = str(tile["kind"])
@@ -153,10 +188,23 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var se: Vector3 = at+Vector3(half,corners[2],half)
         var sw: Vector3 = at+Vector3(-half,corners[3],half)
         var middle: Vector3 = at+Vector3(0,_cell_height(tile),0)
-        _tri(ground,nw,middle,ne,tinted)
-        _tri(ground,ne,middle,se,tinted)
-        _tri(ground,se,middle,sw,tinted)
-        _tri(ground,sw,middle,nw,tinted)
+        # No new geometry or draw calls: only vertex pigments change.
+        # Explored but not presently visible tiles stay uniformly dim.
+        if bool(tile.get("details",false)):
+            var nw_tint: Color = _shared_corner_tint(cells,cell)
+            var ne_tint: Color = _shared_corner_tint(cells,cell+Vector2i(1,0))
+            var se_tint: Color = _shared_corner_tint(cells,cell+Vector2i(1,1))
+            var sw_tint: Color = _shared_corner_tint(cells,cell+Vector2i(0,1))
+            _tri_tinted(ground,nw,middle,ne,nw_tint,tinted,ne_tint)
+            _tri_tinted(ground,ne,middle,se,ne_tint,tinted,se_tint)
+            _tri_tinted(ground,se,middle,sw,se_tint,tinted,sw_tint)
+            _tri_tinted(ground,sw,middle,nw,sw_tint,tinted,nw_tint)
+            blended_count += 1
+        else:
+            _tri(ground,nw,middle,ne,tinted)
+            _tri(ground,ne,middle,se,tinted)
+            _tri(ground,se,middle,sw,tinted)
+            _tri(ground,sw,middle,nw,tinted)
         land_count += 1
         # No landscape detail on explored-but-currently-hidden positions.
         if not bool(tile.get("details",false)):
@@ -223,7 +271,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     chunk.set_meta("origin",data["origin"])
     chunk.set_meta("tiles",data["tile_count"])
     return {"land":land_count,"water":water_count,"unknown":hidden_count,
-        "roads":roads_count,"shore_edges":shores_count}
+        "roads":roads_count,"shore_edges":shores_count,
+        "blended_tiles":blended_count}
 
 static func _make_cone_trees(parent: Node3D,cells: Dictionary) -> int:
     var positions: Array[Transform3D] = []
@@ -386,7 +435,7 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
-        "roads":0,"shore_edges":0}
+        "roads":0,"shore_edges":0,"blended_tiles":0}
     for chunk in chunks:
         var stats: Dictionary = _build_chunk(scene,chunk,cells)
         for key in counters:
@@ -395,6 +444,9 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     counters["sites"] = _make_sites(scene,state,cells)
     counters["units"] = _make_units(scene,state,cells,selected_id)
     counters["chunks"] = chunks.size()
+    # A shared vertex palette reuses the existing ground mesh/material;
+    # no extra render batches for 24x18 or 40x30 mobile boards.
+    counters["terrain_blend_extra_batches"] = 0
     scene.set_meta("board_size",dims)
     scene.set_meta("visual_only",true)
     scene.set_meta("public_cells",cells)
