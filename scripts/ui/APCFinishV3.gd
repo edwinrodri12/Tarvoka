@@ -249,7 +249,30 @@ static func _damage(parent: Node3D,
             _card(root,"HumoDestruccionP06",
                 Vector3(0.12,1.89,0.57),Vector2(1.20,1.44),"smoke",true)
             _card(root,"FuegoDestruccionP06",
-                Vector3(0.05,1.62,0.58),Vector2(0.86,1.02),"fire",true)
+                Vector3(0.05,1.62,0.58),Vector2(0.99,1.18),"fire",true)
+            # Visible from the frequently used front-right three-quarter
+            # view: ripped flank metal and a larger irregular impact scar.
+            var carbon:=_card(root,"CarbonLateralDestruido",
+                Vector3(0.865,1.02,-0.33),Vector2(1.03,0.72),"soot")
+            carbon.rotation_degrees=Vector3(0,90,-14)
+            _sculpt(root,"CostadoDerrumbadoP06",[
+                Vector3(0.85,1.29,-0.70),Vector3(1.01,1.18,-0.57),
+                Vector3(0.93,0.91,-0.28),
+                Vector3(0.85,1.29,-0.70),Vector3(0.93,0.91,-0.28),
+                Vector3(0.87,1.05,-0.86),
+                Vector3(1.01,1.18,-0.57),Vector3(0.98,0.76,-0.29),
+                Vector3(0.93,0.91,-0.28)],charred)
+            # Wheel is visually destroyed, not just a darkened intact tire.
+            # Original wheel is hidden at stage four and comes back upon
+            # repair; 6x6 movement/collision/rules are left untouched.
+            V1._cylinder(root,"BujeRotoP06",
+                Vector3(0.83,0.24,-1.05),0.18,0.065,steel,12,
+                Vector3(0,0,90))
+            _sculpt(root,"NeumaticoReventadoRestos",[
+                Vector3(0.97,0.19,-1.35),Vector3(1.11,0.07,-1.16),
+                Vector3(0.92,0.12,-0.97),
+                Vector3(0.97,0.19,-1.35),Vector3(0.92,0.12,-0.97),
+                Vector3(0.78,0.08,-1.17)],charred)
 
 static func apply(model: Node3D,color: Color) -> bool:
     if model==null or not model.get_meta("tarvoka_apc_armor_v2",false):
@@ -314,6 +337,12 @@ static func apply_stage(model: Node3D,stage: int) -> bool:
         if group==null:
             return false
         group.visible=current>=i
+    # Visually fracture one wheel only at terminal wreck state, including
+    # restoring its original 48-tread batch whenever the unit is repaired.
+    var wheel: Node3D=model.find_child(
+        "RuedaMotorizadaP06_1_0",true,false) as Node3D
+    if wheel!=null:
+        wheel.visible=current<4
     model.set_meta("tarvoka_apc_v3_damage_stage",current)
     return true
 
