@@ -27,6 +27,11 @@ const TURRET := "TorretaGiratoria"
 const GUN := "ElevacionCanon"
 const STAGE_META := "tarvoka_visual_damage_stage"
 const ACCENT := Color("#E8A34F")
+const V16 = preload("res://scripts/ui/TankFinishV16.gd")
+const V17 = preload("res://scripts/ui/TankFXV17.gd")
+const V20 = preload("res://scripts/ui/TankIntegrationV20.gd")
+const V21 = preload("res://scripts/ui/TankFinishV21.gd")
+const V22 = preload("res://scripts/ui/TankGunV22.gd")
 
 static func _material(color: Color, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -104,6 +109,11 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
     # Battle HP, deterministic cached unit portraits and saves stay untouched.
     if model == null or current_stage(model) < 2:
         return
+    # Optimized V17 stores the six smoke and five fire nodes directly.
+    # Avoid legacy find_child on every animation frame.
+    if model.get_meta("tarvoka_mbt_fx_v17",false):
+        V17.animate_effects(model,elapsed)
+        return
     var names := ["HumoGrisMotor","VahoMotor","HumoNegroCritico",
         "HumoElevado","ColumnaHumo","HumoSuperior"]
     for index in range(names.size()):
@@ -126,7 +136,8 @@ static func animate_smoke(model: Node3D, elapsed: float) -> void:
             var swish: float = elapsed*3.2+float(index)*1.8
             flame.rotation_degrees.z = [-18.0,12.0,23.0][index] + 4.5*sin(swish)
             flame.scale = Vector3.ONE * (0.92 + 0.11*sin(swish*1.7))
-
+        if not model.get_meta("tarvoka_mbt_fx_v17",false) and model.get_meta("tarvoka_mbt_finish_v16",false):
+            V16.animate_fire(model,elapsed)
 # Angled, light-emitting flame tongues instead of a fire effect made
 # entirely of round spheres. Kept under 8 segments for Android OpenGL.
 static func _flame(parent: Node3D, label: String, at: Vector3,
@@ -337,6 +348,80 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
         var upper_piece: MeshInstance3D = model.find_child(part_name,true,false) as MeshInstance3D
         if upper_piece != null:
             upper_piece.visible = stage < 4
+    # V11 closed armored wedges physically break with critical damage.
+    # The same visibility restoration works for stages 0-2 and legacy V10.
+    for part_name in ["G09V11MordazaAngular_1",
+            "G09V11HombreraFlanco_1","G09V11PuntaGlacis_1"]:
+        var v11_piece: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v11_piece != null:
+            v11_piece.visible = stage < 3
+    for part_name in ["G09V11BastionPosterior_-1",
+            "G09V11BastionPosterior_1"]:
+        var v11_rear: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v11_rear != null:
+            v11_rear.visible = stage < 4
+    # Cosmetic V12 panels break independently; restoring full HP returns
+    # each original transform and material without destroying scene nodes.
+    for part_name in ["G09V12DefensaOrugaAngular_1",
+            "G09V12RetenFaldonDelantero_1",
+            "G09V12CubiertaMotorLateral_1"]:
+        var v12_side: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v12_side != null:
+            v12_side.visible = stage < 3
+    for part_name in ["G09V12AlmacenBlindadoPosterior",
+            "G09V12MantoTermicoIntegrado","G09V12EscudoDeReculada"]:
+        var v12_upper: Node3D = model.find_child(part_name,true,false) as Node3D
+        if v12_upper != null:
+            v12_upper.visible = stage < 4
+    # V13 replaces the uninterrupted V12 side plates and old bustle.
+    # Enforce this across ALL five stages; legacy V12 restore code above
+    # must not resurrect geometry concealed by the newer optional sculpt.
+    if model.get_meta("tarvoka_mbt_segmented_v13",false):
+        for old_name in ["G09V12DefensaOrugaAngular_-1",
+                "G09V12DefensaOrugaAngular_1",
+                "G09V12AlmacenBlindadoPosterior"]:
+            var concealed: Node3D = model.find_child(old_name,true,false) as Node3D
+            if concealed != null:
+                concealed.visible = false
+        for part in model.find_children("G09V13FaldonSegmentado_*",
+                "MeshInstance3D",true,false):
+            var is_rear_hit: bool = str(part.name).ends_with("_1_03") or \
+                str(part.name).ends_with("_1_04")
+            part.visible = stage < 4 and not (stage >= 3 and is_rear_hit)
+        for seam in model.find_children("G09V13RibeteFaldon_*",
+                "MeshInstance3D",true,false):
+            var torn: bool = str(seam.name).ends_with("_1_03") or \
+                str(seam.name).ends_with("_1_04")
+            seam.visible = stage < 4 and not (stage >= 3 and torn)
+        for name in ["G09V13BastionMunicionesContinuo",
+                "G09V13RejillaPosterior","G09V13VigaBastion_-1",
+                "G09V13VigaBastion_1"]:
+            var aft: Node3D = model.find_child(name,true,false) as Node3D
+            if aft != null:
+                aft.visible = stage < 4
+    # Larger V14 silhouette pieces visibly break away while wheel hubs
+    # remain on the wreck. Repairing returns every original transform.
+    if model.get_meta("tarvoka_mbt_silhouette_v14",false):
+        for piece in model.find_children("G09V14*",
+                "MeshInstance3D",true,false):
+            var starboard_hit: bool = str(piece.name).ends_with("_1") and (
+                "AlaBlindadaFrontal" in piece.name or
+                "CarrilleraEscalonada" in piece.name or
+                "CantoProa" in piece.name)
+            piece.visible = stage < 4 and not (stage >= 3 and starboard_hit)
+    # V15 reshapes the SAME V14 armor nodes. Re-hide old projecting welds
+    # after each V14 visibility pass; new flush seams follow the intact hull
+    # and detach on the damaged starboard side.
+    if model.get_meta("tarvoka_mbt_integrated_v15",false):
+        for retired_name in ["G09V14CantoProa_-1","G09V14CantoProa_1",
+                "G09V14NervioLongitudinal_-1","G09V14NervioLongitudinal_1",
+                "G09V14JuntaCarrillera_-1","G09V14JuntaCarrillera_1"]:
+            var retired: Node3D = model.find_child(retired_name,true,false) as Node3D
+            if retired != null:
+                retired.visible = false
+        for join in model.find_children("G09V15*","MeshInstance3D",true,false):
+            var hit: bool = str(join.name).ends_with("_1")
+            join.visible = stage < 4 and not (stage >= 3 and hit)
     var turret: Node3D = model.find_child(TURRET,true,false) as Node3D
     var gun: Node3D = model.find_child(GUN,true,false) as Node3D
     if turret != null:
@@ -452,4 +537,13 @@ static func apply_stage(model: Node3D, stage: int) -> bool:
             var damaged_part: Node3D = model.find_child(part_name,true,false) as Node3D
             if damaged_part != null:
                 damaged_part.visible = stage < 4
+    # V20 retires protruding V7/V13/V15 decoration permanently. Damage
+    # updates above can re-enable old trims; re-hide them after every HP
+    # change so destruction and repair never resurrect the floating bars.
+    if model.get_meta("tarvoka_mbt_integrated_v20",false):
+        V20.hide_legacy(model)
+    if model.get_meta("tarvoka_mbt_finish_v21",false):
+        V21.hide_legacy(model)
+    if model.get_meta("tarvoka_mbt_gun_v22",false):
+        V22.apply_damage(model,stage)
     return true
