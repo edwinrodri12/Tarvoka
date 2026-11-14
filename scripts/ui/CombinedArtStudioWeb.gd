@@ -7,6 +7,7 @@ const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
+const UniversalClimate = preload("res://scripts/ui/WeatherCoating3D.gd")
 const HQMapLOD = preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
 const HQCityBatch = preload("res://scripts/ui/HeadquartersCityBatch3D.gd")
 const OfficialEmblems = preload("res://scripts/ui/HeadquartersEmblems3D.gd")
@@ -186,11 +187,35 @@ func _apply_hq_climate_v17() -> void:
     var sprite_mode: bool = hq_v15_mode_picker.selected == 2
     assert(HQClimateV17.apply(hq_climate_stage,weather,terrain,level,condition,sprite_mode))
     hq_climate_stage.visible = _role=="headquarters" and not hq_batch_toggle.button_pressed
+    # The V17 set, puddles and precip are environment-only. The real
+    # V12/V13 HQ mesh now gets the SAME reversible universal coating as G09.
+    # Sprite V15 is a pre-baked PNG: NEVER reinterpret its colors/materials.
+    var actual_model: bool = model_root != null and is_instance_valid(model_root) and \
+        model_root.get_parent() == preview and \
+        model_root.get_meta("tarvoka_building_kind","") == "headquarters" and \
+        not sprite_mode and not hq_batch_toggle.button_pressed
+    var model_stats: Dictionary = {}
+    if actual_model:
+        model_stats = model_root.get_meta("weather_coating",{})
+        if str(model_stats.get("mode","")) != weather:
+            model_stats = UniversalClimate.apply(model_root,weather,
+                model_root.get_meta("tarvoka_hq_production_v13",false))
+        # Universal roof patches follow the actual building and its rotation;
+        # suppress the older standalone roof slabs to avoid duplicate snow.
+        if weather == "snow" and int(model_stats.get("snow_nodes",0)) > 0:
+            for i in range(3):
+                var roof: MeshInstance3D = hq_climate_stage.get_node_or_null(
+                    "NieveAcumuladaCubiertaV17_%d" % i) as MeshInstance3D
+                if roof != null:
+                    roof.visible = false
     if hq_climate_status != null:
         hq_climate_status.text = "%s · %s · máximo %d lotes 3D de clima/entorno. Sprite V15: imagen seca original." % [
             str(HQClimateV17.WEATHER_NAMES[hq_weather_picker.selected]),
             str(HQClimateV17.TERRAIN_NAMES[hq_terrain_picker.selected]),
             HQClimateV17.active_mesh_count(hq_climate_stage)]
+        if actual_model:
+            hq_climate_status.text += " · Modelo 3D: %d materiales húmedos / %d mallas nieve." % [
+                int(model_stats.get("wet",0)),int(model_stats.get("snow_nodes",0))]
 
 func _add_building_mode() -> void:
     # Use the same SubViewport and camera that already serve the tank.
@@ -725,6 +750,7 @@ func _display_headquarters() -> void:
             HQMapLOD.set_distant(model_root,hq_map_lod_toggle.button_pressed)
     assert(model_root != null)
     preview.add_child(model_root)
+    _apply_hq_climate_v17()
     if initial:
         _yaw = 32.0
         _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
