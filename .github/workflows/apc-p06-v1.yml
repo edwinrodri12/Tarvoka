@@ -1,0 +1,72 @@
+name: TARVOKA APC P06 V1 sculpt, studio and 6x6 mechanical QA
+on:
+  push:
+    branches:
+      - feat/apc-v1-six-wheel-armored-transporter-20261114
+    paths:
+      - "scripts/ui/APC*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "tests/test_apc_p06_art_v1.gd"
+      - ".github/workflows/apc-p06-v1.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/APC*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "tests/test_apc_p06_art_v1.gd"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-apc-v1:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 with native OpenGL virtual display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Parse and import full Godot project including APC P06 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/apc-p06-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/apc-p06-import.log; then exit 1; fi
+      - name: Native APC 6x6 geometry, faction, ramp and wheel animation QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_art_v1.gd 2>&1 | tee /tmp/apc-p06-v1.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-p06-v1.log; then exit 1; fi
+          grep -q 'PASS APC P06 V1:' /tmp/apc-p06-v1.log
+          for name in frontal_3d lateral_3d rampa_cerrada rampa_abierta; do
+            test -s "artifacts/tarvoka_apc_p06_v1_${name}.png"
+          done
+          test -s artifacts/tarvoka_apc_p06_v0_comparacion.png
+      - name: Regression — finished G09 V32 tank still intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_g09_animation_final_v32.gd 2>&1 | tee /tmp/apc-g09-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-g09-regression.log; then exit 1; fi
+          grep -q 'PASS G09 V32:' /tmp/apc-g09-regression.log
+      - name: Upload true Godot V0/V1 APC 3D review images
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-APC-P06-V1-Real-3D-Views
+          path: artifacts/tarvoka_apc_p06_*.png
+          if-no-files-found: error
