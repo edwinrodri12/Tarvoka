@@ -13,7 +13,7 @@ const PROFILES := {
     "piercer":{"weapon":"arma antiblindaje","style":"direct","reaction_pct":35,"armor":"ligera","tier":1,"strength":"Contra blindados y baluartes","weakness":"Expuesto ante infanteria y bombardeo"},
     "artillery":{"weapon":"lanzador indirecto","style":"indirect","reaction_pct":0,"armor":"ligera","tier":1,"strength":"Fuego desde distancia de dos casillas","weakness":"Sin respuesta inmediata; punto ciego cercano"},
     "assault":{"weapon":"fusil de asalto","style":"direct","reaction_pct":55,"armor":"ligera","tier":1,"strength":"Presion y captura en zonas urbanas","weakness":"Muy vulnerable a tanques y artilleria"},
-    "engineer":{"weapon":"arma de autodefensa","style":"direct","reaction_pct":25,"armor":"ligera","tier":1,"strength":"Captura y apoyo a infraestructura","weakness":"Combate deficiente y movimiento limitado"},
+    "engineer":{"weapon":"arma de autodefensa","style":"direct","reaction_pct":25,"armor":"ligera","tier":1,"strength":"Captura y reparación de chasis terrestres aliados adyacentes, con coste y acción","weakness":"Combate deficiente y movimiento limitado"},
     "apc":{"weapon":"ametralladora montada","style":"direct","reaction_pct":35,"armor":"blindada","tier":2,"strength":"Movilidad y escolta ligera","weakness":"Ataque bajo frente a blindados; carga pendiente"},
     "ifv":{"weapon":"canon automatico","style":"direct","reaction_pct":55,"armor":"blindada","tier":2,"strength":"Apoyo mecanizado y cobertura de escuadras","weakness":"Pierde frente a tanque y armas pesadas"},
     "tank":{"weapon":"canon de carro","style":"direct","reaction_pct":60,"armor":"pesada","tier":2,"strength":"Duelo contra vehiculos terrestres blindados","weakness":"Sin ataque aereo; flancos, apoyo artillero"},
