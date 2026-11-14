@@ -92,6 +92,14 @@ func _run() -> void:
         "FuegoDestruccionP06",true,false) as MeshInstance3D
     assert(smoke!=null and flame!=null)
     var smoke_origin: Vector3=smoke.position
+    var destroyed_wheel: Node3D=modern.find_child(
+        "RuedaMotorizadaP06_1_0",true,false) as Node3D
+    assert(destroyed_wheel!=null)
+    var damaged_hub: MeshInstance3D=modern.find_child(
+        "BujeRotoP06",true,false) as MeshInstance3D
+    var torn_flank: MeshInstance3D=modern.find_child(
+        "CostadoDerrumbadoP06",true,false) as MeshInstance3D
+    assert(damaged_hub!=null and torn_flank!=null)
     for stage in range(5):
         assert(Finish.apply_stage(modern,stage))
         assert(int(modern.get_meta("tarvoka_apc_v3_damage_stage",-1))==stage)
@@ -99,11 +107,13 @@ func _run() -> void:
             var group: Node3D=stage_parent.find_child(
                 "DanoP06Etapa_%d" % i,false,false) as Node3D
             assert(group!=null and group.visible==(stage>=i))
+        assert(destroyed_wheel.visible==(stage<4))
         Finish.animate_damage(modern,1.9+float(stage))
         if stage>=2:
             assert(smoke.position.distance_to(smoke_origin)>0.004)
         assert(Models.inspect_meshes(modern)==modern_count)
     assert(Finish.apply_stage(modern,0))
+    assert(destroyed_wheel.visible)
     Finish.animate_damage(modern,4.0)
     for i in range(1,5):
         assert(not stage_parent.find_child(
