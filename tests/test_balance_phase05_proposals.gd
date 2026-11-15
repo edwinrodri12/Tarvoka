@@ -8,6 +8,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const AI = preload("res://scripts/core/BasicAI.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # Headless, deterministic A/B of three OPT-IN proposals. Neither UI nor
 # shipping game invokes the experimental implementation.
@@ -15,15 +16,18 @@ func _initialize() -> void:
     var urban: Dictionary = _urban_assault_ab()
     var engineering: Dictionary = _engineer_ab()
     var recruiting: Dictionary = _ai_recruitment_ab()
+    var safeguards: Dictionary = _turn_and_fog_safeguards()
+    assert(safeguards["engineer_cycles"] == 2 and safeguards["fog_probes"] == 2)
     assert(urban["samples"] == 40)
     assert(engineering["valid"] > 0)
     assert(recruiting["comparisons"] == 60)
-    print("PROPOSAL_V05_SUMMARY urban_samples=%d urban_hits_better=%d urban_off_city_equal=%d urban_legacy_equal=%d repair_cases=%d repair_valid=%d repair_denials=%d ai_budget_comparisons=%d ai_differences=%d ai_holds=%d baseline_helis_at_500=%d experiment_helis_at_500=%d" % [
+    print("PROPOSAL_V05_SUMMARY urban_samples=%d urban_hits_better=%d urban_off_city_equal=%d urban_legacy_equal=%d repair_cases=%d repair_valid=%d repair_denials=%d ai_budget_comparisons=%d ai_differences=%d ai_holds=%d baseline_helis_at_500=%d experiment_helis_at_500=%d engineer_turn_cycles=%d fog_knowledge_checks=%d" % [
         urban["samples"],urban["better"],urban["off_city_equal"],
         urban["legacy_equal"],engineering["cases"],engineering["valid"],
         engineering["denied"],recruiting["comparisons"],
         recruiting["different"],recruiting["holds"],
-        recruiting["baseline_idle_heli"],recruiting["proposal_idle_heli"]
+        recruiting["baseline_idle_heli"],recruiting["proposal_idle_heli"],
+        safeguards["engineer_cycles"],safeguards["fog_probes"]
     ])
     print("PASS balance phase05: isolated A/B urban assault, paid adjacent engineer repair, fog-safe utility-first recruitment and v1 save compatibility")
     quit(0)
@@ -253,3 +257,68 @@ static func _ai_recruitment_ab() -> Dictionary:
         print("PROPOSAL_RECRUIT_REPAIR side=%d unit=engineer damaged_armor_near_factory=true" % side)
     return {"comparisons":examined,"different":differences,"holds":held,
         "baseline_idle_heli":before_helis,"proposal_idle_heli":after_helis}
+
+# A repair must respect real phase boundaries, the opening-order limit,
+# and payment. Enemy aircraft beyond the fog cannot affect recruitment.
+static func _turn_and_fog_safeguards() -> Dictionary:
+    var engineer_cycles := 0
+    var fog_probes := 0
+    for side in [0,1]:
+        var original: Dictionary = _repair_fixture(side,"tank",4)
+        var first: Dictionary = Proposal.engineer_repair(original,"ENG","ARM")
+        assert(first["valid"] and not Proposal.engineer_quote(first["state"],"ENG","ARM")["valid"])
+        var opponent: Dictionary = Session.end_turn(first["state"])
+        assert(opponent["valid"] and int(opponent["state"]["faction"]) == 1-side)
+        assert(not Proposal.engineer_quote(opponent["state"],"ENG","ARM")["valid"])
+        var own_again: Dictionary = Session.end_turn(opponent["state"])
+        assert(own_again["valid"] and int(own_again["state"]["faction"]) == side)
+        var second: Dictionary = Proposal.engineer_repair(own_again["state"],"ENG","ARM")
+        assert(second["valid"])
+        assert(int(second["state"]["units"][1]["hp"]) == int(Arsenal.profile("tank")["hp"]))
+        assert(Codec.decode(Codec.encode(second["state"])) == second["state"])
+        var no_more: Dictionary = Session.end_turn(second["state"])
+        assert(no_more["valid"])
+        no_more = Session.end_turn(no_more["state"])
+        assert(no_more["valid"])
+        assert(not Proposal.engineer_repair(no_more["state"],"ENG","ARM")["valid"])
+        var capped: Dictionary = _repair_fixture(side,"tank",4)
+        capped["opening"] = {"starter":side,"limit":1,"used":0}
+        var capped_repair: Dictionary = Proposal.engineer_repair(capped,"ENG","ARM")
+        assert(capped_repair["valid"])
+        assert(int(capped_repair["state"]["opening"]["used"]) == 1)
+        var blocked: Dictionary = capped.duplicate(true)
+        blocked["opening"]["used"] = 1
+        assert(not Proposal.engineer_quote(blocked,"ENG","ARM")["valid"])
+        print("PROPOSAL_REPAIR_TURNS side=%d repaired_twice=true capped_at_max=true opening_order_used=1 save_compatible=true" % side)
+        engineer_cycles += 1
+
+        var fog: Dictionary = _purchase_fixture(side,"airbase",1000)
+        var air_i := 0
+        for unit in fog["units"]:
+            if int(unit["faction"]) != side and str(unit.get("domain","ground")) == "air":
+                # Put both enemy aircraft far from own units' vision,
+                # across the map at distinct altitudes/columns.
+                unit["pos"] = Vector2i(9 if side == 0 else 0,0 if air_i == 0 else 7)
+                air_i += 1
+        assert(air_i == 2)
+        fog["fog_enabled"] = true
+        fog = Visibility.update_exploration(fog)
+        var observed: Dictionary = Visibility.observed_state(fog,side)
+        for contact in observed["units"]:
+            if int(contact.get("faction",-1)) != side:
+                assert(str(contact.get("domain","ground")) != "air")
+        var site_pos := Vector2i(0,6) if side == 0 else Vector2i(9,6)
+        var without_air: Dictionary = Proposal.purchase_proposal(fog,site_pos)
+        assert(without_air["valid"] and str(without_air["role"]) == "attack_heli")
+        var unseen_change: Dictionary = fog.duplicate(true)
+        unseen_change["economy"]["credits"][1-side] = 100000
+        var same: Dictionary = Proposal.purchase_proposal(unseen_change,site_pos)
+        assert(same["valid"] and same["role"] == without_air["role"])
+        var visible: Dictionary = fog.duplicate(true)
+        visible.erase("fog_enabled")
+        visible.erase("explored")
+        var with_air: Dictionary = Proposal.purchase_proposal(visible,site_pos)
+        assert(with_air["valid"] and str(with_air["role"]) == "fighter")
+        print("PROPOSAL_FOG side=%d hidden_air=attack_heli revealed_air=fighter enemy_credits_ignored=true" % side)
+        fog_probes += 1
+    return {"engineer_cycles":engineer_cycles,"fog_probes":fog_probes}
