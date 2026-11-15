@@ -26,3 +26,35 @@
 
 ## Salidas
 Las líneas `BALANCE_ROLE`, `BALANCE_MOVE`, `BALANCE_CITY`, `BALANCE_OPENING`, `BALANCE_PHASE02_SUMMARY` y `PASS balance phase 02:` se conservan en el log de GitHub Actions. Tras verificar la CI, registrar las cifras y convertir los casos sospechosos en pruebas de combate con composición y precios controlados.
+
+## Resultados verificados con CI (Godot 4.3, ejecución 43695385829)
+
+**[Prueba completa: SUCCESS](https://github.com/edwinrodri12/Tarvoka/actions/runs/43695385829)**. La prueba ejecutó **1.024 parejas rol-atacante/rol-defensor**, de las cuales **432 permiten disparo real según distancia, tipo de objetivo y armamento**. Todos los perfiles tienen costo positivo, instalación de producción, vida/movimiento/rango legal, reacciones y municiones validadas. Se clasificaron exactamente 5 roles sin ataque convencional: `ew`, `logistics`, `uav_recon`, `transport_heli`, `landing_ship`. **Esto valida consistencia del motor, no garantiza valor estratégico de cada unidad.**
+
+**Movimiento/clima:** 312 combinaciones rol × mapa compatible × clima, comparadas desde ambos extremos del campo. La lluvia redujo casillas alcanzables respecto al cielo despejado en 32 combinaciones de rol y mapa; nieve en 44. No se encontraron ampliaciones espurias por empeorar el clima ni ventajas de posición este/oeste en esta batería. No incluye simulación dinámica de flancos o combustible agotado después de muchos turnos.
+
+**Economía aislada:** una ciudad adicional pasa de 250 a 500 créditos de ingresos por turno propio, lo que añade +750 después de tres pagos, equivalente al costo actual del tanque de 750. Dos ciudades extras suponen 750 contra 250 por turno, +1500 después de tres pagos. Con ingresos simétricos durante seis medias fases, ambos bandos obtuvieron 3250 créditos independientemente de quien iniciara; se verificó que el pago se acredita una sola vez al comienzo de cada turno correspondiente.
+
+**Aperturas de IA:** 32 simulaciones de 12 medias fases (aproximadamente seis rondas completas). Se ejecutaron **607 compras, 122 cambios de control urbano y 36 reabastecimientos**. **Ninguna partida había concluido a la fase 12**: no se puede calcular tasa de victorias ni concluir que el primer jugador o el segundo tiene ventaja decisiva en este horizonte.
+
+**Desigualdades al corte:** créditos sin gastar = caja, **no** poder económico ni valor total del ejército. Los promedios siguientes muestran qué escenarios revisar primero, sin introducir cambios de balance en esta rama:
+
+| Escenario 10×8 | Diferencia media absoluta de créditos | Diferencia media de renta por turno | Diferencia media de unidades vivas | Máxima brecha de caja observada |
+|---|---:|---:|---:|---:|
+| Campo abierto | 1150 | 125 | 1,3 | 1700 |
+| Bosque de dos rutas | 1491 | 375 | 1,4 | 2850 |
+| Puentes | 1175 | 375 | 1,3 | 2300 |
+| Costa | **1685** | **438** | **3,3** | **3050** |
+
+Son ocho partidas por escenario (dos nieblas × dos primeros jugadores × dos aperturas), con dos bandos de IA idéntica, no muestra humana. Los valores de renta son el **desbalance absoluto de ingresos por ciudades poseídas en el punto de corte**, no una media de renta durante toda la partida. El coste de unidades compradas, daños, posición y composición deben medirse antes de comparar los créditos de cierre. Las medias de muestra reducida, mapas simétricos y IA determinista no extrapolan estadísticamente a partidas humanas.
+
+**A/B apertura libre vs tres órdenes (n=16 cada una):** media de brecha de caja **1417** vs **1334** créditos, y renta desigual **344** vs **313** por turno. Son diferencias descriptivas, **no evidencia suficiente de que el límite mejore el juego**; se estudiarán enfrentamientos completos, alternando iniciador y geografía.
+
+### Prioridades de la fase 03
+1. En cada turno medir **riqueza total** (efectivo + valor invertido en unidades vivas ajustado por HP + suministros), no solo dinero disponible, y la probabilidad de remontada tras perder una ciudad.
+2. Estudiar la costa y dos rutas con diversas composiciones iniciales; contabilizar adquisiciones, bajas, capturas netas y tiempos hasta victoria, sin ocultar partidas que terminan tras más de seis rondas.
+3. Auditar unidades con ataques restringidos (SAM, antiaéreos, submarinos, artillería, unidades de un solo uso) y evitar que precios favorezcan a unidades cuyo papel especial aún está pendiente de programación.
+4. Cuando exista un sistema real de mejoras, evaluar **coste por mejora y beneficio efectivo**; `tier` del catálogo actual es solo acto de campaña, y no hay progresión de atributos implementada que se pueda medir como si existiera.
+5. Conservar el balance 0.1 de las ocho facciones hasta disponer de poderes y pruebas funcionales que justifiquen una revisión.
+
+**Dictamen de esta fase:** la batería de coherencia pasó, pero todavía NO se certifica que las estadísticas actuales sean competitivamente equilibradas o divertidas. El principal riesgo cuantificable es la ampliación económica por captura, especialmente en mapas que facilitan concentrar ciudades.
