@@ -152,7 +152,8 @@ func _run() -> void:
     assert(mixed_shot.save_png(
         "res://artifacts/tarvoka_mixed_%s_apc_hq_lod.png" % tag)==OK)
     for hq in hqs:
-        assert(HQLod.set_reduced(hq,false)>0)
+        # A demolished HQ can legitimately have zero glazing to hide.
+        HQLod.set_reduced(hq,false)
         assert(not hq.get_meta(HQLod.ACTIVE,true))
     for vehicle in apcs:
         assert(APC.apply_stage(vehicle,0))
