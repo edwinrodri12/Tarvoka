@@ -130,9 +130,10 @@ static func _flanks(root: Node3D, enamel: Material,
             var z: float = float(V1.WHEEL_Z[axle])
             fender_boxes.append(Vector3(sign*0.831,0.830,z))
             fender_angles.append(Vector3(0,0,sign*6.5))
-            for end in [-1,1]:
-                armor_fasteners.append(Vector3(sign*0.856,1.248,
-                    z+float(end)*0.215))
+            for height in [1.248,1.112]:
+                for end in [-1,1]:
+                    armor_fasteners.append(Vector3(sign*0.856,height,
+                        z+float(end)*0.215))
         for seam_z in [-0.66,0.03,0.69]:
             seam_marks.append(Vector3(sign*0.858,1.055,seam_z))
         # Both rear service latches are at the physical edge of the troop door.
@@ -277,6 +278,7 @@ static func apply(model: Node3D, faction_color: Color) -> bool:
     if old != null:
         old.visible = false
     model.set_meta(FLAG,true)
+    model.set_meta("tarvoka_apc_v6_visible",true)
     model.set_meta("tarvoka_apc_v6_armored_rivets",rivets)
     model.set_meta(STAGE,0)
     return true
@@ -294,10 +296,11 @@ static func set_stage(model: Node3D, stage: int) -> bool:
         if layer != null:
             layer.visible = value >= int(entry[1])
     # A destroyed APC cannot have a pristine sensor mast and roof panel.
+    var enabled: bool = bool(model.get_meta("tarvoka_apc_v6_visible",true))
     for label in [ROOF,TURRET,"RegistroMantenimientoTecho"]:
         var part: Node3D = model.find_child(label,true,false) as Node3D
         if part != null:
-            part.visible = value < 4
+            part.visible = enabled and value < 4
     model.set_meta(STAGE,value)
     return true
 
