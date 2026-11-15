@@ -118,3 +118,16 @@
 - No se ha medido rendimiento Android aquí; antes de finalizar el arte debe hacerse revisión humana del ritmo, separación entre estelas y cámara lenta en el Estudio 3D.
 
 **Próxima posible mejora visual:** suavizar la estela aerodinámica y la disipación de gases del propulsor y mejorar los efectos sincronizados en cada salva, sin alterar la mecánica del combate.
+
+## Actualización V9 — estelas tridimensionales y disipación de gases (15-nov-2026)
+
+**Modelado nuevo:** `scripts/ui/G11ExhaustV9.gd` se integra tras `G11SequentialSalvoV8.gd` en `G11Art3D.gd` y recibe poses sincronizadas desde `G11VisualRig3D.gd`. No se altera ninguna estadística de ataque, munición, economía, ni movimiento del juego.
+
+- Los doce cohetes V8 incorporan dos mallas de escape por motor: núcleo luminoso y estela exterior, ambos realizados como `ArrayMesh` con anillos tridimensionales curvos y gradientes propios de color/transparencia. Se **estiran al acelerar** el proyectil, con la estela orientada en la dirección opuesta al vuelo local `-Z`.
+- Cada tubo mantiene además dos sistemas independientes: gases de presión cerca de la boca y humo residual, que se dilatan, ascienden, se dispersan y se extinguen progresivamente, incluso después de que el cohete salga del encuadre.
+- Los antiguos tres `SphereMesh` por boca (`G11V8_Presion_*`) y el cono rígido del motor V8 se ocultan para que no atraviesen las nuevas formas orgánicas, conservando los nodos por compatibilidad y restauración.
+- Cada efecto permanece unido a su cohete o su boca real sobre el lanzador. Sigue la elevación hidráulica, giro de torreta y salvas alternadas de las ocho facciones. Las doce mallas se restauran a estado invisible al parar, tras destrucción o al reparar.
+- El Estudio 3D presenta ahora el nombre «G11 Lanzador · Estelas V9 · 12 cohetes», con botones existentes **Salva normal** y **Salva lenta x0.35** para distinguir cada encendido. El pipeline de GitHub Pages incluye el nuevo módulo desde la fuente `main`.
+- Prueba nativa Godot 4.3 aprobada: [G11 V9, 12 sistemas de gases y estelas](https://github.com/edwinrodri12/Tarvoka/actions/runs/43735566071). Los tests verifican vuelos escalonados, aumento de estela, disipación tardía, las ocho facciones y reparación. El artifact `tarvoka-g11-v9-exhaust-gas-24-godot-reviews` contiene **24 capturas de render real** desde doce disparos, cuatro vistas laterales, seis acercamientos y estados inicial/final.
+
+**Pendiente de inspección artística:** estudiar en el Estudio 3D el color y la forma de los gases, y pulir cualquier pequeña intersección en el lanzamiento. No consideramos el G11 terminado sin esa revisión.
