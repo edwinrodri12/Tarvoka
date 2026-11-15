@@ -12,6 +12,7 @@ const TUBE_COUNT := 12
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
+const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -269,6 +270,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 surface V3 failed; retaining complete V2 finish")
     elif not GeometryV4.apply(model):
         push_warning("G11 physical sculpt V4 failed; retaining V3 finish")
+    elif not MechanicsV5.apply(model):
+        push_warning("G11 mechanical sculpt V5 failed; retaining V4 sculpt")
     return true
 
 static func stage(model: Node3D) -> int:
