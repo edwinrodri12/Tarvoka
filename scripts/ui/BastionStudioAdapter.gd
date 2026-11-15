@@ -20,6 +20,7 @@ const P06JointV16 = preload("res://scripts/ui/APCJointFinishV16.gd")
 const P06ContourV17 = preload("res://scripts/ui/APCContourV17.gd")
 const P06WheelwellV18 = preload("res://scripts/ui/APCWheelwellV18.gd")
 const P06FlankV19 = preload("res://scripts/ui/APCUnifiedFlankV19.gd")
+const P06MicroV20 = preload("res://scripts/ui/APCMicrodetailV20.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -58,10 +59,10 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V16 bastidor frontal y techos")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V15 bastidor y paneles traseros")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V19 blindaje lateral integrado · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V20 soldaduras y tornillería · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -69,11 +70,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V19_FaldonesIntegrados"
+    p06_controls.name = "BastionP06_V20_AcabadosFinisimos"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V19 · INTEGRACIÓN LATERAL 3D",14)
+        "BASTIÓN P06 · V20 · SOLDADURAS Y REMACHES 3D",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -101,6 +102,10 @@ func _install_p06_controls() -> void:
         "V19: sellos de rueda",_inspect_p06_seals_v19)
     _add_paired(p06_controls,"V19: anclajes suspensión",_inspect_p06_mounts_v19,
         "V19: daño lateral",_inspect_p06_damage_v19)
+    _add_paired(p06_controls,"V20: inspeccionar soldaduras",_inspect_p06_welds_v20,
+        "V20: tornillos y arandelas",_inspect_p06_bolts_v20)
+    _add_paired(p06_controls,"V20: daño medio y costuras",_inspect_p06_medium_v20,
+        "V20: fracturas críticas",_inspect_p06_critical_v20)
     _add_paired(p06_controls,"Vista inferior completa",_inspect_p06_underside,
         "Acercamiento a transmisión",_inspect_p06_transfer)
     _add_paired(p06_controls,"Vista 3/4 trasera",func(): _view_p06_angle(145.0),
@@ -109,14 +114,14 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V19",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V20",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
         "Prueba 32 vehículos",func(): _show_p06_fleet(32))
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
-        "Volver al Bastión V19",_hide_p06_fleet)
+        "Volver al Bastión V20",_hide_p06_fleet)
     _add_paired(p06_controls,
         "LOD cerca",func(): _set_p06_fleet_quality(0),
         "LOD medio",func(): _set_p06_fleet_quality(1))
@@ -127,9 +132,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V19: transiciones biseladas entre faldones V18 y blindaje V11, seis "
-        + "juntas de rueda fijas con holgura, anclajes de suspensión y "
-        + "fracturas laterales coherentes. Daños y reparaciones reversibles.",12)
+        "V20: cordones de soldadura en los cuatro faldones, tornillos hexagonales "
+        + "y arandelas en seis pasos de rueda; cada detalle responde al daño "
+        + "y a la reparación sin interferir con dirección ni suspensión.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -141,7 +146,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · FRENTE Y TECHO 3D V16",14)
+        "G11 LANZADOR · ESCULTURA POSTERIOR V15",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -165,14 +170,10 @@ func _install_g11_controls() -> void:
         "Lateral opuesto",func(): _g11_view(270.0))
     _add_paired(g11_controls,"V15: trasera en 3/4",func(): _g11_view(145.0),
         "V15: blindaje opuesto",func(): _g11_view(215.0))
-    _add_paired(g11_controls,"V16: frente en 3/4",func(): _g11_view(38.0),
-        "V16: frontal opuesto",func(): _g11_view(322.0))
-    _add_paired(g11_controls,"V16: techo y articulación",func(): _g11_view(70.0),
-        "V16: juntas posteriores",func(): _g11_view(165.0))
     _title(g11_controls,
-        "V16: bastidor frontal con bocas abiertas, cuatro cartelas, "
-        + "soldaduras y dos tapas superiores físicas. Conserva la trasera "
-        + "V15, hidráulicos V14 y engranes con pintura V13.",12)
+        "V15: inspecciona las dos cubiertas traseras biseladas, el bastidor "
+        + "reforzado y seis lamas 3D. Durante la salva verás los hidráulicos V14; "
+        + "las diez puntas del engrane V13 y la pintura siguen intactas.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -324,7 +325,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V19")
+                if _p06_show_v5 else "Volver al acabado completo V20")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -378,6 +379,7 @@ func _display_role(role: String) -> void:
             P06ContourV17.FLAG,false)) and bool(model_root.get_meta(
             P06WheelwellV18.FLAG,false)) and bool(model_root.get_meta(
             P06FlankV19.FLAG,false)) and bool(model_root.get_meta(
+            P06MicroV20.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -395,8 +397,9 @@ func _display_role(role: String) -> void:
             P06ContourV17.set_stage(model_root,0)
             P06WheelwellV18.set_stage(model_root,0)
             P06FlankV19.set_stage(model_root,0)
+            P06MicroV20.set_stage(model_root,0)
         else:
-            push_error("TARVOKA P06 V19 side-fender sculpture was not built; do not label it final")
+            push_error("TARVOKA P06 V20 microdetail was not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -482,6 +485,7 @@ func _set_damage(stage: int) -> void:
         P06ContourV17.set_stage(model_root,stage)
         P06WheelwellV18.set_stage(model_root,stage)
         P06FlankV19.set_stage(model_root,stage)
+        P06MicroV20.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -504,6 +508,7 @@ func _toggle_p06_version() -> void:
     P06ContourV17.set_enabled(model_root,_p06_show_v5)
     P06WheelwellV18.set_enabled(model_root,_p06_show_v5)
     P06FlankV19.set_enabled(model_root,_p06_show_v5)
+    P06MicroV20.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -592,6 +597,38 @@ func _inspect_p06_damage_v19() -> void:
     _set_damage(3)
     _view_p06_angle(104.0)
     _zoom=1.89
+    _update_camera()
+
+func _inspect_p06_welds_v20() -> void:
+    if _role!="apc":
+        return
+    _set_damage(0)
+    _view_p06_angle(91.0)
+    _zoom=2.08
+    _update_camera()
+
+func _inspect_p06_bolts_v20() -> void:
+    if _role!="apc":
+        return
+    _set_damage(0)
+    _view_p06_angle(-76.0)
+    _zoom=2.17
+    _update_camera()
+
+func _inspect_p06_medium_v20() -> void:
+    if _role!="apc":
+        return
+    _set_damage(2)
+    _view_p06_angle(97.0)
+    _zoom=2.10
+    _update_camera()
+
+func _inspect_p06_critical_v20() -> void:
+    if _role!="apc":
+        return
+    _set_damage(3)
+    _view_p06_angle(125.0)
+    _zoom=1.95
     _update_camera()
 
 func _inspect_p06_turret() -> void:
@@ -773,9 +810,7 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_front_frame_v16",false)):
-            detail_label.text = detail_label.text.replace("salva V8","uniones y acabados V16")
-        elif built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
             detail_label.text = detail_label.text.replace("salva V8","bastidor y acabados V15")
         elif built and bool(model_root.get_meta("tarvoka_g11_mechanical_detail_v14",false)):
             detail_label.text = detail_label.text.replace("salva V8","hidráulicos V14")
@@ -813,10 +848,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V19 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V20 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V19 cargado" if _p06_quality_verified else
+        "acabado V20 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
