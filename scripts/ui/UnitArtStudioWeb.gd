@@ -263,7 +263,7 @@ func _construct() -> void:
     column.add_child(role_picker)
     role_picker.item_selected.connect(_on_role)
     _auto_benchmark_button=_button(column,
-        "ANDROID · AUTOTEST 6 FASES (6 MIN)",_toggle_auto_benchmark)
+        "ANDROID · AUTOTEST 6 FASES (≈7 MIN)",_toggle_auto_benchmark)
 
     apc_controls=VBoxContainer.new()
     apc_controls.name="APCP06V1_InspeccionTecnica"
@@ -1347,7 +1347,7 @@ func _tick_auto_benchmark(delta: float) -> void:
         _begin_auto_benchmark_phase()
         return
     _auto_benchmark_report_path=_save_auto_benchmark_report()
-    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (6 MIN)"
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (≈7 MIN)"
     _auto_internal_change=true
     _set_apc_stress(0)
     _auto_internal_change=false
@@ -1373,7 +1373,7 @@ func _abort_auto_benchmark() -> void:
         _auto_benchmark.finish_phase(_apc_perf.report())
     _auto_benchmark.abort()
     _auto_benchmark_report_path=_save_auto_benchmark_report()
-    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (6 MIN)"
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (≈7 MIN)"
     _auto_internal_change=true
     _set_apc_stress(0)
     _auto_internal_change=false
@@ -1381,7 +1381,7 @@ func _abort_auto_benchmark() -> void:
         "Autotest detenido · informe parcial guardado (si hubo muestras)")
 
 func _save_apc_perf() -> void:
-    if not _auto_benchmark.active and (
+    if not _auto_benchmark.active and _apc_stress_count==0 and (
             _auto_benchmark.reports.size()>0):
         # Export the complete native Android A/B series by explicit tap.
         DisplayServer.clipboard_set(JSON.stringify(
