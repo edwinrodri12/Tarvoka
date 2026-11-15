@@ -8,6 +8,8 @@ on:
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitRender3D.gd"
       - "tests/test_native_unit_models_3d.gd"
+      - "tests/test_performance_telemetry_v1.gd"
+      - "scripts/ui/PerformanceTelemetryV1.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
@@ -23,6 +25,8 @@ on:
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitRender3D.gd"
       - "tests/test_native_unit_models_3d.gd"
+      - "tests/test_performance_telemetry_v1.gd"
+      - "scripts/ui/PerformanceTelemetryV1.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
@@ -103,6 +107,15 @@ jobs:
           test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_stress.png
           test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_tactical_lod.png
           test -s artifacts/apc_p06_v3_stress_metrics_64.json
+      - name: Verify on-device FPS profiling percentiles, memory and report serialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy \
+            --script res://tests/test_performance_telemetry_v1.gd 2>&1 | tee /tmp/tarvoka-profiler.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-profiler.log; then exit 1; fi
+          grep -q 'PASS TARVOKA PERF TELEMETRY:' /tmp/tarvoka-profiler.log
+          test -s artifacts/tarvoka_profiler_sample.json
       - name: Verify Android and web Studio 32/64 APC test buttons and FPS HUD
         shell: bash
         run: |
@@ -187,6 +200,7 @@ jobs:
             artifacts/tarvoka_apc_p06_v3_*.png
             artifacts/tarvoka_apc_p06_v2_antes.png
             artifacts/TARVOKA_APC_P06_V3_Editable.glb
+            artifacts/tarvoka_profiler_sample.json
             artifacts/apc_p06_v3_stress_metrics_32.json
             artifacts/apc_p06_v3_stress_metrics_64.json
             artifacts/tarvoka_mixed_*.png
