@@ -12,6 +12,10 @@ func _run() -> void:
     assert(str(ProjectSettings.get_setting("display/window/stretch/mode","")) == "canvas_items")
     assert(str(ProjectSettings.get_setting("display/window/stretch/aspect","")) == "expand")
 
+    # Compile the command script directly to expose primary parser diagnostics,
+    # rather than only Main's secondary "Could not preload" message.
+    var command_script: Script = load("res://scripts/ui/CommandMenu.gd")
+    assert(command_script != null)
     var scene: PackedScene = load("res://scenes/Main.tscn")
     assert(scene != null)
     var screen: Control = scene.instantiate()
