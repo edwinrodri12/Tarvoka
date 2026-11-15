@@ -85,6 +85,15 @@ func _run() -> void:
         await process_frame
     assert(main.board.state.get(Biome.FIELD)==Biome.WINTER)
     if DisplayServer.get_name() != "headless":
+        # The test calls confirmation directly. Real GPU screenshots should
+        # not retain the native confirmation popup or cover 70% of the
+        # winter art with the FOG that was separately validated above.
+        main.new_game_dialog.hide()
+        main.board.new_game(1,true,false,false,true,false,false,0,0,
+            Vector2i(10,8),{},Weather.CLEAR,false,Biome.WINTER)
+        main.board.set_isometric(true)
+        for frame in range(5):
+            await process_frame
         DirAccess.make_dir_recursive_absolute(
             ProjectSettings.globalize_path("res://artifacts"))
         var iso_image: Image = root.get_texture().get_image()
