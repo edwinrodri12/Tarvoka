@@ -106,6 +106,9 @@ static func _sculpt_fender(near: Node3D,far: Node3D,
             Vector3(-0.112,0.10,0.068),
             Vector3(0.080,0.095,0.05),RUST,0.11,
             Vector3(14,20,9))
+        _box(far,label+"_DamagedDistanceProfile",pos,
+            Vector3(0.25,0.29,0.30),RUST,0.11,
+            Vector3(0,0,15))
         return
     # Two real clamped metal ends; the original V8 metal rings are hidden
     # when this V9 assembly is present, so the structure isn't doubled.
