@@ -98,12 +98,15 @@ func _run() -> void:
             var shaft: Node3D=_node(car,Underside.SHAFT_NAMES[i])
             _check(shaft!=null and shaft.get_parent()==transmission,
                 "three drive shafts actually parent to transfer gearbox")
-            var tube: Node3D=shaft.find_child("P06V15_TuboTransmision",
-                false,false) as Node3D if shaft!=null else null
+            var tube: Node3D=null
+            var joint: Node3D=null
+            if shaft!=null:
+                tube=shaft.find_child(
+                    "P06V15_TuboTransmision",false,false) as Node3D
+                joint=shaft.find_child(
+                    "P06V15_CrucetaCardan",false,false) as Node3D
             _check(tube!=null and tube.scale.y>0.08,
                 "drive shaft real cylinder joins gearbox and differential")
-            var joint: Node3D=shaft.find_child("P06V15_CrucetaCardan",
-                false,false) as Node3D if shaft!=null else null
             _check(joint!=null and joint.get_child_count()==2,
                 "each drive shaft has a genuine two-axis universal cross")
         _check(_node(car,"P06V15_CajaTransferencia6x6") is MeshInstance3D,
