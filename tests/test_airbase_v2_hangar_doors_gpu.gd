@@ -1,0 +1,201 @@
+extends SceneTree
+
+const Airbase = preload("res://scripts/ui/Airbase3DV1.gd")
+const Hangar = preload("res://scripts/ui/AirbaseHangarV2.gd")
+const Doors = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
+const Scene = preload("res://scenes/UnitArtStudioWeb.tscn")
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _frames(n: int = 6) -> void:
+    for _i in range(n):
+        await process_frame
+
+func _capture(studio: Control,name: String) -> Image:
+    var image: Image = studio.preview.get_texture().get_image()
+    assert(image != null and image.get_width()>400 and image.get_height()>300)
+    assert(DirAccess.make_dir_recursive_absolute(
+        ProjectSettings.globalize_path("res://artifacts"))==OK)
+    assert(image.save_png("res://artifacts/"+name)==OK)
+    return image
+
+func _different(first: Image,second: Image) -> int:
+    var a: Image = first.duplicate()
+    var b: Image = second.duplicate()
+    a.resize(215,160)
+    b.resize(215,160)
+    var count := 0
+    for y in range(0,160,2):
+        for x in range(0,215,2):
+            var p: Color = a.get_pixel(x,y)
+            var q: Color = b.get_pixel(x,y)
+            if absf(p.r-q.r)+absf(p.g-q.g)+absf(p.b-q.b)>0.14:
+                count+=1
+    return count
+
+func _run() -> void:
+    var max_meshes := 0
+    # Do not silently alter the V1 structural baseline or approved emblems.
+    for faction in range(8):
+        for tier in range(1,4):
+            for stage in range(5):
+                var building: Node3D = Airbase.build(tier,faction,stage)
+                var applied: bool = Hangar.apply(building,tier,faction,stage)
+                assert(applied)
+                assert(not Hangar.apply(building,tier,faction,stage))
+                assert(building.get_meta("visual_faction",-1)==faction)
+                assert(building.find_child("BaseCompacta",true,false)!=null)
+                if stage<4:
+                    assert(building.get_meta("tarvoka_airbase_v2",false))
+                    assert(building.find_child(Hangar.STAGE_NAME,true,false)!=null)
+                    assert(building.find_child("MuroTraseroCerrado",true,false)!=null)
+                    assert(building.find_child("PavimentoInterior",true,false)!=null)
+                    assert(building.find_child("PuenteGruaHangar",true,false)!=null)
+                    assert(building.find_child("CarrilSuperiorContinuo",true,false)!=null)
+                    assert(building.find_child("EmblemaOficialAtlasBaseAerea",true,false)!=null)
+                else:
+                    assert(building.find_child("HangarPrincipalV1",true,false)==null)
+                    assert(building.find_child(Hangar.STAGE_NAME,true,false)==null)
+                var budget: int = Airbase.mesh_count(building)
+                assert(budget>25 and budget<310)
+                max_meshes=maxi(max_meshes,budget)
+                building.free()
+
+    # Independent actual gate mesh animation and full-open physical clearance.
+    var model: Node3D = Airbase.build(2,0,0)
+    assert(Hangar.apply(model,2,0,0))
+    var gate: TarvokaAirbaseDoorRigV2 = Doors.build(0)
+    model.add_child(gate)
+    root.add_child(model)
+    await _frames(3)
+    assert(gate.is_operational() and gate.gate_mesh_count()==20)
+    var hangar_root: Node3D = model.get_node("HangarPrincipalV1") as Node3D
+    var leaf_l: MeshInstance3D = hangar_root.get_node("CompuertaPrincipal_1") as MeshInstance3D
+    var leaf_r: MeshInstance3D = hangar_root.get_node("CompuertaPrincipal_2") as MeshInstance3D
+    var pos_before: Vector3 = leaf_l.position
+    assert(is_equal_approx(leaf_l.position.x,-0.85))
+    assert(is_equal_approx(leaf_r.position.x,0.87))
+    var started: bool = gate.play_open()
+    assert(started)
+    gate.advance(Doors.MOTION_SECONDS*0.33)
+    assert(gate.is_moving() and gate.open_fraction()>0.30)
+    var halfway: float = leaf_l.position.x
+    assert(halfway<pos_before.x)
+    gate.advance(Doors.MOTION_SECONDS)
+    assert(not gate.is_moving() and gate.open_fraction()>0.999)
+    assert(absf(leaf_l.position.x-(-3.43))<0.02)
+    assert(absf(leaf_r.position.x-3.43)<0.02)
+    var opened: bool = gate.play_close()
+    assert(opened)
+    gate.advance(Doors.MOTION_SECONDS*2.0)
+    assert(not gate.is_moving())
+    assert((leaf_l.position-pos_before).length()<0.005)
+    assert(gate.set_open_fraction(0.70))
+    assert(absf(gate.open_fraction()-0.70)<0.002)
+    gate.set_distant(true)
+    assert(gate.play_close() and not gate.is_processing())
+    gate.advance(0.6)
+    assert(absf(gate.open_fraction()-0.70)<0.002)
+    gate.set_distant(false)
+    assert(gate.is_processing())
+    gate.advance(Doors.MOTION_SECONDS)
+    assert(not gate.is_moving() and gate.open_fraction()<0.001)
+    model.queue_free()
+    await _frames(4)
+
+    # Damage stage 2 is visually broken. It can never operate like an
+    # intact working door, nor regenerate the missing gate leaf.
+    var destroyed: Node3D = Airbase.build(2,5,2)
+    assert(Hangar.apply(destroyed,2,5,2))
+    var jammed: TarvokaAirbaseDoorRigV2 = Doors.build(2)
+    destroyed.add_child(jammed)
+    root.add_child(destroyed)
+    await _frames(3)
+    assert(not jammed.is_operational())
+    assert(not jammed.play_open())
+    assert(not jammed.set_open_fraction(1.0))
+    destroyed.queue_free()
+    await _frames(3)
+
+    # Native GPU studio screenshot & controls, without a fake image viewer.
+    root.content_scale_size=Vector2i(1280,800)
+    var studio: Control = Scene.instantiate()
+    root.add_child(studio)
+    await _frames(10)
+    studio._switch_category(1)
+    await _frames(5)
+    studio._change_selected_building(1)
+    await _frames(8)
+    assert(studio._role=="airbase")
+    assert(studio.airbase_open_button!=null)
+    assert(studio.airbase_close_button!=null)
+    assert(studio.airbase_gate_slider!=null and studio.airbase_gate_slider.editable)
+    assert(not studio.airbase_open_button.disabled)
+    assert(studio.model_root.find_child("InteriorOperativoHangarV2",true,false)!=null)
+    var closed_image: Image = _capture(studio,"tarvoka_airbase_v2_level1_closed.png")
+    var studio_gate: TarvokaAirbaseDoorRigV2 = studio._airbase_gate_rig()
+    assert(studio_gate!=null and studio_gate.is_operational())
+    studio._play_airbase_doors(true)
+    studio_gate.advance(Doors.MOTION_SECONDS+0.2)
+    await _frames(4)
+    assert(studio_gate.open_fraction()>0.999)
+    var open_image: Image = _capture(studio,"tarvoka_airbase_v2_level1_open.png")
+    assert(_different(closed_image,open_image)>28)
+    studio._scrub_airbase_doors(0.48)
+    await _frames(4)
+    assert(absf(studio._airbase_gate_rig().open_fraction()-0.48)<0.02)
+    _capture(studio,"tarvoka_airbase_v2_half_open.png")
+    studio._scrub_airbase_doors(1.0)
+    studio.airbase_level_picker.select(2)
+    studio._change_airbase_level(2)
+    await _frames(8)
+    assert(studio.model_root.get_meta("visual_level",-1)==3)
+    assert(studio._airbase_gate_rig().open_fraction()>0.995)
+    _capture(studio,"tarvoka_airbase_v2_level3_open.png")
+    studio._on_faction(6)
+    studio._refresh_building_faction(6)
+    await _frames(8)
+    assert(studio.model_root.get_meta("visual_faction",-1)==6)
+    assert(studio._airbase_gate_rig().open_fraction()>0.99)
+    _capture(studio,"tarvoka_airbase_v2_turquoise_open.png")
+    studio.airbase_damage_picker.select(1)
+    studio._change_airbase_damage(1)
+    await _frames(5)
+    assert(studio._airbase_gate_rig().is_operational())
+    studio.airbase_damage_picker.select(2)
+    studio._change_airbase_damage(2)
+    await _frames(8)
+    assert(studio._airbase_gate_rig()==null)
+    assert(studio.airbase_open_button.disabled and studio.airbase_close_button.disabled)
+    assert(studio.model_root.find_child("CompuertaPrincipal_2",true,false)!=null)
+    _capture(studio,"tarvoka_airbase_v2_damage_jammed.png")
+    studio.airbase_damage_picker.select(3)
+    studio._change_airbase_damage(3)
+    await _frames(8)
+    assert(studio._airbase_gate_rig()==null)
+    _capture(studio,"tarvoka_airbase_v2_critical.png")
+    studio.airbase_damage_picker.select(4)
+    studio._change_airbase_damage(4)
+    await _frames(7)
+    assert(studio.model_root.find_child("HangarPrincipalV1",true,false)==null)
+    _capture(studio,"tarvoka_airbase_v2_destroyed.png")
+    studio.airbase_damage_picker.select(0)
+    studio._change_airbase_damage(0)
+    studio.airbase_weather_picker.select(1)
+    studio._change_airbase_weather(1)
+    await _frames(7)
+    assert(studio.model_root.get_meta("weather_coating",{}).get("mode","")=="rain")
+    studio.airbase_weather_picker.select(2)
+    studio._change_airbase_weather(2)
+    await _frames(7)
+    assert(studio.model_root.get_meta("weather_coating",{}).get("mode","")=="snow")
+    _capture(studio,"tarvoka_airbase_v2_snow.png")
+    studio._change_selected_building(0)
+    await _frames(5)
+    assert(studio._role=="headquarters")
+    assert(studio.model_root.get_meta("tarvoka_hq_visual_v12",false))
+    studio.queue_free()
+    await _frames(5)
+    print("PASS AIRBASE V2: 120 modular variants, max %d meshes, 20 real gate meshes, smooth 1.85s reversible motion, safety interlock, true GPU open/closed views, eight factions and HQ preserved" % max_meshes)
+    quit(0)
