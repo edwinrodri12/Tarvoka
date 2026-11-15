@@ -1,7 +1,7 @@
 extends RefCounted
 class_name TarvokaAPCTransportAI
 
-# Tactical, fog-safe cargo planner. The caller supplies an ALREADY redacted
+# Tactical, fog-safe APC/IFV cargo planner. The caller supplies an ALREADY redacted
 # Visibility.observed_state, never a privileged enemy roster. Load infantry
 # only for a distant visible/known city, carry it across terrain, and unload
 # it directly on an empty adjacent city tile. Ordinary attacks, escape,
@@ -76,7 +76,7 @@ static func step(state: Dictionary, knowledge: Dictionary, friends: Array) -> Di
     var width: int = Rules.map_size(knowledge["terrain"]).x
     var visible: Dictionary = Visibility.visible_cells(state,side) if Visibility.enabled(state) else {}
     for vehicle in friends:
-        if str(vehicle.get("role","")) != Cargo.CARRIER_ROLE or not Turns.can_act(vehicle,side):
+        if Cargo.capacity(str(vehicle.get("role",""))) <= 0 or not Turns.can_act(vehicle,side):
             continue
         var carrier_id: String = str(vehicle["id"])
         var city: Vector2i = _preferred_city(cities,vehicle["pos"],side,width)
