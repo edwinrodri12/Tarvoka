@@ -82,6 +82,31 @@ func _run() -> void:
     DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://artifacts"))
     assert(img.save_png("res://artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png")==OK)
+    var full_draws: float=Performance.get_monitor(
+        Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+    var lod_details: int=0
+    for unit in actors:
+        lod_details+=Finish.set_tactical_lod(unit,true)
+        assert(unit.get_meta("tarvoka_apc_v3_tactical_lod",false))
+    assert(lod_details>=actors.size()*12)
+    var reduced_start: int=Time.get_ticks_usec()
+    for frame in range(FRAMES):
+        for unit in actors:
+            Finish.animate_damage(unit,float(frame+FRAMES)*0.17)
+        await process_frame
+    var reduced_ms: float=float(Time.get_ticks_usec()-reduced_start)/1000.0
+    var tactical_draws: float=Performance.get_monitor(
+        Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+    # Tactical LOD must reduce actual draw calls, not merely a numeric flag.
+    assert(tactical_draws<full_draws)
+    var tactical_img: Image=vp.get_texture().get_image()
+    assert(tactical_img!=null and not tactical_img.is_empty())
+    assert(tactical_img.save_png(
+        "res://artifacts/tarvoka_apc_p06_v3_32_vehicle_tactical_lod.png")==OK)
+    for unit in actors:
+        assert(Finish.set_tactical_lod(unit,false)>0)
+        assert(Models.inspect_meshes(unit)==expected_meshes)
+        assert(not unit.get_meta("tarvoka_apc_v3_tactical_lod",true))
     # Mesa CI is a reference, not a guarantee of phone FPS; keep metrics
     # instead of adding brittle pass/fail thresholds for host CPU/GPU speed.
     var report: Dictionary={
@@ -93,8 +118,13 @@ func _run() -> void:
         "build_ms":snappedf(build_ms,0.01),
         "renderer_elapsed_ms":snappedf(measured_ms,0.01),
         "renderer_ms_per_frame":snappedf(measured_ms/float(FRAMES),0.01),
-        "draw_calls_last_frame":Performance.get_monitor(
-            Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+        "draw_calls_last_frame":full_draws,
+        "tactical_draw_calls":tactical_draws,
+        "tactical_lod_hidden_details_total":lod_details,
+        "tactical_elapsed_ms":snappedf(reduced_ms,0.01),
+        "tactical_ms_per_frame":snappedf(reduced_ms/float(FRAMES),0.01),
+        "tactical_draw_call_reduction_percent":snappedf(
+            100.0*(full_draws-tactical_draws)/maxf(full_draws,1.0),0.01),
         "gpu_platform":"CI Mesa/llvmpipe; NOT Android physical device",
         "damage_repair_regression":true
     }
