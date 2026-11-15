@@ -1,0 +1,36 @@
+name: TARVOKA map topology and opening A/B audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_map_shape_first_turn_study.gd"
+      - "docs/MAP_SHAPES_AND_INITIATIVE_AB_20261115.md"
+      - ".github/workflows/map-shape-opening-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  map_audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3 headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare varied maps and symmetric opening with 56 actual matches
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 690s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_map_shape_first_turn_study.gd \
+            2>&1 | tee /tmp/tarvoka-map-shape-audit.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-map-shape-audit.log; then
+            echo 'Topology/initiative audit failed'; exit 1
+          fi
+          grep -Fq 'PASS map shape first-turn study:' /tmp/tarvoka-map-shape-audit.log
