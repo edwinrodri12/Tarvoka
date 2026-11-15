@@ -56,6 +56,15 @@ func _run() -> void:
             "V15 lower armor and three differentials installed")
         _check(bool(model.get_meta("tarvoka_apc_joint_finish_v16",false)),
             "V16 360-degree seams and moving hinges installed")
+        _check(bool(model.get_meta("tarvoka_apc_contour_v17",false)),
+            "V17 closed 3D contour volumes are installed")
+        var rear_v17: MeshInstance3D = model.find_child(
+            "P06V17_CuartonTrasero_1",true,false) as MeshInstance3D
+        _check(rear_v17!=null and rear_v17.mesh is ArrayMesh
+            and (rear_v17.mesh as ArrayMesh).surface_get_array_len(0)==36,
+            "V17 rear quarter is sealed real geometry rather than a flat panel")
+        _check(model.find_child("P06V17_SegmentoAnillo_0",true,false) is MeshInstance3D,
+            "V17 octagonal turret bearing cover installed")
         _check(model.find_child("P06V16_SelloAnilloGiro",true,false) is MeshInstance3D,
             "V16 rotating turret gasket is a real 3D mesh")
         _check(model.find_child("P06V16_PestañaBordeRampa_1",true,false) is MeshInstance3D,
@@ -146,6 +155,8 @@ func _run() -> void:
         "V15 underside breakage follows fifth-stage art controls")
     _check(int(model.get_meta("tarvoka_apc_v16_stage",-1))==3,
         "V16 junctions track staged damage without floating over tears")
+    _check(int(model.get_meta("tarvoka_apc_v17_stage",-1))==3,
+        "V17 sculpted lids and locks respect critical damage")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -243,6 +254,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v16_visible",true),
         "V3 comparison also hides new moving ramp/weapon joint finishes")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v17_visible",true),
+        "V3 comparison hides V17 rear and weapon bearing contour meshes")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -267,12 +281,22 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v16_visible",false),
         "V16 all-angle junction finish returns after comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v17_visible",false),
+        "V17 production 3D corner closures return after comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
     studio.call("_inspect_p06_rear_joint")
     _check(absf(float(studio.get("_yaw"))-153.0)<0.001,
         "V16 rear quarter seam inspection orbits real 3D model")
+    studio.call("_inspect_p06_roof_v17")
+    _check(absf(float(model.rotation_degrees.x)+24.0)<0.001,
+        "V17 roof camera tilts actual solid 3D model")
+    studio.call("_inspect_p06_ramp_v17")
+    _check(absf(float(studio.get("_yaw"))-176.0)<0.001 and
+        absf(float(model.rotation_degrees.x))<0.001,
+        "V17 rear ramp closeup resets real model orientation")
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
         "native chassis actually rotates to expose underside")
@@ -408,5 +432,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V16 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V17 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
