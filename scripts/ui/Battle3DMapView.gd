@@ -81,12 +81,12 @@ func _ready() -> void:
     atmosphere.background_color = Color("#263f50")
     atmosphere.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     atmosphere.ambient_light_color = Color("#dce8ef")
-    atmosphere.ambient_light_energy = 0.65
+    atmosphere.ambient_light_energy = 0.41
     env.environment = atmosphere
     preview.add_child(env)
     var sun := DirectionalLight3D.new()
     sun.rotation_degrees = Vector3(-56,-36,0)
-    sun.light_energy = 1.65
+    sun.light_energy = 1.06
     sun.shadow_enabled = true
     preview.add_child(sun)
     camera = Camera3D.new()
@@ -260,9 +260,11 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     preview.add_child(_scene)
     _cells = model.get_meta("public_cells")
     _dims = model.get_meta("board_size")
-    _look_at = Vector3.ZERO
-    _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.66,
-        16.0,70.0)
+    # Open on the *whole* tactical environment, not zoomed into the first
+    # soldier in a corner. The user can still focus the selected unit later.
+    _look_at = Terrain.world_at(Vector2i(_dims.x/2,_dims.y/2))
+    _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.83,
+        22.0,90.0)
     _yaw = PI*0.25
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
