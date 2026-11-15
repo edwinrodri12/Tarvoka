@@ -19,6 +19,8 @@ on:
       - 'scripts/ui/G11ArmorFinishV11.gd'
       - 'scripts/ui/G11CabChassisV12.gd'
       - 'scripts/ui/G11TracksFactionV13.gd'
+      - 'scripts/ui/G11MechanicalDetailV14.gd'
+      - 'tests/test_g11_mechanical_detail_v14.gd'
       - 'tests/test_g11_tracks_faction_v13.gd'
       - 'tests/test_g11_tracks_faction_v13_capture.gd'
       - 'tests/test_g11_cab_chassis_v12.gd'
@@ -76,6 +78,20 @@ jobs:
             echo 'G11 native sculpt or animation regression'; exit 1
           fi
           grep -F 'PASS G11 3D:' /tmp/g11_3d_qa.log
+      - name: Validate G11 V14 articulated hoses and maintenance surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_mechanical_detail_v14.gd 2>&1 | tee /tmp/g11_v14.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v14.log; then
+            echo 'G11 V14 native 3D regression'; exit 1
+          fi
+          grep -F 'PASS G11 V14:' /tmp/g11_v14.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
