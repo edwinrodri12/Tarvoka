@@ -8,6 +8,7 @@ class_name TarvokaTerrainStudioMountainBiomesV13
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const Spines = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
 const Foothills = preload("res://scripts/ui/TerrainStudioFoothillsV11.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const DIRECTIONS := [
     Vector2i(1,0),Vector2i(-1,0),
     Vector2i(0,1),Vector2i(0,-1)]
@@ -16,11 +17,15 @@ static func _hash(value: int) -> float:
     return float(posmod(value*4517+31013,65521))/65521.0
 
 static func _stone(scene: int) -> Color:
+    if scene == 3:
+        return Winter.FROSTED_STONE
     if scene == 1:
         return Color("#a18a74")
     return Color("#728783") if scene == 2 else Color("#788b80")
 
 static func _ground(scene: int, kind: String) -> Color:
+    if scene == 3:
+        return Winter.SNOW_FOREST if kind == "forest" else Winter.SNOW
     if scene == 1:
         return Color("#b39c78") if kind == "forest" else Color("#c2a77f")
     if scene == 2:
@@ -28,6 +33,9 @@ static func _ground(scene: int, kind: String) -> Color:
     return Color("#567a5b") if kind == "forest" else Color("#849a73")
 
 static func _facet_tint(scene: int, point: Vector3, phase: float) -> Color:
+    if scene == 3:
+        return Winter.FROSTED_STONE.lerp(
+            Winter.SNOW,0.24+0.35*clampf(point.y/3.0,0.0,1.0))
     var mineral: Color = _stone(scene)
     var bands: float = sin(
         point.y*4.6+point.x*1.4+point.z*0.9+phase)
@@ -42,6 +50,9 @@ static func _facet_tint(scene: int, point: Vector3, phase: float) -> Color:
 
 static func _transition_color(scene: int, kind: String,
         inward: float, position: Vector3, seed: int) -> Color:
+    if scene == 3:
+        return Winter.foothill(
+            _stone(scene),position,inward)
     var rock: Color = _stone(scene)
     var soil: Color = _ground(scene,kind)
     # Same multi-scale world-space mineral grain across neighbouring cells.
@@ -183,6 +194,7 @@ static func _ground_accent(tool: SurfaceTool,cell: Dictionary,
             (_hash(seed+i*17)-0.5)*width,height,
             (_hash(seed+i*19)-0.5)*width)
         var tint: Color = (
+            Winter.SNOW_FOREST if scene == 3 else
             Color("#aa997d") if scene == 1 else
             Color("#638f7a") if scene == 2 else Color("#5b7855"))
         _tri(tool,a,b,tip,tint.darkened(0.20),
