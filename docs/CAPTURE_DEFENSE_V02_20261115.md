@@ -37,3 +37,36 @@ Las victorias solo se informarán si realmente ocurren; no se inventará una tas
 - Protección táctica no equivale a maximizar estrategia con ocho jugadores ni al equilibrio de facciones.
 - Persistencia y HUD requieren solución propia antes de integración: un contador externo se perdería al reiniciar.
 - La CI general conserva un problema ajeno a estas reglas, en la importación visual de CombinedArtStudioWeb.gd / BastionStudioAdapter.gd. El SUCCESS experimental no implica aprobación del CI general.
+
+
+## Resultados comprobados: IA defensiva v0.4 frente a apoyo v0.3
+
+**Godot 4.3 — SUCCESS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43760500942
+
+16 parejas espejo (32 partidas), hasta 48 medias fases, mismas reglas de captura/economía/clima, ambos bandos y niebla.
+
+| Indicador por 16 sesiones del mismo brazo | Apoyo v0.3 | Defensiva v0.4 |
+|---|---:|---:|
+| Conquistas efectivas | 66 | 55 |
+| Progresos parciales | 187 | 187 |
+| Capturas interrumpidas | 94 | 101 |
+| Capturadores muertos al perder el contador | 69 | 71 |
+| Capturadores vivos que abandonan | 20 | 22 |
+| Compras | 1.024 | 1.056 |
+| Disparos especiales de defensa | 0 | 25 |
+| Escoltas propuestos | 24 | 23 |
+| Rentas retenidas | 14.250 | 14.500 |
+| Partidas con vencedor | 4 | 3 |
+| Victorias del jugador que comenzó | 0 | 0 |
+
+**Hallazgo crítico:** la nueva IA *sí* interviene y el motor aprueba sus órdenes, pero esta parametrización **empeora los indicadores defensivos que pretendía mejorar**, en particular interrupciones y muertes de ocupantes. No se recomienda su integración. Las escasas partidas decididas y el hecho de que ninguna favoreciera al iniciador son una señal para ampliar las pruebas, **no** prueba de ventaja sistemática del segundo jugador.
+
+## Ajuste conservador v0.5 (pendiente de contraste A/B)
+
+- La variante CaptureDefensiveAIV03.gd no sustituye ataques letales ya elegidos por BasicAI.
+- Disparo de escolta obligatorio para protección especial (no gastar la acción del capturador).
+- Intervenir únicamente si el daño de una amenaza observada **podría matar al ocupante**, no ante un rasguño.
+- Un refuerzo especial solo se moviliza si permite **terminar la captura en la fase propia actual**, y nunca a una casilla con daño enemigo visible mayor o igual a la mitad de su vida.
+- Mantener intacta BasicAI como decisión normal y continuar con pruebas emparejadas de 48 medias fases antes de considerar integración.
+
+La prueba mecánica está en tests/test_capture_defense_v03.gd y la comparación prolongada en tests/test_capture_defense_long_v03.gd. Sus resultados no deben inferirse del éxito de v0.4: se registrarán de manera independiente cuando GitHub Actions los confirme.
