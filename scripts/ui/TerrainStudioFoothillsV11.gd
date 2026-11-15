@@ -7,6 +7,7 @@ class_name TarvokaTerrainStudioFoothillsV11
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const Spines = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
 const BiomePaletteV14 = preload("res://scripts/ui/TerrainStudioBiomePaletteV14.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const DIRECTIONS := [
     Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]
 
@@ -45,11 +46,15 @@ static func _finish(parent: Node3D, label: String,
     return piece
 
 static func _ground_color(cell: Dictionary, scene: int) -> Color:
+    if scene == 3:
+        return Winter.SNOW_FOREST if str(cell["kind"])=="forest" else Winter.SNOW
     if scene == 1:
         return Color("#a79479")
     return Color("#6d9076") if str(cell["kind"])=="forest" else Color("#7b967e")
 
 static func _stone_color(scene: int) -> Color:
+    if scene == 3:
+        return Winter.FROSTED_STONE
     return (
         Color("#768581") if scene == 0 else
         Color("#938273") if scene == 1 else
