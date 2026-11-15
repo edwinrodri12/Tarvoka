@@ -58,6 +58,8 @@ jobs:
             tarvoka_apc_p06_v3_superior_torreta.png \
             tarvoka_apc_p06_v3_juntas_laterales.png \
             tarvoka_apc_p06_v3_cinco_niveles_dano.png \
+            tarvoka_apc_p06_v3_impacto_balas.png \
+            tarvoka_apc_p06_v3_impacto_explosivo.png \
             tarvoka_apc_p06_v2_antes.png; do
             test -s "artifacts/$name"
           done
