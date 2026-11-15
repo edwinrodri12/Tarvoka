@@ -274,6 +274,8 @@ jobs:
           test -s NAVAL_BASE_V8_FENDERS_WATER_SHIPYARD.md
           grep -q 'NavalFendersV8.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'DefensasContactoAguaNavalV8' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Detalle defensas y rampa' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'camera.size=(9.4 if _naval_camera_view==4' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V8:' tests/test_naval_base_v8_gpu.gd
           grep -q 'func _display_naval_base()' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V1:' tests/test_naval_base_v1_gpu.gd
