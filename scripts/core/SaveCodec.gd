@@ -16,6 +16,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
@@ -117,6 +118,25 @@ static func decode(raw: String) -> Dictionary:
                 if not _whole(unit[key]):
                     return {}
                 unit[key] = int(unit[key])
+    # Cargo is embedded, positionless infantry; normalize numeric fields
+    # just like top-level units. Legacy saves omit "cargo" entirely.
+    for vehicle in state["units"]:
+        if not vehicle.has("cargo"):
+            continue
+        if not vehicle["cargo"] is Array:
+            return {}
+        for passenger in vehicle["cargo"]:
+            if not passenger is Dictionary or passenger.has("pos") or passenger.has("cargo"):
+                return {}
+            for key in ["faction","hp","move_points","attack","defense","cover"]:
+                if not _whole(passenger.get(key)):
+                    return {}
+                passenger[key] = int(passenger[key])
+            for key in ["vision","ammo","fuel","attack_min_range","attack_range"]:
+                if passenger.has(key):
+                    if not _whole(passenger[key]):
+                        return {}
+                    passenger[key] = int(passenger[key])
     if not _whole(state.get("faction")) or not _whole(state.get("winner")):
         return {}
     state["faction"] = int(state["faction"])
@@ -292,6 +312,47 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         if unit.has("role") and (not unit["role"] is String or not Roles.valid(unit["role"])):
             return false
+        # Carried soldiers are NOT additional board tiles, but their full
+        # HP/ammo, unique IDs and faction still require strict validation.
+        # Never accept a spoofed APC holding enemy, naval or nested units.
+        if unit.has("cargo"):
+            var manifest = unit["cargo"]
+            if str(unit.get("role","")) != Cargo.CARRIER_ROLE or not manifest is Array or manifest.size() > Cargo.CAPACITY:
+                return false
+            if int(unit["hp"]) <= 0 and not manifest.is_empty():
+                return false
+            for passenger in manifest:
+                if not passenger is Dictionary or passenger.has("pos") or passenger.has("cargo"):
+                    return false
+                if not passenger.get("id") is String or passenger["id"].is_empty() or passenger["id"].length() > 64 or ids.has(passenger["id"]):
+                    return false
+                ids[passenger["id"]] = true
+                if str(passenger.get("role","")) not in Cargo.PASSENGER_ROLES or int(passenger.get("faction",-1)) != int(unit["faction"]):
+                    return false
+                if not passenger.get("faction") is int or not passenger.get("hp") is int or passenger["hp"] <= 0 or passenger["hp"] > MAX_STAT:
+                    return false
+                if not passenger.get("acted") is bool or not bool(passenger["acted"]) or not passenger.get("moved") is bool or not bool(passenger["moved"]):
+                    return false
+                if not Logistics.valid_unit(passenger):
+                    return false
+                for key in ["move_points","attack","defense","cover"]:
+                    if not passenger.get(key) is int or passenger[key] < 0 or passenger[key] > MAX_STAT:
+                        return false
+                if passenger.has("vision") and (not passenger["vision"] is int or passenger["vision"] < 1 or passenger["vision"] > Visibility.MAX_VISION):
+                    return false
+                if passenger.has("ammo") and not passenger["ammo"] is int:
+                    return false
+                for key in ["attack_min_range","attack_range"]:
+                    if passenger.has(key) and (not passenger[key] is int or passenger[key] < 1 or passenger[key] > 8):
+                        return false
+                if int(passenger.get("attack_min_range",1)) > int(passenger.get("attack_range",1)):
+                    return false
+                if passenger.has("domain") and Domains.domain(passenger) != Domains.GROUND:
+                    return false
+                if Arsenal.valid(str(passenger["role"])):
+                    var carried_profile: Dictionary = Arsenal.profile(str(passenger["role"]))
+                    if passenger.get("domain") != carried_profile["domain"] or passenger.get("target_domains") != carried_profile["target_domains"]:
+                        return false
         if unit.has("domain") and not Domains.valid_domain(unit["domain"]):
             return false
         if unit.has("target_domains") and not Domains.valid_targets(unit["target_domains"]):
