@@ -63,6 +63,19 @@ var production_columns: BoxContainer
 var production_list_body: VBoxContainer
 var production_list_scroll: ScrollContainer
 var production_purchase_buttons: Dictionary = {}
+var production_site_picker: OptionButton
+var production_site_positions: Array[Vector2i] = []
+var production_filter_picker: OptionButton
+var production_filter_index := 0
+var production_list_rows: Dictionary = {}
+var production_candidates: Dictionary = {}
+var production_funds_label: Label
+var production_status_label: Label
+var production_selection_label: Label
+var production_available_count := 0
+var production_confirm_dialog: ConfirmationDialog
+var pending_production_role := ""
+var production_header_crest: TextureRect
 var _tab_transition: Tween
 var command_buttons: Dictionary = {}
 var command_grid: GridContainer
@@ -143,6 +156,12 @@ func _ready() -> void:
     command_confirm_exit.cancel_button_text = "CANCELAR"
     command_confirm_exit.confirmed.connect(func(): home_requested.emit())
     add_child(command_confirm_exit)
+    production_confirm_dialog = ConfirmationDialog.new()
+    production_confirm_dialog.title = "Confirmar producción"
+    production_confirm_dialog.ok_button_text = "PRODUCIR UNIDAD"
+    production_confirm_dialog.cancel_button_text = "CANCELAR"
+    production_confirm_dialog.confirmed.connect(_confirm_production)
+    add_child(production_confirm_dialog)
     get_viewport().size_changed.connect(_reflow)
     hide()
 
@@ -480,6 +499,8 @@ func _production_unit_row(role: String, viewer: int) -> void:
     card.add_theme_stylebox_override("panel",Chrome.box_style(
         Color("#122A3A"),Chrome.EDGE if available else Color("#344B59"),7,7))
     production_list_body.add_child(card)
+    production_list_rows[role] = card
+    production_candidates[role] = record.duplicate(true)
     var stack := VBoxContainer.new()
     stack.add_theme_constant_override("separation",5)
     card.add_child(stack)
@@ -524,11 +545,11 @@ func _production_unit_row(role: String, viewer: int) -> void:
     var commands := HBoxContainer.new()
     commands.add_theme_constant_override("separation",6)
     stack.add_child(commands)
-    var sheet := _action(commands,"Ficha A",func(): _select_production_role(role))
+    var sheet := _action(commands,"FICHA A",func(): _select_production_role(role))
     sheet.tooltip_text = "Mostrar estadísticas y disponibilidad de esta unidad"
-    var compare := _action(commands,"Comparar B",func(): _compare_production_role(role))
+    var compare := _action(commands,"COMPARAR B",func(): _compare_production_role(role))
     compare.tooltip_text = "Comparar este modelo con la selección A"
-    var buy: Button = _action(commands,"Comprar",func(): purchase_requested.emit(role),available)
+    var buy: Button = _action(commands,"PRODUCIR",func(): _request_production(role),available)
     buy.tooltip_text = str(record.get("reason",""))
     production_purchase_buttons[role] = buy
 
