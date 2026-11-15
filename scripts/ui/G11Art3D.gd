@@ -10,6 +10,7 @@ const TURRET := "G11_GiroPlataforma"
 const ELEVATION := "G11_ElevacionLanzador"
 const TUBE_COUNT := 12
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
+const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -263,6 +264,8 @@ static func build(model: Node3D, paint: Color) -> bool:
     # Geometry remains authored as native Godot meshes; not an image proxy.
     if not FinishV2.apply(model,paint):
         push_warning("G11 finish V2 failed; retaining complete V1 fallback")
+    elif not SurfaceV3.apply(model):
+        push_warning("G11 surface V3 failed; retaining complete V2 finish")
     return true
 
 static func stage(model: Node3D) -> int:
