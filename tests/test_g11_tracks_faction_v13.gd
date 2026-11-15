@@ -75,9 +75,13 @@ func _run() -> void:
                     "gear axle shares exact Y center with racetrack contour")
                 _check(absf(absf(gear.position.z)-Finish.TRACK_HALF_LENGTH) < 0.001,
                     "idler and drive sprocket sit on two curved belt ends")
-                var aabb: AABB = gear.mesh.get_aabb()
-                _check(absf(maxf(aabb.size.y,aabb.size.z)*0.5-Track.TIPS_RADIUS) < 0.008,
-                    "teeth follow correct inner track contact circle")
+                var verts: PackedVector3Array = gear.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                var actual_radius: float = 0.0
+                for vertex in verts:
+                    actual_radius = maxf(actual_radius,Vector2(vertex.y,vertex.z).length())
+                _check(actual_radius >= Finish.TRACK_INNER_RADIUS-0.004
+                    and actual_radius <= Finish.TRACK_INNER_RADIUS+0.004,
+                    "true radial gear tooth/idler rim contact matches belt inner contour")
                 _check(_find(gear,"G11V13_CabezalEje_impulsor" if label == "PinionTrasero"
                     else "G11V13_CabezalEje_tensor") != null,
                     "the outer hub belongs to its rotating gear assembly")
