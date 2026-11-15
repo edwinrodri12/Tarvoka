@@ -68,6 +68,16 @@ func _run() -> void:
     assert(not menu.production_columns.vertical)
     assert(menu.production_list_body != null and menu.production_list_scroll != null)
     assert(menu.comparison_preview != null)
+    assert(menu.production_site_picker != null)
+    assert(menu.production_site_positions.size() >= 2)
+    assert(menu.production_site_picker.item_count == menu.production_site_positions.size())
+    assert(menu.production_header_crest.texture is AtlasTexture)
+    assert(menu.production_filter_picker.item_count == 3)
+    assert(menu.production_list_rows.size() == menu.production_purchase_buttons.size())
+    assert(menu.production_candidates.size() == menu.production_purchase_buttons.size())
+    assert(menu.production_funds_label.text.contains("CRÉDITOS"))
+    assert(not menu.production_status_label.text.is_empty())
+    assert(menu.production_confirm_dialog != null)
     var rows: VBoxContainer = menu.comparison_preview.find_child("TablaComparativa",true,false)
     assert(rows != null and rows.get_child_count() >= 8)
     for line in rows.get_children():
@@ -83,12 +93,58 @@ func _run() -> void:
         assert(buy.tooltip_text == str(candidate["reason"]))
         assert(candidate["price"] == Economy.cost(str(role)))
         assert(buy.custom_minimum_size.y >= 48)
+    menu._filter_production(1)
+    assert(menu.production_filter_index == 1)
+    for role in menu.production_list_rows:
+        assert(menu.production_list_rows[role].visible ==
+            bool(menu.production_candidates[role].get("available",false)))
+    menu._filter_production(2)
+    for role in menu.production_list_rows:
+        assert(menu.production_list_rows[role].visible ==
+            not bool(menu.production_candidates[role].get("available",false)))
+    menu._filter_production(0)
+    for role in menu.production_list_rows:
+        assert(menu.production_list_rows[role].visible)
+    menu.reflow_for_size(Vector2(915,412))
+    assert(menu.production_site_picker.custom_minimum_size.y >= 44)
+    assert(menu.production_filter_picker.custom_minimum_size.y >= 44)
+    assert(menu.production_compare_scroll.custom_minimum_size.y <= 210)
+    menu.reflow_for_size(Vector2(780,360))
+    assert(menu.production_list_scroll.custom_minimum_size.y <= 180)
+    menu.reflow_for_size(Vector2(1600,900))
+    assert(not menu.command_compact)
+
     var roles: Array = menu.production_purchase_buttons.keys()
     menu._select_production_role(str(roles[0]))
     assert(menu.selected_catalog_role == str(roles[0]))
     if roles.size() > 1:
         menu._compare_production_role(str(roles[1]))
         assert(menu.comparison_catalog_role == str(roles[1]))
+    assert(main.board.state == before_production)
+    # Browsing a different owned factory can only update the UI selection,
+    # never spend money or produce units.
+    var old_pos: Vector2i = main.board.selected_factory_pos
+    var other_index: int = 1 if menu.production_site_positions[0] == old_pos else 0
+    var other_pos: Vector2i = menu.production_site_positions[other_index]
+    menu._change_production_site(other_index)
+    assert(main.board.selected_factory_pos == other_pos)
+    assert(main.board.state == before_production)
+    main.board.selected_factory_pos = old_pos
+    menu.open_for(main.board,"Produccion")
+    assert(main.board.selected_factory_pos == old_pos)
+    # Tapping PRODUCIR opens a modal, and does not instantly purchase.
+    var has_ready := false
+    for role in menu.production_candidates:
+        if bool(menu.production_candidates[role].get("available",false)):
+            menu._request_production(str(role))
+            assert(menu.production_confirm_dialog.visible)
+            assert(menu.pending_production_role == str(role))
+            assert(main.board.state == before_production)
+            has_ready = true
+            menu.production_confirm_dialog.hide()
+            break
+    if not has_ready:
+        assert(menu.production_available_count == 0)
     assert(main.board.state == before_production)
 
     # Low funds must disable all unaffordable purchases. Never emit a
