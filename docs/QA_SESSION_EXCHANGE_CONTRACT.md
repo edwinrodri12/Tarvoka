@@ -35,3 +35,6 @@ La ejecución [43697584172](https://github.com/edwinrodri12/Tarvoka/actions/runs
 La ejecución general [43697584025](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697584025) falló por una dependencia artística distinta: `BastionStudioAdapter.gd` no puede resolver `CombinedArtStudioWeb.gd` durante importación HQ V15. Este fallo no es evidencia de una regresión de SaveStore. Pendiente verificar CI de este nuevo commit y resolver el problema de arte en la rama responsable, sin alterar componentes paralelos.
 
 Android físico: **NO EJECUTADO EN DISPOSITIVO**. La recuperación en proceso reiniciado y las regresiones IA/victoria completas siguen pendientes.
+
+## Regresión adicional — ambas copias inválidas (2026-11-15)
+El test invalida el principal y el respaldo con JSON sintácticamente correcto pero esquema incompatible. `SaveStore.load_report` debe devolver estado vacío, `SaveStore.load` no debe inventar una partida y el estado previamente recuperado en memoria debe permanecer intacto. Los archivos temporales de la prueba se eliminan al terminar. **Godot 4.3 CI: NO EJECUTADO para este commit; Android físico: NO EJECUTADO.**
