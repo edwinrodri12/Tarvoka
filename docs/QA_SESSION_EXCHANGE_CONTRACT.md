@@ -38,3 +38,10 @@ Android físico: **NO EJECUTADO EN DISPOSITIVO**. La recuperación en proceso re
 
 ## Regresión adicional — ambas copias inválidas (2026-11-15)
 El test invalida el principal y el respaldo con JSON sintácticamente correcto pero esquema incompatible. `SaveStore.load_report` debe devolver estado vacío, `SaveStore.load` no debe inventar una partida y el estado previamente recuperado en memoria debe permanecer intacto. Los archivos temporales de la prueba se eliminan al terminar. **Godot 4.3 CI: NO EJECUTADO para este commit; Android físico: NO EJECUTADO.**
+
+
+## Recuperación sin archivo principal (2026-11-15)
+
+Commit `8623a19be2bcc83d45ce9a7f42489ef49852922d`: caso adicional aislado. Se guardan dos estados sucesivos, se elimina únicamente el archivo principal y se exige recuperar desde `.bak` el estado anterior (HP, acción consumida y facción intactos). Se comprueba que el ataque gastado continúa rechazado y se eliminan los archivos de prueba. No modifica SaveStore ni las partidas reales.
+
+**Estado:** cambio registrado; Godot 4.3 del nuevo SHA **NO EJECUTADO** hasta disponer de CI; Android físico **NO EJECUTADO EN DISPOSITIVO**. La ejecución del SHA anterior `088f9663` pasó la suite específica (run 43707692340), pero falló la suite general (43707692316). No extrapolar esos resultados a este commit. Pendiente: comprobar CI específico y regresiones de IA/guardado/victoria, investigar el fallo general por separado.
