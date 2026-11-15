@@ -8,6 +8,7 @@ on:
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_v3_stress.gd"
       - "tests/export_apc_p06_v3_glb.gd"
       - ".github/workflows/apc-p06-v3.yml"
   pull_request:
@@ -16,6 +17,7 @@ on:
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_v3_stress.gd"
       - "tests/export_apc_p06_v3_glb.gd"
   workflow_dispatch:
 permissions:
@@ -59,6 +61,18 @@ jobs:
             tarvoka_apc_p06_v2_antes.png; do
             test -s "artifacts/$name"
           done
+      - name: Stress render 32 real APC V3 vehicles across eight factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v3_stress.gd 2>&1 | tee /tmp/apc-v3-stress.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-stress.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress.log
+          test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png
+          test -s artifacts/apc_p06_v3_stress_metrics.json
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
@@ -90,4 +104,5 @@ jobs:
             artifacts/tarvoka_apc_p06_v3_*.png
             artifacts/tarvoka_apc_p06_v2_antes.png
             artifacts/TARVOKA_APC_P06_V3_Editable.glb
+            artifacts/apc_p06_v3_stress_metrics.json
           if-no-files-found: error
