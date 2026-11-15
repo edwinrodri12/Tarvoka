@@ -15,6 +15,9 @@ on:
       - 'scripts/ui/G11DamageAtmosphereV7.gd'
       - 'scripts/ui/G11SequentialSalvoV8.gd'
       - 'scripts/ui/G11ExhaustV9.gd'
+      - 'scripts/ui/G11CooldownV10.gd'
+      - 'tests/test_g11_cooldown_v10.gd'
+      - 'tests/test_g11_cooldown_v10_capture.gd'
       - 'tests/test_g11_exhaust_v9.gd'
       - 'tests/test_g11_exhaust_v9_capture.gd'
       - 'tests/test_g11_salvo_v8.gd'
@@ -120,7 +123,21 @@ jobs:
             echo 'G11 procedural exhaust integration failed'; exit 1
           fi
           grep -F 'PASS G11 EXHAUST V9:' /tmp/g11_v9_exhaust.log
-      - name: Render G11 V9 from twelve physically separate nozzles and dissipating gases
+      - name: Verify G11 V10 post-salvo cool rims and smooth hydraulic home position
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_cooldown_v10.gd 2>&1 | tee /tmp/g11_cooldown_v10.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_cooldown_v10.log; then
+            echo 'G11 V10 cooldown or restoration regression'; exit 1
+          fi
+          grep -F 'PASS G11 COOLDOWN V10:' /tmp/g11_cooldown_v10.log
+      - name: Render G11 V10 cooling, vapor and hydraulic return at 18 actual native Godot camera frames
         shell: bash
         run: |
           set -euo pipefail
@@ -130,17 +147,17 @@ jobs:
             env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-360 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_g11_exhaust_v9_capture.gd 2>&1 | tee /tmp/g11_exhaust_v9_capture.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_exhaust_v9_capture.log; then
+            --script res://tests/test_g11_cooldown_v10_capture.gd 2>&1 | tee /tmp/g11_cooldown_v10_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_cooldown_v10_capture.log; then
             echo 'G11 eight-angle GPU capture failed'; exit 1
           fi
-          grep -F 'PASS G11 EXHAUST V9 CAPTURE:' /tmp/g11_exhaust_v9_capture.log
-          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 24
-      - name: Upload G11 V9 graded exhaust and lingering muzzle gas visual gallery
+          grep -F 'PASS G11 COOLDOWN V10 CAPTURE:' /tmp/g11_cooldown_v10_capture.log
+          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 18
+      - name: Upload G11 V10 hot cooling lips, gentle vapor and mechanism return visual gallery
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-g11-v9-exhaust-gas-24-godot-reviews
+          name: tarvoka-g11-v10-cooling-hydraulics-18-godot-renders
           path: /tmp/g11-360/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
