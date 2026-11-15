@@ -233,7 +233,9 @@ static func pose(model: Node3D, progress: float) -> bool:
     var launcher := _parts(model)
     if launcher == null:
         return false
-    var t: float = clampf(progress,0.0,1.0)
+    # Support a little time beyond the end of the twelve V8 firings,
+    # so the final muzzle smoke can fade during V10 recovery naturally.
+    var t: float = clampf(progress,0.0,1.12)
     var wakes: int = 0
     for sequence in range(COUNT):
         var slot_id: int = int(V8.SLOT_ORDER[sequence])
