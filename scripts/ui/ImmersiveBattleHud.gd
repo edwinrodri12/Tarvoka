@@ -17,6 +17,7 @@ const Factions = preload("res://scripts/ui/VisualStyle.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
+const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const MiniMap = preload("res://scripts/ui/BattleMinimap.gd")
 const ArtIcon = preload("res://scripts/ui/UnitArtIcon.gd")
@@ -278,8 +279,20 @@ func refresh_from_board() -> void:
         order_title.text = (
             "TOCA OTRA VEZ PARA ATACAR" if kind == "attack"
             else "TOCA OTRA VEZ PARA MOVER")
-        order_detail.text = "Casilla (%d,%d) · × cancela" % [
-            cell.x+1,cell.y+1]
+        order_detail.text = "Casilla (%d,%d)" % [cell.x+1,cell.y+1]
+        var unit_id: String = str(order.get("unit_id",""))
+        if not unit_id.is_empty() and cell.x >= 0:
+            # Pull forecast only for a legal, currently visible target, via
+            # the same engine that validates the eventual action.
+            var hints: Dictionary = TacticalHints.for_unit(state,unit_id)
+            if kind == "attack" and hints.get("attacks",{}).has(cell):
+                var forecast: Dictionary = hints["attacks"][cell]
+                if str(forecast.get("id","")) == str(order.get("target_id","")):
+                    order_detail.text = "Daño %d PV · Respuesta hasta %d PV" % [
+                        int(forecast.get("damage",0)),
+                        int(forecast.get("counter_damage",0))]
+            elif kind == "move" and hints.get("moves",{}).has(cell):
+                order_detail.text += " · Coste %d" % int(hints["moves"][cell])
     var winner: int = int(state.get("winner",-1))
     end_turn_button.disabled = (
         winner != -1 or not order.is_empty() or
