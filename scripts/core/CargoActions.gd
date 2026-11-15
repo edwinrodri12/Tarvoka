@@ -111,7 +111,8 @@ static func embark(units: Array, passenger_id: String, carrier_id: String,
     vehicle["moved"] = true
     next.remove_at(passenger_index)
     return {"valid":true,"units":next,"carrier_id":carrier_id,
-        "passenger_id":passenger_id,"cargo_count":passengers(vehicle).size()}
+        "passenger_id":passenger_id,"cargo_count":passengers(vehicle).size(),
+        "cargo_capacity":capacity(str(vehicle["role"]))}
 
 # Unload ONE passenger into a visible, unoccupied orthogonal ground tile.
 # An APC/IFV may have moved earlier but cannot have attacked/unloaded.
@@ -154,7 +155,8 @@ static func disembark(units: Array, carrier_id: String, passenger_id: String,
     next.append(infantry)
     return {"valid":true,"units":next,"carrier_id":carrier_id,
         "passenger_id":passenger_id,"destination":destination,
-        "cargo_count":manifest.size()}
+        "cargo_count":manifest.size(),
+        "cargo_capacity":capacity(str(vehicle["role"]))}
 
 # No free evacuation from either carrier after attack/counterfire. Dead
 # vehicles may remain in the save as zero-HP shells with EMPTY manifests.
