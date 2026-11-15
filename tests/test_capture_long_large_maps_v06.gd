@@ -54,7 +54,7 @@ func _initialize() -> void:
 
 static func _blank() -> Dictionary:
     return {"matches":0,"turns":0,"decided":0,"first_wins":0,
-        "aborts":0,"completed":0,"interrupted":0,"purchases":0,
+        "censored":0,"completed":0,"interrupted":0,"purchases":0,
         "attacks":0,"moves":0,"detours":0,"holds":0,
         "credits_end":0,"end_income":0,"units_end":0,
         "first_contact_phase_sum":0,"contact_matches":0}
@@ -126,7 +126,7 @@ static func _play(spec: Dictionary, safe: bool) -> Dictionary:
     var winner: int = int(state.get("winner",-1))
     out["decided"] = 1 if winner in [0,1] else 0
     out["first_wins"] = 1 if winner == int(spec["first"]) else 0
-    out["aborts"] = 1 if winner < 0 else 0
+    out["censored"] = 1 if winner < 0 else 0
     out["credits_end"] = int(state["economy"]["credits"][0])+int(state["economy"]["credits"][1])
     out["end_income"] = Economy.income_for(state["economy"],0)+Economy.income_for(state["economy"],1)
     out["units_end"] = state["units"].size()
