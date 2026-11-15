@@ -21,6 +21,7 @@ const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const FinishV11 = preload("res://scripts/ui/G11ArmorFinishV11.gd")
 const CabinV12 = preload("res://scripts/ui/G11CabChassisV12.gd")
 const TracksFactionV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
+const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -296,6 +297,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 cabin/chassis V12 failed; retaining V11 sculpture")
     elif not TracksFactionV13.apply(model,paint):
         push_warning("G11 V13 physical sprocket and faction color refinement failed")
+    elif not DetailV14.apply(model,paint):
+        push_warning("G11 V14 live hydraulic/service detail failed; retaining V13 sculpture")
     return true
 
 static func stage(model: Node3D) -> int:
