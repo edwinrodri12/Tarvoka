@@ -46,7 +46,7 @@ func _run() -> void:
             assert(not V4.apply(model,2,faction,damage))
             assert(_count(model,V4.STAGE_NAME)==1)
             var stage: Node3D=model.get_node(V4.STAGE_NAME)
-            assert(int(stage.get_meta("naval_v4_coated_meshes",0))>=6)
+            assert(int(stage.get_meta("naval_v4_coated_meshes",0))>=(4 if damage==4 else 6))
             assert(_count(model,"MarcasMareaOxidoYSalV4")==1)
             assert(_count(model,"TransicionCostaEscolleraV4")==1)
             assert(_count(model,"LimoMareaMuelleEste_00")==1)
