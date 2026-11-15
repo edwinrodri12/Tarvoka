@@ -13,6 +13,7 @@ on:
       - 'scripts/ui/TouchBoard.gd'
       - 'scripts/ui/Main.gd'
       - 'tests/test_apc_transport_engine.gd'
+      - 'tests/test_apc_transport_save_security.gd'
       - 'tests/test_apc_transport_ui.gd'
       - '.github/workflows/apc-transport.yml'
   push:
@@ -42,6 +43,15 @@ jobs:
             | tee /tmp/apc-transport-engine.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-transport-engine.log; then exit 1; fi
           grep -F 'PASS APC transport engine:' /tmp/apc-transport-engine.log
+      - name: Reject corrupted passenger manifests and preserve old saves
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_save_security.gd 2>&1 \
+            | tee /tmp/apc-transport-save-security.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/apc-transport-save-security.log; then exit 1; fi
+          grep -F 'PASS APC transport save security:' /tmp/apc-transport-save-security.log
       - name: Validate mobile touch controls and user-safe confirmation
         if: ${{ hashFiles('tests/test_apc_transport_ui.gd') != '' }}
         run: |
@@ -75,5 +85,6 @@ jobs:
           path: |
             /tmp/apc-transport-engine.log
             /tmp/apc-transport-ui.log
+            /tmp/apc-transport-save-security.log
             /tmp/*-apc.log
           if-no-files-found: warn
