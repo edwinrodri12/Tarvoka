@@ -74,3 +74,25 @@ Solo utiliza progreso de capturas propias visibles y la visión autorizada; el m
 ## CI general independiente del balance
 
 Una ejecución de la batería general de Godot (https://github.com/edwinrodri12/Tarvoka/actions/runs/43754811848) se detuvo en importación de arte HQ V15, al faltar la superclase CombinedArtStudioWeb.gd requerida por BastionStudioAdapter.gd. El fallo ocurre en scripts/ui, fuera de esta propuesta de captura, y requiere corrección del frente visual o revisión del estado de ramas antes de aprobar el proyecto completo. No declarar aprobado todo el CI basándose únicamente en las pruebas experimentales.
+
+
+## A/B de IA: ¿el apoyo mejora realmente partidas?
+
+**GitHub Actions SUCCESS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43755271090
+
+Se reprodujeron 16 parejas espejo = 32 sesiones con la **misma captura progresiva de ciudad 4 / fábrica 3, renta bloqueada desde 2 puntos y horizonte de 20 medias fases**. La única diferencia fue BasicAI oficial versus el planificador experimental de apoyo de infanterías propias.
+
+| Medición acumulada en 16 partidas por brazo | BasicAI | BasicAI + apoyo experimental |
+|---|---:|---:|
+| Órdenes especiales de apoyo | 0 | 6 |
+| Capturas completadas / cambios de dueño | 40 | 42 |
+| Avances parciales | 89 | 95 |
+| Contadores interrumpidos | 40 | 46 |
+| Créditos no pagados por asedio | 3.500 | 4.500 |
+| Compras | 487 | 486 |
+| Saldo total al cierre, sumado en 16 partidas | 50.636 | 48.186 |
+| Victorias completas | 0 | 0 |
+
+**Resultado mixto:** hay +2 capturas (+5 %), pero también +6 interrupciones de avance y +1.000 créditos retenidos al defender. El menor saldo total no permite atribuir causalidad simple al apoyo: puede incluir producción, más capturas y diferencias de compras. Solo 6 órdenes asistidas en 16 sesiones es una señal de cobertura táctica limitada, NO evidencia de un planificador final equilibrado.
+
+**Siguiente prioridad:** evaluar peligro real de los refuerzos, proteger al ocupante, medir interrupciones por muerte o abandono por separado y extender partidas a una duración con victorias. No introducir esta IA al motor oficial todavía.
