@@ -107,9 +107,7 @@ func _run() -> void:
     assert(menu.confirm_load_button.custom_minimum_size.y >= 48)
     assert(menu.cancel_load_button.custom_minimum_size.y >= 48)
     for dims in [Vector2i(915,412),Vector2i(780,360)]:
-        root.size = dims
-        await process_frame
-        menu._reflow()
+        menu.reflow_for_size(Vector2(dims))
         assert(menu.compact_landscape)
         assert(not menu.slot_cards.vertical)
         assert(not menu.page_explanation.visible)
@@ -119,9 +117,7 @@ func _run() -> void:
         assert(menu.cancel_load_button.custom_minimum_size.y >= 44)
         assert(menu.slot_previews["auto"].custom_minimum_size.y <= 90)
         assert(board.state == original)
-    root.size = Vector2i(1280,720)
-    await process_frame
-    menu._reflow()
+    menu.reflow_for_size(Vector2(1280,720))
     assert(not menu.compact_landscape)
     assert(menu.page_explanation.visible)
     assert(not menu.slot_cards.vertical)
