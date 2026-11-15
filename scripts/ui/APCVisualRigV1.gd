@@ -42,8 +42,8 @@ static func _wheels(model: Node3D,phase: float,
                 var oscillation: float=sin(
                     TAU*(travel_t*2.15+float(i)*0.17+
                         (0.0 if side<0 else 0.13)))
-                wheel.position.y=0.43-0.010*maxf(0.0,oscillation)*
-                    sin(PI*travel_t)
+                wheel.position.y=(0.43-0.010*maxf(0.0,oscillation)*
+                    sin(PI*travel_t))
 
 static func pose(model: Node3D,kind: String,t: float,
         yaw_degrees: float=35.0) -> bool:
