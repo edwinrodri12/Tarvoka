@@ -12,6 +12,7 @@ const NavalMarineV4 = preload("res://scripts/ui/NavalMarineFinishV4.gd")
 const NavalYardV5 = preload("res://scripts/ui/NavalYardSignalsV5.gd")
 const NavalNightV6 = preload("res://scripts/ui/NavalNightReadabilityV6.gd")
 const NavalBoardingV7 = preload("res://scripts/ui/NavalBoardingDetailV7.gd")
+const NavalFendersV8 = preload("res://scripts/ui/NavalFendersV8.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -62,6 +63,7 @@ var naval_detail_v4_toggle: CheckButton
 var naval_detail_v5_toggle: CheckButton
 var naval_detail_v6_toggle: CheckButton
 var naval_detail_v7_toggle: CheckButton
+var naval_detail_v8_toggle: CheckButton
 var naval_night_v6_toggle: CheckButton
 var _naval_saved_light_preset: int=0
 var naval_level_picker: OptionButton
@@ -401,7 +403,7 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
-    building_picker.add_item("Base Naval · V7 · uniones y embarque 3D")
+    building_picker.add_item("Base Naval · V8 · defensas y espuma costera")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -964,7 +966,7 @@ func _add_naval_controls() -> void:
     naval_controls.name="OpcionesBaseNavalV1"
     naval_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(naval_controls)
-    _title(naval_controls,"BASE NAVAL V7 · EMBARQUE Y UNIONES 3D",14)
+    _title(naval_controls,"BASE NAVAL V8 · DEFENSAS, AGUA Y ASTILLERO",14)
     _title(naval_controls,
         "Dársena en U, espigones, grúa, hangar marítimo, torre y servicios.",12)
     naval_detail_v2_toggle=CheckButton.new()
@@ -1003,6 +1005,12 @@ func _add_naval_controls() -> void:
     naval_detail_v7_toggle.button_pressed=true
     naval_detail_v7_toggle.toggled.connect(_toggle_naval_detail_v7)
     naval_controls.add_child(naval_detail_v7_toggle)
+    naval_detail_v8_toggle=CheckButton.new()
+    naval_detail_v8_toggle.name="DefensasContactoAguaNavalV8"
+    naval_detail_v8_toggle.text="V8 · defensas, espuma y drenajes (comparar V7)"
+    naval_detail_v8_toggle.button_pressed=true
+    naval_detail_v8_toggle.toggled.connect(_toggle_naval_detail_v8)
+    naval_controls.add_child(naval_detail_v8_toggle)
     naval_night_v6_toggle=CheckButton.new()
     naval_night_v6_toggle.name="VistaNocturnaBaseNavalV6"
     naval_night_v6_toggle.text="Vista nocturna · reflectores y balizas reales"
@@ -1064,12 +1072,18 @@ func _toggle_naval_detail_v7(_enabled: bool) -> void:
     if _role=="naval_base":
         _display_naval_base()
 
+func _toggle_naval_detail_v8(_enabled: bool) -> void:
+    if _role=="naval_base":
+        _display_naval_base()
+
 func _toggle_naval_night_v6(_enabled: bool) -> void:
     if _role!="naval_base" or model_root==null:
         return
     var active: bool=model_root.has_node(NavalNightV6.STAGE_NAME)
     NavalNightV6.set_night(model_root,active and naval_night_v6_toggle.button_pressed)
     NavalBoardingV7.set_night(model_root,
+        active and naval_night_v6_toggle.button_pressed)
+    NavalFendersV8.set_night(model_root,
         active and naval_night_v6_toggle.button_pressed)
     _apply_hq_lighting(2 if active and naval_night_v6_toggle.button_pressed else _naval_saved_light_preset)
 
@@ -1143,6 +1157,14 @@ func _display_naval_base() -> void:
                                 else:
                                     NavalBoardingV7.set_night(model_root,
                                         naval_night_v6_toggle.button_pressed)
+                                    if naval_detail_v8_toggle.button_pressed:
+                                        var ok_v8: bool=NavalFendersV8.apply(model_root,
+                                            naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
+                                        if not ok_v8:
+                                            push_error("Base Naval V8: fallaron defensas y contacto costero")
+                                        else:
+                                            NavalFendersV8.set_night(model_root,
+                                                naval_night_v6_toggle.button_pressed)
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2087,6 +2109,8 @@ func _update_camera() -> void:
             NavalNightV6.set_detail(model_root,_zoom>=0.85)
         if model_root!=null and model_root.has_node(NavalBoardingV7.STAGE_NAME):
             NavalBoardingV7.set_detail(model_root,_zoom>=0.85)
+        if model_root!=null and model_root.has_node(NavalFendersV8.STAGE_NAME):
+            NavalFendersV8.set_detail(model_root,_zoom>=0.85)
         return
     if _role == "airbase":
         if camera != null:
@@ -2117,15 +2141,16 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="naval_base" and model_root!=null:
         detail_label.text="Base Naval %s · Nivel %d · %d mallas reales" % [
-            "V7" if model_root.has_node(NavalBoardingV7.STAGE_NAME) else (
+            "V8" if model_root.has_node(NavalFendersV8.STAGE_NAME) else (
+                "V7" if model_root.has_node(NavalBoardingV7.STAGE_NAME) else (
                 "V6" if model_root.has_node(NavalNightV6.STAGE_NAME) else (
                 "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
                 "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
                 "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))),
+                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1")))))),
             int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
-        status_label.text="%s · %s · rampas, escaleras y atraque real 3D" % [
+        status_label.text="%s · %s · defensas marítimas, oleaje y astillero 3D" % [
             str(VisualStyle.FACTIONS[_faction]["name"]),
             str(NavalBaseV1.DAMAGE_STAGES[int(model_root.get_meta(
                 "visual_damage_stage",0))])]
