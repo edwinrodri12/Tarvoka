@@ -44,5 +44,31 @@ func _initialize() -> void:
     assert(downhill_hit["damage"] == 6)
     assert(attacker["hp"] == 10 and defender["hp"] == 10)
     assert(board[2][1] == "mountain")
+    # Adversarial: cover is positional, not a permanent property of the unit.
+    # Air defenders above a mountain must not inherit ground cover or height.
+    var aircraft := {"id":"air", "faction":2, "pos":summit, "hp":10, "domain":"air"}
+    var air_modifiers: Dictionary = tactics.modifiers(attacker, aircraft, board)
+    assert(air_modifiers["defense_cover"] == 0)
+    assert(air_modifiers["height_delta"] == 0)
+    assert(air_modifiers["attack_bonus"] == 0)
+    assert(air_modifiers["terrain"] == "mountain")
+
+    # Adversarial: malformed coordinates must not create terrain bonuses.
+    var invalid_target := {"id":"bad", "faction":2, "pos":Vector2i(-1, 2), "hp":10, "domain":"ground"}
+    var invalid_modifiers: Dictionary = tactics.modifiers(attacker, invalid_target, board)
+    assert(invalid_modifiers["terrain"] == "")
+    assert(invalid_modifiers["defense_cover"] == 0)
+    assert(invalid_modifiers["attack_bonus"] == 0)
+
+    # Positive: city cover stacks with mountain cover, but does not mutate
+    # the original board or the defender's permanent statistics.
+    var city := {"sites":[{"kind":"city", "pos":summit}]}
+    var urban_modifiers: Dictionary = tactics.modifiers(attacker, defender, board, city)
+    assert(urban_modifiers["city"])
+    assert(urban_modifiers["defense_cover"] == 3)
+    assert(urban_modifiers["attack_bonus"] == -1)
+    assert(defender["hp"] == 10)
+    assert(board[2][1] == "mountain")
+
     print("PASS: mountain movement and positional combat integration")
     quit()
