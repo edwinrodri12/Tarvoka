@@ -4,6 +4,7 @@ class_name TarvokaAPCVisualRigV1
 # 6x6 wheeled P06 native animation. Entirely cosmetic; it never changes
 # passenger capacity, HP, movement rules or the G09's finalized rig.
 const Burst = preload("res://scripts/ui/APCMachineGunV7.gd")
+const RearV10 = preload("res://scripts/ui/APCRearDesignV10.gd")
 const MOVE_DURATION := 0.65
 const SHOT_DURATION := 1.12 # Machinegun: six discrete muzzle pulses
 const RAMP_DURATION := 1.05
@@ -128,6 +129,10 @@ static func pose(model: Node3D,kind: String,t: float,
         model.set_meta("tarvoka_apc_ramp_open",true)
     elif t>=1.0 and kind=="close_ramp":
         model.set_meta("tarvoka_apc_ramp_open",false)
+    # Drive the twin pistons using the true hinge transformation, including
+    # intermediate open/close frames; never animate the rods independently.
+    if model.get_meta(RearV10.FLAG,false):
+        RearV10.pose(model)
     model.set_meta("tarvoka_apc_v1_last_pose",kind)
     return true
 
