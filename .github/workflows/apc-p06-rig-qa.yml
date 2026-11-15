@@ -37,7 +37,7 @@ jobs:
               xvfb-run -a -s '-screen 0 1280x720x24' \
               env LIBGL_ALWAYS_SOFTWARE=1 \
               /tmp/Godot_v4.3-stable_linux.x86_64 \
-              --rendering-method gl_compatibility --path . \
+              --rendering-method gl_compatibility --audio-driver Dummy --path . \
               --script "res://tests/${entry}.gd" 2>&1 | tee "/tmp/${entry}.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${entry}.log"; then
               echo "P06 visual regression: ${entry}"; exit 1
