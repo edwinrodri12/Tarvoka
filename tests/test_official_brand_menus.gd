@@ -12,7 +12,15 @@ func _run() -> void:
     root.add_child(screen)
     await process_frame
     var home = screen.home_menu
-    assert(home != null and home.primary_buttons.size() == 7)
+    # Approved commercial home adds Online, Créditos and Salir beyond the old 7-key registry.
+    assert(home != null and home.primary_buttons.size() >= 8)
+    assert(home.primary_buttons.has("Online"))
+    assert(home.primary_buttons["Online"].disabled)
+    assert(home.primary_buttons.has("Créditos"))
+    assert(home.primary_buttons.has("Salir"))
+    assert(home.showcase_emblems.size() == 8)
+    for shield in home.showcase_emblems:
+        assert(shield.texture != null)
     assert(home.primary_buttons.has("Partidas guardadas"))
     assert(home.primary_buttons["Multijugador"].disabled)
     assert(home.hero != null and home.action_card != null)
@@ -103,6 +111,18 @@ func _run() -> void:
     screen.command_menu.close_requested.emit()
     assert(not screen.command_menu.visible and not home.visible)
     screen._show_home_menu()
+
+    # Story navigation shows approved chapters without replacing battle state.
+    home.primary_buttons["Modo historia"].pressed.emit()
+    assert(screen.story_chapter_menu.visible and not home.visible)
+    assert(screen.story_chapter_menu._play.disabled == false)
+    screen.story_chapter_menu._select_chapter(24)
+    assert(screen.story_chapter_menu._play.disabled)
+    screen.story_chapter_menu._select_chapter(1)
+    assert(not screen.story_chapter_menu._play.disabled)
+    screen.story_chapter_menu.back_requested.emit()
+    assert(home.visible and not screen.story_chapter_menu.visible)
+    assert(screen.board.state == baseline)
 
     # The campaign button stays wired, but tests do not switch the scene.
     assert(home.primary_buttons["Modo historia"].disabled == false)
