@@ -22,6 +22,7 @@ on:
       - 'scripts/ui/G11MechanicalDetailV14.gd'
       - 'scripts/ui/G11AftPodFinishV15.gd'
       - 'tests/test_g11_aft_pod_finish_v15.gd'
+      - 'tests/test_g11_aft_pod_finish_v15_capture.gd'
       - 'tests/test_g11_mechanical_detail_v14.gd'
       - 'tests/test_g11_tracks_faction_v13.gd'
       - 'tests/test_g11_tracks_faction_v13_capture.gd'
@@ -242,6 +243,29 @@ jobs:
         with:
           name: tarvoka-g11-v13-corrected-gears-faction-roofs-20-real-godot
           path: /tmp/g11-360/*.png
+          retention-days: 14
+      - name: Render 14 actual Godot V15 aft-pod, cheek and articulated closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v15-review
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v15-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_aft_pod_finish_v15_capture.gd 2>&1 | tee /tmp/g11_v15_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v15_capture.log; then
+            echo 'G11 V15 native gallery render regression'; exit 1
+          fi
+          grep -F 'PASS G11 V15 CAPTURE:' /tmp/g11_v15_capture.log
+          test "$(find /tmp/g11-v15-review -name '*.png' | wc -l)" -eq 14
+      - name: Upload G11 V15 14 true Godot rear-pod sculpture review images
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v15-14-real-godot-aft-pod-review
+          path: /tmp/g11-v15-review/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
