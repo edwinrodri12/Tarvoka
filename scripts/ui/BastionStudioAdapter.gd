@@ -46,7 +46,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · Escultura V5 · rodaje articulado")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V7 ráfagas y daños · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V9 movimiento y LOD · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -54,11 +54,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V7_RafagaDestrozos"
+    p06_controls.name = "BastionP06_V9_MovimientoLOD"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V7 · AMETRALLADORA Y DESTROZOS",14)
+        "BASTIÓN P06 · V9 · MOVILIDAD Y DISTANCIAS",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -90,9 +90,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V7: seis fogonazos individuales y casquillos expulsados. "
-        + "Daños progresivos con placas dobladas, rueda afectada y torreta "
-        + "desplazada al destruirse. Ráfaga V8 con sonido original sincronizado.",12)
+        "V9: dirección delantera y suspensión 6×6, LOD cerca/medio/lejos. "
+        + "Ráfaga de seis disparos, casquillos y daños físicos. "
+        + "Audio original sincronizado, flotas de 8/32/64 vehículos.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
