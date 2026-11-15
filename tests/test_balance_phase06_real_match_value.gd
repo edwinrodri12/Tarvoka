@@ -36,6 +36,7 @@ func _initialize() -> void:
         marginal[role] = _new_marginal(role)
     var baseline: Dictionary = _baseline_matches(exposure)
     var comparisons := 0
+    var all_outcomes: Dictionary = baseline.duplicate(true)
     # Every single role can be bought and followed as a purchased unit
     # in a legal real modern coastal match, on both sides.
     for role in all_roles:
@@ -44,6 +45,8 @@ func _initialize() -> void:
                 var control: Dictionary = _match(3,side,fog,"clear",20,"",side,exposure)
                 var trial: Dictionary = _match(3,side,fog,"clear",20,role,side,exposure)
                 _record_comparison(marginal[role],role,control,trial)
+                _count_outcomes(all_outcomes,control)
+                _count_outcomes(all_outcomes,trial)
                 comparisons += 1
     # Infantry-specific stress on very different terrain and weather.
     for role in INFANTRY:
@@ -53,6 +56,8 @@ func _initialize() -> void:
                 var control: Dictionary = _match(map_id,side,true,climate,28,"",side,exposure)
                 var trial: Dictionary = _match(map_id,side,true,climate,28,role,side,exposure)
                 _record_comparison(marginal[role],role,control,trial)
+                _count_outcomes(all_outcomes,control)
+                _count_outcomes(all_outcomes,trial)
                 comparisons += 1
     assert(comparisons == 156)
     var counter: Dictionary = _duel_matrix(all_roles)
@@ -81,15 +86,24 @@ func _initialize() -> void:
             int(e["received"]),int(e["losses"]),int(e["captures"])
         ])
     print("REALMATCH_SUMMARY natural_matches=%d paired_ab_comparisons=%d all_games=%d events=%d purchases=%d captures=%d attacks=%d moves=%d resupplies=%d actual_winners=%d unresolved=%d matrix_legal_exchanges=%d matrix_candidate_pairs=%d" % [
-        int(baseline["matches"]),comparisons,int(baseline["matches"])+comparisons*2,
-        int(baseline["events"])+int(marginal["line"]["events_placeholder"]) if marginal["line"].has("events_placeholder") else int(baseline["events"]),
-        int(baseline["buys"]),int(baseline["captures"]),int(baseline["attacks"]),
-        int(baseline["moves"]),int(baseline["resupplies"]),
-        int(baseline["decided"]),int(baseline["unresolved"]),
+        int(baseline["matches"]),comparisons,int(all_outcomes["matches"]),
+        int(all_outcomes["events"]),int(all_outcomes["buys"]),
+        int(all_outcomes["captures"]),int(all_outcomes["attacks"]),
+        int(all_outcomes["moves"]),int(all_outcomes["resupplies"]),
+        int(all_outcomes["decided"]),int(all_outcomes["unresolved"]),
         int(counter["legal"]),int(counter["candidates"])
     ])
     print("PASS balance phase06: 32-role field-value A/B, all four maps in rain snow clear and 32x32 actual combat previews")
     quit(0)
+
+static func _count_outcomes(totals: Dictionary, sample: Dictionary) -> void:
+    totals["matches"] += 1
+    for kind in ["events","buys","captures","attacks","moves","resupplies"]:
+        totals[kind] += int(sample[kind])
+    if int(sample["final"]["winner"]) >= 0:
+        totals["decided"] += 1
+    else:
+        totals["unresolved"] += 1
 
 static func _new_exposure(role: String) -> Dictionary:
     return {"role":role,"natural_buys":0,"buys":0,"attacks":0,
@@ -143,8 +157,8 @@ static func _score(state: Dictionary, side: int) -> int:
     var foe := 1-side
     # This heuristic for descriptive trending only, NOT a win probability.
     # Store individual components too; do not optimize balance based on it.
-    return (int(x["material"][side])-int(x["material"][foe]))
-        + (int(x["income"][side])-int(x["income"][foe]))*2
+    return ((int(x["material"][side])-int(x["material"][foe]))
+        + (int(x["income"][side])-int(x["income"][foe]))*2)
 
 static func _baseline_matches(exposure: Dictionary) -> Dictionary:
     var out := {"matches":0,"decided":0,"unresolved":0,"events":0,
@@ -337,7 +351,8 @@ static func _record_comparison(m: Dictionary, role: String,
     for key in keys:
         var control_lead: int = int(control[key][side])-int(control[key][enemy])
         var variant_lead: int = int(variant[key][side])-int(variant[key][enemy])
-        m[key] += variant_lead-control_lead
+        var metric: String = "credits" if key == "cash" else key
+        m[metric] += variant_lead-control_lead
     var before_score: int = _score(a["state"],side)
     var after_score: int = _score(b["state"],side)
     m["score"] += after_score-before_score
