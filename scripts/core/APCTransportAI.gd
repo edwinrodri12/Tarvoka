@@ -150,8 +150,7 @@ static func step(state: Dictionary, knowledge: Dictionary, friends: Array) -> Di
                 str(troop["id"]),carrier_id,side,state["terrain"])
             if not proposal.get("valid",false):
                 continue
-            var priority: int = _distance(troop["pos"],city)*100+
-                _rel_x(troop["pos"],side,width)*3+troop["pos"].y
+            var priority: int = _distance(troop["pos"],city)*100+_rel_x(troop["pos"],side,width)*3+troop["pos"].y
             if priority < chosen_score:
                 chosen_score = priority
                 chosen = str(troop["id"])
