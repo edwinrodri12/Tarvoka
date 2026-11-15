@@ -77,6 +77,7 @@ jobs:
           for image in \
             tarvoka_airbase_v2_level1_closed.png \
             tarvoka_airbase_v2_level1_open.png \
+            tarvoka_airbase_v2_interior_inspection.png \
             tarvoka_airbase_v2_half_open.png \
             tarvoka_airbase_v2_level3_open.png \
             tarvoka_airbase_v2_turquoise_open.png \
