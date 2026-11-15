@@ -155,8 +155,11 @@ static func _position(surface: String,slot: int) -> Vector3:
             at.y+=0.15*float(slot%2)
             at.z=-4.174 # original V1 gate face is z=-4.150
         "tower_concrete":
-            at.x+=dx*0.62
-            at.y+=0.25*float(slot%2)
+            # Stay inside the exposed left concrete bay, rather than
+            # placing over the central/front metal frame.
+            at.x+=dx*0.30
+            at.y+=0.30*float(slot)
+            at.z=-2.864
         "hangar_roof":
             var local_x: float=2.80+dx
             at.x=V1.HANGAR_CENTER_X+local_x
@@ -216,6 +219,8 @@ func add_mark(attack: String,surface: String) -> bool:
         var n: Vector3=_normal(surface,slot)
         anchor.basis=Basis.looking_at(-n,
             Vector3.FORWARD if surface=="hangar_roof" else Vector3.UP)
+        # Shallow concrete crater rather than a wall-mounted plaque.
+        anchor.scale=Vector3(1.0,1.0,0.64) if surface=="tower_concrete" else Vector3.ONE
         anchor.visible=true
         _counts[surface]=count+1
         mark_changed.emit(surface,slot,attack)

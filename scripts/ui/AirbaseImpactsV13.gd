@@ -49,7 +49,10 @@ static func surface_position(surface: String) -> Vector3:
             # two center sections, so no impact may float in that gap.
             return Vector3(V1.HANGAR_CENTER_X-2.28,1.60,-4.12)
         "tower_concrete":
-            return Vector3(4.17,1.91,-2.95)
+            # Aim between the concrete-shaft's metal mullions (local
+            # x=-0.49,0,+0.49) rather than directly at the center rail.
+            # The V1 concrete face is z=-2.86 world, not z=-2.95.
+            return Vector3(3.92,1.91,-2.864)
         "hangar_roof":
             # This is section 12, intact even at stage 3. Avoid
             # placing a surface response over a removed roof panel.
