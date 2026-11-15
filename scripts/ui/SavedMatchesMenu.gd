@@ -8,6 +8,8 @@ const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Preview = preload("res://scripts/ui/SavedMatchMinimap.gd")
 
 const AUTO_PATH := "user://tarvoka_autosave_v1.json"
 const MANUAL_PATH := SaveStore.DEFAULT_PATH
@@ -15,6 +17,15 @@ const MANUAL_PATH := SaveStore.DEFAULT_PATH
 var slot_buttons: Dictionary = {}
 var slot_summaries: Dictionary = {}
 var slot_statuses: Dictionary = {}
+var slot_previews: Dictionary = {}
+var slot_faction_crests: Dictionary = {}
+var slot_titles: Dictionary = {}
+var slot_helps: Dictionary = {}
+var slot_bodies: Dictionary = {}
+var page_title: Label
+var page_explanation: Label
+var back_button: Button
+var compact_landscape := false
 var status_label: Label
 var slot_scroll: ScrollContainer
 var slot_cards: BoxContainer
@@ -48,20 +59,23 @@ func _ready() -> void:
     column.add_child(heading)
     var brand := Label.new()
     brand.text = "TARVOKA  /  PARTIDAS GUARDADAS"
+    page_title = brand
     brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     brand.add_theme_color_override("font_color",Chrome.GOLD)
     brand.add_theme_font_size_override("font_size",21)
     brand.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     heading.add_child(brand)
     var back := Button.new()
-    back.text = "Volver"
-    back.custom_minimum_size = Vector2(100,48)
+    back.text = "‹ VOLVER"
+    back_button = back
+    back.custom_minimum_size = Vector2(105,48)
     back.pressed.connect(func(): _clear_pending(); back_requested.emit())
     heading.add_child(back)
     Chrome.emphasize(back,"secondary")
 
     var explain := Label.new()
-    explain.text = "Dos ranuras reales. Revisa la partida antes de sustituir la batalla activa."
+    explain.text = "ESCARAMUZAS · Dos ranuras verificadas. Los capítulos de Historia mantienen guardados independientes."
+    page_explanation = explain
     explain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     explain.add_theme_color_override("font_color",Chrome.MUTED)
     column.add_child(explain)
@@ -75,7 +89,7 @@ func _ready() -> void:
     slot_cards = BoxContainer.new()
     slot_cards.name = "DosGuardadosHorizontales"
     slot_cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    slot_cards.add_theme_constant_override("separation",16)
+    slot_cards.add_theme_constant_override("separation",12)
     slot_scroll.add_child(slot_cards)
     _slot("auto","GUARDADO AUTOMÁTICO",
         "Último punto de control registrado durante la batalla.",AUTO_PATH)
@@ -98,14 +112,14 @@ func _ready() -> void:
     confirmation_label.add_theme_font_size_override("font_size",15)
     confirmation_row.add_child(confirmation_label)
     confirm_load_button = Button.new()
-    confirm_load_button.text = "Confirmar carga"
-    confirm_load_button.custom_minimum_size = Vector2(156,48)
+    confirm_load_button.text = "CARGAR PARTIDA"
+    confirm_load_button.custom_minimum_size = Vector2(152,48)
     confirm_load_button.pressed.connect(_confirm_loading)
     confirmation_row.add_child(confirm_load_button)
     Chrome.emphasize(confirm_load_button,"primary")
     cancel_load_button = Button.new()
-    cancel_load_button.text = "Cancelar"
-    cancel_load_button.custom_minimum_size = Vector2(115,48)
+    cancel_load_button.text = "CANCELAR"
+    cancel_load_button.custom_minimum_size = Vector2(112,48)
     cancel_load_button.pressed.connect(_cancel_loading)
     confirmation_row.add_child(cancel_load_button)
     Chrome.emphasize(cancel_load_button,"secondary")
@@ -124,8 +138,42 @@ func _reflow() -> void:
     if slot_cards == null:
         return
     var viewport: Vector2 = get_viewport_rect().size
-    # Landscape Android always shows both slots side-by-side.
+    compact_landscape = viewport.x > viewport.y and viewport.y <= 560.0
+    # Do not stack the two real save slots on a compact Android landscape.
     slot_cards.vertical = viewport.y > viewport.x * 1.12
+    page_explanation.visible = not compact_landscape
+    page_title.add_theme_font_size_override(
+        "font_size",17 if compact_landscape else 21)
+    back_button.custom_minimum_size = (
+        Vector2(90,44) if compact_landscape else Vector2(105,48))
+    status_label.visible = not compact_landscape or confirmation_panel.visible
+    for key in ["auto","manual"]:
+        slot_titles[key].text = (
+            ("AUTOMÁTICO" if key == "auto" else "MANUAL") if compact_landscape else
+            ("GUARDADO AUTOMÁTICO" if key == "auto" else "GUARDADO MANUAL"))
+        slot_titles[key].add_theme_font_size_override(
+            "font_size",14 if compact_landscape else 19)
+        slot_statuses[key].add_theme_font_size_override(
+            "font_size",10 if compact_landscape else 13)
+        slot_helps[key].visible = not compact_landscape
+        slot_summaries[key].add_theme_font_size_override(
+            "font_size",11 if compact_landscape else 16)
+        slot_previews[key].custom_minimum_size = (
+            Vector2(115,83) if compact_landscape else Vector2(170,122))
+        for crest in slot_faction_crests[key]:
+            crest.custom_minimum_size = (
+                Vector2(33,33) if compact_landscape else Vector2(45,45))
+        slot_buttons[key].custom_minimum_size.y = 44 if compact_landscape else 50
+        slot_bodies[key].add_theme_constant_override(
+            "separation",4 if compact_landscape else 7)
+    confirm_load_button.custom_minimum_size = (
+        Vector2(132,44) if compact_landscape else Vector2(152,48))
+    cancel_load_button.custom_minimum_size = (
+        Vector2(95,44) if compact_landscape else Vector2(112,48))
+    confirmation_label.add_theme_font_size_override(
+        "font_size",12 if compact_landscape else 15)
+    if not _pending_path.is_empty() and confirmation_panel.visible:
+        _request_load(_pending_path)
 
 func _slot(key: String, title: String, help: String, path: String) -> void:
     var card := PanelContainer.new()
@@ -137,12 +185,14 @@ func _slot(key: String, title: String, help: String, path: String) -> void:
     slots.append(card)
 
     var body := VBoxContainer.new()
-    body.add_theme_constant_override("separation",8)
+    body.add_theme_constant_override("separation",7)
+    slot_bodies[key] = body
     card.add_child(body)
     var title_row := HBoxContainer.new()
     body.add_child(title_row)
     var heading := Label.new()
     heading.text = title
+    slot_titles[key] = heading
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     heading.add_theme_color_override("font_color",Chrome.GOLD)
     heading.add_theme_font_size_override("font_size",19)
@@ -159,6 +209,34 @@ func _slot(key: String, title: String, help: String, path: String) -> void:
     detail.add_theme_color_override("font_color",Chrome.MUTED)
     detail.add_theme_font_size_override("font_size",14)
     body.add_child(detail)
+    slot_helps[key] = detail
+    var recon := HBoxContainer.new()
+    recon.add_theme_constant_override("separation",9)
+    body.add_child(recon)
+    var tactical_map: Control = Preview.new()
+    tactical_map.name = "MinimapaDeGuardado_%s" % key
+    tactical_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    tactical_map.custom_minimum_size = Vector2(170,122)
+    recon.add_child(tactical_map)
+    slot_previews[key] = tactical_map
+    var insignias := VBoxContainer.new()
+    insignias.add_theme_constant_override("separation",4)
+    recon.add_child(insignias)
+    var insignia_title := Label.new()
+    insignia_title.text = "BANDOS"
+    insignia_title.add_theme_font_size_override("font_size",10)
+    insignia_title.add_theme_color_override("font_color",Chrome.GOLD)
+    insignias.add_child(insignia_title)
+    var crests: Array[TextureRect] = []
+    for side in range(2):
+        var crest := TextureRect.new()
+        crest.custom_minimum_size = Vector2(45,45)
+        crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        insignias.add_child(crest)
+        crests.append(crest)
+    slot_faction_crests[key] = crests
     body.add_child(HSeparator.new())
     var descriptor := Label.new()
     descriptor.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -169,8 +247,8 @@ func _slot(key: String, title: String, help: String, path: String) -> void:
     slot_summaries[key] = descriptor
 
     var load := Button.new()
-    load.text = "Revisar y cargar"
-    load.custom_minimum_size.y = 52
+    load.text = "REVISAR Y CARGAR"
+    load.custom_minimum_size.y = 50
     load.disabled = true
     load.pressed.connect(func(): _request_load(path))
     body.add_child(load)
@@ -224,6 +302,15 @@ func refresh_slots() -> void:
         var badge: Label = slot_statuses[key]
         button.disabled = not ready
         label.text = describe_state(state)
+        slot_previews[key].set_snapshot(state,_recovered_paths[path])
+        var crests: Array = slot_faction_crests[key]
+        for side in range(2):
+            var faction_index: int = Identity.index_for(
+                Identity.key_for(state,side)) if ready else -1
+            crests[side].texture = (
+                Style.emblem_texture(faction_index) if ready else null)
+            crests[side].tooltip_text = (
+                Identity.name_for(state,side) if ready else "Sin partida")
         if not ready:
             badge.text = "SIN PARTIDA"
             badge.add_theme_color_override("font_color",Chrome.MUTED)
@@ -242,7 +329,11 @@ func _request_load(path: String) -> void:
     _pending_path = path
     var label := "automático" if path == AUTO_PATH else "manual"
     var recovery := " Se utilizará la copia válida recuperada." if bool(_recovered_paths.get(path,false)) else ""
-    confirmation_label.text = "¿Cargar el guardado %s? Sustituirá la batalla activa.%s" % [label,recovery]
+    confirmation_label.text = (
+        "¿Cargar el guardado %s? Sustituirá la batalla activa.%s" % [label,recovery])
+    if compact_landscape:
+        confirmation_label.text = (
+            "Cargar %s · reemplaza la batalla activa.%s" % [label,recovery])
     confirmation_panel.show()
     status_label.text = "La batalla actual permanece intacta hasta confirmar."
 
