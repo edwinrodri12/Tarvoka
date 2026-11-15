@@ -861,6 +861,8 @@ func _set_army_filter(index: int) -> void:
     if army_filter_picker.selected != index:
         army_filter_picker.select(index)
     var shown := 0
+    var first_visible_id := ""
+    var selected_still_visible := false
     for unit in army_roster_units:
         var uid: String = str(unit.get("id",""))
         if not army_row_nodes.has(uid):
@@ -875,8 +877,20 @@ func _set_army_filter(index: int) -> void:
         army_row_nodes[uid].visible = allowed
         if allowed:
             shown += 1
+            if first_visible_id.is_empty():
+                first_visible_id = uid
+            if uid == army_selected_id:
+                selected_still_visible = true
     if army_filter_empty != null:
         army_filter_empty.visible = shown == 0
+    if shown == 0 and army_details_body != null:
+        army_selected_id = ""
+        _clear(army_details_body)
+        army_stats_grid = null
+        army_stat_cells.clear()
+        _heading(army_details_body,"SIN UNIDADES PARA ESTE FILTRO")
+    elif shown > 0 and not selected_still_visible:
+        _select_army_unit(first_visible_id)
 
 func _toggle_more_commands() -> void:
     if command_extras == null:
