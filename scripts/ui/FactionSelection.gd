@@ -133,6 +133,7 @@ func _ready() -> void:
 
     var chooser := PanelContainer.new()
     chooser.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    chooser.size_flags_stretch_ratio = 1.15
     chooser.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#102736"),Chrome.EDGE,9,11))
     content_rail.add_child(chooser)
@@ -202,6 +203,7 @@ func _ready() -> void:
 
     var dossier := PanelContainer.new()
     dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    dossier.size_flags_stretch_ratio = 0.85
     dossier.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0C2030"),Chrome.EDGE_BRIGHT,10,13))
     content_rail.add_child(dossier)
@@ -210,7 +212,7 @@ func _ready() -> void:
     dossier_col.add_theme_constant_override("separation",5)
     dossier.add_child(dossier_col)
     var dossier_kicker := Label.new()
-    dossier_kicker.text = "DOSSIER DE MANDO"
+    dossier_kicker.text = "DOSSIER DE COMANDANTE  /  ARTE OFICIAL"
     dossier_kicker.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_kicker.add_theme_font_size_override("font_size",16)
     dossier_col.add_child(dossier_kicker)
@@ -233,7 +235,7 @@ func _ready() -> void:
     var portrait_center := CenterContainer.new()
     portrait_shell.add_child(portrait_center)
     var portrait_box := Control.new()
-    portrait_box.custom_minimum_size = Vector2(122,122)
+    portrait_box.custom_minimum_size = Vector2(135,135)
     portrait_center.add_child(portrait_box)
     emblem_display_box = portrait_box
     portrait_fallback = ColorRect.new()
@@ -265,7 +267,7 @@ func _ready() -> void:
     var commander_center := CenterContainer.new()
     commander_shell.add_child(commander_center)
     var commander_box := Control.new()
-    commander_box.custom_minimum_size = Vector2(122,122)
+    commander_box.custom_minimum_size = Vector2(178,135)
     commander_center.add_child(commander_box)
     commander_display_box = commander_box
     commander_fallback = ColorRect.new()
@@ -294,7 +296,7 @@ func _ready() -> void:
     preview_motif.add_theme_color_override("font_color",Chrome.TEXT)
     dossier_col.add_child(preview_motif)
     preview_commander = Label.new()
-    preview_commander.text = "COMANDANTE\nRetrato aprobado: pendiente de incorporar como archivo al proyecto."
+    preview_commander.text = "COMANDANTE  ·  RETRATO OFICIAL"
     preview_commander.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     preview_commander.add_theme_color_override("font_color",Chrome.MUTED)
     dossier_col.add_child(preview_commander)
@@ -304,18 +306,24 @@ func _ready() -> void:
     selection_status.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_col.add_child(selection_status)
     var balance := Label.new()
-    balance.text = "Identidad y colores oficiales. Los poderes de comandante se integrarán por separado."
+    balance.text = "Identidad visual oficial. Este selector no altera estadísticas ni desbloquea poderes adicionales."
     balance.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     balance.add_theme_color_override("font_color",Chrome.MUTED)
     balance.add_theme_font_size_override("font_size",12)
     dossier_col.add_child(balance)
 
     confirm_button = Button.new()
-    confirm_button.text = "CONFIRMAR BANDOS  ·  CONTINUAR"
-    confirm_button.custom_minimum_size.y = 56
+    confirm_button.text = "CONFIRMAR FACCIONES  ·  VOLVER A ESCARAMUZA"
+    confirm_button.custom_minimum_size.y = 58
     confirm_button.pressed.connect(_confirm)
     Chrome.emphasize(confirm_button,"primary")
     frame.add_child(confirm_button)
+    matchup_caption = Label.new()
+    matchup_caption.name = "ResumenDeFacciones"
+    matchup_caption.add_theme_font_size_override("font_size",11)
+    matchup_caption.add_theme_color_override("font_color",Chrome.MUTED)
+    matchup_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    frame.add_child(matchup_caption)
     get_viewport().size_changed.connect(_reflow)
     call_deferred("_reflow")
     _refresh()
@@ -356,14 +364,24 @@ func _refresh() -> void:
     if preview_title == null:
         return
     for side in range(2):
-        var name: String = str(Style.faction_info(Identity.index_for(str(selected[str(side)]))).get("name",""))
-        side_buttons[side].text = ("%s: %s" % ["JUGADOR" if side == 0 else "RIVAL",name])
+        var side_index: int = Identity.index_for(str(selected[str(side)]))
+        var name: String = str(Style.faction_info(side_index).get("name",""))
+        side_buttons[side].text = ("%s · %s" % ["JUGADOR" if side == 0 else "RIVAL",name])
+        side_buttons[side].tooltip_text = "Cambiar la facción de %s" % name
+        side_commander_portraits[side].texture = Style.commander_texture(side_index)
+        side_emblems[side].texture = Style.emblem_texture(side_index)
         Chrome.emphasize(side_buttons[side],"primary" if side == active_side else "secondary")
     var idx: int = Identity.index_for(str(selected[str(active_side)]))
     var data: Dictionary = Style.faction_info(idx)
     var color: Color = Style.faction_color(idx)
     for i in range(faction_buttons.size()):
-        faction_buttons[i].text = ("✓  " if i == idx else "     ") + str(Style.FACTIONS[i]["name"])
+        var key: String = str(Style.FACTIONS[i]["key"])
+        var allocated: String = (
+            "AZUL" if str(selected["0"]) == key else
+            ("ROJO" if str(selected["1"]) == key else ""))
+        faction_buttons[i].text = ("✓ " if i == idx else "") + str(Style.FACTIONS[i]["name"])
+        faction_buttons[i].tooltip_text = str(Style.FACTIONS[i]["name"]) + " · " + str(Style.FACTIONS[i]["motif"])
+        faction_assignment_labels[i].text = allocated
         Chrome.emphasize(faction_buttons[i],"primary" if i == idx else "secondary")
     preview_title.text = str(data.get("name",""))
     preview_title.add_theme_color_override("font_color",color.lightened(0.23))
@@ -385,8 +403,12 @@ func _refresh() -> void:
         commander_fallback.color = color.darkened(0.78)
     preview_commander.text = ("COMANDANTE · Retrato oficial" if approved_commander != null else
         "COMANDANTE · Retrato pendiente")
-    selection_status.text = "BANDO %d  /  %s" % [active_side+1,str(data.get("name",""))]
+    selection_status.text = "EDITANDO %s  /  %s" % ["JUGADOR" if active_side == 0 else "RIVAL",str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
+    if matchup_caption != null:
+        var player_name: String = str(Style.faction_info(Identity.index_for(str(selected["0"]))).get("name",""))
+        var rival_name: String = str(Style.faction_info(Identity.index_for(str(selected["1"]))).get("name",""))
+        matchup_caption.text = "%s   VS   %s    ·    SIN ALTERAR LA PARTIDA ACTUAL" % [player_name,rival_name]
 
 func _confirm() -> void:
     if Identity.is_valid(selected):
@@ -402,6 +424,8 @@ func reflow_for_size(viewport: Vector2) -> void:
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
     is_portrait_layout = viewport.y > viewport.x * 1.12
     content_rail.vertical = is_portrait_layout
+    if faction_grid != null:
+        faction_grid.columns = 1 if is_portrait_layout else 2
     # Portrait headers and long real faction names cannot fit side-by-side.
     # Stack them instead of allowing "Volver" and "Rival" off-screen.
     if header_row != null:
@@ -416,13 +440,13 @@ func reflow_for_size(viewport: Vector2) -> void:
     for child in content_rail.get_children():
         if child is Control:
             child.custom_minimum_size.x = 0 if is_portrait_layout or viewport.x < 1000.0 else 310
-    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else (92.0 if viewport.x < 1000.0 else 122.0)
+    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else (104.0 if viewport.x < 1000.0 else 145.0)
     if selection_status != null:
         selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
         emblem_display_box.custom_minimum_size = Vector2(art_width,art_width)
     if commander_display_box != null:
-        commander_display_box.custom_minimum_size = Vector2(art_width,art_width)
+        commander_display_box.custom_minimum_size = Vector2(maxf(82.0,art_width),maxf(76.0,art_width*0.76))
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
