@@ -12,6 +12,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Threats = preload("res://scripts/experiments/CaptureThreatsV02.gd")
 
 const NEIGHBORS := [
     Vector2i(0,-1), Vector2i(1,0), Vector2i(0,1), Vector2i(-1,0)
@@ -24,7 +25,7 @@ static func step(state: Dictionary, tracking: Dictionary, settings: Dictionary =
     return AI.step(state)
 
 static func _escort_in_progress_capture(state: Dictionary, tracking: Dictionary,
-        settings: Dictionary) -> Dictionary:
+        settings: Dictionary, threat_aware: bool = false) -> Dictionary:
     var none := {"valid":false}
     if not Capture.valid_settings(settings) or not state.has("economy"):
         return none
@@ -106,10 +107,21 @@ static func _escort_in_progress_capture(state: Dictionary, tracking: Dictionary,
                         break
                 if occupied:
                     continue
+                var risk := {"immediate_lethal":false,"immediate_damage":0,"penalty":0}
+                if threat_aware:
+                    risk = Threats.risk_for_cell(seen,helper,slot)
+                    # Never spend a soldier to add +1 to a siege when a
+                    # currently visible gun can immediately destroy it.
+                    if bool(risk["immediate_lethal"]):
+                        continue
+                    if int(risk["immediate_damage"])*2 >= int(helper["hp"]):
+                        continue
                 var would_finish_next: bool = int(effort["total"])+1 >= remaining
                 var score: int = 10000 + (20000 if would_finish_next else 0)
                 score += 1000 if str(site["kind"]) == "city" else 0
                 score -= int(cells[slot])*5
+                if threat_aware:
+                    score -= int(risk["penalty"])
                 # Deterministic ties independent of dictionary iteration.
                 if score > best_score or (score == best_score and (str(helper["id"]) < best_unit or (str(helper["id"]) == best_unit and (slot.y < best_slot.y or (slot.y == best_slot.y and slot.x < best_slot.x))))):
                     best_score = score
