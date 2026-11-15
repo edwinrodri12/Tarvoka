@@ -170,7 +170,8 @@ static func apply(model: Node3D,color: Color) -> bool:
         Vector3(0.067,0.326,-0.233),Vector3(-0.082,0.326,-0.233))
     _mesh(turret_finish,"P06V5_VidrioOpticaPrincipal",lens,glass)
 
-    var bolt_count: int=_bolt_group(root,weld)
+    # Hide both roof and flank fasteners with the wreck's damaged shell.
+    var bolt_count: int=_bolt_group(roof,weld)
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_apc_v5_bolt_count",bolt_count)
     model.set_meta("tarvoka_apc_v5_visual_meshes",7)
