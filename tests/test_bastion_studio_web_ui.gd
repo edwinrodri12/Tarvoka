@@ -52,6 +52,18 @@ func _run() -> void:
             "V13 real PBR coating and welded steel applied")
         _check(bool(model.get_meta("tarvoka_apc_wheel_v14",false)),
             "V14 all six true mechanical wheel assemblies installed")
+        _check(bool(model.get_meta("tarvoka_apc_undercarriage_v15",false)),
+            "V15 lower armor and three differentials installed")
+        var diff: Node3D=model.find_child(
+            "P06V15_Diferencial_2",true,false) as Node3D
+        _check(diff!=null,"rear axle differential is real 3D geometry")
+        var transfer: Node3D=model.find_child(
+            "P06V15_CajaTransferencia6x6",true,false) as Node3D
+        _check(transfer!=null,"center transfer case exists under actual V1 hull")
+        var cardan: Node3D=model.find_child(
+            "P06V15_CardanTrasero",true,false) as Node3D
+        _check(cardan!=null and cardan.visible,
+            "rear Cardan drive shaft joins three axle system")
         var rim: MeshInstance3D=model.find_child(
             "P06V14_SeisRadiosCalados",true,false) as MeshInstance3D
         _check(rim!=null and rim.mesh is ArrayMesh,
@@ -124,6 +136,12 @@ func _run() -> void:
         "paint weathering follows damage without changing game HP")
     _check(int(model.get_meta("tarvoka_apc_wheel_v14_stage",-1)) == 3,
         "V14 wheels follow critical damaged state")
+    _check(int(model.get_meta("tarvoka_apc_v15_stage",-1))==3,
+        "V15 underside breakage follows fifth-stage art controls")
+    var snapped_shaft: Node3D=model.find_child(
+        "P06V15_CardanQuebrado",true,false) as Node3D
+    _check(snapped_shaft!=null and snapped_shaft.visible,
+        "critical damage exposes a physically fractured shaft")
     var tire_tear: Node3D=model.find_child(
         "P06V14_NeumaticoCortado",true,false) as Node3D
     _check(tire_tear!=null and tire_tear.visible,
@@ -158,6 +176,10 @@ func _run() -> void:
         "P06V14_SuspensionDesprendida",true,false) as Node3D
     _check(busted_axle!=null and busted_axle.visible,
         "broken fork and shock remains visible on destroyed 6x6")
+    var underside_wreck: Node3D=model.find_child(
+        "P06V15_TransmisionRota",true,false) as Node3D
+    _check(underside_wreck!=null and underside_wreck.visible,
+        "broken differential and underside skid plates appear on wreck")
     var lamp: Node3D = model.find_child(
         "P06V10_PilotoTrasero_1",true,false) as Node3D
     _check(lamp!=null and not lamp.visible,
@@ -179,6 +201,10 @@ func _run() -> void:
         "new tire puncture disappears after repair")
     _check(busted_axle!=null and not busted_axle.visible,
         "wrecked axle fragments removed after repair")
+    _check(snapped_shaft!=null and not snapped_shaft.visible,
+        "critical broken shaft fragment disappears after repair")
+    _check(underside_wreck!=null and not underside_wreck.visible,
+        "destroyed differential debris disappears after repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -203,6 +229,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_wheel_v14_visible",true),
         "historical comparison hides V14 rims and mechanical suspension")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v15_visible",true),
+        "historic comparison hides underside armor and three Cardan shafts")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -221,6 +250,19 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_wheel_v14_visible",false),
         "six commercial spoke wheels and their suspensions return")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v15_visible",false),
+        "new differential, gearbox and underside armor returns")
+    studio.call("_inspect_p06_underside")
+    _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
+        "native chassis actually rotates to expose underside")
+    studio.call("_inspect_p06_transfer")
+    _check(absf(float(model.rotation_degrees.x)-157.0)<0.001 and
+        absf(float(studio.get("_zoom"))-1.96)<0.001,
+        "transfer-case closeup rotates real mesh under camera")
+    studio.call("_view_p06_angle",90.0)
+    _check(absf(float(model.rotation_degrees.x))<0.001,
+        "normal wheel view restores upright 3D chassis")
     studio.call("_inspect_p06_wheels")
     _check(absf(float(studio.get("_yaw"))-90.0)<0.001 and
         absf(float(studio.get("_zoom"))-1.43)<0.001,
@@ -346,5 +388,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V14 LIVE WEB STUDIO: six open-spoke wheels, real articulated suspension, tire damage, steering, historical comparison and full repairs")
+    print("PASS BASTION V15 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
