@@ -5,7 +5,7 @@ extends SceneTree
 # 8 playable factions x 4 identical-quality vehicles; no surrogate sprites.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Finish=preload("res://scripts/ui/APCFinishV3.gd")
-const PER_FACTION=4
+const DEFAULT_PER_FACTION=4
 const FRAMES=18
 const SCREEN=Vector2i(960,540)
 
@@ -19,15 +19,21 @@ func _run() -> void:
     vp.own_world_3d=true
     root.add_child(vp)
 
+    # The same test can run 4 or 8 APCs per faction (32 or 64 total).
+    var per_faction: int=DEFAULT_PER_FACTION
+    var value: String=OS.get_environment("TARVOKA_APC_PER_FACTION")
+    if value.is_valid_int():
+        per_faction=clampi(int(value),1,12)
+    var output_tag: String=str(8*per_faction)
     var actors: Array[Node3D]=[]
     var start_usec: int=Time.get_ticks_usec()
     for faction in range(8):
-        for index in range(PER_FACTION):
+        for index in range(per_faction):
             var unit: Node3D=Models.build("apc",faction,true,13)
             assert(unit!=null)
             assert(unit.get_meta("tarvoka_apc_finish_v3",false))
             assert(unit.get_meta("tarvoka_apc_v2_tread_count",0)==288)
-            unit.position=Vector3((float(index)-1.5)*3.2,0,
+            unit.position=Vector3((float(index)-0.5*float(per_faction-1))*3.2,0,
                 (float(faction)-3.5)*3.3)
             unit.rotation_degrees.y=float((faction*31+index*17)%360)
             vp.add_child(unit)
@@ -35,11 +41,11 @@ func _run() -> void:
             assert(unit.get_meta("tarvoka_apc_v3_cached_fx",[]).size()==5)
             actors.append(unit)
     var build_ms: float=float(Time.get_ticks_usec()-start_usec)/1000.0
-    assert(actors.size()==8*PER_FACTION)
+    assert(actors.size()==8*per_faction)
 
     var cam:=Camera3D.new()
     cam.projection=Camera3D.PROJECTION_ORTHOGONAL
-    cam.size=32.0
+    cam.size=32.0 if per_faction<=4 else 49.0
     cam.position=Vector3(27,32,39)
     vp.add_child(cam)
     cam.look_at(Vector3.ZERO,Vector3.UP)
@@ -81,7 +87,7 @@ func _run() -> void:
     assert(img!=null and not img.is_empty())
     DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://artifacts"))
-    assert(img.save_png("res://artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png")==OK)
+    assert(img.save_png("res://artifacts/tarvoka_apc_p06_v3_%s_vehicle_stress.png" % output_tag)==OK)
     var full_draws: float=Performance.get_monitor(
         Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
     var lod_details: int=0
@@ -102,7 +108,7 @@ func _run() -> void:
     var tactical_img: Image=vp.get_texture().get_image()
     assert(tactical_img!=null and not tactical_img.is_empty())
     assert(tactical_img.save_png(
-        "res://artifacts/tarvoka_apc_p06_v3_32_vehicle_tactical_lod.png")==OK)
+        "res://artifacts/tarvoka_apc_p06_v3_%s_vehicle_tactical_lod.png" % output_tag)==OK)
     for unit in actors:
         assert(Finish.set_tactical_lod(unit,false)>0)
         assert(Models.inspect_meshes(unit)==expected_meshes)
@@ -114,6 +120,7 @@ func _run() -> void:
         "model":"native Godot 4.3 Geometry",
         "factions":8,
         "vehicles":actors.size(),
+        "apc_per_faction":per_faction,
         "frames":FRAMES,
         "build_ms":snappedf(build_ms,0.01),
         "renderer_elapsed_ms":snappedf(measured_ms,0.01),
@@ -128,7 +135,8 @@ func _run() -> void:
         "gpu_platform":"CI Mesa/llvmpipe; NOT Android physical device",
         "damage_repair_regression":true
     }
-    var file:=FileAccess.open("res://artifacts/apc_p06_v3_stress_metrics.json",
+    var file:=FileAccess.open(
+        "res://artifacts/apc_p06_v3_stress_metrics_%s.json" % output_tag,
         FileAccess.WRITE)
     assert(file!=null)
     file.store_string(JSON.stringify(report,"  "))
