@@ -44,6 +44,14 @@ func _run() -> void:
             "physical V7 staged damage geometry is built")
         _check(bool(model.get_meta("tarvoka_apc_rear_design_v10",false)),
             "V10 actual rear armor, passenger room and hydraulic actuators built")
+        _check(bool(model.get_meta("tarvoka_apc_exterior_v11",false)),
+            "V11 actual bevelled front and curved guards are installed")
+        _check(model.find_child("P06V11_GuardabarrosCurvo_-1_0",
+            true,false)!=null,
+            "curved front-left 3D fender is visible in the real studio")
+        _check(model.find_child("P06V11_ArgollaRescateCircular_1",
+            true,false)!=null,
+            "welded front-right circular recovery eye is real 3D")
         _check(model.find_child("P06V10_Hidraulico_-1",true,false)!=null,
             "left mechanical ram belongs to real 3D cabin")
         _check(model.find_child("P06V10_Hidraulico_1",true,false)!=null,
@@ -68,6 +76,12 @@ func _run() -> void:
         "V7 bent armor follows damage stage")
     _check(int(model.get_meta("tarvoka_apc_rear_v10_stage",-1)) == 3,
         "V10 rear assemblies respect physical damage")
+    _check(int(model.get_meta("tarvoka_apc_exterior_v11_stage",-1)) == 3,
+        "V11 front and side armor tracks five-stage damage")
+    var front_guard: Node3D=model.find_child(
+        "P06V11_GuardabarrosCurvo_-1_0",true,false) as Node3D
+    _check(front_guard!=null and not front_guard.visible,
+        "left-front guard breaks away in critical state")
     studio.call("_set_damage",0)
     _check(int(model.get_meta("tarvoka_apc_v6_stage",-1)) == 0,
         "V6 exterior recovers after repair")
@@ -87,6 +101,8 @@ func _run() -> void:
         "wrecked turret resets after repair")
     _check(lamp!=null and lamp.visible,
         "rear taillamp comes back after a full repair")
+    _check(front_guard!=null and front_guard.visible,
+        "curved front guard returns to exact placement on repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -99,12 +115,24 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_rear_v10_visible",true),
         "V3 comparison hides V10 fixed and moving hydraulic elements")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_exterior_v11_visible",true),
+        "V3 comparison hides V11 sculpted front and fenders")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
     _check(model!=null and model.get_meta(
         "tarvoka_apc_rear_v10_visible",false),
         "V10 returns after toggling back from V3")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_exterior_v11_visible",false),
+        "V11 exterior fully returns after leaving V3 comparison")
+    studio.call("_view_p06_angle",0.0)
+    _check(absf(float(studio.get("_yaw")))<0.001,
+        "native front viewpoint targets P06 glacis")
+    studio.call("_view_p06_angle",90.0)
+    _check(absf(float(studio.get("_yaw"))-90.0)<0.001,
+        "native side viewpoint exposes all three contoured wheel arches")
     studio.call("_play","attack")
     studio.call("_process",0.45)
     var muzzle: Node3D = model.find_child(
@@ -205,5 +233,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V10 LIVE WEB STUDIO: sculpted rear boarding bay, dual hydraulics, rear-view controls, moving ramp and 8 factions")
+    print("PASS BASTION V11 LIVE WEB STUDIO: bevelled front, six curved 3D arches, real tow eyes, view controls, all 8 factions and hydraulic ramp")
     quit(0)
