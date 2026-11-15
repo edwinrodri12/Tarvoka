@@ -26,6 +26,6 @@ Para comprobar el efecto es recomendable usar **vista interior del hangar**, cá
 
 ### QA
 
-`tests/test_airbase_v8_glass_lighting_gpu.gd` recorre 40 combinaciones de facción y daño, los tres niveles, portones operativos, clima reversible, protección de escudos, cantidad de lotes gráficos y comparación V7/V8. Exporta ocho capturas nativas de Godot: exterior, V7, hangar, daño medio/crítico, destrucción, lluvia y nieve.
+`tests/test_airbase_v8_glass_lighting_gpu.gd` recorre 40 combinaciones de facción y daño, los tres niveles, portones operativos, clima reversible, protección de escudos, cantidad de lotes gráficos y comparación V7/V8. Exporta nueve capturas nativas de Godot: exterior, V7, hangar, daño medio/crítico, destrucción, lluvia y nieve.
 
 `.github/workflows/airbase-v8-glass-lighting-gpu.yml` ejecuta la aceptación en Godot 4.3 con OpenGL. **No se atribuyen FPS Android a un renderizado de escritorio.**
