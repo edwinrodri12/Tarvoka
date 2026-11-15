@@ -132,3 +132,31 @@ La meta provisional para los primeros teléfonos de referencia es
 `p10 >= 30 FPS` en cada escenario de un minuto. Se necesitan varias
 repeticiones y pruebas de mayor duración antes de fijar un requisito
 mínimo comercial. No atribuir FPS de hardware a CI Mesa/llvmpipe.
+
+
+## Diagnóstico comparativo después del autotest
+
+El botón **VER DIAGNÓSTICO DE RENDIMIENTO** muestra los tres pares
+completo/LOD y un dictamen **provisional**. El informe JSON incluye la
+misma evaluación en el campo `analysis`.
+
+- `full_detail`: los tres escenarios de detalle completo superaron el
+  objetivo provisional de p10 ≥30 FPS con suficientes muestras
+- `tactical_lod`: el detalle completo falla en al menos uno de los
+  escenarios y los tres escenarios con LOD sí alcanzan el objetivo
+- `further_optimization_needed`: ni el perfil completo ni el LOD
+  alcanzan el objetivo en todos los escenarios
+- `insufficient_data`: prueba incompleta, cancelada o con muestras
+  insuficientes; no autoriza elegir perfil
+
+Cada comparación incluye la variación de FPS p10, la reducción de
+llamadas de dibujo y la memoria estática máxima medida por Godot.
+Se exige al menos el 75% del número esperado de muestras de 0,5 s;
+pocas muestras o series parciales no producen una recomendación.
+
+**Importante:** un resultado `full_detail` o `tactical_lod` es
+únicamente una observación del rendimiento visual del dispositivo en
+ese ensayo. Un informe producido en Linux o navegador informa
+`requires_physical_android_validation=true`. Incluso en Android,
+no es certificación comercial ni mide batería, temperatura, IA,
+multijugador o el mapa completo; esas pruebas siguen pendientes.
