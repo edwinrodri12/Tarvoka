@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/tarvoka-3d-pages.yml"
+      - "scripts/ui/BastionStudioAdapter.gd"
+      - "scripts/ui/BastionVisualRig3D.gd"
+      - "scripts/ui/BastionDamage3D.gd"
+      - "scripts/ui/UnitModels3D.gd"
   workflow_dispatch:
   workflow_run:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA"]
@@ -56,6 +60,16 @@ jobs:
           done
           test -s hq-android-v15/assets/buildings/hq_v15/hq_neutral.png
           cp hq-android-v15/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          # The publisher keeps the complete HQ/Airbase/G09 web studio from its
+          # release branch. Only P06 model/animation files and an additive
+          # subclass adapter come from main; no building assets are replaced.
+          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd; do
+            test -s "hq-android-v15/scripts/ui/${item}"
+            cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
+          done
+          test -s scenes/UnitArtStudioWeb.tscn
+          sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           rm -rf hq-android-v15
           test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
       - name: Download Godot 4.3 and Web export templates
@@ -111,6 +125,10 @@ jobs:
           test -s scripts/ui/HeadquartersSmokeV23.gd
           # Airbase V1 ships INSIDE the existing 3D building selector:
           # preserve existing HQ V23, terrain, G09 tank and APC sources.
+          test -s scripts/ui/BastionVisualRig3D.gd
+          test -s scripts/ui/BastionDamage3D.gd
+          test -s scripts/ui/BastionStudioAdapter.gd
+          grep -q 'BastionP06_V6_Animacion3D' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/Airbase3DV1.gd
           test -s tests/test_airbase_v1_native_studio.gd
           test -s scripts/ui/AirbaseHangarV2.gd
