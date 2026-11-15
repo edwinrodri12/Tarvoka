@@ -139,10 +139,12 @@ func _run() -> void:
         assert(APC.apply_stage(vehicle,0))
         assert(APC.set_tactical_lod(vehicle,false)>0)
         assert(Units.inspect_meshes(vehicle)==meshes_before)
-        assert(vehicle.find_child(
-            "RuedaMotorizadaP06_1_0",true,false).visible)
-        assert(vehicle.find_child(
-            "TechoBlindadoContinuoV3",true,false).visible)
+        var wheel: Node3D=vehicle.find_child(
+            "RuedaMotorizadaP06_1_0",true,false) as Node3D
+        var roof: Node3D=vehicle.find_child(
+            "TechoBlindadoContinuoV3",true,false) as Node3D
+        assert(wheel!=null and roof!=null)
+        assert(wheel.visible and roof.visible)
     for hq in hqs:
         assert(hq.get_meta("visual_only",false))
     var report: Dictionary={
