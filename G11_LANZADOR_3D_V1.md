@@ -131,3 +131,16 @@
 - Prueba nativa Godot 4.3 aprobada: [G11 V9, 12 sistemas de gases y estelas](https://github.com/edwinrodri12/Tarvoka/actions/runs/43735566071). Los tests verifican vuelos escalonados, aumento de estela, disipación tardía, las ocho facciones y reparación. El artifact `tarvoka-g11-v9-exhaust-gas-24-godot-reviews` contiene **24 capturas de render real** desde doce disparos, cuatro vistas laterales, seis acercamientos y estados inicial/final.
 
 **Pendiente de inspección artística:** estudiar en el Estudio 3D el color y la forma de los gases, y pulir cualquier pequeña intersección en el lanzamiento. No consideramos el G11 terminado sin esa revisión.
+
+### Revisión visual V9b — gases compactos y fogonazo sin cuadrados (15-nov-2026)
+
+Se descargaron y examinaron **las capturas renderizadas reales de Godot** de la versión V9. La primera iteración tapaba parcialmente el frente de doce tubos mediante superficies translúcidas grandes y el viejo halo cuadrado naranja dominaba la boca.
+
+Corrección aplicada dentro de `G11ExhaustV9.gd`:
+
+- Reducción del radio, alpha, expansión y duración del humo de presión y residual, para preservar lectura de los tubos aun durante salva completa.
+- En lugar del TorusMesh luminoso y cuatro barras rectangulares V8, cada boca recibió un **nuevo fogonazo volumétrico cónico** con gradiente cálido y silueta redondeada; se preservan las piezas antiguas ocultas por compatibilidad.
+- La disipación empieza antes. El test `test_g11_exhaust_v9.gd` comprueba explícitamente la contracción tardía del gas y que no reaparezcan los elementos viejos.
+- [CI Godot 4.3 aprobado para la revisión](https://github.com/edwinrodri12/Tarvoka/actions/runs/43736084201), con 24 capturas actualizadas en `tarvoka-g11-v9-exhaust-gas-24-godot-reviews`. La segunda revisión visual muestra el frente despejado y estelas de tamaño más proporcionado.
+
+Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo sigue pendiente de validación definitiva en el visor 3D a tamaño natural y pantalla Android.
