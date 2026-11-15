@@ -14,6 +14,11 @@ var selected: Dictionary = Identity.defaults()
 var faction_buttons: Array[Button] = []
 var faction_card_emblems: Array[TextureRect] = []
 var side_buttons: Array[Button] = []
+var side_commander_portraits: Array[TextureRect] = []
+var side_emblems: Array[TextureRect] = []
+var faction_assignment_labels: Array[Label] = []
+var faction_grid: GridContainer
+var matchup_caption: Label
 var content_rail: BoxContainer
 var preview_title: Label
 var preview_motif: Label
@@ -50,7 +55,7 @@ func _ready() -> void:
     var frame := VBoxContainer.new()
     frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    frame.add_theme_constant_override("separation",10)
+    frame.add_theme_constant_override("separation",8)
     add_child(frame)
 
     header_row = BoxContainer.new()
@@ -60,20 +65,20 @@ func _ready() -> void:
     overline.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header_row.add_child(overline)
     var title := Label.new()
-    title.text = "TARVOKA  /  ELEGIR FACCIONES"
+    title.text = "TARVOKA  /  FACCIONES Y COMANDANTES"
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title.add_theme_color_override("font_color",Chrome.GOLD)
     title.add_theme_font_size_override("font_size",23)
     overline.add_child(title)
     var note := Label.new()
-    note.text = "Ocho identidades oficiales · dos bandos en esta escaramuza"
+    note.text = "Ocho facciones originales · elige los dos mandos de tu escaramuza"
     note.add_theme_color_override("font_color",Chrome.MUTED)
     note.add_theme_font_size_override("font_size",13)
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     overline.add_child(note)
     var back := Button.new()
-    back.text = "Volver"
-    back.custom_minimum_size = Vector2(82,50)
+    back.text = "‹ VOLVER A ESCARAMUZA"
+    back.custom_minimum_size = Vector2(170,50)
     back.pressed.connect(func(): back_requested.emit())
     Chrome.emphasize(back,"secondary")
     header_row.add_child(back)
@@ -81,12 +86,39 @@ func _ready() -> void:
     sides_row = BoxContainer.new()
     sides_row.add_theme_constant_override("separation",8)
     frame.add_child(sides_row)
+    # Each side displays the original commander and shield at all times.
     for side in range(2):
+        var side_card := PanelContainer.new()
+        side_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        side_card.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#0D293B"),Chrome.EDGE,7,7))
+        sides_row.add_child(side_card)
+        var side_row := HBoxContainer.new()
+        side_row.add_theme_constant_override("separation",6)
+        side_card.add_child(side_row)
+        var side_portrait := TextureRect.new()
+        side_portrait.name = "RetratoOficialBando%d" % side
+        side_portrait.custom_minimum_size = Vector2(61,60)
+        side_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        side_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        side_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        side_row.add_child(side_portrait)
+        side_commander_portraits.append(side_portrait)
+        var crest := TextureRect.new()
+        crest.name = "EscudoOficialBando%d" % side
+        crest.custom_minimum_size = Vector2(45,45)
+        crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        side_row.add_child(crest)
+        side_emblems.append(crest)
         var side_button := Button.new()
-        side_button.custom_minimum_size.y = 47
+        side_button.name = "EditarBando%d" % side
+        side_button.custom_minimum_size.y = 51
         side_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        side_button.clip_text = true
         side_button.pressed.connect(_choose_side.bind(side))
-        sides_row.add_child(side_button)
+        side_row.add_child(side_button)
         side_buttons.append(side_button)
 
     scroll = ScrollContainer.new()
@@ -113,13 +145,30 @@ func _ready() -> void:
     heading.add_theme_color_override("font_color",Chrome.GOLD)
     heading.add_theme_font_size_override("font_size",16)
     chooser_col.add_child(heading)
+    var instructions := Label.new()
+    instructions.text = "OCHO FACCIONES · PULSA UN ESCUDO PARA ASIGNARLO"
+    instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    instructions.add_theme_color_override("font_color",Chrome.MUTED)
+    instructions.add_theme_font_size_override("font_size",11)
+    chooser_col.add_child(instructions)
+    faction_grid = GridContainer.new()
+    faction_grid.name = "GaleriaDeOchoFacciones"
+    faction_grid.columns = 2
+    faction_grid.add_theme_constant_override("h_separation",6)
+    faction_grid.add_theme_constant_override("v_separation",6)
+    chooser_col.add_child(faction_grid)
     for i in range(Style.FACTIONS.size()):
         var info: Dictionary = Style.faction_info(i)
+        var card := PanelContainer.new()
+        card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        card.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#0D2534"),Style.faction_color(i),6,5))
+        faction_grid.add_child(card)
         var row := HBoxContainer.new()
-        row.add_theme_constant_override("separation",8)
-        chooser_col.add_child(row)
+        row.add_theme_constant_override("separation",4)
+        card.add_child(row)
         var color_block := ColorRect.new()
-        color_block.custom_minimum_size = Vector2(11,50)
+        color_block.custom_minimum_size = Vector2(5,53)
         color_block.color = Style.faction_color(i)
         color_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_child(color_block)
@@ -134,15 +183,22 @@ func _ready() -> void:
         row.add_child(emblem)
         faction_card_emblems.append(emblem)
         var choice := Button.new()
-        choice.text = str(info["name"]) + "  ·  " + str(info["motif"])
+        choice.text = str(info["name"])
         choice.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        choice.custom_minimum_size.y = 50
+        choice.custom_minimum_size = Vector2(104,52)
         choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         choice.clip_text = true
         choice.tooltip_text = str(info["name"]) + " — " + str(info["motif"])
         choice.pressed.connect(_choose_faction.bind(i))
         row.add_child(choice)
         faction_buttons.append(choice)
+        var assigned := Label.new()
+        assigned.name = "Asignado%d" % i
+        assigned.add_theme_font_size_override("font_size",10)
+        assigned.add_theme_color_override("font_color",Chrome.GOLD)
+        assigned.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        row.add_child(assigned)
+        faction_assignment_labels.append(assigned)
 
     var dossier := PanelContainer.new()
     dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
