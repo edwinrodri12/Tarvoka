@@ -5,6 +5,7 @@ class_name TarvokaImmersiveBattleHud
 # Every statistic comes from the existing match; all orders are still handled
 # by TouchBoard. Non-control surfaces let drag, pinch and taps reach the map.
 signal menu_requested
+signal expand_requested
 signal objectives_requested
 signal cancel_order_requested
 signal end_turn_requested
@@ -30,6 +31,7 @@ var game_label: Label
 var credits_label: Label
 var weather_label: Label
 var menu_button: Button
+var expand_button: Button
 var objective_button: Button
 var radar_panel: PanelContainer
 var radar: Control
@@ -113,6 +115,14 @@ func _build() -> void:
     menu_button.pressed.connect(func(): menu_requested.emit())
     top_content.add_child(menu_button)
     Chrome.emphasize(menu_button,"secondary")
+    expand_button = Button.new()
+    expand_button.text = "▤"
+    expand_button.name = "VolverAlPanelDeEscritorio"
+    expand_button.tooltip_text = "Restaurar panel lateral del escritorio"
+    expand_button.custom_minimum_size = Vector2(45,44)
+    expand_button.pressed.connect(func(): expand_requested.emit())
+    expand_button.visible = not OS.has_feature("mobile")
+    top_content.add_child(expand_button)
 
     radar_panel = PanelContainer.new()
     radar_panel.name = "MinimapaReal"
