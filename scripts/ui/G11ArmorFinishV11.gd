@@ -155,6 +155,42 @@ static func _cheek_mesh() -> ArrayMesh:
     st.generate_normals()
     return st.commit()
 
+static func _add_solid_box(st: SurfaceTool,
+        center: Vector3, size: Vector3) -> void:
+    var a: Vector3 = center-size*0.5
+    var b: Vector3 = center+size*0.5
+    # Six real quad faces. Their positions are not a solid face across
+    # the center of the 4x3 tube grid: they are thin peripheral walls only.
+    _quad(st,Vector3(a.x,a.y,a.z),Vector3(b.x,a.y,a.z),
+        Vector3(b.x,b.y,a.z),Vector3(a.x,b.y,a.z))
+    _quad(st,Vector3(a.x,a.y,b.z),Vector3(a.x,b.y,b.z),
+        Vector3(b.x,b.y,b.z),Vector3(b.x,a.y,b.z))
+    _quad(st,Vector3(a.x,a.y,a.z),Vector3(a.x,a.y,b.z),
+        Vector3(b.x,a.y,b.z),Vector3(b.x,a.y,a.z))
+    _quad(st,Vector3(a.x,b.y,a.z),Vector3(b.x,b.y,a.z),
+        Vector3(b.x,b.y,b.z),Vector3(a.x,b.y,b.z))
+    _quad(st,Vector3(a.x,a.y,a.z),Vector3(a.x,b.y,a.z),
+        Vector3(a.x,b.y,b.z),Vector3(a.x,a.y,b.z))
+    _quad(st,Vector3(b.x,a.y,a.z),Vector3(b.x,a.y,b.z),
+        Vector3(b.x,b.y,b.z),Vector3(b.x,b.y,a.z))
+
+static func _open_casing() -> ArrayMesh:
+    # Corrects the crucial visual flaw found in V11 real Godot renders:
+    # G11_ArmazonLanzador was a FULL BOX whose solid front crossed all twelve
+    # physically hollow V4 bores 0.11 m behind their lips. This four-wall
+    # structural sleeve leaves a 1.11 x 0.752 m actual opening and the rear
+    # V4 electronics housing closes only the back as designed.
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for y in [-0.393,0.393]:
+        _add_solid_box(st,Vector3(0,y,0),
+            Vector3(1.18,0.034,1.48))
+    for x in [-0.574,0.574]:
+        _add_solid_box(st,Vector3(x,0,0),
+            Vector3(0.032,0.82,1.48))
+    st.generate_normals()
+    return st.commit()
+
 static func _fastener_mesh() -> CylinderMesh:
     if _rail_bolt == null:
         _rail_bolt = CylinderMesh.new()
@@ -211,6 +247,18 @@ static func apply(model: Node3D) -> bool:
         return false
     if not _refine_tubes(launcher):
         return false
+    var old_casing := launcher.find_child(
+        "G11_ArmazonLanzador",true,false) as MeshInstance3D
+    var old_roof := launcher.find_child(
+        "G11_TapaSuperior",true,false) as MeshInstance3D
+    if old_casing == null or old_roof == null:
+        return false
+    # A real hollow armored frame replaces the 1.18 m solid box that was
+    # visually plugging the mouth of every one of the twelve V4 barrels.
+    old_casing.mesh = _open_casing()
+    old_casing.material_override = _mat(Color("#374344"),0.50,0.72)
+    old_roof.mesh = _beveled_extrusion(1.08,0.10,1.27,0.032)
+    old_roof.material_override = _mat(Color("#53625f"),0.48,0.73)
     var steel := _mat(Color("#697a77"),0.52,0.67)
     var dark := _mat(Color("#222c2d"),0.32,0.81)
     var polished := _mat(Color("#a8b5af"),0.72,0.45)
@@ -253,6 +301,16 @@ static func apply(model: Node3D) -> bool:
     _bolts(launcher)
     _mesh(launcher,"G11V11_RozadurasBocas",
         _wear_geometry(),Vector3.ZERO,warm)
+    # Three slim raised folded-metal stiffeners break up the former plain
+    # roof slab without blocking any hot nozzle, hydraulic arm or cable.
+    for rail in range(3):
+        _box(launcher,"G11V11_NervioTecho_%d" % rail,
+            Vector3(-0.35+float(rail)*0.35,0.531,0.12),
+            Vector3(0.026,0.016,1.12),dark)
+    for seam in range(2):
+        _box(launcher,"G11V11_SoldaduraTecho_%d" % seam,
+            Vector3(0,0.532,-0.28+float(seam)*0.50),
+            Vector3(0.92,0.011,0.014),polished)
     # Fine roofing detail gives the same visual precision to the cab,
     # without replacing the accepted octagonal body or faction paint.
     _box(root,"G11V11_TapaFiltroTecho",
@@ -266,4 +324,5 @@ static func apply(model: Node3D) -> bool:
     model.set_meta("tarvoka_g11_v11_true_beveled_rails",4)
     model.set_meta("tarvoka_g11_v11_new_bevel_and_service_parts",true)
     model.set_meta("tarvoka_g11_v11_lip_wear_sectors",36)
+    model.set_meta("tarvoka_g11_v11_real_open_casing",true)
     return true
