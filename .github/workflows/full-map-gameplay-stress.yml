@@ -6,6 +6,8 @@ on:
       - "scripts/core/**"
       - "scripts/core/FactionTurnOrderV1.gd"
       - "tests/test_eight_faction_turn_order_v1.gd"
+      - "scripts/core/FactionVisibilityV1.gd"
+      - "tests/test_eight_faction_fog_privacy_v1.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/IsoRenderer.gd"
       - "scripts/ui/VisualBudget.gd"
@@ -19,6 +21,8 @@ on:
       - "scripts/core/**"
       - "scripts/core/FactionTurnOrderV1.gd"
       - "tests/test_eight_faction_turn_order_v1.gd"
+      - "scripts/core/FactionVisibilityV1.gd"
+      - "tests/test_eight_faction_fog_privacy_v1.gd"
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/IsoRenderer.gd"
       - "tests/test_large_map_gameplay_stress.gd"
@@ -63,6 +67,17 @@ jobs:
             /tmp/turn-rotation-eight.log; then exit 1; fi
           grep -q 'PASS TARVOKA FUTURE EIGHT-TURN ROTATION:' \
             /tmp/turn-rotation-eight.log
+      - name: Verify future eight-faction fog does not leak rival intelligence
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_eight_faction_fog_privacy_v1.gd \
+            2>&1 | tee /tmp/eight-faction-fog-privacy.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/eight-faction-fog-privacy.log; then exit 1; fi
+          grep -q 'PASS TARVOKA EIGHT-FACTION FOG PRIVACY:' \
+            /tmp/eight-faction-fog-privacy.log
       - name: Guard three-domain pathfinder semantics with indexed blockers
         shell: bash
         run: |
