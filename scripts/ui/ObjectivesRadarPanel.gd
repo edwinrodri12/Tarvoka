@@ -8,6 +8,8 @@ signal locate_unit_requested(unit_id: String)
 const Data = preload("res://scripts/ui/ObjectivesRadarData.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
 const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 var tabs: TabContainer
 var overview_body: VBoxContainer
@@ -19,6 +21,7 @@ var _data: Dictionary = {}
 var _priorities: Dictionary = {}
 var radar_compact := false
 var close_button: Button
+var faction_mark: TextureRect
 var metric_labels: Dictionary = {}
 var metrics_row: HBoxContainer
 var mission_label: Label
@@ -43,7 +46,16 @@ func _ready() -> void:
     column.add_theme_constant_override("separation",7)
     add_child(column)
     var header := HBoxContainer.new()
+    header.add_theme_constant_override("separation",7)
     column.add_child(header)
+    faction_mark = TextureRect.new()
+    faction_mark.name = "EscudoOficialEnRadar"
+    faction_mark.custom_minimum_size = Vector2(37,37)
+    faction_mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    faction_mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    faction_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    faction_mark.texture = Style.emblem_texture(0)
+    header.add_child(faction_mark)
     header_label = _label("TARVOKA  /  OBJETIVOS",21,Color("#F5D88B"))
     header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(header_label)
@@ -104,6 +116,8 @@ func reflow_for_size(extent: Vector2) -> void:
     header_label.text = "OBJETIVOS / TARVOKA" if radar_compact else "TARVOKA  /  OBJETIVOS"
     header_label.add_theme_font_size_override("font_size",17 if radar_compact else 21)
     close_button.text = "‹ VOLVER" if radar_compact else "‹ VOLVER AL MAPA"
+    faction_mark.custom_minimum_size = (
+        Vector2(28,28) if radar_compact else Vector2(37,37))
     close_button.custom_minimum_size = Vector2(88,44) if radar_compact else Vector2(148,46)
     summary_label.visible = not radar_compact
     for key in metric_labels:
@@ -207,6 +221,8 @@ func refresh_from_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false)
     # Preserve the active tab and read only one valid snapshot per change.
     var tab: int = tabs.current_tab
     _current_viewer = viewer
+    var visual_index: int = Identity.index_for(Identity.key_for(state,viewer))
+    faction_mark.texture = Style.emblem_texture(visual_index)
     _data = Data.build(state,viewer)
     _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
@@ -214,6 +230,8 @@ func refresh_from_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false)
 
 func open_with_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
     _current_viewer = viewer
+    var visual_index: int = Identity.index_for(Identity.key_for(state,viewer))
+    faction_mark.texture = Style.emblem_texture(visual_index)
     _data = Data.build(state,viewer)
     _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
