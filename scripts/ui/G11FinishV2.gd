@@ -123,7 +123,7 @@ static func _path(s: float, radius: float) -> Vector2:
             -TRACK_HALF_LENGTH+(p-straight-arc))
     var theta: float = PI*0.5+(p-2.0*straight-arc)/radius
     return Vector2(TRACK_CENTER_Y+radius*sin(theta),
-        TRACK_HALF_LENGTH+radius*cos(theta))
+        TRACK_HALF_LENGTH-radius*cos(theta))
 
 static func _circumference(radius: float) -> float:
     return 4.0*TRACK_HALF_LENGTH+TAU*radius
@@ -146,7 +146,7 @@ static func _path_matched(s: float, radius: float) -> Vector2:
             -TRACK_HALF_LENGTH+(p-straight-arc))
     var theta: float = PI*0.5+(p-2.0*straight-arc)/TRACK_OUTER_RADIUS
     return Vector2(TRACK_CENTER_Y+radius*sin(theta),
-        TRACK_HALF_LENGTH+radius*cos(theta))
+        TRACK_HALF_LENGTH-radius*cos(theta))
 
 static func _belt_mesh() -> ArrayMesh:
     # Real closed ribbon over inner/outer contours; wheels are visible through
