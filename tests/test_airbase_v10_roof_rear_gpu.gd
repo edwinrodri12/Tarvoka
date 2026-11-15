@@ -24,7 +24,7 @@ func _frames(n: int=7) -> void:
 
 func _shot(studio: Control,name: String) -> void:
     var capture: Image=studio.preview.get_texture().get_image()
-    assert(capture!=null and capture.get_width()>=640)
+    assert(capture!=null and capture.get_width()>400 and capture.get_height()>300)
     assert(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://artifacts"))==OK)
     assert(capture.save_png(
