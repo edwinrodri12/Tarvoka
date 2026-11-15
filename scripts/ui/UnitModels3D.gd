@@ -23,6 +23,7 @@ const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const APCFinishV6 = preload("res://scripts/ui/APCFinishV6.gd")
 const APCMachineGunV7 = preload("res://scripts/ui/APCMachineGunV7.gd")
 const APCDamageV7 = preload("res://scripts/ui/APCDamageV7.gd")
+const APCTacticalV8 = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -866,9 +867,13 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "scout":
             _person(model,true)
         "apc":
-            # The final P06 sculpt is a complete closed mesh. Never allocate
-            # the simplified prototype under it in mobile or Web Studio.
-            if not (finish_enabled and art_level >= 13):
+            # Art level 8 is a separate native lightweight *same silhouette*
+            # profile for eight-player Android boards. Older art-level 6
+            # remains accessible for backwards-compatible P06 visual tests.
+            if not finish_enabled and art_level==8:
+                if not APCTacticalV8.build(model,faction_paint_color(faction)):
+                    _apc(model)
+            elif not (finish_enabled and art_level >= 13):
                 _apc(model)
         "tank":
             _tank(model)
@@ -940,7 +945,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         apply_faction_palette(model,faction)
         # Sculpted V5 owns its physical damage rig. Only the fallback P06
         # prototype uses the original procedural 5-stage damage subsystem.
-        if not model.get_meta("tarvoka_apc_finish_v3",false):
+        if not model.get_meta("tarvoka_apc_finish_v3",false) and not APCTacticalV8.has_model(model):
             BastionDamage.prepare(model)
     return model
 
@@ -952,6 +957,12 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "tank":
             return TankRig.pose(model,kind,progress,target_heading)
         "apc":
+            if APCTacticalV8.has_model(model):
+                return APCTacticalV8.pose(model,kind,progress,target_heading)
+            if model.get_meta("tarvoka_apc_sculpt_v1",false):
+                return preload("res://scripts/ui/APCVisualRigV1.gd").pose(
+                    model,kind,progress,rad_to_deg(
+                        atan2(float(target_heading.x),-float(target_heading.y))))
             return BastionRig.pose(model,kind,progress,target_heading)
         "mlrs":
             if G11Mobile.has_model(model):
@@ -964,7 +975,12 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
         "tank":
             TankRig.restore(model)
         "apc":
-            BastionRig.restore(model)
+            if APCTacticalV8.has_model(model):
+                APCTacticalV8.restore(model)
+            elif model.get_meta("tarvoka_apc_sculpt_v1",false):
+                preload("res://scripts/ui/APCVisualRigV1.gd").restore(model)
+            else:
+                BastionRig.restore(model)
         "mlrs":
             if G11Mobile.has_model(model):
                 G11Mobile.restore(model)
