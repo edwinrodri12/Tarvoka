@@ -158,10 +158,14 @@ func _run() -> void:
     studio._toggle_airbase_stress(false)
     await _frames(7)
     assert(not studio._airbase_is_stress())
-    assert(not studio.airbase_open_button.disabled)
+    # The selected stage remains critical after leaving stress mode.
+    # A destroyed hangar must NOT gain operational doors simply
+    # because the benchmark scene was closed.
+    assert(studio.airbase_open_button.disabled)
     studio.airbase_damage_picker.select(0)
     studio._change_airbase_damage(0)
     await _frames(6)
+    assert(not studio.airbase_open_button.disabled)
     assert(studio._airbase_gate_rig().is_operational())
     assert(studio.model_root.find_child("LineaUmbralHangarV3",true,false)!=null)
     _shot(studio,"tarvoka_airbase_v4_intact_restored.png")
