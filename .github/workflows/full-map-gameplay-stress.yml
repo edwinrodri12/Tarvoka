@@ -10,6 +10,7 @@ on:
       - "scripts/ui/IsoRenderer.gd"
       - "scripts/ui/VisualBudget.gd"
       - "tests/test_large_map_gameplay_stress.gd"
+      - "tests/test_pathfinding_index_parity.gd"
       - ".github/workflows/full-map-gameplay-stress.yml"
   push:
     branches:
@@ -21,6 +22,7 @@ on:
       - "scripts/ui/TouchBoard.gd"
       - "scripts/ui/IsoRenderer.gd"
       - "tests/test_large_map_gameplay_stress.gd"
+      - "tests/test_pathfinding_index_parity.gd"
       - ".github/workflows/full-map-gameplay-stress.yml"
   workflow_dispatch:
 
@@ -61,6 +63,17 @@ jobs:
             /tmp/turn-rotation-eight.log; then exit 1; fi
           grep -q 'PASS TARVOKA FUTURE EIGHT-TURN ROTATION:' \
             /tmp/turn-rotation-eight.log
+      - name: Guard three-domain pathfinder semantics with indexed blockers
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_pathfinding_index_parity.gd \
+            2>&1 | tee /tmp/pathfinder-index-parity.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/pathfinder-index-parity.log; then exit 1; fi
+          grep -q 'PASS TARVOKA INDEXED PATHFINDING PARITY:' \
+            /tmp/pathfinder-index-parity.log
       - name: Stress the real 40x30 battle with 24 and 48 mixed units
         shell: bash
         run: |
