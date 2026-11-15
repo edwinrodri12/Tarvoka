@@ -104,7 +104,9 @@ func _run() -> void:
     assert(menu.tabs.current_tab == 2)
     # Production is now one two-column dashboard instead of a long list of
     # direct children. Validate its real catalog and purchase permissions.
-    assert(menu.production_body.get_child_count() == 1)
+    assert(menu.production_body.get_child_count() == 2) # Base selector + dashboard
+    assert(menu.production_site_picker.item_count >= 2)
+    assert(menu.production_filter_picker.item_count == 3)
     assert(menu.production_columns != null and menu.production_columns.get_child_count() == 2)
     assert(not menu.production_columns.vertical)
     assert(menu.comparison_preview != null)
