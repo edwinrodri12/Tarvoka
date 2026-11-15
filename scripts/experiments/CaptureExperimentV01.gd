@@ -15,6 +15,10 @@ const CITY_THRESHOLD := 4
 const FACILITY_THRESHOLD := 3
 const MIN_OWN_TURNS := 2
 const MAX_ADJACENT_SUPPORT := 2
+# An inexpensive single infiltrator must not instantly suppress an
+# entire enemy city's 250-credit income. Denial begins halfway through
+# the capture meter, not as soon as any soldier enters the tile.
+const DENIAL_START_POINTS := 2
 const ELIGIBLE := ["line","scout","assault","piercer","engineer"]
 const FAST_CAPTURERS := ["line","assault"]
 const SECONDARY_ELIGIBLE := "piercer"
@@ -153,6 +157,8 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
                 continue
             var key: String = _key(site["pos"])
             if not meter.has(key) or meter[key].is_empty() or int(meter[key]["side"]) == next_side:
+                continue
+            if int(meter[key].get("points",0)) < DENIAL_START_POINTS:
                 continue
             if str(site["kind"]) == "city":
                 withheld += one_city
