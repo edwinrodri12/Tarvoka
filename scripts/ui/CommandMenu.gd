@@ -655,11 +655,13 @@ func refresh() -> void:
     command_map = MiniMap.new()
     command_map.name = "RadarSeguroDelCentroDeMando"
     command_map.call("set_board",board)
-    command_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
     command_map.tooltip_text = "Vista de reconocimiento. No ejecuta órdenes."
     command_map.custom_minimum_size = Vector2(190,126)
     command_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     situation.add_child(command_map)
+    # BattleMinimap._ready() sets STOP by default for its navigation mode.
+    # Reapply IGNORE after entering the scene tree: this preview is read-only.
+    command_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
     command_detail_label = Label.new()
     command_detail_label.text = (
         "Integridad propia: %d PV. %s" % [
