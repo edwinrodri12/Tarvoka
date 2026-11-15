@@ -94,19 +94,7 @@ jobs:
             build/TARVOKA-G11-Android-StressLab.apk
           unzip -tq build/TARVOKA-G11-Android-StressLab.apk >/dev/null
           unzip -Z1 build/TARVOKA-G11-Android-StressLab.apk > /tmp/g11-apk-filelist.txt
-          grep -E '^lib/arm64-v8a/[^/]+[.]so
-          sha256sum build/TARVOKA-G11-Android-StressLab.apk
-      - name: Upload installable G11 performance APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: TARVOKA-G11-StressLab-Android-arm64
-          path: build/TARVOKA-G11-Android-StressLab.apk
-          retention-days: 14
-          if-no-files-found: error
-      - name: Erase disposable test key
-        if: always()
-        run: rm -f /tmp/g11-debug.keystore
- /tmp/g11-apk-filelist.txt
+          grep -E '^lib/arm64-v8a/[^/]+[.]so$' /tmp/g11-apk-filelist.txt
           sha256sum build/TARVOKA-G11-Android-StressLab.apk
       - name: Upload installable G11 performance APK
         uses: actions/upload-artifact@v4
