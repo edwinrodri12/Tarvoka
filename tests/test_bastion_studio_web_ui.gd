@@ -138,11 +138,17 @@ func _run() -> void:
     studio.call("_animate_p06_fleet","move_turn")
     studio.call("_process",0.31)
     var first_apc: Node3D=gallery.get_child(0) as Node3D
+    var first_home: Vector3=first_apc.get_meta(
+        "tarvoka_apc_lod8_rest",Vector3.ZERO)
     _check(first_apc!=null and absf(first_apc.rotation_degrees.z)>0.05,
         "all units are capable of simulated cornering")
+    _check(first_apc.position.distance_to(first_home)<0.05,
+        "fleet maintains its formation while wheels turn")
     studio.call("_process",0.40)
     _check(str(studio.get("_p06_fleet_animation"))=="",
         "fleet steering ends and returns to rest")
+    _check(first_apc.position.distance_to(first_home)<0.001,
+        "fleet returns to the same grid position after movement")
     studio.call("_animate_p06_fleet","attack")
     studio.call("_process",0.52)
     var fleet_turret: Node3D=first_apc.find_child(
