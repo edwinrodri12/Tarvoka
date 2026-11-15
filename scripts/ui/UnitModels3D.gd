@@ -13,6 +13,7 @@ const BastionDamage = preload("res://scripts/ui/BastionDamage3D.gd")
 const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
+const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -872,9 +873,11 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "tank":
             _tank(model)
         "mlrs":
-            # Heavy V1 sculpt only in the art studio; battle retains low-poly LOD.
+            # G11: preserve the hero sculpt in Studio; batch wheels and tubes
+            # into a lighter native 3D model for the Android battle camera.
             if not (finish_enabled and art_level >= 13):
-                _mlrs(model)
+                if not G11Mobile.build(model,faction_paint_color(faction),art_level):
+                    _mlrs(model)
         "attack_heli":
             _helicopter(model)
         "fighter":
@@ -951,6 +954,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "apc":
             return BastionRig.pose(model,kind,progress,target_heading)
         "mlrs":
+            if G11Mobile.has_model(model):
+                return G11Mobile.pose(model,kind,progress,target_heading)
             return G11Rig.pose(model,kind,progress,target_heading)
     return false
 
@@ -961,7 +966,10 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
         "apc":
             BastionRig.restore(model)
         "mlrs":
-            G11Rig.restore(model)
+            if G11Mobile.has_model(model):
+                G11Mobile.restore(model)
+            else:
+                G11Rig.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
