@@ -22,3 +22,10 @@ Se espera `PASS: mountain movement and positional combat integration` y código 
 - Adversarial: coordenada fuera de tablero no produce cobertura ni bonificaciones de ataque.
 - Commit de código: `7ae824bb83214ef81149bd6f89ac7f2f2d087c41`.
 - Estado de esta extensión: **NO EJECUTADO en Godot/CI**; **NO EJECUTADO EN DISPOSITIVO**. No se ha fusionado en main.
+
+## Extensión — contraataque con inversión de posiciones (2026-11-14)
+- Tras el ataque cuesta arriba (daño 2, defensor en montaña sobrevive con 8 HP), simular su contraataque desde la altura contra el atacante situado en llanura.
+- Recalcular `TerrainTactics.modifiers` invirtiendo atacante y defensor; esperar altura +1, cobertura 0 para el nuevo defensor y daño 6 con ataque base 6/defensa 1.
+- Comprobar que el contraataque no hereda cobertura montañosa del primer disparo, no declara derrota errónea y no muta diccionarios de unidades.
+- Código: commit `513b0e1c6052c6441b2287000ef6da8c4094e55b`. Godot 4.3/CI: **NO EJECUTADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**.
+- Alcance limitado: prueba de funciones puras; no acredita que el controlador de turnos dispare automáticamente el contraataque ni que el HUD lo presente correctamente.
