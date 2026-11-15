@@ -41,6 +41,7 @@ const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const BattleView3D = preload("res://scripts/ui/Battle3DMapView.gd")
+const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
 const DestinationComparison = preload("res://scripts/ui/DestinationComparison.gd")
@@ -166,6 +167,7 @@ var _result_style: StyleBoxFlat
 # the minimap and full economics remain available by opening the sidebar.
 var battle_hud_compact := false
 var battle_hud_overlay: Control
+var immersive_battle_hud: Control
 var battle_hud_toggle: Button
 var battle_hud_commands: VBoxContainer
 var compact_status: Label
@@ -229,7 +231,13 @@ func _bind_touch_feedback() -> void:
             sidebar_alerts_button,compact_alerts_button,expanded_alerts_button,
             sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit,
             sidebar_threat_button,compact_threat_button,expanded_threat_button,
-            sidebar_compare_button,compact_compare_button,expanded_compare_button]:
+            sidebar_compare_button,compact_compare_button,expanded_compare_button,
+            immersive_battle_hud.menu_button,
+            immersive_battle_hud.objective_button,
+            immersive_battle_hud.expand_button,
+            immersive_battle_hud.end_turn_button,
+            immersive_battle_hud.order_cancel,
+            immersive_battle_hud.supply_button]:
         var button: Button = control
         if button == null:
             continue
@@ -1443,6 +1451,22 @@ func _build_battle_hud() -> void:
     compact_threat_button.pressed.connect(_toggle_threat_preview)
     compact_top_shortcuts.add_child(compact_threat_button)
     GameUiTheme.emphasize(compact_options_button,"primary")
+    # This is the actual playable Godot battlefield: the map remains visible
+    # while a slim top ribbon, fog-safe minimap and contextual hints float on it.
+    immersive_battle_hud = ImmersiveHud.new()
+    immersive_battle_hud.name = "PantallaDeBatallaV15"
+    battle_hud_overlay.add_child(immersive_battle_hud)
+    immersive_battle_hud.attach_board(board)
+    immersive_battle_hud.menu_requested.connect(_open_command_menu)
+    immersive_battle_hud.expand_requested.connect(_toggle_battle_hud)
+    immersive_battle_hud.objectives_requested.connect(_open_objectives_radar)
+    immersive_battle_hud.cancel_order_requested.connect(_cancel_prepared_order)
+    immersive_battle_hud.end_turn_requested.connect(_end_turn)
+    immersive_battle_hud.zoom_requested.connect(
+        func(step: int): board.change_view_zoom(step))
+    immersive_battle_hud.center_requested.connect(
+        func(): board.frame_player_force())
+    immersive_battle_hud.resupply_requested.connect(_resupply_unit)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
@@ -1452,7 +1476,10 @@ func _build_battle_hud() -> void:
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
     sidebar.visible = not compact
-    battle_hud_commands.visible = compact
+    # Previous vertically stacked developer HUD is kept for compatibility,
+    # but replaced by the map-first floating battlefield in compact mode.
+    battle_hud_commands.visible = false
+    immersive_battle_hud.visible = compact
     compact_center.visible = compact
     compact_iso.visible = compact
     compact_options_button.visible = compact
@@ -1500,6 +1527,8 @@ func layout_for_size(view_size: Vector2) -> void:
     else:
         sidebar.custom_minimum_size = Vector2(clampf(view_size.x * 0.31, 300.0, 490.0), 0)
         board_holder.custom_minimum_size = Vector2(255, 0)
+    if immersive_battle_hud != null:
+        immersive_battle_hud.reflow_for_size(view_size)
 
 func _on_viewport_resized() -> void:
     # Camera offsets from the previous orientation can place the entire
@@ -1528,6 +1557,8 @@ func _process(_delta: float) -> void:
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
         unit_summary_refresh_count += 1
+        if immersive_battle_hud != null:
+            immersive_battle_hud.refresh_from_board()
         var readout: Dictionary = TurnReadout.snapshot(
             board.state,board.selected_id,board.pending_order,board.ai_enabled)
         var climate: String = Weather.from_state(board.state)
@@ -1685,6 +1716,8 @@ func _process(_delta: float) -> void:
     compact_confirm.text = "Resultados" if int(board.state.get("winner",-1)) != -1 else ("Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar")
     compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
     compact_end_turn.disabled = int(board.state.get("winner",-1)) != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction",0)) != 0)
+    if immersive_battle_hud != null:
+        immersive_battle_hud.end_turn_button.disabled = compact_end_turn.disabled
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
     if not resupply_button.disabled:
@@ -2058,6 +2091,9 @@ func _reroll_map_seed() -> void:
 
 func _cancel_selection() -> void:
     board.cancel_selection()
+
+func _cancel_prepared_order() -> void:
+    board.cancel_prepared_order()
 
 func _confirm_order() -> void:
     if int(board.state.get("winner",-1)) != -1:

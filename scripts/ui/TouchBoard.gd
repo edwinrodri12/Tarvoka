@@ -862,6 +862,16 @@ func cancel_selection() -> void:
     message = "Seleccion cancelada."
     queue_redraw()
 
+# A small X on the new battlefield HUD discards only the preview.
+# Unlike cancel_selection, the selected unit remains highlighted and no
+# movement, ammunition or turn state is touched.
+func cancel_prepared_order() -> void:
+    if pending_order.is_empty():
+        return
+    pending_order.clear()
+    message = "Orden descartada. Elige otro destino."
+    queue_redraw()
+
 func confirm_pending_order() -> bool:
     if pending_order.is_empty():
         return false

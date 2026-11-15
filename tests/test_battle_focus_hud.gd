@@ -47,12 +47,15 @@ func _run() -> void:
     await process_frame
     assert(view.battle_hud_compact)
     assert(not view.sidebar.visible)
-    assert(view.battle_hud_commands.visible)
-    assert(view.compact_options_button.visible)
+    assert(not view.battle_hud_commands.visible)
+    var hud = view.immersive_battle_hud
+    assert(hud.visible)
+    assert(hud.radar.board == game)
+    assert(hud.faction_crest.texture != null)
     assert(not view.battle_hud_toggle.visible)
-    assert(view.compact_top_shortcuts.visible)
+    assert(hud.end_turn_button.custom_minimum_size.y >= 44)
     view._process(0.0)
-    assert(view.compact_end_turn.disabled == view.end_button.disabled)
+    assert(hud.end_turn_button.disabled == view.end_button.disabled)
     assert(view.compact_confirm.disabled == view.confirm_button.disabled)
     assert(view.compact_cancel.disabled == view.cancel_button.disabled)
     assert(game.state == untouched)
@@ -64,53 +67,60 @@ func _run() -> void:
     game._tap(move_cell)
     view._process(0.0)
     assert(not game.pending_order.is_empty())
-    assert(view.compact_end_turn.disabled)
-    assert(not view.compact_confirm.disabled)
+    assert(hud.end_turn_button.disabled)
+    assert(hud.order_panel.visible)
+    assert(hud.order_title.text.contains("MOVER"))
     var old_turn: int = int(game.state["faction"])
-    view.compact_end_turn.pressed.emit() # Still protected by _end_turn.
+    hud.end_turn_button.pressed.emit() # Still protected by _end_turn.
     assert(int(game.state["faction"]) == old_turn)
     assert(not game.pending_order.is_empty())
-    view.compact_confirm.pressed.emit()
+    # Confirm on the MAP itself, no separate move menu or button.
+    game._tap(move_cell)
     assert(game.pending_order.is_empty())
     assert(game.state["units"][0]["pos"] == Vector2i(2,2))
     view._process(0.0)
-    assert(not view.compact_end_turn.disabled)
+    assert(not hud.end_turn_button.disabled)
     game.selected_id = "A"
     view._process(0.0)
-    assert(not view.compact_cancel.disabled)
-    view.compact_cancel.pressed.emit()
+    assert(hud.unit_panel.visible)
+    view._cancel_selection()
     assert(game.selected_id.is_empty())
+    assert(not hud.order_panel.visible)
 
-    # The player can reopen the complete setup, save and factory panel,
-    # and return to full-map mode without changing units or fog information.
+    # Gear/menu from the floating HUD opens the real command center without
+    # switching to the old 2-row developer HUD.
     var saved: Dictionary = game.state.duplicate(true)
-    view.compact_options_button.pressed.emit()
+    hud.menu_button.pressed.emit()
     await process_frame
-    assert(not view.battle_hud_compact)
-    assert(view.battle_hud_toggle.visible)
-    assert(view.sidebar.visible)
+    assert(view.battle_hud_compact)
+    assert(view.command_menu.visible)
     assert(view.scenario_picker != null and view.map_size_picker != null)
     assert(view.production_picker != null and view.produce_button != null)
+    view._close_command_menu()
+    view._set_compact_hud(false)
+    assert(view.battle_hud_toggle.visible)
+    assert(view.sidebar.visible)
     assert(view.battle_hud_toggle.text == "Ampliar mapa")
     view.battle_hud_toggle.pressed.emit()
     await process_frame
-    assert(view.battle_hud_compact)
+    assert(view.battle_hud_compact and hud.visible)
     assert(not view.sidebar.visible)
     assert(game.state == saved)
-    # In both modes the view switch must use the real illustrated map.
-    view.compact_iso.pressed.emit()
+    # Camera shortcuts still call the real board, not a separate HUD camera.
+    view._toggle_isometric_view()
     assert(game.iso_enabled)
     assert(game.state == saved)
     var dims: Vector2i = game.map_dimensions()
     var old_zoom: float = game.iso_zoom
-    view.compact_center.pressed.emit()
+    hud.camera_buttons.get_node("CentrarMapa").pressed.emit()
     assert(game.iso_zoom >= old_zoom or dims.x == 10)
     assert(game.state == saved)
     # Victory is still announced in fullscreen status, even with sidebar closed.
     game.state["winner"] = 0
     view._process(0.0)
     assert(view.compact_status.text == "Batalla terminada")
-    assert(view.compact_end_turn.disabled)
+    assert(hud.end_turn_button.disabled)
+    assert(hud.turn_label.text.contains("FINALIZADA"))
     assert(view.result_banner.visible)
     view.queue_free()
     print("PASS battle HUD: mobile fullscreen action bar, menu restore, battle safety and 24x18/40x30 army camera")

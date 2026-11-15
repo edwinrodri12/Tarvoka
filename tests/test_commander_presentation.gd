@@ -88,8 +88,12 @@ func _run() -> void:
 
     screen._set_compact_hud(true)
     assert(screen.battle_hud_compact)
-    assert(not screen.sidebar.visible and screen.battle_hud_commands.visible)
+    assert(not screen.sidebar.visible and screen.immersive_battle_hud.visible)
+    assert(not screen.battle_hud_commands.visible)
+    assert(screen.immersive_battle_hud.faction_crest.texture != null)
     assert(mobile.is_ancestor_of(screen.compact_status) == false)
+    # Previous commander strip is retained for compatibility, but the
+    # immersive screen uses its own verified faction crest instead.
     assert(screen.battle_hud_commands.is_ancestor_of(mobile))
     screen._set_compact_hud(false)
     assert(screen.sidebar.visible and not screen.battle_hud_commands.visible)

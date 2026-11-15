@@ -1,5 +1,7 @@
 extends SceneTree
 
+const Hints = preload("res://scripts/core/TacticalHints.gd")
+
 # Real Main scene with real buttons. These are read-only presentation changes:
 # no artificial engine orders, save paths, faction balance or new turn rules.
 func _initialize() -> void:
@@ -52,7 +54,7 @@ func _run() -> void:
     # executed until the original pressed signal runs through Main.
     main._set_compact_hud(true)
     main._continue_from_home()
-    var button: Button = main.compact_options_button
+    var button: Button = main.immersive_battle_hud.menu_button
     assert(button.visible and not button.disabled)
     assert(button.self_modulate == Color.WHITE)
     button.button_down.emit()
@@ -86,7 +88,61 @@ func _run() -> void:
     main._set_compact_hud(true)
     assert(main.compact_confirm.custom_minimum_size.y >= 44)
     assert(main.compact_end_turn.custom_minimum_size.y >= 44)
+    # V15 is the real map-first battle HUD, not the old 2-row command menu.
+    var hud = main.immersive_battle_hud
+    assert(not main.battle_hud_commands.visible)
+    main._set_compact_hud(true)
+    assert(hud.visible)
+    assert(not main.sidebar.visible)
+    assert(hud.radar.board == main.board)
+    assert(hud.faction_crest.texture != null)
+    assert(hud.menu_button.custom_minimum_size.y >= 44)
+    assert(hud.end_turn_button.custom_minimum_size.y >= 44)
+    assert(hud.idle_label.visible)
+    assert(not hud.unit_panel.visible)
+    assert(not hud.order_panel.visible)
+    hud.reflow_for_size(Vector2(915,412))
+    assert(hud.compact_phone)
+    assert(hud.radar_panel.offset_bottom <= 150)
+    hud.reflow_for_size(Vector2(780,360))
+    assert(hud.end_turn_button.offset_bottom <= -9)
+    assert(hud.radar_panel.offset_bottom <= 150)
+
+    # Select a real friendly unit with a legal movement; the new floating
+    # cue is a PREVIEW only, and X preserves the unit selection.
+    var ready_id := ""
+    var next_cell := Vector2i(-1,-1)
+    for candidate in baseline.get("units",[]):
+        if not candidate is Dictionary or int(candidate.get("faction",-1)) != 0:
+            continue
+        var selected_uid: String = str(candidate.get("id",""))
+        var legal_moves: Dictionary = Hints.for_unit(baseline,selected_uid).get("moves",{})
+        if not legal_moves.is_empty():
+            ready_id = selected_uid
+            next_cell = legal_moves.keys()[0]
+            break
+    assert(not ready_id.is_empty())
+    main.board.selected_id = ready_id
+    main.board.pending_order = {
+        "unit_id":ready_id,"cell":next_cell,"kind":"move","target_id":""}
+    hud.refresh_from_board()
+    assert(hud.unit_panel.visible and not hud.idle_label.visible)
+    assert(hud.order_panel.visible)
+    assert(hud.order_title.text.contains("MOVER"))
+    assert(hud.order_detail.text.contains("Coste"))
+    assert(hud.end_turn_button.disabled)
+    assert(main.board.state == baseline)
+    hud.order_cancel.pressed.emit()
+    hud.refresh_from_board()
+    assert(main.board.selected_id == ready_id)
+    assert(main.board.pending_order.is_empty())
+    assert(not hud.order_panel.visible)
+    assert(main.board.state == baseline)
+
+    main.board.cancel_selection()
     main._set_compact_hud(false)
+    assert(not hud.visible)
+    assert(main.sidebar.visible)
     assert(main.board.state == baseline)
     main.queue_free()
     print("PASS UI motion: rapid navigation, screen reveals, touch feedback, battery saver and unchanged battle")
