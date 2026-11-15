@@ -109,14 +109,19 @@ static func observed_state(state: Dictionary,faction: int,roster: Array) -> Dict
         if int(unit.get("faction",-1))==faction or (
                 not fog) or visible.has(unit.get("pos",null)):
             observed["units"].append(unit.duplicate(true))
+    var largest_faction: int=0
+    for participant in roster:
+        largest_faction=maxi(largest_faction,int(participant))
     if state.get("economy") is Dictionary:
         var economy: Dictionary=state["economy"].duplicate(true)
-        # Refuse to expose a two-side credits array as if it covered 8.
+        # Arrays are indexed by actual faction ID. A 2-item array cannot
+        # masquerade as a budget for roster [2,7].
         if economy.get("credits") is Array and (
-                (economy["credits"] as Array).size()==roster.size()):
-            for side in roster:
-                if int(side)!=faction:
-                    economy["credits"][int(side)]=-1
+                (economy["credits"] as Array).size()>largest_faction) and (
+                (economy["credits"] as Array).size()<=TurnOrder.MAX_FACTIONS):
+            for side in range(economy["credits"].size()):
+                if side!=faction:
+                    economy["credits"][side]=-1
             for site in economy.get("sites",[]):
                 if site is Dictionary and fog and not visible.has(
                         site.get("pos",null)) and int(site.get("owner",-1))!=faction:
@@ -127,11 +132,12 @@ static func observed_state(state: Dictionary,faction: int,roster: Array) -> Dict
     if state.get("control") is Dictionary:
         var control: Dictionary=state["control"].duplicate(true)
         if control.get("scores") is Array and (
-                (control["scores"] as Array).size()==roster.size()):
+                (control["scores"] as Array).size()>largest_faction) and (
+                (control["scores"] as Array).size()<=TurnOrder.MAX_FACTIONS):
             # Other sides' hidden score state must not leak into AI clients.
-            for side in roster:
-                if int(side)!=faction:
-                    control["scores"][int(side)]=-1
+            for side in range(control["scores"].size()):
+                if side!=faction:
+                    control["scores"][side]=-1
             for relay in control.get("nodes",[]):
                 if relay is Dictionary and fog and not visible.has(
                         relay.get("pos",null)) and int(relay.get("owner",-1))!=faction:
