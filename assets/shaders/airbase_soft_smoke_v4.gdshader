@@ -42,7 +42,7 @@ void fragment() {
     float outline=1.0-smoothstep(0.40,0.91,warped);
     float wisps=smoothstep(0.17,0.67,curl+0.12);
     float height_fade=1.0-smoothstep(0.49,1.0,puff_age);
-    float alpha=clamp(smoke_tint.a*outline*wisps*mix(1.0,0.24,height_fade<0.0?0.0:1.0-height_fade),0.0,0.48);
+    float alpha=clamp(smoke_tint.a*outline*wisps*(0.32+0.68*height_fade),0.0,0.48);
     alpha*=1.0-0.40*smoothstep(0.75,1.0,puff_age);
     ALBEDO=smoke_tint.rgb*mix(0.78,1.15,coarse);
     ALPHA=alpha;
