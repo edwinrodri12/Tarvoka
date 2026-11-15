@@ -15,6 +15,7 @@ const AirbaseMaterialsV7 = preload("res://scripts/ui/AirbaseMaterialsV7.gd")
 const AirbaseFinishV8 = preload("res://scripts/ui/AirbaseFinishV8.gd")
 const AirbaseDetailV9 = preload("res://scripts/ui/AirbaseDetailV9.gd")
 const AirbaseStructureV10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
+const AirbaseTrussesV11 = preload("res://scripts/ui/AirbaseTrussesV11.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -48,6 +49,8 @@ var airbase_material_v7_toggle: CheckButton
 var airbase_finish_v8_toggle: CheckButton
 var airbase_detail_v9_toggle: CheckButton
 var airbase_structure_v10_toggle: CheckButton
+var airbase_trusses_v11_toggle: CheckButton
+var airbase_v11_cutaway_toggle: CheckButton
 var airbase_v9_view_picker: OptionButton
 var _airbase_v9_view := 0
 var airbase_level_picker: OptionButton
@@ -361,7 +364,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V10 · estructura y fachada posterior")
+    building_picker.add_item("Base Aérea · V11 · cerchas interiores y daño real")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -654,6 +657,22 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_structure_v10_toggle)
     _title(airbase_controls,
         "V10 · cerchas siguiendo las 14 chapas del techo, sin cubrir daños.",12)
+    airbase_trusses_v11_toggle = CheckButton.new()
+    airbase_trusses_v11_toggle.name = "CerchasCruzadasYDesgarrosRealesBaseAereaV11"
+    airbase_trusses_v11_toggle.text = "V11 · cerchas cruzadas, soportes y roturas (comparar V10)"
+    airbase_trusses_v11_toggle.button_pressed = true
+    airbase_trusses_v11_toggle.toggled.connect(_toggle_airbase_trusses_v11)
+    airbase_controls.add_child(airbase_trusses_v11_toggle)
+    _title(airbase_controls,
+        "V11 · soportes 3D bajo cada chapa, sin atravesar huecos destruidos.",12)
+    airbase_v11_cutaway_toggle = CheckButton.new()
+    airbase_v11_cutaway_toggle.name = "InspeccionSinChapasTechoBaseAereaV11"
+    airbase_v11_cutaway_toggle.text = "Inspeccionar cerchas: ocultar chapas del techo"
+    airbase_v11_cutaway_toggle.button_pressed = false
+    airbase_v11_cutaway_toggle.toggled.connect(_toggle_airbase_cutaway_v11)
+    airbase_controls.add_child(airbase_v11_cutaway_toggle)
+    _title(airbase_controls,
+        "Vista desmontable del estudio; no modifica el modelo del juego.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -1006,7 +1025,8 @@ func _display_airbase_stress(first: bool) -> void:
         airbase_material_v7_toggle.button_pressed,
         airbase_finish_v8_toggle.button_pressed,
         airbase_detail_v9_toggle.button_pressed,
-        airbase_structure_v10_toggle.button_pressed)
+        airbase_structure_v10_toggle.button_pressed,
+        airbase_trusses_v11_toggle.button_pressed and airbase_structure_v10_toggle.button_pressed)
     if model_root==null:
         push_error("Base Aerea V4: no se pudo crear escenario LOD")
         return
@@ -1049,6 +1069,43 @@ func _toggle_airbase_detail_v9(_enabled: bool) -> void:
 func _toggle_airbase_structure_v10(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
+
+func _toggle_airbase_trusses_v11(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
+func _is_airbase_v11_roof_shell(node: Node) -> bool:
+    var label: String=str(node.name)
+    return label.begins_with("CubiertaCurva3D_") or label.begins_with(
+        "NervaduraCubierta_") or label.begins_with(
+        "ExtractorCubierta_") or label.begins_with(
+        "RejillaExtractor_") or label.begins_with(
+        "PanelFotovoltaico_") or label=="CostillasCubiertaCurvaV6" or \
+        label=="RematePerimetralCurvoV9"
+
+func _walk_airbase_v11_cutaway(node: Node, enabled: bool) -> void:
+    if node is Node3D and _is_airbase_v11_roof_shell(node):
+        var body: Node3D=node as Node3D
+        if enabled:
+            if not body.has_meta("tarvoka_v11_cutaway_was_visible"):
+                body.set_meta("tarvoka_v11_cutaway_was_visible",body.visible)
+            body.visible=false
+        elif body.has_meta("tarvoka_v11_cutaway_was_visible"):
+            body.visible=bool(body.get_meta("tarvoka_v11_cutaway_was_visible"))
+            body.remove_meta("tarvoka_v11_cutaway_was_visible")
+    for child in node.get_children():
+        _walk_airbase_v11_cutaway(child,enabled)
+
+func _apply_airbase_v11_cutaway() -> void:
+    if _role!="airbase" or _airbase_is_stress() or model_root==null:
+        return
+    var visible_cutaway: bool=airbase_v11_cutaway_toggle!=null and \
+        airbase_v11_cutaway_toggle.button_pressed
+    _walk_airbase_v11_cutaway(model_root,visible_cutaway)
+    model_root.set_meta("tarvoka_airbase_v11_cutaway",visible_cutaway)
+
+func _toggle_airbase_cutaway_v11(_enabled: bool) -> void:
+    _apply_airbase_v11_cutaway()
 
 func _change_airbase_v9_view(index: int) -> void:
     if _role != "airbase" or _airbase_is_stress():
@@ -1112,6 +1169,9 @@ func _display_airbase() -> void:
     if airbase_structure_v10_toggle.button_pressed:
         if not AirbaseStructureV10.apply(model_root,tier,_faction,stage):
             push_error("Base Aerea V10: cerchas y fachada posterior no instaladas")
+    if airbase_trusses_v11_toggle.button_pressed and airbase_structure_v10_toggle.button_pressed:
+        if not AirbaseTrussesV11.apply(model_root,tier,_faction,stage):
+            push_error("Base Aerea V11: arriostramiento y roturas no instalados")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
@@ -1134,6 +1194,7 @@ func _display_airbase() -> void:
     var coating: Dictionary = UniversalClimate.apply(model_root,weather)
     if not bool(coating.get("valid",false)):
         push_error("Base Aerea V1: clima no aplicado")
+    _apply_airbase_v11_cutaway()
     # Reuse V17 environmental precipitation, but not its old HQ snow caps.
     var climate_ready: bool = HQClimateV17.apply(hq_climate_stage,
         weather,"asphalt",tier,"operativo",false)
