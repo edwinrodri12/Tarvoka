@@ -36,3 +36,9 @@ Se espera `PASS: mountain movement and positional combat integration` y código 
 - La cobertura de montaña del defensor permanece +2; unidades y terreno no se mutan.
 - CI anterior para `3ac5778`: Godot general 43666142242, suite de montaña 43666142263 y exportación Android 43666142265, todos SUCCESS. **Esos resultados no validan este nuevo commit.**
 - Godot/CI del commit de esta extensión: NO EJECUTADO / pendiente de resultado. Android físico: NO EJECUTADO EN DISPOSITIVO. No integra el controlador de turnos ni verifica visualización de flanqueo.
+
+## Extensión — falsos flanqueos (2026-11-14)
+- Verifica que un aliado diagonal, un aliado situado en el lado equivocado y una unidad enemiga detrás del defensor **no** activen `flanked` ni cancelen la penalización de altura (-1).
+- Comprueba que los datos de la unidad aliada original permanecen intactos.
+- Código: `76c0c596f7f961a15c7befcfad6be9911a5b2ccb`. Godot/CI de esta extensión: **NO EJECUTADO / pendiente de confirmación**. Android físico: **NO EJECUTADO EN DISPOSITIVO**.
+- Esta regresión cubre las funciones puras; no valida todavía el controlador de batalla ni el HUD.
