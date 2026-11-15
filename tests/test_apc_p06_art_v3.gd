@@ -232,6 +232,19 @@ func _run() -> void:
     assert(damage_sheet.save_png(
         "res://artifacts/tarvoka_apc_p06_v3_cinco_niveles_dano.png")==OK)
     assert(Finish.apply_stage(modern,0))
+    # The two new impact types must also appear in true Godot screenshots.
+    assert(Finish.animate_impact(modern,"hit_bullet",0.12))
+    assert(Rig.pose(modern,"hit_bullet",0.14))
+    await _shot(viewport,cam,Vector3(4.4,2.3,-5.4),
+        Vector3(0,0.53,0),
+        "res://artifacts/tarvoka_apc_p06_v3_impacto_balas.png")
+    assert(Finish.animate_impact(modern,"hit_explosive",0.28))
+    assert(Rig.pose(modern,"hit_explosive",0.32))
+    await _shot(viewport,cam,Vector3(4.4,2.3,-5.4),
+        Vector3(0,0.53,0),
+        "res://artifacts/tarvoka_apc_p06_v3_impacto_explosivo.png")
+    Rig.restore(modern)
+    assert(Finish.animate_impact(modern,"",1.0))
     viewport.remove_child(modern)
     viewport.add_child(previous)
     await _shot(viewport,cam,Vector3(4.4,2.3,-5.4),
