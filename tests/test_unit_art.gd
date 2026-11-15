@@ -104,7 +104,8 @@ func _run() -> void:
     assert(popup.has_signal("close_requested"))
     assert(popup.has_method("open_for"))
     assert(not popup.content_rail.vertical)
-    var rows: VBoxContainer = popup.get("entries")
+    var rows: GridContainer = popup.get("entries")
+    assert(rows.columns == 2)
     assert(rows.get_child_count() == 39) # 32 genuine units + 7 documented sites
     assert(popup.role_buttons.size() == 32)
     assert(popup.site_buttons.size() == 7)
