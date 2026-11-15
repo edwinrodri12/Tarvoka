@@ -109,7 +109,10 @@ jobs:
           name: tarvoka-g11-v7-physical-fire-smoke-damage-review
           path: /tmp/g11-360/*.png
           retention-days: 14
+      # Heavy mobile/GL measurements are intentionally deferred until art is approved.
+      # They remain available through manual workflow_dispatch, not sculpt commits.
       - name: Quantitative G11 8/32/64 native stress benchmark
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -125,7 +128,7 @@ jobs:
           grep -F 'PASS G11 STRESS:' /tmp/g11_mobile_bench.log
           python3 -c 'import json; d=json.load(open("/tmp/g11-mobile-benchmark.json")); assert len(d["cases"]) == 7'
       - name: Upload machine-readable G11 performance report
-        if: success()
+        if: github.event_name == 'workflow_dispatch' && success()
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-g11-mobile-gl-stress
