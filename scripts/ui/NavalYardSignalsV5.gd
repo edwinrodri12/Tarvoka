@@ -87,6 +87,8 @@ static func _digit(parent: Node3D,prefix: String,value: int,
             Vector3(x+dx,y+dy,z),size,LABEL,0.12)
 
 static func _berth_numbers(stage: Node3D,damage: int) -> void:
+    if damage==4:
+        return
     var plates:=_group(stage,"NumeracionMuellesFisicaV5")
     for pier in [-1,1]:
         # The far-side +pier has actually snapped in V1/V2 at critical damage.
