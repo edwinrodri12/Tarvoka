@@ -1202,6 +1202,15 @@ func _toggle_apc_mixed() -> void:
     mixed.name="TARVOKA_BatallaMixta_8Facciones"
     _apc_stress_group.add_child(mixed)
     _apc_mixed_group=mixed
+    # Match the lab's original native Godot V26 terrain material. A large
+    # benchmark plane is representative only, not the full battle-map mesh.
+    var terrain:=MeshInstance3D.new()
+    terrain.name="TARVOKA_TerrenoV26_Referencia"
+    var ground:=PlaneMesh.new()
+    ground.size=Vector2(192,150)
+    terrain.mesh=ground
+    terrain.material_override=BattleScenarioV26._material(1)
+    mixed.add_child(terrain)
     var per_faction: int=int(_apc_stress_count/8)
     for faction in range(8):
         var home:=Vector3((float(faction%4)-1.5)*39.0,0,
