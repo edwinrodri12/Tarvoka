@@ -613,11 +613,11 @@ func refresh() -> void:
 
     _heading(situation,"ESTADO DE LA BATALLA")
     var overview: Dictionary = BattleReport.operational_snapshot(state,viewer)
-    var economy: Dictionary = state.get("economy",{})
-    var funds: Array = economy.get("credits",[])
+    var battle_economy: Dictionary = state.get("economy",{})
+    var battle_funds: Array = battle_economy.get("credits",[])
     var own_credits := "SIN ECONOMÍA"
-    if viewer >= 0 and funds.size() > viewer:
-        own_credits = "%d CRÉDITOS" % int(funds[viewer])
+    if viewer >= 0 and battle_funds.size() > viewer:
+        own_credits = "%d CRÉDITOS" % int(battle_funds[viewer])
     command_overview_title = Label.new()
     command_overview_title.name = "EstadoAutenticoDeLaOperacion"
     command_overview_title.text = (
