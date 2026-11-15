@@ -6,6 +6,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Art = preload("res://scripts/ui/G11Art3D.gd")
 const Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
+const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -38,6 +39,27 @@ func _run() -> void:
         _check(Rig.has_rig(model),"G11 moving articulated rig")
         _check(bool(model.get_meta(FinishV2.FLAG,false)),
             "commercial V2 finish installed on 3D native model")
+        _check(bool(model.get_meta(SurfaceV3.FLAG,false)),
+            "weathered V3 surface installed")
+        _check(int(model.get_meta("tarvoka_g11_fastener_count",0)) == 28,
+            "maintenance fasteners registered")
+        var fasteners: MultiMeshInstance3D = _find(model,
+            "G11V3_TornillosMantenimientoLote") as MultiMeshInstance3D
+        _check(fasteners != null and fasteners.multimesh != null,
+            "batched hardware mesh exists")
+        if fasteners != null and fasteners.multimesh != null:
+            _check(fasteners.multimesh.instance_count == SurfaceV3.FASTENER_COUNT,
+                "all 28 hardware pieces share one MultiMesh")
+        var hull: MeshInstance3D = _find(model,
+            "G11V2_CascoOctogonalCerrado") as MeshInstance3D
+        _check(hull != null and hull.material_override is StandardMaterial3D,
+            "hull uses real Godot PBR material")
+        if hull != null and hull.material_override is StandardMaterial3D:
+            var material: StandardMaterial3D = hull.material_override as StandardMaterial3D
+            _check(material.albedo_texture is ImageTexture,
+                "wear is procedural texture, not floating fake decals")
+        _check(_find(model,"G11V3_ServicioTrasero") != null,
+            "rear service hatch is closed from behind")
         _check(_find(model,"G11V2_CabinaBiselada") != null,
             "cab is truly chamfered geometry")
         _check(_find(model,"G11V2_CascoOctogonalCerrado") != null,
