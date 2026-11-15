@@ -1661,7 +1661,7 @@ func _process(_delta: float) -> void:
         compact_resupply.text = "Cargar M/F" if int(compact_order.get("fuel", 0)) + int(compact_order.get("cargo_fuel", 0)) > 0 else "Cargar mun."
     unload_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern",false))
     unload_button.disabled = not board.can_unload_selected()
-    unload_button.text = "Salir de modo desembarco" if board.unload_mode else "Desembarcar infanteria APC"
+    unload_button.text = "Salir de modo desembarco" if board.unload_mode else "Desembarcar infanteria APC/IFV"
     compact_unload.visible = unload_button.visible and not board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
     compact_unload.disabled = unload_button.disabled
     compact_unload.text = "Cancelar salida" if board.unload_mode else "Desembarcar"
