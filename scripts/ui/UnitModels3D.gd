@@ -245,31 +245,138 @@ static func _person(root: Node3D, special: bool) -> void:
         Vector3(0.16,0.28,0.14),DARK)
 
 static func _apc(root: Node3D) -> void:
-    _body(root,"ChasisAPC",0.72,1.26,1.20,0.72,1.22,STEEL)
-    _wheels(root,3,0.32)
-    _box(root,"ParabrisasFrontal",Vector3(0,1.09,-1.17),
-        Vector3(0.83,0.24,0.08),GLASS,Vector3(-20,0,0))
-    _box(root,"BlindajeCabina",Vector3(0,1.26,-0.70),
-        Vector3(0.99,0.10,0.60),ARMOR)
-    _box(root,"PuestoSensores",Vector3(0,1.53,0.11),
-        Vector3(0.28,0.28,0.32),DARK)
-    _box(root,"CabezaElectroOptica",Vector3(0,1.81,0.07),
-        Vector3(0.49,0.27,0.27),ARMOR)
-    for x in [-0.15,0.15]:
-        _sphere(root,"Optica%.1f" % x,Vector3(x,1.82,-0.08),
-            Vector3(0.14,0.14,0.07),GLASS)
+    # P06 Bastion v4: native Godot geometry, a distinct 6x6 APC rather than
+    # a scaled tank or passenger vehicle. Forward is negative Z.
+    # The large hull pieces are complete closed solids; no visible hollow rear.
+    var chassis := Node3D.new()
+    chassis.name = "Bastion_P06_Casco"
+    root.add_child(chassis)
+    _body(chassis,"Monocasco6x6",0.78,1.37,1.35,0.55,1.34,STEEL)
+    _body(chassis,"SobrecascoInclinado",0.70,1.20,1.22,1.21,1.47,ARMOR)
+    _box(chassis,"FrenteGlacis",Vector3(0,0.99,-1.30),
+        Vector3(1.20,0.38,0.085),STEEL.darkened(0.09),Vector3(-25,0,0))
+    _box(chassis,"Parachoques",Vector3(0,0.48,-1.41),
+        Vector3(1.36,0.16,0.15),DARK)
+    _box(chassis,"TechoBlindadoSellado",Vector3(0,1.48,0.13),
+        Vector3(1.28,0.095,1.99),STEEL.darkened(0.06))
+    _box(chassis,"UnionTechoFrontal",Vector3(0,1.48,-0.98),
+        Vector3(1.06,0.085,0.22),DARK)
+    _box(chassis,"PortonTraseroBlindado",Vector3(0,0.98,1.385),
+        Vector3(1.18,0.91,0.11),STEEL.darkened(0.14))
+    _box(chassis,"PanelCentralRampa",Vector3(0,0.94,1.454),
+        Vector3(0.94,0.66,0.028),ARMOR)
     for side in [-1,1]:
-        var x: float = float(side)*0.50
-        for n in range(3):
-            _box(root,"Ventanilla_%s_%d" % [side,n],
-                Vector3(x,1.10,-0.33+float(n)*0.39),
-                Vector3(0.08,0.17,0.21),BLACK)
-        _antenna(root,"Comunicacion%s" % side,
-            Vector3(x,1.22,0.77),0.58)
-    _box(root,"Parrilla",Vector3(0,0.75,-1.29),
-        Vector3(0.50,0.18,0.06),BLACK)
-    _box(root,"LuzIzq",Vector3(-0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
-    _box(root,"LuzDer",Vector3(0.51,0.71,-1.29),Vector3(0.16,0.13,0.05),METAL)
+        var sign: float = float(side)
+        _box(chassis,"BisagraRampa%s" % side,
+            Vector3(sign*0.55,1.37,1.46),
+            Vector3(0.12,0.10,0.11),BLACK)
+        _box(chassis,"CierreRampa%s" % side,
+            Vector3(sign*0.43,0.69,1.48),
+            Vector3(0.095,0.16,0.06),DARK)
+        _box(chassis,"PeldañoPosterior%s" % side,
+            Vector3(sign*0.40,0.42,1.48),
+            Vector3(0.33,0.09,0.23),DARK)
+        # Each tyre is a real cylinder with a recessed dark sidewall,
+        # separate metal hub and visible fixing bolts.
+        _box(chassis,"CajaGuardabarros%s" % side,
+            Vector3(sign*0.77,0.90,0),
+            Vector3(0.19,0.14,2.65),DARK)
+        for axle in range(3):
+            var z: float = -0.91+float(axle)*0.91
+            var hub_x: float = sign*0.94
+            _cylinder(chassis,"NeumaticoBastion%s_%d" % [side,axle],
+                Vector3(sign*0.79,0.355,z),
+                0.35,0.30,RUBBER,Vector3(0,0,90),20)
+            _cylinder(chassis,"PerfilNeumatico%s_%d" % [side,axle],
+                Vector3(hub_x,0.355,z),0.274,0.025,BLACK,
+                Vector3(0,0,90),20)
+            _cylinder(chassis,"RinBlindado%s_%d" % [side,axle],
+                Vector3(sign*0.965,0.355,z),0.165,0.034,
+                STEEL.darkened(0.16),Vector3(0,0,90),14)
+            _cylinder(chassis,"BujeCentral%s_%d" % [side,axle],
+                Vector3(sign*0.988,0.355,z),0.065,0.045,
+                DARK,Vector3(0,0,90),12)
+            for bolt in range(6):
+                var angle: float = TAU*float(bolt)/6.0
+                _sphere(chassis,"Tuerca%s_%d_%d" % [side,axle,bolt],
+                    Vector3(sign*1.001,0.355+cos(angle)*0.118,
+                        z+sin(angle)*0.118),
+                    Vector3(0.034,0.034,0.034),METAL)
+            # Segmented wheel arches with black relief, rather than
+            # squared passenger-car wheel housings.
+            _box(chassis,"ArcoAlto%s_%d" % [side,axle],
+                Vector3(sign*0.82,0.75,z),
+                Vector3(0.23,0.075,0.54),DARK)
+            for edge in [-1,1]:
+                _box(chassis,"ArcoExtremo%s_%d_%d" % [side,axle,edge],
+                    Vector3(sign*0.82,0.65,z+float(edge)*0.31),
+                    Vector3(0.23,0.19,0.075),DARK,
+                    Vector3(float(edge)*19,0,0))
+        # Armor modules and discrete paint panels can take any of the eight
+        # official factions without tinting the whole APC.
+        for panel in range(3):
+            var pz: float = -0.66+float(panel)*0.77
+            _box(chassis,"BlindajeLateral%s_%d" % [side,panel],
+                Vector3(sign*0.75,1.15,pz),
+                Vector3(0.16,0.35,0.56),ARMOR,
+                Vector3(0,0,sign*9))
+            _paint_box(chassis,"FaccionAPCPanel%s_%d" % [side,panel],
+                Vector3(sign*0.846,1.29,pz),
+                Vector3(0.018,0.070,0.34),"dark")
+            _box(chassis,"JuntaLateral%s_%d" % [side,panel],
+                Vector3(sign*0.845,1.13,pz+0.30),
+                Vector3(0.023,0.31,0.023),BLACK)
+        _box(chassis,"EspejoBlindado%s" % side,
+            Vector3(sign*0.69,1.28,-1.20),
+            Vector3(0.16,0.20,0.11),BLACK)
+        _box(chassis,"PilotoTrasero%s" % side,
+            Vector3(sign*0.57,0.76,1.46),
+            Vector3(0.115,0.18,0.04),Color("#a34237"))
+        _antenna(chassis,"RadioBastion%s" % side,
+            Vector3(sign*0.54,1.54,0.96),0.63 if side<0 else 0.48)
+    _box(chassis,"CristalConductorProtegido",Vector3(-0.34,1.23,-1.22),
+        Vector3(0.31,0.16,0.065),GLASS,Vector3(-18,0,0))
+    _box(chassis,"CristalCopilotoProtegido",Vector3(0.34,1.23,-1.22),
+        Vector3(0.31,0.16,0.065),GLASS,Vector3(-18,0,0))
+    _box(chassis,"MarcoCentralVisores",Vector3(0,1.27,-1.25),
+        Vector3(0.09,0.23,0.086),DARK,Vector3(-18,0,0))
+    for side in [-1,1]:
+        _box(chassis,"FaroDelantero%s" % side,
+            Vector3(float(side)*0.53,0.67,-1.37),
+            Vector3(0.18,0.13,0.055),METAL)
+        _box(chassis,"ProtectorFaro%s" % side,
+            Vector3(float(side)*0.53,0.75,-1.41),
+            Vector3(0.23,0.045,0.05),DARK)
+    for slit in range(5):
+        _box(chassis,"RejillaRefrigeracion_%d" % slit,
+            Vector3(-0.38+float(slit)*0.19,1.54,0.78),
+            Vector3(0.09,0.025,0.27),BLACK)
+    _box(chassis,"EscotillaTripulacion",Vector3(-0.35,1.565,-0.42),
+        Vector3(0.38,0.064,0.43),DARK)
+    _box(chassis,"AsaEscotilla",Vector3(-0.35,1.625,-0.39),
+        Vector3(0.24,0.045,0.055),METAL)
+
+    var remote := Node3D.new()
+    remote.name = "TorretaRemotaP06"
+    remote.position = Vector3(0.17,1.55,0.08)
+    root.add_child(remote)
+    _cylinder(remote,"AnilloTorreta",Vector3.ZERO,0.27,0.11,
+        BLACK,Vector3.ZERO,14)
+    _box(remote,"BaseEstabilizada",Vector3(0,0.21,0),
+        Vector3(0.49,0.30,0.50),DARK)
+    _body(remote,"CarcasaSensores",0.29,0.32,0.33,0.30,0.56,ARMOR)
+    _box(remote,"FrontalElectrooptico",Vector3(-0.12,0.40,-0.34),
+        Vector3(0.20,0.19,0.085),GLASS)
+    _sphere(remote,"OpticaTermica",Vector3(-0.12,0.40,-0.40),
+        Vector3(0.11,0.11,0.045),BLACK)
+    _cylinder(remote,"AmetralladoraRemota",Vector3(0.13,0.42,-0.55),
+        0.040,0.86,BLACK,Vector3(90,0,0),12)
+    _cylinder(remote,"BocachaRemota",Vector3(0.13,0.42,-0.99),
+        0.064,0.11,DARK,Vector3(90,0,0),12)
+    _box(remote,"CajaAlimentacion",Vector3(0.30,0.36,0.08),
+        Vector3(0.24,0.24,0.30),STEEL)
+    _paint_box(remote,"FaccionAPC_Torre",Vector3(0,0.58,0.10),
+        Vector3(0.34,0.026,0.26))
 
 # Small alpha-blended 3D effects belong to the rig. They are only shown
 # during real tactical actions, not as permanently glowing weapons.
