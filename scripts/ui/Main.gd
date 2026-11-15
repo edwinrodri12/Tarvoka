@@ -20,6 +20,8 @@ const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
+const CreditsHomeScreen = preload("res://scripts/ui/CreditsHomeScreen.gd")
+const SettingsHomeScreen = preload("res://scripts/ui/SettingsHomeScreen.gd")
 const StoryChapterMenu = preload("res://scripts/ui/StoryChapterMenu.gd")
 const SavedMatchesMenu = preload("res://scripts/ui/SavedMatchesMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
@@ -77,6 +79,8 @@ var sidebar_compare_panel: Control
 var compact_compare_panel: Control
 var _destination_comparison_snapshot: Dictionary = {}
 var home_menu: Control
+var home_credits_menu: Control
+var home_settings_menu: Control
 var story_chapter_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
@@ -904,6 +908,16 @@ func _ready() -> void:
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
+    home_menu.credits_requested.connect(_open_credits_from_home)
+
+    home_settings_menu = SettingsHomeScreen.new()
+    add_child(home_settings_menu)
+    home_settings_menu.close_requested.connect(_close_settings_from_home)
+    home_settings_menu.setting_requested.connect(_apply_home_setting)
+
+    home_credits_menu = CreditsHomeScreen.new()
+    add_child(home_credits_menu)
+    home_credits_menu.close_requested.connect(_close_credits_from_home)
 
     story_chapter_menu = StoryChapterMenu.new()
     add_child(story_chapter_menu)
@@ -2097,6 +2111,8 @@ func _show_home_menu() -> void:
     skirmish_setup.hide()
     saved_matches_menu.hide()
     story_chapter_menu.hide()
+    home_settings_menu.hide()
+    home_credits_menu.hide()
     home_menu.show()
     _reveal_screen(home_menu)
 
@@ -2203,11 +2219,38 @@ func _return_home_from_arsenal() -> void:
         _gallery_from_home = false
         _show_home_menu()
 
+func _open_credits_from_home() -> void:
+    home_menu.hide()
+    command_menu.hide()
+    home_credits_menu.open_for()
+    _reveal_screen(home_credits_menu)
+
+func _close_credits_from_home() -> void:
+    home_credits_menu.hide()
+    _reveal_screen(home_menu)
+
 func _open_settings_from_home() -> void:
     home_menu.hide()
-    _command_from_home = true
-    command_menu.open_for(board,"Ajustes")
-    _reveal_screen(command_menu)
+    command_menu.hide()
+    _command_from_home = false
+    home_settings_menu.open_for(board,_minimap_preference)
+    _reveal_screen(home_settings_menu)
+
+func _apply_home_setting(key: String) -> void:
+    match key:
+        "isometric":
+            _toggle_isometric_view()
+        "minimap_enabled":
+            _toggle_minimap()
+        "battery_saver":
+            _toggle_battery_saver()
+        _:
+            return
+    home_settings_menu.sync_from(board,_minimap_preference)
+
+func _close_settings_from_home() -> void:
+    home_settings_menu.hide()
+    _reveal_screen(home_menu)
 
 func _close_command_menu() -> void:
     command_menu.hide()

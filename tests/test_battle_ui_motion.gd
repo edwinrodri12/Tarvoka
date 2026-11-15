@@ -40,10 +40,12 @@ func _run() -> void:
     assert(main.faction_selector.modulate.a == 1.0)
     main._back_from_skirmish()
     main._open_settings_from_home()
-    assert(main.command_menu.visible)
-    assert(main.command_menu.modulate.a < 1.0)
-    main._close_command_menu()
+    assert(main.home_settings_menu.visible)
+    assert(not main.command_menu.visible)
+    assert(main.home_settings_menu.modulate.a < 1.0)
+    main._close_settings_from_home()
     assert(main.home_menu.visible)
+    assert(not main.home_settings_menu.visible)
     assert(main.board.state == baseline)
 
     # Touch visual response runs ONLY for button_down/up: no order is
