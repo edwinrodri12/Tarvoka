@@ -66,9 +66,11 @@ func _run() -> void:
             if frame==FRAMES/2:
                 # All repairs must restore intact roof, tires, no added meshes.
                 assert(Finish.apply_stage(unit,0))
-                assert(unit.find_child("TechoBlindadoContinuoV3",true,false).visible)
-                assert(unit.find_child("PlacaTechoFaceteadaV2",true,false).visible)
-                assert(unit.find_child("RuedaMotorizadaP06_1_0",true,false).visible)
+                var roof: Node3D=unit.find_child("TechoBlindadoContinuoV3",true,false) as Node3D
+                var v2_roof: Node3D=unit.find_child("PlacaTechoFaceteadaV2",true,false) as Node3D
+                var wheel: Node3D=unit.find_child("RuedaMotorizadaP06_1_0",true,false) as Node3D
+                assert(roof!=null and v2_roof!=null and wheel!=null)
+                assert(roof.visible and v2_roof.visible and wheel.visible)
         await process_frame
     var measured_ms: float=float(Time.get_ticks_usec()-frames_start)/1000.0
     for unit in actors:
