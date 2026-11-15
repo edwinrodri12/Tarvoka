@@ -20,6 +20,8 @@ const APCArmorV2 = preload("res://scripts/ui/APCArmorV2.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const APCFinishV6 = preload("res://scripts/ui/APCFinishV6.gd")
+const APCMachineGunV7 = preload("res://scripts/ui/APCMachineGunV7.gd")
+const APCDamageV7 = preload("res://scripts/ui/APCDamageV7.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -901,7 +903,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 if APCFinishV3.apply(model,enamel):
                     if APCDetailV5.apply(model,enamel):
                         if art_level >= 14:
-                            APCFinishV6.apply(model,enamel)
+                            if APCFinishV6.apply(model,enamel):
+                                APCMachineGunV7.prepare(model)
+                                APCDamageV7.prepare(model)
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
