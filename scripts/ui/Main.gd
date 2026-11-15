@@ -668,7 +668,7 @@ func _ready() -> void:
     biome_picker.name = "SelectorBiomaV19"
     biome_picker.custom_minimum_size.y = 54
     biome_picker.add_item("Valle boscoso · templado",0)
-    biome_picker.add_item("Bioma nevado · nieve y hielo",1)
+    biome_picker.add_item("Nevado V19 · nieve y hielo",1)
     biome_picker.add_item("Canon rocoso · montanas y tierra seca",2)
     biome_picker.add_item("Delta costero · humedal y litoral",3)
     biome_picker.select(Winter.index_for(board.state))
