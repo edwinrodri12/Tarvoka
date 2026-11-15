@@ -24,6 +24,7 @@ const APCFinishV6 = preload("res://scripts/ui/APCFinishV6.gd")
 const APCMachineGunV7 = preload("res://scripts/ui/APCMachineGunV7.gd")
 const APCDamageV7 = preload("res://scripts/ui/APCDamageV7.gd")
 const APCTacticalV8 = preload("res://scripts/ui/APCTacticalLOD8.gd")
+const APCWeaponAudioV8 = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const APCFullRigV1 = preload("res://scripts/ui/APCVisualRigV1.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
@@ -913,7 +914,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     if APCDetailV5.apply(model,enamel):
                         if art_level >= 14:
                             if APCFinishV6.apply(model,enamel):
-                                APCMachineGunV7.prepare(model)
+                                if APCMachineGunV7.prepare(model):
+                                    APCWeaponAudioV8.prepare(model)
                                 APCDamageV7.prepare(model)
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
