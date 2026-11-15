@@ -5,6 +5,7 @@ class_name TarvokaG11VisualRig3D
 const Art = preload("res://scripts/ui/G11Art3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
+const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -38,6 +39,7 @@ static func _reset(model: Node3D) -> void:
             if wheel != null:
                 wheel.rotation_degrees = Vector3.ZERO
                 wheel.position.y = 0.26
+    MechanicsV5.update_running_gear(model,0.0)
     for name in ["G11_EfectoFogonazo","G11_EfectoHumoDisparo",
             "G11_EfectoPolvoMarcha","G11_ImpactoBalas",
             "G11_ImpactoExplosivo"]:
@@ -78,6 +80,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             model.rotation_degrees.z = sin(phase)*0.34
             # Both tread belts scroll physically around the idlers.
             FinishV2.pose_tracks(model,t)
+            MechanicsV5.update_running_gear(model,t)
             _node(model,"G11_EfectoPolvoMarcha").visible = t > 0.02 and t < 0.95
         "attack", "fire":
             if destroyed:
