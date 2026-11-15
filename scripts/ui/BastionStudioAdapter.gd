@@ -19,6 +19,7 @@ const P06UnderV15 = preload("res://scripts/ui/APCUndercarriageV15.gd")
 const P06JointV16 = preload("res://scripts/ui/APCJointFinishV16.gd")
 const P06ContourV17 = preload("res://scripts/ui/APCContourV17.gd")
 const P06WheelwellV18 = preload("res://scripts/ui/APCWheelwellV18.gd")
+const P06FlankV19 = preload("res://scripts/ui/APCUnifiedFlankV19.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -60,7 +61,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V13 orugas y colores de facción")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V18 pasos de rueda y daños · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V19 blindaje lateral integrado · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -68,11 +69,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V18_PasosRueda"
+    p06_controls.name = "BastionP06_V19_FaldonesIntegrados"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V18 · PASOS RUEDA Y BLINDAJE DAÑADO",14)
+        "BASTIÓN P06 · V19 · INTEGRACIÓN LATERAL 3D",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -96,6 +97,10 @@ func _install_p06_controls() -> void:
         "Examinar suspensión",_inspect_p06_suspension)
     _add_paired(p06_controls,"V18: faldones entre ejes",_inspect_p06_skirts_v18,
         "V18: daño lateral crítico",_inspect_p06_critical_v18)
+    _add_paired(p06_controls,"V19: uniones entre faldones",_inspect_p06_seams_v19,
+        "V19: sellos de rueda",_inspect_p06_seals_v19)
+    _add_paired(p06_controls,"V19: anclajes suspensión",_inspect_p06_mounts_v19,
+        "V19: daño lateral",_inspect_p06_damage_v19)
     _add_paired(p06_controls,"Vista inferior completa",_inspect_p06_underside,
         "Acercamiento a transmisión",_inspect_p06_transfer)
     _add_paired(p06_controls,"Vista 3/4 trasera",func(): _view_p06_angle(145.0),
@@ -104,14 +109,14 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V18",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V19",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
         "Prueba 32 vehículos",func(): _show_p06_fleet(32))
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
-        "Volver al Bastión V18",_hide_p06_fleet)
+        "Volver al Bastión V19",_hide_p06_fleet)
     _add_paired(p06_controls,
         "LOD cerca",func(): _set_p06_fleet_quality(0),
         "LOD medio",func(): _set_p06_fleet_quality(1))
@@ -122,9 +127,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V18: faldones 3D entre los tres ejes, guardapolvos interiores separados "
-        + "de las seis ruedas móviles y blindaje lateral que se rompe por etapas. "
-        + "Conserva transmisión V15, cierres V16/V17 y reparación completa.",12)
+        "V19: transiciones biseladas entre faldones V18 y blindaje V11, seis "
+        + "juntas de rueda fijas con holgura, anclajes de suspensión y "
+        + "fracturas laterales coherentes. Daños y reparaciones reversibles.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -313,7 +318,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V18")
+                if _p06_show_v5 else "Volver al acabado completo V19")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -366,6 +371,7 @@ func _display_role(role: String) -> void:
             P06JointV16.FLAG,false)) and bool(model_root.get_meta(
             P06ContourV17.FLAG,false)) and bool(model_root.get_meta(
             P06WheelwellV18.FLAG,false)) and bool(model_root.get_meta(
+            P06FlankV19.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -382,8 +388,9 @@ func _display_role(role: String) -> void:
             P06JointV16.set_stage(model_root,0)
             P06ContourV17.set_stage(model_root,0)
             P06WheelwellV18.set_stage(model_root,0)
+            P06FlankV19.set_stage(model_root,0)
         else:
-            push_error("TARVOKA P06 V18 wheelwell model was not built; do not label it final")
+            push_error("TARVOKA P06 V19 side-fender sculpture was not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -468,6 +475,7 @@ func _set_damage(stage: int) -> void:
         P06JointV16.set_stage(model_root,stage)
         P06ContourV17.set_stage(model_root,stage)
         P06WheelwellV18.set_stage(model_root,stage)
+        P06FlankV19.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -489,6 +497,7 @@ func _toggle_p06_version() -> void:
     P06JointV16.set_enabled(model_root,_p06_show_v5)
     P06ContourV17.set_enabled(model_root,_p06_show_v5)
     P06WheelwellV18.set_enabled(model_root,_p06_show_v5)
+    P06FlankV19.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -548,6 +557,35 @@ func _inspect_p06_critical_v18() -> void:
     _set_damage(3)
     _view_p06_angle(108.0)
     _zoom=1.84
+    _update_camera()
+
+func _inspect_p06_seams_v19() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(90.0)
+    _zoom=1.94
+    _update_camera()
+
+func _inspect_p06_seals_v19() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(-82.0)
+    _zoom=2.06
+    _update_camera()
+
+func _inspect_p06_mounts_v19() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(124.0)
+    _zoom=1.92
+    _update_camera()
+
+func _inspect_p06_damage_v19() -> void:
+    if _role!="apc":
+        return
+    _set_damage(3)
+    _view_p06_angle(104.0)
+    _zoom=1.89
     _update_camera()
 
 func _inspect_p06_turret() -> void:
@@ -763,10 +801,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V18 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V19 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V18 cargado" if _p06_quality_verified else
+        "acabado V19 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
