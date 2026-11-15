@@ -11,6 +11,7 @@ const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const DamageV6 = preload("res://scripts/ui/G11DamageSculptV6.gd")
 const AtmosV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
+const TracksV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -75,8 +76,8 @@ func _run() -> void:
             "destroyed vehicle exposes the broken turntable void")
         _check(int(model.get_meta("tarvoka_g11_v5_sculpted_roadwheels",0)) == 12,
             "twelve solid wheel proxies replaced by real annular wheels")
-        _check(int(model.get_meta("tarvoka_g11_v5_sprocket_teeth",0)) == 16,
-            "toothed drive sprocket count")
+        _check(int(model.get_meta("tarvoka_g11_v5_sprocket_teeth",0)) == TracksV13.DRIVE_TEETH,
+            "V13 corrected sprocket pitch matches actual tread link spacing")
         var bearing := _find(model,"G11V5_CoronaGiroHorizontal") as MeshInstance3D
         _check(bearing != null and bearing.mesh is ArrayMesh,
             "rotating turret uses a horizontal 3D bearing ring")
@@ -191,8 +192,9 @@ func _run() -> void:
             -shock_rest) > 0.004,
             "telescopic suspension follows moving wheel pivots")
         var sprocket: Node3D = _find(model,"G11V5_PinionTrasero_1")
-        _check(sprocket != null and absf(sprocket.rotation_degrees.x-90.0) < 0.1,
-            "drive sprocket rotates synchronously with tracks")
+        var expected_angle: float = rad_to_deg(0.125*FinishV2.LINK_TRAVEL/TracksV13.PITCH_RADIUS)
+        _check(sprocket != null and absf(sprocket.rotation_degrees.x-expected_angle) < 0.15,
+            "V13 drive sprocket rotates by true belt arclength, not old 720-degree slip")
         _check(Models.pose_model("mlrs",model,"move",0.25),"moving tracks")
         var while_moving: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(at_rest.origin.distance_to(while_moving.origin) > 0.05,
