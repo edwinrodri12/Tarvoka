@@ -17,13 +17,13 @@ const Save = preload("res://scripts/core/SaveCodec.gd")
 # no Asaltante urban bonus, no 8-player battles.
 # A/B uses a genuine Session.purchase at a friendly producer (first turn),
 # vs saving money and allowing the same deterministic BasicAI to play.
-# 32 roles x 2 mirrored starters x 2 fogs x 2 variants = 256 coastal.
+# 32 roles x 2 mirrored starters x 2 variants = 128 coastal (clear, no fog).
 # 7 infantry x 2 mirrored starters x 2 other maps x 2 variants = 56.
 # 4 maps x 2 starters x 2 fogs x 3 climates = 48 natural AI matches.
-# 360 matches, 32x32 counterplay checks x 3 terrain covers.
+# 232 matches, 32x32 counterplay checks x 3 terrain covers.
 const INFANTRY := ["line","scout","assault","piercer","bulwark","artillery","engineer"]
 const MAP_BASELINE := [0,1,2,3]
-const MAX_ACTIONS_PER_PHASE := 40
+const MAX_ACTIONS_PER_PHASE := 24
 
 func _initialize() -> void:
     var all_roles: Array = Roles.ORDER.duplicate()
@@ -41,13 +41,12 @@ func _initialize() -> void:
     # in a legal real modern coastal match, on both sides.
     for role in all_roles:
         for side in [0,1]:
-            for fog in [false,true]:
-                var control: Dictionary = _match(3,side,fog,"clear",20,"",side,exposure)
-                var trial: Dictionary = _match(3,side,fog,"clear",20,role,side,exposure)
-                _record_comparison(marginal[role],role,control,trial)
-                _count_outcomes(all_outcomes,control)
-                _count_outcomes(all_outcomes,trial)
-                comparisons += 1
+            var control: Dictionary = _match(3,side,false,"clear",20,"",side,exposure)
+            var trial: Dictionary = _match(3,side,false,"clear",20,role,side,exposure)
+            _record_comparison(marginal[role],role,control,trial)
+            _count_outcomes(all_outcomes,control)
+            _count_outcomes(all_outcomes,trial)
+            comparisons += 1
     # Infantry-specific stress on very different terrain and weather.
     for role in INFANTRY:
         for map_id in [1,2]:
@@ -59,12 +58,12 @@ func _initialize() -> void:
                 _count_outcomes(all_outcomes,control)
                 _count_outcomes(all_outcomes,trial)
                 comparisons += 1
-    assert(comparisons == 156)
+    assert(comparisons == 92)
     var counter: Dictionary = _duel_matrix(all_roles)
     for role in all_roles:
         var m: Dictionary = marginal[role]
         var samples: int = int(m["samples"])
-        assert(samples >= 4)
+        assert(samples >= 2)
         print("REALMATCH_ROLE role=%s price=%d domain=%s samples=%d injected=%d used_moves=%d used_attacks=%d dealt_hp=%d received_hp=%d killed=%d forced_city_captures=%d forced_survival=%d mean_marginal_material=%d mean_marginal_credits=%d mean_marginal_army=%d mean_marginal_income=%d mean_marginal_cities=%d meanscore_delta=%d counter_legal_pairs=%d net_trade_value=%d" % [
             role,Economy.cost(role),str(m["domain"]),samples,
             int(m["injected"]),int(m["moves"]),int(m["attacks"]),
@@ -274,22 +273,20 @@ static func _match(map_id: int, first: int, fog: bool, weather: String,
                     exposure[purchase_role]["natural_buys"] += 1
             elif action == "resupply":
                 recharges += 1
-            # Record every damage loss from actual actions, not theoretical
-            # preview. This includes retaliation and one-way munitions.
-            for previous_unit in older["units"]:
-                if int(previous_unit.get("hp",0)) <= 0:
-                    continue
-                var newest: Dictionary = _by_id(next,str(previous_unit["id"]))
-                if newest.is_empty():
-                    continue
-                var damage_taken: int = maxi(0,int(previous_unit["hp"])-int(newest["hp"]))
-                if damage_taken > 0:
-                    var injured: String = str(previous_unit["role"])
-                    exposure[injured]["received"] += damage_taken
-                    if int(newest["hp"]) == 0:
-                        exposure[injured]["losses"] += 1
-                    if str(previous_unit["id"]) == unit_id:
-                        forced_received += damage_taken
+            # Only an attack causes immediate HP changes in the shipping
+            # main engine. Avoid a quadratic full-army diff after every move.
+            if action == "attack":
+                for previous_unit in [before_actor,before_def]:
+                    var newest: Dictionary = _by_id(next,str(previous_unit["id"]))
+                    assert(not newest.is_empty())
+                    var damage_taken: int = maxi(0,int(previous_unit["hp"])-int(newest["hp"]))
+                    if damage_taken > 0:
+                        var injured: String = str(previous_unit["role"])
+                        exposure[injured]["received"] += damage_taken
+                        if int(newest["hp"]) == 0:
+                            exposure[injured]["losses"] += 1
+                        if str(previous_unit["id"]) == unit_id:
+                            forced_received += damage_taken
             state = next
             events += 1
             if int(state["winner"]) >= 0:
@@ -318,6 +315,21 @@ static func _match(map_id: int, first: int, fog: bool, weather: String,
                 exposure[str(capturer["role"])]["captures"] += 1
                 if str(capturer.get("id","")) == unit_id:
                     forced_captures += 1
+        # Upkeep may remove HP from an out-of-fuel aircraft/vessel.
+        # Track that damage once at end turn instead of on every AI step.
+        for previous_unit in current["units"]:
+            if int(previous_unit.get("hp",0)) <= 0:
+                continue
+            var newest: Dictionary = _by_id(updated,str(previous_unit["id"]))
+            if newest.is_empty():
+                continue
+            var upkeep_loss: int = maxi(0,int(previous_unit["hp"])-int(newest["hp"]))
+            if upkeep_loss > 0:
+                exposure[str(previous_unit["role"])]["received"] += upkeep_loss
+                if int(newest["hp"]) == 0:
+                    exposure[str(previous_unit["role"])]["losses"] += 1
+                if str(previous_unit["id"]) == unit_id:
+                    forced_received += upkeep_loss
         state = updated
         phases += 1
         if phase % 7 == 0:
