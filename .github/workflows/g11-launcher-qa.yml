@@ -1,0 +1,43 @@
+name: TARVOKA G11 native launcher sculpt QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/G11Art3D.gd'
+      - 'scripts/ui/G11VisualRig3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g11_launcher_3d.gd'
+      - '.github/workflows/g11-launcher-qa.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  launcher-native-qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate native 3D launcher and all faction states
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_launcher_3d.gd 2>&1 | tee /tmp/g11_3d_qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_3d_qa.log; then
+            echo 'G11 native sculpt or animation regression'; exit 1
+          fi
+          grep -F 'PASS G11 3D:' /tmp/g11_3d_qa.log
