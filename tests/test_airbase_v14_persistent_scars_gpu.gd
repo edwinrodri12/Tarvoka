@@ -219,6 +219,9 @@ func _run() -> void:
     studio._clear_airbase_v14_marks()
     assert(studio._airbase_v14_history.is_empty())
     assert(restored.active_mesh_instances()==0)
+    # The Godot SubViewport image is one rendered frame behind mutations.
+    # Capture after GPU refresh, not a stale copy of medium_retained.
+    await _frames(9)
     _capture(studio,"reset_clean")
     studio.airbase_damage_picker.select(4)
     studio._change_airbase_damage(4)
@@ -229,5 +232,5 @@ func _run() -> void:
     assert(studio._role=="headquarters")
     studio.queue_free()
     await _frames(3)
-    print("PASS AIRBASE V14: 40 faction/damage combinations, 3 levels, 9 real contoured pooled scars, 3 materials x 3 attacks, 20 gate parts, persistence across weather/damage, bounded pool, reset UI, 13 real Godot captures")
+    print("PASS AIRBASE V14: 40 faction/damage combinations, 3 levels, 9 real contoured pooled scars, 3 materials x 3 attacks, 20 gate parts, persistence across weather/damage, bounded pool, reset UI, 14 real Godot captures")
     quit(0)
