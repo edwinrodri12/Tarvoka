@@ -40,3 +40,37 @@ En ambos escenarios, si el ocupante muere o abandona el sitio, se anula el avanc
 No elegir el umbral por el número bruto de capturas. Buscar menor recaptura precipitada, tiempo razonable, ausencia de sabotaje barato, y equilibrio del iniciador; posteriormente evaluar IA consciente de progresos, mapas grandes, recuperación de guardados y niebla. Mantener PR #394 en borrador.
 
 La fase v0.1 pasó Godot 4.3. **No considerar v0.2 aprobada hasta que su GitHub Actions arroje SUCCESS y el log contenga PASS capture phase02.** No adelantar cifras o conclusiones con pruebas pendientes.
+
+
+## Mediciones v0.2 verificadas en Godot 4.3
+
+**Workflow exitoso:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43754811996
+**Registro archivado:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43754811996/artifacts/14177673713
+
+El motor ejecutó **36 verificaciones mecánicas + 112 sesiones IA** (16 baseline nativas y 96 variantes), con todas las aserciones satisfechas. A diferencia del ensayo v0.1, aquí la ventana se acorta a 14 medias fases para medir sensibilidad cruzada; **no se deben comparar 70 cambios basales de este ensayo con los 94 de la ventana anterior de 20 medias fases**.
+
+| Captura urbana | Política de asedio | Cambios efectivos | Compras IA | Avances parciales | Créditos retenidos | Fábricas congeladas |
+|---|---|---:|---:|---:|---:|---:|
+| Regla instantánea | No aplica | 70 | 343 | — | — | — |
+| 3 puntos | Desde 2 puntos | 40 | 339 | 70 | 2.500 | 2 |
+| 3 puntos | Solo al completar | 40 | 338 | 70 | 0 | 0 |
+| 4 puntos | Desde 2 puntos | 38 | 339 | 76 | 2.500 | 2 |
+| 4 puntos | Solo al completar | 38 | 338 | 76 | 0 | 0 |
+| 5 puntos | Desde 2 puntos | 34 | 339 | 80 | 2.000 | 2 |
+| 5 puntos | Solo al completar | 34 | 339 | 80 | 0 | 0 |
+
+En la ventana v0.2, la reducción de cambios de propiedad respecto a regla oficial es: **3 puntos: 42,9 %; 4 puntos: 45,7 %; 5 puntos: 51,4 %**. Se incluyen tanto ciudades como instalaciones. Las compras permanecen cercanas (338–339 frente a 343), pero el ingreso retenido cambia y puede propagarse a otros movimientos y gastos. **No hubo victorias completas en ninguna de las 112 sesiones**; por ello es incorrecto deducir tasa de victorias, equidad del iniciador o diversión solo a partir de estos números.
+
+El ensayo determinista también verificó que una Guardia ocupa en 2/2/3 turnos propios para umbrales 3/4/5, el Rastreador en 3/4/5, y que un Rastreador con un aliado adyacente consigue 2/2/3, incluyendo ambos bandos. Se verificó la protección del ingreso ante una infiltración inicial de 1 punto.
+
+**Lectura provisional:** no hay evidencia para fijar ya el umbral urbano. El 4 sigue siendo un candidato intermedio plausible pero **no se recomienda integrarlo** antes de evaluar IA adaptada, choques defensivos y más rondas. El bloqueo de renta desde 2 puntos es una elección relevante para la economía, no una diferencia cosmética.
+
+## Próximo experimento de IA (aislado)
+
+Un nuevo planificador de apoyo se añadió a scripts/experiments/CaptureAwareAIV01.gd y se verificó con **16 órdenes controladas en Godot 4.3**, ambos bandos, con/sin niebla, umbrales 3/4 y ambas políticas. **Workflow exitoso:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43755102292
+
+Solo utiliza progreso de capturas propias visibles y la visión autorizada; el movimiento legal se aplica con el motor de sesión real. Por ahora valida decisiones de apoyo, **no una mejora cuantificada de tasa de victoria**. No modifica scripts/core/BasicAI.gd ni se usa en la aplicación Android.
+
+## CI general independiente del balance
+
+Una ejecución de la batería general de Godot (https://github.com/edwinrodri12/Tarvoka/actions/runs/43754811848) se detuvo en importación de arte HQ V15, al faltar la superclase CombinedArtStudioWeb.gd requerida por BastionStudioAdapter.gd. El fallo ocurre en scripts/ui, fuera de esta propuesta de captura, y requiere corrección del frente visual o revisión del estado de ramas antes de aprobar el proyecto completo. No declarar aprobado todo el CI basándose únicamente en las pruebas experimentales.
