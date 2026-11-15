@@ -7,6 +7,7 @@ on:
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/G11Art3D.gd'
       - 'scripts/ui/G11VisualRig3D.gd'
+      - 'scripts/ui/G11FinishV2.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g11_launcher_3d.gd'
       - '.github/workflows/g11-launcher-qa.yml'
