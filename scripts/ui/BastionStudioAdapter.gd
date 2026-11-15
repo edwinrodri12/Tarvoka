@@ -46,7 +46,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · Escultura V6 · daños reales")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · Escultura V7 · humo y fuego")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V10 interior y rampa · 6×6")
@@ -109,7 +109,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ESCULTURA V6 · DAÑO PROGRESIVO",14)
+        "G11 LANZADOR · ESCULTURA V7 · DAÑOS Y FUEGO",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -128,9 +128,9 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
         "Lateral opuesto",func(): _g11_view(270.0))
     _title(g11_controls,
-        "V6: cráteres tridimensionales, blindaje realmente doblado, "
-        + "conductos del motor expuestos y restos estructurales. "
-        + "Cinco estados de daño reversibles, disparo y explosión distintos.",12)
+        "V7: humo irregular en volúmenes curvos, lenguas de fuego con "
+        + "gradientes, sin las esferas anteriores. Placas deformadas "
+        + "sin cruces, torreta rota descubierta y reparación reversible.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -548,8 +548,10 @@ func _update_details() -> void:
         var built: bool = G11Art.has_model(model_root)
         detail_label.text = "G11 Lanzador · 12 tubos · %d mallas 3D · %s" % [
             P06Models.inspect_meshes(model_root),
-            "escultura V6" if built and bool(model_root.get_meta(
-                "tarvoka_g11_damage_v6",false)) else (
+            "escultura V7" if built and bool(model_root.get_meta(
+                "tarvoka_g11_atmosphere_v7",false)) else (
+                "escultura V6" if built and bool(model_root.get_meta(
+                    "tarvoka_g11_damage_v6",false)) else (
                 "escultura V5" if built and bool(model_root.get_meta(
                     "tarvoka_g11_mechanics_v5",false)) else (
                 "escultura V4" if built and bool(model_root.get_meta(
@@ -558,7 +560,7 @@ func _update_details() -> void:
                     "tarvoka_g11_surface_v3",false)) else (
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
-                    "escultura V1" if built else "LOD provisional")))))]
+                    "escultura V1" if built else "LOD provisional"))))))]
         status_label.text = "%s · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             G11Art.STAGES[G11Art.stage(model_root)],
