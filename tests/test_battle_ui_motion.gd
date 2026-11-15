@@ -1,5 +1,8 @@
 extends SceneTree
 
+const ActionCopy = preload("res://scripts/ui/BattleActionPresentation.gd")
+const Hints = preload("res://scripts/core/TacticalHints.gd")
+
 # Real Main scene with real buttons. These are read-only presentation changes:
 # no artificial engine orders, save paths, faction balance or new turn rules.
 func _initialize() -> void:
@@ -87,6 +90,58 @@ func _run() -> void:
     assert(main.compact_confirm.custom_minimum_size.y >= 44)
     assert(main.compact_end_turn.custom_minimum_size.y >= 44)
     main._set_compact_hud(false)
+    assert(main.board.state == baseline)
+
+    # V14 action copy is computed from queued orders, never from hidden
+    # targets or guessed damage. Rendering changes no authoritative state.
+    var queued_attack: Dictionary = ActionCopy.snapshot(
+        baseline,"FRIENDLY",{
+            "unit_id":"FRIENDLY","cell":Vector2i(3,2),
+            "kind":"attack","target_id":"VISIBLE_ENEMY"})
+    assert(queued_attack["title"] == "ATAQUE PENDIENTE")
+    assert(str(queued_attack["confirm"]) == "CONFIRMAR ATAQUE")
+    assert(str(queued_attack["detail"]).contains("VISIBLE_ENEMY"))
+    assert(ActionCopy.snapshot(baseline,"",{})["kind"] == "idle")
+
+    var source_id := ""
+    var destination := Vector2i(-1,-1)
+    for unit in baseline.get("units",[]):
+        if not unit is Dictionary or int(unit.get("faction",-1)) != 0:
+            continue
+        var unit_id: String = str(unit.get("id",""))
+        var legal_moves: Dictionary = Hints.for_unit(baseline,unit_id).get("moves",{})
+        if not legal_moves.is_empty():
+            source_id = unit_id
+            destination = legal_moves.keys()[0]
+            break
+    assert(not source_id.is_empty() and destination.x >= 0)
+    main.board.selected_id = source_id
+    main.board.pending_order = {
+        "unit_id":source_id,"cell":destination,
+        "kind":"move","target_id":""}
+    main._set_compact_hud(true)
+    main._process(0.0)
+    assert(main.compact_confirm.text == "CONFIRMAR MOV.")
+    assert(main.compact_cancel.text == "CANCELAR ORDEN")
+    assert(not main.compact_confirm.disabled)
+    assert(not main.compact_detail.text.contains("ATAQUE PENDIENTE"))
+    assert(main.compact_detail.text.contains("MOVIMIENTO PENDIENTE"))
+    assert(main.compact_end_turn.disabled)
+    assert(main.board.state == baseline)
+    # Wider screens show the same order next to the PC confirmation buttons.
+    root.size = Vector2i(1600,900)
+    await process_frame
+    main._set_compact_hud(false)
+    main._process(0.0)
+    assert(main.expanded_order_status.visible)
+    assert(main.expanded_confirm.text == "CONFIRMAR MOV.")
+    assert(main.expanded_cancel.text == "CANCELAR ORDEN")
+    assert(main.board.state == baseline)
+    main.board.pending_order.clear()
+    main.board.selected_id = ""
+    main._process(0.0)
+    assert(main.compact_confirm.disabled)
+    assert(not main.expanded_order_status.visible)
     assert(main.board.state == baseline)
     main.queue_free()
     print("PASS UI motion: rapid navigation, screen reveals, touch feedback, battery saver and unchanged battle")
