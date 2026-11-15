@@ -101,7 +101,7 @@ func _run() -> void:
     assert(exit_prompt.visible)
     assert(exit_prompt.cancel_button.custom_minimum_size.y >= 44)
     assert(exit_prompt.exit_button.custom_minimum_size.y >= 44)
-    assert(exit_prompt.warning_label.text.contains("guardar"))
+    assert(exit_prompt.warning_label.text.contains("guardado"))
     assert(exit_prompt.cancel_button.text.contains("CANCELAR"))
     exit_prompt.reflow_for_size(Vector2(780,360))
     assert(exit_prompt.compact_landscape)
