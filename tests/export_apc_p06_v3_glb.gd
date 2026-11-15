@@ -79,7 +79,10 @@ func _run() -> void:
             group.add_child(piece)
             baked+=1
     assert(count>60)
-    assert(baked==336)
+    # 336 physical wheel bolts/treads + optional static V4 box batches.
+    var extra_boxes: int=int(source.get_meta("tarvoka_apc_v4_box_count",0))
+    assert(extra_boxes>=12)
+    assert(baked==336+extra_boxes)
     var document:=GLTFDocument.new()
     var state:=GLTFState.new()
     var append_error: Error=document.append_from_scene(artist,state,0)
