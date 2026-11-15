@@ -177,8 +177,21 @@ func _measure(per_side: int,seed: int) -> Dictionary:
     var canvas_ms: float=float(
         Time.get_ticks_usec()-render_started)/4000.0
     assert(detailed["size"]==DIMENSIONS)
-    assert(int(detailed["candidate_tiles"])<1200)
-    assert(int(detailed["tiles_drawn"])<=int(detailed["candidate_tiles"]))
+    # A center-focused camera can legitimately include the ENTIRE board.
+    # Verify the cap there, then move to an edge to exercise real culling.
+    var centered_candidates: int=int(detailed["candidate_tiles"])
+    assert(centered_candidates<=Rules.MAX_AREA)
+    assert(int(detailed["tiles_drawn"])<=centered_candidates)
+    assert(board.focus_iso_cell(Vector2i(37,26)))
+    board.queue_redraw()
+    await process_frame
+    var edge: Dictionary=Renderer.last_frame_stats.duplicate(true)
+    var edge_candidates: int=int(edge["candidate_tiles"])
+    print("BATTLE-STRESS viewport center=%d edge=%d tiles=%d" % [
+        centered_candidates,edge_candidates,int(edge["tiles_drawn"])])
+    assert(edge["size"]==DIMENSIONS)
+    assert(edge_candidates<Rules.MAX_AREA)
+    assert(int(edge["tiles_drawn"])<=edge_candidates)
     assert(board.state==rendered_state)
     board.queue_free()
     await process_frame
@@ -204,7 +217,8 @@ func _measure(per_side: int,seed: int) -> Dictionary:
             float(longest_ai_usec)/1000.0,0.01),
         "canvas_frame_scheduling_ms_average":snappedf(canvas_ms,0.01),
         "overview_tile_candidates":int(overview["candidate_tiles"]),
-        "zoomed_tile_candidates":int(detailed["candidate_tiles"]),
+        "zoomed_tile_candidates":centered_candidates,
+        "edge_tile_candidates":edge_candidates,
         "fog_enabled":true,
         "urban_economy_enabled":true,
         "supply_ammo_fuel_enabled":true,
@@ -222,7 +236,11 @@ func _run() -> void:
             per_side,230017 if per_side==12 else 461101)
         results.append(result)
         print("BATTLE-STRESS-40x30 "+JSON.stringify(result))
-    assert(results.size()==2)
+    if results.size()!=2 or not results[0].has("initial_units") or (
+            not results[1].has("initial_units")):
+        push_error("Large-map stress did not return two valid benchmark records")
+        quit(1)
+        return
     assert(int(results[0]["initial_units"])==24)
     assert(int(results[1]["initial_units"])==48)
     DirAccess.make_dir_recursive_absolute(
