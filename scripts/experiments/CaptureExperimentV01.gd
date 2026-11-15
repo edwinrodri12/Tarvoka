@@ -76,6 +76,10 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
     if not bool(settled.get("valid",false)):
         return denied
     var next: Dictionary = settled["state"]
+    # Save the actual amount paid by native end_turn BEFORE changing the
+    # experimental site ownership (next aliases settled["state"]).
+    var next_side: int = int(next.get("faction",-1))
+    var original_paid_income: int = Economy.income_for(next["economy"],next_side) if next_side in [0,1] else 0
     var meter: Dictionary = tracking.duplicate(true)
     var completed := 0
     var advanced := 0
@@ -102,8 +106,9 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
                 record = {}
                 interrupted += 1
         if old_owner == side:
-            # A site owned by its occupant needs no progress meter.
-            if meter.has(key):
+            # The city's owner taking a turn must NOT erase an enemy
+            # occupation still physically held on the same tile.
+            if not holder.is_empty() and meter.has(key):
                 meter.erase(key)
             continue
         if holder.is_empty():
@@ -134,9 +139,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
     # Reconcile automatic income that Session.end_turn already paid to the
     # next faction before our experimental ownership/progress adjustment.
     # A city under active occupation cannot bankroll its defender.
-    var next_side: int = int(next.get("faction",-1))
     if next_side in [0,1] and next.has("economy"):
-        var baseline_income: int = Economy.income_for(settled["state"]["economy"],next_side)
         var income_new: int = Economy.income_for(next["economy"],next_side)
         var withheld: int = 0
         var one_city: int = Economy.MODERN_CITY_INCOME if bool(next["economy"].get("modern",false)) else Economy.CITY_INCOME
@@ -147,7 +150,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
             if meter.has(key) and not meter[key].is_empty() and int(meter[key]["side"]) != next_side:
                 withheld += one_city
                 contested += 1
-        var adjust: int = income_new-baseline_income-withheld
+        var adjust: int = income_new-original_paid_income-withheld
         if adjust != 0:
             next["economy"]["credits"][next_side] = maxi(0,mini(Economy.MAX_CREDITS,
                 int(next["economy"]["credits"][next_side])+adjust))
