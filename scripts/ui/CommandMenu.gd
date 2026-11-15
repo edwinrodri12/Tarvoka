@@ -576,6 +576,10 @@ func _update_comparison_preview() -> void:
     comparison_preview.show_comparison(CompareData.compare(
         board.state,board.selected_factory_pos,selected_catalog_role,comparison_catalog_role,viewer),
         Identity.color_for(board.state,viewer))
+    if production_selection_label != null:
+        var a_name: String = Roles.label(selected_catalog_role) if not selected_catalog_role.is_empty() else "Sin selección"
+        var b_name: String = Roles.label(comparison_catalog_role) if not comparison_catalog_role.is_empty() else "Sin comparación"
+        production_selection_label.text = "A · %s    |    B · %s" % [a_name,b_name]
 
 func open_for(source: Control, section: String = "") -> void:
     board = source
@@ -990,6 +994,69 @@ func refresh() -> void:
     _description(tutorial,"Carretera: vehículos motorizados recorren 2 casillas por punto de movimiento; infantería, 1. Bosque: cobertura +1. Montaña: +2 y ventaja de altura. Ciudad: +1.")
     _reflow()
 
+func _change_production_site(index: int) -> void:
+    if board == null or index < 0 or index >= production_site_positions.size():
+        return
+    var pos: Vector2i = production_site_positions[index]
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var economy: Dictionary = board.state.get("economy",{})
+    var site: Dictionary = Economy.site_at(economy,pos)
+    if site.is_empty() or int(site.get("owner",-1)) != viewer or str(site.get("kind","")) == "city":
+        return
+    board.selected_factory_pos = pos
+    # Only the inspected UI target changes. No orders, funds or turns.
+    refresh()
+    tabs.current_tab = 2
+
+func _filter_production(index: int) -> void:
+    if index not in [0,1,2] or production_filter_picker == null:
+        return
+    production_filter_index = index
+    if production_filter_picker.selected != index:
+        production_filter_picker.select(index)
+    var count := 0
+    for role in production_list_rows:
+        var record: Dictionary = production_candidates.get(role,{})
+        var available: bool = bool(record.get("available",false))
+        var allowed: bool = (
+            index == 0 or (index == 1 and available) or (index == 2 and not available))
+        production_list_rows[role].visible = allowed
+        if allowed:
+            count += 1
+    if production_empty_filter != null:
+        production_empty_filter.visible = count == 0
+
+func _request_production(role: String) -> void:
+    if board == null:
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var record: Dictionary = CompareData.candidate(
+        board.state,board.selected_factory_pos,role,viewer)
+    if record.is_empty() or not bool(record.get("available",false)):
+        return
+    pending_production_role = role
+    production_confirm_dialog.dialog_text = (
+        "¿Producir %s por %d créditos en %s (%d,%d)?\n"
+        + "La unidad será creada únicamente si la compra sigue permitida.") % [
+        str(record.get("name",role)),int(record.get("price",0)),
+        _installation_label(str(Economy.site_at(
+            board.state.get("economy",{}),board.selected_factory_pos).get("kind",""))),
+        board.selected_factory_pos.x+1,board.selected_factory_pos.y+1]
+    production_confirm_dialog.popup_centered()
+
+func _confirm_production() -> void:
+    var role: String = pending_production_role
+    pending_production_role = ""
+    if board == null or role.is_empty():
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var record: Dictionary = CompareData.candidate(
+        board.state,board.selected_factory_pos,role,viewer)
+    if bool(record.get("available",false)):
+        purchase_requested.emit(role)
+    else:
+        refresh()
+
 func _open_command_tab(index: int) -> void:
     if tabs == null:
         return
@@ -1098,6 +1165,29 @@ func reflow_for_size(viewport: Vector2) -> void:
     for tile in army_stat_cells:
         if is_instance_valid(tile):
             tile.custom_minimum_size.x = 100 if command_compact else 190
+    if production_columns != null:
+        production_columns.vertical = viewport.y > viewport.x * 1.12
+    if production_site_picker != null:
+        production_site_picker.custom_minimum_size.y = 44 if command_compact else 48
+        production_site_picker.add_theme_font_size_override(
+            "font_size",12 if command_compact else 16)
+    if production_filter_picker != null:
+        production_filter_picker.custom_minimum_size.y = 44 if command_compact else 48
+    if production_list_scroll != null:
+        production_list_scroll.custom_minimum_size.y = 175 if command_compact else 310
+    if production_compare_scroll != null:
+        production_compare_scroll.custom_minimum_size.y = 205 if command_compact else 330
+    if production_header_crest != null:
+        production_header_crest.custom_minimum_size = (
+            Vector2(28,28) if command_compact else Vector2(37,37))
+    if production_funds_label != null:
+        production_funds_label.add_theme_font_size_override(
+            "font_size",12 if command_compact else 14)
+    for role in production_purchase_buttons:
+        var buy: Button = production_purchase_buttons[role]
+        buy.custom_minimum_size.y = 44 if command_compact else 48
+        buy.add_theme_font_size_override(
+            "font_size",12 if command_compact else 15)
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):
