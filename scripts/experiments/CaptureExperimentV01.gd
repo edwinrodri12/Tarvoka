@@ -66,11 +66,29 @@ static func _effort(units: Array, holder: Dictionary, side: int,
     return {"base":base,"support":mini(MAX_ADJACENT_SUPPORT,helpers.size()),
         "total":base+mini(MAX_ADJACENT_SUPPORT,helpers.size())}
 
+static func valid_settings(settings: Dictionary) -> bool:
+    # Sensitivity controls are only read by experimental callers.
+    for key in settings:
+        if key not in ["city_threshold", "facility_threshold", "denial_policy"]:
+            return false
+    if settings.has("city_threshold") and (not settings["city_threshold"] is int or int(settings["city_threshold"]) not in [3,4,5]):
+        return false
+    if settings.has("facility_threshold") and (not settings["facility_threshold"] is int or int(settings["facility_threshold"]) not in [2,3,4,5]):
+        return false
+    if settings.has("denial_policy") and (not settings["denial_policy"] is String or str(settings["denial_policy"]) not in ["after_two","complete_only"]):
+        return false
+    return true
+
 static func finish_and_advance(state: Dictionary, tracking: Dictionary,
-        allow_piercer: bool = true) -> Dictionary:
+        allow_piercer: bool = true, settings: Dictionary = {}) -> Dictionary:
     var before: Dictionary = state.duplicate(true)
     var unchanged: Dictionary = tracking.duplicate(true)
     var denied := {"valid":false,"state":before,"tracking":unchanged}
+    if not valid_settings(settings):
+        return denied
+    var city_threshold: int = int(settings.get("city_threshold",CITY_THRESHOLD))
+    var facility_threshold: int = int(settings.get("facility_threshold",FACILITY_THRESHOLD))
+    var denial_policy: String = str(settings.get("denial_policy","after_two"))
     if not state.has("economy") or not Economy.valid(state["economy"],state.get("terrain",[])):
         return denied
     if int(state.get("winner",-1)) != -1 or int(state.get("faction",-1)) not in [0,1]:
@@ -129,7 +147,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
             record = {}
             interrupted += 1
         var effort: Dictionary = _effort(next["units"],holder,side,allow_piercer)
-        var threshold: int = CITY_THRESHOLD if kind == "city" else FACILITY_THRESHOLD
+        var threshold: int = city_threshold if kind == "city" else facility_threshold
         var value: int = int(record.get("points",0))+int(effort["total"])
         var turns: int = int(record.get("turns",0))+1
         var ready: bool = value >= threshold and turns >= MIN_OWN_TURNS
@@ -158,7 +176,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
             var key: String = _key(site["pos"])
             if not meter.has(key) or meter[key].is_empty() or int(meter[key]["side"]) == next_side:
                 continue
-            if int(meter[key].get("points",0)) < DENIAL_START_POINTS:
+            if denial_policy == "complete_only" or int(meter[key].get("points",0)) < DENIAL_START_POINTS:
                 continue
             if str(site["kind"]) == "city":
                 withheld += one_city
