@@ -1,0 +1,143 @@
+name: TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA
+
+on:
+  push:
+    branches:
+      - feat/naval-base-v2-quays-hangar-crane-water-20261115
+    paths:
+      - "scripts/ui/NavalBase3DV1.gd"
+      - "scripts/ui/NavalBaseDetailV2.gd"
+      - "assets/shaders/naval_port_water_v2.gdshader"
+      - "scripts/ui/Airbase3DV1.gd"
+      - "scripts/ui/AirbaseExteriorV6.gd"
+      - "scripts/ui/AirbaseMaterialsV7.gd"
+      - "scripts/ui/AirbaseFinishV8.gd"
+      - "scripts/ui/AirbaseDetailV9.gd"
+      - "scripts/ui/AirbaseStructureV10.gd"
+      - "scripts/ui/AirbaseTrussesV11.gd"
+      - "scripts/ui/AirbaseFractureV12.gd"
+      - "scripts/ui/AirbaseImpactsV13.gd"
+      - "scripts/ui/AirbaseScarsV14.gd"
+      - "scripts/ui/AirbaseScarFinishV15.gd"
+      - "scripts/ui/AirbaseImpactsV13.gd"
+      - "scripts/ui/AirbaseScarsV14.gd"
+      - "scripts/ui/AirbaseHangarV2.gd"
+      - "scripts/ui/AirbaseDamageFXV3.gd"
+      - "scripts/ui/AirbaseDamageFXV4.gd"
+      - "scripts/ui/AirbaseMapLODV4.gd"
+      - "scripts/ui/AirbaseStressV4.gd"
+      - "assets/shaders/airbase_soft_smoke_v4.gdshader"
+      - "assets/shaders/airbase_soft_flame_v4.gdshader"
+      - "scripts/ui/AirbaseImpactV3.gd"
+      - "scripts/ui/HeadquartersImpactV21.gd"
+      - "assets/shaders/hq_volumetric_smoke_v23.gdshader"
+      - "scripts/ui/AirbaseDoorRigV2.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_naval_base_v2_gpu.gd"
+      - ".github/workflows/naval-base-v2-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/Airbase3DV1.gd"
+      - "scripts/ui/AirbaseExteriorV6.gd"
+      - "scripts/ui/AirbaseMaterialsV7.gd"
+      - "scripts/ui/AirbaseFinishV8.gd"
+      - "scripts/ui/AirbaseDetailV9.gd"
+      - "scripts/ui/AirbaseStructureV10.gd"
+      - "scripts/ui/AirbaseTrussesV11.gd"
+      - "scripts/ui/AirbaseFractureV12.gd"
+      - "scripts/ui/AirbaseImpactsV13.gd"
+      - "scripts/ui/AirbaseScarsV14.gd"
+      - "scripts/ui/AirbaseScarFinishV15.gd"
+      - "scripts/ui/AirbaseImpactsV13.gd"
+      - "scripts/ui/AirbaseScarsV14.gd"
+      - "scripts/ui/AirbaseHangarV2.gd"
+      - "scripts/ui/AirbaseDamageFXV3.gd"
+      - "scripts/ui/AirbaseDamageFXV4.gd"
+      - "scripts/ui/AirbaseMapLODV4.gd"
+      - "scripts/ui/AirbaseStressV4.gd"
+      - "assets/shaders/airbase_soft_smoke_v4.gdshader"
+      - "assets/shaders/airbase_soft_flame_v4.gdshader"
+      - "scripts/ui/AirbaseImpactV3.gd"
+      - "scripts/ui/HeadquartersImpactV21.gd"
+      - "assets/shaders/hq_volumetric_smoke_v23.gdshader"
+      - "scripts/ui/AirbaseDoorRigV2.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_naval_base_v2_gpu.gd"
+      - ".github/workflows/naval-base-v2-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bring the actual V15 PNGs from the Android game
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-android
+          persist-credentials: false
+      - name: Copy precisely nine approved PNGs and isolate Android code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          test -s source-android/assets/buildings/hq_v15/hq_neutral.png
+          cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf source-android
+          test "$(find assets/buildings/hq_v15 -name '*.png' | wc -l)" -eq 9
+      - name: Install native Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/airbase4-godot.zip
+          unzip -q /tmp/airbase4-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/airbase4-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/airbase4-import.log; then
+            echo "Airbase V4 architectural lighting import failed" >&2; exit 1
+          fi
+      - name: Native GPU verify native airbase, 8 factions, damage, weather and editor controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_naval_base_v2_gpu.gd 2>&1 | tee /tmp/airbase4-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/airbase4-gpu.log; then
+            echo "Naval Base V1 real 3D geometry acceptance" >&2; exit 1
+          fi
+          grep -q "PASS NAVAL BASE V2:" /tmp/airbase4-gpu.log
+          for image in \
+            tarvoka_naval_v2_overview_v2.png \
+            tarvoka_naval_v2_overview_v1_compare.png \
+            tarvoka_naval_v2_harbor.png \
+            tarvoka_naval_v2_rear.png \
+            tarvoka_naval_v2_top.png \
+            tarvoka_naval_v2_level_2.png \
+            tarvoka_naval_v2_level_3.png \
+            tarvoka_naval_v2_damage_1.png \
+            tarvoka_naval_v2_damage_2.png \
+            tarvoka_naval_v2_damage_3.png \
+            tarvoka_naval_v2_damage_4.png \
+            tarvoka_naval_v2_faction_turquesa.png; do
+            test -s "artifacts/$image"
+          done
+      - name: Archive real GPU visuals
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Naval-Base-V2-12-Godot-Captures
+          retention-days: 30
+          if-no-files-found: error
+          path: artifacts/tarvoka_naval_v2_*.png
