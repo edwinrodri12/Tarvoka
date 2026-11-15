@@ -7,6 +7,7 @@ const Art = preload("res://scripts/ui/G11Art3D.gd")
 const Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
+const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -41,6 +42,10 @@ func _run() -> void:
             "commercial V2 finish installed on 3D native model")
         _check(bool(model.get_meta(SurfaceV3.FLAG,false)),
             "weathered V3 surface installed")
+        _check(bool(model.get_meta(GeometryV4.FLAG,false)),
+            "genuine hollow tubes and hydraulic V4 rig installed")
+        _check(int(model.get_meta("tarvoka_g11_hollow_tubes",0)) == 12,
+            "all twelve tubes replaced by open bore geometry")
         _check(int(model.get_meta("tarvoka_g11_fastener_count",0)) == 28,
             "maintenance fasteners registered")
         var fasteners: MultiMeshInstance3D = _find(model,
@@ -85,6 +90,15 @@ func _run() -> void:
                     "tube %d/%d" % [column,row])
                 _check(_find(model,"G11_BocaInterior_%d_%d" % [column,row]) != null,
                     "real dark tube opening")
+                var tube: MeshInstance3D = _find(model,
+                    "G11_Tubo_%d_%d" % [column,row]) as MeshInstance3D
+                _check(tube != null and tube.mesh is ArrayMesh,
+                    "real shared mesh is not a primitive closed cylinder")
+                if tube != null and tube.mesh is ArrayMesh:
+                    _check(tube.mesh.get_surface_count() == 3,
+                        "barrel includes exterior, annular mouth and internal bore")
+                _check(_find(model,"G11_AroBoca_%d_%d" % [column,row]) == null,
+                    "obsolete fake front ring deleted")
         for side in [-1,1]:
             for axle in range(6):
                 _check(_find(model,"G11_RuedaPivot_%d_%d" % [side,axle]) != null,
@@ -92,6 +106,15 @@ func _run() -> void:
         var paint := _find(model,"G11_PinturaLateral_1_0") as MeshInstance3D
         _check(paint != null and paint.material_override != null,
             "faction color on actual mesh")
+        for side in [-1,1]:
+            _check(_find(model,"G11V4_CilindroHidraulico_%d" % side) != null,
+                "articulated hydraulic actuator side %d" % side)
+            _check(_find(model,"G11V4_ArticulacionAlta_%d" % side) != null,
+                "upper moving joint side %d" % side)
+        _check(_find(model,"G11V4_TapaControlPosterior") != null,
+            "rear enclosed service module has actual depth")
+        var hydraulic_rest: float = _find(model,
+            "G11V4_VastagoHidraulico_1").scale.y
         var start: Vector3 = model.position
         var inst: MultiMeshInstance3D = _find(model,
             "G11V2_OrugaAnimada_1") as MultiMeshInstance3D
@@ -108,6 +131,8 @@ func _run() -> void:
             "azimuth rotation")
         _check(_find(model,"G11_ElevacionLanzador").rotation_degrees.x > 20.0,
             "launch elevation")
+        _check(absf(_find(model,"G11V4_VastagoHidraulico_1").scale.y
+            -hydraulic_rest) > 0.01,"hydraulic pistons extend with live launcher")
         _check(_find(model,"G11_EfectoFogonazo").visible,"rocket muzzle flash")
         _check(Models.pose_model("mlrs",model,"hit_bullet",0.15),
             "small-arms impact reaction")
@@ -129,6 +154,8 @@ func _run() -> void:
         var reset_link: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(at_rest.origin.distance_to(reset_link.origin) < 0.001,
             "tread links return to initial position")
+        _check(absf(_find(model,"G11V4_VastagoHidraulico_1").scale.y
+            -hydraulic_rest) < 0.002,"hydraulic pistons restore after animation")
         _check(model.position.distance_to(start) < 0.001,
             "restore starting model transform")
         _check(not _find(model,"G11_ImpactoExplosivo").visible,
@@ -139,5 +166,5 @@ func _run() -> void:
         push_error("G11 3D QA FAILED (%d checks)" % failed)
         quit(1)
         return
-    print("PASS G11 3D: V2 beveled hull, batched moving tracks, 8 factions, 12 launch tubes, LOD, firing, hits and 5 damage stages")
+    print("PASS G11 3D: V4 genuine 12 hollow bore tubes, articulated dual pistons, closed rear details, 8 factions, moving tracks, hits and damage")
     quit(0)
