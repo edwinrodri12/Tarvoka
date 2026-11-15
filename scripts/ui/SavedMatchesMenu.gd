@@ -135,9 +135,11 @@ func _ready() -> void:
     hide()
 
 func _reflow() -> void:
+    reflow_for_size(get_viewport_rect().size)
+
+func reflow_for_size(viewport: Vector2) -> void:
     if slot_cards == null:
         return
-    var viewport: Vector2 = get_viewport_rect().size
     compact_landscape = viewport.x > viewport.y and viewport.y <= 560.0
     # Do not stack the two real save slots on a compact Android landscape.
     slot_cards.vertical = viewport.y > viewport.x * 1.12
