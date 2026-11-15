@@ -252,6 +252,19 @@ static func apply(model: Node3D, faction_color: Color) -> bool:
             _box(root,"G11V12_SoporteEscalon_%d_%d" % [side,brace],
                 Vector3(sign*0.758,0.717,-0.96+float(brace)*0.17),
                 Vector3(0.043,0.090,0.027),muted)
+        # The first visual review found that the top engine grilles could
+        # disappear behind the raised rocket pod. A second, actually
+        # exposed lateral intake creates a readable service silhouette.
+        _box(root,"G11V12_BaseRespiraderoCostado_%d" % side,
+            Vector3(sign*0.773,0.928,1.108),
+            Vector3(0.036,0.227,0.270),dark)
+        _box(root,"G11V12_MarcoRespiraderoCostado_%d" % side,
+            Vector3(sign*0.801,0.927,1.108),
+            Vector3(0.018,0.198,0.247),armor)
+        for slit in range(4):
+            _box(root,"G11V12_AletaRespiraderoCostado_%d_%d" % [side,slit],
+                Vector3(sign*0.816,0.926,1.021+float(slit)*0.055),
+                Vector3(0.013,0.144,0.023),muted)
         # Distinct rear wheel arch guard: slender real beveled metal lip.
         _box(root,"G11V12_GuardaLodoTrasera_%d" % side,
             Vector3(sign*0.863,0.702,1.122),
@@ -309,6 +322,7 @@ static func apply(model: Node3D, faction_color: Color) -> bool:
     model.set_meta("tarvoka_g11_v12_side_windows",GLASS_COUNT)
     model.set_meta("tarvoka_g11_v12_recessed_motor_louvers",LOUVERS)
     model.set_meta("tarvoka_g11_v12_hardware",FASTENERS)
+    model.set_meta("tarvoka_g11_v12_lateral_air_slats",8)
     return set_stage(model,0)
 
 static func set_stage(model: Node3D, stage: int) -> bool:
@@ -330,6 +344,18 @@ static func set_stage(model: Node3D, stage: int) -> bool:
             "G11V12_AletaVentilacionMotor_%d" % i,true,false) as Node3D
         if blade != null:
             blade.visible = level < 3
+    for side in _SIDES:
+        for name in ["G11V12_BaseRespiraderoCostado_%d",
+                "G11V12_MarcoRespiraderoCostado_%d"]:
+            var vent := root.find_child(name % side,true,false) as Node3D
+            if vent != null:
+                vent.visible = level < 3
+        for slit in range(4):
+            var blade := root.find_child(
+                "G11V12_AletaRespiraderoCostado_%d_%d" % [side,slit],
+                true,false) as Node3D
+            if blade != null:
+                blade.visible = level < 3
     # Critical damage does not erase the outer cabin or intact windshield:
     # localized destruction remains in V6's physically deformed engine bay.
     return true
