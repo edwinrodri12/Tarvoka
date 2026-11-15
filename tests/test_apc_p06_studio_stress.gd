@@ -16,6 +16,19 @@ func _run() -> void:
     studio._display_role("apc")
     assert(studio._role=="apc")
     assert(studio.apc_stress_button.visible)
+    assert(studio.apc_v5_button.visible)
+    assert(studio.model_root.get_meta("tarvoka_apc_detail_v5",false))
+    var v5_root: Node3D=studio.model_root.find_child(
+        "APC_P06_V5_AcabadosComerciales",true,false) as Node3D
+    var v5_turret: Node3D=studio.model_root.find_child(
+        "P06V5_SensoresEnTorreta",true,false) as Node3D
+    assert(v5_root!=null and v5_turret!=null)
+    studio._toggle_apc_v5()
+    assert(not v5_root.visible and not v5_turret.visible)
+    assert(studio.apc_v5_button.text.contains("MOSTRAR ACABADOS V5"))
+    studio._toggle_apc_v5()
+    assert(v5_root.visible and v5_turret.visible)
+    assert(studio.apc_v5_button.text.contains("MOSTRAR SOLO V3"))
     assert(studio._apc_stress_count==0)
     studio._cycle_apc_stress()
     assert(studio._apc_stress_count==32)
