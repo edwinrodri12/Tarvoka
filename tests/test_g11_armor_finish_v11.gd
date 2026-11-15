@@ -56,8 +56,16 @@ func _run() -> void:
             "former flat launcher roof is now a real beveled octagonal plate")
         if top_cover != null and top_cover.material_override is StandardMaterial3D:
             var roof_metal: StandardMaterial3D = top_cover.material_override as StandardMaterial3D
-            _check(roof_metal.metallic > 0.40 and roof_metal.roughness > 0.65,
-                "roof has grounded satin dark-metal PBR rather than an empty white rectangle")
+            if bool(model.get_meta("tarvoka_g11_tracks_faction_v13",false)):
+                _check(roof_metal.metallic > 0.25 and roof_metal.roughness > 0.45,
+                    "V13 faction-painted upper pod remains genuine metallic PBR")
+                var faction_paint: Color = model.get_meta(
+                    "tarvoka_g11_v13_faction_paint",Color.BLACK) as Color
+                _check(roof_metal.albedo_color.is_equal_approx(faction_paint),
+                    "V11 octagonal roof honors requested V13 color per faction")
+            else:
+                _check(roof_metal.metallic > 0.40 and roof_metal.roughness > 0.65,
+                    "V11 without V13 keeps its original dark satin metal")
         for stiffener in range(3):
             _check(_find(model,"G11V11_NervioTecho_%d" % stiffener) != null,
                 "thin three-dimensional longitudinal roof stiffener %d" % stiffener)
