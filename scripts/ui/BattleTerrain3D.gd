@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
@@ -605,6 +606,19 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
     counters["units"] = _make_units(scene,state,cells,selected_id)
+    # Camera-based LOD runs at 4 Hz AFTER the scene enters the viewport.
+    # Headless battle/test scenes without a camera keep their stable V8 mesh.
+    if int(counters["units"].get("apc_lod",0))>0:
+        var lod_driver: Node=APCCameraLOD.new()
+        lod_driver.name="P06V9_LOD_Camara"
+        scene.add_child(lod_driver)
+        for child in scene.get_children():
+            if child is Node3D and bool(child.get_meta(
+                    "tarvoka_apc_tactical_lod_v8",false)):
+                lod_driver.register(child as Node3D)
+        counters["apc_distance_lod"]=true
+    else:
+        counters["apc_distance_lod"]=false
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.
