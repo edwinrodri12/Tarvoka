@@ -31,7 +31,7 @@ static func build_grid(count: int,requested_near: int=MAX_NEAR) -> Node3D:
     for i in range(count):
         var faction: int = i%8
         var level: int = 1+i%3
-        var stage: int = (i/7)%5
+        var stage: int = (i+i/7)%5
         var object: Node3D
         if i<near_count:
             var full: Node3D = Airbase.build(level,faction,stage)
