@@ -27,7 +27,8 @@ static func step(state: Dictionary, tracking: Dictionary,
     return AI.step(state)
 
 static func defend_capture(state: Dictionary, tracking: Dictionary,
-        settings: Dictionary = {}) -> Dictionary:
+        settings: Dictionary = {}, emergency_only: bool = false,
+        escort_shooter_only: bool = false) -> Dictionary:
     var none := {"valid":false}
     if not Capture.valid_settings(settings) or not state.has("economy"):
         return none
@@ -71,12 +72,16 @@ static func defend_capture(state: Dictionary, tracking: Dictionary,
                 continue
             # Focus on meaningful threat to a garrison, rather than
             # suppressing any small scratch and starving other objectives.
+            if emergency_only and expected_hit < int(holder["hp"]):
+                continue
             if expected_hit*3 < int(holder["hp"]):
                 continue
             for friend in observed["units"]:
                 if not friend is Dictionary or int(friend.get("faction",-1)) != side:
                     continue
                 if not Turns.can_act(friend,side) or not Logistics.can_fire(friend):
+                    continue
+                if escort_shooter_only and str(friend["id"]) == str(holder["id"]):
                     continue
                 if not Turns.in_attack_range(friend,enemy):
                     continue
