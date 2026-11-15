@@ -23,6 +23,7 @@ on:
       - "scripts/ui/G11CooldownV10.gd"
       - "scripts/ui/G11ArmorFinishV11.gd"
       - "scripts/ui/G11CabChassisV12.gd"
+      - "scripts/ui/G11TracksFactionV13.gd"
       - "scripts/ui/G11DamageAtmosphereV7.gd"
       - "scripts/ui/APCTacticalLOD8.gd"
       - "scripts/ui/APCDistanceLODControllerV9.gd"
