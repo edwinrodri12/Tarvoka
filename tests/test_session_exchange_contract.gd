@@ -131,6 +131,20 @@ func _initialize() -> void:
     assert(missing_primary.get("recovered", false))
     assert(missing_primary.get("state", {}) == outcome["state"])
     assert(not Session.attack(missing_primary["state"], "attacker", "defender")["valid"])
+    # A recovered match must resume normal play, not merely deserialize.
+    # The spent attacker stays blocked until the opposing faction takes its turn.
+    var resumed: Dictionary = Session.end_turn(missing_primary["state"])
+    assert(resumed.get("valid", false))
+    assert(int(resumed["state"]["faction"]) == 1)
+    assert(int(resumed["state"]["units"][0]["hp"]) == int(expected["attacker_hp"]))
+    assert(int(resumed["state"]["units"][1]["hp"]) == int(expected["defender_hp"]))
+    assert(not Session.attack(resumed["state"], "attacker", "defender")["valid"])
+    var resumed_enemy: Dictionary = Session.attack(resumed["state"], "defender", "attacker")
+    assert(resumed_enemy.get("valid", false))
+    assert(bool(resumed_enemy["state"]["units"][1]["acted"]))
+    assert(not Session.attack(resumed_enemy["state"], "defender", "attacker")["valid"])
+    # Recovery and continuation must not mutate the saved snapshot.
+    assert(missing_primary["state"] == outcome["state"])
     assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(disk_path + ".bak")) == OK)
     assert(not FileAccess.file_exists(disk_path))
     assert(not FileAccess.file_exists(disk_path + ".bak"))
