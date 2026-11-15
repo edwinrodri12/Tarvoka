@@ -56,16 +56,16 @@ static func _concrete(tool: SurfaceTool,attack: String,
     var turn: float=0.41+float(slot)*0.29
     for ray in range(rays):
         var base: float=TAU*float(ray)/float(rays)+turn
-        var previous: Vector3=_polar(base,radius*0.63,0.087)
+        var previous: Vector3=_polar(base,radius*0.63,0.066)
         for piece in range(3):
-            var r: float=radius*(0.63+float(piece+1)*0.46)
+            var r: float=radius*(0.63+float(piece+1)*0.37)
             var wobble: float=0.09*sin(float(ray*7+piece*13+slot*3))
-            var point: Vector3=_polar(base+wobble,r,0.089)
+            var point: Vector3=_polar(base+wobble,r,0.070)
             _crack(tool,previous,point,0.015 if attack=="bullet" else 0.021,dark)
             stats["crack_segments"]+=1
             if piece==1:
                 var side: Vector3=_polar(base+0.28+0.06*float(ray%3),
-                    radius*(1.49+0.22*float(ray%2)),0.091)
+                    radius*(1.38+0.17*float(ray%2)),0.071)
                 _crack(tool,point,side,0.011,dark)
                 stats["crack_segments"]+=1
             previous=point
@@ -75,10 +75,10 @@ static func _concrete(tool: SurfaceTool,attack: String,
         var angle: float=TAU*float(chip)/float(5 if attack=="bullet" else 9)+turn
         var far: float=radius*(1.05+0.11*float(chip%3))
         _triangle(tool,
-            _polar(angle-0.17,far,0.086),
-            _polar(angle+0.12,far*1.16,0.095),
-            _polar(angle+0.035,far*1.42,0.109),
-            Color("#8d8c83"))
+            _polar(angle-0.17,far,0.069),
+            _polar(angle+0.12,far*1.09,0.072),
+            _polar(angle+0.035,far*1.27,0.081),
+            Color("#73716a"))
         stats["chips"]+=1
 
 static func _steel(tool: SurfaceTool,surface: String,
