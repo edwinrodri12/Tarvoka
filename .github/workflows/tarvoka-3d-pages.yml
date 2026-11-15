@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/ui/BastionStudioAdapter.gd"
+      - "tests/test_bastion_studio_web_ui.gd"
       - "scripts/ui/BastionVisualRig3D.gd"
       - "scripts/ui/BastionDamage3D.gd"
       - "scripts/ui/UnitModels3D.gd"
@@ -73,6 +74,8 @@ jobs:
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
+          test -s hq-android-v15/tests/test_bastion_studio_web_ui.gd
+          cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
           test -s scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
@@ -243,6 +246,18 @@ jobs:
             exit 1
           fi
           test -d .godot/imported
+          # Actually instantiate the published homepage under GL compatibility.
+          # A successful static export alone cannot detect broken model pickers
+          # or a fallback vehicle displayed instead of V5 on Android.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_bastion_studio_web_ui.gd \
+            2>&1 | tee /tmp/bastion-studio-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/bastion-studio-smoke.log; then
+            echo "Bastion Web UI regression"; exit 1
+          fi
+          grep -F 'PASS BASTION V5 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
