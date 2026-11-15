@@ -11,6 +11,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
 static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false) -> Dictionary:
@@ -54,6 +55,25 @@ static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> D
         return {"valid": false, "state": state.duplicate(true)}
     var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state))
     return _apply(state, action)
+
+# Both passengers and vehicles remain under the same authoritative
+# rules used by the touchscreen. No portable cargo action in legacy games.
+static func embark(state: Dictionary, passenger_id: String, carrier_id: String) -> Dictionary:
+    if not _active(state) or not Opening.can_order(state) or not bool(state.get("economy",{}).get("modern",false)):
+        return {"valid":false,"state":state.duplicate(true)}
+    var action: Dictionary = Cargo.embark(state["units"],passenger_id,carrier_id,
+        int(state["faction"]),state["terrain"])
+    return _apply(state,action)
+
+static func disembark(state: Dictionary, carrier_id: String,
+        passenger_id: String, destination: Vector2i) -> Dictionary:
+    if not _active(state) or not Opening.can_order(state) or not bool(state.get("economy",{}).get("modern",false)):
+        return {"valid":false,"state":state.duplicate(true)}
+    if Visibility.enabled(state) and not Visibility.visible_cells(state,int(state["faction"])).has(destination):
+        return {"valid":false,"state":state.duplicate(true)}
+    var action: Dictionary = Cargo.disembark(state["units"],carrier_id,
+        passenger_id,destination,int(state["faction"]),state["terrain"])
+    return _apply(state,action)
 
 static func attack(state: Dictionary, attacker_id: String, defender_id: String) -> Dictionary:
     if not _active(state) or not Opening.can_order(state):
@@ -137,7 +157,7 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     var response := {"valid": true, "state": next}
     # Preserve public exchange facts for combat feedback and tactical hints.
     # The live battle state itself stores only persistent HP/ammo, not events.
-    for key in ["damage", "counter_damage", "counter_spent", "terrain_attack_bonus", "terrain_defense_cover", "flanked"]:
+    for key in ["damage", "counter_damage", "counter_spent", "terrain_attack_bonus", "terrain_defense_cover", "flanked", "carrier_id", "passenger_id", "cargo_count", "destination"]:
         if action.has(key):
             response[key] = action[key]
     if not str(action.get("consumed_unit_id", "")).is_empty():
