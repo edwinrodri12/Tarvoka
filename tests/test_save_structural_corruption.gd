@@ -62,6 +62,13 @@ func _initialize() -> void:
     var null_row: Dictionary = baseline.duplicate(true)
     null_row["terrain"][0] = null
     cases.append(null_row)
+    # Reject extra dimensions and unknown terrain cells, not only truncated rows.
+    var extra_row: Dictionary = baseline.duplicate(true)
+    extra_row["terrain"].append(extra_row["terrain"][0].duplicate(true))
+    cases.append(extra_row)
+    var unknown_tile: Dictionary = baseline.duplicate(true)
+    unknown_tile["terrain"][3][4] = "unknown_untrusted_tile"
+    cases.append(unknown_tile)
     var duplicate_unit: Dictionary = baseline.duplicate(true)
     duplicate_unit["units"].append(duplicate_unit["units"][0].duplicate(true))
     cases.append(duplicate_unit)
