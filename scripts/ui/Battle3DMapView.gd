@@ -4,6 +4,10 @@ class_name TarvokaBattle3DMapView
 # Modal, read-only 3D camera over the CURRENT battle. No touch event is ever
 # forwarded as a move/attack/purchase. Closing may re-center the 2D camera.
 signal focus_requested(cell: Vector2i)
+signal command_center_requested
+signal objectives_requested
+signal end_turn_requested
+signal resupply_requested
 
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -11,6 +15,7 @@ const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -48,6 +53,11 @@ var _confirm_order_button: Button
 var _cancel_order_button: Button
 var _move_here_button: Button
 var _choose_unit_button: Button
+var _legacy_header: PanelContainer
+var _legacy_footer: PanelContainer
+var immersive_hud: Control
+var _three_d_shortcuts: HBoxContainer
+var _immersive_mode := false
 
 func _ready() -> void:
     hide()
@@ -96,6 +106,7 @@ func _ready() -> void:
     camera.current = true
 
     var header := PanelContainer.new()
+    _legacy_header = header
     header.name = "ControlVisor3D"
     header.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
     header.offset_bottom = 62
@@ -122,6 +133,7 @@ func _ready() -> void:
         tools.add_child(action)
 
     var footer := PanelContainer.new()
+    _legacy_footer = footer
     footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
     footer.offset_top = -155
     add_child(footer)
@@ -180,6 +192,120 @@ func _ready() -> void:
     _confirm_order_button.hide()
     commands.add_child(_confirm_order_button)
 
+    # Reuse the ACTUAL V15 game HUD, not a second mockup. Its widgets bind
+    # directly to TouchBoard's state, real emblem, weather and fog-safe radar.
+    # Legacy footer/header remain intact for read-only standalone previews.
+    immersive_hud = ImmersiveHud.new()
+    immersive_hud.name = "HUD3DDeBatallaV16"
+    add_child(immersive_hud)
+    immersive_hud.connect("menu_requested",Callable(self,"_open_3d_command_center"))
+    immersive_hud.connect("objectives_requested",Callable(self,"_open_3d_objectives"))
+    immersive_hud.connect("cancel_order_requested",Callable(self,"_cancel_3d_order"))
+    immersive_hud.connect("end_turn_requested",Callable(self,"_end_turn_3d"))
+    immersive_hud.connect("resupply_requested",Callable(self,"_resupply_3d"))
+    immersive_hud.connect("zoom_requested",Callable(self,"_zoom_from_hud"))
+    immersive_hud.connect("center_requested",Callable(self,"_center_camera_on_own_units"))
+    # A fullscreen 3D view needs its own explicit return button.
+    immersive_hud.expand_button.hide()
+    var hud_top: HBoxContainer = immersive_hud.top_bar.get_child(0)
+    var back_to_map := Button.new()
+    back_to_map.name = "VolverAlMapaTactico"
+    back_to_map.text = "2D"
+    back_to_map.tooltip_text = "Volver al mapa táctico sin perder la batalla"
+    back_to_map.custom_minimum_size = Vector2(46,44)
+    back_to_map.pressed.connect(close_view)
+    hud_top.add_child(back_to_map)
+    # Small 3D-only camera controls, separate from on-map combat.
+    _three_d_shortcuts = HBoxContainer.new()
+    _three_d_shortcuts.name = "GirarYAlcances3D"
+    _three_d_shortcuts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _three_d_shortcuts.add_theme_constant_override("separation",5)
+    add_child(_three_d_shortcuts)
+    _three_d_shortcuts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    _three_d_shortcuts.offset_left = -115
+    _three_d_shortcuts.offset_right = -9
+    _three_d_shortcuts.offset_top = 67
+    _three_d_shortcuts.offset_bottom = 111
+    for descriptor in [
+        ["↻",_rotate_camera,"Girar el mapa 3D"],
+        ["RANGO",_toggle_ranges,"Mostrar u ocultar rangos legales"]
+    ]:
+        var shortcut := Button.new()
+        shortcut.text = str(descriptor[0])
+        shortcut.tooltip_text = str(descriptor[2])
+        shortcut.custom_minimum_size = Vector2(48,44)
+        shortcut.pressed.connect(descriptor[1])
+        _three_d_shortcuts.add_child(shortcut)
+    _three_d_shortcuts.hide()
+    resized.connect(_reflow_3d_hud)
+
+func _reflow_3d_hud() -> void:
+    if immersive_hud != null:
+        immersive_hud.call("reflow_for_size",size)
+    if _immersive_mode:
+        call_deferred("_sync_viewport_size")
+
+func _set_immersive_mode(enabled: bool) -> void:
+    _immersive_mode = enabled
+    if holder == null:
+        return
+    _legacy_header.visible = not enabled
+    _legacy_footer.visible = not enabled
+    holder.offset_top = 0 if enabled else 62
+    holder.offset_bottom = 0 if enabled else -157
+    if immersive_hud != null:
+        immersive_hud.visible = enabled
+        immersive_hud.expand_button.hide()
+        immersive_hud.call("reflow_for_size",size)
+    _three_d_shortcuts.visible = enabled
+    call_deferred("_sync_viewport_size")
+
+func _sync_immersive_hud() -> void:
+    if immersive_hud == null or not _immersive_mode or _live_board == null:
+        return
+    immersive_hud.call("refresh_from_board")
+
+func _zoom_from_hud(step: int) -> void:
+    if step > 0:
+        _zoom_in()
+    elif step < 0:
+        _zoom_out()
+
+func _center_camera_on_own_units() -> void:
+    if _scene == null:
+        return
+    var center: Vector2i = _focus_for_selected(
+        _current_state(),str(_live_board.get("selected_id")) if _live_board != null else "")
+    _look_at = Terrain.world_at(center)
+    _refresh_camera()
+
+func _open_3d_command_center() -> void:
+    close_view()
+    command_center_requested.emit()
+
+func _open_3d_objectives() -> void:
+    close_view()
+    objectives_requested.emit()
+
+func _end_turn_3d() -> void:
+    if not Orders.can_control(_live_board) or not _order_quote.is_empty():
+        return
+    end_turn_requested.emit()
+    if _live_board == null:
+        return
+    if int(_current_state().get("winner",-1)) != -1:
+        close_view()
+    else:
+        _refresh_from_board()
+
+func _resupply_3d() -> void:
+    if not Orders.can_control(_live_board) or not _order_quote.is_empty():
+        return
+    if not bool(_live_board.call("can_resupply_selected")):
+        return
+    resupply_requested.emit()
+    _refresh_from_board()
+
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
         return
@@ -232,6 +358,7 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
 
 func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     # Standalone and browser tests remain read-only.
+    _set_immersive_mode(false)
     _live_board = null
     _order_quote.clear()
     if _scene != null:
@@ -294,6 +421,14 @@ func open_from_board(board: Control) -> bool:
     if not open_from_state(state,str(board.get("selected_id"))):
         return false
     _live_board = board
+    # Fullscreen map-first mode is exclusive to a live game, never to a
+    # detached 3D studio preview (where execution must remain impossible).
+    _set_immersive_mode(true)
+    immersive_hud.call("attach_board",board)
+    immersive_hud.radar_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    immersive_hud.radar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    immersive_hud.radar_panel.tooltip_text = (
+        "Radar táctico con niebla protegida; arrastra en el mapa para mover cámara.")
     if bool(board.get("battery_saver")):
         for child in preview.get_children():
             if child is DirectionalLight3D:
@@ -317,6 +452,7 @@ func _update_order_ui() -> void:
     _confirm_order_button.visible = pending
     _move_here_button.hide()
     _choose_unit_button.hide()
+    _sync_immersive_hud()
     if not active:
         _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
         return
@@ -389,6 +525,17 @@ func tap_battle_cell(cell: Vector2i) -> bool:
     var selected_before: String = str(_live_board.get("selected_id"))
     var intent: Dictionary = Orders.legal_intent(_current_state(),selected_before,cell)
     var friends: Array[Dictionary] = Orders.visible_friends(_current_state(),cell)
+    # Repeated tap on the SAME still-legal target explicitly authorizes the
+    # existing confirmation pipeline. First tap remains a read-only preview.
+    # A different cell only prepares a NEW preview, never auto-commits.
+    var queued: Dictionary = _order_quote.get("order",{})
+    if not queued.is_empty() and not intent.is_empty() and \
+            queued.get("cell") == cell and \
+            str(queued.get("unit_id","")) == selected_before and \
+            str(queued.get("kind","")) == str(intent.get("kind","")) and \
+            str(queued.get("target_id","")) == str(intent.get("target_id","")):
+        _confirm_3d_order()
+        return true
     inspect_cell(cell)
     if not Orders.can_control(_live_board):
         _update_order_ui()
@@ -684,6 +831,7 @@ func _on_viewport_input(event: InputEvent) -> void:
 
 func close_view() -> void:
     _drop_3d_quote()
+    _set_immersive_mode(false)
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
     if _scene != null:
