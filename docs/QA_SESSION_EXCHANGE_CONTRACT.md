@@ -16,3 +16,8 @@ Evidence: file creation verified in GitHub commit b643d5c2. Godot execution, And
 
 ## CI específico (2026-11-15)
 Se añadió `.github/workflows/battle-session-exchange.yml` en esta rama para ejecutar la regresión con Godot 4.3 headless, `timeout` de 90 segundos, búsqueda de errores y marcador PASS obligatorio. Commit del workflow: `cb57760a9dec58bac07fcd69f10701eb1e7da3aa`. **Ejecución del workflow: NO EJECUTADO / sin resultados asociados al commit al consultar GitHub.** Esto no equivale a prueba física Android ni a verificación de IA/guardado. La PR sigue en borrador y no debe fusionarse antes de CI satisfactoria.
+
+## Regresión de persistencia tras intercambio (2026-11-15)
+Commit `f73c973d1de8ba6e0c669d5d9c690b7d4eb4a109`: la misma prueba ahora codifica y decodifica el estado después del ataque usando `SaveCodec`, compara HP, bandos y acciones consumidas, rechaza repetir el ataque y comprueba el cambio de turno. Además, guarda y restaura una victoria decisiva y confirma que ni ataques ni cambios de turno vuelvan a habilitarse.
+
+**Alcance:** prueba de serialización en memoria; NO demuestra escritura física `user://`, recuperación de respaldo, cierre/reapertura de Android ni rendimiento. **Godot 4.3: NO EJECUTADO** hasta obtener resultado CI del nuevo commit. **Android físico: NO EJECUTADO EN DISPOSITIVO**. **Regresiones IA y SaveStore: NO EJECUTADO**. No fusionar sin comprobar el nuevo SHA.
