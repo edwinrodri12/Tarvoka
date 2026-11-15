@@ -537,11 +537,6 @@ func _update_details() -> void:
                 " · PANELES/JUNTAS/PERNOS/ÓPTICA" if _apc_v5_preview
                 else "") + (" · TORRETA REFINADA · BALAS/EXPLOSIONES"
                 + " · DAÑO %d/4" % _apc_damage_stage)
-            # Old V3-only status is below for the historical comparison
-            # and must not overwrite V5 preview text.
-            if false:
-                status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
-                + " · TORRETA REFINADA · BALAS/EXPLOSIONES · DAÑO %d/4" % _apc_damage_stage)
             if _apc_tactical_lod:
                 status_label.text+=" · LOD TÁCTICO"
         elif model_root.get_meta("tarvoka_apc_armor_v2",false):
