@@ -101,6 +101,33 @@ func _initialize() -> void:
                 assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK)
         print("PASS cross-process missing_primary_read")
         quit(0)
+    elif phase == "resume_write":
+        # A recovered backup must be usable as a new durable primary save.
+        assert(not FileAccess.file_exists(PATH))
+        var report: Dictionary = Store.load_report(PATH)
+        assert(bool(report.get("recovered",false)))
+        var recovered: Dictionary = report.get("state",{})
+        assert(not recovered.is_empty())
+        var next: Dictionary = Session.end_turn(recovered)
+        assert(next.get("valid",false))
+        assert(int(next["state"]["faction"]) == 1)
+        assert(Store.save(next["state"],PATH))
+        print("PASS cross-process resume_write")
+        quit(0)
+    elif phase == "resume_read":
+        var report: Dictionary = Store.load_report(PATH)
+        assert(not bool(report.get("recovered",true)))
+        var state: Dictionary = report.get("state",{})
+        assert(not state.is_empty())
+        assert(int(state["faction"]) == 1)
+        assert(bool(state["units"][0]["acted"]))
+        assert(int(state["units"][1]["hp"]) < 10)
+        for suffix in ["", ".bak", ".tmp"]:
+            var path: String = PATH + suffix
+            if FileAccess.file_exists(path):
+                assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK)
+        print("PASS cross-process resume_read")
+        quit(0)
     elif phase == "backup_read":
         var report: Dictionary = Store.load_report(PATH)
         assert(bool(report.get("recovered",false)))
