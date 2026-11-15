@@ -860,7 +860,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "scout":
             _person(model,true)
         "apc":
-            _apc(model)
+            # The final P06 sculpt is a complete closed mesh. Never allocate
+            # the simplified prototype under it in mobile or Web Studio.
+            if not (finish_enabled and art_level >= 13):
+                _apc(model)
         "tank":
             _tank(model)
         "mlrs":
