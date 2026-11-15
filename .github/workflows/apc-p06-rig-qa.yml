@@ -1,0 +1,41 @@
+name: TARVOKA P06 Bastion native 3D rig QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionDamage3D.gd'
+      - 'scripts/ui/BastionVisualRig3D.gd'
+      - 'tests/test_bastion_visual_damage.gd'
+      - 'tests/test_bastion_visual_rig.gd'
+      - '.github/workflows/apc-p06-rig-qa.yml'
+  workflow_dispatch:
+
+jobs:
+  native-rig:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official Linux binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate Bastion damage and six-wheel rig in native Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          for entry in test_bastion_visual_damage test_bastion_visual_rig; do
+            timeout --signal=TERM --kill-after=5s 90s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${entry}.gd" 2>&1 | tee "/tmp/${entry}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${entry}.log"; then
+              echo "P06 visual regression: ${entry}"; exit 1
+            fi
+            grep -F 'PASS ' "/tmp/${entry}.log"
+          done
