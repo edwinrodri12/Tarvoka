@@ -23,6 +23,7 @@ const CabinV12 = preload("res://scripts/ui/G11CabChassisV12.gd")
 const TracksFactionV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
 const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
 const AftFinishV15 = preload("res://scripts/ui/G11AftPodFinishV15.gd")
+const FrontFinishV16 = preload("res://scripts/ui/G11FrontFrameV16.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -302,6 +303,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 V14 live hydraulic/service detail failed; retaining V13 sculpture")
     elif not AftFinishV15.apply(model,paint):
         push_warning("G11 V15 rear armor refinement failed; retaining V14 sculpture")
+    elif not FrontFinishV16.apply(model,paint):
+        push_warning("G11 V16 frame/roof refinement failed; retaining V15 sculpture")
     return true
 
 static func stage(model: Node3D) -> int:
@@ -322,4 +325,5 @@ static func apply_stage(model: Node3D, value: int) -> bool:
     AtmosphereV7.set_stage(model,s)
     CabinV12.set_stage(model,s)
     AftFinishV15.set_stage(model,s)
+    FrontFinishV16.set_stage(model,s)
     return true
