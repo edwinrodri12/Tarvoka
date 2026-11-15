@@ -9,6 +9,7 @@ const NavalBaseV1 = preload("res://scripts/ui/NavalBase3DV1.gd")
 const NavalDetailV2 = preload("res://scripts/ui/NavalBaseDetailV2.gd")
 const NavalBerthsV3 = preload("res://scripts/ui/NavalBaseBerthsV3.gd")
 const NavalMarineV4 = preload("res://scripts/ui/NavalMarineFinishV4.gd")
+const NavalYardV5 = preload("res://scripts/ui/NavalYardSignalsV5.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -56,6 +57,7 @@ var naval_controls: VBoxContainer
 var naval_detail_v2_toggle: CheckButton
 var naval_detail_v3_toggle: CheckButton
 var naval_detail_v4_toggle: CheckButton
+var naval_detail_v5_toggle: CheckButton
 var naval_level_picker: OptionButton
 var naval_damage_picker: OptionButton
 var naval_camera_picker: OptionButton
@@ -393,7 +395,7 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
-    building_picker.add_item("Base Naval · V4 · acabados marítimos 3D")
+    building_picker.add_item("Base Naval · V5 · astillero e iluminación")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -956,7 +958,7 @@ func _add_naval_controls() -> void:
     naval_controls.name="OpcionesBaseNavalV1"
     naval_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(naval_controls)
-    _title(naval_controls,"BASE NAVAL V4 · MATERIALES Y COSTA 3D",14)
+    _title(naval_controls,"BASE NAVAL V5 · SEÑALES Y LUCES 3D",14)
     _title(naval_controls,
         "Dársena en U, espigones, grúa, hangar marítimo, torre y servicios.",12)
     naval_detail_v2_toggle=CheckButton.new()
@@ -977,6 +979,12 @@ func _add_naval_controls() -> void:
     naval_detail_v4_toggle.button_pressed=true
     naval_detail_v4_toggle.toggled.connect(_toggle_naval_detail_v4)
     naval_controls.add_child(naval_detail_v4_toggle)
+    naval_detail_v5_toggle=CheckButton.new()
+    naval_detail_v5_toggle.name="EstructuraSenalesIluminacionNavalV5"
+    naval_detail_v5_toggle.text="V5 · escala, números de muelle y luces (comparar V4)"
+    naval_detail_v5_toggle.button_pressed=true
+    naval_detail_v5_toggle.toggled.connect(_toggle_naval_detail_v5)
+    naval_controls.add_child(naval_detail_v5_toggle)
     _title(naval_controls,"NIVEL ARQUITECTÓNICO",12)
     naval_level_picker=OptionButton.new()
     naval_level_picker.name="NivelBaseNavalV1"
@@ -1017,6 +1025,10 @@ func _toggle_naval_detail_v3(_enabled: bool) -> void:
         _display_naval_base()
 
 func _toggle_naval_detail_v4(_enabled: bool) -> void:
+    if _role=="naval_base":
+        _display_naval_base()
+
+func _toggle_naval_detail_v5(_enabled: bool) -> void:
     if _role=="naval_base":
         _display_naval_base()
 
@@ -1068,6 +1080,11 @@ func _display_naval_base() -> void:
                     naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
                 if not ok_v4:
                     push_error("Base Naval V4: no se pudieron aplicar acabados marítimos")
+                elif naval_detail_v5_toggle.button_pressed:
+                    var ok_v5: bool=NavalYardV5.apply(model_root,
+                        naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
+                    if not ok_v5:
+                        push_error("Base Naval V5: no se pudo completar señalización ni astillero")
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2035,12 +2052,13 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="naval_base" and model_root!=null:
         detail_label.text="Base Naval %s · Nivel %d · %d mallas reales" % [
-            "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
+            "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
+                "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
                 "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1")),
+                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))),
             int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
-        status_label.text="%s · %s · materiales marítimos, muelles y astillero 3D" % [
+        status_label.text="%s · %s · astillero, atraques y señales 3D" % [
             str(VisualStyle.FACTIONS[_faction]["name"]),
             str(NavalBaseV1.DAMAGE_STAGES[int(model_root.get_meta(
                 "visual_damage_stage",0))])]
