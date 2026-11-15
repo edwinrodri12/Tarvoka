@@ -44,6 +44,12 @@ func _run() -> void:
             "sculpted central glacis weld follows original nose")
         _check(_piece(model,"P06V11_LabioBlindajeParrilla")!=null,
             "front radiator grille remains framed")
+        var old_fender: Node3D=_piece(model,"SeisBordesGuardabarro")
+        _check(old_fender==null or not old_fender.visible,
+            "old rectangular V6 lips never show under new curved wheel guards")
+        var old_eye: Node3D=_piece(model,"ArgollaArrastre_1")
+        _check(old_eye==null or not old_eye.visible,
+            "old fake box-shaped tow eye hidden under hollow recovery ring")
         _check(_piece(model,"P06V11_CristalFaroFrontal_1")!=null,
             "front optical glass is 3D")
         for sign in [-1,1]:
@@ -114,8 +120,12 @@ func _run() -> void:
             "repaired armor and fenders reappear without recreating meshes")
         _check(Exterior.set_enabled(model,false),"compare V3")
         _check(not external.visible,"V3 comparison hides V11 overlay")
+        _check(old_fender==null or old_fender.visible,
+            "earlier V6 fender detail is available for visual comparison")
         _check(Exterior.set_enabled(model,true),"return to V11")
         _check(external.visible,"V11 overlay restored for inspection")
+        _check(old_fender==null or not old_fender.visible,
+            "return to V11 hides old boxy arch edges again")
         _check(Rig.pose(model,"attack",0.49),
             "machinegun animation still works after front remodel")
         _check(Rig.pose(model,"open_ramp",1.0),
