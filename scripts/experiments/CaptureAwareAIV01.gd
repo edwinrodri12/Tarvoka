@@ -25,7 +25,8 @@ static func step(state: Dictionary, tracking: Dictionary, settings: Dictionary =
     return AI.step(state)
 
 static func _escort_in_progress_capture(state: Dictionary, tracking: Dictionary,
-        settings: Dictionary, threat_aware: bool = false) -> Dictionary:
+        settings: Dictionary, threat_aware: bool = false,
+        urgent_only: bool = false) -> Dictionary:
     var none := {"valid":false}
     if not Capture.valid_settings(settings) or not state.has("economy"):
         return none
@@ -117,6 +118,8 @@ static func _escort_in_progress_capture(state: Dictionary, tracking: Dictionary,
                     if int(risk["immediate_damage"])*2 >= int(helper["hp"]):
                         continue
                 var would_finish_next: bool = int(effort["total"])+1 >= remaining
+                if urgent_only and not would_finish_next:
+                    continue
                 var score: int = 10000 + (20000 if would_finish_next else 0)
                 score += 1000 if str(site["kind"]) == "city" else 0
                 score -= int(cells[slot])*5
