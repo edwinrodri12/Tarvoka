@@ -36,6 +36,22 @@ acciones de red ni turnos simultáneos.
 posiciones, rotación, eliminación, victoria y compatibilidad de la
 detección de ganador con el motor clásico de dos facciones.
 
+`scripts/core/FactionVisibilityV1.gd` crea vistas de niebla independientes
+para listas de 2–8 facciones. Reutiliza la misma línea de visión que
+`Visibility.gd` para no introducir diferencias en la versión de dos
+jugadores. Su `observed_state` construye una lista explícita de campos
+públicos: solo incluye unidades propias o visibles, oculta terreno sin
+explorar, presupuestos y puntuaciones de rivales, y **nunca devuelve**
+`contacts`, `explored` privados ni datos de autorización. Una economía
+con el número de cuentas incoherente se omite por seguridad.
+
+`tests/test_eight_faction_fog_privacy_v1.gd` prueba ocho puntos de
+vista, recuento de exploración, ocultación de equipos lejanos,
+desconocimiento de créditos/relés y equivalencia exacta de visión de
+dos bandos con el motor actual. **No se ha conectado aún a partidas ni
+a clientes de red**: la persistencia multiusuario deberá definirse
+antes de activarlo.
+
 ## Plan de migración segura
 
 1. **Estado de partida versionado**: introducir un campo explícito de
@@ -68,6 +84,10 @@ detección de ganador con el motor clásico de dos facciones.
 
 ## Presupuesto gráfico y pruebas integradas
 
+- `tests/test_pathfinding_index_parity.gd`: 150 comparaciones contra
+  el buscador de movimiento anterior, con casillas bloqueadas, tres
+  dominios y tableros 10×8, 24×18 y 40×30. Los caminos conservan
+  las mismas reglas; las lecturas de CPU se deben repetir por ruido CI.
 - `tests/test_large_map_gameplay_stress.gd`: **40×30**, despliegues
   mixtos de **24 y 48 unidades**, dos bandos reales, IA, niebla,
   economía, relés, combustible/munición, guardado/carga y
