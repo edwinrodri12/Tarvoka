@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/AirbaseAndroidBenchV5.gd" id="1_bench"]
+
+[node name="TARVOKA_BaseAerea_V5_Android" type="Node3D"]
+script = ExtResource("1_bench")

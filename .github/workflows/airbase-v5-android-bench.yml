@@ -1,0 +1,142 @@
+name: TARVOKA Airbase V5 Android mixed-load benchmark APK
+
+on:
+  push:
+    branches:
+      - feat/airbase-v5-android-mixed-load-20261115
+    paths:
+      - "scripts/ui/AirbaseAndroidBenchV5.gd"
+      - "tests/test_airbase_v5_android_mix.gd"
+      - "scenes/AirbaseAndroidBenchV5.tscn"
+      - ".github/workflows/airbase-v5-android-bench.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-export:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy only the approved HQ faction PNGs from Android main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-android
+          persist-credentials: false
+
+      - name: Supply approved faction textures without modifying source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          test -s source-android/assets/buildings/hq_v15/hq_neutral.png
+          cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf source-android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android platform SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          test -x "${ANDROID_HOME}/build-tools/34.0.0/apksigner"
+
+      - name: Install matching native Godot 4.3 and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/templates.tpz
+          mkdir -p /tmp/export-templates
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/export-templates/templates/android_debug.apk "$T/"
+          cp /tmp/export-templates/templates/android_release.apk "$T/"
+          printf '4.3.stable\n' > "$T/version.txt"
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+
+      - name: Import and check native Godot scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --editor --path . --import --quit 2>&1 | tee /tmp/airbase-v5-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/airbase-v5-import.log; then exit 1; fi
+
+      - name: Execute mixed-load scene smoke test on OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 170s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_airbase_v5_android_mix.gd 2>&1 | tee /tmp/airbase-v5-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/airbase-v5-test.log; then exit 1; fi
+          grep -q "PASS AIRBASE V5 MIXED ANDROID HARNESS" /tmp/airbase-v5-test.log
+
+      - name: Prepare independent debug APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scenes/AirbaseAndroidBenchV5.tscn
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/AirbaseAndroidBenchV5.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/AirbaseAndroidBenchV5.tscn"' project.godot
+          sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.airbasebench"|' export_presets.cfg
+          sed -i 's|package/name="TARVOKA"|package/name="TARVOKA Airbase V5"|' export_presets.cfg
+          grep -q 'com.edwinrodri12.tarvoka.airbasebench' export_presets.cfg
+          umask 077
+          keytool -genkeypair -keystore /tmp/airbase-v5-debug.keystore \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1000 \
+            -storepass android -keypass android \
+            -dname "CN=Airbase Android V5 Debug,O=TARVOKA Development,C=US" >/dev/null 2>&1
+
+      - name: Export native Android ARM64 benchmark APK
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/airbase-v5-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-debug Android build/TARVOKA-Airbase-V5-Android-arm64.apk
+          test -s build/TARVOKA-Airbase-V5-Android-arm64.apk
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose \
+            build/TARVOKA-Airbase-V5-Android-arm64.apk
+          unzip -Z1 build/TARVOKA-Airbase-V5-Android-arm64.apk | \
+            grep -Eq '^lib/arm64-v8a/[^/]+\.so$'
+          sha256sum build/TARVOKA-Airbase-V5-Android-arm64.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Airbase-V5-Android-Mixed-Load-arm64
+          path: build/TARVOKA-Airbase-V5-Android-arm64.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Remove disposable APK signing key
+        if: always()
+        shell: bash
+        run: rm -f /tmp/airbase-v5-debug.keystore
