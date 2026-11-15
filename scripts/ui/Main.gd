@@ -231,7 +231,13 @@ func _bind_touch_feedback() -> void:
             sidebar_alerts_button,compact_alerts_button,expanded_alerts_button,
             sidebar_next_unit,sidebar_attention_unit,compact_next_unit,compact_attention_unit,
             sidebar_threat_button,compact_threat_button,expanded_threat_button,
-            sidebar_compare_button,compact_compare_button,expanded_compare_button]:
+            sidebar_compare_button,compact_compare_button,expanded_compare_button,
+            immersive_battle_hud.menu_button,
+            immersive_battle_hud.objective_button,
+            immersive_battle_hud.expand_button,
+            immersive_battle_hud.end_turn_button,
+            immersive_battle_hud.order_cancel,
+            immersive_battle_hud.supply_button]:
         var button: Button = control
         if button == null:
             continue
