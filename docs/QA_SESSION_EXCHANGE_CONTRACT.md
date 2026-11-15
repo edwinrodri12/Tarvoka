@@ -27,3 +27,11 @@ Commit `f73c973d1de8ba6e0c669d5d9c690b7d4eb4a109`: la misma prueba ahora codific
 Commit `4fbc0613bc25105dcdc3d1f3075d6b1c20e0ce83`: la regresión ejecuta `SaveStore.save/load_report` sobre `user://tarvoka_session_exchange_contract_test.json`, confirma lectura del primer guardado, guarda una victoria posterior para crear `.bak`, corrompe deliberadamente solo el archivo de prueba principal y exige recuperar el estado anterior con `recovered=true`. Comprueba que el ataque ya consumido sigue rechazado y elimina los tres archivos temporales de prueba al terminar. **No usa ni borra la partida real** `tarvoka_battle_v1.json`.
 
 **Estado al crear este commit:** implementación registrada; ejecución del nuevo SHA en Godot 4.3/CI **PENDIENTE**. Esta prueba verifica disco del entorno CI, **NO EJECUTADO EN DISPOSITIVO ANDROID**; tampoco demuestra supervivencia al cierre/reapertura del proceso móvil. Regresiones de IA y victoria global pendientes de verificar en el mismo SHA. No fusionar sin CI verde y revisión de fallos externos.
+
+## Corrección CI de recuperación (2026-11-15)
+
+La ejecución [43697584172](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697584172) produjo el marcador PASS y verificó recuperación del respaldo, pero el job falló porque el fixture `{invalid json` emitía `ERROR: Parse JSON failed` en Godot. El gate CI rechaza correctamente cualquier línea `ERROR:`. Commit `0de919373d33cfa9114c7a0997579350b401e035`: reemplaza ese fixture por JSON **sintácticamente válido pero incompatible con el esquema** (`version=999`), manteniendo la prueba de rechazo de principal inválido y recuperación de `.bak` sin ruido de parser. No se cambió SaveStore, SaveCodec ni el formato de partidas.
+
+La ejecución general [43697584025](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697584025) falló por una dependencia artística distinta: `BastionStudioAdapter.gd` no puede resolver `CombinedArtStudioWeb.gd` durante importación HQ V15. Este fallo no es evidencia de una regresión de SaveStore. Pendiente verificar CI de este nuevo commit y resolver el problema de arte en la rama responsable, sin alterar componentes paralelos.
+
+Android físico: **NO EJECUTADO EN DISPOSITIVO**. La recuperación en proceso reiniciado y las regresiones IA/victoria completas siguen pendientes.
