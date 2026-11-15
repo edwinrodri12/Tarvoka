@@ -1,0 +1,78 @@
+name: TARVOKA Android V19 winter biome integration QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/WinterBattleBiome.gd"
+      - "scripts/ui/WorldArt.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/SkirmishSetup.gd"
+      - "scripts/ui/VisualStyle.gd"
+      - "scripts/ui/BattleMinimap.gd"
+      - "scripts/ui/BattlefieldPreview.gd"
+      - "scripts/core/SaveCodec.gd"
+      - "tests/test_android_winter_biome_v19.gd"
+      - ".github/workflows/android-winter-biome-v19.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  winter-real-game:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load native Godot 4.3 and import Android game
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fsSL --retry 3 "$base/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/tarvoka-godot.zip
+          unzip -q /tmp/tarvoka-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 110s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --editor --path . --import --quit 2>&1 | tee /tmp/winter-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/winter-import.log; then
+            echo 'Winter battle import failed'; exit 1
+          fi
+      - name: Validate winter battle UI, climate, save, fog and 3 sizes headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --path . --script res://tests/test_android_winter_biome_v19.gd \
+            2>&1 | tee /tmp/winter-headless.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:' /tmp/winter-headless.log; then
+            echo 'V19 Android battle regression'; exit 1
+          fi
+          grep -q 'PASS TARVOKA_ANDROID_WINTER_V19:' /tmp/winter-headless.log
+      - name: Render actual isometric and classic snow battles under OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_android_winter_biome_v19.gd \
+            2>&1 | tee /tmp/winter-gpu.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:' /tmp/winter-gpu.log; then
+            echo 'V19 GPU art regression'; exit 1
+          fi
+          grep -q 'PASS TARVOKA_ANDROID_WINTER_V19:' /tmp/winter-gpu.log
+          test -s artifacts/tarvoka_android_winter_v19_iso.png
+          test -s artifacts/tarvoka_android_winter_v19_classic.png
+      - name: Archive actual battle screens and regression traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-V19-Android-Winter-Live-Battle-Screenshots
+          path: |
+            artifacts/tarvoka_android_winter_v19_*.png
+            /tmp/winter-gpu.log
+            /tmp/winter-headless.log
+          if-no-files-found: warn
+          retention-days: 30
