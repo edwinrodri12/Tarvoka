@@ -57,7 +57,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/airbase1-import.log; then
             echo "Airbase V1 architectural lighting import failed" >&2; exit 1
           fi
-      - name: Native GPU verify fallen antennas, broken roof, smoke, flame dynamics and impact VFX
+      - name: Native GPU verify native airbase, 8 factions, damage, weather and editor controls
         shell: bash
         run: |
           set -euo pipefail
@@ -69,7 +69,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/airbase1-gpu.log; then
             echo "Airbase V1 architecture regression" >&2; exit 1
           fi
-          grep -q "PASS Airbase V1:" /tmp/airbase1-gpu.log
+          grep -q "PASS AIRBASE V1:" /tmp/airbase1-gpu.log
           for image in \
             tarvoka_airbase_v1_level1_day.png \
             tarvoka_airbase_v1_level3_day.png \
