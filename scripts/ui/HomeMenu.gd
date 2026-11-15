@@ -12,6 +12,7 @@ signal credits_requested
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Backdrop = preload("res://scripts/ui/CinematicHomeBackdrop.gd")
+const ExitConfirmation = preload("res://scripts/ui/ExitConfirmationScreen.gd")
 
 # Compatibility surface for the other menu layouts and existing UI checks.
 var primary_buttons: Dictionary = {}
@@ -28,7 +29,7 @@ var _root: VBoxContainer
 var _navigation: VBoxContainer
 var _header_title: Label
 var _continue_button: Button
-var _exit_dialog: ConfirmationDialog
+var _exit_confirmation: Control
 var _all_menu_buttons: Array[Button] = []
 
 const OFFICIAL_ICON_HD := "res://assets/branding/tarvoka_emblem_fictional_planet_512.webp"
@@ -235,12 +236,11 @@ func _ready() -> void:
         faction_row.add_child(crest)
         showcase_emblems.append(crest)
 
-    _exit_dialog = ConfirmationDialog.new()
-    _exit_dialog.title = "Salir de TARVOKA"
-    _exit_dialog.dialog_text = "¿Quieres cerrar el juego? Tus partidas guardadas permanecerán disponibles."
-    _exit_dialog.ok_button_text = "Salir"
-    _exit_dialog.confirmed.connect(func(): get_tree().quit())
-    add_child(_exit_dialog)
+    _exit_confirmation = ExitConfirmation.new()
+    _exit_confirmation.name = "ConfirmacionSalidaTactil"
+    add_child(_exit_confirmation)
+    _exit_confirmation.cancel_requested.connect(_cancel_exit)
+    _exit_confirmation.exit_confirmed.connect(_confirm_exit)
     get_viewport().size_changed.connect(_reflow)
     call_deferred("_reflow")
     hide()
@@ -289,7 +289,15 @@ func _reflow() -> void:
     home_scroll.custom_minimum_size.x = 280 if vertical else 310
 
 func _ask_exit() -> void:
-    _exit_dialog.popup_centered()
+    _exit_confirmation.open_for()
+
+func _cancel_exit() -> void:
+    _exit_confirmation.hide()
+    primary_buttons["Salir"].grab_focus()
+
+func _confirm_exit() -> void:
+    # The only quitting path is a deliberate second tap on the red action.
+    get_tree().quit()
 
 func _open_credits() -> void:
     credits_requested.emit()
