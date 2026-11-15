@@ -35,5 +35,6 @@ func _run() -> void:
     assert(turret.visible and plate.visible)
     assert(Damage.current_stage(model) == 0)
     model.queue_free()
+    await process_frame
     print("PASS Bastion P06: five reversible stages, faction paint, ballistic/explosive effects")
     quit(0)
