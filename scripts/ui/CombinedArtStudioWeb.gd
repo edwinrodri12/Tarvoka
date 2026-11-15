@@ -13,6 +13,7 @@ const AirbaseStressV4 = preload("res://scripts/ui/AirbaseStressV4.gd")
 const AirbaseExteriorV6 = preload("res://scripts/ui/AirbaseExteriorV6.gd")
 const AirbaseMaterialsV7 = preload("res://scripts/ui/AirbaseMaterialsV7.gd")
 const AirbaseFinishV8 = preload("res://scripts/ui/AirbaseFinishV8.gd")
+const AirbaseDetailV9 = preload("res://scripts/ui/AirbaseDetailV9.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -44,6 +45,9 @@ var airbase_controls: VBoxContainer
 var airbase_exterior_v6_toggle: CheckButton
 var airbase_material_v7_toggle: CheckButton
 var airbase_finish_v8_toggle: CheckButton
+var airbase_detail_v9_toggle: CheckButton
+var airbase_v9_view_picker: OptionButton
+var _airbase_v9_view := 0
 var airbase_level_picker: OptionButton
 var airbase_damage_picker: OptionButton
 var airbase_weather_picker: OptionButton
@@ -355,7 +359,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V8 · iluminación y cristales")
+    building_picker.add_item("Base Aérea · V9 · cabina y vistas 360°")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -632,6 +636,14 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_finish_v8_toggle)
     _title(airbase_controls,
         "V8 · reflejos del control aéreo y luz agrupada en hangar sin focos extra.",12)
+    airbase_detail_v9_toggle = CheckButton.new()
+    airbase_detail_v9_toggle.name = "CabinaPanoramicaRematesBaseAereaV9"
+    airbase_detail_v9_toggle.text = "V9 · cristal fino, cabina real y remates (comparar V8)"
+    airbase_detail_v9_toggle.button_pressed = true
+    airbase_detail_v9_toggle.toggled.connect(_toggle_airbase_detail_v9)
+    airbase_controls.add_child(airbase_detail_v9_toggle)
+    _title(airbase_controls,
+        "V9 · volumen de vidrio vaciado, interior visible y remates unidos al techo.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -686,6 +698,18 @@ func _add_building_mode() -> void:
         "Inspeccionar interior del hangar",_toggle_airbase_camera)
     airbase_camera_button.name = "InspeccionarInteriorHangarV2"
     airbase_camera_button.custom_minimum_size.y = 44
+    _title(airbase_controls,"V9 · INSPECCIÓN DESDE TODOS LOS ÁNGULOS",12)
+    airbase_v9_view_picker = OptionButton.new()
+    airbase_v9_view_picker.name = "VistasMultiplesBaseAereaV9"
+    airbase_v9_view_picker.custom_minimum_size.y = 46
+    for angle_name in [
+            "Frontal isométrica","Lateral izquierdo","Posterior",
+            "Lateral derecho","Cubierta superior","Torre de control",
+            "Interior hangar","Frontal bajo"]:
+        airbase_v9_view_picker.add_item(angle_name)
+    airbase_v9_view_picker.select(0)
+    airbase_v9_view_picker.item_selected.connect(_change_airbase_v9_view)
+    airbase_controls.add_child(airbase_v9_view_picker)
     _title(airbase_controls,"V3 · IMPACTOS Y DAÑOS ATMOSFÉRICOS",13)
     var hits := HBoxContainer.new()
     hits.name = "ImpactosBalasExplosivosBaseAereaV3"
@@ -856,28 +880,44 @@ func _refresh_airbase_door_ui() -> void:
 func _toggle_airbase_camera() -> void:
     if _role != "airbase" or _airbase_is_stress():
         return
-    _airbase_camera_interior = not _airbase_camera_interior
-    if _airbase_camera_interior:
-        var rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
-        if rig != null and rig.is_operational():
-            rig.set_open_fraction(1.0)
-            _airbase_saved_gate_fraction = 1.0
-            _refresh_airbase_door_ui()
-    _apply_airbase_camera()
+    # Keep legacy button fully functional with the new eight-angle selector.
+    _change_airbase_v9_view(0 if _airbase_camera_interior else 6)
+    if airbase_v9_view_picker!=null:
+        airbase_v9_view_picker.select(_airbase_v9_view)
 
 func _apply_airbase_camera() -> void:
     if camera == null or _role != "airbase":
         return
-    if _airbase_camera_interior:
-        camera.position = Vector3(-8.6,5.0,-13.1)
-        camera.look_at(Vector3(-1.95,1.33,0.04),Vector3.UP)
+    var target:=Vector3(0,2.25,0)
+    if airbase_detail_v9_toggle!=null and airbase_detail_v9_toggle.button_pressed:
+        match _airbase_v9_view:
+            1:
+                camera.position=Vector3(-21,9,1)
+            2:
+                camera.position=Vector3(0,12,22)
+            3:
+                camera.position=Vector3(21,9,1)
+            4:
+                camera.position=Vector3(-7,27,7)
+            5:
+                camera.position=Vector3(11,9,-12)
+                target=Vector3(4.17,4.8,-2.17)
+            6:
+                camera.position=Vector3(-8.6,5,-13.1)
+                target=Vector3(-1.95,1.33,0.04)
+            7:
+                camera.position=Vector3(-1.95,5.0,-17)
+            _:
+                camera.position=Vector3(-17.5,16.0,-19.0)
+    elif _airbase_camera_interior:
+        camera.position=Vector3(-8.6,5,-13.1)
+        target=Vector3(-1.95,1.33,0.04)
     else:
-        camera.position = Vector3(-17.5,16.0,-19.0)
-        camera.look_at(Vector3(0,2.25,0),Vector3.UP)
+        camera.position=Vector3(-17.5,16.0,-19.0)
+    camera.look_at(target,Vector3.UP)
     if airbase_camera_button != null:
         airbase_camera_button.text = (
-            "Volver a vista exterior"
-            if _airbase_camera_interior
+            "Volver a vista exterior" if _airbase_camera_interior
             else "Inspeccionar interior del hangar")
     _update_camera()
 
@@ -986,6 +1026,23 @@ func _toggle_airbase_finish_v8(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
 
+func _toggle_airbase_detail_v9(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
+func _change_airbase_v9_view(index: int) -> void:
+    if _role != "airbase" or _airbase_is_stress():
+        return
+    _airbase_v9_view=clampi(index,0,7)
+    _airbase_camera_interior=_airbase_v9_view==6
+    if _airbase_camera_interior:
+        var rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+        if rig!=null and rig.is_operational():
+            rig.set_open_fraction(1.0)
+            _airbase_saved_gate_fraction=1.0
+            _refresh_airbase_door_ui()
+    _apply_airbase_camera()
+
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
         _display_airbase()
@@ -1029,6 +1086,9 @@ func _display_airbase() -> void:
     if airbase_finish_v8_toggle.button_pressed:
         if not AirbaseFinishV8.apply(model_root,tier,_faction,stage):
             push_error("Base Aerea V8: cristales y luz no instalados")
+    if airbase_detail_v9_toggle.button_pressed:
+        if not AirbaseDetailV9.apply(model_root,tier,_faction,stage):
+            push_error("Base Aerea V9: cristal panoramico y cubierta no instalados")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
@@ -1068,6 +1128,9 @@ func _display_airbase() -> void:
         _yaw = 32.0
         _zoom = 1.0
         _airbase_camera_interior = false
+        _airbase_v9_view = 0
+        if airbase_v9_view_picker!=null:
+            airbase_v9_view_picker.select(0)
     model_root.rotation_degrees.y = _yaw
     _apply_airbase_camera()
     _apply_hq_lighting(_hq_light_preset)
