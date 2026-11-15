@@ -10,6 +10,7 @@ const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const DamageV6 = preload("res://scripts/ui/G11DamageSculptV6.gd")
+const AtmosV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -52,6 +53,18 @@ func _run() -> void:
             "full sculpt V5 running gear and horizontal bearing installed")
         _check(bool(model.get_meta(DamageV6.FLAG,false)),
             "native V6 physically deformed progressive damage model installed")
+        _check(bool(model.get_meta(AtmosV7.FLAG,false)),
+            "V7 sculpted smoky and burning damaged model installed")
+        _check(int(model.get_meta("tarvoka_g11_v7_smoke",0)) == 10,
+            "ten true volumetric-shaped smoke meshes across damage stages")
+        _check(int(model.get_meta("tarvoka_g11_v7_flames",0)) == 8,
+            "eight true tapered fire meshes across critical and wreck states")
+        var wildfire := _find(model,"G11V7_Flama_critico_1") as MeshInstance3D
+        _check(wildfire != null and wildfire.mesh is ArrayMesh,
+            "fire is authored curved triangle geometry, not a primitive sphere")
+        var smoke_test := _find(model,"G11V7_Penacho_restos_1") as MeshInstance3D
+        _check(smoke_test != null and smoke_test.mesh is ArrayMesh,
+            "wreck smoke is modeled with non-spherical actual mesh geometry")
         _check(int(model.get_meta("tarvoka_g11_v6_craters",0)) == 3,
             "three independent geometric bullet impact craters")
         var folded: MeshInstance3D = _find(model,
@@ -214,6 +227,22 @@ func _run() -> void:
             _check(Art.stage(model) == level,"persist damage stage")
             _check(_find(model,"G11_ElevacionLanzador").visible == (level < 4),
                 "destruction toggles launcher")
+            _check(_find(model,"G11_GiroPlataforma").visible == (level < 4),
+                "intact platform no longer obscures damaged turret crater")
+            _check(_find(model,"G11V2_ProteccionLateral_-1").visible == (level < 3),
+                "intact left armor hides when its internal service cavity opens")
+            _check(_find(model,"G11_PanelLateral_1_1").visible == (level < 2),
+                "original right paint panels do not intersect folded shield")
+            _check(_find(model,"G11_PanelLateral_-1_1").visible == (level < 3),
+                "original left panels do not block torn edge")
+            _check(not _find(model,"G11_HumoNegro").visible,
+                "obsolete sphere smoke is hidden even during fire")
+            _check(not _find(model,"G11_FuegoMotor").visible,
+                "obsolete sphere flame is hidden during critical damage")
+            _check(_find(model,"G11V7_Penacho_medio_0").is_visible_in_tree()
+                == (level >= 2),"smoke emerges from true damaged engine at medium level")
+            _check(_find(model,"G11V7_Flama_critico_0").is_visible_in_tree()
+                == (level >= 3),"modeled fire starts only when critically damaged")
             _check(_find(model,"G11V2_ProteccionLateral_1").visible == (level < 2),
                 "buckled armor replaces pristine plate at moderate damage")
             _check(_find(model,"G11_Antena_-1").visible == (level < 3),
@@ -231,6 +260,12 @@ func _run() -> void:
         _check(Art.apply_stage(model,0),"complete repair")
         _check(_find(model,"G11V2_ProteccionLateral_1").visible,
             "factory side armor restored on full repair")
+        _check(_find(model,"G11V2_ProteccionLateral_-1").visible,
+            "factory left armored plating restored after critical damage")
+        _check(_find(model,"G11_GiroPlataforma").visible,
+            "functional launcher turntable restored after wreck repair")
+        _check(_find(model,"G11_PanelLateral_1_1").visible,
+            "painted lateral components restored after full repair")
         _check(_find(model,"G11_Antena_-1").visible,
             "broken antenna restored on repair")
         _check(_find(model,"G11V5_TapaEscotilla").visible,
@@ -255,5 +290,5 @@ func _run() -> void:
         push_error("G11 3D QA FAILED (%d checks)" % failed)
         quit(1)
         return
-    print("PASS G11 3D: V6 sculpted reversible damage, buckled armor, exposed engine, fractured turret, impact variants; V5 wheels and 8 factions")
+    print("PASS G11 3D: V7 true smoke and fire meshes, non-overlapping folded and torn armor, reversible turret and repair, V6 damage and 8 factions")
     quit(0)
