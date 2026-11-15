@@ -54,7 +54,7 @@ func _run() -> void:
     # executed until the original pressed signal runs through Main.
     main._set_compact_hud(true)
     main._continue_from_home()
-    var button: Button = main.compact_options_button
+    var button: Button = main.immersive_battle_hud.menu_button
     assert(button.visible and not button.disabled)
     assert(button.self_modulate == Color.WHITE)
     button.button_down.emit()
