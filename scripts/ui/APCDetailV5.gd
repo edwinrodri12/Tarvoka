@@ -176,3 +176,18 @@ static func apply(model: Node3D,color: Color) -> bool:
     model.set_meta("tarvoka_apc_v5_bolt_count",bolt_count)
     model.set_meta("tarvoka_apc_v5_visual_meshes",7)
     return true
+
+# Reversible V3/V5 comparison in the actual Godot editor, web and Android.
+# No model rebuild, no animation reset, no new textures or combat edits.
+static func set_enabled(model: Node3D,enabled: bool) -> bool:
+    if model==null or not bool(model.get_meta(FLAG,false)):
+        return false
+    var exterior: Node3D=model.find_child(ROOT,true,false) as Node3D
+    var sensors: Node3D=model.find_child(
+        "P06V5_SensoresEnTorreta",true,false) as Node3D
+    if exterior==null or sensors==null:
+        return false
+    exterior.visible=enabled
+    sensors.visible=enabled
+    model.set_meta("tarvoka_apc_v5_visible",enabled)
+    return true
