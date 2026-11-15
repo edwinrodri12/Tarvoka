@@ -7,6 +7,7 @@ const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 
 func _initialize() -> void:
     var state: Dictionary = Session.start([
@@ -106,5 +107,28 @@ func _initialize() -> void:
     assert(not Session.embark(occupied,"IFV","AP")["valid"])
     assert(not Session.embark(occupied,"AP","IFV")["valid"])
 
+    # Max army cap counts soldiers INSIDE the APC. An otherwise legal
+    # factory purchase cannot raise the total above 256 or reuse a stowed ID.
+    var saturated: Dictionary = loaded.duplicate(true)
+    for n in range(253):
+        var gone: Dictionary = Roles.make_unit("DEAD%d" % n,0,
+            Vector2i(0,0),"line")
+        gone["hp"] = 0
+        saturated["units"].append(gone)
+    assert(saturated["units"].size() == 255)
+    assert(saturated["units"][0]["cargo"].size() == 1)
+    assert(not Codec.encode(saturated).is_empty()) # 255 deployed + 1 held.
+    assert(not Economy.can_purchase(saturated,Vector2i(0,1),"apc"))
+    assert(not Session.purchase(saturated,Vector2i(0,1),"apc")["valid"])
+    var over_cap: Dictionary = saturated.duplicate(true)
+    over_cap["units"].append(Roles.make_unit("OVER",0,Vector2i(0,0),"line"))
+    over_cap["units"].back()["hp"] = 0
+    assert(Codec.encode(over_cap).is_empty())
+    saturated["units"].pop_back()
+    assert(Economy.can_purchase(saturated,Vector2i(0,1),"apc"))
+    var last_slot: Dictionary = Session.purchase(saturated,Vector2i(0,1),"apc")
+    assert(last_slot["valid"] and last_slot["state"]["units"].size() == 255)
+    assert(not Codec.encode(last_slot["state"]).is_empty())
+    attacks += 1
     print("PASS APC transport save security: %d forged cargo manifests rejected; old v1, 24x18/40x30 fog, domain and identity guard" % attacks)
     quit(0)
