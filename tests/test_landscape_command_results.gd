@@ -100,6 +100,37 @@ func _run() -> void:
     menu.command_confirm_exit.hide()
     assert(main.board.state == state_before)
 
+    # Radar V12 reads the authorized, fog-safe view model and keeps the same
+    # tactical actions. Compact phone navigation never commits board orders.
+    main._open_objectives_radar()
+    var radar: Control = main.objectives_panel
+    assert(radar.visible and not menu.visible)
+    assert(radar.tabs.get_tab_count() == 3)
+    assert(radar.metric_labels.size() == 3)
+    assert(radar.mission_label.text == str(radar._data.get("objective","")))
+    assert(radar.metric_labels["cities"].text.contains(
+        str(radar._data.get("owned_cities",0))))
+    assert(radar.metric_labels["bases"].text.contains(
+        str(radar._data.get("owned_bases",0))))
+    assert(radar.metric_labels["alerts"].text.contains(
+        str(radar._priorities.get("total",0))))
+    radar.reflow_for_size(Vector2(915,412))
+    assert(radar.radar_compact)
+    assert(radar.close_button.custom_minimum_size.y >= 44)
+    assert(not radar.summary_label.visible)
+    radar.reflow_for_size(Vector2(780,360))
+    assert(radar.radar_compact)
+    assert(radar.close_button.custom_minimum_size.y >= 44)
+    radar.reflow_for_size(Vector2(1600,900))
+    assert(not radar.radar_compact)
+    assert(radar.summary_label.visible)
+    radar.open_alerts_with_state(state_before,0,false)
+    assert(radar.tabs.current_tab == 2)
+    assert(main.board.state == state_before)
+    radar.close_requested.emit()
+    assert(not radar.visible)
+    assert(main.board.state == state_before)
+
     var terminal: Dictionary = state_before.duplicate(true)
     terminal["winner"] = 0
     assert(bool(ResultsData.report(terminal).get("valid",false)))
