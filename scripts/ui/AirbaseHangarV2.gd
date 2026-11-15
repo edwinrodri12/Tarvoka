@@ -26,12 +26,17 @@ static func apply(model: Node3D, level: int, faction: int,
         return false
     if not model.get_meta("tarvoka_airbase_v1",false):
         return false
-    if model.find_child(STAGE_NAME,true,false) != null:
+    if model.get_meta("tarvoka_airbase_v2",false) or \
+            model.find_child(STAGE_NAME,true,false) != null:
         return false
     var hangar: Node3D = model.find_child("HangarPrincipalV1",true,false) as Node3D
     if hangar == null:
         # Stage 4 contains real V1 ruins and no intact V2 construction.
-        return damage_stage == 4
+        # Mark this as processed to make accidental double-layering fail.
+        if damage_stage != 4:
+            return false
+        model.set_meta("tarvoka_airbase_v2",true)
+        return true
     var layer := Node3D.new()
     layer.name = STAGE_NAME
     hangar.add_child(layer)
