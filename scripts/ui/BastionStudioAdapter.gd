@@ -10,6 +10,8 @@ const P06Details = preload("res://scripts/ui/APCDetailV5.gd")
 const P06V6 = preload("res://scripts/ui/APCFinishV6.gd")
 const P06Burst = preload("res://scripts/ui/APCMachineGunV7.gd")
 const P06Wreck = preload("res://scripts/ui/APCDamageV7.gd")
+const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
+const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const P06Stages := [
@@ -64,7 +66,7 @@ func _install_p06_controls() -> void:
     p06_hint = _title(p06_controls,
         "V7: seis fogonazos individuales y casquillos expulsados. "
         + "Daños progresivos con placas dobladas, rueda afectada y torreta "
-        + "desplazada al destruirse. Giro con un dedo y zoom con dos.",12)
+        + "desplazada al destruirse. Ráfaga V8 con sonido original sincronizado.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -170,7 +172,8 @@ func _display_role(role: String) -> void:
             P06Details.FLAG,false)) and bool(model_root.get_meta(
             P06V6.FLAG,false)) and bool(model_root.get_meta(
             P06Burst.FLAG,false)) and bool(model_root.get_meta(
-            P06Wreck.FLAG,false))
+            P06Wreck.FLAG,false)) and bool(model_root.get_meta(
+            P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
             P06V6.set_enabled(model_root,_p06_show_v5)
@@ -281,10 +284,13 @@ func _play(kind: String) -> void:
     if _stage_p06() >= 4 and kind not in ["hit_bullet","hit_explosive"]:
         status_label.text = "Bastión destruido · reparar antes de mover o disparar"
         return
+    P06Audio.stop(model_root)
     _animation = kind
     _animation_time = 0.0
     P06Visual.pose(model_root,kind,0.0,42.0)
     P06Finish.animate_impact(model_root,kind,0.0)
+    if kind=="attack":
+        P06Audio.play(model_root)
 
 func _stop_animation() -> void:
     if _role == "mlrs":
@@ -296,6 +302,7 @@ func _stop_animation() -> void:
     _animation = ""
     _animation_time = 0.0
     if _studio_p06():
+        P06Audio.stop(model_root)
         P06Visual.restore(model_root)
         P06Finish.animate_impact(model_root,"",1.0)
         _sync_p06_controls()
