@@ -2,6 +2,7 @@ extends SceneTree
 
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const Prefs = preload("res://scripts/ui/DisplayPreferences.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -105,7 +106,7 @@ func _run() -> void:
         var uid: String = str(soldier.get("id",""))
         var damaged_or_alert: bool = (
             int(soldier.get("hp",0)) <= 5 or
-            not menu.Logistics.alert(soldier).is_empty())
+            not Logistics.alert(soldier).is_empty())
         assert(menu.army_row_nodes[uid].visible == damaged_or_alert)
     menu._set_army_filter(0)
     for uid in menu.army_row_nodes:
