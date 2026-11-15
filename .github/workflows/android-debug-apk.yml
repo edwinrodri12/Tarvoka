@@ -155,6 +155,42 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # The main APK remains unchanged. A second, independently installed
+      # debug application opens the exact same native Godot 3D Art Studio
+      # scene as the web viewer, but on the phone's Android renderer.
+      - name: Build native Android TARVOKA Estudio 3D benchmark APK
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/tarvoka-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_KEY_ALIAS || 'androiddebugkey' }}
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.TARVOKA_DEBUG_STORE_PASSWORD || 'android' }}
+        run: |
+          set -euo pipefail
+          cp project.godot /tmp/tarvoka-original-project.godot
+          cp export_presets.cfg /tmp/tarvoka-original-export-presets.cfg
+          trap 'cp /tmp/tarvoka-original-project.godot project.godot; cp /tmp/tarvoka-original-export-presets.cfg export_presets.cfg' EXIT
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' project.godot
+          sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.studio"|' export_presets.cfg
+          sed -i 's|package/name="TARVOKA"|package/name="TARVOKA Estudio 3D"|' export_presets.cfg
+          grep -q 'package/unique_name="com.edwinrodri12.tarvoka.studio"' export_presets.cfg
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/tarvoka-studio-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/tarvoka-studio-import.log; then exit 1; fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug Android build/TARVOKA-Estudio3D-benchmark.apk
+          test -s build/TARVOKA-Estudio3D-benchmark.apk
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose build/TARVOKA-Estudio3D-benchmark.apk
+          unzip -tq build/TARVOKA-Estudio3D-benchmark.apk > /dev/null
+          unzip -Z1 build/TARVOKA-Estudio3D-benchmark.apk | grep -Eq "^lib/arm64-v8a/[^/]+\\.so$"
+          sha256sum build/TARVOKA-Estudio3D-benchmark.apk
+
+      - name: Upload optional native Android 3D FPS benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Estudio3D-Android-FPS-benchmark-arm64
+          path: build/TARVOKA-Estudio3D-benchmark.apk
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Erase debug keystore from runner
         if: always()
         shell: bash
