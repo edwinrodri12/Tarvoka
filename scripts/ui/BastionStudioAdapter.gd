@@ -61,7 +61,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V17 materiales y desgaste PBR")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V18 orugas reconstruidas")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V21 pintura, acero y caucho · 6×6")
@@ -152,7 +152,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ACABADOS PBR V17",14)
+        "G11 LANZADOR · ORUGAS CORREGIDAS V18",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -182,13 +182,26 @@ func _install_g11_controls() -> void:
         "V17: pintura del techo",func(): _g11_view(70.0))
     _add_paired(g11_controls,"V17: desgaste operativo",func(): _g11_set_wear(true),
         "V17: pintura limpia",func(): _g11_set_wear(false))
+    _add_paired(g11_controls,"V18: oruga izquierda",func(): _g11_track_closeup(90.0),
+        "V18: oruga derecha",func(): _g11_track_closeup(270.0))
+    _add_paired(g11_controls,"V18: engranaje trasero",func(): _g11_track_closeup(115.0),
+        "V18: tensor delantero",func(): _g11_track_closeup(65.0))
     _title(g11_controls,
-        "V17: compara desgaste y acabado limpio sobre materiales PBR reales. "
-        + "Acero pulido en doce bocas abiertas, pintura y juntas en el techo. "
-        + "Se conservan las ocho facciones, V16, hidráulicos V14 y orugas.",12)
+        "V18: orugas reconstruidas con seis ruedas espaciadas, tensores y "
+        + "zapatas sin piezas duplicadas. Prueba marcha y observa ambos "
+        + "perfiles; la pintura V17 y los 12 tubos siguen intactos.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _g11_track_closeup(yaw: float) -> void:
+    if _role != "mlrs" or model_root == null:
+        return
+    _g11_stop()
+    _yaw = yaw
+    _zoom = 1.94
+    model_root.rotation_degrees.y = yaw
+    _update_camera()
 
 func _g11_set_wear(enabled: bool) -> void:
     if _role != "mlrs" or model_root == null:
@@ -865,7 +878,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_surface_weather_v17",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_track_clearance_v18",false)):
+            detail_label.text = detail_label.text.replace("salva V8","orugas integradas V18")
+        elif built and bool(model_root.get_meta("tarvoka_g11_surface_weather_v17",false)):
             detail_label.text = detail_label.text.replace("salva V8","acabados y pintura V17")
         elif built and bool(model_root.get_meta("tarvoka_g11_front_frame_v16",false)):
             detail_label.text = detail_label.text.replace("salva V8","acabados V16")
