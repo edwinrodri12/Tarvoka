@@ -147,7 +147,7 @@ func _run() -> void:
         _check(not scratches.visible and not middle.visible and
             not critical.visible,"repair returns clean factory finish")
 
-        var original_mat: Material=Material.new()
+        var original_mat: Material=null
         # Verify that toggling comparison restores exactly the materials
         # saved at application time. Don't recolor a shared original.
         var records: Array=model.get_meta(Surface.PAINT_RECORDS,[])
