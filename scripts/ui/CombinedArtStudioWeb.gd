@@ -8,6 +8,8 @@ const AirbaseV1 = preload("res://scripts/ui/Airbase3DV1.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
+const AirbaseDamageV4 = preload("res://scripts/ui/AirbaseDamageFXV4.gd")
+const AirbaseStressV4 = preload("res://scripts/ui/AirbaseStressV4.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -47,6 +49,10 @@ var airbase_impact_bullet_button: Button
 var airbase_impact_explosive_button: Button
 var airbase_impact_status: Label
 var airbase_mobile_fx_toggle: CheckButton
+var airbase_stress_toggle: CheckButton
+var airbase_stress_picker: OptionButton
+var airbase_stress_status: Label
+var _airbase_stress_seconds := 0.0
 var airbase_camera_button: Button
 var _airbase_camera_interior := false
 var _airbase_saved_gate_fraction := 0.0
@@ -343,7 +349,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V3 · pista y efectos")
+    building_picker.add_item("Base Aérea · V4 · efectos y rendimiento")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -595,7 +601,7 @@ func _add_building_mode() -> void:
     airbase_controls.name = "OpcionesBaseAereaV1"
     airbase_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(airbase_controls)
-    _title(airbase_controls,"BASE AÉREA · V3 PISTA + EFECTOS",13)
+    _title(airbase_controls,"BASE AÉREA · V4 EFECTOS + LOD",13)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -671,8 +677,26 @@ func _add_building_mode() -> void:
     airbase_impact_status = _title(airbase_controls,
         "V3: impactos visuales · no cambian puntos de vida.",12)
     _title(airbase_controls,
-        "Pista de rodaje alineada con entrada del hangar · "
-        + "humo en daño medio · fuego y humo en daño crítico.",12)
+        "V4: humo suave, fuego con bordes animados y pista alineada.",12)
+    _title(airbase_controls,
+        "V4 · PRUEBA VISUAL DE CARGA (NO BENCHMARK ANDROID)",13)
+    airbase_stress_toggle = CheckButton.new()
+    airbase_stress_toggle.name = "MostrarEscenarioDeCargaBaseAereaV4"
+    airbase_stress_toggle.text = "Vista de muchas bases aéreas · LOD real"
+    airbase_stress_toggle.toggled.connect(_toggle_airbase_stress)
+    airbase_controls.add_child(airbase_stress_toggle)
+    airbase_stress_picker = OptionButton.new()
+    airbase_stress_picker.name = "EscalaEdificiosBaseAereaV4"
+    airbase_stress_picker.custom_minimum_size.y = 48
+    for scenario in ["8 edificios · 8 facciones","32 edificios · LOD",
+            "64 edificios · LOD"]:
+        airbase_stress_picker.add_item(scenario)
+    airbase_stress_picker.item_selected.connect(_change_airbase_stress_count)
+    airbase_controls.add_child(airbase_stress_picker)
+    airbase_stress_picker.visible = false
+    airbase_stress_status = _title(airbase_controls,
+        "Escenario inactivo · FPS reales de Android no disponibles.",12)
+    airbase_stress_status.visible = false
     airbase_controls.visible = false
     building_controls.visible = false
 
@@ -800,7 +824,7 @@ func _refresh_airbase_door_ui() -> void:
         int(round(fraction*100.0))]
 
 func _toggle_airbase_camera() -> void:
-    if _role != "airbase":
+    if _role != "airbase" or _airbase_is_stress():
         return
     _airbase_camera_interior = not _airbase_camera_interior
     if _airbase_camera_interior:
@@ -862,6 +886,8 @@ func _refresh_airbase_damage_ui() -> void:
     airbase_impact_explosive_button.disabled = not active
     if not active:
         airbase_impact_status.text = (
+            "Escenario de carga · FX de unidades lejanas desactivados."
+            if _airbase_is_stress() else
             "Base completamente destruida; no hay objetivos intactos de impacto."
             if _role=="airbase" else "Impactos disponibles en Base Aérea")
         return
@@ -872,6 +898,48 @@ func _refresh_airbase_damage_ui() -> void:
     airbase_impact_status.text = (
         "V3 · %d volutas / %d lote de llamas · impactos de prueba sin HP" %
         [smoke_count,fire_batches])
+
+func _airbase_is_stress() -> bool:
+    return _role=="airbase" and model_root!=null and \
+        model_root.get_meta("tarvoka_building_kind","")=="airbase_stress"
+
+func _toggle_airbase_stress(enabled: bool) -> void:
+    if airbase_stress_picker!=null:
+        airbase_stress_picker.visible = enabled
+    if airbase_stress_status!=null:
+        airbase_stress_status.visible = enabled
+    if _role=="airbase":
+        _display_airbase()
+
+func _change_airbase_stress_count(_index: int) -> void:
+    if _role=="airbase" and airbase_stress_toggle.button_pressed:
+        _display_airbase()
+
+func _display_airbase_stress(first: bool) -> void:
+    var count: int = [8,32,64][airbase_stress_picker.selected]
+    model_root = AirbaseStressV4.build_grid(count)
+    if model_root==null:
+        push_error("Base Aerea V4: no se pudo crear escenario LOD")
+        return
+    preview.add_child(model_root)
+    if hq_climate_stage!=null:
+        hq_climate_stage.visible=false
+    hq_map_lod_toggle.visible=false
+    faction_picker.visible=true
+    airbase_camera_button.disabled=true
+    if first:
+        _yaw=32.0
+        _zoom=1.0
+    _airbase_camera_interior=false
+    model_root.rotation_degrees.y=_yaw
+    camera.position=Vector3(-95.0,108.0,-101.0) * \
+        float(int(model_root.get_meta("tarvoka_stress_grid_cols",4)))/8.0
+    camera.look_at(Vector3(0,1.5,0),Vector3.UP)
+    _update_camera()
+    _refresh_airbase_door_ui()
+    _refresh_airbase_damage_ui()
+    _airbase_stress_seconds=0.0
+    _update_details()
 
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
@@ -896,6 +964,10 @@ func _display_airbase() -> void:
     _role = "airbase"
     var tier: int = airbase_level_picker.selected+1
     var stage: int = airbase_damage_picker.selected
+    if airbase_stress_toggle != null and airbase_stress_toggle.button_pressed:
+        _display_airbase_stress(first)
+        return
+    airbase_camera_button.disabled=false
     model_root = AirbaseV1.build(tier,_faction,stage)
     if model_root == null:
         push_error("Base Aerea V1: especificacion no valida")
@@ -906,7 +978,7 @@ func _display_airbase() -> void:
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
-        var ambience: TarvokaAirbaseDamageFXV3 = AirbaseDamageV3.build(stage)
+        var ambience: TarvokaAirbaseDamageFXV4 = AirbaseDamageV4.build(stage)
         model_root.add_child(ambience)
     if stage < 4:
         var impacts := TarvokaAirbaseImpactV3.new()
@@ -1333,7 +1405,13 @@ func _reset_camera() -> void:
         _airbase_camera_interior = false
         if model_root != null:
             model_root.rotation_degrees.y = _yaw
-        _apply_airbase_camera()
+        if _airbase_is_stress():
+            camera.position=Vector3(-95.0,108.0,-101.0) * \
+                float(int(model_root.get_meta("tarvoka_stress_grid_cols",4)))/8.0
+            camera.look_at(Vector3(0,1.5,0),Vector3.UP)
+            _update_camera()
+        else:
+            _apply_airbase_camera()
         return
     if _role == "headquarters":
         _yaw = 32.0
@@ -1350,9 +1428,13 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role == "airbase":
         if camera != null:
-            camera.size = (
-                10.5 if _airbase_camera_interior else 18.8
-                )/maxf(0.35,_zoom)
+            if _airbase_is_stress():
+                var cols: int = int(model_root.get_meta("tarvoka_stress_grid_cols",4))
+                camera.size=(18.0+float(cols)*16.5)/maxf(0.35,_zoom)
+            else:
+                camera.size = (
+                    10.5 if _airbase_camera_interior else 18.8
+                    )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
         if camera != null:
@@ -1366,9 +1448,19 @@ func _update_details() -> void:
     if _role == "airbase":
         if model_root == null:
             return
+        if _airbase_is_stress():
+            var count: int = int(model_root.get_meta("tarvoka_stress_count",0))
+            var close: int = int(model_root.get_meta("tarvoka_stress_near_count",0))
+            var far: int = int(model_root.get_meta("tarvoka_stress_proxy_count",0))
+            var meshes: int = int(model_root.get_meta("tarvoka_stress_mesh_nodes",0))
+            detail_label.text = "Base Aérea V4 · %d edificios · %d detallados / %d LOD" % [
+                count,close,far]
+            status_label.text = "%d nodos de malla · estimación de %d superficies (NO FPS Android)" % [
+                meshes,int(model_root.get_meta("tarvoka_stress_estimated_surfaces",0))]
+            return
         var tier: int = int(model_root.get_meta("visual_level",1))
         var stage: int = int(model_root.get_meta("visual_damage_stage",0))
-        detail_label.text = "Base Aérea · V3 PISTA ALINEADA Y EFECTOS · Nivel %d · %d mallas 3D" % [
+        detail_label.text = "Base Aérea · V4 HUMO / FUEGO SUAVES · Nivel %d · %d mallas 3D" % [
             tier,AirbaseV1.mesh_count(model_root)]
         status_label.text = "%s · %s · %d piezas de facción · casco cerrado" % [
             str(Factions.FACTIONS[_faction]["name"]),
@@ -1427,6 +1519,15 @@ func _process(delta: float) -> void:
         var door_rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
         if door_rig != null and door_rig.is_moving():
             _refresh_airbase_door_ui()
+    if _airbase_is_stress():
+        _airbase_stress_seconds += delta
+        if _airbase_stress_seconds >= 0.75:
+            _airbase_stress_seconds=0.0
+            if airbase_stress_status!=null:
+                airbase_stress_status.text="Visor Godot: %d FPS · %d edificios · %d LOD · no medido en Android" % [
+                    Engine.get_frames_per_second(),
+                    int(model_root.get_meta("tarvoka_stress_count",0)),
+                    int(model_root.get_meta("tarvoka_stress_proxy_count",0))]
     if _role in ["headquarters","airbase"] and hq_climate_stage != null and hq_climate_stage.visible:
         _hq_weather_time += delta
         if model_root != null and _role == "headquarters":
