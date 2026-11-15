@@ -11,6 +11,7 @@ const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
+const APCBoardingV4 = preload("res://scripts/ui/APCBoardingV4.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
 const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
@@ -74,6 +75,9 @@ var _apc_stress_count: int=0
 var _apc_stress_elapsed: float=0.0
 var _apc_stress_sample: float=0.0
 var apc_ramp_button: Button
+var apc_embark_button: Button
+var apc_disembark_button: Button
+var apc_occupancy_label: Label
 var _tactical_view := false
 var _underside_view := false
 var _scenario_enabled := false
@@ -284,6 +288,14 @@ func _construct() -> void:
         "APC V3: Restaurar daños",func(): _set_apc_damage(0))
     apc_ramp_button=_button(apc_controls,
         "APC: Abrir rampa de tropas",_toggle_apc_ramp)
+    apc_occupancy_label=_title(apc_controls,"APC V4 · Pasajeros 0/2",13)
+    _add_paired(apc_controls,"V4 · Embarcar soldado 3D",
+        func(): _play("embark"),"V4 · Desembarcar soldado 3D",
+        func(): _play("disembark"))
+    var apc_cargo_row: HBoxContainer=apc_controls.get_child(apc_controls.get_child_count()-1) as HBoxContainer
+    if apc_cargo_row!=null and apc_cargo_row.get_child_count()>=2:
+        apc_embark_button=apc_cargo_row.get_child(0) as Button
+        apc_disembark_button=apc_cargo_row.get_child(1) as Button
     apc_lod_button=_button(apc_controls,
         "APC V3 · MODO TÁCTICO: Ocultar microdetalles",_toggle_apc_lod)
     apc_stress_button=_button(apc_controls,
@@ -411,6 +423,8 @@ func _display_role(role: String) -> void:
     if _clay_review and (_v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview):
         ClayV19.set_enabled(model_root,true)
     preview.add_child(model_root)
+    if _role=="apc" and bool(model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        APCBoardingV4.prepare(model_root,_faction)
     _yaw = -32.0
     _zoom = 1.0
     _effect_time = 0.0
@@ -444,6 +458,10 @@ func _display_role(role: String) -> void:
     apc_v3_button.text = ("APC V3/V2 · Ver V2 anterior" if _apc_v3_preview else "APC V3 · Ver techo y daño realistas")
     apc_damage_button.text = "APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
+    if apc_embark_button!=null:
+        apc_embark_button.disabled=not bool(model_root.get_meta("tarvoka_apc_boarding_v4",false))
+    if apc_disembark_button!=null:
+        apc_disembark_button.disabled=true
     if model_root.get_meta("tarvoka_apc_finish_v3",false):
         APCFinishV3.apply_stage(model_root,_apc_damage_stage)
         APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
@@ -500,6 +518,13 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
+        var boarded: int=APCBoardingV4.occupants(model_root)
+        apc_occupancy_label.text="P06 V4 · Soldados en compartimento: %d/2" % boarded
+        var v4_ready: bool=bool(model_root.get_meta("tarvoka_apc_boarding_v4",false)) and _apc_damage_stage<4
+        if apc_embark_button!=null:
+            apc_embark_button.disabled=not v4_ready or boarded>=APCBoardingV4.CAPACITY
+        if apc_disembark_button!=null:
+            apc_disembark_button.disabled=not v4_ready or boarded<=0
         if model_root.get_meta("tarvoka_apc_finish_v3",false):
             status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
                 + " · TORRETA REFINADA · BALAS/EXPLOSIONES · DAÑO %d/4" % _apc_damage_stage)
@@ -1268,6 +1293,13 @@ func _set_apc_damage(stage: int) -> void:
             not model_root.get_meta("tarvoka_apc_finish_v3",false)):
         return
     _apc_damage_stage=clampi(stage,0,4)
+    if _apc_damage_stage==4:
+        # Studio visualization follows the game's lethal-cargo rule:
+        # no ghost passengers may remain inside a destroyed P06.
+        _stop_animation()
+        APCBoardingV4.set_occupants(model_root,0)
+        model_root.set_meta("tarvoka_apc_ramp_open",false)
+        APCBoardingV4.restore(model_root)
     if APCFinishV3.apply_stage(model_root,_apc_damage_stage):
         apc_damage_button.text="APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
         _update_details()
@@ -1294,6 +1326,9 @@ func _on_faction(index: int) -> void:
     _faction = index
     if _role=="apc" and model_root!=null:
         Models.apply_faction_palette(model_root,index)
+        # Repaint the shared original infantry uniform with the same 8
+        # faction identities; the 3D P06 passenger stays inside the vehicle.
+        APCBoardingV4.recolor(model_root,index)
     if _role == "tank" and model_root != null:
         var clay_was_on: bool = ClayV19.is_enabled(model_root)
         if clay_was_on:
@@ -1319,12 +1354,19 @@ func _play(kind: String) -> void:
         return
     if _role=="apc" and not model_root.get_meta("tarvoka_apc_sculpt_v1",false):
         return
+    if _role=="apc" and kind in ["embark","disembark"]:
+        if _apc_stress_count>0 or _apc_damage_stage>=4:
+            return
+        # Genuine soldier/compartment animation, no 2D substitute.
+        if not APCBoardingV4.pose(model_root,kind,0.0):
+            return
     _animation=kind
     _animation_time=0.0
     if _role=="apc":
-        APCVisual.pose(model_root,kind,0.0)
-        if model_root.get_meta("tarvoka_apc_finish_v3",false):
-            APCFinishV3.animate_impact(model_root,kind,0.0)
+        if kind not in ["embark","disembark"]:
+            APCVisual.pose(model_root,kind,0.0)
+            if model_root.get_meta("tarvoka_apc_finish_v3",false):
+                APCFinishV3.animate_impact(model_root,kind,0.0)
     else:
         TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
         TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
@@ -1334,8 +1376,10 @@ func _stop_animation() -> void:
     _animation_time = 0.0
     if _role=="apc" and model_root!=null:
         APCVisual.restore(model_root)
+        APCBoardingV4.restore(model_root)
         if model_root.get_meta("tarvoka_apc_finish_v3",false):
             APCFinishV3.animate_impact(model_root,"",1.0)
+        _update_details()
     elif _role == "tank" and model_root != null:
         var stage: int = TankDamage.current_stage(model_root)
         TankRig.restore(model_root)
@@ -1353,13 +1397,17 @@ func _process(delta: float) -> void:
             APCFinishV3.animate_damage(model_root,_effect_time)
         if not _animation.is_empty():
             _animation_time+=maxf(delta,0.0)
-            var duration: float=(APCVisual.MOVE_DURATION if _animation=="move"
+            var duration: float=(APCBoardingV4.DURATION if _animation in ["embark","disembark"]
+                else APCVisual.MOVE_DURATION if _animation=="move"
                 else APCVisual.RAMP_DURATION if _animation in ["open_ramp","close_ramp"]
                 else APCVisual.SHOT_DURATION)
             var t: float=minf(_animation_time/maxf(duration,0.01),1.0)
-            APCVisual.pose(model_root,_animation,t)
-            if model_root.get_meta("tarvoka_apc_finish_v3",false):
-                APCFinishV3.animate_impact(model_root,_animation,t)
+            if _animation in ["embark","disembark"]:
+                APCBoardingV4.pose(model_root,_animation,t)
+            else:
+                APCVisual.pose(model_root,_animation,t)
+                if model_root.get_meta("tarvoka_apc_finish_v3",false):
+                    APCFinishV3.animate_impact(model_root,_animation,t)
             if t>=1.0:
                 _stop_animation()
         return
