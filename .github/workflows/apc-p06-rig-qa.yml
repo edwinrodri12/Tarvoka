@@ -19,6 +19,8 @@ on:
       - 'scripts/ui/APCMachineGunV7.gd'
       - 'scripts/ui/APCDamageV7.gd'
       - 'scripts/ui/APCTacticalLOD8.gd'
+      - 'scripts/ui/APCWeaponAudioV8.gd'
+      - 'tests/test_bastion_v8_audio.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_bastion_v8_mobile_stress.gd'
       - 'tests/test_bastion_v7_machinegun_damage.gd'
@@ -45,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
