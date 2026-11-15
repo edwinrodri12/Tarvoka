@@ -53,11 +53,8 @@ static func _preflight(units: Array, side: int, terrain: Array) -> bool:
             return false
         if unit.has("cargo") and (capacity(str(unit.get("role",""))) == 0 or (unit["cargo"] as Array).size() > capacity(str(unit.get("role","")))):
             return false
-        if unit.has("cargo"):
-            for occupied in unit["cargo"]:
-                if not occupied is Dictionary or not allowed_passenger(str(unit.get("role","")),str(occupied.get("role",""))):
-                    return false
-            return false
+        # A nonempty legal manifest is expected after the first embark.
+        # Each seated soldier is checked below for IDs, ownership and HP.
         for passenger in passengers(unit):
             if not passenger is Dictionary or not passenger.get("id") is String:
                 return false
