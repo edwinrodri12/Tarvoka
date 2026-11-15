@@ -83,9 +83,9 @@ static func validate(data: Dictionary) -> bool:
     var raw_size = data.get("size",null)
     if not (raw_size is Array) or raw_size.size() != 2:
         return false
-    if not (raw_size[0] is int) or not (raw_size[1] is int):
+    if not _whole(raw_size[0]) or not _whole(raw_size[1]):
         return false
-    var size := Vector2i(raw_size[0],raw_size[1])
+    var size := Vector2i(int(raw_size[0]),int(raw_size[1]))
     if size not in [Vector2i(24,18),Vector2i(40,30)] or (size.x == 24 and players > 4):
         return false
     var expected_id := "lab-v%d-%dp-%s-s%d-%dx%d" % [VERSION,players,arch,seed,size.x,size.y]
@@ -137,9 +137,9 @@ static func validate(data: Dictionary) -> bool:
         preset_names[preset["mode"]] = true
         var team_sizes: Dictionary = {}
         for team in assignments:
-            if not (team is int) or int(team) < 0 or int(team) >= players:
+            if not _whole(team) or int(team) < 0 or int(team) >= players:
                 return false
-            team_sizes[team] = int(team_sizes.get(team,0))+1
+            team_sizes[int(team)] = int(team_sizes.get(int(team),0))+1
         var smallest: int = players
         var biggest := 0
         for count in team_sizes.values():
@@ -262,9 +262,9 @@ static func _unpacked(pair: Array) -> Vector2i:
     return Vector2i(int(pair[0]),int(pair[1]))
 
 static func _check_cell(raw, terrain: Array, occupied: Dictionary) -> bool:
-    if not (raw is Array) or raw.size() != 2 or not (raw[0] is int) or not (raw[1] is int):
+    if not (raw is Array) or raw.size() != 2 or not _whole(raw[0]) or not _whole(raw[1]):
         return false
-    var cell := Vector2i(raw[0],raw[1])
+    var cell := Vector2i(int(raw[0]),int(raw[1]))
     if occupied.has(cell) or not Rules.inside(cell,terrain):
         return false
     if Rules.movement_cost(str(terrain[cell.y][cell.x])) <= 0:
@@ -277,3 +277,10 @@ static func _preset_names(presets: Array) -> Array:
     for preset in presets:
         names.append(str(preset["mode"]))
     return names
+
+# Godot's JSON parser returns whole-valued numeric tokens as floats in some
+# versions; validate integral numbers without accepting fractional coordinates.
+static func _whole(value) -> bool:
+    if value is int:
+        return true
+    return value is float and absf(value) <= 10000000.0 and value == floorf(value)
