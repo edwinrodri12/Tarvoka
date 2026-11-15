@@ -14,6 +14,7 @@ const TURRET := "P06V8_TorretaRemota"
 const GUN := "P06V8_ArmaEstabilizada"
 const RAMP := "P06V8_RampaTropas"
 const BASE := "tarvoka_apc_lod8_rest"
+const BASE_BOUND := "tarvoka_apc_lod8_origin_bound"
 const LAST := "tarvoka_apc_lod8_last_pose"
 const WHEEL_TURNS := TAU*1.7
 const MAX_DRAW_SURFACES := 15
@@ -217,8 +218,17 @@ static func build(model: Node3D, faction_color: Color) -> bool:
     model.set_meta("tarvoka_apc_lod8_faction_color",faction_color)
     model.set_meta("tarvoka_apc_lod8_render_surfaces",draw_surfaces(model))
     model.set_meta(BASE,model.position)
+    model.set_meta(BASE_BOUND,false)
     model.set_meta(LOD_META,LOD_NEAR)
     return tires.multimesh.instance_count==6
+
+static func rebase(model: Node3D) -> void:
+    # The renderer positions the APC after geometry construction. Set the
+    # visual origin only after its actual grid or fleet coordinates exist.
+    if not has_model(model):
+        return
+    model.set_meta(BASE,model.position)
+    model.set_meta(BASE_BOUND,true)
 
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
@@ -331,6 +341,8 @@ static func pose(model: Node3D,kind: String,progress: float,
     if root==null:
         return false
     var t: float=clampf(progress,0.0,1.0)
+    if not bool(model.get_meta(BASE_BOUND,false)):
+        rebase(model)
     var base_pos: Vector3=model.get_meta(BASE,model.position)
     model.position=base_pos
     var remote: Node3D=root.find_child(TURRET,false,false) as Node3D
