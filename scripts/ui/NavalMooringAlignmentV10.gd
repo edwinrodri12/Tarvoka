@@ -83,7 +83,7 @@ static func _east_wall_supports(model: Node3D,
         var fender: Vector3=east_fender(i)
         # V9 fender projects from quay face x=1.125, its rear collar
         # penetrates the wall by a small realistic amount.
-        assertf(absf(fender.x-EAST_QUAY_FACE)<0.16,
+        assert(absf(fender.x-EAST_QUAY_FACE)<0.16,
             "Eastern fender must touch the real seawall")
         if damage==3:
             _box(near,"SoporteEsteDoblado_%02d" % i,
@@ -166,9 +166,14 @@ static func _pier_supports(model: Node3D,
                 continue
             var fender: Vector3=pier_fender(side,i)
             var bollard: Vector3=pier_bollard(side,i)
-            assertf(absf(absf(fender.z)-INNER_PIER_FACE)<0.16,
+            var v8_chain:=model.find_child(
+                "CadenaDefensa_%s_%d" % [side,i],
+                true,false) as Node3D
+            if v8_chain!=null:
+                v8_chain.visible=false
+            assert(absf(absf(fender.z)-INNER_PIER_FACE)<0.16,
                 "Pier fender must meet its real inside seawall")
-            assertf(absf(fender.x-bollard.x)<0.14,
+            assert(absf(fender.x-bollard.x)<0.14,
                 "Pier fender must be centered under a real bollard")
             if damage==3:
                 _box(near,"FijacionEspigonRota_%s_%d" % [side,i],
