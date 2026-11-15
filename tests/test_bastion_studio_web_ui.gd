@@ -46,6 +46,17 @@ func _run() -> void:
             "V10 actual rear armor, passenger room and hydraulic actuators built")
         _check(bool(model.get_meta("tarvoka_apc_exterior_v11",false)),
             "V11 actual bevelled front and curved guards are installed")
+        _check(bool(model.get_meta("tarvoka_apc_turret_v12",false)),
+            "V12 fully sculpted remote weapon station is built")
+        _check(model.find_child("P06V12_CarcasaOctogonalCerrada",
+            true,false) is MeshInstance3D,
+            "real sealed octagonal weapon housing visible in published studio")
+        _check(model.find_child("P06V12_CamisaCanonPerforadaReal",
+            true,false) is MeshInstance3D,
+            "machinegun has real cooling ports, not a texture decal")
+        _check(model.find_child("P06V12_ModuloTelemetro",
+            true,false)!=null,
+            "ranging optic attached to native rotating turret")
         _check(model.find_child("P06V11_GuardabarrosCurvo_-1_0",
             true,false)!=null,
             "curved front-left 3D fender is visible in the real studio")
@@ -78,6 +89,12 @@ func _run() -> void:
         "V10 rear assemblies respect physical damage")
     _check(int(model.get_meta("tarvoka_apc_exterior_v11_stage",-1)) == 3,
         "V11 front and side armor tracks five-stage damage")
+    _check(int(model.get_meta("tarvoka_apc_turret_v12_stage",-1)) == 3,
+        "V12 weapon station responds to critical stage")
+    var pristine_optics: Node3D=model.find_child(
+        "P06V12_OpticasEstabilizadas",true,false) as Node3D
+    _check(pristine_optics!=null and not pristine_optics.visible,
+        "V12 pristine glass disappears after serious hits")
     var front_guard: Node3D=model.find_child(
         "P06V11_GuardabarrosCurvo_-1_0",true,false) as Node3D
     _check(front_guard!=null and not front_guard.visible,
@@ -92,6 +109,10 @@ func _run() -> void:
         "EstacionRemotaP06",true,false) as Node3D
     _check(turret != null and absf(turret.rotation_degrees.z)>10.0,
         "terminal wreck turret physically displaced")
+    var v12_wreck: Node3D=model.find_child(
+        "P06V12_RestosTorreta",true,false) as Node3D
+    _check(v12_wreck!=null and v12_wreck.visible,
+        "burnt station and broken machinegun visible after destruction")
     var lamp: Node3D = model.find_child(
         "P06V10_PilotoTrasero_1",true,false) as Node3D
     _check(lamp!=null and not lamp.visible,
@@ -103,6 +124,10 @@ func _run() -> void:
         "rear taillamp comes back after a full repair")
     _check(front_guard!=null and front_guard.visible,
         "curved front guard returns to exact placement on repair")
+    _check(pristine_optics!=null and pristine_optics.visible,
+        "three clean turret optics return after repair")
+    _check(v12_wreck!=null and not v12_wreck.visible,
+        "burnt turret fragments disappear after repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -118,6 +143,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_exterior_v11_visible",true),
         "V3 comparison hides V11 sculpted front and fenders")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_turret_v12_visible",true),
+        "historic comparison hides both turret body and muzzle fittings")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -127,6 +155,13 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_exterior_v11_visible",false),
         "V11 exterior fully returns after leaving V3 comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_turret_v12_visible",false),
+        "close-up V12 turret finish returns after comparison")
+    studio.call("_inspect_p06_turret")
+    _check(absf(float(studio.get("_yaw"))-34.0)<0.001 and
+        absf(float(studio.get("_zoom"))-2.05)<0.001,
+        "new turret inspection actually changes camera and zoom")
     studio.call("_view_p06_angle",0.0)
     _check(absf(float(studio.get("_yaw")))<0.001,
         "native front viewpoint targets P06 glacis")
@@ -233,5 +268,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V11 LIVE WEB STUDIO: bevelled front, six curved 3D arches, real tow eyes, view controls, all 8 factions and hydraulic ramp")
+    print("PASS BASTION V12 LIVE WEB STUDIO: sealed rotating turret, perforated automatic gun, three stabilized optics, damage, historical comparison and hydraulics")
     quit(0)
