@@ -7,6 +7,7 @@ const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const AtmosphereV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
+const SalvoV8 = preload("res://scripts/ui/G11SequentialSalvoV8.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -41,6 +42,7 @@ static func _reset(model: Node3D) -> void:
                 wheel.rotation_degrees = Vector3.ZERO
                 wheel.position.y = 0.26
     MechanicsV5.update_running_gear(model,0.0)
+    SalvoV8.reset(model)
     for name in ["G11_EfectoFogonazo","G11_EfectoHumoDisparo",
             "G11_EfectoPolvoMarcha","G11_ImpactoBalas",
             "G11_ImpactoExplosivo"]:
@@ -101,6 +103,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             haze.visible = t >= 0.37 and t < 0.91
             haze.scale = Vector3.ONE*(0.70+0.45*t)
             GeometryV4.update_actuators(model)
+            SalvoV8.pose(model,t)
         "bullet", "hit_bullet":
             var impact := _node(model,"G11_ImpactoBalas")
             impact.visible = t < 0.42
