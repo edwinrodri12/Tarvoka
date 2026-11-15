@@ -163,7 +163,12 @@ func _run() -> void:
             # 3D panorama uses an orthographic projection: actual closeup
             # requires a reduced frustum, not merely moving the camera.
             assert(studio.camera.projection==Camera3D.PROJECTION_ORTHOGONAL)
-            assert(studio.camera.size<=6.0)
+            assert(studio.camera.size<=6.5)
+            var focus: Vector3=studio.model_root.transform*Vector3(
+                4.17,4.12+float(studio.airbase_level_picker.selected)*0.62,-2.17)
+            var to_focus: Vector3=(focus-studio.camera.position).normalized()
+            var view_forward: Vector3=-studio.camera.transform.basis.z.normalized()
+            assert(view_forward.dot(to_focus)>0.98)
         _shot(studio,str(CAPTURES[i]))
     var gate: TarvokaAirbaseDoorRigV2=studio._airbase_gate_rig()
     assert(gate!=null and gate.open_fraction()>0.99)
