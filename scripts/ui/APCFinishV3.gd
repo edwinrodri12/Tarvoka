@@ -397,7 +397,8 @@ static func apply_stage(model: Node3D,stage: int) -> bool:
     # At destruction the intact roof must NOT remain under the fallen panel.
     # A real opening replaces the roof/hatch meshes; repairs restore exactly
     # the same original nodes/materials without rebuilding the APC.
-    for label in ["PlacaTechoFaceteadaV2","TechoBlindadoContinuoV3",
+    for label in ["TechoServicioCentral","PlacaTechoFaceteadaV2",
+            "TechoBlindadoContinuoV3",
             "HombroTechoInclinadoV3_-1","HombroTechoInclinadoV3_1",
             "EscotillaTechoOctogonalV3","BlindajeRegistroSuperiorV3",
             "PeriscopioFrontalV3","JuntaTechoDelanteraV3"]:
