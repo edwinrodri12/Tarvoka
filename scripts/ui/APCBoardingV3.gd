@@ -204,7 +204,7 @@ static func pose(model: Node3D,kind: String,time: float) -> bool:
     moving.visible=t<1.0
     moving.position=(START.lerp(INSIDE,step) if kind=="embark"
         else INSIDE.lerp(START,step))
-    var gait: float=sin(step*TAU*2.5)*minf(1.0,sinf(PI*step)*3.0)
+    var gait: float=sin(step*TAU*2.5)*minf(1.0,sin(PI*step)*3.0)
     moving.position.y+=absf(gait)*0.024
     moving.rotation_degrees.y=0.0 if kind=="embark" else 180.0
     moving.rotation_degrees.z=gait*1.5
