@@ -61,8 +61,8 @@ static func _gear_mesh(drive: bool) -> ArrayMesh:
     for i in range(segments):
         var a: float = TAU*float(i)/float(segments)
         var b: float = TAU*float(i+1)/float(segments)
-        var ra: float = 0.253
-        var rb: float = 0.253
+        var ra: float = 0.263
+        var rb: float = 0.263
         if drive:
             ra = TIPS_RADIUS if i%4 == 1 or i%4 == 2 else 0.247
             rb = TIPS_RADIUS if (i+1)%4 == 1 or (i+1)%4 == 2 else 0.247
