@@ -62,6 +62,8 @@ func _ready() -> void:
     holder = SubViewportContainer.new()
     holder.name = "VisorTactico3D"
     holder.stretch = true
+    # Mobile GPU safe default even before the first resize callback.
+    holder.stretch_shrink = 2
     holder.mouse_filter = Control.MOUSE_FILTER_STOP
     holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     holder.offset_top = 62
@@ -186,12 +188,20 @@ func _sync_viewport_size() -> void:
     # Stretch containers override a child's size on the next frame.
     # Set stretch_shrink on the *container*, which is the authoritative
     # control for both rendered pixel count and the presented texture.
-    var shrink: int = maxi(1,ceili(maxf(
-        holder.size.x/1280.0,holder.size.y/800.0)))
+    var shrink: int = maxi(2,ceili(maxf(
+        holder.size.x/640.0,holder.size.y/400.0)))
     holder.stretch_shrink = shrink
     preview.size = Vector2i(
         maxi(1,roundi(holder.size.x/float(shrink))),
         maxi(1,roundi(holder.size.y/float(shrink))))
+
+func _process(_delta: float) -> void:
+    # SubViewportContainer may apply a new OS display-scale factor one frame
+    # after resizing. Guard ACTUAL GPU texture dimensions, not just UI sizes.
+    if not visible or preview == null or holder == null:
+        return
+    if preview.size.x > 1280 or preview.size.y > 800:
+        holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
 
 func _refresh_camera() -> void:
     if camera == null:
