@@ -34,10 +34,10 @@ on:
       - "scripts/ui/APCVisualRigV1.gd"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA"]
     types: [completed]
     branches:
-      - feat/airbase-v13-surface-specific-impacts-20261115
+      - feat/airbase-v14-persistent-surface-marks-20261115
       - feat/terrain-v19-snow-biome-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -64,7 +64,7 @@ jobs:
       - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/airbase-v13-surface-specific-impacts-20261115
+          ref: feat/airbase-v14-persistent-surface-marks-20261115
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -122,7 +122,7 @@ jobs:
           # branch, but Bastion P06 is overlaid from this main revision.
           # Show the deployed revision, not the misleading older HQ SHA.
           printf 'Bastión P06 · interior/rampa 3D V10 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/airbase-v13-surface-specific-impacts-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/airbase-v13-surface-specific-impacts-20261115)"
+          test "$(git branch --show-current)" = "feat/airbase-v14-persistent-surface-marks-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/airbase-v14-persistent-surface-marks-20261115)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -206,6 +206,14 @@ jobs:
           test -s scripts/ui/AirbaseFractureV12.gd
           # V13 real 3D surface-aware projectile reactions and optional zoom.
           test -s scripts/ui/AirbaseImpactsV13.gd
+          # V14 QA-verified permanent 3D impact scars and reset controls.
+          test -s scripts/ui/AirbaseScarsV14.gd
+          test -s tests/test_airbase_v14_persistent_scars_gpu.gd
+          test -s AIRBASE_V14_PERSISTENT_SURFACE_MARKS.md
+          grep -q 'TarvokaAirbaseScarsV14.new' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'HuellasPersistentesConRelieveBaseAereaV14' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'RepararSuperficiesEnEstudioV14' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'PASS AIRBASE V14:' tests/test_airbase_v14_persistent_scars_gpu.gd
           test -s tests/test_airbase_v13_surface_impacts_gpu.gd
           test -s AIRBASE_V13_MATERIAL_ATTACK_REACTIONS.md
           grep -q 'AirbaseImpactsV13.new' scripts/ui/CombinedArtStudioWeb.gd
@@ -267,7 +275,7 @@ jobs:
           grep -q 'AnimacionPortonesHangarV2' scripts/ui/AirbaseDoorRigV2.gd
           grep -q 'NichoRecesoMantenimiento' scripts/ui/AirbaseHangarV2.gd
           grep -q 'PASS AIRBASE V2:' tests/test_airbase_v2_hangar_doors_gpu.gd
-          grep -q 'building_picker.add_item("Base Aérea · V13 · impactos por material")' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'building_picker.add_item("Base Aérea · V14 · marcas de impactos acumuladas")' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'AirbaseV1.build' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'HelipuertoDespliegue' scripts/ui/Airbase3DV1.gd
           grep -q 'MuroTraseroCerrado' scripts/ui/Airbase3DV1.gd
