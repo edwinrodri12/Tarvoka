@@ -15,6 +15,7 @@ const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
 const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
 const PerfTelemetry=preload("res://scripts/ui/PerformanceTelemetryV1.gd")
+const AndroidBenchmarkSuite=preload("res://scripts/ui/AndroidBenchmarkSuiteV2.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -71,6 +72,10 @@ var _apc_mixed_group: Node3D
 var apc_stress_label: Label
 var apc_perf_button: Button
 var _apc_perf=PerfTelemetry.new()
+var _auto_benchmark=AndroidBenchmarkSuite.new()
+var _auto_benchmark_button: Button
+var _auto_internal_change: bool=false
+var _auto_benchmark_report_path: String=""
 var _apc_stress_group: Node3D
 var _apc_stress_units: Array[Node3D]=[]
 var _apc_stress_count: int=0
@@ -257,6 +262,8 @@ func _construct() -> void:
         role_picker.add_item(Roles.label(str(role)))
     column.add_child(role_picker)
     role_picker.item_selected.connect(_on_role)
+    _auto_benchmark_button=_button(column,
+        "ANDROID · AUTOTEST 6 FASES (6 MIN)",_toggle_auto_benchmark)
 
     apc_controls=VBoxContainer.new()
     apc_controls.name="APCP06V1_InspeccionTecnica"
@@ -364,6 +371,8 @@ func _version_text() -> String:
 func _display_role(role: String) -> void:
     if not Models.supports(role):
         return
+    if _auto_benchmark.active and not _auto_internal_change:
+        _abort_auto_benchmark()
     _clear_apc_stress()
     _stop_animation()
     if model_root != null:
@@ -1114,6 +1123,8 @@ func _toggle_apc_v3() -> void:
     _update_details()
 
 func _toggle_apc_lod() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
     if _role!="apc" or model_root==null or (
             not model_root.get_meta("tarvoka_apc_finish_v3",false)):
         return
@@ -1134,7 +1145,9 @@ func _toggle_apc_lod() -> void:
 
 func _clear_apc_stress() -> void:
     # Preserve the previous measured scenario before freeing the stress scene.
-    if _apc_stress_count>0 and int(_apc_perf.report()["sample_count"])>0:
+    if _apc_stress_count>0 and not _auto_benchmark.active and (
+            not _auto_internal_change) and int(
+            _apc_perf.report()["sample_count"])>0:
         _archive_apc_perf()
     # The mixed scene hangs off the stress group and is freed alongside it.
     _apc_mixed_enabled=false
@@ -1152,6 +1165,8 @@ func _clear_apc_stress() -> void:
         model_root.visible=true
 
 func _cycle_apc_stress() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
     if _apc_stress_count==0:
         _set_apc_stress(32)
     elif _apc_stress_count==32:
@@ -1160,6 +1175,8 @@ func _cycle_apc_stress() -> void:
         _set_apc_stress(0)
 
 func _set_apc_stress(count: int) -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
     if _role!="apc" or model_root==null or (
             not model_root.get_meta("tarvoka_apc_finish_v3",false)):
         return
@@ -1196,6 +1213,8 @@ func _set_apc_stress(count: int) -> void:
     _reset_apc_perf()
 
 func _toggle_apc_mixed() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
     if _role!="apc" or model_root==null or not model_root.get_meta(
             "tarvoka_apc_finish_v3",false):
         return
@@ -1274,7 +1293,102 @@ func _archive_apc_perf() -> String:
         return path
     return ""
 
+func _toggle_auto_benchmark() -> void:
+    if _auto_benchmark.active:
+        _abort_auto_benchmark()
+        return
+    _auto_benchmark.begin()
+    _auto_benchmark_report_path=""
+    _auto_benchmark_button.text="DETENER AUTOTEST · Guardar parcial"
+    _auto_internal_change=true
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            "tarvoka_apc_finish_v3",false):
+        _display_role("apc")
+    _auto_internal_change=false
+    _begin_auto_benchmark_phase()
+
+func _begin_auto_benchmark_phase() -> void:
+    var phase: Dictionary=_auto_benchmark.phase()
+    if phase.is_empty():
+        return
+    _auto_internal_change=true
+    _set_apc_stress(int(phase["count"]))
+    if bool(phase["mixed"]):
+        _toggle_apc_mixed()
+    if _apc_tactical_lod!=bool(phase["lod"]):
+        _toggle_apc_lod()
+    _reset_apc_perf()
+    _auto_internal_change=false
+    apc_stress_label.text=("AUTOTEST %d/6 · Preparando %s · 6s de calentamiento"
+        % [_auto_benchmark.phase_index+1,str(phase["label"])])
+
+func _tick_auto_benchmark(delta: float) -> void:
+    if not _auto_benchmark.active:
+        return
+    var done: bool=_auto_benchmark.advance_clock(delta)
+    if not done:
+        var phase: Dictionary=_auto_benchmark.phase()
+        var stage: String=("Calentando" if not _auto_benchmark.is_measuring()
+            else "Midiendo")
+        var count: int=int(maxf(0.0,
+            ceilf(_auto_benchmark.warmup_seconds+
+                _auto_benchmark.measure_seconds-
+                _auto_benchmark.phase_elapsed)))
+        apc_stress_label.text=(
+            "AUTOTEST %d/6 · %s · %s · restan %ds · %.0f FPS"
+            % [_auto_benchmark.phase_index+1,str(phase["label"]),stage,
+                count,Engine.get_frames_per_second()])
+        return
+    # Do not save the transition frames into either phase. Sample after
+    # the same six-second warmup for every model/LOD configuration.
+    var stats: Dictionary=_apc_perf.report()
+    var has_more: bool=_auto_benchmark.finish_phase(stats)
+    if has_more:
+        _begin_auto_benchmark_phase()
+        return
+    _auto_benchmark_report_path=_save_auto_benchmark_report()
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (6 MIN)"
+    _auto_internal_change=true
+    _set_apc_stress(0)
+    _auto_internal_change=false
+    apc_stress_label.text=(
+        "AUTOTEST COMPLETO · 6/6 fases · Toca GUARDAR/COPIAR INFORME FPS")
+
+func _save_auto_benchmark_report() -> String:
+    if _auto_benchmark.reports.is_empty():
+        return ""
+    var path: String="user://tarvoka_android_suite_v2_%d.json" % int(
+        Time.get_unix_time_from_system())
+    if not _auto_benchmark.save(path):
+        return ""
+    print("TARVOKA ANDROID SUITE V2: %s | %s" % [
+        path,JSON.stringify(_auto_benchmark.summary())])
+    return path
+
+func _abort_auto_benchmark() -> void:
+    if not _auto_benchmark.active:
+        return
+    if int(_apc_perf.report()["sample_count"])>0:
+        # Partial results are deliberately marked cancelled, never passed.
+        _auto_benchmark.finish_phase(_apc_perf.report())
+    _auto_benchmark.abort()
+    _auto_benchmark_report_path=_save_auto_benchmark_report()
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (6 MIN)"
+    _auto_internal_change=true
+    _set_apc_stress(0)
+    _auto_internal_change=false
+    apc_stress_label.text=(
+        "Autotest detenido · informe parcial guardado (si hubo muestras)")
+
 func _save_apc_perf() -> void:
+    if not _auto_benchmark.active and (
+            _auto_benchmark.reports.size()>0):
+        # Export the complete native Android A/B series by explicit tap.
+        DisplayServer.clipboard_set(JSON.stringify(
+            _auto_benchmark.summary(),"  "))
+        apc_stress_label.text=("Serie de %d/6 fases copiada · informe %s"
+            % [_auto_benchmark.reports.size(),_auto_benchmark_report_path])
+        return
     var path: String=_archive_apc_perf()
     if path.is_empty():
         apc_stress_label.text="Primero ejecuta la prueba durante al menos 0,5 segundos"
@@ -1286,10 +1400,11 @@ func _save_apc_perf() -> void:
 func _update_apc_stress(delta: float) -> void:
     _apc_stress_elapsed+=maxf(delta,0.0)
     _apc_stress_sample+=maxf(delta,0.0)
-    _apc_perf.add(delta,float(Engine.get_frames_per_second()),
-        Performance.get_monitor(
-            Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
-        Performance.get_monitor(Performance.MEMORY_STATIC))
+    if not _auto_benchmark.active or _auto_benchmark.is_measuring():
+        _apc_perf.add(delta,float(Engine.get_frames_per_second()),
+            Performance.get_monitor(
+                Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+            Performance.get_monitor(Performance.MEMORY_STATIC))
     # A real moving subset plus smoke/fire on damaged units: no stand-ins.
     var progress: float=fposmod(_apc_stress_elapsed,APCVisual.MOVE_DURATION) / APCVisual.MOVE_DURATION
     for i in range(_apc_stress_units.size()):
@@ -1394,6 +1509,8 @@ func _process(delta: float) -> void:
         return
     if _apc_stress_count>0:
         _update_apc_stress(delta)
+        if _auto_benchmark.active:
+            _tick_auto_benchmark(delta)
         return
     if _role=="apc":
         if model_root.get_meta("tarvoka_apc_finish_v3",false) and _apc_damage_stage>=2:
