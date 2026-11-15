@@ -89,3 +89,46 @@ Las pruebas de laboratorio con 48 y 80 modelos reales de Godot son
 **visuales**: no verifican red, latencia de ocho clientes, IA por turno,
 mapas completos ni consumo térmico del teléfono. La aprobación de QA/CI
 no equivale a aprobación física.
+
+
+## Autotest V2: comparación Android sin cambiar ajustes manualmente
+
+En el **Estudio 3D para Android** seleccionar el botón
+`ANDROID · AUTOTEST 6 FASES (≈7 MIN)`. El visor cambia automáticamente
+entre seis escenarios idénticos en colocación y daño, con **6 segundos
+de calentamiento** y **60 segundos de medición** para cada fase:
+
+| Fase | Escenario | Calidad |
+|---|---|---|
+| 1 | 32 APC P06, ocho facciones | Completa |
+| 2 | 32 APC P06, ocho facciones | LOD táctico |
+| 3 | 64 APC P06, ocho facciones | Completa |
+| 4 | 64 APC P06, ocho facciones | LOD táctico |
+| 5 | 64 APC, 8 tanques G09 y 8 HQ V3 | Completa |
+| 6 | 64 APC, 8 tanques G09 y 8 HQ V3 | LOD táctico |
+
+Al terminar, queda un archivo local
+`user://tarvoka_android_suite_v2_*.json` con las seis mediciones
+independientes. Pulsar **GUARDAR / COPIAR INFORME FPS** para copiar el
+JSON completo y compartirlo en el chat. Si se pulsa **DETENER AUTOTEST**,
+se guarda un resultado parcial marcado `cancelled=true`; no debe
+interpretarse como una prueba terminada. El botón también se puede
+usar en el navegador, pero sus datos no se deben etiquetar como Android.
+
+En cada fase se muestrean FPS, percentil inferior p10, porcentaje de
+muestras que superaron 30 FPS, llamadas de dibujo y memoria estática
+del motor. El protocolo no conoce el estado térmico real de Android ni
+recolecta identificadores personales del teléfono. Su resultado es
+evidencia de capacidad gráfica del laboratorio, no un ensayo completo
+de IA, red, multijugador u optimización de mapas.
+
+**Control de calidad:** `tests/test_android_benchmark_suite_v2.gd`
+revisa las seis fases, el calentamiento, el informe y la cancelación.
+`tests/test_apc_p06_studio_stress.gd` comprueba además que el botón
+inicia la escena correcta, cambia automáticamente el LOD, guarda un
+informe parcial y libera la escena al detenerse.
+
+La meta provisional para los primeros teléfonos de referencia es
+`p10 >= 30 FPS` en cada escenario de un minuto. Se necesitan varias
+repeticiones y pruebas de mayor duración antes de fijar un requisito
+mínimo comercial. No atribuir FPS de hardware a CI Mesa/llvmpipe.
