@@ -61,6 +61,13 @@ var apc_v2_button: Button
 var apc_v3_button: Button
 var apc_damage_button: Button
 var apc_lod_button: Button
+var apc_stress_button: Button
+var apc_stress_label: Label
+var _apc_stress_group: Node3D
+var _apc_stress_units: Array[Node3D]=[]
+var _apc_stress_count: int=0
+var _apc_stress_elapsed: float=0.0
+var _apc_stress_sample: float=0.0
 var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
@@ -274,6 +281,10 @@ func _construct() -> void:
         "APC: Abrir rampa de tropas",_toggle_apc_ramp)
     apc_lod_button=_button(apc_controls,
         "APC V3 · MODO TÁCTICO: Ocultar microdetalles",_toggle_apc_lod)
+    apc_stress_button=_button(apc_controls,
+        "APC · PROBAR 32 VEHÍCULOS (8 FACCIONES)",_cycle_apc_stress)
+    apc_stress_label=_title(apc_controls,
+        "Prueba de FPS real: 32 → 64 → salir. Usa Android o el navegador.",11)
 
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
@@ -340,6 +351,7 @@ func _version_text() -> String:
 func _display_role(role: String) -> void:
     if not Models.supports(role):
         return
+    _clear_apc_stress()
     _stop_animation()
     if model_root != null:
         preview.remove_child(model_root)
@@ -428,6 +440,8 @@ func _display_role(role: String) -> void:
         APCFinishV3.apply_stage(model_root,_apc_damage_stage)
         APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
     apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
+    apc_stress_button.visible=apc_lod_button.visible
+    apc_stress_label.visible=apc_lod_button.visible
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     tactical_button.visible = (_role == "tank")
@@ -1090,9 +1104,85 @@ func _toggle_apc_lod() -> void:
         return
     _apc_tactical_lod=not _apc_tactical_lod
     APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+    for unit in _apc_stress_units:
+        APCFinishV3.set_tactical_lod(unit,_apc_tactical_lod)
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     _update_details()
+
+func _clear_apc_stress() -> void:
+    if _apc_stress_group!=null and is_instance_valid(_apc_stress_group):
+        if _apc_stress_group.get_parent()!=null:
+            _apc_stress_group.get_parent().remove_child(_apc_stress_group)
+        _apc_stress_group.free()
+    _apc_stress_group=null
+    _apc_stress_units.clear()
+    _apc_stress_count=0
+    _apc_stress_elapsed=0.0
+    _apc_stress_sample=0.0
+    if model_root!=null and is_instance_valid(model_root):
+        model_root.visible=true
+
+func _cycle_apc_stress() -> void:
+    if _apc_stress_count==0:
+        _set_apc_stress(32)
+    elif _apc_stress_count==32:
+        _set_apc_stress(64)
+    else:
+        _set_apc_stress(0)
+
+func _set_apc_stress(count: int) -> void:
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _clear_apc_stress()
+    if count==0:
+        apc_stress_button.text="APC · PROBAR 32 VEHÍCULOS (8 FACCIONES)"
+        apc_stress_label.text="Prueba finalizada · modelo normal restaurado"
+        _update_camera()
+        return
+    var per_faction: int=4 if count<=32 else 8
+    var group:=Node3D.new()
+    group.name="APC_P06_PruebaFPS_%d" % (8*per_faction)
+    _apc_stress_group=group
+    preview.add_child(group)
+    for faction in range(8):
+        for index in range(per_faction):
+            var unit: Node3D=Models.build("apc",faction,true,13)
+            assert(unit!=null and unit.get_meta("tarvoka_apc_finish_v3",false))
+            unit.position=Vector3(
+                (float(index)-0.5*float(per_faction-1))*3.2,0,
+                (float(faction)-3.5)*3.3)
+            unit.rotation_degrees.y=float((faction*31+index*17)%360)
+            group.add_child(unit)
+            APCFinishV3.apply_stage(unit,(faction+index)%5)
+            APCFinishV3.set_tactical_lod(unit,_apc_tactical_lod)
+            _apc_stress_units.append(unit)
+    _apc_stress_count=_apc_stress_units.size()
+    model_root.visible=false
+    _update_camera()
+    apc_stress_button.text=("APC · PROBAR 64 VEHÍCULOS"
+        if _apc_stress_count==32 else "APC · TERMINAR PRUEBA")
+    apc_stress_label.text="Prueba de %d APC · calculando FPS..." % _apc_stress_count
+
+func _update_apc_stress(delta: float) -> void:
+    _apc_stress_elapsed+=maxf(delta,0.0)
+    _apc_stress_sample+=maxf(delta,0.0)
+    # A real moving subset plus smoke/fire on damaged units: no stand-ins.
+    var progress: float=fposmod(_apc_stress_elapsed,APCVisual.MOVE_DURATION) / APCVisual.MOVE_DURATION
+    for i in range(_apc_stress_units.size()):
+        var unit: Node3D=_apc_stress_units[i]
+        if i%3==0:
+            APCVisual.pose(unit,"move",progress)
+        if int(unit.get_meta("tarvoka_apc_v3_damage_stage",0))>=2:
+            APCFinishV3.animate_damage(unit,_apc_stress_elapsed)
+    if _apc_stress_sample>=0.70:
+        _apc_stress_sample=0.0
+        var draws: float=Performance.get_monitor(
+            Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+        apc_stress_label.text=("%d APC · %.0f FPS reales · %.0f llamadas de dibujo · %s"
+            % [_apc_stress_count,Engine.get_frames_per_second(),draws,
+                "LOD TÁCTICO" if _apc_tactical_lod else "DETALLE COMPLETO"])
 
 func _set_apc_damage(stage: int) -> void:
     if _role!="apc" or model_root==null or (
@@ -1175,6 +1265,9 @@ func _stop_animation() -> void:
 func _process(delta: float) -> void:
     if model_root==null:
         return
+    if _apc_stress_count>0:
+        _update_apc_stress(delta)
+        return
     if _role=="apc":
         if model_root.get_meta("tarvoka_apc_finish_v3",false) and _apc_damage_stage>=2:
             _effect_time+=delta
@@ -1220,6 +1313,11 @@ func _change_zoom(direction: int) -> void:
 
 func _update_camera() -> void:
     if camera != null:
+        if _apc_stress_count>0:
+            camera.size=33.0 if _apc_stress_count==32 else 49.0
+            camera.position=Vector3(27,32,39) if _apc_stress_count==32 else Vector3(35,41,49)
+            camera.look_at(Vector3(0,0.50,0),Vector3.UP)
+            return
         if _role=="tank" and _underside_view:
             camera.size = Models.preview_frame_height(_role)*1.26/_zoom
             camera.position = Vector3(6.0,-1.75,2.1)
