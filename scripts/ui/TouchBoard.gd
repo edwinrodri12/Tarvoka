@@ -17,6 +17,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
@@ -51,6 +52,7 @@ var selected_id := ""
 var inspected_enemy_id := "" # Only currently visible enemy, never saved.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
+var unload_mode := false # UI-only selection mode; never serialized.
 var selected_factory_pos := Vector2i(-1,-1)
 var inspected_cell := Vector2i(-1,-1) # UI-only terrain/building inspection; not saved.
 var _site_overlay_key := -1
@@ -843,6 +845,7 @@ func _draw_combat_effects(tile: float, board_origin: Vector2) -> void:
 func cancel_selection() -> void:
     compare_mode = false
     compare_candidates.clear()
+    unload_mode = false
     if selected_id.is_empty() and inspected_enemy_id.is_empty() and pending_order.is_empty() and selected_factory_pos == Vector2i(-1,-1) and inspected_cell == Vector2i(-1,-1):
         return
     selected_id = ""
@@ -853,6 +856,20 @@ func cancel_selection() -> void:
     message = "Seleccion cancelada."
     queue_redraw()
 
+func can_unload_selected() -> bool:
+    if campaign_locked or not pending_order.is_empty() or selected_id.is_empty() or (ai_enabled and int(state.get("faction",-1)) != 0):
+        return false
+    return not TacticalHints.transport(state,selected_id)["unloads"].is_empty()
+
+func arm_unload_selected() -> bool:
+    if not can_unload_selected():
+        message = "Desembarco no disponible: selecciona un APC propio con pasajeros y una casilla libre."
+        return false
+    unload_mode = not unload_mode
+    message = "Toca una casilla amarilla adyacente para desembarcar. El soldado actuara el proximo turno." if unload_mode else "Desembarco cancelado."
+    queue_redraw()
+    return true
+
 func confirm_pending_order() -> bool:
     if pending_order.is_empty():
         return false
@@ -860,6 +877,27 @@ func confirm_pending_order() -> bool:
     var committed := _commit_order(order)
     queue_redraw()
     return committed
+
+# Explicit confirmation and the same transaction path as combat/move.
+# A selected APC taps neighboring infantry to embark. After pressing the
+# Desembarcar control, a free adjacent tile becomes a safe unload target.
+func _request_transport_order(cell: Vector2i, passenger_id: String,
+        kind: String) -> void:
+    var legal: Dictionary = TacticalHints.transport(state,selected_id)
+    var options: Dictionary = legal["embarks"] if kind == "embark" else legal["unloads"]
+    if not options.has(cell) or str(options[cell]["passenger_id"]) != passenger_id:
+        pending_order.clear()
+        message = "Transporte no disponible o destino ocupado."
+        return
+    var order: Dictionary = {"unit_id":selected_id,"cell":cell,
+        "kind":kind,"target_id":passenger_id}
+    if require_order_confirmation and pending_order != order:
+        pending_order = order
+        message = ("Embarcar %s en APC (consume ambas acciones)." if kind == "embark" else
+            "Desembarcar %s; quedara inactivo hasta el proximo turno.") % passenger_id
+        message += " Toca otra vez o Confirmar orden."
+        return
+    _commit_order(order)
 
 func _request_order(cell: Vector2i, target: Dictionary) -> void:
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
@@ -906,7 +944,15 @@ func _commit_order(order: Dictionary) -> bool:
         return false
     var hints: Dictionary = TacticalHints.for_unit(state, unit_id)
     var result: Dictionary = {}
-    if kind == "attack":
+    if kind in ["embark","disembark"]:
+        var transport: Dictionary = TacticalHints.transport(state,unit_id)
+        var candidates: Dictionary = transport["embarks"] if kind == "embark" else transport["unloads"]
+        if not candidates.has(cell) or str(candidates[cell]["passenger_id"]) != enemy_id:
+            message = "Transporte cancelado: pasajero o destino ya no disponible."
+            unload_mode = false
+            return false
+        result = Session.embark(state,enemy_id,unit_id) if kind == "embark" else Session.disembark(state,unit_id,enemy_id,cell)
+    elif kind == "attack":
         if not hints["attacks"].has(cell) or str(hints["attacks"][cell]["id"]) != enemy_id:
             message = "Objetivo ya no disponible."
             return false
@@ -924,6 +970,7 @@ func _commit_order(order: Dictionary) -> bool:
         return false
     var prior_state: Dictionary = state
     state = result["state"]
+    unload_mode = false
     if kind == "attack":
         _record_attack_effect(prior_state, result, unit_id, enemy_id)
     elif kind == "move":
@@ -945,6 +992,13 @@ func _commit_order(order: Dictionary) -> bool:
         else:
             selected_id = ""
             message = "Movimiento completado. Sin objetivos visibles en alcance."
+    elif kind == "embark":
+        selected_id = ""
+        message = "Embarque completado: %s en APC. Acciones consumidas, pasajeros %d/%d." % [
+            enemy_id,int(result.get("cargo_count",0)),Cargo.CAPACITY]
+    elif kind == "disembark":
+        selected_id = ""
+        message = "Desembarco de %s completado. Disponible a partir del proximo turno." % enemy_id
     else:
         selected_id = ""
         var outgoing: int = int(result.get("damage",0))
@@ -1302,6 +1356,7 @@ func finish_turn() -> void:
     inspected_enemy_id = ""
     selected_factory_pos = Vector2i(-1,-1)
     pending_order.clear()
+    unload_mode = false
     last_enemy_turn_report = ""
     last_economy_report = ""
     if previous.has("economy") and state.has("economy"):
