@@ -231,6 +231,10 @@ jobs:
           test -s scripts/ui/G11MobileLOD.gd
           grep -q 'G11_Lanzador_V1_EstudioReal' scripts/ui/BastionStudioAdapter.gd
           grep -q 'BastionP06_V21_MaterialesPBR' scripts/ui/BastionStudioAdapter.gd
+          # Do not allow concurrent APC releases to downgrade G11 selector.
+          grep -q 'G11 Lanzador · V17 materiales y desgaste PBR' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G11Weather.set_wear(model_root,enabled)' scripts/ui/BastionStudioAdapter.gd
+          test -s scripts/ui/G11SurfaceWeatherV17.gd
           # New Naval Base V1 shares the same native Godot 3D showroom.
           test -s scripts/ui/NavalBase3DV1.gd
           # New V2 harbor finishing, shader and regression all preserved.
