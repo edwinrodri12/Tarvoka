@@ -1,67 +1,117 @@
 extends "res://scripts/ui/CombinedArtStudioWeb.gd"
 class_name TarvokaBastionStudioAdapter
 
-# Additive V6 Bastion overlay for the established HQ/Airbase/G09 web studio.
-# The Pages workflow overlays the current main-branch P06 Godot sources onto
-# the published feature-branch studio, preserving its existing 3D assets.
-const P06Damage = preload("res://scripts/ui/BastionDamage3D.gd")
-const P06Rig = preload("res://scripts/ui/BastionVisualRig3D.gd")
+# Published P06 presentation uses the sculpted V5 art, not the initial native
+# prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
+const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
+const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
+const P06Details = preload("res://scripts/ui/APCDetailV5.gd")
+const P06Stages := [
+    "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
+]
 
 var p06_controls: VBoxContainer
 var p06_hint: Label
-var _p06_ready: bool = false
+var p06_version_button: Button
+var p06_ramp_button: Button
+var _p06_show_v5: bool = true
+var _p06_quality_verified: bool = false
 
 func _ready() -> void:
     super._ready()
     _install_p06_controls()
-    var bastion_index: int = P06Models.ROLES.find("apc")
-    if bastion_index >= 0:
-        role_picker.set_item_text(bastion_index,"Bastión P06 · 6×6 · V6")
-    _p06_ready = true
-    _sync_p06_controls()
+    var idx: int = P06Models.ROLES.find("apc")
+    if idx >= 0:
+        role_picker.set_item_text(idx,"Bastión P06 · V5 completo · 6×6")
+    # The project home link now opens the model under review rather than
+    # showing the old default G09 first and confusing Android users.
+    _display_role("apc")
 
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V6_Animacion3D"
+    p06_controls.name = "BastionP06_V5_ArteCompleto"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
-    var title := _title(p06_controls,"BASTIÓN P06 · 6×6 · ANIMACIONES V6",15)
-    title.add_theme_color_override("font_color",Color("#E7BE70"))
-    _add_paired(p06_controls,"Rodar / suspensión",func(): _play("move"),
-        "Ametralladora",func(): _play("attack"))
-    _add_paired(p06_controls,"Impacto de balas",func(): _play("bullet"),
-        "Impacto explosivo",func(): _play("explosive"))
+    var heading: Label = _title(p06_controls,
+        "BASTIÓN P06 · ACABADO V5 · ANIMACIÓN NATIVA",14)
+    heading.add_theme_color_override("font_color",Color("#E7BE70"))
+    _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
+        "Torreta",func(): _play("turn_turret"))
+    _add_paired(p06_controls,"Disparo",func(): _play("attack"),
+        "Detener",_stop_animation)
+    _add_paired(p06_controls,"Impacto de balas",func(): _play("hit_bullet"),
+        "Explosión",func(): _play("hit_explosive"))
+    p06_ramp_button = _button(p06_controls,"Abrir rampa de tropas",
+        _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
-        "Reparación",func(): _set_damage(0))
-    _button(p06_controls,"Detener animación P06",_stop_animation)
+        "Reparar completamente",func(): _set_damage(0))
+    p06_version_button = _button(p06_controls,"Comparar con acabado V3",
+        _toggle_p06_version)
     p06_hint = _title(p06_controls,
-        "P06 V6 · 6 ruedas articuladas, dirección, suspensión y torreta remota. "
-        + "Usa los 5 estados de daño y los 8 colores oficiales.",12)
+        "Modelo V5 real: blindaje biselado, techo cerrado, seis neumáticos "
+        + "articulados, ópticas y portón de tropas. Giro con un dedo; "
+        + "zoom con dos dedos en Android.",12)
+    var index: int = column.get_children().find(detail_label)
+    column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
-    var detail_index: int = column.get_children().find(detail_label)
-    column.move_child(p06_controls,maxi(0,detail_index))
+
+func _studio_p06() -> bool:
+    return _role == "apc" and model_root != null and \
+        bool(model_root.get_meta("tarvoka_apc_finish_v3",false))
 
 func _sync_p06_controls() -> void:
     var p06: bool = _role == "apc"
     if p06_controls != null:
-        p06_controls.visible = p06
-    if p06:
+        p06_controls.visible = p06 and \
+            (category_picker == null or category_picker.selected == 0)
+    if p06 and damage_picker != null:
         faction_picker.visible = true
         damage_picker.visible = true
         comparison_button.visible = false
         previous_version_button.visible = false
-        if model_root != null:
-            damage_picker.select(P06Damage.current_stage(model_root))
+        for i in range(P06Stages.size()):
+            damage_picker.set_item_text(i,str(P06Stages[i]))
+        damage_picker.select(_stage_p06())
+        if p06_version_button != null:
+            p06_version_button.text = ("Ver acabado anterior V3"
+                if _p06_show_v5 else "Volver al acabado completo V5")
+        if p06_ramp_button != null:
+            p06_ramp_button.text = ("Cerrar rampa de tropas"
+                if model_root != null and model_root.get_meta(
+                    "tarvoka_apc_ramp_open",false) else "Abrir rampa de tropas")
+    elif damage_picker != null:
+        for i in range(TankDamage.STAGES.size()):
+            damage_picker.set_item_text(i,str(TankDamage.STAGES[i]))
+
+func _stage_p06() -> int:
+    if model_root == null:
+        return 0
+    return clampi(int(model_root.get_meta(
+        "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
     super._display_role(role)
     if role == "apc" and model_root != null:
-        P06Models.apply_faction_palette(model_root,_faction)
-        P06Damage.prepare(model_root)
-        model_root.set_meta(P06Rig.REST_YAW,_yaw)
-        damage_picker.select(0)
+        # Replace the proxy outright: leaving hundreds of invisible meshes
+        # in the render tree wastes RAM and obscures model QA on mobile.
+        preview.remove_child(model_root)
+        model_root.queue_free()
+        model_root = P06Models.build("apc",_faction,true,13)
+        if model_root == null:
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y = _yaw
+        _p06_quality_verified = bool(model_root.get_meta(
+            "tarvoka_apc_finish_v3",false)) and bool(model_root.get_meta(
+            P06Details.FLAG,false))
+        if _p06_quality_verified:
+            P06Details.set_enabled(model_root,_p06_show_v5)
+            P06Finish.apply_stage(model_root,0)
+        else:
+            push_error("TARVOKA P06 V5 sculpt was not built; do not label it final")
+        _update_camera()
     _sync_p06_controls()
     _update_details()
 
@@ -70,35 +120,67 @@ func _switch_category(index: int) -> void:
     _sync_p06_controls()
 
 func _on_faction(index: int) -> void:
-    super._on_faction(index)
-    if _role == "apc" and model_root != null:
-        P06Models.apply_faction_palette(model_root,_faction)
-        _update_details()
+    if _role != "apc":
+        super._on_faction(index)
+        return
+    if index < 0 or index >= Factions.FACTIONS.size():
+        return
+    var last_stage: int = _stage_p06()
+    var last_yaw: float = _yaw
+    var last_zoom: float = _zoom
+    _faction = index
+    # Rebuild once on a faction change, so V5 sculpt materials as well as
+    # the chassis and roof match the selected official enamel.
+    _display_role("apc")
+    _yaw = last_yaw
+    _zoom = last_zoom
+    if model_root != null:
+        model_root.rotation_degrees.y = _yaw
+    _update_camera()
+    _set_damage(last_stage)
+
+func _on_damage(index: int) -> void:
+    _set_damage(index)
 
 func _set_damage(stage: int) -> void:
     if _role != "apc":
         super._set_damage(stage)
         return
-    if model_root == null:
+    if not _studio_p06():
         return
     _stop_animation()
-    if P06Damage.apply_stage(model_root,stage):
-        damage_picker.select(P06Damage.current_stage(model_root))
+    if P06Finish.apply_stage(model_root,stage):
+        damage_picker.select(_stage_p06())
         _update_details()
+
+func _toggle_p06_version() -> void:
+    if not _studio_p06():
+        return
+    _p06_show_v5 = not _p06_show_v5
+    P06Details.set_enabled(model_root,_p06_show_v5)
+    _sync_p06_controls()
+    _update_details()
+
+func _toggle_p06_ramp() -> void:
+    if not _studio_p06() or _stage_p06() >= 4:
+        return
+    var opened: bool = bool(model_root.get_meta(
+        "tarvoka_apc_ramp_open",false))
+    _play("close_ramp" if opened else "open_ramp")
 
 func _play(kind: String) -> void:
     if _role != "apc":
         super._play(kind)
         return
-    if model_root == null:
+    if not _studio_p06():
         return
-    if P06Damage.current_stage(model_root) >= 4 and kind != "bullet" and kind != "explosive":
-        status_label.text = "Bastión destruido · restáuralo antes de mover o disparar"
+    if _stage_p06() >= 4 and kind not in ["hit_bullet","hit_explosive"]:
+        status_label.text = "Bastión destruido · reparar antes de mover o disparar"
         return
-    _animation = "explosive" if kind == "damaged" else kind
+    _animation = kind
     _animation_time = 0.0
-    model_root.set_meta(P06Rig.REST_YAW,_yaw)
-    P06Models.pose_model("apc",model_root,_animation,0.0,Vector2i(1,-1))
+    P06Visual.pose(model_root,kind,0.0,42.0)
+    P06Finish.animate_impact(model_root,kind,0.0)
 
 func _stop_animation() -> void:
     if _role != "apc":
@@ -106,50 +188,46 @@ func _stop_animation() -> void:
         return
     _animation = ""
     _animation_time = 0.0
-    if model_root != null and P06Rig.has_rig(model_root):
-        P06Models.restore_model_pose("apc",model_root)
-        model_root.rotation_degrees.y = _yaw
-        model_root.set_meta(P06Rig.REST_YAW,_yaw)
+    if _studio_p06():
+        P06Visual.restore(model_root)
+        P06Finish.animate_impact(model_root,"",1.0)
+        _sync_p06_controls()
 
 func _process(delta: float) -> void:
     super._process(delta)
-    if _role != "apc" or model_root == null or _animation.is_empty():
+    if not _studio_p06():
         return
-    _animation_time += maxf(delta,0.0)
-    var duration: float = P06Rig.MOVE_DURATION
-    match _animation:
-        "attack":
-            duration = P06Rig.ATTACK_DURATION
-        "bullet":
-            duration = P06Rig.HIT_BULLET_DURATION
-        "explosive":
-            duration = P06Rig.HIT_EXPLOSIVE_DURATION
-    var ratio: float = minf(1.0,_animation_time/maxf(0.01,duration))
-    P06Models.pose_model("apc",model_root,_animation,ratio,Vector2i(1,-1))
-    if ratio >= 1.0:
+    if _stage_p06() >= 2:
+        _effect_time += maxf(0.0,delta)
+        P06Finish.animate_damage(model_root,_effect_time)
+    if _animation.is_empty():
+        return
+    _animation_time += maxf(0.0,delta)
+    var duration: float = P06Visual.MOVE_DURATION
+    if _animation in ["open_ramp","close_ramp"]:
+        duration = P06Visual.RAMP_DURATION
+    elif _animation != "move":
+        duration = P06Visual.SHOT_DURATION
+    var t: float = minf(1.0,_animation_time/maxf(duration,0.01))
+    P06Visual.pose(model_root,_animation,t,42.0)
+    P06Finish.animate_impact(model_root,_animation,t)
+    if t >= 1.0:
         _stop_animation()
         _update_details()
-
-func _rotate(degrees: float) -> void:
-    super._rotate(degrees)
-    if _role == "apc" and model_root != null:
-        model_root.set_meta(P06Rig.REST_YAW,_yaw)
-
-func _reset_camera() -> void:
-    super._reset_camera()
-    if _role == "apc" and model_root != null:
-        model_root.set_meta(P06Rig.REST_YAW,_yaw)
 
 func _update_details() -> void:
     if _role != "apc":
         super._update_details()
         return
-    if model_root == null or detail_label == null:
+    if model_root == null or detail_label == null or status_label == null:
         return
-    detail_label.text = "Bastión P06 V6 · %d mallas 3D · 6 ruedas articuladas" % [
-        P06Models.inspect_meshes(model_root)]
-    var faction: String = str(Factions.FACTIONS[_faction]["name"])
-    var stage: int = P06Damage.current_stage(model_root)
-    status_label.text = "%s · %s · rig %s" % [
-        faction,str(P06Damage.STAGES[stage]),
-        "activo" if P06Rig.has_rig(model_root) else "no disponible"]
+    var mesh_count: int = P06Models.inspect_meshes(model_root)
+    var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
+    detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
+        mesh_count,"V5 esculpido" if true_v5 and _p06_show_v5 else
+        "V3 de comparación"]
+    var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
+    status_label.text = "%s · %s · %s" % [
+        faction_name,P06Stages[_stage_p06()],
+        "acabado V5 cargado" if _p06_quality_verified else
+        "ERROR: modelo final no cargado"]
