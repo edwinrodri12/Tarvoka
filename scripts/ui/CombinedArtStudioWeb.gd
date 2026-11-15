@@ -17,6 +17,7 @@ const AirbaseDetailV9 = preload("res://scripts/ui/AirbaseDetailV9.gd")
 const AirbaseStructureV10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
 const AirbaseTrussesV11 = preload("res://scripts/ui/AirbaseTrussesV11.gd")
 const AirbaseFractureV12 = preload("res://scripts/ui/AirbaseFractureV12.gd")
+const AirbaseImpactsV13 = preload("res://scripts/ui/AirbaseImpactsV13.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -52,6 +53,11 @@ var airbase_detail_v9_toggle: CheckButton
 var airbase_structure_v10_toggle: CheckButton
 var airbase_trusses_v11_toggle: CheckButton
 var airbase_fracture_v12_toggle: CheckButton
+var airbase_impacts_v13_toggle: CheckButton
+var airbase_surface_v13_picker: OptionButton
+var airbase_v13_focus_toggle: CheckButton
+var airbase_missile_v13_button: Button
+var airbase_bombard_v13_button: Button
 var airbase_v11_cutaway_toggle: CheckButton
 var airbase_v9_view_picker: OptionButton
 var _airbase_v9_view := 0
@@ -366,7 +372,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V12 · quemaduras y fragmentos")
+    building_picker.add_item("Base Aérea · V13 · impactos por material")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -762,6 +768,48 @@ func _add_building_mode() -> void:
         func(): _play_airbase_impact("explosive"))
     airbase_impact_explosive_button.custom_minimum_size.y = 46
     airbase_impact_explosive_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _title(airbase_controls,
+        "V13 · IMPACTOS SEGÚN MATERIAL Y TIPO DE ATAQUE",13)
+    airbase_impacts_v13_toggle = CheckButton.new()
+    airbase_impacts_v13_toggle.name = "ImpactosMaterialBalasMisilesBombardeoBaseAereaV13"
+    airbase_impacts_v13_toggle.text = "V13 · efectos específicos (comparar V12)"
+    airbase_impacts_v13_toggle.button_pressed = true
+    airbase_impacts_v13_toggle.toggled.connect(_toggle_airbase_impacts_v13)
+    airbase_controls.add_child(airbase_impacts_v13_toggle)
+    airbase_surface_v13_picker = OptionButton.new()
+    airbase_surface_v13_picker.name = "SuperficieObjetivoBaseAereaV13"
+    airbase_surface_v13_picker.custom_minimum_size.y = 46
+    for surface_name in [
+            "Portón metálico · chispas y abolladuras",
+            "Torre de concreto · polvo y desprendimientos",
+            "Cubierta del hangar · quemaduras y fragmentos"]:
+        airbase_surface_v13_picker.add_item(surface_name)
+    airbase_surface_v13_picker.select(0)
+    airbase_surface_v13_picker.item_selected.connect(
+        _change_airbase_v13_target)
+    airbase_controls.add_child(airbase_surface_v13_picker)
+    airbase_v13_focus_toggle = CheckButton.new()
+    airbase_v13_focus_toggle.name = "EnfoqueCercanoImpactoBaseAereaV13"
+    airbase_v13_focus_toggle.text = "Enfocar objetivo para inspeccionar impactos de cerca"
+    airbase_v13_focus_toggle.button_pressed = false
+    airbase_v13_focus_toggle.toggled.connect(_toggle_airbase_v13_focus)
+    airbase_controls.add_child(airbase_v13_focus_toggle)
+    var attacks_v13 := HBoxContainer.new()
+    attacks_v13.name = "AtaquesV13Diferenciados"
+    attacks_v13.add_theme_constant_override("separation",6)
+    airbase_controls.add_child(attacks_v13)
+    airbase_missile_v13_button = _button(attacks_v13,"Misil",
+        func(): _play_airbase_impact("missile"))
+    airbase_missile_v13_button.name = "AtaqueMisilBaseAereaV13"
+    airbase_missile_v13_button.custom_minimum_size.y = 46
+    airbase_missile_v13_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    airbase_bombard_v13_button = _button(attacks_v13,"Bombardeo",
+        func(): _play_airbase_impact("bombardment"))
+    airbase_bombard_v13_button.name = "BombardeoSecuencialBaseAereaV13"
+    airbase_bombard_v13_button.custom_minimum_size.y = 46
+    airbase_bombard_v13_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _title(airbase_controls,
+        "Usa Impacto de bala, Misil o Bombardeo; V12 conserva la explosión clásica.",12)
     airbase_mobile_fx_toggle = CheckButton.new()
     airbase_mobile_fx_toggle.name = "EfectosLivianosAndroidBaseAereaV3"
     airbase_mobile_fx_toggle.text = "Humo reducido · perfil Android"
@@ -927,6 +975,22 @@ func _toggle_airbase_camera() -> void:
 func _apply_airbase_camera() -> void:
     if camera == null or _role != "airbase":
         return
+    # Optional orthographic close-up; focus the transformed physical
+    # impact anchor so it keeps working after rotating the model.
+    if model_root!=null and not _airbase_is_stress() and \
+            airbase_v13_focus_toggle!=null and \
+            airbase_v13_focus_toggle.button_pressed and \
+            airbase_impacts_v13_toggle.button_pressed:
+        var surface: String=AirbaseImpactsV13.TARGETS[
+            airbase_surface_v13_picker.selected]
+        var point: Vector3=model_root.transform*AirbaseImpactsV13.surface_position(
+            surface)
+        camera.position=point+(
+            Vector3(-3.1,6.1,-4.3) if surface=="hangar_roof" else
+            Vector3(3.8,2.8,-5.8))
+        camera.look_at(point,Vector3.UP)
+        _update_camera()
+        return
     var target:=Vector3(0,2.25,0)
     if airbase_detail_v9_toggle!=null and airbase_detail_v9_toggle.button_pressed:
         match _airbase_v9_view:
@@ -971,6 +1035,24 @@ func _airbase_impact_rig() -> TarvokaAirbaseImpactV3:
         AirbaseImpactV3.AIRBASE_NAME) as TarvokaAirbaseImpactV3
 
 func _play_airbase_impact(kind: String) -> void:
+    if _role!="airbase" or model_root==null or _airbase_is_stress():
+        return
+    if airbase_impacts_v13_toggle!=null and airbase_impacts_v13_toggle.button_pressed and \
+            kind in AirbaseImpactsV13.KINDS:
+        var v13: TarvokaAirbaseImpactsV13=model_root.get_node_or_null(
+            AirbaseImpactsV13.STAGE_NAME) as TarvokaAirbaseImpactsV13
+        var target: String=AirbaseImpactsV13.TARGETS[
+            airbase_surface_v13_picker.selected]
+        if v13!=null and v13.trigger(kind,target):
+            var names: Dictionary={"bullet":"Bala","missile":"Misil",
+                "bombardment":"Bombardeo"}
+            airbase_impact_status.text=(
+                "V13 · %s sobre %s · efectos 3D sin cambios de HP." %
+                [names[kind],airbase_surface_v13_picker.get_item_text(
+                    airbase_surface_v13_picker.selected)])
+        return
+    if kind in ["missile","bombardment"]:
+        return
     var rig: TarvokaAirbaseImpactV3 = _airbase_impact_rig()
     if rig == null:
         return
@@ -983,6 +1065,19 @@ func _play_airbase_impact(kind: String) -> void:
             if kind=="bullet" else
             "Explosión: fogonazo, onda de choque, escombros y humo 3D."
             )
+
+func _toggle_airbase_impacts_v13(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
+func _toggle_airbase_v13_focus(_enabled: bool) -> void:
+    if _role=="airbase" and not _airbase_is_stress():
+        _apply_airbase_camera()
+
+func _change_airbase_v13_target(_index: int) -> void:
+    if _role=="airbase" and not _airbase_is_stress() and \
+            airbase_v13_focus_toggle.button_pressed:
+        _apply_airbase_camera()
 
 func _set_airbase_mobile_vfx(enabled: bool) -> void:
     if _role != "airbase" or model_root == null:
@@ -1000,6 +1095,12 @@ func _refresh_airbase_damage_ui() -> void:
         int(model_root.get_meta("visual_damage_stage",4))<4
     airbase_impact_bullet_button.disabled = not active
     airbase_impact_explosive_button.disabled = not active
+    if airbase_missile_v13_button!=null:
+        airbase_missile_v13_button.disabled=not active or not \
+            airbase_impacts_v13_toggle.button_pressed
+    if airbase_bombard_v13_button!=null:
+        airbase_bombard_v13_button.disabled=not active or not \
+            airbase_impacts_v13_toggle.button_pressed
     if not active:
         airbase_impact_status.text = (
             "Escenario de carga · FX de unidades lejanas desactivados."
@@ -1204,6 +1305,11 @@ func _display_airbase() -> void:
         var impacts := TarvokaAirbaseImpactV3.new()
         impacts.name = AirbaseImpactV3.AIRBASE_NAME
         model_root.add_child(impacts)
+        if airbase_impacts_v13_toggle.button_pressed:
+            var surface_rig := TarvokaAirbaseImpactsV13.new()
+            surface_rig.name=AirbaseImpactsV13.STAGE_NAME
+            surface_rig.damage_stage=stage
+            model_root.add_child(surface_rig)
     preview.add_child(model_root)
     if stage in [2,3]:
         var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
@@ -1658,10 +1764,14 @@ func _update_camera() -> void:
             else:
                 # In an orthographic camera, changing distance does NOT
                 # zoom in: the inspection lens needs its own frustum size.
+                var focus_close: bool=airbase_v13_focus_toggle!=null and \
+                    airbase_v13_focus_toggle.button_pressed and \
+                    airbase_impacts_v13_toggle.button_pressed
                 var tower_close: bool = airbase_detail_v9_toggle != null and \
                     airbase_detail_v9_toggle.button_pressed and _airbase_v9_view==5
                 camera.size = (
-                    6.4 if tower_close else 10.5 if _airbase_camera_interior else 18.8
+                    5.6 if focus_close else 6.4 if tower_close else
+                    10.5 if _airbase_camera_interior else 18.8
                     )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
