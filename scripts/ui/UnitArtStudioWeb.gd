@@ -54,11 +54,13 @@ var _apc_v1_preview := true
 var _apc_v2_preview := true
 var _apc_v3_preview := true
 var _apc_damage_stage := 0
+var _apc_tactical_lod := false
 var apc_controls: VBoxContainer
 var apc_compare_button: Button
 var apc_v2_button: Button
 var apc_v3_button: Button
 var apc_damage_button: Button
+var apc_lod_button: Button
 var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
@@ -270,6 +272,8 @@ func _construct() -> void:
         "APC V3: Restaurar daños",func(): _set_apc_damage(0))
     apc_ramp_button=_button(apc_controls,
         "APC: Abrir rampa de tropas",_toggle_apc_ramp)
+    apc_lod_button=_button(apc_controls,
+        "APC V3 · MODO TÁCTICO: Ocultar microdetalles",_toggle_apc_lod)
 
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
@@ -422,6 +426,10 @@ func _display_role(role: String) -> void:
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
     if model_root.get_meta("tarvoka_apc_finish_v3",false):
         APCFinishV3.apply_stage(model_root,_apc_damage_stage)
+        APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+    apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
+    apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
+        if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -472,6 +480,8 @@ func _update_details() -> void:
         if model_root.get_meta("tarvoka_apc_finish_v3",false):
             status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
                 + " · TORRETA REFINADA · BALAS/EXPLOSIONES · DAÑO %d/4" % _apc_damage_stage)
+            if _apc_tactical_lod:
+                status_label.text+=" · LOD TÁCTICO"
         elif model_root.get_meta("tarvoka_apc_armor_v2",false):
             status_label.text = ("APC P06 BASTIÓN V2 · BLINDAJE ANGULAR"
                 + " · 288 TACOS 3D COMPARTIDOS · PINTURA PBR"
@@ -1072,6 +1082,16 @@ func _toggle_apc_v3() -> void:
         if _apc_v3_preview:
             APCFinishV3.apply_stage(model_root,_apc_damage_stage)
     _update_camera()
+    _update_details()
+
+func _toggle_apc_lod() -> void:
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _apc_tactical_lod=not _apc_tactical_lod
+    APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+    apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
+        if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     _update_details()
 
 func _set_apc_damage(stage: int) -> void:
