@@ -139,6 +139,7 @@ var production_picker: OptionButton
 var _production_catalog_key := ""
 var produce_button: Button
 var resupply_button: Button
+var unload_button: Button
 var relay_status: Label
 var _unit_summary_cache_key := -1
 var unit_summary_refresh_count := 0 # Diagnostics for headless regression tests.
@@ -169,6 +170,7 @@ var compact_confirm: Button
 var compact_cancel: Button
 var compact_end_turn: Button
 var compact_resupply: Button
+var compact_unload: Button
 var compact_top_shortcuts: HBoxContainer
 var compact_options_button: Button
 var compact_center: Button
@@ -572,6 +574,13 @@ func _ready() -> void:
     resupply_button.visible = false
     resupply_button.pressed.connect(_resupply_unit)
     panel.add_child(resupply_button)
+    unload_button = Button.new()
+    unload_button.name = "DesembarcarAPCLateral"
+    unload_button.text = "Desembarcar infanteria del APC"
+    unload_button.custom_minimum_size.y = 52
+    unload_button.visible = false
+    unload_button.pressed.connect(_arm_apc_unload)
+    panel.add_child(unload_button)
 
     cancel_button = Button.new()
     cancel_button.text = "Cancelar seleccion"
@@ -984,7 +993,7 @@ func _polish_battle_sidebar(panel: VBoxContainer, heading: Label, camera_row: HB
     orders_title.text = "ACCIONES DISPONIBLES"
     GameUiTheme.section(orders_title)
     orders.add_child(orders_title)
-    for widget in [confirm_button,cancel_button,end_button,resupply_button, factory_status,production_picker,produce_button]:
+    for widget in [confirm_button,cancel_button,end_button,resupply_button,unload_button, factory_status,production_picker,produce_button]:
         widget.reparent(orders,false)
     GameUiTheme.emphasize(confirm_button,"success")
     GameUiTheme.emphasize(end_button,"danger")
@@ -1176,6 +1185,14 @@ func _build_battle_hud() -> void:
     compact_resupply.visible = false
     compact_resupply.pressed.connect(_resupply_unit)
     actions.add_child(compact_resupply)
+    compact_unload = Button.new()
+    compact_unload.name = "DesembarcarAPCMovil"
+    compact_unload.text = "Desembarcar"
+    compact_unload.custom_minimum_size.y = 48
+    compact_unload.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_unload.visible = false
+    compact_unload.pressed.connect(_arm_apc_unload)
+    actions.add_child(compact_unload)
 
     compact_end_turn = Button.new()
     compact_end_turn.text = "Fin turno"
@@ -1189,7 +1206,7 @@ func _build_battle_hud() -> void:
     other_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
     other_actions.add_theme_constant_override("separation",5)
     action_rows.add_child(other_actions)
-    for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply]:
+    for shortcut in [compact_menu_button,compact_objectives_button,compact_resupply,compact_unload]:
         shortcut.reparent(other_actions,false)
     compact_compare_button = Button.new()
     compact_compare_button.name = "CompararHastaTresDestinosMovil"
@@ -1642,6 +1659,12 @@ func _process(_delta: float) -> void:
     if not compact_resupply.disabled:
         var compact_order: Dictionary = Logistics.quote(board.state, board.selected_id)
         compact_resupply.text = "Cargar M/F" if int(compact_order.get("fuel", 0)) + int(compact_order.get("cargo_fuel", 0)) > 0 else "Cargar mun."
+    unload_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern",false))
+    unload_button.disabled = not board.can_unload_selected()
+    unload_button.text = "Salir de modo desembarco" if board.unload_mode else "Desembarcar infanteria APC"
+    compact_unload.visible = unload_button.visible and not board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
+    compact_unload.disabled = unload_button.disabled
+    compact_unload.text = "Cancelar salida" if board.unload_mode else "Desembarcar"
     economy_status.visible = board.state.has("economy")
     factory_status.visible = board.state.has("economy")
     production_picker.visible = board.state.has("economy")
@@ -2000,6 +2023,9 @@ func _confirm_order() -> void:
 
 func _resupply_unit() -> void:
     board.resupply_selected()
+
+func _arm_apc_unload() -> void:
+    board.arm_unload_selected()
 
 func _produce_unit() -> void:
     if not board.state.has("economy") or production_picker.get_selected_id() < 0:
