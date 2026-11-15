@@ -33,88 +33,113 @@ var parked_tank_factions: Dictionary = {}
 var parked_order: Array[String] = []
 var live_tank_render_updates := 0
 
+# Four temporary viewports per batch cap peak setup memory and renderer
+# allocations. All 22 final faction textures are still baked just once.
+const STATIC_CAPTURE_BATCH_SIZE: int=4
+var _pending_static: Array[Dictionary]=[]
+var _static_capture_active: bool=false
+var _static_capture_target: int=0
+var capture_peak_viewports: int=0
+var capture_batches_finished: int=0
+
 func prepare() -> void:
     if prepared:
         return
-    prepared = true
+    prepared=true
     for role in Models.ROLES:
-        # Tank and APC use eight true faction-color captures; each is
-        # frozen into one static texture rather than 3D-rendered per unit.
-        # This integrates the finished APC P06 art WITHOUT making an
-        # eight-player battle instantiate dozens of live detailed APCs.
-        var variants: Array = range(8) if str(role) in ["tank","apc"] else [-1]
+        var variants: Array=range(8) if str(role) in ["tank","apc"] else [-1]
         for faction in variants:
-            var id: String = str(role) + ("#%d" % faction if int(faction) >= 0 else "")
-            var viewport := SubViewport.new()
-            viewport.name = "3D_" + id.replace("#","_")
-            viewport.size = SIZE
-            viewport.transparent_bg = true
-            viewport.own_world_3d = true
-            viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
-            viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-            add_child(viewport)
-            var model: Node3D = (Models.build("apc",int(faction),true,13)
-                if str(role)=="apc" else Models.build(str(role),int(faction)))
-            if model == null:
-                continue
-            if str(role)=="apc":
-                # Tread bolts and distant micro hardware are below 1px in
-                # the 224x224 combat portrait, so render tactical LOD.
-                APCFinishV3.set_tactical_lod(model,true)
-            viewport.add_child(model)
-            var camera := Camera3D.new()
-            camera.name = "CamaraIsometrica"
-            camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-            camera.size = Models.preview_frame_height(str(role))
-            camera.near = 0.1
-            camera.far = 50.0
-            camera.position = ORBIT
-            viewport.add_child(camera)
-            camera.look_at(Vector3(0,0.30,0),Vector3.UP)
-            camera.current = true
-            var key := DirectionalLight3D.new()
-            key.name = "LuzPrincipal"
-            key.rotation_degrees = Vector3(-49,-35,0)
-            key.light_energy = 1.3
-            viewport.add_child(key)
-            var fill := DirectionalLight3D.new()
-            fill.name = "LuzRelleno"
-            fill.rotation_degrees = Vector3(-20,135,0)
-            fill.light_energy = 0.45
-            viewport.add_child(fill)
-            previews[id] = viewport.get_texture()
-            viewports[id] = viewport
-            if str(role) in ["tank","apc"] and int(faction) == 0:
-                previews[str(role)] = viewport.get_texture()
-    # Captures need a couple of real graphical frames after attaching to
-    # scene tree. Stop rendering afterward so Android is not driving 8 live
-    # cameras in every battle frame.
-    _finish_captures.call_deferred()
+            _pending_static.append({"role":str(role),"faction":int(faction)})
+    _static_capture_target=_pending_static.size()
+    _start_static_capture_batch.call_deferred()
 
-func _finish_captures() -> void:
+func _start_static_capture_batch() -> void:
+    if not is_inside_tree() or _static_capture_active:
+        return
+    if _pending_static.is_empty():
+        captures_completed=(baked_static_captures==_static_capture_target)
+        if not captures_completed:
+            push_warning("TARVOKA: an incomplete 3D capture batch needs 2D fallback")
+        textures_ready.emit()
+        return
+    _static_capture_active=true
+    var batch_ids: Array[String]=[]
+    for i in range(mini(STATIC_CAPTURE_BATCH_SIZE,_pending_static.size())):
+        var job: Dictionary=_pending_static.pop_front()
+        var role: String=str(job["role"])
+        var faction: int=int(job["faction"])
+        var id: String=role+("#%d" % faction if faction>=0 else "")
+        var viewport:=SubViewport.new()
+        viewport.name="3D_"+id.replace("#","_")
+        viewport.size=SIZE
+        viewport.transparent_bg=true
+        viewport.own_world_3d=true
+        viewport.render_target_clear_mode=SubViewport.CLEAR_MODE_ALWAYS
+        viewport.render_target_update_mode=SubViewport.UPDATE_ONCE
+        add_child(viewport)
+        var model: Node3D=(Models.build("apc",faction,true,13)
+            if role=="apc" else Models.build(role,faction))
+        if model==null:
+            viewport.queue_free()
+            continue
+        if role=="apc":
+            APCFinishV3.set_tactical_lod(model,true)
+        viewport.add_child(model)
+        var camera:=Camera3D.new()
+        camera.name="CamaraIsometrica"
+        camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+        camera.size=Models.preview_frame_height(role)
+        camera.near=0.1
+        camera.far=50.0
+        camera.position=ORBIT
+        viewport.add_child(camera)
+        camera.look_at(Vector3(0,0.30,0),Vector3.UP)
+        camera.current=true
+        var key:=DirectionalLight3D.new()
+        key.name="LuzPrincipal"
+        key.rotation_degrees=Vector3(-49,-35,0)
+        key.light_energy=1.3
+        viewport.add_child(key)
+        var fill:=DirectionalLight3D.new()
+        fill.name="LuzRelleno"
+        fill.rotation_degrees=Vector3(-20,135,0)
+        fill.light_energy=0.45
+        viewport.add_child(fill)
+        previews[id]=viewport.get_texture()
+        viewports[id]=viewport
+        if role in ["tank","apc"] and faction==0:
+            previews[role]=viewport.get_texture()
+        batch_ids.append(id)
+    capture_peak_viewports=maxi(capture_peak_viewports,viewports.size())
+    _finish_static_capture_batch.call_deferred(batch_ids)
+
+func _finish_static_capture_batch(batch_ids: Array[String]) -> void:
     if not is_inside_tree():
         return
+    # Wait for the GPU to actually draw each small batch before readback.
     await get_tree().process_frame
     await get_tree().process_frame
-    for role in viewports:
-        var viewport: SubViewport = viewports[role]
-        viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-        # Baked static previews must not hold the 22 capture models and
-        # cameras in Android memory for the rest of the match. One guarded
-        # GPU readback per role creates a lightweight permanent ImageTexture.
-        var image: Image = viewport.get_texture().get_image()
-        if image != null and not image.is_empty():
-            var frozen: ImageTexture = ImageTexture.create_from_image(image)
-            if frozen != null:
-                previews[role] = frozen
-                if str(role) in ["tank#0","apc#0"]:
-                    previews[str(role).split("#")[0]] = frozen
-                baked_static_captures += 1
-                viewport.queue_free()
-    if baked_static_captures == viewports.size():
-        viewports.clear()
-    captures_completed = true
-    textures_ready.emit()
+    for id in batch_ids:
+        var viewport: SubViewport=viewports.get(id,null) as SubViewport
+        if viewport==null:
+            continue
+        viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
+        var image: Image=viewport.get_texture().get_image()
+        if image!=null and not image.is_empty():
+            var frozen: ImageTexture=ImageTexture.create_from_image(image)
+            if frozen!=null:
+                previews[id]=frozen
+                if id in ["tank#0","apc#0"]:
+                    previews[id.split("#")[0]]=frozen
+                baked_static_captures+=1
+        viewport.queue_free()
+        viewports.erase(id)
+    capture_batches_finished+=1
+    _static_capture_active=false
+    # A frame boundary allows old 3D models and render targets to be freed
+    # before the next set is allocated. No 22-camera burst on Android.
+    await get_tree().process_frame
+    _start_static_capture_batch.call_deferred()
 
 func texture_for(role: String, faction: int = -1, unit_id: String = "") -> Texture2D:
     if not prepared or not captures_completed:
