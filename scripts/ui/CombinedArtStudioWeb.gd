@@ -19,6 +19,7 @@ const AirbaseTrussesV11 = preload("res://scripts/ui/AirbaseTrussesV11.gd")
 const AirbaseFractureV12 = preload("res://scripts/ui/AirbaseFractureV12.gd")
 const AirbaseImpactsV13 = preload("res://scripts/ui/AirbaseImpactsV13.gd")
 const AirbaseScarsV14 = preload("res://scripts/ui/AirbaseScarsV14.gd")
+const AirbaseScarFinishV15 = preload("res://scripts/ui/AirbaseScarFinishV15.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -56,6 +57,7 @@ var airbase_trusses_v11_toggle: CheckButton
 var airbase_fracture_v12_toggle: CheckButton
 var airbase_impacts_v13_toggle: CheckButton
 var airbase_scars_v14_toggle: CheckButton
+var airbase_finish_v15_toggle: CheckButton
 var airbase_v14_reset_button: Button
 var airbase_v14_status: Label
 var _airbase_v14_history: Array[Dictionary]=[]
@@ -377,7 +379,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V14 · marcas de impactos acumuladas")
+    building_picker.add_item("Base Aérea · V15 · fracturas y quemaduras naturales")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -823,6 +825,14 @@ func _add_building_mode() -> void:
     airbase_scars_v14_toggle.button_pressed=true
     airbase_scars_v14_toggle.toggled.connect(_toggle_airbase_scars_v14)
     airbase_controls.add_child(airbase_scars_v14_toggle)
+    airbase_finish_v15_toggle=CheckButton.new()
+    airbase_finish_v15_toggle.name="FracturasNaturalesConcretoYMetalBaseAereaV15"
+    airbase_finish_v15_toggle.text="V15 · grietas orgánicas, metal rasgado y carbonización (comparar V14)"
+    airbase_finish_v15_toggle.button_pressed=true
+    airbase_finish_v15_toggle.toggled.connect(_toggle_airbase_finish_v15)
+    airbase_controls.add_child(airbase_finish_v15_toggle)
+    _title(airbase_controls,
+        "V15 · un lote de detalle por huella; comparar sin perder historial.",12)
     airbase_v14_reset_button=_button(airbase_controls,
         "Limpiar impactos acumulados",_clear_airbase_v14_marks)
     airbase_v14_reset_button.name="RepararSuperficiesEnEstudioV14"
@@ -1100,6 +1110,10 @@ func _toggle_airbase_scars_v14(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
 
+func _toggle_airbase_finish_v15(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
 func _clear_airbase_v14_marks() -> void:
     _airbase_v14_history.clear()
     if model_root!=null:
@@ -1374,6 +1388,12 @@ func _display_airbase() -> void:
     var persistent_marks: TarvokaAirbaseScarsV14=model_root.get_node_or_null(
         AirbaseScarsV14.STAGE_NAME) as TarvokaAirbaseScarsV14
     if persistent_marks!=null:
+        if airbase_finish_v15_toggle.button_pressed:
+            var organic_finish:=TarvokaAirbaseScarFinishV15.new()
+            organic_finish.name=AirbaseScarFinishV15.STAGE_NAME
+            model_root.add_child(organic_finish)
+            if not organic_finish.bind_to_scars(persistent_marks):
+                push_error("Base Aerea V15: acentos organicos no enlazados")
         persistent_marks.restore(_airbase_v14_history)
     if stage in [2,3]:
         var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
