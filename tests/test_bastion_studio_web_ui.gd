@@ -48,6 +48,21 @@ func _run() -> void:
             "V11 actual bevelled front and curved guards are installed")
         _check(bool(model.get_meta("tarvoka_apc_turret_v12",false)),
             "V12 fully sculpted remote weapon station is built")
+        _check(bool(model.get_meta("tarvoka_apc_surface_v13",false)),
+            "V13 real PBR coating and welded steel applied")
+        var finish: MeshInstance3D=model.find_child(
+            "P06V11_ModuloBlindaje_1_0",true,false) as MeshInstance3D
+        _check(finish!=null and finish.material_override is StandardMaterial3D
+            and (finish.material_override as StandardMaterial3D).uv1_triplanar,
+            "real painted modular side has 3D texture projection")
+        var weld: Node3D=model.find_child(
+            "P06V13_CordonesSoldaduraReales",true,false) as Node3D
+        _check(weld!=null and weld.visible,
+            "raised 3D beads appear along armored hull")
+        var bolts: MultiMeshInstance3D=model.find_child(
+            "P06V13_PernosTorreta",true,false) as MultiMeshInstance3D
+        _check(bolts!=null and bolts.multimesh.instance_count==12,
+            "12 true hexagonal bolts attached to remote station")
         _check(model.find_child("P06V12_CarcasaOctogonalCerrada",
             true,false) is MeshInstance3D,
             "real sealed octagonal weapon housing visible in published studio")
@@ -91,6 +106,12 @@ func _run() -> void:
         "V11 front and side armor tracks five-stage damage")
     _check(int(model.get_meta("tarvoka_apc_turret_v12_stage",-1)) == 3,
         "V12 weapon station responds to critical stage")
+    _check(int(model.get_meta("tarvoka_apc_v13_damage_stage",-1)) == 3,
+        "paint weathering follows damage without changing game HP")
+    var burnt_paint: Node3D=model.find_child(
+        "P06V13_MetalChamuscado",true,false) as Node3D
+    _check(burnt_paint!=null and burnt_paint.visible,
+        "critical impact reveals distressed paint near actual torn plating")
     var pristine_optics: Node3D=model.find_child(
         "P06V12_OpticasEstabilizadas",true,false) as Node3D
     _check(pristine_optics!=null and not pristine_optics.visible,
@@ -128,6 +149,8 @@ func _run() -> void:
         "three clean turret optics return after repair")
     _check(v12_wreck!=null and not v12_wreck.visible,
         "burnt turret fragments disappear after repair")
+    _check(burnt_paint!=null and not burnt_paint.visible,
+        "full repair clears burnt coating")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -146,6 +169,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_turret_v12_visible",true),
         "historic comparison hides both turret body and muzzle fittings")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v13_visible",true),
+        "historical version reverts applied materials and hides welds")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -158,6 +184,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_turret_v12_visible",false),
         "close-up V12 turret finish returns after comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v13_visible",false),
+        "modern enamel, roughness and real weld beads return")
     studio.call("_inspect_p06_turret")
     _check(absf(float(studio.get("_yaw"))-34.0)<0.001 and
         absf(float(studio.get("_zoom"))-2.05)<0.001,
@@ -268,5 +297,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V12 LIVE WEB STUDIO: sealed rotating turret, perforated automatic gun, three stabilized optics, damage, historical comparison and hydraulics")
+    print("PASS BASTION V13 LIVE WEB STUDIO: triplanar armor enamel, roughness, real weld beads, turret bolts, 8 factions, damage repair and inspection")
     quit(0)
