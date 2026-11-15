@@ -31,7 +31,7 @@ func _initialize() -> void:
             "position_forgery","nested_cargo","negative_hp",
             "oversized_ammo","missing_stats","invalid_moved",
             "invalid_ready","bad_domain","too_many_seats",
-            "dead_carrier","other_carrier","missing_cargo"]:
+            "dead_carrier","non_carrier","missing_cargo"]:
         var forged: Dictionary = baseline.duplicate(true)
         var unit: Dictionary = forged["units"][0]
         var soldier: Dictionary = unit["cargo"][0]
@@ -62,8 +62,8 @@ func _initialize() -> void:
                 unit["cargo"] = [soldier.duplicate(true),soldier.duplicate(true),soldier.duplicate(true)]
             "dead_carrier":
                 unit["hp"] = 0
-            "other_carrier":
-                unit["role"] = "ifv"
+            "non_carrier":
+                unit["role"] = "tank"
             "missing_cargo":
                 unit["cargo"] = null
         var invalid: String = JSON.stringify(forged)
