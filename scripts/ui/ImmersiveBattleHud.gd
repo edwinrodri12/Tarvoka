@@ -35,7 +35,7 @@ var expand_button: Button
 var objective_button: Button
 var radar_panel: PanelContainer
 var radar: Control
-var camera_buttons: VBoxContainer
+var camera_buttons: BoxContainer
 var unit_panel: PanelContainer
 var unit_icon: Control
 var unit_name: Label
@@ -136,7 +136,8 @@ func _build() -> void:
     radar_panel.add_child(radar)
     radar.custom_minimum_size = Vector2.ZERO
 
-    camera_buttons = VBoxContainer.new()
+    camera_buttons = BoxContainer.new()
+    camera_buttons.vertical = true
     camera_buttons.name = "ControlesDeCamara"
     camera_buttons.add_theme_constant_override("separation",5)
     add_child(camera_buttons)
@@ -325,7 +326,11 @@ func reflow_for_size(viewport: Vector2) -> void:
     radar.custom_minimum_size = Vector2.ZERO
     if compact_phone:
         _corner(radar_panel,Control.PRESET_TOP_LEFT,9,61,150,145)
-        _corner(camera_buttons,Control.PRESET_TOP_LEFT,10,155,55,304)
+        # Three 44px camera controls fit in one horizontal row beneath the
+        # minimap. The old vertical rail ended at y304 and overlapped the unit
+        # dossier starting at y272 on 780×360 Android.
+        camera_buttons.vertical = false
+        _corner(camera_buttons,Control.PRESET_TOP_LEFT,9,154,155,199)
         _corner(unit_panel,Control.PRESET_BOTTOM_LEFT,9,-88,273,-9)
         _corner(idle_label,Control.PRESET_BOTTOM_LEFT,12,-38,240,-9)
         _corner(order_panel,Control.PRESET_CENTER_TOP,-155,66,155,118)
@@ -338,6 +343,7 @@ func reflow_for_size(viewport: Vector2) -> void:
         order_detail.add_theme_font_size_override("font_size",11)
     else:
         _corner(radar_panel,Control.PRESET_TOP_LEFT,10,65,188,178)
+        camera_buttons.vertical = true
         _corner(camera_buttons,Control.PRESET_TOP_LEFT,10,186,55,333)
         _corner(unit_panel,Control.PRESET_BOTTOM_LEFT,10,-103,332,-12)
         _corner(order_panel,Control.PRESET_CENTER_TOP,-190,70,190,127)
