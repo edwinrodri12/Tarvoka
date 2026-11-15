@@ -1,7 +1,7 @@
 name: TARVOKA V16 immersive 3D HUD
 on:
   push:
-    branches: [ui/immersive-3d-battle-hud-v16]
+    branches: [ui/immersive-3d-battle-hud-v16, ui/immersive-3d-touch-polish-v17]
   pull_request:
     paths:
       - 'scripts/ui/Battle3DMapView.gd'
