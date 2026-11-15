@@ -7,6 +7,8 @@ const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const AirbaseV1 = preload("res://scripts/ui/Airbase3DV1.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
+const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
+const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
@@ -41,6 +43,10 @@ var airbase_open_button: Button
 var airbase_close_button: Button
 var airbase_gate_slider: HSlider
 var airbase_gate_status: Label
+var airbase_impact_bullet_button: Button
+var airbase_impact_explosive_button: Button
+var airbase_impact_status: Label
+var airbase_mobile_fx_toggle: CheckButton
 var airbase_camera_button: Button
 var _airbase_camera_interior := false
 var _airbase_saved_gate_fraction := 0.0
@@ -337,7 +343,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V2 · portones animados")
+    building_picker.add_item("Base Aérea · V3 · pista y efectos")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -589,7 +595,7 @@ func _add_building_mode() -> void:
     airbase_controls.name = "OpcionesBaseAereaV1"
     airbase_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(airbase_controls)
-    _title(airbase_controls,"BASE AÉREA · HANGAR AVANZADO V2",13)
+    _title(airbase_controls,"BASE AÉREA · V3 PISTA + EFECTOS",13)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -644,9 +650,29 @@ func _add_building_mode() -> void:
         "Inspeccionar interior del hangar",_toggle_airbase_camera)
     airbase_camera_button.name = "InspeccionarInteriorHangarV2"
     airbase_camera_button.custom_minimum_size.y = 44
+    _title(airbase_controls,"V3 · IMPACTOS Y DAÑOS ATMOSFÉRICOS",13)
+    var hits := HBoxContainer.new()
+    hits.name = "ImpactosBalasExplosivosBaseAereaV3"
+    hits.add_theme_constant_override("separation",6)
+    airbase_controls.add_child(hits)
+    airbase_impact_bullet_button = _button(hits,"Impacto de bala",
+        func(): _play_airbase_impact("bullet"))
+    airbase_impact_bullet_button.custom_minimum_size.y = 46
+    airbase_impact_bullet_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    airbase_impact_explosive_button = _button(hits,"Impacto explosivo",
+        func(): _play_airbase_impact("explosive"))
+    airbase_impact_explosive_button.custom_minimum_size.y = 46
+    airbase_impact_explosive_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    airbase_mobile_fx_toggle = CheckButton.new()
+    airbase_mobile_fx_toggle.name = "EfectosLivianosAndroidBaseAereaV3"
+    airbase_mobile_fx_toggle.text = "Humo reducido · perfil Android"
+    airbase_mobile_fx_toggle.toggled.connect(_set_airbase_mobile_vfx)
+    airbase_controls.add_child(airbase_mobile_fx_toggle)
+    airbase_impact_status = _title(airbase_controls,
+        "V3: impactos visuales · no cambian puntos de vida.",12)
     _title(airbase_controls,
-        "Hangar cerrado y techo curvo 3D · torre · helipuerto · "
-        + "escudos oficiales · daños experimentales. Sin cambios en el combate.",12)
+        "Pista de rodaje alineada con entrada del hangar · "
+        + "humo en daño medio · fuego y humo en daño crítico.",12)
     airbase_controls.visible = false
     building_controls.visible = false
 
@@ -801,6 +827,52 @@ func _apply_airbase_camera() -> void:
             else "Inspeccionar interior del hangar")
     _update_camera()
 
+func _airbase_impact_rig() -> TarvokaAirbaseImpactV3:
+    if _role != "airbase" or model_root == null:
+        return null
+    return model_root.get_node_or_null(
+        AirbaseImpactV3.AIRBASE_NAME) as TarvokaAirbaseImpactV3
+
+func _play_airbase_impact(kind: String) -> void:
+    var rig: TarvokaAirbaseImpactV3 = _airbase_impact_rig()
+    if rig == null:
+        return
+    if rig.trigger_airbase(kind):
+        airbase_impact_status.text = (
+            "Disparo: chispas y desconchones 3D de la puerta · simulación visual."
+            if kind=="bullet" else
+            "Explosión: fogonazo, onda de choque, escombros y humo 3D."
+            )
+
+func _set_airbase_mobile_vfx(enabled: bool) -> void:
+    if _role != "airbase" or model_root == null:
+        return
+    var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
+        AirbaseDamageV3.STAGE_NAME) as TarvokaAirbaseDamageFXV3
+    if smoke != null:
+        smoke.set_mobile_quality(enabled)
+    _refresh_airbase_damage_ui()
+
+func _refresh_airbase_damage_ui() -> void:
+    if airbase_impact_bullet_button == null:
+        return
+    var active: bool = _role=="airbase" and model_root!=null and \
+        int(model_root.get_meta("visual_damage_stage",4))<4
+    airbase_impact_bullet_button.disabled = not active
+    airbase_impact_explosive_button.disabled = not active
+    if not active:
+        airbase_impact_status.text = (
+            "Base completamente destruida; no hay objetivos intactos de impacto."
+            if _role=="airbase" else "Impactos disponibles en Base Aérea")
+        return
+    var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
+        AirbaseDamageV3.STAGE_NAME) as TarvokaAirbaseDamageFXV3
+    var smoke_count: int = smoke.smoke_instance_count() if smoke!=null else 0
+    var fire_batches: int = smoke.flame_batch_count() if smoke!=null else 0
+    airbase_impact_status.text = (
+        "V3 · %d volutas / %d lote de llamas · impactos de prueba sin HP" %
+        [smoke_count,fire_batches])
+
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
         _display_airbase()
@@ -833,7 +905,19 @@ func _display_airbase() -> void:
         push_error("Base Aerea V2: fallo al instalar arquitectura")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
+    if stage in [2,3]:
+        var ambience: TarvokaAirbaseDamageFXV3 = AirbaseDamageV3.build(stage)
+        model_root.add_child(ambience)
+    if stage < 4:
+        var impacts := TarvokaAirbaseImpactV3.new()
+        impacts.name = AirbaseImpactV3.AIRBASE_NAME
+        model_root.add_child(impacts)
     preview.add_child(model_root)
+    if stage in [2,3]:
+        var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
+            AirbaseDamageV3.STAGE_NAME) as TarvokaAirbaseDamageFXV3
+        if smoke != null:
+            smoke.set_mobile_quality(airbase_mobile_fx_toggle.button_pressed)
     var rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
     if rig != null and rig.is_operational():
         rig.set_open_fraction(_airbase_saved_gate_fraction)
@@ -862,6 +946,7 @@ func _display_airbase() -> void:
     _apply_airbase_camera()
     _apply_hq_lighting(_hq_light_preset)
     _refresh_airbase_door_ui()
+    _refresh_airbase_damage_ui()
     _update_details()
 
 func _change_hq_version(index: int) -> void:
@@ -1283,7 +1368,7 @@ func _update_details() -> void:
             return
         var tier: int = int(model_root.get_meta("visual_level",1))
         var stage: int = int(model_root.get_meta("visual_damage_stage",0))
-        detail_label.text = "Base Aérea · HANGAR DETALLADO V2 · Nivel %d · %d mallas 3D" % [
+        detail_label.text = "Base Aérea · V3 PISTA ALINEADA Y EFECTOS · Nivel %d · %d mallas 3D" % [
             tier,AirbaseV1.mesh_count(model_root)]
         status_label.text = "%s · %s · %d piezas de facción · casco cerrado" % [
             str(Factions.FACTIONS[_faction]["name"]),
