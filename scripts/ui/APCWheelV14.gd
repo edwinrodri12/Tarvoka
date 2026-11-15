@@ -331,7 +331,7 @@ static func pose(model: Node3D) -> bool:
                 true,false) as Node3D
             var assembly: Node3D=root.find_child(
                 "P06V14_Suspension_%d_%d" % [side,axle],
-                false,false) as Node3D
+                true,false) as Node3D
             if not _pose_block(assembly,wheel):
                 return false
     return true
