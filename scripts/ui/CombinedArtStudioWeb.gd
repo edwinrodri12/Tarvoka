@@ -16,6 +16,7 @@ const AirbaseFinishV8 = preload("res://scripts/ui/AirbaseFinishV8.gd")
 const AirbaseDetailV9 = preload("res://scripts/ui/AirbaseDetailV9.gd")
 const AirbaseStructureV10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
 const AirbaseTrussesV11 = preload("res://scripts/ui/AirbaseTrussesV11.gd")
+const AirbaseFractureV12 = preload("res://scripts/ui/AirbaseFractureV12.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -50,6 +51,7 @@ var airbase_finish_v8_toggle: CheckButton
 var airbase_detail_v9_toggle: CheckButton
 var airbase_structure_v10_toggle: CheckButton
 var airbase_trusses_v11_toggle: CheckButton
+var airbase_fracture_v12_toggle: CheckButton
 var airbase_v11_cutaway_toggle: CheckButton
 var airbase_v9_view_picker: OptionButton
 var _airbase_v9_view := 0
@@ -364,7 +366,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V11 · cerchas interiores y daño real")
+    building_picker.add_item("Base Aérea · V12 · quemaduras y fragmentos")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -673,6 +675,14 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_v11_cutaway_toggle)
     _title(airbase_controls,
         "Vista desmontable del estudio; no modifica el modelo del juego.",12)
+    airbase_fracture_v12_toggle = CheckButton.new()
+    airbase_fracture_v12_toggle.name = "ExplosionQuemadurasYAceroTorcidoBaseAereaV12"
+    airbase_fracture_v12_toggle.text = "V12 · bordes quemados, vigas torcidas y fragmentos (comparar V11)"
+    airbase_fracture_v12_toggle.button_pressed = true
+    airbase_fracture_v12_toggle.toggled.connect(_toggle_airbase_fracture_v12)
+    airbase_controls.add_child(airbase_fracture_v12_toggle)
+    _title(airbase_controls,
+        "Al pulsar Explosión se animan seis esquirlas metálicas 3D sin cambiar HP.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -965,6 +975,9 @@ func _play_airbase_impact(kind: String) -> void:
     if rig == null:
         return
     if rig.trigger_airbase(kind):
+        if kind=="explosive" and airbase_fracture_v12_toggle!=null and \
+                airbase_fracture_v12_toggle.button_pressed:
+            AirbaseFractureV12.trigger_explosion(model_root)
         airbase_impact_status.text = (
             "Disparo: chispas y desconchones 3D de la puerta · simulación visual."
             if kind=="bullet" else
@@ -1026,7 +1039,9 @@ func _display_airbase_stress(first: bool) -> void:
         airbase_finish_v8_toggle.button_pressed,
         airbase_detail_v9_toggle.button_pressed,
         airbase_structure_v10_toggle.button_pressed,
-        airbase_trusses_v11_toggle.button_pressed and airbase_structure_v10_toggle.button_pressed)
+        airbase_trusses_v11_toggle.button_pressed and airbase_structure_v10_toggle.button_pressed,
+        airbase_fracture_v12_toggle.button_pressed and airbase_trusses_v11_toggle.button_pressed and \
+            airbase_structure_v10_toggle.button_pressed)
     if model_root==null:
         push_error("Base Aerea V4: no se pudo crear escenario LOD")
         return
@@ -1107,6 +1122,10 @@ func _apply_airbase_v11_cutaway() -> void:
 func _toggle_airbase_cutaway_v11(_enabled: bool) -> void:
     _apply_airbase_v11_cutaway()
 
+func _toggle_airbase_fracture_v12(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
 func _change_airbase_v9_view(index: int) -> void:
     if _role != "airbase" or _airbase_is_stress():
         return
@@ -1172,6 +1191,10 @@ func _display_airbase() -> void:
     if airbase_trusses_v11_toggle.button_pressed and airbase_structure_v10_toggle.button_pressed:
         if not AirbaseTrussesV11.apply(model_root,tier,_faction,stage):
             push_error("Base Aerea V11: arriostramiento y roturas no instalados")
+    if airbase_fracture_v12_toggle.button_pressed and airbase_trusses_v11_toggle.button_pressed and \
+            airbase_structure_v10_toggle.button_pressed:
+        if not AirbaseFractureV12.apply(model_root,tier,_faction,stage):
+            push_error("Base Aerea V12: fracturas y metal quemado no instalados")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
