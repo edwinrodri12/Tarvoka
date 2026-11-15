@@ -13,6 +13,8 @@ on:
       - 'scripts/ui/Main.gd'
       - 'tests/test_transport_animated_vfx.gd'
       - 'tests/test_ifv_single_seat_transport.gd'
+      - 'tests/test_ifv_cargo_ai.gd'
+      - 'scripts/core/APCTransportAI.gd'
       - '.github/workflows/cargo-vfx-ifv.yml'
   push:
     branches:
@@ -39,6 +41,14 @@ jobs:
             --script res://tests/test_ifv_single_seat_transport.gd 2>&1 | tee /tmp/ifv-single-seat.log
           if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/ifv-single-seat.log; then exit 1; fi
           grep -F 'PASS IFV transport:' /tmp/ifv-single-seat.log
+      - name: Verify IFV autonomous pickup travel and city capture
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ifv_cargo_ai.gd 2>&1 | tee /tmp/ifv-cargo-ai.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/ifv-cargo-ai.log; then exit 1; fi
+          grep -F 'PASS IFV transport AI:' /tmp/ifv-cargo-ai.log
       - name: Draw real cargo embark/disembark VFX on classic and isometric boards
         run: |
           set -euo pipefail
@@ -65,6 +75,7 @@ jobs:
           path: |
             /tmp/ifv-single-seat.log
             /tmp/cargo-vfx.log
+            /tmp/ifv-cargo-ai.log
             /tmp/test_apc_transport_*.log
             /tmp/test_piercer_g09_regression.log
             /tmp/test_ground_armor_ai_procurement.log
