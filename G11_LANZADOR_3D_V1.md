@@ -210,3 +210,18 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - La vista interactiva `BastionStudioAdapter.gd` ahora identifica este acabado como «ENGRANES Y FACCIÓN V13». El pipeline web exporta el módulo V13 al Studio de TARVOKA.
 
 **Estado:** cambios de geometría y pintura integrados. No pasar aún al benchmark Android ni dar el G11 por terminado: inspeccionar primero que los engranajes engranen visualmente con los tacos de caucho y que la cubierta de facción se lea correctamente en la escala real del juego.
+
+
+## Actualización V14 — hidráulicos articulados y registros de mantenimiento 3D (15-nov-2026)
+
+**Integrado en `main` en el PR [#399](https://github.com/edwinrodri12/Tarvoka/pull/399).** El siguiente pase permanece centrado exclusivamente en la escultura del modelo; sin mejoras de rendimiento todavía.
+
+- Módulo real de Godot 4.3 `scripts/ui/G11MechanicalDetailV14.gd`, aplicado por `G11Art3D.gd` después de V13.
+- Cuatro circuitos de mangueras hidráulicas con siete cilindros curvos por circuito (28 tramos nativos), dos por lateral. Cada tramo interpola su posición entre el soporte de la plataforma giratoria y el conector fijo a la elevación mediante una curva cuadrática; la función `update_hoses` recalcula la forma en cada pose de disparo/enfriamiento y evita mangueras rígidas flotantes.
+- Cuatro parejas de conectores hidráulicos metálicos, cubiertas concéntricas de los ejes de elevación y soportes inferiores; todos son geometría 3D y no texturas decorativas.
+- Registro posterior con puerta, junta, dos bisagras, dos cierres, refuerzo y ocho pernos en MultiMesh. Dos registros laterales de servicio separados de los grandes paneles cromáticos V13, para conservar lectura clara de las facciones.
+- No se reemplazan la cubierta PBR `G11_TapaSuperior`, la estructura abierta del bastidor, los doce conductos de cohetes, ni los sprockets de diez dientes V13. Se preservan los cinco estados de daño y las animaciones ya existentes.
+- `G11VisualRig3D.gd` actualiza el tendido de mangueras en cada pose reversible. `BastionStudioAdapter.gd` identifica el G11 como V14 y el exportador de Pages incorpora el nuevo módulo.
+- Test `tests/test_g11_mechanical_detail_v14.gd` para ocho facciones, los cuatro circuitos, 28 tramos, doce tubos, material de pintura, sincronización con elevación, giro de orugas, daños y reparación. **GitHub Actions G11 native launcher sculpt QA del PR #399: aprobado**.
+
+**Estado:** V14 integrada en la fuente del juego y probada en Godot. La publicación web se comprueba por separado. Aún falta inspección artística del conjunto en el visor desde todos los ángulos; no dar el G11 por terminado antes de esa evaluación.
