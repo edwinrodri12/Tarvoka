@@ -14,6 +14,7 @@ const NavalNightV6 = preload("res://scripts/ui/NavalNightReadabilityV6.gd")
 const NavalBoardingV7 = preload("res://scripts/ui/NavalBoardingDetailV7.gd")
 const NavalFendersV8 = preload("res://scripts/ui/NavalFendersV8.gd")
 const NavalSculptV9 = preload("res://scripts/ui/NavalSculptedFendersV9.gd")
+const NavalMooringV10 = preload("res://scripts/ui/NavalMooringAlignmentV10.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -66,6 +67,7 @@ var naval_detail_v6_toggle: CheckButton
 var naval_detail_v7_toggle: CheckButton
 var naval_detail_v8_toggle: CheckButton
 var naval_detail_v9_toggle: CheckButton
+var naval_detail_v10_toggle: CheckButton
 var naval_night_v6_toggle: CheckButton
 var _naval_saved_light_preset: int=0
 var naval_level_picker: OptionButton
@@ -405,7 +407,7 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
-    building_picker.add_item("Base Naval · V9 · caucho PBR y defensas esculpidas")
+    building_picker.add_item("Base Naval · V10 · anclajes y bolardos reales")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -968,7 +970,7 @@ func _add_naval_controls() -> void:
     naval_controls.name="OpcionesBaseNavalV1"
     naval_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(naval_controls)
-    _title(naval_controls,"BASE NAVAL V9 · CAUCHO PBR Y DEFENSAS",14)
+    _title(naval_controls,"BASE NAVAL V10 · AMARRES Y SOPORTES",14)
     _title(naval_controls,
         "Dársena en U, espigones, grúa, hangar marítimo, torre y servicios.",12)
     naval_detail_v2_toggle=CheckButton.new()
@@ -1019,6 +1021,12 @@ func _add_naval_controls() -> void:
     naval_detail_v9_toggle.button_pressed=true
     naval_detail_v9_toggle.toggled.connect(_toggle_naval_detail_v9)
     naval_controls.add_child(naval_detail_v9_toggle)
+    naval_detail_v10_toggle=CheckButton.new()
+    naval_detail_v10_toggle.name="AnclajesFenderYAmarresAlineadosV10"
+    naval_detail_v10_toggle.text="V10 · anclajes, bolardos y soportes (comparar V9)"
+    naval_detail_v10_toggle.button_pressed=true
+    naval_detail_v10_toggle.toggled.connect(_toggle_naval_detail_v10)
+    naval_controls.add_child(naval_detail_v10_toggle)
     naval_night_v6_toggle=CheckButton.new()
     naval_night_v6_toggle.name="VistaNocturnaBaseNavalV6"
     naval_night_v6_toggle.text="Vista nocturna · reflectores y balizas reales"
@@ -1047,7 +1055,8 @@ func _add_naval_controls() -> void:
     naval_camera_picker.name="CamaraBaseNavalV1"
     naval_camera_picker.custom_minimum_size.y=48
     for label in ["Puerto completo","Vista desde el mar",
-            "Parte posterior","Vista superior","Detalle defensas y rampa"]:
+            "Parte posterior","Vista superior","Detalle defensas y rampa",
+            "Anclajes y bolardos"]:
         naval_camera_picker.add_item(label)
     naval_camera_picker.item_selected.connect(_change_naval_camera)
     naval_controls.add_child(naval_camera_picker)
@@ -1088,6 +1097,10 @@ func _toggle_naval_detail_v9(_enabled: bool) -> void:
     if _role=="naval_base":
         _display_naval_base()
 
+func _toggle_naval_detail_v10(_enabled: bool) -> void:
+    if _role=="naval_base":
+        _display_naval_base()
+
 func _toggle_naval_night_v6(_enabled: bool) -> void:
     if _role!="naval_base" or model_root==null:
         return
@@ -1097,6 +1110,8 @@ func _toggle_naval_night_v6(_enabled: bool) -> void:
         active and naval_night_v6_toggle.button_pressed)
     NavalFendersV8.set_night(model_root,
         active and naval_night_v6_toggle.button_pressed)
+    NavalMooringV10.set_night(model_root,
+        active and naval_night_v6_toggle.button_pressed)
     _apply_hq_lighting(2 if active and naval_night_v6_toggle.button_pressed else _naval_saved_light_preset)
 
 func _change_naval_setting(_index: int) -> void:
@@ -1104,7 +1119,7 @@ func _change_naval_setting(_index: int) -> void:
         _display_naval_base()
 
 func _change_naval_camera(index: int) -> void:
-    _naval_camera_view=clampi(index,0,4)
+    _naval_camera_view=clampi(index,0,5)
     if _role=="naval_base":
         _apply_naval_camera()
 
@@ -1114,9 +1129,11 @@ func _apply_naval_camera() -> void:
     var spots: Array[Vector3]=[
         Vector3(-19.0,17.5,-18.0),Vector3(-23.0,11.5,0.5),
         Vector3(19.0,13.5,16.0),Vector3(-0.01,31.0,9.0),
-        Vector3(-9.5,7.8,9.2)]
+        Vector3(-9.5,7.8,9.2),
+        Vector3(-12.2,8.1,-12.2)]
     camera.position=spots[_naval_camera_view]
     camera.look_at(
+        Vector3(-3.20,0.68,-4.58) if _naval_camera_view==5 else
         Vector3(1.28,0.78,1.36) if _naval_camera_view==4 else
         Vector3(0,1.65,0),Vector3.UP)
     _update_camera()
