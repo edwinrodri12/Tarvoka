@@ -654,7 +654,7 @@ func refresh() -> void:
     situation.add_child(map_label)
     command_map = MiniMap.new()
     command_map.name = "RadarSeguroDelCentroDeMando"
-    command_map.set_board(board)
+    command_map.call("set_board",board)
     command_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
     command_map.tooltip_text = "Vista de reconocimiento. No ejecuta órdenes."
     command_map.custom_minimum_size = Vector2(190,126)
@@ -673,7 +673,7 @@ func refresh() -> void:
     command_commander_strip = CommanderStrip.new()
     command_commander_strip.name = "ComandantesDelCentroDeMando"
     situation.add_child(command_commander_strip)
-    command_commander_strip.bind_state(state,bool(board.ai_enabled))
+    command_commander_strip.call("bind_state",state,bool(board.ai_enabled))
 
     # Army uses two independent landscape surfaces: owned roster and
     # read-only unit details. Selection does not execute a movement or attack.
