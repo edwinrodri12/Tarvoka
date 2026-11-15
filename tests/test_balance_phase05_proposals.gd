@@ -9,27 +9,27 @@ const AI = preload("res://scripts/core/BasicAI.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
-# Headless, deterministic A/B of three OPT-IN proposals. Neither UI nor
+# Headless, deterministic A/B of two OPT-IN proposals. Neither UI nor
 # shipping game invokes the experimental implementation.
 func _initialize() -> void:
     var urban: Dictionary = _urban_assault_ab()
-    var engineering: Dictionary = _engineer_ab()
     var recruiting: Dictionary = _ai_recruitment_ab()
-    var safeguards: Dictionary = _turn_and_fog_safeguards()
-    assert(safeguards["engineer_cycles"] == 2 and safeguards["fog_probes"] == 2)
+    var safeguards: Dictionary = _fog_safeguards()
+    var infantry: Dictionary = _infantry_roster_audit()
+    assert(safeguards["fog_probes"] == 2)
     assert(urban["samples"] == 40)
-    assert(engineering["valid"] > 0)
     assert(recruiting["comparisons"] == 60)
-    print("PROPOSAL_V05_SUMMARY urban_samples=%d urban_hits_better=%d urban_off_city_equal=%d urban_legacy_equal=%d repair_cases=%d repair_valid=%d repair_denials=%d ai_budget_comparisons=%d ai_differences=%d ai_holds=%d baseline_helis_at_500=%d experiment_helis_at_500=%d engineer_turn_cycles=%d fog_knowledge_checks=%d" % [
+    assert(infantry["roles"] == 7)
+    print("PROPOSAL_V05_SUMMARY urban_samples=%d urban_hits_better=%d urban_off_city_equal=%d urban_legacy_equal=%d ai_budget_comparisons=%d ai_differences=%d ai_holds=%d baseline_helis_at_500=%d experiment_helis_at_500=%d fog_knowledge_checks=%d infantry_roles=%d" % [
         urban["samples"],urban["better"],urban["off_city_equal"],
-        urban["legacy_equal"],engineering["cases"],engineering["valid"],
-        engineering["denied"],recruiting["comparisons"],
+        urban["legacy_equal"],recruiting["comparisons"],
         recruiting["different"],recruiting["holds"],
         recruiting["baseline_idle_heli"],recruiting["proposal_idle_heli"],
-        safeguards["engineer_cycles"],safeguards["fog_probes"]
+        safeguards["fog_probes"],infantry["roles"]
     ])
-    print("PASS balance phase05: isolated A/B urban assault, paid adjacent engineer repair, fog-safe utility-first recruitment and v1 save compatibility")
+    print("PASS balance phase05: isolated A/B urban assault and utility-first recruitment, seven infantry roles, fog privacy and v1 save compatibility")
     quit(0)
 
 static func _battle(side: int, attacker_role: String, defender_role: String,
@@ -95,93 +95,6 @@ static func _urban_assault_ab() -> Dictionary:
     assert(count == 40 and improved >= 15 and equal_off_city == 10 and equal_legacy == 10)
     return {"samples":count,"better":improved,"off_city_equal":equal_off_city,"legacy_equal":equal_legacy}
 
-static func _repair_fixture(side: int, role: String = "tank", damaged_hp: int = 4) -> Dictionary:
-    var x := 2 if side == 0 else 7
-    var units := [
-        Roles.make_unit("ENG",side,Vector2i(x,3),"engineer"),
-        Roles.make_unit("ARM",side,Vector2i(x+1 if side == 0 else x-1,3),role),
-        Roles.make_unit("FOE",1-side,Vector2i(5,6),"line")
-    ]
-    units[1]["hp"] = maxi(1,int(units[1]["hp"])-damaged_hp)
-    return Session.start(units,Scenarios.terrain(0),side,false,false,true,true)
-
-static func _engineer_ab() -> Dictionary:
-    var total := 0
-    var accepted := 0
-    var rejected := 0
-    for side in [0,1]:
-        for role in ["apc","ifv","tank","spg","mlrs","mobile_aa","sam","logistics"]:
-            var state: Dictionary = _repair_fixture(side,role,4)
-            var initial: Dictionary = state.duplicate(true)
-            var baseline: Dictionary = state.duplicate(true)
-            var quote: Dictionary = Proposal.engineer_quote(state,"ENG","ARM")
-            var repaired: Dictionary = Proposal.engineer_repair(state,"ENG","ARM")
-            assert(quote.get("valid",false) and repaired.get("valid",false))
-            assert(state == initial and baseline == state)
-            assert(int(repaired["repaired_hp"]) == 2 and int(repaired["cost"]) == int(quote["cost"]))
-            assert(int(repaired["cost"]) >= Proposal.REPAIR_MIN_CREDITS)
-            assert(int(repaired["state"]["units"][1]["hp"]) == int(state["units"][1]["hp"])+2)
-            assert(int(repaired["state"]["economy"]["credits"][side]) == int(state["economy"]["credits"][side])-int(repaired["cost"]))
-            assert(repaired["state"]["units"][0]["acted"])
-            assert(not Proposal.engineer_repair(repaired["state"],"ENG","ARM")["valid"])
-            assert(Codec.decode(Codec.encode(repaired["state"])) == repaired["state"])
-            print("PROPOSAL_REPAIR side=%d role=%s price=%d max_hp=%d hp_restored=%d credits=%d baseline_restored=0" % [
-                side,role,Economy.cost(role),int(Roles.PROFILES[role]["hp"]) if Roles.PROFILES.has(role) else int(Arsenal.profile(role)["hp"]),
-                int(repaired["repaired_hp"]),int(repaired["cost"])
-            ])
-            total += 1
-            accepted += 1
-        var low: Dictionary = _repair_fixture(side)
-        var no_money: Dictionary = low.duplicate(true)
-        no_money["economy"]["credits"][side] = 0
-        var all_cases: Array = []
-        all_cases.append({"name":"no_money","state":no_money,"eng":"ENG","target":"ARM"})
-        var distant: Dictionary = low.duplicate(true)
-        distant["units"][1]["pos"] = Vector2i(4 if side == 0 else 5,4)
-        all_cases.append({"name":"too_far","state":distant,"eng":"ENG","target":"ARM"})
-        var already_acted: Dictionary = low.duplicate(true)
-        already_acted["units"][0]["acted"] = true
-        all_cases.append({"name":"spent_action","state":already_acted,"eng":"ENG","target":"ARM"})
-        var dead: Dictionary = low.duplicate(true)
-        dead["units"][1]["hp"] = 0
-        all_cases.append({"name":"dead_target","state":dead,"eng":"ENG","target":"ARM"})
-        var full: Dictionary = low.duplicate(true)
-        full["units"][1]["hp"] = int(Arsenal.profile("tank")["hp"])
-        all_cases.append({"name":"healthy_target","state":full,"eng":"ENG","target":"ARM"})
-        var enemy: Dictionary = low.duplicate(true)
-        enemy["units"][1]["faction"] = 1-side
-        all_cases.append({"name":"enemy_target","state":enemy,"eng":"ENG","target":"ARM"})
-        var wrong: Dictionary = low.duplicate(true)
-        wrong["units"][0]["role"] = "line"
-        all_cases.append({"name":"wrong_healer","state":wrong,"eng":"ENG","target":"ARM"})
-        var wrong_domain: Dictionary = _repair_fixture(side,"fighter",4)
-        all_cases.append({"name":"aircraft_target","state":wrong_domain,"eng":"ENG","target":"ARM"})
-        var no_modern: Dictionary = low.duplicate(true)
-        no_modern["economy"]["modern"] = false
-        all_cases.append({"name":"legacy_economy","state":no_modern,"eng":"ENG","target":"ARM"})
-        var finished: Dictionary = low.duplicate(true)
-        finished["winner"] = side
-        all_cases.append({"name":"finished_match","state":finished,"eng":"ENG","target":"ARM"})
-        for probe in all_cases:
-            var state_probe: Dictionary = probe["state"]
-            var original: Dictionary = state_probe.duplicate(true)
-            var refused: Dictionary = Proposal.engineer_repair(state_probe,probe["eng"],probe["target"])
-            assert(not refused.get("valid",false))
-            assert(refused["state"] == original and state_probe == original)
-            rejected += 1
-            total += 1
-        var moved: Dictionary = low.duplicate(true)
-        moved["units"][0]["moved"] = true
-        assert(Proposal.engineer_repair(moved,"ENG","ARM")["valid"])
-        var exactly_one: Dictionary = low.duplicate(true)
-        exactly_one["units"][1]["hp"] = int(Arsenal.profile("tank")["hp"])-1
-        var single: Dictionary = Proposal.engineer_repair(exactly_one,"ENG","ARM")
-        assert(single.get("valid",false) and int(single["repaired_hp"]) == 1)
-        total += 2
-        accepted += 2
-    assert(total == 40 and accepted == 20 and rejected == 20)
-    return {"cases":total,"valid":accepted,"denied":rejected}
-
 static func _purchase_fixture(side: int, kind: String, credits: int) -> Dictionary:
     var state: Dictionary = Session.start(Roles.modern_armies(true),
         Scenarios.terrain(3),side,false,false,true,true)
@@ -239,59 +152,13 @@ static func _ai_recruitment_ab() -> Dictionary:
             ])
     assert(before_helis == 2 and after_helis == 0)
     assert(examined == 60 and differences > 0 and held > 0)
-    # An armored casualty near the factory makes the Engineer meaningful
-    # ONLY when the proposal's actual repair action is available.
-    for side in [0,1]:
-        var state: Dictionary = _purchase_fixture(side,"factory",1000)
-        var friendly_tank: Dictionary = {}
-        for unit in state["units"]:
-            if int(unit["faction"]) == side and str(unit.get("role","")) == "tank":
-                friendly_tank = unit
-                break
-        assert(not friendly_tank.is_empty())
-        friendly_tank["hp"] = 8
-        friendly_tank["pos"] = Vector2i(2,3) if side == 0 else Vector2i(7,3)
-        var factory_pos := Vector2i(0,3) if side == 0 else Vector2i(9,3)
-        var suggestion: Dictionary = Proposal.purchase_proposal(state,factory_pos)
-        assert(suggestion.get("valid",false) and suggestion["role"] == "engineer")
-        print("PROPOSAL_RECRUIT_REPAIR side=%d unit=engineer damaged_armor_near_factory=true" % side)
     return {"comparisons":examined,"different":differences,"holds":held,
         "baseline_idle_heli":before_helis,"proposal_idle_heli":after_helis}
 
-# A repair must respect real phase boundaries, the opening-order limit,
-# and payment. Enemy aircraft beyond the fog cannot affect recruitment.
-static func _turn_and_fog_safeguards() -> Dictionary:
-    var engineer_cycles := 0
+# Fog tests for the recruitment-only proposals.
+static func _fog_safeguards() -> Dictionary:
     var fog_probes := 0
     for side in [0,1]:
-        var original: Dictionary = _repair_fixture(side,"tank",4)
-        var first: Dictionary = Proposal.engineer_repair(original,"ENG","ARM")
-        assert(first["valid"] and not Proposal.engineer_quote(first["state"],"ENG","ARM")["valid"])
-        var opponent: Dictionary = Session.end_turn(first["state"])
-        assert(opponent["valid"] and int(opponent["state"]["faction"]) == 1-side)
-        assert(not Proposal.engineer_quote(opponent["state"],"ENG","ARM")["valid"])
-        var own_again: Dictionary = Session.end_turn(opponent["state"])
-        assert(own_again["valid"] and int(own_again["state"]["faction"]) == side)
-        var second: Dictionary = Proposal.engineer_repair(own_again["state"],"ENG","ARM")
-        assert(second["valid"])
-        assert(int(second["state"]["units"][1]["hp"]) == int(Arsenal.profile("tank")["hp"]))
-        assert(Codec.decode(Codec.encode(second["state"])) == second["state"])
-        var no_more: Dictionary = Session.end_turn(second["state"])
-        assert(no_more["valid"])
-        no_more = Session.end_turn(no_more["state"])
-        assert(no_more["valid"])
-        assert(not Proposal.engineer_repair(no_more["state"],"ENG","ARM")["valid"])
-        var capped: Dictionary = _repair_fixture(side,"tank",4)
-        capped["opening"] = {"starter":side,"limit":1,"used":0}
-        var capped_repair: Dictionary = Proposal.engineer_repair(capped,"ENG","ARM")
-        assert(capped_repair["valid"])
-        assert(int(capped_repair["state"]["opening"]["used"]) == 1)
-        var blocked: Dictionary = capped.duplicate(true)
-        blocked["opening"]["used"] = 1
-        assert(not Proposal.engineer_quote(blocked,"ENG","ARM")["valid"])
-        print("PROPOSAL_REPAIR_TURNS side=%d repaired_twice=true capped_at_max=true opening_order_used=1 save_compatible=true" % side)
-        engineer_cycles += 1
-
         var fog: Dictionary = _purchase_fixture(side,"airbase",2000)
         var air_i := 0
         for unit in fog["units"]:
@@ -321,4 +188,34 @@ static func _turn_and_fog_safeguards() -> Dictionary:
         assert(with_air["valid"] and str(with_air["role"]) == "fighter")
         print("PROPOSAL_FOG side=%d hidden_air=attack_heli revealed_air=fighter enemy_credits_ignored=true" % side)
         fog_probes += 1
-    return {"engineer_cycles":engineer_cycles,"fog_probes":fog_probes}
+    return {"fog_probes":fog_probes}
+
+# Audit the entire soldier family, not just the Asaltante.
+# Repairs and support roles are verified in PR #320/#323 separately.
+static func _infantry_roster_audit() -> Dictionary:
+    var roster := ["line","scout","assault","piercer","bulwark","artillery","engineer"]
+    var capturers := 0
+    for role in roster:
+        assert(Roles.valid(role))
+        var unit: Dictionary = Roles.make_unit("S",0,Vector2i(1,3),role)
+        Logistics.equip(unit)
+        assert(unit.get("role","") == role and Logistics.fuel_capacity(role) == 0)
+        assert(unit.has("ammo") and int(unit["ammo"]) == Logistics.ammo_capacity(role))
+        assert(Economy.cost(role) > 0)
+        var captures: bool = Economy.can_capture(unit)
+        if captures:
+            capturers += 1
+        print("INFANTRY_BASELINE role=%s cost=%d hp=%d attack=%d defense=%d move=%d vision=%d range=%d-%d ammo=%d capture=%s" % [
+            role,Economy.cost(role),int(unit["hp"]),int(unit["attack"]),
+            int(unit["defense"]),int(unit["move_points"]),int(unit["vision"]),
+            int(unit["attack_min_range"]),int(unit["attack_range"]),
+            Logistics.ammo_capacity(role),str(captures)
+        ])
+    # Baseline implementation on main (PR #156 can change piercer capture).
+    assert(capturers >= 4)
+    var truck: Dictionary = Roles.make_unit("L",0,Vector2i(1,3),"logistics")
+    Logistics.equip(truck)
+    assert(int(truck["attack"]) == 0 and truck.has("supply_ammo") and truck.has("supply_fuel"))
+    assert(not Economy.can_capture(truck))
+    print("INFANTRY_SUPPORT_VS_LOGISTICS soldier_roles=%d capture_capable=%d truck_carries_ammo_fuel=true truck_repairs_hp_in_main=false engineer_repair_existing_draft=PR320" % [roster.size(),capturers])
+    return {"roles":roster.size(),"capturers":capturers}
