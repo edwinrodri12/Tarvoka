@@ -143,7 +143,7 @@ static func _hangar_finish(hangar: Node3D, accent: Color,
             var x: float = -3.65+float(seam)*7.30/14.0
             var y: float = 2.80+0.73*sin(PI*(x+3.65)/7.30)
             _box(top,"JuntaCurvaV6_%02d" % seam,
-                Vector3(x,y+0.095,0.00),Vector3(0.046,0.055,6.49),
+                Vector3(x,y+0.018,0.00),Vector3(0.046,0.055,6.49),
                 BEVEL,0.30)
         for side in [-1,1]:
             _box(top,"RemateCanalonV6_%s" % side,
