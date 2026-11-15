@@ -16,6 +16,8 @@ on:
   pull_request:
     paths:
       - "scripts/ui/NavalBaseBerthsV3.gd"
+      - "scripts/ui/NavalMarineFinishV4.gd"
+      - "assets/shaders/naval_marine_weathering_v4.gdshader"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "tests/test_naval_base_v4_gpu.gd"
       - ".github/workflows/naval-base-v4-gpu.yml"
