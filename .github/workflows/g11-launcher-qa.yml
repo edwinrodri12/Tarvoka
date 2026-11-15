@@ -12,6 +12,9 @@ on:
       - 'scripts/ui/G11MobileLOD.gd'
       - 'tests/test_g11_mobile_lod.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
+      - 'scripts/ui/G11AndroidPerfLab.gd'
+      - 'scenes/G11AndroidStressLab.tscn'
+      - 'tests/test_g11_android_lab.gd'
       - 'tests/test_g11_360_gpu_v3.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g11_launcher_3d.gd'
@@ -61,6 +64,20 @@ jobs:
             echo 'G11 mobile LOD regression'; exit 1
           fi
           grep -F 'PASS G11 MOBILE LOD:' /tmp/g11_mobile_qa.log
+      - name: Smoke test touch-friendly native Android benchmark scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_android_lab.gd 2>&1 | tee /tmp/g11_android_lab.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_android_lab.log; then
+            echo 'G11 on-device benchmark scene failed'; exit 1
+          fi
+          grep -F 'PASS G11 ANDROID LAB:' /tmp/g11_android_lab.log
       - name: Render G11 from eight actual Godot 3D camera angles
         shell: bash
         run: |
