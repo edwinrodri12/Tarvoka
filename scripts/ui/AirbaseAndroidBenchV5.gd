@@ -349,8 +349,10 @@ func _finish_measure() -> void:
         _unit_count,_detailed_units,_weather,str(_fx_enabled),str(_wide),
         average_fps,mean_ms,p95,durations.size()]
     var filename := "user://airbase_v5_results.csv"
-    var file := FileAccess.open(filename,FileAccess.READ_WRITE)
-    if file == null:
+    var file: FileAccess
+    if FileAccess.file_exists(filename):
+        file = FileAccess.open(filename,FileAccess.READ_WRITE)
+    else:
         file = FileAccess.open(filename,FileAccess.WRITE)
     if file != null:
         if file.get_length() == 0:
