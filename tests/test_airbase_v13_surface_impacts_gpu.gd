@@ -187,8 +187,19 @@ func _run() -> void:
     studio._toggle_airbase_impacts_v13(true)
     await _frames(7)
 
+    assert(not studio.airbase_v13_focus_toggle.button_pressed)
+    studio.airbase_v13_focus_toggle.set_pressed_no_signal(true)
+    studio._toggle_airbase_v13_focus(true)
     for surface_index in range(3):
         studio.airbase_surface_v13_picker.select(surface_index)
+        studio._change_airbase_v13_target(surface_index)
+        await _frames(3)
+        assert(studio.camera.projection==Camera3D.PROJECTION_ORTHOGONAL)
+        assert(studio.camera.size<5.7)
+        var focus_world: Vector3=studio.model_root.transform*V13.surface_position(
+            V13.TARGETS[surface_index])
+        var line: Vector3=(focus_world-studio.camera.position).normalized()
+        assert((-studio.camera.transform.basis.z).dot(line)>0.98)
         for kind in V13.KINDS:
             studio._play_airbase_impact(kind)
             var local_fx: TarvokaAirbaseImpactsV13=studio.model_root.get_node(
@@ -231,7 +242,7 @@ func _run() -> void:
     assert(studio._role=="headquarters")
     studio.queue_free()
     await _frames(3)
-    print("PASS AIRBASE V13: 40 faction/damage variants, 3 architectural levels, 3 attack classes, 3 true material targets, 2 pooled MultiMeshes, 3 staggered blast waves, 20 gate parts, existing climate/LOD, 12 native Godot screenshots")
+    print("PASS AIRBASE V13: 40 faction/damage variants, 3 architectural levels, 3 attack classes, 3 true material targets, 2 pooled MultiMeshes, 3 staggered blast waves, 20 gate parts, existing climate/LOD, 12 native Godot screenshots including 3 material-specific closeups")
     quit(0)
 
 func _check_pool_visible(rig: TarvokaAirbaseImpactsV13) -> void:
