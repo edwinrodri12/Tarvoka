@@ -51,3 +51,9 @@ Commit `8623a19be2bcc83d45ce9a7f42489ef49852922d`: caso adicional aislado. Se gu
 Tras eliminar los archivos exclusivos del test, la suite vuelve a invocar `SaveStore.load_report` y `SaveStore.load`. Exige estado vacío, `recovered=false` y ausencia de archivos principal y `.bak`. Esto cubre una instalación nueva o una ranura limpiada, sin modificar el código de producción ni tocar partidas reales. Commit de prueba: `67a78c8984390156f48ca66a96a38a20e18caa81`.
 
 **Godot 4.3 para este cambio: NO EJECUTADO hasta obtener CI del SHA nuevo. Android físico: NO EJECUTADO EN DISPOSITIVO.** El SHA anterior `5f6c778` sí pasó el workflow específico y Android export, pero falló CI general; esos resultados no certifican este cambio.
+
+## Continuación táctica tras recuperar respaldo (2026-11-15)
+
+La regresión de `test_session_exchange_contract.gd` ahora reanuda una partida recuperada de `.bak`: cambia al bando 1, conserva HP de ambos combatientes, impide reutilizar la acción consumida del atacante original, permite un ataque legal del defensor en su turno y bloquea repetir ese ataque. También comprueba que el estado recuperado no se muta al continuar. Commit de prueba `62edfc9efbbd5493bb3e5101bd539f82c6edab20`.
+
+**Estado:** código registrado en rama de PR #356; ejecución Godot 4.3 del nuevo SHA **NO EJECUTADO**, Android físico **NO EJECUTADO EN DISPOSITIVO**. La prueba continúa en un mismo proceso Godot y no certifica cierre/reapertura de la aplicación; se requiere CI verde antes de merge. No modifica reglas ni estadísticas.
