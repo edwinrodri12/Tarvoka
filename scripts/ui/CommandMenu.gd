@@ -261,7 +261,8 @@ func _action(body: Container, name: String, callable: Callable, enabled: bool = 
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
     button.disabled = not enabled
-    button.pressed.connect(callable)
+    if enabled and callable.is_valid():
+        button.pressed.connect(callable)
     body.add_child(button)
     if name.begins_with("Radar") or name.begins_with("Comprar") or name.begins_with("Volver al mapa"):
         Chrome.emphasize(button,"primary")
