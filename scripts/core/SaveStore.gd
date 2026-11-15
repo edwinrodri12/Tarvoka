@@ -75,7 +75,17 @@ static func load_report(path: String = DEFAULT_PATH) -> Dictionary:
     return {"state": {}, "recovered": false}
 
 static func _valid_path(path: String) -> bool:
-    return path.begins_with("user://") and path.ends_with(".json")
+    if not path.begins_with("user://") or not path.ends_with(".json"):
+        return false
+    # Reject traversal and ambiguous separators before any filesystem access.
+    # Nested user:// folders remain supported for legitimate save slots.
+    if path.contains("\\"):
+        return false
+    var relative := path.substr("user://".length())
+    for segment in relative.split("/"):
+        if segment.is_empty() or segment == "." or segment == "..":
+            return false
+    return true
 
 static func _load_single(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):

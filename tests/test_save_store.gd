@@ -22,6 +22,12 @@ func _initialize() -> void:
     assert(Store.load(path) == state)
     assert(not Store.save(state, "res://unsafe.json"))
     assert(Store.load("res://unsafe.json").is_empty())
+    # Save and load must never escape user:// through relative path segments.
+    for unsafe_path in ["user://../outside.json", "user://slot/../../outside.json", "user://./slot.json", "user://slot//save.json", "user://slot\\..\\outside.json"]:
+        assert(not Store.save(state, unsafe_path))
+        assert(Store.load(unsafe_path).is_empty())
+        assert(Store.load_report(unsafe_path)["recovered"] == false)
+
     var file := FileAccess.open(path, FileAccess.WRITE)
     assert(file != null)
     file.store_string("invalid json")
