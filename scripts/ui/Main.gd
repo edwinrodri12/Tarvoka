@@ -942,7 +942,10 @@ func _ready() -> void:
     camera_reset.text = "Centrar isométrico" if board.iso_enabled else "Centrar cámara"
     _apply_minimap_visibility()
     call_deferred("_frame_camera_after_layout")
-    if OS.has_feature("mobile"):
+    if get_tree().has_meta("tarvoka_return_to_story"):
+        get_tree().remove_meta("tarvoka_return_to_story")
+        call_deferred("_open_story_selector")
+    elif OS.has_feature("mobile"):
         call_deferred("_show_home_menu")
     set_process(true)
     _process(0.0)

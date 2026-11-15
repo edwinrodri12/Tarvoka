@@ -8,6 +8,7 @@ const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Backdrop = preload("res://scripts/ui/GameUiBackdrop.gd")
 const StoryMap = preload("res://scripts/ui/StoryCampaignMap.gd")
+const MissionBriefing = preload("res://scripts/ui/StoryMissionBriefing.gd")
 
 const ACTS = [
     "LAS PRIMERAS 72 HORAS","FRONTERAS EN LLAMAS",
@@ -77,6 +78,7 @@ var _player_name: Label
 var _rival_name: Label
 var _play: Button
 var _page_title: Label
+var _mission_briefing: Control
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -256,6 +258,11 @@ func _ready() -> void:
         crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
         crest.tooltip_text = str(Style.FACTIONS[faction]["name"])
         footer.add_child(crest)
+    _mission_briefing = MissionBriefing.new()
+    _mission_briefing.name = "InformacionMisionAntesDeBatalla"
+    add_child(_mission_briefing)
+    _mission_briefing.back_requested.connect(_briefing_to_chapters)
+    _mission_briefing.deploy_requested.connect(_briefing_deploy)
     _select_chapter(1)
     hide()
 
@@ -343,6 +350,17 @@ func _set_official_character(portrait: TextureRect, crest: TextureRect,
     name.text = str(Style.FACTIONS[index]["name"]).to_upper()
 
 func _launch_selected() -> void:
-    if selected_chapter != 1:
+    if selected_chapter != 1 or _mission_briefing == null:
         return
-    play_chapter_requested.emit(selected_chapter)
+    # Previewing mission intel must never create, load into, or overwrite the board.
+    _mission_briefing.open_for(selected_chapter)
+
+func _briefing_to_chapters() -> void:
+    _mission_briefing.hide()
+
+func _briefing_deploy(chapter: int) -> void:
+    # Only the explicitly confirmed C01 can open a real mission.
+    if chapter != 1 or _mission_briefing == null or not _mission_briefing.visible:
+        return
+    _mission_briefing.hide()
+    play_chapter_requested.emit(chapter)
