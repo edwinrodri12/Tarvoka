@@ -62,6 +62,11 @@ func _run() -> void:
             "V18 solid side skirt and static wheelwell finish installed")
         _check(bool(model.get_meta("tarvoka_apc_unified_flank_v19",false)),
             "V19 physically unified wheelwell and skirt welds installed")
+        _check(bool(model.get_meta("tarvoka_apc_microdetail_v20",false)),
+            "V20 true 3D weld beads, hex bolts and washers installed")
+        _check(model.find_child("P06V20_PernoFaldon_1_0_0_Hex",true,false)
+            is MeshInstance3D,
+            "latest three-dimensional hex-head fastener actually exists")
         var joint: MeshInstance3D=model.find_child(
             "P06V19_ChaflanSuperior_1_0",true,false) as MeshInstance3D
         _check(joint!=null and joint.mesh is ArrayMesh and
@@ -177,6 +182,8 @@ func _run() -> void:
         "V18 torn wheelwell panels follow critical damage")
     _check(int(model.get_meta("tarvoka_apc_v19_stage",-1))==3,
         "V19 continuous seams fracture coherently at critical damage")
+    _check(int(model.get_meta("tarvoka_apc_v20_stage",-1))==3,
+        "V20 micro-welds and clean bolts fracture at critical damage")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -283,6 +290,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v19_visible",true),
         "V3 comparison also hides new V19 integrated side details")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v20_visible",true),
+        "V3 comparison hides latest native V20 bolt and weld finish")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -316,6 +326,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v19_visible",false),
         "V19 integrated static details return after historical comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v20_visible",false),
+        "V20 bolt-and-weld finish returns after historical comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -350,6 +363,22 @@ func _run() -> void:
     _check(absf(float(studio.get("_yaw"))-104.0)<0.001 and
         int(model.get_meta("tarvoka_apc_v19_stage",-1))==3,
         "V19 damage closeup shows broken geometry")
+    studio.call("_set_damage",0)
+    studio.call("_inspect_p06_welds_v20")
+    _check(absf(float(studio.get("_yaw"))-91.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v20_stage",-1))==0,
+        "V20 clean weld viewer shows actual model")
+    studio.call("_inspect_p06_bolts_v20")
+    _check(absf(float(studio.get("_yaw"))+76.0)<0.001,
+        "V20 bolt inspection views opposite hull")
+    studio.call("_inspect_p06_medium_v20")
+    _check(absf(float(studio.get("_yaw"))-97.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v20_stage",-1))==2,
+        "V20 moderate damage exposes real fractured seam")
+    studio.call("_inspect_p06_critical_v20")
+    _check(absf(float(studio.get("_yaw"))-125.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v20_stage",-1))==3,
+        "V20 critical damage reveals fractured armor and displaced parts")
     studio.call("_set_damage",0)
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
@@ -486,5 +515,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V19 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V20 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
