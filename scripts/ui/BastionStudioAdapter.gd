@@ -12,6 +12,7 @@ const P06Burst = preload("res://scripts/ui/APCMachineGunV7.gd")
 const P06Wreck = preload("res://scripts/ui/APCDamageV7.gd")
 const P06RearV10 = preload("res://scripts/ui/APCRearDesignV10.gd")
 const P06ExteriorV11 = preload("res://scripts/ui/APCExteriorV11.gd")
+const P06TurretV12 = preload("res://scripts/ui/APCTurretV12.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -52,7 +53,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · Escultura V7 · humo y fuego")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V11 blindaje exterior · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V12 torreta y ópticas · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -60,11 +61,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V11_CorazaExteriorEsculpida"
+    p06_controls.name = "BastionP06_V12_TorretaRemota"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V11 · BLINDAJE EXTERIOR",14)
+        "BASTIÓN P06 · V12 · TORRETA Y AMETRALLADORA",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -76,6 +77,8 @@ func _install_p06_controls() -> void:
         "Explosión",func(): _play("hit_explosive"))
     _add_paired(p06_controls,"Vista frontal",func(): _view_p06_angle(0.0),
         "Vista 3/4 delantera",func(): _view_p06_angle(38.0))
+    _add_paired(p06_controls,"Acercamiento a la torreta",_inspect_p06_turret,
+        "Vista óptica opuesta",func(): _view_p06_angle(-42.0))
     _add_paired(p06_controls,"Vista lateral",func(): _view_p06_angle(90.0),
         "Vista trasera",func(): _view_p06_angle(180.0))
     _add_paired(p06_controls,"Vista 3/4 trasera",func(): _view_p06_angle(145.0),
@@ -84,14 +87,14 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V11",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V12",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
         "Prueba 32 vehículos",func(): _show_p06_fleet(32))
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
-        "Volver al Bastión V11",_hide_p06_fleet)
+        "Volver al Bastión V12",_hide_p06_fleet)
     _add_paired(p06_controls,
         "LOD cerca",func(): _set_p06_fleet_quality(0),
         "LOD medio",func(): _set_p06_fleet_quality(1))
@@ -102,9 +105,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V11: proa con placas biseladas de volumen, argollas reales, "
-        + "guardabarros curvos sobre las seis ruedas y blindaje lateral modular. "
-        + "Usa las vistas frontal y lateral para inspeccionar los acabados.",12)
+        "V12: estación remota octagonal cerrada, camisa perforada real, "
+        + "boca de ametralladora abierta y tres ópticas protegidas. "
+        + "Acerca la torreta para ver su giro, expulsión de casquillos y daños.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -287,7 +290,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V11")
+                if _p06_show_v5 else "Volver al acabado completo V12")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -333,6 +336,7 @@ func _display_role(role: String) -> void:
             P06Wreck.FLAG,false)) and bool(model_root.get_meta(
             P06RearV10.FLAG,false)) and bool(model_root.get_meta(
             P06ExteriorV11.FLAG,false)) and bool(model_root.get_meta(
+            P06TurretV12.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -342,8 +346,9 @@ func _display_role(role: String) -> void:
             P06Wreck.set_stage(model_root,0)
             P06RearV10.set_stage(model_root,0)
             P06ExteriorV11.set_stage(model_root,0)
+            P06TurretV12.set_stage(model_root,0)
         else:
-            push_error("TARVOKA P06 V11 exterior sculpt was not built; do not label it final")
+            push_error("TARVOKA P06 V12 weapon station was not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -421,6 +426,7 @@ func _set_damage(stage: int) -> void:
         P06Wreck.set_stage(model_root,stage)
         P06RearV10.set_stage(model_root,stage)
         P06ExteriorV11.set_stage(model_root,stage)
+        P06TurretV12.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -435,6 +441,7 @@ func _toggle_p06_version() -> void:
     P06Wreck.set_enabled(model_root,_p06_show_v5)
     P06RearV10.set_enabled(model_root,_p06_show_v5)
     P06ExteriorV11.set_enabled(model_root,_p06_show_v5)
+    P06TurretV12.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -447,6 +454,14 @@ func _view_p06_angle(angle: float) -> void:
         return
     _yaw=angle
     model_root.rotation_degrees.y=angle
+    _update_camera()
+
+func _inspect_p06_turret() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(34.0)
+    # The orthographic camera zooms by adjusting its frustum, not distance.
+    _zoom=2.05
     _update_camera()
 
 func _toggle_p06_ramp() -> void:
@@ -599,10 +614,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V11 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V12 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V11 cargado" if _p06_quality_verified else
+        "acabado V12 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
