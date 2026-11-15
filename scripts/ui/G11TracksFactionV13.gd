@@ -13,7 +13,7 @@ const ELEVATION := "G11_ElevacionLanzador"
 const _FINISH = preload("res://scripts/ui/G11FinishV2.gd")
 const TRACK_X: float = 0.79
 const TRACK_Y: float = 0.35
-const AXLE_Z: float = 1.04
+const AXLE_Z: float = 1.34
 const PITCH_RADIUS: float = 0.258
 const TIPS_RADIUS: float = 0.265
 const DRIVE_TEETH: int = 10
@@ -56,8 +56,8 @@ static func _gear_mesh(drive: bool) -> ArrayMesh:
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var segments: int = DRIVE_TEETH*4 if drive else 60
-    var back: float = 0.124
-    var front: float = 0.180
+    var back: float = 0.045
+    var front: float = 0.105
     for i in range(segments):
         var a: float = TAU*float(i)/float(segments)
         var b: float = TAU*float(i+1)/float(segments)
@@ -110,7 +110,7 @@ static func _add_hub(gear: MeshInstance3D, side: int,
     var cap := MeshInstance3D.new()
     cap.name = "G11V13_CabezalEje_%s" % ("impulsor" if rear else "tensor")
     cap.mesh = _hub()
-    cap.position = Vector3(0.199,0,0)
+    cap.position = Vector3(0.124,0,0)
     cap.rotation_degrees.z = 90.0
     gear.add_child(cap)
     # Six rivets on actual moving axle; no stationary fake overlay.
@@ -126,7 +126,7 @@ static func _add_hub(gear: MeshInstance3D, side: int,
     mm.instance_count = 6
     for i in range(6):
         var a: float = TAU*float(i)/6.0
-        var pos := Vector3(0.198,cos(a)*0.078,sin(a)*0.078)
+        var pos := Vector3(0.123,cos(a)*0.078,sin(a)*0.078)
         mm.set_instance_transform(i,Transform3D(
             Basis(Vector3.FORWARD,PI*0.5),pos))
     var heads := MultiMeshInstance3D.new()
@@ -193,7 +193,7 @@ static func apply(model: Node3D, paint: Color) -> bool:
         # chassis, not another disconnected solid sprocket disk.
         var dark := _mat(Color("#333e3e"),0.40,0.70)
         _box(root,"G11V13_SoporteEje_%d" % side,
-            Vector3(sign*0.710,0.36,1.04),
+            Vector3(sign*0.710,0.36,AXLE_Z),
             Vector3(0.085,0.114,0.18),dark)
     # Repaint the genuine octagonal roof mesh itself, not a floating decal:
     # most of the upper rocket pod is now faction-colored, while the V11
