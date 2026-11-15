@@ -1,0 +1,82 @@
+name: TARVOKA APC P06 V4 native troop boarding QA
+
+on:
+  push:
+    branches:
+      - feat/apc-p06-v4-native-boarding-rig-20261114
+    paths:
+      - 'scripts/ui/APCBoardingV4.gd'
+      - 'scripts/ui/UnitArtStudioWeb.gd'
+      - 'tests/test_apc_p06_v4_native_boarding.gd'
+      - '.github/workflows/apc-p06-v4-native-boarding.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/APCBoardingV4.gd'
+      - 'scripts/ui/UnitArtStudioWeb.gd'
+      - 'tests/test_apc_p06_v4_native_boarding.gd'
+      - '.github/workflows/apc-p06-v4-native-boarding.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-boarding:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Godot 4.3 and real OpenGL3 display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Import native APC P06 V2+V3 and all inherited 3D scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/p06-v4-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/p06-v4-import.log; then exit 1; fi
+      - name: Test native 3D infantry hinges, walk cycle, 2 seats and render five authentic frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v4_native_boarding.gd 2>&1 | tee /tmp/p06-v4-native.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/p06-v4-native.log; then exit 1; fi
+          grep -F 'PASS APC P06 V4 native boarding:' /tmp/p06-v4-native.log
+          for f in 00_filmstrip_real_3d 01_cerrado 02_rampa_abierta 03_soldado_subiendo 04_soldado_dentro 05_soldado_bajando; do
+            test -s "artifacts/apc-p06-v4/${f}.png"
+          done
+      - name: Preserve P06 V1/V2 original armor, wheel and G09 native art
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in test_apc_p06_art_v1 test_apc_p06_art_v2 test_native_unit_models_3d; do
+            timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${t}.gd" 2>&1 | tee "/tmp/${t}-v3.log"
+            if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' "/tmp/${t}-v3.log"; then exit 1; fi
+            grep -q 'PASS' "/tmp/${t}-v3.log"
+          done
+      - name: Upload genuine Godot 3D APC troop action frames and QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-APC-P06-V4-Native-3D-Boarding-Filmstrip
+          path: |
+            artifacts/apc-p06-v4/*.png
+            /tmp/p06-v4-native.log
+            /tmp/p06-v4-import.log
+            /tmp/test_apc_p06_art_v1-v3.log
+            /tmp/test_apc_p06_art_v2-v3.log
+            /tmp/test_native_unit_models_3d-v3.log
+          if-no-files-found: warn
