@@ -16,6 +16,7 @@ const P06TurretV12 = preload("res://scripts/ui/APCTurretV12.gd")
 const P06SurfaceV13 = preload("res://scripts/ui/APCSurfaceV13.gd")
 const P06WheelsV14 = preload("res://scripts/ui/APCWheelV14.gd")
 const P06UnderV15 = preload("res://scripts/ui/APCUndercarriageV15.gd")
+const P06JointV16 = preload("res://scripts/ui/APCJointFinishV16.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -57,7 +58,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · Acabados V11 · marco y metales")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V15 bajos y transmisión · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V16 uniones y acabados 360° · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -65,11 +66,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V15_BajosYTransmision"
+    p06_controls.name = "BastionP06_V16_Uniones360"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V15 · BLINDAJE Y TRANSMISIÓN INFERIOR",14)
+        "BASTIÓN P06 · V16 · UNIONES Y ACABADOS 360°",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -83,6 +84,8 @@ func _install_p06_controls() -> void:
         "Vista 3/4 delantera",func(): _view_p06_angle(38.0))
     _add_paired(p06_controls,"Acercamiento a la torreta",_inspect_p06_turret,
         "Vista óptica opuesta",func(): _view_p06_angle(-42.0))
+    _add_paired(p06_controls,"Inspeccionar junta frontal",_inspect_p06_front_joint,
+        "Inspeccionar junta trasera",_inspect_p06_rear_joint)
     _add_paired(p06_controls,"Vista lateral",func(): _view_p06_angle(90.0),
         "Vista trasera",func(): _view_p06_angle(180.0))
     _add_paired(p06_controls,"Examinar ruedas 6×6",_inspect_p06_wheels,
@@ -95,7 +98,7 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V15",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V16",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
@@ -113,9 +116,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V15: bajos blindados en V, tres diferenciales, caja de transferencia, "
-        + "árboles Cardán y barras de dirección articuladas. Gira el vehículo "
-        + "a la vista inferior para observar la transmisión y sus daños.",12)
+        "V16: uniones físicas de proa a costados, retornos de guardabarros, "
+        + "sellado de bajos, junta de torreta giratoria y rampa móvil. "
+        + "Conserva los tres diferenciales, dirección 6×6 y cinco daños.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -304,7 +307,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V15")
+                if _p06_show_v5 else "Volver al acabado completo V16")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -354,6 +357,7 @@ func _display_role(role: String) -> void:
             P06SurfaceV13.FLAG,false)) and bool(model_root.get_meta(
             P06WheelsV14.FLAG,false)) and bool(model_root.get_meta(
             P06UnderV15.FLAG,false)) and bool(model_root.get_meta(
+            P06JointV16.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -367,8 +371,9 @@ func _display_role(role: String) -> void:
             P06SurfaceV13.set_stage(model_root,0)
             P06WheelsV14.set_stage(model_root,0)
             P06UnderV15.set_stage(model_root,0)
+            P06JointV16.set_stage(model_root,0)
         else:
-            push_error("TARVOKA P06 V15 physical undercarriage was not built; do not label it final")
+            push_error("TARVOKA P06 V16 finishing geometry was not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -450,6 +455,7 @@ func _set_damage(stage: int) -> void:
         P06SurfaceV13.set_stage(model_root,stage)
         P06WheelsV14.set_stage(model_root,stage)
         P06UnderV15.set_stage(model_root,stage)
+        P06JointV16.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -468,6 +474,7 @@ func _toggle_p06_version() -> void:
     P06SurfaceV13.set_enabled(model_root,_p06_show_v5)
     P06WheelsV14.set_enabled(model_root,_p06_show_v5)
     P06UnderV15.set_enabled(model_root,_p06_show_v5)
+    P06JointV16.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -482,6 +489,20 @@ func _view_p06_angle(angle: float) -> void:
     # After viewing the underside, restore the original upright chassis.
     model_root.rotation_degrees.x=0.0
     model_root.rotation_degrees.y=angle
+    _update_camera()
+
+func _inspect_p06_front_joint() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(47.0)
+    _zoom=1.82
+    _update_camera()
+
+func _inspect_p06_rear_joint() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(153.0)
+    _zoom=1.72
     _update_camera()
 
 func _inspect_p06_turret() -> void:
@@ -693,10 +714,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V15 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V16 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V15 cargado" if _p06_quality_verified else
+        "acabado V16 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]

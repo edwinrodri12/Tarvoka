@@ -24,7 +24,9 @@ on:
       - 'scripts/ui/APCSurfaceV13.gd'
       - 'scripts/ui/APCWheelV14.gd'
       - 'scripts/ui/APCUndercarriageV15.gd'
+      - 'scripts/ui/APCJointFinishV16.gd'
       - 'tests/test_bastion_v15_undercarriage.gd'
+      - 'tests/test_bastion_v16_joint_finish.gd'
       - 'tests/test_bastion_v14_wheel_sculpt.gd'
       - 'tests/test_bastion_v13_materials.gd'
       - 'tests/test_bastion_v12_turret.gd'
@@ -42,6 +44,13 @@ on:
       - 'tests/test_bastion_v6_finish.gd'
       - 'scripts/ui/APCVisualRigV1.gd'
       - '.github/workflows/apc-p06-rig-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ui/APCJointFinishV16.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_bastion_v16_joint_finish.gd'
   workflow_dispatch:
 
 jobs:
@@ -62,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage test_bastion_v16_joint_finish; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
