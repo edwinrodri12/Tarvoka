@@ -84,6 +84,13 @@ func _run() -> void:
         "64-vehicle graphics budget remains bounded")
     _check(container.get_child_count()==64,
         "no hidden children or game-state units created")
+    var last: Node3D=container.get_child(63) as Node3D
+    var home: Vector3=last.position
+    _check(Models.pose_model("apc",last,"move_turn",0.50),
+        "real battle grid unit animates without origin reset")
+    Models.restore_model_pose("apc",last)
+    _check(last.position.distance_to(home)<0.001,
+        "grid cell unchanged after six-wheel cornering")
     container.queue_free()
     await process_frame
 
