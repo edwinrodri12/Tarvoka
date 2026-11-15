@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaTerrainScatter3D
 
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 
 # A deterministic, render-only detail pass for the browser art studio.
 # Repeated grass, reeds and stones use three MultiMesh batches instead of
@@ -78,6 +79,8 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
             var quantity: int = 6 if kind == "forest" else 5
             if preset == 1:
                 quantity = 3 if kind == "plain" else 4
+            elif preset == 3:
+                quantity = 2 if kind == "plain" else 3
             for i in range(quantity):
                 var rx: float = _variation(seed,i*7+2)
                 var rz: float = _variation(seed,i*11+19)
@@ -89,7 +92,8 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                 grass.append(_placement(at,_variation(seed,i+67)*TAU,
                     Vector3(size,size,size)))
             # Reeds mark the water-facing edge, never the road or lake bed.
-            var edges: Array = cell.get("water_edges",[])
+            var edges: Array = (
+                [] if preset == 3 else cell.get("water_edges",[]))
             for side in edges:
                 var direction: Vector2i = side
                 for i in range(3):
@@ -106,7 +110,8 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                     var size: float = 0.82+_variation(seed,i+131)*0.48
                     reeds.append(_placement(at,_variation(seed,i+151)*TAU,
                         Vector3(size,size,size)))
-        if kind == "mountain" or (preset == 1 and kind == "plain"):
+        if (kind == "mountain" and preset != 3) or (
+                preset in [1,3] and kind == "plain"):
             # Broken stone fragments echo the mountains' faceted silhouette.
             for i in range(2):
                 var px: float = (_variation(seed,i+179)-0.5)*1.38
@@ -116,10 +121,16 @@ static func populate(parent: Node3D, cells: Array[Dictionary],
                     center+Vector3(px,_surface_y(cell,px,pz)+0.065,pz),
                     _variation(seed,i+251)*TAU,
                     Vector3(size,0.42*size,0.76*size)))
-    var grass_tint: Color = Color("#879c69") if preset == 0 else (
+    var grass_tint: Color = (
+        Winter.SNOW_FOREST if preset == 3 else
+        Color("#879c69") if preset == 0 else
         Color("#ae9c71") if preset == 1 else Color("#589479"))
-    var reed_tint := Color("#afad72") if preset != 1 else Color("#a59c78")
-    var rock_tint: Color = Color("#858f8e") if preset != 1 else Color("#927d72")
+    var reed_tint := (
+        Winter.FROZEN_SHORE if preset == 3 else
+        Color("#afad72") if preset != 1 else Color("#a59c78"))
+    var rock_tint: Color = (
+        Winter.FROSTED_STONE if preset == 3 else
+        Color("#858f8e") if preset != 1 else Color("#927d72"))
     var pebbles := SphereMesh.new()
     pebbles.radius = 0.23
     pebbles.height = 0.36
