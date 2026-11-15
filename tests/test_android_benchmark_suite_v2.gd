@@ -46,8 +46,8 @@ func _run() -> void:
     assert((analysis["quality_issues"] as Array).is_empty())
     assert(analysis["provisional_profile"]=="full_detail")
     # A/B data must not be labeled an approved Android-device result on CI.
-    assert(bool(analysis["requires_physical_android_validation"])==(
-        OS.get_name()!="Android"))
+    assert(bool(analysis["requires_physical_android_validation"]))
+    assert(bool(analysis["platform_is_android"])==(OS.get_name()=="Android"))
     # Verify a low-FPS full-detail device where LOD makes all 3 scenes viable.
     suite.begin(1.0,0.2)
     for i in range(Suite.PHASES.size()):
