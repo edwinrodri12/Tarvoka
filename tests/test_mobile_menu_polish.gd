@@ -15,7 +15,9 @@ func _run() -> void:
     # The home screen puts active game modes ahead of long explanatory copy.
     var home: Control = main.home_menu
     main._show_home_menu()
-    assert(home.primary_buttons.size() == 7)
+    assert(home.primary_buttons.size() >= 8)
+    assert(home.primary_buttons.has("Online"))
+    assert(home.primary_buttons["Online"].disabled)
     var master_preview := Image.new()
     assert(master_preview.load(home.OFFICIAL_ICON_HD) == OK)
     assert(master_preview.get_width() == 512)
