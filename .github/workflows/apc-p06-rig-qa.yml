@@ -9,6 +9,13 @@ on:
       - 'scripts/ui/BastionVisualRig3D.gd'
       - 'tests/test_bastion_visual_damage.gd'
       - 'tests/test_bastion_visual_rig.gd'
+      - 'tests/test_bastion_v5_studio.gd'
+      - 'scripts/ui/APCArtV1.gd'
+      - 'scripts/ui/APCArmorV2.gd'
+      - 'scripts/ui/APCBatchingV4.gd'
+      - 'scripts/ui/APCFinishV3.gd'
+      - 'scripts/ui/APCDetailV5.gd'
+      - 'scripts/ui/APCVisualRigV1.gd'
       - '.github/workflows/apc-p06-rig-qa.yml'
   workflow_dispatch:
 
@@ -30,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
