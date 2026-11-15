@@ -121,10 +121,13 @@ static func _isolated_ai_picks() -> Dictionary:
                     unit["moved"] = true
             for site in state["economy"]["sites"]:
                 if int(site["owner"]) == side and str(site["kind"]) != "city":
-                    site["produced_turn"] = int(state["economy"]["turn"])
+                    # Neutralizing unrelated sites isolates the chosen
+                    # purchase. Marking those sites as already produced
+                    # would distort SupplyStrategy's per-phase buy cap.
                     if str(site["kind"]) == site_kind:
                         test_site = site["pos"]
-                        site["produced_turn"] = -1
+                    else:
+                        site["owner"] = -1
             assert(test_site.x >= 0)
             assert(Economy.valid(state["economy"],state["terrain"]))
             var frozen: Dictionary = state.duplicate(true)
