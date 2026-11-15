@@ -95,6 +95,31 @@ func _run() -> void:
     slots.back_requested.emit()
     assert(home.visible)
 
+    # Credits is a real, read-only full-screen view, not the old alert.
+    home.primary_buttons["Créditos"].pressed.emit()
+    var credits: Control = screen.home_credits_menu
+    assert(credits.visible and not home.visible)
+    assert(credits.category_buttons.size() == 4)
+    assert(credits.crest_buttons.size() == 8)
+    assert(credits.hero_mark.texture is AtlasTexture)
+    credits._choose_faction(7)
+    assert(credits.selected_tab == 1 and credits.selected_faction == 7)
+    assert(credits.portrait_title.text == "ORDEN ÓNIX")
+    assert(credits.hero_mark.texture is AtlasTexture)
+    credits._change_tab(3)
+    assert(credits.fact_values[0].text == "POR CONFIRMAR")
+    credits.reflow_for_size(Vector2(915,412))
+    assert(credits.compact_landscape)
+    assert(not credits.content_rail.vertical)
+    assert(credits.category_buttons[0].custom_minimum_size.y >= 44)
+    credits.reflow_for_size(Vector2(780,360))
+    assert(credits.done_button.custom_minimum_size.y >= 44)
+    credits.reflow_for_size(Vector2(1280,720))
+    assert(not credits.compact_landscape)
+    credits.close_requested.emit()
+    assert(home.visible and not credits.visible)
+    assert(screen.board.state == baseline)
+
     # Settings/Arsenal opened from the title screen must return to Inicio,
     # not silently expose the battle behind the menu.
     home.primary_buttons["Ajustes"].pressed.emit()
