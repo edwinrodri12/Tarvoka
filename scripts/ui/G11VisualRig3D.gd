@@ -87,7 +87,7 @@ static func pose(model: Node3D, kind: String, progress: float,
                     var wheel := _node(model,"G11_RuedaPivot_%d_%d" % [side,axle])
                     if wheel != null:
                         wheel.rotation_degrees.x = 720.0*t
-                        wheel.position.y = 0.26+0.015*sin(phase+float(axle))
+                        wheel.position.y = 0.265+0.008*sin(phase+float(axle))
             model.position.y -= absf(sin(phase))*0.018
             model.rotation_degrees.z = sin(phase)*0.34
             # Both tread belts scroll physically around the idlers.
