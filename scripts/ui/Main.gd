@@ -20,6 +20,7 @@ const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
+const StoryChapterMenu = preload("res://scripts/ui/StoryChapterMenu.gd")
 const SavedMatchesMenu = preload("res://scripts/ui/SavedMatchesMenu.gd")
 const SkirmishSetup = preload("res://scripts/ui/SkirmishSetup.gd")
 const FactionSelection = preload("res://scripts/ui/FactionSelection.gd")
@@ -76,6 +77,7 @@ var sidebar_compare_panel: Control
 var compact_compare_panel: Control
 var _destination_comparison_snapshot: Dictionary = {}
 var home_menu: Control
+var story_chapter_menu: Control
 var saved_matches_menu: Control
 var _command_from_home := false
 var _gallery_from_home := false
@@ -897,11 +899,16 @@ func _ready() -> void:
     home_menu = HomeMenu.new()
     add_child(home_menu)
     home_menu.continue_requested.connect(_continue_from_home)
-    home_menu.story_requested.connect(_open_campaign)
+    home_menu.story_requested.connect(_open_story_selector)
     home_menu.skirmish_requested.connect(_prepare_skirmish)
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
+
+    story_chapter_menu = StoryChapterMenu.new()
+    add_child(story_chapter_menu)
+    story_chapter_menu.back_requested.connect(_story_to_home)
+    story_chapter_menu.play_chapter_requested.connect(_launch_story_chapter)
 
     saved_matches_menu = SavedMatchesMenu.new()
     add_child(saved_matches_menu)
@@ -2433,6 +2440,24 @@ func _open_unit_art_gallery() -> void:
     if unit_art_gallery != null:
         unit_art_gallery.open_for()
         _reveal_screen(unit_art_gallery)
+
+func _open_story_selector() -> void:
+    # The 50-chapter overview is presentation-only; it cannot spend a turn,
+    # replace an autosave or start an unimplemented chapter.
+    home_menu.hide()
+    saved_matches_menu.hide()
+    skirmish_setup.hide()
+    command_menu.hide()
+    _reveal_screen(story_chapter_menu)
+
+func _story_to_home() -> void:
+    story_chapter_menu.hide()
+    _reveal_screen(home_menu)
+
+func _launch_story_chapter(chapter_id: int) -> void:
+    # Guard against stale UI signals and future chapters without real scenes.
+    if chapter_id == 1:
+        _open_campaign()
 
 func _open_campaign() -> void:
     # Main keeps the existing skirmish autosave unchanged. Campaign resumes
