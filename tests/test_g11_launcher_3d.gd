@@ -168,7 +168,7 @@ func _run() -> void:
                     "active suspension strut side %d axle %d" % [side,axle])
         _check(_find(model,"G11V5_TapaEscotilla") != null,
             "round roof access hatch with actual thickness")
-        var paint := _find(model,"G11_PinturaLateral_1_0") as MeshInstance3D
+        var paint := _find(model,"G11V13_PanelFaccionLanzador_1") as MeshInstance3D
         _check(paint != null and paint.material_override != null,
             "faction color on actual mesh")
         for side in [-1,1]:
@@ -233,10 +233,10 @@ func _run() -> void:
                 "intact platform no longer obscures damaged turret crater")
             _check(_find(model,"G11V2_ProteccionLateral_-1").visible == (level < 3),
                 "intact left armor hides when its internal service cavity opens")
-            _check(_find(model,"G11_PanelLateral_1_1").visible == (level < 2),
-                "original right paint panels do not intersect folded shield")
-            _check(_find(model,"G11_PanelLateral_-1_1").visible == (level < 3),
-                "original left panels do not block torn edge")
+            _check(_find(model,"G11_PanelLateral_1_1") == null,
+                "the obsolete right plate was removed so damage cannot reintroduce overlap")
+            _check(_find(model,"G11_PanelLateral_-1_1") == null,
+                "the obsolete left plate was removed so torn metal remains unobstructed")
             _check(not _find(model,"G11_HumoNegro").visible,
                 "obsolete sphere smoke is hidden even during fire")
             _check(not _find(model,"G11_FuegoMotor").visible,
@@ -266,8 +266,8 @@ func _run() -> void:
             "factory left armored plating restored after critical damage")
         _check(_find(model,"G11_GiroPlataforma").visible,
             "functional launcher turntable restored after wreck repair")
-        _check(_find(model,"G11_PanelLateral_1_1").visible,
-            "painted lateral components restored after full repair")
+        _check(_find(model,"G11_Faldon_1").visible,
+            "single adjusted steel fender survives complete repair")
         _check(_find(model,"G11_Antena_-1").visible,
             "broken antenna restored on repair")
         _check(_find(model,"G11V5_TapaEscotilla").visible,
