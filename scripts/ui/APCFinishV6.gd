@@ -258,12 +258,12 @@ static func apply(model: Node3D, faction_color: Color) -> bool:
     var dark := _mat(Color("#202a2f"),0.10,0.95)
     var steel := _mat(Color("#68747b"),0.52,0.78)
     var glass := _mat(Color("#2e657b"),0.09,0.23)
-    var signal := _mat(Color("#e0cba0"),0.09,0.39,true)
+    var signal_material := _mat(Color("#e0cba0"),0.09,0.39,true)
     var soot := _mat(Color("#222524"),0.08,0.95)
     var scratched := _mat(Color("#92999b"),0.54,0.81)
     _front(v6,enamel,dark,glass,steel)
     var rivets: int = _flanks(v6,enamel,steel,dark)
-    _troop_bay(v6,steel,dark,signal)
+    _troop_bay(v6,steel,dark,signal_material)
     if not _ramp(model,steel,dark,enamel):
         v6.free()
         return false
