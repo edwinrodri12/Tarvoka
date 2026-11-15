@@ -476,6 +476,21 @@ func _drop_3d_quote() -> void:
     if _live_board != null and not _order_quote.is_empty():
         Orders.cancel_preview(_live_board,_order_quote)
     _order_quote.clear()
+    _tint_prepared_cursor()
+
+func _tint_prepared_cursor() -> void:
+    if _cursor == null or not is_instance_valid(_cursor):
+        return
+    var kind: String = str(_order_quote.get("order",{}).get("kind",""))
+    var color: Color = Color("#E9C96B")
+    if kind == "move":
+        color = Color("#5BD8FF")
+    elif kind == "attack":
+        color = Color("#F76A60")
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    _cursor.material_override = material
 
 func _cancel_3d_order() -> void:
     _drop_3d_quote()
@@ -495,6 +510,7 @@ func _preview_3d_intent(intent: Dictionary) -> bool:
         return false
     _drop_3d_quote()
     _order_quote = Orders.request_preview(_live_board,intent)
+    _tint_prepared_cursor()
     _update_order_ui()
     return not _order_quote.is_empty()
 
@@ -538,7 +554,10 @@ func tap_battle_cell(cell: Vector2i) -> bool:
             str(queued.get("target_id","")) == str(intent.get("target_id","")):
         _confirm_3d_order()
         return true
-    inspect_cell(cell)
+    # Do not recenter the camera for a live touch. Moving the target under
+    # the finger after the first preview makes the second on-map touch land
+    # on a DIFFERENT tile; panning/centering remains an explicit gesture.
+    inspect_cell(cell,false)
     if not Orders.can_control(_live_board):
         _update_order_ui()
         return true
