@@ -39,6 +39,43 @@ func _run() -> void:
     assert(not suite.summary()["cancelled"])
     assert(suite.summary()["finished_phases"]==6)
     assert((suite.summary()["results"] as Array).size()==6)
+    var analysis: Dictionary=suite.evaluate()
+    assert(analysis["complete"])
+    assert(not analysis["on_android_device"] or OS.get_name()=="Android")
+    assert((analysis["pair_comparisons"] as Array).size()==3)
+    assert((analysis["quality_issues"] as Array).is_empty())
+    assert(analysis["provisional_profile"]=="full_detail")
+    # A/B data must not be labeled an approved Android-device result on CI.
+    assert(bool(analysis["requires_physical_android_validation"])==(
+        OS.get_name()!="Android"))
+    # Verify a low-FPS full-detail device where LOD makes all 3 scenes viable.
+    suite.begin(1.0,0.2)
+    for i in range(Suite.PHASES.size()):
+        var is_reduced: bool=bool(suite.phase()["lod"])
+        suite.finish_phase({
+            "sample_count":120,
+            "fps_p10":39.0 if is_reduced else 22.0,
+            "draw_calls_mean":1900.0 if is_reduced else 3100.0,
+            "memory_mib_peak":220.0
+        })
+    var reduced: Dictionary=suite.evaluate()
+    assert(reduced["provisional_profile"]=="tactical_lod")
+    assert((reduced["pair_comparisons"] as Array).size()==3)
+    for pair in reduced["pair_comparisons"]:
+        assert(pair["recommendation"]=="tactical_lod_meets_provisional_target")
+        assert(float(pair["draw_call_reduction_percent"])>30.0)
+    # Any missing/sparse data forbids claiming a pass, even with high FPS.
+    suite.begin(60.0,6.0)
+    for i in range(Suite.PHASES.size()):
+        suite.finish_phase({"sample_count":1,"fps_p10":60.0,
+            "draw_calls_mean":200.0})
+    assert(suite.evaluate()["provisional_profile"]=="insufficient_data")
+    assert((suite.evaluate()["quality_issues"] as Array).size()==6)
+    suite.begin(1.0,0.2)
+    for i in range(Suite.PHASES.size()):
+        suite.finish_phase({"sample_count":120,"fps_p10":22.0,
+            "draw_calls_mean":4000.0})
+    assert(suite.evaluate()["provisional_profile"]=="further_optimization_needed")
     DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://artifacts"))
     var path: String="res://artifacts/tarvoka_android_auto_suite_sample.json"
