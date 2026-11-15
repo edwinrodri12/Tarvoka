@@ -89,9 +89,23 @@ static func generate(player_count: int, archetype: String, seed: int,
     var neutral_cities: Array = []
     var objectives: Array = []
     for spawn in starts:
-        home_cities.append(_toward(spawn,center,0.10))
-        neutral_cities.append(_toward(spawn,center,0.34))
-        objectives.append(_toward(spawn,center,0.61))
+        home_cities.append(_toward_steps(spawn,center,2))
+        neutral_cities.append(_toward_steps(spawn,center,6))
+        objectives.append(_toward_steps(spawn,center,11))
+    # Keep every designated capture/objective tile connected to mainland.
+    # When a proposed landmark falls inside an interior lake, carve its
+    # shortest vertical causeway to the nearest dry shore. Do NOT change
+    # the river-crossings archetype: its explicit bridges remain chokepoints.
+    if archetype == "inner_lakes":
+        for collection in [starts,home_cities,neutral_cities,objectives]:
+            for landmark in collection:
+                if str(terrain[landmark.y][landmark.x]) != "water":
+                    continue
+                var direction: int = -1 if landmark.y < int(h/2) else 1
+                var shore_y: int = landmark.y
+                while shore_y >= 0 and shore_y < h and str(terrain[shore_y][landmark.x]) == "water":
+                    terrain[shore_y][landmark.x] = "road"
+                    shore_y += direction
     var reserved: Dictionary = {}
     for points in [starts,home_cities,neutral_cities,objectives]:
         for cell in points:
@@ -237,6 +251,14 @@ static func _ellipse(x: int,y: int,cx: int,cy: int,rx: int,ry: int) -> bool:
 static func _toward(a: Vector2i,b: Vector2i,t: float) -> Vector2i:
     return Vector2i(int(round(lerpf(float(a.x),float(b.x),t))),
         int(round(lerpf(float(a.y),float(b.y),t))))
+
+static func _toward_steps(a: Vector2i,b: Vector2i,steps: int) -> Vector2i:
+    # Comparable opening travel budgets across edge and corner spawns.
+    # Fractions of map radius would disproportionately favor middle slots
+    # in six/eight-player free-for-all maps.
+    var distance: int = absi(b.x-a.x)+absi(b.y-a.y)
+    var travel: int = mini(steps,maxi(1,distance-2))
+    return _toward(a,b,float(travel)/float(maxi(1,distance)))
 
 static func _starting_slots(players: int,size: Vector2i) -> Array:
     var w: int = size.x
