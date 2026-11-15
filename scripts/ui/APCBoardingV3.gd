@@ -133,6 +133,7 @@ static func prepare(model: Node3D,faction: int=0) -> bool:
     moving.position=START
     moving.scale=Vector3.ONE*0.93
     moving.visible=false
+    _show_seats(root,0) # New model starts empty; no ghost soldiers.
     model.set_meta(COUNT,0)
     model.set_meta(FINISHED,false)
     model.set_meta("tarvoka_apc_boarding_v3",true)
