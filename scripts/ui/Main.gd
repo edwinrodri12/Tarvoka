@@ -36,6 +36,7 @@ const GameUiTheme = preload("res://scripts/ui/GameUiTheme.gd")
 const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
 const DestinationComparison = preload("res://scripts/ui/DestinationComparison.gd")
@@ -117,6 +118,7 @@ var cancel_button: Button
 var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
+var biome_picker: OptionButton
 var map_size_picker: OptionButton
 var camera_zoom_in: Button
 var camera_zoom_out: Button
@@ -647,6 +649,22 @@ func _ready() -> void:
     scenario_picker.add_item(Scenarios.label(Scenarios.RANDOM_SCENARIO_ID), Scenarios.RANDOM_SCENARIO_ID)
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
+    var biome_heading := Label.new()
+    biome_heading.text = "BIOMA DEL MAPA · APARIENCIA PERMANENTE"
+    biome_heading.add_theme_font_size_override("font_size",16)
+    panel.add_child(biome_heading)
+    biome_picker = OptionButton.new()
+    biome_picker.name = "SelectorBiomaV19"
+    biome_picker.custom_minimum_size.y = 54
+    biome_picker.add_item("Templado · vegetación y roca",0)
+    biome_picker.add_item("Nevado V19 · montañas, pinos y hielo",1)
+    biome_picker.select(1 if Winter.from_state(board.state)==Winter.WINTER else 0)
+    panel.add_child(biome_picker)
+    var biome_help := Label.new()
+    biome_help.text = "El bioma es el paisaje. El clima de abajo controla movilidad y precipitaciones, independientemente."
+    biome_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    biome_help.add_theme_font_size_override("font_size",14)
+    panel.add_child(biome_help)
     var size_heading := Label.new()
     size_heading.text = "TAMAÑO DEL CAMPO DE BATALLA"
     size_heading.add_theme_font_size_override("font_size", 16)
@@ -1910,6 +1928,7 @@ func _save_game() -> void:
 func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
     if board.load_game(path):
         scenario_picker.select(board.current_scenario_id)
+        biome_picker.select(1 if Winter.from_state(board.state)==Winter.WINTER else 0)
         var grid: Vector2i = board.map_dimensions()
         map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
@@ -1943,9 +1962,10 @@ func _new_game() -> void:
     var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
     var dimensions: Vector2i = _selected_map_size()
     var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
+    var biome_name: String = "Nevado V19" if biome_picker.get_selected_id()==1 else "Templado"
     if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
         map_name += " (semilla %d)" % int(map_seed_picker.value)
-    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s, clima %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, weather_name, objective_name, starter_name]
+    new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s, bioma %s, clima %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, biome_name, weather_name, objective_name, starter_name]
     var match_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else Identity.from_state(board.state)
     if Identity.is_valid(match_identity):
         new_game_dialog.dialog_text += "\nBandos: %s contra %s (identidad visual)." % [
@@ -1966,7 +1986,8 @@ func _confirm_new_game() -> void:
     var next_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else (Identity.from_state(board.state) if board.state.has(Identity.STATE_FIELD) else {})
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
         str(Weather.TYPES[weather_picker.get_selected_id()]),
-        weather_cycle_picker.get_selected_id() == 1)
+        weather_cycle_picker.get_selected_id() == 1,
+        Winter.WINTER if biome_picker.get_selected_id()==1 else Winter.TEMPERATE)
     _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
@@ -2085,6 +2106,7 @@ func _prepare_skirmish() -> void:
         "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(), "fog":fog_picker.get_selected_id(),
         "weather":weather_picker.get_selected_id(),
+        "biome":biome_picker.get_selected_id(),
         "weather_cycle":weather_cycle_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
@@ -2123,6 +2145,7 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     roster_picker.select(int(configuration["roster"]))
     fog_picker.select(int(configuration["fog"]))
     weather_picker.select(int(configuration.get("weather",0)))
+    biome_picker.select(int(configuration.get("biome",0)))
     weather_cycle_picker.select(int(configuration.get("weather_cycle",0)))
     economy_picker.select(int(configuration["economy"]))
     relay_picker.select(int(configuration["objective"]))
