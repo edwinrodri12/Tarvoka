@@ -12,6 +12,7 @@ const ExteriorV6 = preload("res://scripts/ui/AirbaseExteriorV6.gd")
 const MaterialsV7 = preload("res://scripts/ui/AirbaseMaterialsV7.gd")
 const FinishV8 = preload("res://scripts/ui/AirbaseFinishV8.gd")
 const DetailV9 = preload("res://scripts/ui/AirbaseDetailV9.gd")
+const StructureV10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
 const PERMITTED := [8,32,64]
 const MAX_NEAR := 4
 const GRID_SPACING := 15.4
@@ -21,7 +22,8 @@ static func valid_count(count: int) -> bool:
 
 static func build_grid(count: int,requested_near: int=MAX_NEAR,
         show_v6_finish: bool=false,show_v7_materials: bool=false,
-        show_v8_finish: bool=false,show_v9_detail: bool=false) -> Node3D:
+        show_v8_finish: bool=false,show_v9_detail: bool=false,
+        show_v10_structure: bool=false) -> Node3D:
     if not valid_count(count) or requested_near<0:
         return null
     var board := Node3D.new()
@@ -51,6 +53,8 @@ static func build_grid(count: int,requested_near: int=MAX_NEAR,
                 return null
             if show_v9_detail and not DetailV9.apply(full,level,faction,stage):
                 return null
+            if show_v10_structure and not StructureV10.apply(full,level,faction,stage):
+                return null
             if stage in [2,3]:
                 var weather: TarvokaAirbaseDamageFXV4 = Smoke.build(stage)
                 full.add_child(weather)
@@ -77,6 +81,7 @@ static func build_grid(count: int,requested_near: int=MAX_NEAR,
     board.set_meta("tarvoka_stress_materials_v7",show_v7_materials)
     board.set_meta("tarvoka_stress_finish_v8",show_v8_finish)
     board.set_meta("tarvoka_stress_detail_v9",show_v9_detail)
+    board.set_meta("tarvoka_stress_structure_v10",show_v10_structure)
     board.set_meta("tarvoka_stress_grid_cols",columns)
     board.set_meta("tarvoka_stress_grid_rows",rows)
     board.set_meta("tarvoka_stress_near_count",near_count)
