@@ -45,7 +45,9 @@ static func valid_attack(kind: String, surface: String, stage: int) -> bool:
 static func surface_position(surface: String) -> Vector3:
     match surface:
         "gate_metal":
-            return Vector3(V1.HANGAR_CENTER_X-0.46,1.60,-4.12)
+            # Left-hand surviving gate panel: V1 stage 3 omits the
+            # two center sections, so no impact may float in that gap.
+            return Vector3(V1.HANGAR_CENTER_X-2.28,1.60,-4.12)
         "tower_concrete":
             return Vector3(4.17,1.91,-2.95)
         "hangar_roof":
