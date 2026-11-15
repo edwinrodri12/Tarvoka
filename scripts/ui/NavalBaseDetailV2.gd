@@ -11,6 +11,7 @@ const STAGE_NAME: String="AcabadosNauticosRealesV2"
 const EDGE=Color("#c7d1cf")
 const CAP=Color("#a5b4b7")
 const DARK=Color("#304854")
+const IRON=Color("#253642")
 const RUST=Color("#7a6357")
 const SAFETY=Color("#e7b953")
 const MARINE=Color("#5e8190")
