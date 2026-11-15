@@ -1,5 +1,7 @@
 # TARVOKA — Biblia narrativa y campaña de 50 capítulos
 
+> **Integración con el motor compartido:** [CAMPAIGN_MECHANICS_INTEGRATION.md](CAMPAIGN_MECHANICS_INTEGRATION.md) vincula los **50 capítulos** con mecánicas **realmente presentes** en Godot (contrafuego, alcance, terrenos/altura/flanqueos, niebla, ciudades, fábricas, logística, aire/mar, drones, relés, IA, guardado e interfaz). [scripts/core/CampaignCatalog.gd](scripts/core/CampaignCatalog.gd) conserva este inventario como datos validados. Habilidades aún ausentes —carga física, reparaciones, sonar, guerra electrónica activa, árbol de niveles— se identifican como pendientes, no se presentan como jugables.
+
 > **Actualización del arsenal y narrativa (2026-11-12):** progresión revisada a **24 familias** (propuesta 23 si se descarta logística naval M09) y mejoras de tres niveles. Ver [CAMPAIGN_UNIT_PROGRESSION.md](CAMPAIGN_UNIT_PROGRESSION.md), [CAMPAIGN_TECH_LEVELS_V1.md](CAMPAIGN_TECH_LEVELS_V1.md) y [STORY_CHAPTER_01.md](STORY_CHAPTER_01.md). Las 50 misiones y ocho facciones se mantienen. Este es diseño, no programación.
 
 
