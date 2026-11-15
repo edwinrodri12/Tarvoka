@@ -34,6 +34,7 @@ on:
       - "scripts/ui/APCRearDesignV10.gd"
       - "scripts/ui/APCExteriorV11.gd"
       - "scripts/ui/APCTurretV12.gd"
+      - "scripts/ui/APCSurfaceV13.gd"
       - "scripts/ui/APCVisualRigV1.gd"
   workflow_dispatch:
   workflow_run:
@@ -89,7 +90,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11MobileLOD.gd; do
+          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11MobileLOD.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -124,7 +125,7 @@ jobs:
           # The editor draws its original HQ base from a pinned feature
           # branch, but Bastion P06 is overlaid from this main revision.
           # Show the deployed revision, not the misleading older HQ SHA.
-          printf 'Bastión P06 · torreta y ametralladora 3D V12 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
+          printf 'Bastión P06 · acabados de metal V13 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
           test "$(git branch --show-current)" = "feat/airbase-v16-final-visual-audit-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/airbase-v16-final-visual-audit-20261115)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
@@ -174,9 +175,10 @@ jobs:
           test -s scripts/ui/APCRearDesignV10.gd
           test -s scripts/ui/APCExteriorV11.gd
           test -s scripts/ui/APCTurretV12.gd
+          test -s scripts/ui/APCSurfaceV13.gd
           test -s scripts/ui/G11MobileLOD.gd
           grep -q 'G11_Lanzador_V1_EstudioReal' scripts/ui/BastionStudioAdapter.gd
-          grep -q 'BastionP06_V12_TorretaRemota' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'BastionP06_V13_MaterialesSoldaduras' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/Airbase3DV1.gd
           test -s tests/test_airbase_v1_native_studio.gd
           test -s scripts/ui/AirbaseHangarV2.gd
@@ -357,7 +359,7 @@ jobs:
           if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/bastion-studio-smoke.log; then
             echo "Bastion Web UI regression"; exit 1
           fi
-          grep -F 'PASS BASTION V12 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
+          grep -F 'PASS BASTION V13 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
