@@ -1,0 +1,108 @@
+name: TARVOKA G11 Android stress lab APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/g11-android-stress-apk.yml'
+      - 'scripts/ui/G11AndroidPerfLab.gd'
+      - 'scenes/G11AndroidStressLab.tscn'
+      - 'scripts/ui/G11MobileLOD.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-g11-device-lab:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    env:
+      GODOT_VERSION: "4.3"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Java 17 and Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Ensure Android 34 build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Download Godot 4.3 and Android templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/export-templates.tpz
+          mkdir -p /tmp/g11-templates
+          unzip -q /tmp/export-templates.tpz -d /tmp/g11-templates
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/g11-templates/templates/android_debug.apk "$T/"
+          cp /tmp/g11-templates/templates/android_release.apk "$T/"
+          printf '4.3.stable\n' > "$T/version.txt"
+      - name: Use independent package and dedicated performance scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/G11AndroidStressLab.tscn"|' project.godot
+          grep -F 'run/main_scene="res://scenes/G11AndroidStressLab.tscn"' project.godot
+          sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.g11lab"|' export_presets.cfg
+          sed -i 's|package/name="TARVOKA"|package/name="TARVOKA G11 Lab"|' export_presets.cfg
+          grep -F 'package/unique_name="com.edwinrodri12.tarvoka.g11lab"' export_presets.cfg
+          test -s scenes/G11AndroidStressLab.tscn
+          test -s scripts/ui/G11AndroidPerfLab.gd
+      - name: Create disposable Android test signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -keystore /tmp/g11-debug.keystore \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1000 \
+            -storepass android -keypass android \
+            -dname "CN=TARVOKA G11 Performance QA,O=TARVOKA,C=US" >/dev/null 2>&1
+          test -s /tmp/g11-debug.keystore
+      - name: Prepare art atlas and import native 3D models
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 90s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --path . --script res://tools/export_unit_atlas.gd
+          mkdir -p build
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+      - name: Export isolated signed arm64 APK for actual Android benchmarks
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/g11-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-debug Android build/TARVOKA-G11-Android-StressLab.apk
+          test -s build/TARVOKA-G11-Android-StressLab.apk
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose \
+            build/TARVOKA-G11-Android-StressLab.apk
+          unzip -tq build/TARVOKA-G11-Android-StressLab.apk >/dev/null
+          unzip -Z1 build/TARVOKA-G11-Android-StressLab.apk | \
+            grep -Eq '^lib/arm64-v8a/[^/]+\\.so$'
+          sha256sum build/TARVOKA-G11-Android-StressLab.apk
+      - name: Upload installable G11 performance APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-G11-StressLab-Android-arm64
+          path: build/TARVOKA-G11-Android-StressLab.apk
+          retention-days: 14
+          if-no-files-found: error
+      - name: Erase disposable test key
+        if: always()
+        run: rm -f /tmp/g11-debug.keystore
