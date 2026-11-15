@@ -102,6 +102,7 @@ jobs:
             tarvoka_airbase_v8_exterior.png \
             tarvoka_airbase_v8_compare_v7.png \
             tarvoka_airbase_v8_hangar_illumination.png \
+            tarvoka_airbase_v8_hangar_night.png \
             tarvoka_airbase_v8_medium_damage.png \
             tarvoka_airbase_v8_critical_damage.png \
             tarvoka_airbase_v8_destroyed.png \
