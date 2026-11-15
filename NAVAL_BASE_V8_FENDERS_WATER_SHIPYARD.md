@@ -11,7 +11,7 @@ Perfeccionar la Base Naval existente en Godot 4.3 sin reemplazar su arquitectura
 - **Modo nocturno:** emisores muy suaves cerca de las defensas existentes, y espuma atenuada por factor 0.42; el interruptor nocturno de V6 controla ambos sin cambiar las opciones de cámara ni las facciones.
 
 ## Integración en el estudio
-Selector **Base Naval V8** → nueva casilla **V8 · defensas, espuma y drenajes (comparar V7)**. Mantiene comparación V1–V7, facciones, giro, zoom, vistas desde el mar, niveles 1–3 y daños 0–4. Desactivar V8 recrea la V7 original sin modificaciones.
+Selector **Base Naval V8** → nueva casilla **V8 · defensas, espuma y drenajes (comparar V7)**. Mantiene comparación V1–V7, facciones, giro, zoom, vistas desde el mar, niveles 1–3 y daños 0–4. Se añade una quinta cámara **Detalle defensas y rampa** con enfoque ortográfico cercano a los puntos de amarre y la pasarela, para inspección directa en el teléfono sin alterar las cuatro cámaras anteriores. Desactivar V8 recrea la V7 original sin modificaciones.
 
 ## Archivos y QA
 - `scripts/ui/NavalFendersV8.gd`
