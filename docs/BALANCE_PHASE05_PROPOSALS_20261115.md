@@ -42,3 +42,42 @@ El agente experimental no reemplaza todavía a `BasicAI`. Decide *para un edific
 `tests/test_balance_phase05_proposals.gd` compara ataque urbano base/propuesta en ambos bandos y coberturas, reparaciones válidas e inválidas y decisiones AI baseline/propuestas con fábricas y crédito controlado; valida que un resultado no manipule las estadísticas originales y que los nuevos estados se puedan serializar como partidas existentes. La suite se ejecuta bajo `.github/workflows/balance-phase05-proposals.yml`.
 
 **No fijar las tres habilidades como definitivas por obtener PASS técnico.** Para promover una propuesta al juego: identificar una ventaja diferencial razonable en situaciones correspondientes y nula fuera de ellas, mantener previsión y daño real idénticos, verificar una partida larga con IA en mapa costero y bosque, comprobar que las respuestas del enemigo son claras y que las ocho facciones reciben exactamente la misma mecánica básica, luego revisar ergonomía de Android y las reglas de guardado.
+
+## Resultados reproducibles verificados — 15/11/2026
+
+**Godot 4.3:** [suite A/B #43734603282 — SUCCESS](https://github.com/edwinrodri12/Tarvoka/actions/runs/43734603282). Previa básica: [#43734333958 — SUCCESS](https://github.com/edwinrodri12/Tarvoka/actions/runs/43734333958). Una prueba intermedia falló por exigir que la IA comprara sin reservas en un escenario de niebla; el test se corrigió con presupuesto suficiente para conservar la regla auténtica de ahorro, no reduciendo el requisito de privacidad de información.
+
+### P1: 40 muestras de ataque, sin mejorar estadísticas permanentes
+
+- **30 ataques urbanos** (2 lados × 5 blancos × llanura/bosque/montaña); **24** infligieron +1 HP de daño y **6** no aumentaron daño por límites/mínimo de la fórmula actual. Nunca superó +1 ni redujo daño.
+- **10 ataques fuera de ciudad** conservaron resultados y estado idénticos al juego actual.
+- **10 ataques urbanos de otras cinco clases** (Guardia, Explorador, Rompedor, Ingeniero, Tanque) permanecieron idénticos; esto protege la exclusividad de la habilidad.
+- Ambos lados tienen condiciones idénticas y la prueba pasó compatibilidad del guardado, recuperación del ataque base y gasto de munición. No es evaluación de captura de ciudades a largo plazo.
+
+### P2: 40 comprobaciones de reparación y dos ciclos reales de turnos
+
+- **20 acciones válidas** de reparación/situación, incluyendo ocho familias de vehículos terrestres por cada bando, ingeniero que ya se movió y vehículo con solo 1 HP faltante.
+- **20 rechazos obligatorios**: dinero insuficiente, distancia, orden gastada, destrucción, salud máxima, enemigo, persona incorrecta, avión, economía clásica y partida finalizada (en ambos colores).
+- En el tanque, **reparar 2 HP cuesta exactamente 92 créditos**, no los 750 de comprar uno nuevo. Se amortiza mediante exposición del Ingeniero, su coste original, estar adyacente y consumir la orden; si estos costes resultan insuficientes en partidas largas deberá revisarse.
+- **Dos verificaciones de ciclos** (un ciclo por bando): prohibición de reparar dos veces en la misma fase, límite de apertura que consume una orden, posibilidad de reparación al comenzar el siguiente turno propio, límite estricto del HP máximo, persistencia del estado y pagos correctos entre turnos.
+
+### P3: 60 comparaciones de compra real, controlando dinero y observación
+
+- **60 decisiones A/B** (6 tipos de instalación × 5 presupuestos 200/500/700/1000/2500 × ambos colores): **30** propuestas difirieron del comportamiento base. Hubo **10 casos de reservar recursos**, sin producir una unidad, en situaciones donde los mejores roles no eran elegibles o no merecían el gasto.
+- Con **500 créditos en la base aérea**, la IA actual compró el **helicóptero de transporte en ambos colores**; la propuesta **reservó créditos en ambos** en vez de comprar una unidad cuyo transporte de tropas aún no funciona.
+- Con **700 créditos**, la alternativa compró helicóptero de ataque; con 1.000 y enemigo aéreo observado, compró caza. Se mantuvo selección simétrica para ambos colores.
+- Una unidad blindada aliada herida cerca de la fábrica desencadenó la recomendación experimental de Ingeniero en ambos bandos, **solo porque también se implementó la reparación de ensayo**.
+- **Dos pruebas de niebla con reserva económica suficiente**: cuando los aviones contrarios estaban ocultos, la recomendación fue helicóptero de ataque; al hacerlos visibles, pasó a caza. Modificar exclusivamente los créditos **ocultos** del otro jugador no cambió la recomendación.
+- Estas 60 decisiones son ensayos de una sola fábrica, no una tasa de rendimiento de IA en batallas enteras.
+
+### Dictamen y condiciones para una futura integración
+
+**Aceptadas para una segunda ronda de simulación, NO aprobadas como reglas permanentes.** Los tres prototipos tienen una implementación aislada real y pruebas de consistencia simétricas. Para integrarlos al juego deberán incorporarse con las mismas comprobaciones a:
+
+1. `BattleSession` y `BattleActions`/previsión del HUD: una habilidad urbana debe aparecer en el indicador de daño **antes** del ataque, sin mostrar información oculta.
+2. Acciones de Ingeniero en UI Android y validación de guardado actual, incluida compatibilidad con `OpeningBalance`, niebla y desgaste.
+3. `BasicAI` y selección de prioridades solo si partidas reales A/B en costa/bosque muestran mejora de **material total**, captura, contrajuego, costo neto de mantenimiento y duración, no solo menos compras inútiles.
+4. Jugar pruebas de estrés con dos bandos primero; para ocho participantes todavía no existe el motor multibando jugable. Revisar potencial estrategia de reparar blindados sin fin y si la ventaja urbana desplaza excesivamente a la Guardia.
+5. Guardar los bonos de facción v0.1, veterancia (bonos actualmente cero) y demás números intactos hasta disponer de evidencia de balance competitiva.
+
+**La suite en verde NO implica que las habilidades estén ya disponibles en el APK, menú, IA del juego o multijugador.** Son alternativas de código reales, invocadas únicamente por el script experimental. No fusionar este PR todavía.
