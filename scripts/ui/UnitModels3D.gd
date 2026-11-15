@@ -24,6 +24,7 @@ const APCFinishV6 = preload("res://scripts/ui/APCFinishV6.gd")
 const APCMachineGunV7 = preload("res://scripts/ui/APCMachineGunV7.gd")
 const APCDamageV7 = preload("res://scripts/ui/APCDamageV7.gd")
 const APCTacticalV8 = preload("res://scripts/ui/APCTacticalLOD8.gd")
+const APCFullRigV1 = preload("res://scripts/ui/APCVisualRigV1.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -960,7 +961,7 @@ static func pose_model(role: String, model: Node3D, kind: String,
             if APCTacticalV8.has_model(model):
                 return APCTacticalV8.pose(model,kind,progress,target_heading)
             if model.get_meta("tarvoka_apc_sculpt_v1",false):
-                return preload("res://scripts/ui/APCVisualRigV1.gd").pose(
+                return APCFullRigV1.pose(
                     model,kind,progress,rad_to_deg(
                         atan2(float(target_heading.x),-float(target_heading.y))))
             return BastionRig.pose(model,kind,progress,target_heading)
@@ -978,7 +979,7 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             if APCTacticalV8.has_model(model):
                 APCTacticalV8.restore(model)
             elif model.get_meta("tarvoka_apc_sculpt_v1",false):
-                preload("res://scripts/ui/APCVisualRigV1.gd").restore(model)
+                APCFullRigV1.restore(model)
             else:
                 BastionRig.restore(model)
         "mlrs":
