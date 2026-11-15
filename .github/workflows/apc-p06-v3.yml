@@ -124,6 +124,7 @@ jobs:
           test -s artifacts/tarvoka_mixed_32_apc_metrics.json
           test -s artifacts/tarvoka_mixed_32_apc_full.png
           test -s artifacts/tarvoka_mixed_32_apc_lod.png
+          test -s artifacts/tarvoka_mixed_32_apc_hq_lod.png
       - name: Mixed stress 64 APC plus 8 real G09 tanks and 8 HQ V3
         shell: bash
         env:
@@ -139,6 +140,7 @@ jobs:
           test -s artifacts/tarvoka_mixed_64_apc_metrics.json
           test -s artifacts/tarvoka_mixed_64_apc_full.png
           test -s artifacts/tarvoka_mixed_64_apc_lod.png
+          test -s artifacts/tarvoka_mixed_64_apc_hq_lod.png
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
