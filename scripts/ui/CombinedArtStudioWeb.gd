@@ -900,9 +900,12 @@ func _apply_airbase_camera() -> void:
             4:
                 camera.position=Vector3(-7,27,7)
             5:
-                # True close-up, not another distant isometric overview.
-                camera.position=Vector3(7.4,6.5,-7.1)
-                target=Vector3(4.17,4.5,-2.17)
+                # The model itself rotates in the studio. Focus the REAL
+                # transformed tower position, not the unrotated V1 anchor.
+                var tier_offset: float=float(airbase_level_picker.selected)*0.62
+                var local_tower:=Vector3(4.17,4.12+tier_offset,-2.17)
+                target=model_root.transform*local_tower
+                camera.position=target+Vector3(4.7,2.2,-5.9)
             6:
                 camera.position=Vector3(-8.6,5,-13.1)
                 target=Vector3(-1.95,1.33,0.04)
@@ -1556,7 +1559,7 @@ func _update_camera() -> void:
                 var tower_close: bool = airbase_detail_v9_toggle != null and \
                     airbase_detail_v9_toggle.button_pressed and _airbase_v9_view==5
                 camera.size = (
-                    5.8 if tower_close else 10.5 if _airbase_camera_interior else 18.8
+                    6.4 if tower_close else 10.5 if _airbase_camera_interior else 18.8
                     )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
