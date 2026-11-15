@@ -81,7 +81,7 @@ func _run() -> void:
     assert(V10._has_roof(V10._segment_for_x(2.8),3))
     var target_position: Vector3=V13.surface_position("hangar_roof")
     assert(absf(target_position.y-(V10._roof_y(2.8)+0.052))<0.002)
-    assert(V13.surface_position("tower_concrete").x==4.17)
+    assert(absf(V13.surface_position("tower_concrete").x-4.17)<0.001)
 
     var variants:=0
     for faction in range(8):
