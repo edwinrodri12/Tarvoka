@@ -100,9 +100,15 @@ func _run() -> void:
     assert(board.state == original)
     var library: Node = board._models_3d
     assert(library != null) # Real software OpenGL, not Godot dummy headless.
-    for i in range(5):
+    # 22 faction-aware captures are now staged in batches of four rather
+    # than allocating every Godot model and SubViewport in one frame.
+    for i in range(100):
+        if bool(library.get("captures_completed")):
+            break
         await process_frame
     assert(bool(library.get("captures_completed")))
+    assert(int(library.get("capture_peak_viewports"))<=4)
+    assert(int(library.get("capture_batches_finished"))==6)
     # Eight G09 + eight real P06 faction portraits, six remaining roles.
     assert(int(library.get("baked_static_captures")) == 22)
     assert((library.get("viewports") as Dictionary).is_empty())
