@@ -21,6 +21,9 @@ on:
       - 'scripts/ui/G11TracksFactionV13.gd'
       - 'scripts/ui/G11MechanicalDetailV14.gd'
       - 'scripts/ui/G11AftPodFinishV15.gd'
+      - 'scripts/ui/G11FrontFrameV16.gd'
+      - 'tests/test_g11_front_frame_v16.gd'
+      - 'tests/test_g11_front_frame_v16_capture.gd'
       - 'tests/test_g11_aft_pod_finish_v15.gd'
       - 'tests/test_g11_aft_pod_finish_v15_capture.gd'
       - 'tests/test_g11_mechanical_detail_v14.gd'
@@ -109,6 +112,20 @@ jobs:
             echo 'G11 V15 native geometry regression'; exit 1
           fi
           grep -F 'PASS G11 V15:' /tmp/g11_v15.log
+      - name: Validate G11 V16 structural frame, 12 open tubes and roof details
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_front_frame_v16.gd 2>&1 | tee /tmp/g11_v16.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v16.log; then
+            echo 'G11 V16 native frame geometry failed'; exit 1
+          fi
+          grep -F 'PASS G11 V16:' /tmp/g11_v16.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
@@ -266,6 +283,29 @@ jobs:
         with:
           name: tarvoka-g11-v15-14-real-godot-aft-pod-review
           path: /tmp/g11-v15-review/*.png
+          retention-days: 14
+      - name: Render G11 V16 16 actual Godot front roof and structural camera frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v16-review
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v16-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_front_frame_v16_capture.gd 2>&1 | tee /tmp/g11_v16_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v16_capture.log; then
+            echo 'G11 V16 native render capture failed'; exit 1
+          fi
+          grep -F 'PASS G11 V16 CAPTURE:' /tmp/g11_v16_capture.log
+          test "$(find /tmp/g11-v16-review -name '*.png' | wc -l)" -eq 16
+      - name: Upload G11 V16 native 3D front roof and structural gallery
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v16-16-native-godot-front-roof-inspection
+          path: /tmp/g11-v16-review/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
