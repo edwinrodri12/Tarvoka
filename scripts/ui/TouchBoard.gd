@@ -23,6 +23,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
+const CargoVFX = preload("res://scripts/ui/CargoVFX.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const SiteOverlayData = preload("res://scripts/ui/SiteOverlayData.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
@@ -99,6 +100,7 @@ const TAP_DRAG_LIMIT := 18.0
 const COMBAT_EFFECT_SECONDS := 0.55
 # Visual-only state. Never exported to save files or read by game rules.
 var combat_effects: Array[Dictionary] = []
+var cargo_effects: Array[Dictionary] = []
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -165,6 +167,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     last_enemy_turn_report = ""
     last_economy_report = ""
     combat_effects.clear()
+    cargo_effects.clear()
     # When the user selects Red to open a single-player battle, complete
     # precisely one real AI turn BEFORE saving the starting human state.
     # Local two-player games leave Red's opening completely manual.
@@ -424,7 +427,7 @@ func _draw() -> void:
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
             inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview(),
             comparison_cells(),weather_visual_previous,weather_blend,
-        TacticalHints.transport(state,selected_id),unload_mode)
+        TacticalHints.transport(state,selected_id),unload_mode,cargo_effects)
         _draw_campaign_markers()
         AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
             iso_zoom,iso_pan,map_dimensions(),battery_saver)
@@ -614,13 +617,13 @@ func _draw() -> void:
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(10.0, tile * (0.20 if airborne else 0.30))), Color.WHITE)
         # Own APC capacity badge: a quick count for touch users. Never show
         # enemy passenger counts, even when the carrier itself is visible.
-        if is_player and str(unit.get("role","")) == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and tile >= 36.0:
+        if is_player and Cargo.capacity(str(unit.get("role",""))) > 0 and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and tile >= 36.0:
             var count_pos := origin + Vector2(cell)*tile + Vector2(tile*0.54,tile*0.02)
             var count_box := Rect2(count_pos,Vector2(tile*0.43,tile*0.24))
             draw_rect(count_box,Color(0.02,0.10,0.16,0.92))
             draw_rect(count_box,Color(0.22,0.77,1.0,0.92),false,maxf(1.0,tile*0.025))
             draw_string(font,count_pos+Vector2(tile*0.035,tile*0.18),
-                "%d/%d" % [unit["cargo"].size(),Cargo.CAPACITY],
+                "%d/%d" % [unit["cargo"].size(),Cargo.capacity(str(unit["role"]))],
                 HORIZONTAL_ALIGNMENT_LEFT,-1,int(maxf(10.0,tile*0.16)),Color(0.88,0.97,1.0))
         # A second visual marker identifies the tactical role independently
         # of faction color and unit ID; no borrowed game sprites.
@@ -656,6 +659,9 @@ func _draw() -> void:
             draw_string(font, badge_rect.position + Vector2(tile * 0.04, tile * 0.17),
                 "HP %d" % int(unit["hp"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.16)), health_tint)
+    # Transit animation is purely cosmetic: passenger is already inside
+    # authoritative cargo, never creates an extra selectable tile.
+    CargoVFX.draw_classic(self,cargo_effects,origin,tile,battery_saver)
     # Visual attention indicators are drawn after troops, above the tile,
     # with no new touch hitboxes or tactical commands.
     AlertPainter.draw_classic(self,alert_marker_snapshots(),tile,origin,battery_saver)
@@ -679,7 +685,7 @@ func _draw() -> void:
         draw_rect(Rect2(preview_pos, Vector2.ONE * tile), preview_color, false, maxf(2.0,tile*0.06))
         if tile >= 32.0:
             draw_string(font,preview_pos+Vector2(tile*0.05,tile*0.21),
-                "CONF. ATQ" if preview_attack else "CONF. MOV",
+                "CONF. ATQ" if preview_attack else ("CONF. EMB" if str(pending_order.get("kind","")) == "embark" else ("CONF. SAL" if str(pending_order.get("kind","")) == "disembark" else "CONF. MOV")),
                 HORIZONTAL_ALIGNMENT_LEFT,-1,clampi(int(tile*0.14),10,18),preview_color)
     # Put expected damage above the enemy tile, after units are drawn so it stays readable.
     for destination in hints["attacks"]:
@@ -748,6 +754,9 @@ func _process(delta: float) -> void:
             if float(combat_effects[i]["elapsed"]) >= COMBAT_EFFECT_SECONDS:
                 combat_effects.remove_at(i)
         needs_redraw = true
+    if not cargo_effects.is_empty():
+        CargoVFX.advance(cargo_effects,dt)
+        needs_redraw = true
     if not motion_effects.is_empty():
         for effect in motion_effects:
             effect["elapsed"] = float(effect["elapsed"]) + dt
@@ -787,6 +796,16 @@ func _record_move_effect(before: Dictionary, after: Dictionary, unit_id: String)
     while motion_effects.size() > 16:
         motion_effects.pop_front()
     queue_redraw()
+
+# Only true, committed transactions create door/soldier animation.
+# Enemy passenger identities remain private: event_for ignores enemy cargo.
+func _record_cargo_effect(before: Dictionary, after: Dictionary,
+        kind: String, carrier_id: String, passenger_id: String) -> void:
+    var event: Dictionary = CargoVFX.event_for(before,after,kind,
+        carrier_id,passenger_id,0)
+    CargoVFX.enqueue(cargo_effects,event)
+    if not event.is_empty():
+        queue_redraw()
 
 func _record_attack_effect(before: Dictionary, result: Dictionary, attacker_id: String, defender_id: String) -> void:
     if attacker_id.is_empty() or defender_id.is_empty():
@@ -887,7 +906,7 @@ func can_unload_selected() -> bool:
 
 func arm_unload_selected() -> bool:
     if not can_unload_selected():
-        message = "Desembarco no disponible: selecciona un APC propio con pasajeros y una casilla libre."
+        message = "Desembarco no disponible: selecciona un APC o IFV propio con pasajeros y una casilla libre."
         return false
     unload_mode = not unload_mode
     message = "Toca una casilla amarilla adyacente para desembarcar. El soldado actuara el proximo turno." if unload_mode else "Desembarco cancelado."
@@ -903,7 +922,7 @@ func confirm_pending_order() -> bool:
     return committed
 
 # Explicit confirmation and the same transaction path as combat/move.
-# A selected APC taps neighboring infantry to embark. After pressing the
+# A selected APC/IFV taps adjacent eligible infantry. After pressing the
 # Desembarcar control, a free adjacent tile becomes a safe unload target.
 func _request_transport_order(cell: Vector2i, passenger_id: String,
         kind: String) -> void:
@@ -917,7 +936,7 @@ func _request_transport_order(cell: Vector2i, passenger_id: String,
         "kind":kind,"target_id":passenger_id}
     if require_order_confirmation and pending_order != order:
         pending_order = order
-        message = ("Embarcar %s en APC (consume ambas acciones)." if kind == "embark" else
+        message = ("Embarcar %s en transporte propio (consume ambas acciones)." if kind == "embark" else
             "Desembarcar %s; quedara inactivo hasta el proximo turno.") % passenger_id
         message += " Toca otra vez o Confirmar orden."
         return
@@ -999,6 +1018,8 @@ func _commit_order(order: Dictionary) -> bool:
         _record_attack_effect(prior_state, result, unit_id, enemy_id)
     elif kind == "move":
         _record_move_effect(prior_state, state, unit_id)
+    elif kind in ["embark","disembark"]:
+        _record_cargo_effect(prior_state,state,kind,unit_id,enemy_id)
     selected_factory_pos = Vector2i(-1,-1)
     tactical_action_committed.emit({"kind":kind,"unit_id":unit_id,"result":result})
     _write_autosave()
@@ -1018,8 +1039,8 @@ func _commit_order(order: Dictionary) -> bool:
             message = "Movimiento completado. Sin objetivos visibles en alcance."
     elif kind == "embark":
         selected_id = ""
-        message = "Embarque completado: %s en APC. Acciones consumidas, pasajeros %d/%d." % [
-            enemy_id,int(result.get("cargo_count",0)),Cargo.CAPACITY]
+        message = "Embarque completado: %s en transporte. Acciones consumidas, pasajeros %d/%d." % [
+            enemy_id,int(result.get("cargo_count",0)),int(result.get("cargo_capacity",0))]
     elif kind == "disembark":
         selected_id = ""
         message = "Desembarco de %s completado. Disponible a partir del proximo turno." % enemy_id
@@ -1450,6 +1471,9 @@ func _play_ai_turn() -> void:
             _record_attack_effect(prior_state, result, str(result.get("attacker_id", "")), str(result.get("defender_id", "")))
         elif str(result.get("action","")) == "move":
             _record_move_effect(prior_state, state, str(result.get("unit_id", "")))
+        elif str(result.get("action","")) in ["embark","disembark"]:
+            _record_cargo_effect(prior_state,state,str(result["action"]),
+                str(result.get("carrier_id","")),str(result.get("passenger_id","")))
         match str(result.get("action", "")):
             "move":
                 movements += 1
@@ -1522,6 +1546,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     motion_effects.clear()
     unit_headings.clear()
     combat_effects.clear()
+    cargo_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     inspected_cell = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
@@ -1573,6 +1598,7 @@ func resume_autosave() -> bool:
     motion_effects.clear()
     unit_headings.clear()
     combat_effects.clear()
+    cargo_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     inspected_cell = Vector2i(-1,-1)
     current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])

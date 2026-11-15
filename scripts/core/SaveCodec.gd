@@ -318,7 +318,7 @@ static func _valid_state(state: Dictionary) -> bool:
         # Never accept a spoofed APC holding enemy, naval or nested units.
         if unit.has("cargo"):
             var manifest = unit["cargo"]
-            if str(unit.get("role","")) != Cargo.CARRIER_ROLE or not manifest is Array or manifest.size() > Cargo.CAPACITY:
+            if Cargo.capacity(str(unit.get("role",""))) <= 0 or not manifest is Array or manifest.size() > Cargo.capacity(str(unit.get("role",""))):
                 return false
             if int(unit["hp"]) <= 0 and not manifest.is_empty():
                 return false
@@ -331,7 +331,7 @@ static func _valid_state(state: Dictionary) -> bool:
                 if not passenger.get("id") is String or passenger["id"].is_empty() or passenger["id"].length() > 64 or ids.has(passenger["id"]):
                     return false
                 ids[passenger["id"]] = true
-                if str(passenger.get("role","")) not in Cargo.PASSENGER_ROLES or int(passenger.get("faction",-1)) != int(unit["faction"]):
+                if not Cargo.allowed_passenger(str(unit.get("role","")),str(passenger.get("role",""))) or int(passenger.get("faction",-1)) != int(unit["faction"]):
                     return false
                 if not passenger.get("faction") is int or not passenger.get("hp") is int or passenger["hp"] <= 0 or passenger["hp"] > MAX_STAT:
                     return false

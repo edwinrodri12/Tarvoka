@@ -157,7 +157,7 @@ static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:
     var response := {"valid": true, "state": next}
     # Preserve public exchange facts for combat feedback and tactical hints.
     # The live battle state itself stores only persistent HP/ammo, not events.
-    for key in ["damage", "counter_damage", "counter_spent", "terrain_attack_bonus", "terrain_defense_cover", "flanked", "carrier_id", "passenger_id", "cargo_count", "destination"]:
+    for key in ["damage", "counter_damage", "counter_spent", "terrain_attack_bonus", "terrain_defense_cover", "flanked", "carrier_id", "passenger_id", "cargo_count", "cargo_capacity", "destination"]:
         if action.has(key):
             response[key] = action[key]
     if not str(action.get("consumed_unit_id", "")).is_empty():

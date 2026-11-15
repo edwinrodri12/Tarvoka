@@ -26,13 +26,13 @@ static func transport(state: Dictionary, unit_id: String) -> Dictionary:
         if unit is Dictionary and str(unit.get("id","")) == unit_id:
             vehicle = unit
             break
-    if vehicle.is_empty() or str(vehicle.get("role","")) != Cargo.CARRIER_ROLE or not Turns.can_act(vehicle,faction):
+    if vehicle.is_empty() or Cargo.capacity(str(vehicle.get("role",""))) <= 0 or not Turns.can_act(vehicle,faction):
         return empty
     var visible: Dictionary = Visibility.visible_cells(state,faction) if Visibility.enabled(state) else {}
-    if Turns.can_move(vehicle,faction) and Cargo.passengers(vehicle).size() < Cargo.CAPACITY:
+    if Turns.can_move(vehicle,faction) and Cargo.passengers(vehicle).size() < Cargo.capacity(str(vehicle.get("role",""))):
         for unit in state["units"]:
             if unit is Dictionary and str(unit.get("id","")) != unit_id:
-                if int(unit.get("faction",-1)) != faction or str(unit.get("role","")) not in Cargo.PASSENGER_ROLES:
+                if int(unit.get("faction",-1)) != faction or not Cargo.allowed_passenger(str(vehicle.get("role","")),str(unit.get("role",""))):
                     continue
                 var proposal: Dictionary = Cargo.embark(state["units"],str(unit["id"]),unit_id,faction,state["terrain"])
                 if proposal.get("valid",false):
@@ -231,17 +231,19 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
-        if str(unit.get("role","")) == Cargo.CARRIER_ROLE and int(unit.get("faction",-1)) == int(state.get("faction",-1)):
+        if Cargo.capacity(str(unit.get("role",""))) > 0 and int(unit.get("faction",-1)) == int(state.get("faction",-1)):
             var boarded: Array = Cargo.passengers(unit)
             var manifest_names: Array[String] = []
             for passenger in boarded:
                 manifest_names.append("%s (%d HP)" % [str(passenger["id"]),int(passenger["hp"])])
-            text += " | Transporte APC: %d/%d plazas" % [boarded.size(),Cargo.CAPACITY]
+            text += " | Transporte %s: %d/%d plazas" % [str(unit["role"]).to_upper(),boarded.size(),Cargo.capacity(str(unit["role"]))]
             if not manifest_names.is_empty():
                 text += " | Pasajeros: " + ", ".join(manifest_names)
             var options: Dictionary = transport(state,unit_id)
             if not options["embarks"].is_empty():
                 text += "\nToca la infanteria adyacente para embarcar (consume ambas acciones)."
+                if str(unit["role"]) == "ifv":
+                    text += " IFV: solo 1 infante capturador, sin Rompedor."
             if not options["unloads"].is_empty():
                 text += "\nPulsa Desembarcar y elige una casilla adyacente. El soldado actuara el proximo turno."
         text += " | Clima: %s" % Weather.label(Weather.from_state(state))
