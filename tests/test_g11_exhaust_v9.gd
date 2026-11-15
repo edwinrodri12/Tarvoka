@@ -97,8 +97,8 @@ func _run() -> void:
         var expanded: float = cloud.scale.x
         _check(Models.pose_model("mlrs",model,"attack",0.445),
             "residual smoke continues to dissipate after rocket departure")
-        _check(cloud.visible and cloud.scale.x > expanded,
-            "residual muzzle smoke expands before dispersing")
+        _check(cloud.visible and cloud.scale.x < expanded,
+            "residual muzzle smoke now tapers near the end rather than blocking launch tubes")
         _check(cloud.scale.x < 1.2,
             "softened exhaust never grows into an oversized gray sheet")
         _check(Models.pose_model("mlrs",model,"attack",0.550),
