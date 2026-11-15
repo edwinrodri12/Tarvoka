@@ -25,6 +25,7 @@ const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
+const G11Weather = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
 const G11Atmos = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
@@ -59,7 +60,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V15 bastidor y paneles traseros")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V17 materiales y desgaste PBR")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V20 soldaduras y tornillería · 6×6")
@@ -146,7 +147,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ESCULTURA POSTERIOR V15",14)
+        "G11 LANZADOR · ACABADOS METÁLICOS V17",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -170,13 +171,26 @@ func _install_g11_controls() -> void:
         "Lateral opuesto",func(): _g11_view(270.0))
     _add_paired(g11_controls,"V15: trasera en 3/4",func(): _g11_view(145.0),
         "V15: blindaje opuesto",func(): _g11_view(215.0))
+    _add_paired(g11_controls,"V16: frente en 3/4",func(): _g11_view(38.0),
+        "V16: frente opuesto",func(): _g11_view(322.0))
+    _add_paired(g11_controls,"V17: acero de las bocas",func(): _g11_view(18.0),
+        "V17: pintura del techo",func(): _g11_view(70.0))
+    _add_paired(g11_controls,"V17: desgaste operativo",func(): _g11_set_wear(true),
+        "V17: pintura limpia",func(): _g11_set_wear(false))
     _title(g11_controls,
-        "V15: inspecciona las dos cubiertas traseras biseladas, el bastidor "
-        + "reforzado y seis lamas 3D. Durante la salva verás los hidráulicos V14; "
-        + "las diez puntas del engrane V13 y la pintura siguen intactas.",12)
+        "V17: acabado PBR microtexturizado en paneles reales, roce en el "
+        + "labio de las doce bocas, pintura usada y suciedad de juntas. "
+        + "Compara desgaste con pintura limpia sin afectar tus ocho facciones.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _g11_set_wear(enabled: bool) -> void:
+    if _role != "mlrs" or model_root == null:
+        return
+    if G11Weather.set_wear(model_root,enabled):
+        status_label.text = ("G11 V17 · desgaste operativo" if enabled
+            else "G11 V17 · pintura limpia")
 
 func _g11_view(yaw: float) -> void:
     if _role != "mlrs" or model_root == null:
@@ -810,7 +824,11 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_surface_weather_v17",false)):
+            detail_label.text = detail_label.text.replace("salva V8","superficies y desgaste V17")
+        elif built and bool(model_root.get_meta("tarvoka_g11_front_frame_v16",false)):
+            detail_label.text = detail_label.text.replace("salva V8","blindaje y techo V16")
+        elif built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
             detail_label.text = detail_label.text.replace("salva V8","bastidor y acabados V15")
         elif built and bool(model_root.get_meta("tarvoka_g11_mechanical_detail_v14",false)):
             detail_label.text = detail_label.text.replace("salva V8","hidráulicos V14")
