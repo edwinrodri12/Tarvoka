@@ -134,5 +134,7 @@ static func _reset_on_replacement(side: int) -> void:
     assert(resumed.get("valid",false))
     assert(int(resumed["interrupted"]) == 1)
     assert(int(Economy.site_at(resumed["state"]["economy"],city)["owner"]) == -1)
-    assert(int(resumed["tracking"][key]["points"]) == 1)
+    assert(int(resumed["tracking"][key]["points"]) == 2)
+    # REPL earns 1 base + 1 from CAP now standing adjacent; the
+    # previous occupier’s 1 point must NOT be added on top (would be 3).
     assert(str(resumed["tracking"][key]["holder_id"]) == "REPL")
