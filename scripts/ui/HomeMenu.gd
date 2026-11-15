@@ -136,6 +136,9 @@ func _ready() -> void:
     _menu_option("Ajustes","Pantalla, controles y rendimiento","06",func(): settings_requested.emit())
     _menu_option("Créditos","Información del juego y equipo","07",_open_credits)
     _menu_option("Salir","Cerrar TARVOKA","08",_ask_exit)
+    # Backward-compatible keys for the existing Godot regression suites.
+    primary_buttons["Multijugador"] = primary_buttons["Online"]
+    primary_buttons["Continuar"] = _continue_button
 
     hero = PanelContainer.new()
     hero.name = "PersonajesOficialesYEscenario"
