@@ -51,7 +51,14 @@ static func movement_cost_for(terrain: String, domain: String = "ground") -> int
 
 static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Array[Vector2i], domain: String = "ground") -> Dictionary:
     var distances := {}
-    if not valid_terrain(terrain) or not inside(origin, terrain) or points < 0 or origin in blocked or not Domains.valid_domain(domain):
+    if not valid_terrain(terrain) or not inside(origin, terrain) or points < 0 or not Domains.valid_domain(domain):
+        return distances
+    # Index occupied cells once. On 40x30 maps with large squads, a
+    # linear Array membership check inside every BFS edge is costly.
+    var blocked_index: Dictionary={}
+    for cell in blocked:
+        blocked_index[cell]=true
+    if blocked_index.has(origin):
         return distances
     if movement_cost_for(terrain[origin.y][origin.x], domain) < 0:
         return {}
@@ -64,7 +71,7 @@ static func reachable(origin: Vector2i, points: int, terrain: Array, blocked: Ar
         cursor += 1
         for direction in DIRECTIONS:
             var next: Vector2i = current + direction
-            if not inside(next, terrain) or next in blocked:
+            if not inside(next, terrain) or blocked_index.has(next):
                 continue
             var cost := movement_cost_for(terrain[next.y][next.x], domain)
             if cost < 0:
