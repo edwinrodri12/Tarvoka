@@ -36,7 +36,28 @@ Las **4 desviaciones** se dieron en mapas 24×18 con niebla. En los dos experime
 
 **Workflow:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43770096819
 
-No adoptar una interpretación del descenso de compras hasta verificar los números de turnos activos y oportunidades de compra. Los resultados serán agregados a esta sección después de confirmar SUCCESS y el marcador PASS del registro.
+**Godot 4.3 SUCCESS y PASS (16 pares, 32 sesiones, mismas reglas, 48 medias fases máximo):** https://github.com/edwinrodri12/Tarvoka/actions/runs/43770096819
+
+| Indicador (total de 16 sesiones por brazo) | IA conservadora | Rutas seguras |
+|---|---:|---:|
+| Medias fases activas | 741 | 670 |
+| Compras reales | 1.031 | 910 |
+| Compras por 100 medias fases activas | 139,14 | 135,82 |
+| Compras primeras 20 medias fases (mismo horizonte en 16 partidas) | 481 | 474 |
+| Oportunidades de compra al inicio de fase (sitio-fase) | 2.728 | 2.467 |
+| Compras por 100 oportunidades iniciales | 37,79 | 36,89 |
+| Sitios-fase bloqueados por ocupación/producción no elegible | 1.054 | 875 |
+| Sitios-fase sin fondos suficientes | 174 | 247 |
+| Sitios-fase restringidos por reserva IA | 100 | 69 |
+| Créditos gastados en unidades | 319.100 | 273.800 |
+| Créditos sumados al cierre de 16 partidas | 73.314 | 76.560 |
+| Partidas decididas | 4 | 8 |
+
+**Diagnóstico:** las compras totales caen -11,74 %, pero las fases activas -9,58 %. La tasa de compras por 100 medias fases cae únicamente -2,39 %, y en el tramo de primeras 20 fases solo -1,46 %. Si se aplica la tasa base de compra a las 670 fases de la variante, se esperarían ~932 compras; las 910 observadas dejan ~22 compras de diferencia residual. Ese cálculo normaliza por exposición y **NO equivale a identificar una causa experimental aislada**. El número de oportunidades iniciales por fase se mantiene prácticamente igual (3,68 por fase en ambos brazos).
+
+Existe una señal no resuelta: las observaciones de instalaciones sin dinero para comprar aumentaron (174 → 247) y representan ~0,23 frente a ~0,37 sitios-fase por fase activa. Aunque el dinero *total* al cierre es mayor, esos agregados no demuestran que cada bando mantenga liquidez suficiente. Es necesario estudiar dinero por bando, tipo de instalación, fecha y mapas, y separar si la unidad que no se compra era deseable para el jugador.
+
+**Criterio provisional:** no aumentar ingresos, bajar precios ni retocar limitadores de IA basándose en el descenso de compras brutas. La explicación dominante es el menor horizonte jugado, y el cambio residual de ritmo de compra es pequeño; primero investigar las restricciones locales de fondos y medir calidad del combate y duración con muestras mayores.
 
 ## Criterios para la próxima decisión
 
