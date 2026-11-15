@@ -335,10 +335,10 @@ func _ready() -> void:
     commander_sidebar_strip.name = "ComandantesEnCentroTactico"
     panel.add_child(commander_sidebar_strip)
     campaign_button = Button.new()
-    campaign_button.text = "MODO HISTORIA · CAPÍTULO 01"
+    campaign_button.text = "MODO HISTORIA · VER CAPÍTULOS"
     campaign_button.custom_minimum_size.y = 55
     campaign_button.tooltip_text = "Jugar o continuar Escudo compartido. Guardado separado de las batallas libres."
-    campaign_button.pressed.connect(_open_campaign)
+    campaign_button.pressed.connect(_open_story_selector)
     panel.add_child(campaign_button)
     command_menu_button = Button.new()
     command_menu_button.text = "CENTRO DE MANDO"
@@ -2093,6 +2093,7 @@ func _show_home_menu() -> void:
     command_menu.hide()
     skirmish_setup.hide()
     saved_matches_menu.hide()
+    story_chapter_menu.hide()
     home_menu.show()
     _reveal_screen(home_menu)
 
@@ -2127,6 +2128,7 @@ func _continue_from_home() -> void:
 func _prepare_skirmish() -> void:
     _close_results_screen()
     home_menu.hide()
+    story_chapter_menu.hide()
     saved_matches_menu.hide()
     command_menu.hide()
     faction_selector.hide()
