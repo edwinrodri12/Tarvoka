@@ -78,6 +78,48 @@ static func apply(model: Node3D, level: int, faction: int,
         _box(inside,"IndicadorFondo_%d" % i,
             Vector3(x,1.44,2.934),Vector3(0.65,0.41,0.055),
             accent if i==1 else GRILL,0.22)
+    # Deep rear service bays remain visually readable when the doors are
+    # opened: real layered panels with dark recesses, faction-colored screens
+    # and machined frames, not a flat neutral wall texture.
+    for bay in range(3):
+        var bx: float = -2.24+float(bay)*2.24
+        _box(inside,"NichoRecesoMantenimiento_%d" % bay,
+            Vector3(bx,1.35,2.80),Vector3(1.62,1.70,0.29),STEEL,0.31)
+        _box(inside,"DintelTecnicoBahia_%d" % bay,
+            Vector3(bx,2.35,2.62),Vector3(1.76,0.14,0.25),
+            accent,0.34)
+        for frame_side in [-1,1]:
+            _box(inside,"MarcoNicho_%d_%s" % [bay,frame_side],
+                Vector3(bx+float(frame_side)*0.77,1.35,2.61),
+                Vector3(0.13,1.83,0.21),FRAME,0.42)
+        _box(inside,"ArmarioHerramientas_%d" % bay,
+            Vector3(bx,0.73,2.55),Vector3(1.12,1.07,0.42),
+            GRILL,0.40)
+        for row in range(3):
+            _box(inside,"RejillaArmario_%d_%d" % [bay,row],
+                Vector3(bx,0.44+float(row)*0.23,2.30),
+                Vector3(0.93,0.055,0.035),WALL,0.25)
+        _box(inside,"PantallaDatosBahia_%d" % bay,
+            Vector3(bx,1.76,2.50),Vector3(0.78,0.33,0.04),
+            accent if bay==1 else LIGHT,0.12)
+        _box(inside,"IndicadorEstadoBahia_%d" % bay,
+            Vector3(bx,2.02,2.49),Vector3(0.48,0.05,0.035),
+            YELLOW,0.05)
+    # Loading lift and concrete guides create perspective cues through
+    # the open 5.2 m gate; they never obstruct the sliding door meshes.
+    _box(inside,"MesaElevadoraCentral",
+        Vector3(0,0.25,0.50),Vector3(2.40,0.23,1.45),
+        FRAME,0.37)
+    for rail in [-1,1]:
+        _box(inside,"GuiaMesaElevadora_%s" % rail,
+            Vector3(float(rail)*0.94,0.40,0.50),
+            Vector3(0.12,0.12,1.24),YELLOW,0.16)
+    _box(inside,"GabineteEnergiaTaller",
+        Vector3(2.70,0.68,1.95),
+        Vector3(0.72,1.16,0.62),GRILL,0.34)
+    _box(inside,"BalizaGabineteEnergia",
+        Vector3(2.70,1.20,1.61),
+        Vector3(0.42,0.09,0.04),accent,0.20)
     for i in range(4):
         _box(inside,"RielGrua_%d" % i,
             Vector3(-2.82+float(i)*1.86,2.74,-0.16),
