@@ -65,3 +65,18 @@
 - Se generaron 12 imágenes de revisión con cámaras Godot, incluyendo acercamientos específicos a las bocas huecas y parte trasera. Están como artifact `tarvoka-g11-v4-muzzle-rear-360-review` en la ejecución indicada.
 
 **Revisión artística pendiente:** observar las imágenes desde diferentes ángulos para corregir proporciones, intersecciones y pulir detalles si es necesario. El modelo todavía no se declara terminado comercialmente. Rendimiento y APK quedan pospuestos hasta completar el modelado.
+
+## Actualización V5 — tren de rodaje y plataforma (15-nov-2026)
+
+**Trabajo real en el escultor nativo Godot 4.3, sin generar imágenes conceptuales:**
+
+- `scripts/ui/G11MechanicsV5.gd` crea doce ruedas nuevas con perfil anular de neumático, llanta con doble bisel y centro hundido; reemplaza los antiguos cilindros macizos, no los tapa. Mantiene los doce pivotes animados heredados del G11 V1.
+- Cada rueda incluye seis pernos 3D agrupados en un `MultiMeshInstance3D`. Los trenes de rodaje muestran un piñón trasero y tensor delantero de 16 dientes por lado, modelados como malla de contorno real.
+- Los doce amortiguadores tienen cuerpo y vástago de dos diámetros y una unión al pivote móvil. `G11VisualRig3D.gd` los actualiza con cada pose de avance y restaura sus longitudes al detenerse. Los piñones traseros giran con las orugas.
+- La plataforma recibió corona de giro anular horizontal y dos refuerzos estructurales triangulares extruidos, sustituyendo un collar anterior orientado de lado. La escotilla de techo ya no es un rectángulo flotante: ahora tiene asiento, bisagra y tapa circular.
+- El G11 V5 conserva los tubos huecos y el doble sistema hidráulico V4, los materiales PBR V3, las orugas V2, ocho facciones y cinco niveles de daño. Ningún cambio en estadísticas o economía.
+- `BastionStudioAdapter.gd` incorpora botones específicos de vista frontal, lateral, posterior y lateral opuesto para inspeccionar la escultura.
+- Pruebas: [workflow G11 V5 aprobado](https://github.com/edwinrodri12/Tarvoka/actions/runs/43695421079). Incluye control de geometría real, doce ruedas, pernos, giro de piñones, desplazamiento y restauración de suspensión, modelo para ocho facciones y animaciones existentes.
+- El artifact `tarvoka-g11-v5-running-gear-bearing-360-review` contiene **14 capturas Godot reales**: ocho ángulos, inspección de tubos huecos, trasera, suspensión, corona de giro, daño crítico y disparo.
+
+**Pendiente artístico:** revisar manualmente los acercamientos en el visor (alineación de llantas y orugas, contacto de amortiguadores, proporciones del soporte de torreta y coherencia de daños). Esta revisión por capturas automatizadas no implica aprobación visual final. Las pruebas de FPS, APK y escenarios con ocho jugadores se posponen mientras se perfecciona el modelado.
