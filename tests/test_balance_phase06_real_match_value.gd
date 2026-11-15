@@ -255,6 +255,19 @@ static func _match(map_id: int, first: int, fog: bool, weather: String,
                     forced_damage += caused
                     if int(after_def["hp"]) == 0:
                         forced_kills += 1
+                # Only this action can lower HP immediately. Include attacker
+                # retaliation, defender impact, and disposable projectile.
+                for previous_unit in [before_actor,before_def]:
+                    var newest: Dictionary = _by_id(next,str(previous_unit["id"]))
+                    assert(not newest.is_empty())
+                    var damage_taken: int = maxi(0,int(previous_unit["hp"])-int(newest["hp"]))
+                    if damage_taken > 0:
+                        var injured: String = str(previous_unit["role"])
+                        exposure[injured]["received"] += damage_taken
+                        if int(newest["hp"]) == 0:
+                            exposure[injured]["losses"] += 1
+                        if str(previous_unit["id"]) == unit_id:
+                            forced_received += damage_taken
             elif action == "move":
                 moves += 1
                 var actor: String = str(move.get("unit_id",""))
@@ -273,20 +286,6 @@ static func _match(map_id: int, first: int, fog: bool, weather: String,
                     exposure[purchase_role]["natural_buys"] += 1
             elif action == "resupply":
                 recharges += 1
-            # Only an attack causes immediate HP changes in the shipping
-            # main engine. Avoid a quadratic full-army diff after every move.
-            if action == "attack":
-                for previous_unit in [before_actor,before_def]:
-                    var newest: Dictionary = _by_id(next,str(previous_unit["id"]))
-                    assert(not newest.is_empty())
-                    var damage_taken: int = maxi(0,int(previous_unit["hp"])-int(newest["hp"]))
-                    if damage_taken > 0:
-                        var injured: String = str(previous_unit["role"])
-                        exposure[injured]["received"] += damage_taken
-                        if int(newest["hp"]) == 0:
-                            exposure[injured]["losses"] += 1
-                        if str(previous_unit["id"]) == unit_id:
-                            forced_received += damage_taken
             state = next
             events += 1
             if int(state["winner"]) >= 0:
