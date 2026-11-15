@@ -4,6 +4,7 @@ class_name TarvokaG11VisualRig3D
 # Reversible G11 visual animation, independent of turns/HP/ammo.
 const Art = preload("res://scripts/ui/G11Art3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
+const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -30,6 +31,7 @@ static func _reset(model: Node3D) -> void:
     FinishV2.pose_tracks(model,0.0)
     launcher.position = BASE_LAUNCHER
     launcher.rotation_degrees = Vector3(20,0,0)
+    GeometryV4.update_actuators(model)
     for side in [-1,1]:
         for axle in range(6):
             var wheel := _node(model,"G11_RuedaPivot_%d_%d" % [side,axle])
@@ -94,6 +96,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             var haze := _node(model,"G11_EfectoHumoDisparo")
             haze.visible = t >= 0.37 and t < 0.91
             haze.scale = Vector3.ONE*(0.70+0.45*t)
+            GeometryV4.update_actuators(model)
         "bullet", "hit_bullet":
             var impact := _node(model,"G11_ImpactoBalas")
             impact.visible = t < 0.42
