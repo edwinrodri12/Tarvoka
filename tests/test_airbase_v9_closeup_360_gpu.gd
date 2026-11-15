@@ -159,6 +159,11 @@ func _run() -> void:
         await _frames(6)
         assert(studio._airbase_v9_view==i)
         assert(studio._airbase_camera_interior==(i==6))
+        if i==5:
+            # 3D panorama uses an orthographic projection: actual closeup
+            # requires a reduced frustum, not merely moving the camera.
+            assert(studio.camera.projection==Camera3D.PROJECTION_ORTHOGONAL)
+            assert(studio.camera.size<=6.0)
         _shot(studio,str(CAPTURES[i]))
     var gate: TarvokaAirbaseDoorRigV2=studio._airbase_gate_rig()
     assert(gate!=null and gate.open_fraction()>0.99)
