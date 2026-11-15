@@ -274,6 +274,51 @@ static func _damage(parent: Node3D,
                 Vector3(0.97,0.19,-1.35),Vector3(0.92,0.12,-0.97),
                 Vector3(0.78,0.08,-1.17)],charred)
 
+static func _impact_fx(parent: Node3D,model: Node3D) -> void:
+    # Two distinct prebuilt hit effects: a brief small-arms spark, versus
+    # an explosive blast followed by a wider smoke plume. Zero FX allocations
+    # per impact, and neither hit alters the combat damage or HP stage.
+    var hit_root:=Node3D.new()
+    hit_root.name="APCP06ImpactoTiposV3"
+    parent.add_child(hit_root)
+    var bullet: MeshInstance3D=_card(hit_root,"DestelloBalasP06",
+        Vector3(0.89,1.01,-0.50),Vector2(0.28,0.29),"fire",true)
+    var blast: MeshInstance3D=_card(hit_root,"OndaExplosivaP06",
+        Vector3(0.87,1.19,-0.32),Vector2(0.95,1.02),"fire",true)
+    var cloud: MeshInstance3D=_card(hit_root,"NubeImpactoExplosivoP06",
+        Vector3(0.90,1.45,-0.31),Vector2(1.13,1.19),"smoke",true)
+    bullet.visible=false
+    blast.visible=false
+    cloud.visible=false
+    model.set_meta("tarvoka_apc_v3_hit_fx",[bullet,blast,cloud])
+
+static func animate_impact(model: Node3D,kind: String,t: float) -> bool:
+    if model==null or not model.get_meta("tarvoka_apc_finish_v3",false):
+        return false
+    var fx: Array=model.get_meta("tarvoka_apc_v3_hit_fx",[])
+    if fx.size()!=3:
+        return false
+    var bullet: MeshInstance3D=fx[0] as MeshInstance3D
+    var blast: MeshInstance3D=fx[1] as MeshInstance3D
+    var cloud: MeshInstance3D=fx[2] as MeshInstance3D
+    if bullet==null or blast==null or cloud==null:
+        return false
+    var progress: float=clampf(t,0.0,1.0)
+    bullet.visible=kind=="hit_bullet" and progress<0.32
+    blast.visible=kind=="hit_explosive" and progress<0.67
+    cloud.visible=kind=="hit_explosive" and progress<0.95
+    if bullet.visible:
+        bullet.scale=Vector3.ONE*(0.46+0.56*sin(PI*progress/0.32))
+    if blast.visible:
+        blast.scale=Vector3.ONE*(0.65+0.66*progress)
+    if cloud.visible:
+        cloud.scale=Vector3.ONE*(0.48+0.93*progress)
+        var home: Vector3=cloud.get_meta("apc_v3_effect_origin",cloud.position)
+        cloud.position=home+Vector3(0.0,0.27*progress,0.0)
+    else:
+        cloud.position=cloud.get_meta("apc_v3_effect_origin",cloud.position)
+    return true
+
 static func apply(model: Node3D,color: Color) -> bool:
     if model==null or not model.get_meta("tarvoka_apc_armor_v2",false):
         return false
@@ -295,6 +340,7 @@ static func apply(model: Node3D,color: Color) -> bool:
         detail.queue_free()
         return false
     _damage(detail,paint,burned,steel)
+    _impact_fx(detail,model)
     # Cache the five animated cards once per APC. On a crowded 8-player map
     # this avoids five deep scene-tree searches per unit and rendered frame.
     var cards: Array=[]
