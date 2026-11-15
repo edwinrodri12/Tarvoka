@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const AirbaseV1 = preload("res://scripts/ui/Airbase3DV1.gd")
+const NavalBaseV1 = preload("res://scripts/ui/NavalBase3DV1.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -48,6 +49,11 @@ var hq_explosive_test_button: Button
 var hq_impact_status: Label
 var building_controls: VBoxContainer
 var airbase_controls: VBoxContainer
+var naval_controls: VBoxContainer
+var naval_level_picker: OptionButton
+var naval_damage_picker: OptionButton
+var naval_camera_picker: OptionButton
+var _naval_camera_view: int=0
 var airbase_exterior_v6_toggle: CheckButton
 var airbase_material_v7_toggle: CheckButton
 var airbase_finish_v8_toggle: CheckButton
@@ -139,6 +145,7 @@ func _ready() -> void:
     super._ready()
     _add_building_mode()
     _setup_architecture_stage()
+    _add_naval_controls()
 
 func _setup_architecture_stage() -> void:
     # Only the laboratory gets a ground plane and true shadows. The actual
@@ -187,7 +194,7 @@ func _setup_architecture_stage() -> void:
 func _apply_hq_lighting(index: int) -> void:
     if hq_key_light == null or hq_environment == null:
         return
-    var active: bool = _role in ["headquarters","airbase"]
+    var active: bool = _role in ["headquarters","airbase","naval_base"]
     _hq_light_preset = clampi(index,0,2)
     var preset: int = _hq_light_preset if active else 0
     # Three reproducible lighting rigs, same camera and exact 3D material.
@@ -380,6 +387,7 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
+    building_picker.add_item("Base Naval · V1 · puerto y astillero 3D")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -937,6 +945,94 @@ func _sync_faction_gallery(index: int) -> void:
         button.set_pressed_no_signal(i == index)
         button.modulate = Color.WHITE if i == index else Color(0.79,0.81,0.85,0.88)
 
+func _add_naval_controls() -> void:
+    naval_controls=VBoxContainer.new()
+    naval_controls.name="OpcionesBaseNavalV1"
+    naval_controls.add_theme_constant_override("separation",8)
+    building_controls.add_child(naval_controls)
+    _title(naval_controls,"BASE NAVAL V1 · MODELO 3D REAL",14)
+    _title(naval_controls,
+        "Dársena en U, espigones, grúa, hangar marítimo, torre y servicios.",12)
+    _title(naval_controls,"NIVEL ARQUITECTÓNICO",12)
+    naval_level_picker=OptionButton.new()
+    naval_level_picker.name="NivelBaseNavalV1"
+    naval_level_picker.custom_minimum_size.y=48
+    for label in ["Nivel 1 · muelle militar","Nivel 2 · abastecimiento naval",
+            "Nivel 3 · astillero avanzado"]:
+        naval_level_picker.add_item(label)
+    naval_level_picker.item_selected.connect(_change_naval_setting)
+    naval_controls.add_child(naval_level_picker)
+    _title(naval_controls,"ESTADO DE DAÑO VISUAL",12)
+    naval_damage_picker=OptionButton.new()
+    naval_damage_picker.name="EstadoDañoBaseNavalV1"
+    naval_damage_picker.custom_minimum_size.y=48
+    for label in NavalBaseV1.DAMAGE_STAGES:
+        naval_damage_picker.add_item(str(label))
+    naval_damage_picker.item_selected.connect(_change_naval_setting)
+    naval_controls.add_child(naval_damage_picker)
+    _title(naval_controls,"CÁMARA DE INSPECCIÓN",12)
+    naval_camera_picker=OptionButton.new()
+    naval_camera_picker.name="CamaraBaseNavalV1"
+    naval_camera_picker.custom_minimum_size.y=48
+    for label in ["Puerto completo","Vista desde el mar",
+            "Parte posterior","Vista superior"]:
+        naval_camera_picker.add_item(label)
+    naval_camera_picker.item_selected.connect(_change_naval_camera)
+    naval_controls.add_child(naval_camera_picker)
+    _button(naval_controls,"Restablecer vista naval",_reset_camera)
+    _title(naval_controls,
+        "Geometría original Godot 4.3 · arte provisional. No APK ni FPS Android.",12)
+    naval_controls.visible=false
+
+func _change_naval_setting(_index: int) -> void:
+    if _role=="naval_base":
+        _display_naval_base()
+
+func _change_naval_camera(index: int) -> void:
+    _naval_camera_view=clampi(index,0,3)
+    if _role=="naval_base":
+        _apply_naval_camera()
+
+func _apply_naval_camera() -> void:
+    if _role!="naval_base" or camera==null:
+        return
+    var spots: Array[Vector3]=[
+        Vector3(-19.0,17.5,-18.0),Vector3(-23.0,11.5,0.5),
+        Vector3(19.0,13.5,16.0),Vector3(-0.01,31.0,9.0)]
+    camera.position=spots[_naval_camera_view]
+    camera.look_at(Vector3(0,1.65,0),Vector3.UP)
+    _update_camera()
+
+func _display_naval_base() -> void:
+    if preview==null:
+        return
+    var first: bool=_role!="naval_base"
+    _stop_animation()
+    if model_root!=null:
+        preview.remove_child(model_root)
+        model_root.queue_free()
+    _role="naval_base"
+    model_root=NavalBaseV1.build(
+        naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
+    if model_root==null:
+        push_error("Base Naval V1: no fue posible crear el modelo 3D")
+        return
+    preview.add_child(model_root)
+    if hq_climate_stage!=null:
+        hq_climate_stage.visible=false
+    if hq_map_lod_toggle!=null:
+        hq_map_lod_toggle.visible=false
+    faction_picker.visible=true
+    if first:
+        _yaw=26.0
+        _zoom=1.0
+        _naval_camera_view=0
+        naval_camera_picker.select(0)
+    model_root.rotation_degrees.y=_yaw
+    _apply_naval_camera()
+    _apply_hq_lighting(_hq_light_preset)
+    _update_details()
+
 func _change_selected_building(index: int) -> void:
     if index < 0 or index >= building_picker.item_count:
         return
@@ -944,10 +1040,12 @@ func _change_selected_building(index: int) -> void:
     for control in _hq_specific_controls:
         control.visible = index == 0
     airbase_controls.visible = index == 1
-    if index == 1:
-        _display_airbase()
-    else:
-        _display_headquarters()
+    if naval_controls!=null:
+        naval_controls.visible=index==2
+    match index:
+        0: _display_headquarters()
+        1: _display_airbase()
+        2: _display_naval_base()
 
 func _airbase_gate_rig() -> TarvokaAirbaseDoorRigV2:
     if _role != "airbase" or model_root == null:
@@ -1491,10 +1589,10 @@ func _switch_category(index: int) -> void:
         widget.visible = not building
     if building:
         faction_picker.visible = true
-        if building_picker.selected == 1:
-            _display_airbase()
-        else:
-            _display_headquarters()
+        match building_picker.selected:
+            0: _display_headquarters()
+            1: _display_airbase()
+            2: _display_naval_base()
     else:
         camera.position = Vector3(5.3,4.2,6.3)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
@@ -1686,6 +1784,8 @@ func _refresh_building_faction(_index: int) -> void:
     elif _role == "airbase":
         _airbase_v14_history.clear()
         _display_airbase()
+    elif _role == "naval_base":
+        _display_naval_base()
 
 func _display_headquarters() -> void:
     if preview == null:
@@ -1817,6 +1917,13 @@ func _display_headquarters() -> void:
     _update_details()
 
 func _reset_camera() -> void:
+    if _role == "naval_base":
+        _yaw=26.0
+        _zoom=1.0
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _apply_naval_camera()
+        return
     if _role == "airbase":
         _yaw = 32.0
         _zoom = 1.0
@@ -1844,6 +1951,10 @@ func _reset_camera() -> void:
     super._reset_camera()
 
 func _update_camera() -> void:
+    if _role=="naval_base":
+        if camera!=null:
+            camera.size=20.9/maxf(0.35,_zoom)
+        return
     if _role == "airbase":
         if camera != null:
             if _airbase_is_stress():
@@ -1871,6 +1982,15 @@ func _update_camera() -> void:
     super._update_camera()
 
 func _update_details() -> void:
+    if _role=="naval_base" and model_root!=null:
+        detail_label.text="Base Naval V1 · Nivel %d · %d mallas reales" % [
+            int(model_root.get_meta("visual_level",1)),
+            NavalBaseV1.count_meshes(model_root)]
+        status_label.text="%s · %s · dársena, espigones y astillero 3D" % [
+            str(VisualStyle.FACTIONS[_faction]["name"]),
+            str(NavalBaseV1.DAMAGE_STAGES[int(model_root.get_meta(
+                "visual_damage_stage",0))])]
+        return
     if _role == "airbase":
         if model_root == null:
             return
