@@ -42,3 +42,9 @@ Se espera `PASS: mountain movement and positional combat integration` y código 
 - Comprueba que los datos de la unidad aliada original permanecen intactos.
 - Código: `76c0c596f7f961a15c7befcfad6be9911a5b2ccb`. Godot/CI de esta extensión: **NO EJECUTADO / pendiente de confirmación**. Android físico: **NO EJECUTADO EN DISPOSITIVO**.
 - Esta regresión cubre las funciones puras; no valida todavía el controlador de batalla ni el HUD.
+
+## Extensión — simetría cardinal del flanqueo (2026-11-15)
+- Cuatro orientaciones ortogonales alrededor de una casilla central en terreno llano: aliado terrestre vivo detrás del defensor debe activar `flanked` y bonificación +1 en todos los casos.
+- Desplazar el aliado a una diagonal respecto del defensor debe desactivar el flanqueo y dejar bonificación 0, sin mutar unidades originales.
+- Commit de prueba `7d1f34cb49f85ca35dfe02b5cda733a5ff3559af`.
+- Godot/CI para este commit: **NO EJECUTADO / sin evidencia de resultado**. Android físico: **NO EJECUTADO EN DISPOSITIVO**. No se comprueba controlador real ni se cambia balance.
