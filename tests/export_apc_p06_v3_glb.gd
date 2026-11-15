@@ -1,10 +1,10 @@
 extends SceneTree
 
-# Exports ACTUAL Godot P06 V2 sculpt, shared PBR, treaded wheels and real moving assemblies.
+# Exports ACTUAL Godot P06 V5 finishing, V2 chassis, six wheels and live assemblies.
 # Wheel bolts are baked into editable meshes ONLY for the artist's GLB;
 # the Android/Godot runtime retains six efficient 8-instance MultiMeshes.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
-const TARGET := "res://artifacts/TARVOKA_APC_P06_V3_Editable.glb"
+const TARGET := "res://artifacts/TARVOKA_APC_P06_V5_Editable.glb"
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -25,10 +25,10 @@ static func _group_name(part: Node) -> String:
 
 func _run() -> void:
     var source: Node3D=Models.build("apc",2,true,13)
-    assert(source!=null and source.get_meta("tarvoka_apc_finish_v3",false))
+    assert(source!=null and source.get_meta("tarvoka_apc_detail_v5",false))
     root.add_child(source)
     var artist:=Node3D.new()
-    artist.name="TARVOKA_APC_P06_V3_EDITABLE"
+    artist.name="TARVOKA_APC_P06_V5_EDITABLE"
     root.add_child(artist)
     var groups: Dictionary={}
     for label in ["V_Hull_Armor_Seats","Remote_Turret_Weapon","Troop_Ramp_Animated"]:
@@ -82,7 +82,9 @@ func _run() -> void:
     # 336 physical wheel bolts/treads + optional static V4 box batches.
     var extra_boxes: int=int(source.get_meta("tarvoka_apc_v4_box_count",0))
     assert(extra_boxes>=12)
-    assert(baked==336+extra_boxes)
+    var v5_fasteners: int=int(source.get_meta("tarvoka_apc_v5_bolt_count",0))
+    assert(v5_fasteners==36)
+    assert(baked==336+extra_boxes+v5_fasteners)
     var document:=GLTFDocument.new()
     var state:=GLTFState.new()
     var append_error: Error=document.append_from_scene(artist,state,0)
@@ -104,5 +106,5 @@ func _run() -> void:
     output.close()
     artist.free()
     source.free()
-    print("PASS APC P06 V3 GLB: %d native visible meshes, %d baked bolt instances, %d bytes, V2 PBR and sculpted tires with separately editable six wheels, turret and ramp" % [count,baked,bytes])
+    print("PASS APC P06 V5 GLB: %d native visible meshes, %d baked details, %d bytes; V5 real weld/roof/sensor meshes, six wheels, turret and ramp" % [count,baked,bytes])
     quit(0)
