@@ -121,7 +121,13 @@ func _run() -> void:
     assert(board.state==original)
     for i in range(10):
         await process_frame
-    assert(viewer.preview.size.x<=1280 and viewer.preview.size.y<=800)
+    print("V20_VIEWPORT_CAP: actual=",viewer.preview.size,
+        " holder=",viewer.holder.size,
+        " shrink=",viewer.holder.stretch_shrink)
+    if viewer.preview.size.x>1280 or viewer.preview.size.y>800:
+        push_error("V20 unsafe GPU texture size on Android")
+        quit(1)
+        return
     if DisplayServer.get_name()!="headless":
         DirAccess.make_dir_recursive_absolute(
             ProjectSettings.globalize_path("res://artifacts"))
