@@ -19,6 +19,7 @@ const SalvoV8 = preload("res://scripts/ui/G11SequentialSalvoV8.gd")
 const ExhaustV9 = preload("res://scripts/ui/G11ExhaustV9.gd")
 const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const FinishV11 = preload("res://scripts/ui/G11ArmorFinishV11.gd")
+const CabinV12 = preload("res://scripts/ui/G11CabChassisV12.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -290,6 +291,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 post-salvo cooling V10 failed; retaining V9 exhaust")
     elif not FinishV11.apply(model):
         push_warning("G11 beveled armor finish V11 failed; retaining V10 sculpture")
+    elif not CabinV12.apply(model,paint):
+        push_warning("G11 cabin/chassis V12 failed; retaining V11 sculpture")
     return true
 
 static func stage(model: Node3D) -> int:
@@ -308,4 +311,5 @@ static func apply_stage(model: Node3D, value: int) -> bool:
     launcher.visible = s < 4
     DamageV6.update_stage(model,s)
     AtmosphereV7.set_stage(model,s)
+    CabinV12.set_stage(model,s)
     return true
