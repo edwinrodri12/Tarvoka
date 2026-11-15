@@ -6,11 +6,11 @@ class_name TarvokaG11FinishV2
 # One MultiMesh draw per track side, rather than one draw per moving tread.
 const FLAG := "tarvoka_g11_finish_v2"
 const TRACK_CENTER_Y := 0.35
-const TRACK_HALF_LENGTH := 1.04
+const TRACK_HALF_LENGTH := 1.34
 const TRACK_OUTER_RADIUS := 0.35
 const TRACK_INNER_RADIUS := 0.265
 const TRACK_CENTER_X := 0.79
-const TRACK_LINK_COUNT := 40
+const TRACK_LINK_COUNT := 46
 const LINK_TRAVEL := 2.15
 
 static func _mat(color: Color, metallic: float, roughness: float,
@@ -123,10 +123,30 @@ static func _path(s: float, radius: float) -> Vector2:
             -TRACK_HALF_LENGTH+(p-straight-arc))
     var theta: float = PI*0.5+(p-2.0*straight-arc)/radius
     return Vector2(TRACK_CENTER_Y+radius*sin(theta),
-        TRACK_HALF_LENGTH+radius*cos(theta))
+        TRACK_HALF_LENGTH-radius*cos(theta))
 
 static func _circumference(radius: float) -> float:
     return 4.0*TRACK_HALF_LENGTH+TAU*radius
+
+# V18: sample all inner/outer contours using ONE angular phase. Previous
+# independent arclength normalization made skewed band faces at both ends.
+static func _path_matched(s: float, radius: float) -> Vector2:
+    var straight: float = TRACK_HALF_LENGTH*2.0
+    var arc: float = PI*TRACK_OUTER_RADIUS
+    var period: float = 2.0*straight+2.0*arc
+    var p: float = fposmod(s,period)
+    if p < straight:
+        return Vector2(TRACK_CENTER_Y-radius,TRACK_HALF_LENGTH-p)
+    if p < straight+arc:
+        var theta: float = -PI*0.5+(p-straight)/TRACK_OUTER_RADIUS
+        return Vector2(TRACK_CENTER_Y+radius*sin(theta),
+            -TRACK_HALF_LENGTH-radius*cos(theta))
+    if p < straight*2.0+arc:
+        return Vector2(TRACK_CENTER_Y+radius,
+            -TRACK_HALF_LENGTH+(p-straight-arc))
+    var theta: float = PI*0.5+(p-2.0*straight-arc)/TRACK_OUTER_RADIUS
+    return Vector2(TRACK_CENTER_Y+radius*sin(theta),
+        TRACK_HALF_LENGTH-radius*cos(theta))
 
 static func _belt_mesh() -> ArrayMesh:
     # Real closed ribbon over inner/outer contours; wheels are visible through
@@ -138,13 +158,11 @@ static func _belt_mesh() -> ArrayMesh:
     for k in range(segments):
         var s0: float = length*float(k)/float(segments)
         var s1: float = length*float(k+1)/float(segments)
-        var o0: Vector2 = _path(s0,TRACK_OUTER_RADIUS)
-        var o1: Vector2 = _path(s1,TRACK_OUTER_RADIUS)
+        var o0: Vector2 = _path_matched(s0,TRACK_OUTER_RADIUS)
+        var o1: Vector2 = _path_matched(s1,TRACK_OUTER_RADIUS)
         # Keep matching phase using the same normalized loop fraction.
-        var i0: Vector2 = _path(s0*_circumference(TRACK_INNER_RADIUS)/length,
-            TRACK_INNER_RADIUS)
-        var i1: Vector2 = _path(s1*_circumference(TRACK_INNER_RADIUS)/length,
-            TRACK_INNER_RADIUS)
+        var i0: Vector2 = _path_matched(s0,TRACK_INNER_RADIUS)
+        var i1: Vector2 = _path_matched(s1,TRACK_INNER_RADIUS)
         for side in [0,1]:
             var x: float = -0.142 if side == 0 else 0.142
             _quad(st,Vector3(x,o0.x,o0.y),Vector3(x,o1.x,o1.y),
@@ -169,9 +187,9 @@ static func _update_side(multimesh: MultiMesh, side: int,
     var loop_len: float = _circumference(TRACK_OUTER_RADIUS)
     for i in range(TRACK_LINK_COUNT):
         var s: float = loop_len*float(i)/float(TRACK_LINK_COUNT) + progression
-        var here: Vector2 = _path(s,TRACK_OUTER_RADIUS+0.011)
-        var a: Vector2 = _path(s-0.005,TRACK_OUTER_RADIUS+0.011)
-        var b: Vector2 = _path(s+0.005,TRACK_OUTER_RADIUS+0.011)
+        var here: Vector2 = _path_matched(s,TRACK_OUTER_RADIUS+0.011)
+        var a: Vector2 = _path_matched(s-0.005,TRACK_OUTER_RADIUS+0.011)
+        var b: Vector2 = _path_matched(s+0.005,TRACK_OUTER_RADIUS+0.011)
         var delta: Vector2 = b-a
         # Box local Z follows belt tangent in the YZ plane.
         var angle: float = atan2(-delta.x,delta.y)
@@ -241,7 +259,7 @@ static func apply(model: Node3D, faction: Color) -> bool:
         belt.position.x = sign*TRACK_CENTER_X
         root.add_child(belt)
         var link_mesh := BoxMesh.new()
-        link_mesh.size = Vector3(0.297,0.053,0.129)
+        link_mesh.size = Vector3(0.282,0.042,0.135)
         link_mesh.material = tread
         var multi := MultiMesh.new()
         multi.transform_format = MultiMesh.TRANSFORM_3D
