@@ -5,6 +5,8 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const AirbaseV1 = preload("res://scripts/ui/Airbase3DV1.gd")
+const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
+const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
@@ -35,6 +37,11 @@ var airbase_controls: VBoxContainer
 var airbase_level_picker: OptionButton
 var airbase_damage_picker: OptionButton
 var airbase_weather_picker: OptionButton
+var airbase_open_button: Button
+var airbase_close_button: Button
+var airbase_gate_slider: HSlider
+var airbase_gate_status: Label
+var _airbase_saved_gate_fraction := 0.0
 var _hq_specific_controls: Array[Control] = []
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
@@ -606,6 +613,31 @@ func _add_building_mode() -> void:
         airbase_weather_picker.add_item(label)
     airbase_weather_picker.item_selected.connect(_change_airbase_weather)
     airbase_controls.add_child(airbase_weather_picker)
+    _title(airbase_controls,"V2 · PORTONES MOTORIZADOS DEL HANGAR",13)
+    var doors_row := HBoxContainer.new()
+    doors_row.name = "ControlesPortonesRealesBaseAereaV2"
+    doors_row.add_theme_constant_override("separation",6)
+    airbase_controls.add_child(doors_row)
+    airbase_open_button = _button(doors_row,"Abrir portones",
+        func(): _play_airbase_doors(true))
+    airbase_open_button.name = "AbrirPortonesHangarV2"
+    airbase_open_button.custom_minimum_size.y = 45
+    airbase_open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    airbase_close_button = _button(doors_row,"Cerrar portones",
+        func(): _play_airbase_doors(false))
+    airbase_close_button.name = "CerrarPortonesHangarV2"
+    airbase_close_button.custom_minimum_size.y = 45
+    airbase_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    airbase_gate_slider = HSlider.new()
+    airbase_gate_slider.name = "AperturaPortonesHangarV2"
+    airbase_gate_slider.min_value = 0.0
+    airbase_gate_slider.max_value = 1.0
+    airbase_gate_slider.step = 0.01
+    airbase_gate_slider.custom_minimum_size.y = 43
+    airbase_gate_slider.value_changed.connect(_scrub_airbase_doors)
+    airbase_controls.add_child(airbase_gate_slider)
+    airbase_gate_status = _title(airbase_controls,
+        "Portones preparados · apertura: 0 %",12)
     _title(airbase_controls,
         "Hangar cerrado y techo curvo 3D · torre · helipuerto · "
         + "escudos oficiales · daños experimentales. Sin cambios en el combate.",12)
@@ -689,6 +721,52 @@ func _change_selected_building(index: int) -> void:
     else:
         _display_headquarters()
 
+func _airbase_gate_rig() -> TarvokaAirbaseDoorRigV2:
+    if _role != "airbase" or model_root == null:
+        return null
+    return model_root.get_node_or_null(
+        AirbaseDoorsV2.STAGE_NAME) as TarvokaAirbaseDoorRigV2
+
+func _play_airbase_doors(opened: bool) -> void:
+    var gate: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+    if gate == null or not gate.is_operational():
+        _refresh_airbase_door_ui()
+        return
+    if opened:
+        gate.play_open()
+    else:
+        gate.play_close()
+    _refresh_airbase_door_ui()
+
+func _scrub_airbase_doors(value: float) -> void:
+    var gate: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+    if gate == null or not gate.is_operational():
+        return
+    gate.set_open_fraction(value)
+    _airbase_saved_gate_fraction = gate.open_fraction()
+    _refresh_airbase_door_ui()
+
+func _refresh_airbase_door_ui() -> void:
+    if airbase_open_button == null:
+        return
+    var gate: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+    var ready: bool = gate != null and gate.is_operational()
+    airbase_open_button.disabled = not ready
+    airbase_close_button.disabled = not ready
+    airbase_gate_slider.editable = ready
+    if not ready:
+        airbase_gate_status.text = (
+            "Portones inutilizados por daño estructural; no se anima la compuerta."
+            if _role == "airbase" else "Portones disponibles en Base Aérea")
+        return
+    var fraction: float = gate.open_fraction()
+    _airbase_saved_gate_fraction = fraction
+    airbase_gate_slider.set_value_no_signal(fraction)
+    airbase_gate_status.text = "Portones %s · apertura: %d%% · 20 mallas sincronizadas" % [
+        "en movimiento" if gate.is_moving() else "abiertos" if fraction>0.995
+        else "cerrados" if fraction<0.005 else "parciales",
+        int(round(fraction*100.0))]
+
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
         _display_airbase()
@@ -716,7 +794,15 @@ func _display_airbase() -> void:
     if model_root == null:
         push_error("Base Aerea V1: especificacion no valida")
         return
+    var hangar_added: bool = AirbaseHangarV2.apply(model_root,tier,_faction,stage)
+    if not hangar_added:
+        push_error("Base Aerea V2: fallo al instalar arquitectura")
+    if stage <= 1:
+        model_root.add_child(AirbaseDoorsV2.build(stage))
     preview.add_child(model_root)
+    var rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+    if rig != null and rig.is_operational():
+        rig.set_open_fraction(_airbase_saved_gate_fraction)
     var weather: String = ["clear","rain","snow"][airbase_weather_picker.selected]
     var coating: Dictionary = UniversalClimate.apply(model_root,weather)
     if not bool(coating.get("valid",false)):
@@ -742,6 +828,7 @@ func _display_airbase() -> void:
     camera.look_at(Vector3(0,2.25,0),Vector3.UP)
     _update_camera()
     _apply_hq_lighting(_hq_light_preset)
+    _refresh_airbase_door_ui()
     _update_details()
 
 func _change_hq_version(index: int) -> void:
@@ -1163,7 +1250,7 @@ func _update_details() -> void:
             return
         var tier: int = int(model_root.get_meta("visual_level",1))
         var stage: int = int(model_root.get_meta("visual_damage_stage",0))
-        detail_label.text = "Base Aérea · MODELO NATIVO V1 · Nivel %d · %d mallas 3D" % [
+        detail_label.text = "Base Aérea · HANGAR DETALLADO V2 · Nivel %d · %d mallas 3D" % [
             tier,AirbaseV1.mesh_count(model_root)]
         status_label.text = "%s · %s · %d piezas de facción · casco cerrado" % [
             str(Factions.FACTIONS[_faction]["name"]),
@@ -1218,6 +1305,10 @@ func _update_details() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role == "airbase":
+        var door_rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+        if door_rig != null and door_rig.is_moving():
+            _refresh_airbase_door_ui()
     if _role in ["headquarters","airbase"] and hq_climate_stage != null and hq_climate_stage.visible:
         _hq_weather_time += delta
         if model_root != null and _role == "headquarters":
