@@ -586,11 +586,11 @@ func refresh() -> void:
     command_buttons["objectives"] = _action(command_grid,"⚑  OBJETIVOS",
         func(): objectives_requested.emit())
     command_buttons["units"] = _action(command_grid,"◈  ESTADO DE UNIDADES",
-        func(): tabs.current_tab = 1)
+        func(): _open_command_tab(1))
     command_buttons["save"] = _action(command_grid,"▣  GUARDAR PARTIDA",
         func(): save_requested.emit())
     command_buttons["settings"] = _action(command_grid,"⚙  AJUSTES",
-        func(): tabs.current_tab = 3)
+        func(): _open_command_tab(3))
     command_buttons["surrender"] = _action(command_grid,"⚑  RENDIRSE · NO DISPONIBLE",
         Callable(),false)
     command_buttons["surrender"].tooltip_text = (
@@ -615,9 +615,9 @@ func refresh() -> void:
     var overview: Dictionary = BattleReport.operational_snapshot(state,viewer)
     var economy: Dictionary = state.get("economy",{})
     var funds: Array = economy.get("credits",[])
-    var own_credits: String = (
-        "%d CRÉDITOS" % int(funds[viewer])
-        if viewer >= 0 and funds.size() > viewer else "SIN ECONOMÍA")
+    var own_credits := "SIN ECONOMÍA"
+    if viewer >= 0 and funds.size() > viewer:
+        own_credits = "%d CRÉDITOS" % int(funds[viewer])
     command_overview_title = Label.new()
     command_overview_title.name = "EstadoAutenticoDeLaOperacion"
     command_overview_title.text = (
@@ -801,6 +801,11 @@ func refresh() -> void:
     _heading(tutorial,"Ventajas defensivas")
     _description(tutorial,"Carretera: vehículos motorizados recorren 2 casillas por punto de movimiento; infantería, 1. Bosque: cobertura +1. Montaña: +2 y ventaja de altura. Ciudad: +1.")
     _reflow()
+
+func _open_command_tab(index: int) -> void:
+    if tabs == null:
+        return
+    tabs.current_tab = clampi(index,0,3)
 
 func _toggle_more_commands() -> void:
     if command_extras == null:
