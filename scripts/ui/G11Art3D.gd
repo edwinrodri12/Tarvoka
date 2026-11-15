@@ -9,6 +9,7 @@ const ROOT := "G11_CascoRaiz"
 const TURRET := "G11_GiroPlataforma"
 const ELEVATION := "G11_ElevacionLanzador"
 const TUBE_COUNT := 12
+const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -259,6 +260,9 @@ static func build(model: Node3D, paint: Color) -> bool:
         Vector3(1.12,1.61,0.93),Color(0.11,0.12,0.12,0.46))
     model.set_meta(META,0)
     model.set_meta("tarvoka_g11_sculpt_v1",true)
+    # Geometry remains authored as native Godot meshes; not an image proxy.
+    if not FinishV2.apply(model,paint):
+        push_warning("G11 finish V2 failed; retaining complete V1 fallback")
     return true
 
 static func stage(model: Node3D) -> int:
