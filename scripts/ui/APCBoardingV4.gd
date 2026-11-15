@@ -1,11 +1,12 @@
 extends RefCounted
 class_name TarvokaAPCBoardingV4
 
-# Native Godot 3D loading rig for the real P06 V2 sculpt, NOT a sprite overlay.
+# Native Godot 3D loading rig for P06 V3 armor/damage, NOT a sprite overlay.
 # Entirely art/studio-only: the source of truth for multiplayer/battle actions
 # remains BattleSession + CargoActions on the separate gameplay branch.
 # Two articulated seat occupants and one moving rig reuse fixed low-poly
 # materials; the 3D APC retains the original open rear geometry and hinge.
+const Style = preload("res://scripts/ui/VisualStyle.gd")
 const ART_ROOT := "APC_P06_V1_Blindado6x6"
 const RIG_ROOT := "TropasAnimadasP06V4"
 const HINGE := "BisagraRampaP06"
@@ -115,14 +116,18 @@ static func prepare(model: Node3D,faction: int=0) -> bool:
         return true
     # Limited, shared material library per model; no continuous allocation
     # during animation updates on Android.
-    var tint: String="#A5B2A1" if faction%2==0 else "#B9A79C"
-    var uniform:=_solid(tint)
+    var uniform:=_solid("#899A8F")
+    # The entire squad shares ONE per-model material, lightly tinted by
+    # the official 8-faction livery without turning military uniforms neon.
+    if faction>=0 and faction<Style.FACTIONS.size():
+        uniform.albedo_color=Color("#899A8F").lerp(Style.faction_color(faction),0.22)
     var armor:=_solid("#5E746E",0.20)
     var dark:=_solid("#1C2930",0.05)
     var visor:=_solid("#709EB0",0.24)
     var root:=Node3D.new()
     root.name=RIG_ROOT
     hull.add_child(root)
+    root.set_meta("tarvoka_p06_v4_uniform_material",uniform)
     for index in range(CAPACITY):
         var soldier:=_soldier(root,"SoldadoSentadoP06V4_%d" % index,
             uniform,armor,dark,visor)
@@ -137,6 +142,21 @@ static func prepare(model: Node3D,faction: int=0) -> bool:
     model.set_meta(COUNT,0)
     model.set_meta(FINISHED,false)
     model.set_meta("tarvoka_apc_boarding_v4",true)
+    return true
+
+static func recolor(model: Node3D,faction: int) -> bool:
+    if faction<0 or faction>=Style.FACTIONS.size():
+        return false
+    var hull: Node3D=_apc(model)
+    if hull==null:
+        return false
+    var root: Node3D=hull.find_child(RIG_ROOT,false,false) as Node3D
+    if root==null:
+        return false
+    var uniform: StandardMaterial3D=root.get_meta("tarvoka_p06_v4_uniform_material",null) as StandardMaterial3D
+    if uniform==null:
+        return false
+    uniform.albedo_color=Color("#899A8F").lerp(Style.faction_color(faction),0.22)
     return true
 
 static func occupants(model: Node3D) -> int:
