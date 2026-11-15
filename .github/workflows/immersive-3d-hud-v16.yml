@@ -1,7 +1,7 @@
 name: TARVOKA V16 immersive 3D HUD
 on:
   push:
-    branches: [ui/immersive-3d-battle-hud-v16, ui/immersive-3d-touch-polish-v17]
+    branches: [ui/immersive-3d-battle-hud-v16, ui/immersive-3d-touch-polish-v17, qa/multiturn-3d-fog-hotseat-v18]
   pull_request:
     paths:
       - 'scripts/ui/Battle3DMapView.gd'
@@ -9,6 +9,9 @@ on:
       - 'scripts/ui/ImmersiveBattleHud.gd'
       - 'scripts/ui/Battle3DOrders.gd'
       - 'tests/test_immersive_battle_3d_hud.gd'
+      - 'tests/test_3d_multiturn_hotseat.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/BattleRanges3D.gd'
 jobs:
   test-3d-hud:
     runs-on: ubuntu-latest
@@ -34,6 +37,15 @@ jobs:
             exit 1
           fi
           grep -F 'PASS immersive 3D HUD V16' /tmp/hud-3d-test.log
+      - name: Multi-turn 3D hotseat fog, camera and attack
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_3d_multiturn_hotseat.gd 2>&1 | tee /tmp/hud-multiturn.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:|Invalid call\.' /tmp/hud-multiturn.log; then
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA 3D multi-turn hotseat' /tmp/hud-multiturn.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
