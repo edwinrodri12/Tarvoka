@@ -5,6 +5,7 @@ extends SceneTree
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Art = preload("res://scripts/ui/G11Art3D.gd")
 const Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
+const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -35,6 +36,26 @@ func _run() -> void:
         root.add_child(model)
         _check(Art.has_model(model),"complete G11 mesh in faction %d" % faction)
         _check(Rig.has_rig(model),"G11 moving articulated rig")
+        _check(bool(model.get_meta(FinishV2.FLAG,false)),
+            "commercial V2 finish installed on 3D native model")
+        _check(_find(model,"G11V2_CabinaBiselada") != null,
+            "cab is truly chamfered geometry")
+        _check(_find(model,"G11V2_CascoOctogonalCerrado") != null,
+            "lower armored hull is closed with bevels")
+        _check(_find(model,"G11_Oruga_1") == null,
+            "old giant rectangular rubber track slab removed")
+        for side in [-1,1]:
+            var belt: MeshInstance3D = _find(model,
+                "G11V2_BandaOruga_%d" % side) as MeshInstance3D
+            var treads: MultiMeshInstance3D = _find(model,
+                "G11V2_OrugaAnimada_%d" % side) as MultiMeshInstance3D
+            _check(belt != null and belt.mesh != null,
+                "closed belt contour on side %d" % side)
+            _check(treads != null and treads.multimesh != null,
+                "batched tread geometry on side %d" % side)
+            if treads != null and treads.multimesh != null:
+                _check(treads.multimesh.instance_count == FinishV2.TRACK_LINK_COUNT,
+                    "all treads batched in one draw per side")
         _check(Models.inspect_meshes(model) > 80,"more than 80 real 3D meshes")
         for row in range(3):
             for column in range(4):
@@ -50,7 +71,13 @@ func _run() -> void:
         _check(paint != null and paint.material_override != null,
             "faction color on actual mesh")
         var start: Vector3 = model.position
+        var inst: MultiMeshInstance3D = _find(model,
+            "G11V2_OrugaAnimada_1") as MultiMeshInstance3D
+        var at_rest: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(Models.pose_model("mlrs",model,"move",0.25),"moving tracks")
+        var while_moving: Transform3D = inst.multimesh.get_instance_transform(0)
+        _check(at_rest.origin.distance_to(while_moving.origin) > 0.05,
+            "track links actually traverse the contour while moving")
         _check(absf(_find(model,"G11_RuedaPivot_1_0").rotation_degrees.x) > 1.0,
             "roadwheels rotate during movement")
         _check(Models.pose_model("mlrs",model,"attack",0.35,Vector2i(1,0)),
@@ -77,6 +104,9 @@ func _run() -> void:
             "destroyed G11 cannot show live salvo")
         _check(Art.apply_stage(model,0),"complete repair")
         Models.restore_model_pose("mlrs",model)
+        var reset_link: Transform3D = inst.multimesh.get_instance_transform(0)
+        _check(at_rest.origin.distance_to(reset_link.origin) < 0.001,
+            "tread links return to initial position")
         _check(model.position.distance_to(start) < 0.001,
             "restore starting model transform")
         _check(not _find(model,"G11_ImpactoExplosivo").visible,
@@ -87,5 +117,5 @@ func _run() -> void:
         push_error("G11 3D QA FAILED (%d checks)" % failed)
         quit(1)
         return
-    print("PASS G11 3D: 8 factions, 12 launch tubes, 12 roadwheels, LOD, firing, hits and 5 damage stages")
+    print("PASS G11 3D: V2 beveled hull, batched moving tracks, 8 factions, 12 launch tubes, LOD, firing, hits and 5 damage stages")
     quit(0)
