@@ -106,6 +106,12 @@ func _run() -> void:
     var gallery: Node3D=studio.get("_p06_fleet") as Node3D
     _check(gallery!=null and gallery.get_child_count()==8,
         "eight vehicles can be inspected inside the real 3D studio")
+    var live_status: Label=studio.get("status_label") as Label
+    _check(live_status!=null and live_status.text.contains("FPS del visor"),
+        "device-visible browser FPS readout is labelled honestly")
+    studio.call("_process",1.05)
+    _check(int(studio.get("_p06_fleet_fps_sample"))>=0,
+        "live device FPS sample collected without native APK claim")
     _check(model!=null and not model.visible,
         "V7 exhibit is hidden while showing V8 fleet")
     studio.call("_set_p06_fleet_quality",0)
