@@ -130,10 +130,13 @@ func _run() -> void:
             "actual rim/tire rotation remains animated")
         _check(rim_spokes.global_transform!=rim_pos,
             "true spokes rotate and travel with original wheel")
+        var compressed_rod: float=chrome.scale.y
+        _check(absf(compressed_rod-original_rod)>0.0001,
+            "the chrome rod telescopes as the wheel compresses at mid-move")
         _check(Rig.pose(car,"move_turn",0.78),
             "dampers continue following wheel travel through curve")
-        _check(absf(chrome.scale.y-original_rod)>0.0001,
-            "telescoping chrome rod changes length as tire compresses")
+        _check(absf(chrome.scale.y-compressed_rod)>0.0001,
+            "telescoping shock recovers as wheel returns to normal ride height")
         _check(_find(front_susp,"P06V14_CamisaAmortiguador")!=null and
             absf(_find(front_susp,"P06V14_CamisaAmortiguador").scale.y-
             Wheel.STRUT_BODY)<0.001,
