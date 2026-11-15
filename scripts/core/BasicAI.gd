@@ -14,6 +14,7 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
+const APCTransport = preload("res://scripts/core/APCTransportAI.gd")
 const ArmorProcurement = preload("res://scripts/core/GroundArmorProcurement.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -192,6 +193,12 @@ static func step(state: Dictionary) -> Dictionary:
 
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
+    # Transport orders are actual Session transactions, never free moves.
+    # City garrisons, urgent defense, combat and supply above take priority.
+    var cargo_action: Dictionary = APCTransport.step(state,knowledge,friends)
+    if cargo_action.get("valid",false):
+        return cargo_action
+
     var urban_action: Dictionary = _capture_urban_site(state, knowledge, friends, occupied)
     if urban_action.get("valid", false):
         return urban_action
