@@ -122,6 +122,16 @@ func _initialize() -> void:
         var candidate: String = disk_path + suffix
         if FileAccess.file_exists(candidate):
             assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(candidate)) == OK)
+    # Recover from a missing primary, not only an invalid primary.
+    assert(Store.save(outcome["state"], disk_path))
+    assert(Store.save(decisive["state"], disk_path))
+    assert(FileAccess.file_exists(disk_path + ".bak"))
+    assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(disk_path)) == OK)
+    var missing_primary: Dictionary = Store.load_report(disk_path)
+    assert(missing_primary.get("recovered", false))
+    assert(missing_primary.get("state", {}) == outcome["state"])
+    assert(not Session.attack(missing_primary["state"], "attacker", "defender")["valid"])
+    assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(disk_path + ".bak")) == OK)
     assert(not FileAccess.file_exists(disk_path))
     assert(not FileAccess.file_exists(disk_path + ".bak"))
     print("PASS battle session exchange: preview parity, HP, reaction, save roundtrip, disk backup recovery, victory")
