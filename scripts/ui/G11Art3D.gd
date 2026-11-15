@@ -140,10 +140,10 @@ static func build(model: Node3D, paint: Color) -> bool:
         _box(root,"G11_Faldon_%d" % side,Vector3(x,0.66,-0.05),
             Vector3(0.34,0.22,2.71),steel)
         for axle in range(6):
-            var z: float = -1.19+float(axle)*0.47
+            var z: float = -0.875+float(axle)*0.35
             var pivot := Node3D.new()
             pivot.name = "G11_RuedaPivot_%d_%d" % [side,axle]
-            pivot.position = Vector3(x,0.26,z)
+            pivot.position = Vector3(x,0.265,z)
             root.add_child(pivot)
             _cyl(pivot,"G11_Rueda_%d_%d" % [side,axle],
                 Vector3(sign*0.135,0,0),0.18,0.08,edge,
