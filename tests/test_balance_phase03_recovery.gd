@@ -45,6 +45,7 @@ func _initialize() -> void:
                             totals[kind] = {
                                 "games":0, "credit_gap":0, "material_gap":0,
                                 "army_gap":0, "income_gap":0,
+                                "signed_material":0, "signed_army":0, "signed_income":0,
                                 "recover_income":0, "sustained_income":0, "end_income":0, "end_material":0, "reverse_material":0,
                                 "actions":0, "buys":0, "captures":0,
                                 "resupplies":0, "first_wins":0,
@@ -56,6 +57,9 @@ func _initialize() -> void:
                         group["material_gap"] += int(record["material_gap"])
                         group["army_gap"] += int(record["army_gap"])
                         group["income_gap"] += int(record["income_gap"])
+                        group["signed_material"] += int(record["signed_material"])
+                        group["signed_army"] += int(record["signed_army"])
+                        group["signed_income"] += int(record["signed_income"])
                         group["recover_income"] += 1 if record["income_recovered"] else 0
                         group["sustained_income"] += 1 if record["income_sustained"] else 0
                         group["end_income"] += 1 if record["end_income_recovered"] else 0
@@ -101,11 +105,14 @@ func _initialize() -> void:
         var g: Dictionary = totals[key]
         assert(int(g["games"]) == 8)
         n_cases += 1
-        print("BALANCE_PHASE03_GROUP key=%s games=%d mean_credit_gap=%d mean_material_gap=%d mean_army_gap=%d mean_income_gap=%d income_catchups=%d sustained_income=%d end_income=%d material_reversals=%d end_material_ahead=%d buys=%d captures=%d resupplies=%d first_wins=%d second_wins=%d unresolved=%d" % [
+        print("BALANCE_PHASE03_GROUP key=%s games=%d mean_credit_gap=%d mean_material_gap=%d mean_army_gap=%d mean_income_gap=%d mean_reference_material_lead=%d mean_reference_army_lead=%d mean_reference_income_lead=%d income_catchups=%d sustained_income=%d end_income=%d material_reversals=%d end_material_ahead=%d buys=%d captures=%d resupplies=%d first_wins=%d second_wins=%d unresolved=%d" % [
             key,int(g["games"]),int(round(float(g["credit_gap"])/float(g["games"]))),
             int(round(float(g["material_gap"])/float(g["games"]))),
             int(round(float(g["army_gap"])/float(g["games"]))),
             int(round(float(g["income_gap"])/float(g["games"]))),
+            int(round(float(g["signed_material"])/float(g["games"]))),
+            int(round(float(g["signed_army"])/float(g["games"]))),
+            int(round(float(g["signed_income"])/float(g["games"]))),
             int(g["recover_income"]),int(g["sustained_income"]),int(g["end_income"]),
             int(g["reverse_material"]),int(g["end_material"]),int(g["buys"]),
             int(g["captures"]),int(g["resupplies"]),int(g["first_wins"]),
@@ -241,6 +248,10 @@ static func _play(map_id: int,fog: bool,capped: bool,first: int,condition: Strin
             elif material_fell_behind:
                 material_reversed = true
     var final: Dictionary = _snapshot(state)
+    var reference_side: int = first if favored == -1 else favored
+    var signed_material: int = int(final["material"][reference_side])-int(final["material"][1-reference_side])
+    var signed_army: int = int(final["army_value"][reference_side])-int(final["army_value"][1-reference_side])
+    var signed_income: int = int(final["incomes"][reference_side])-int(final["incomes"][1-reference_side])
     var income_at_end := false
     var material_at_end := false
     if favored != -1:
@@ -260,6 +271,7 @@ static func _play(map_id: int,fog: bool,capped: bool,first: int,condition: Strin
         "end_income_recovered":income_at_end,
         "end_material_ahead":material_at_end,
         "material_reversed":material_reversed,
+        "signed_material":signed_material,"signed_army":signed_army,"signed_income":signed_income,
         "cash_gap":absi(int(final["credits"][0])-int(final["credits"][1])),
         "material_gap":absi(int(final["material"][0])-int(final["material"][1])),
         "army_gap":absi(int(final["army_value"][0])-int(final["army_value"][1])),
