@@ -1,0 +1,103 @@
+name: TARVOKA APC infantry transport
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/CargoActions.gd'
+      - 'scripts/core/APCTransportAI.gd'
+      - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/BattleSession.gd'
+      - 'scripts/core/BattleActions.gd'
+      - 'scripts/core/SaveCodec.gd'
+      - 'scripts/core/Visibility.gd'
+      - 'scripts/core/TacticalHints.gd'
+      - 'scripts/ui/IsoRenderer.gd'
+      - 'scripts/ui/TouchBoard.gd'
+      - 'scripts/ui/Main.gd'
+      - 'tests/test_apc_transport_engine.gd'
+      - 'tests/test_apc_transport_ai.gd'
+      - 'tests/test_apc_transport_save_security.gd'
+      - 'tests/test_apc_transport_ui.gd'
+      - '.github/workflows/apc-transport.yml'
+  push:
+    branches:
+      - 'feat/apc-infantry-transport-20261114'
+  workflow_dispatch:
+
+jobs:
+  apc-infantry:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate authoritative two-seat load unload loss and v1 save
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_engine.gd 2>&1 \
+            | tee /tmp/apc-transport-engine.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-transport-engine.log; then exit 1; fi
+          grep -F 'PASS APC transport engine:' /tmp/apc-transport-engine.log
+      - name: Reject corrupted passenger manifests and preserve old saves
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 75s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_save_security.gd 2>&1 \
+            | tee /tmp/apc-transport-save-security.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/apc-transport-save-security.log; then exit 1; fi
+          grep -F 'PASS APC transport save security:' /tmp/apc-transport-save-security.log
+      - name: Validate mobile touch controls and user-safe confirmation
+        if: ${{ hashFiles('tests/test_apc_transport_ui.gd') != '' }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 95s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_ui.gd 2>&1 \
+            | tee /tmp/apc-transport-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-transport-ui.log; then exit 1; fi
+          grep -F 'PASS APC transport UI:' /tmp/apc-transport-ui.log
+      - name: Validate fog-safe AI APC delivery and legal city capture
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_ai.gd 2>&1 \
+            | tee /tmp/apc-transport-ai.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/apc-transport-ai.log; then exit 1; fi
+          grep -F 'PASS APC transport AI:' /tmp/apc-transport-ai.log
+      - name: Existing combat fog movement economy and save regressions
+        run: |
+          set -euo pipefail
+          for test in test_move_then_attack test_move_actions test_fog_ai test_save_codec test_logistics test_piercer_g09_regression; do
+            timeout --signal=TERM --kill-after=5s 95s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" 2>&1 \
+              | tee "/tmp/${test}-apc.log"
+            # Negative JSON/parser probes intentionally log engine ERROR
+            # in legacy save tests. Reject script crashes and missing PASS,
+            # rather than treating their expected invalid-input warnings as
+            # runtime regressions.
+            if grep -E 'SCRIPT ERROR:|Assertion failed' "/tmp/${test}-apc.log"; then exit 1; fi
+            grep -E 'PASS(:| )' "/tmp/${test}-apc.log"
+          done
+      - name: Upload APC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-APC-Transport-QA
+          path: |
+            /tmp/apc-transport-engine.log
+            /tmp/apc-transport-ui.log
+            /tmp/apc-transport-ai.log
+            /tmp/apc-transport-save-security.log
+            /tmp/*-apc.log
+          if-no-files-found: warn

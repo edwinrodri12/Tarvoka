@@ -89,6 +89,10 @@ static func _action_signature(before: Dictionary, result: Dictionary) -> String:
             var factory: Vector2i = result["factory"]
             var relative_x: int = factory.x if int(before["faction"]) == 0 else 9-factory.x
             return "produce %s (%d,%d)" % [str(result["role"]),relative_x,factory.y]
+        "embark":
+            return "embark %s %s" % [_role(before,str(result.get("passenger_id",""))),str(result.get("reason",""))]
+        "disembark":
+            return "disembark %s %s" % [_role(before,str(result.get("carrier_id",""))),str(result.get("reason",""))]
         "resupply":
             return "resupply %s %s" % [_role(before,str(result.get("unit_id",""))),str(result.get("source_kind",""))]
         _:

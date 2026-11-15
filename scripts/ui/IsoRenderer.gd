@@ -58,7 +58,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         combat_effects: Array, zoom: float, pan: Vector2, motion_effects: Array = [], phase: float = 0.0,
         unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
         site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1),
-        threat_preview: Dictionary = {}, compared_cells: Array[Vector2i] = [], weather_before: String = "clear", weather_blend: float = 1.0) -> void:
+        threat_preview: Dictionary = {}, compared_cells: Array[Vector2i] = [], weather_before: String = "clear", weather_blend: float = 1.0,
+        transport_options: Dictionary = {}, unload_mode: bool = false) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -209,6 +210,23 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         canvas.draw_colored_polygon(poly, VisualStyle.attack_fill())
         canvas.draw_polyline(_ring(poly), Color("#FF6655"), maxf(2.0, hw * 0.035), true)
 
+    # APC cargo affordances use the SAME validated tile options in both
+    # classic and isometric projections. No separate geometry or vision.
+    for location in transport_options.get("embarks",{}):
+        if not bounds.has_point(location):
+            continue
+        var poly: PackedVector2Array = _poly(location,canvas,zoom,pan,dims)
+        canvas.draw_colored_polygon(poly,Color(0.19,0.67,1.0,0.24))
+        canvas.draw_polyline(_ring(poly),Color(0.24,0.77,1.0,0.95),
+            maxf(2.0,hw*0.040),true)
+    if unload_mode:
+        for location in transport_options.get("unloads",{}):
+            if not bounds.has_point(location):
+                continue
+            var poly: PackedVector2Array = _poly(location,canvas,zoom,pan,dims)
+            canvas.draw_colored_polygon(poly,Color(1.0,0.76,0.14,0.29))
+            canvas.draw_polyline(_ring(poly),Color(1.0,0.84,0.26,0.96),
+                maxf(2.0,hw*0.040),true)
     # Threats are theoretical footprints from observed enemies. Apply them
     # over legal movement previews, beneath soldiers and aircraft.
     ThreatPainter.draw_iso(canvas,threat_preview,canvas.size,zoom,pan,dims)
@@ -301,6 +319,16 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         if str(unit["id"]) == selected_id:
             canvas.draw_arc(c, radius * 1.53, 0, TAU, 30,
                 Color("#FFE451"), maxf(2.0, hw * 0.055))
+        # Identical local-only manifest indicator in the isometric view.
+        # Enemy APC sprites never disclose passenger occupancy or IDs.
+        if own and role == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and hw >= 23.0:
+            var cargo_box: Rect2 = Rect2(c+Vector2(radius*0.15,-radius*1.25),
+                Vector2(hw*0.67,hw*0.26))
+            canvas.draw_rect(cargo_box,Color(0.02,0.10,0.16,0.94))
+            canvas.draw_rect(cargo_box,Color(0.22,0.77,1.0,0.93),false,maxf(1.0,hw*0.018))
+            canvas.draw_string(font,cargo_box.position+Vector2(hw*0.07,hw*0.20),
+                "%d/2" % int(unit["cargo"].size()),
+                HORIZONTAL_ALIGNMENT_LEFT,-1,int(maxf(10.0,hw*0.19)),Color(0.90,0.97,1.0))
         if hw >= 23.0:
             canvas.draw_string(font,c+Vector2(-radius*0.16,radius+hh*0.42),
                 str(int(unit["hp"])),HORIZONTAL_ALIGNMENT_LEFT,-1,

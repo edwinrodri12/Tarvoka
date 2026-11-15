@@ -40,7 +40,7 @@ static func _match(map_id: int, fog: bool, relay: bool,
             if not bool(step.get("valid",false)):
                 break
             assert(str(step.get("action","")) in
-                ["move","attack","produce","resupply"])
+                ["move","attack","produce","resupply","embark","disembark"])
             var next: Dictionary = step["state"]
             assert(Economy.valid(next["economy"],next["terrain"]))
             assert(int(next["faction"]) == side)

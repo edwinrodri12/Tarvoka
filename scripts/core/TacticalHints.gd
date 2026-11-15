@@ -11,6 +11,42 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const TerrainTactics = preload("res://scripts/core/TerrainTactics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
+
+# Read-only APC transport choices for the human. Hints run the same
+# authoritative legal checks; they never relocate units or see hidden
+# enemies. These are separate from movement/attack hints for legacy callers.
+static func transport(state: Dictionary, unit_id: String) -> Dictionary:
+    var empty := {"embarks":{},"unloads":{}}
+    if unit_id.is_empty() or not Opening.can_order(state) or int(state.get("winner",-1)) != -1 or not state.get("units") is Array or not state.get("terrain") is Array or not bool(state.get("economy",{}).get("modern",false)):
+        return empty
+    var faction: int = int(state.get("faction",-1))
+    var vehicle: Dictionary = {}
+    for unit in state["units"]:
+        if unit is Dictionary and str(unit.get("id","")) == unit_id:
+            vehicle = unit
+            break
+    if vehicle.is_empty() or str(vehicle.get("role","")) != Cargo.CARRIER_ROLE or not Turns.can_act(vehicle,faction):
+        return empty
+    var visible: Dictionary = Visibility.visible_cells(state,faction) if Visibility.enabled(state) else {}
+    if Turns.can_move(vehicle,faction) and Cargo.passengers(vehicle).size() < Cargo.CAPACITY:
+        for unit in state["units"]:
+            if unit is Dictionary and str(unit.get("id","")) != unit_id:
+                if int(unit.get("faction",-1)) != faction or str(unit.get("role","")) not in Cargo.PASSENGER_ROLES:
+                    continue
+                var proposal: Dictionary = Cargo.embark(state["units"],str(unit["id"]),unit_id,faction,state["terrain"])
+                if proposal.get("valid",false):
+                    empty["embarks"][unit["pos"]] = {"passenger_id":str(unit["id"])}
+    if not Cargo.passengers(vehicle).is_empty():
+        var soldier_id: String = str(Cargo.passengers(vehicle)[0]["id"])
+        for direction in Rules.DIRECTIONS:
+            var dest: Vector2i = vehicle["pos"]+direction
+            if Visibility.enabled(state) and not visible.has(dest):
+                continue
+            var proposal: Dictionary = Cargo.disembark(state["units"],unit_id,soldier_id,dest,faction,state["terrain"])
+            if proposal.get("valid",false):
+                empty["unloads"][dest] = {"passenger_id":soldier_id}
+    return empty
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -195,6 +231,19 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
             availability, hints["moves"].size(), hints["attacks"].size()
         ]
         text += " | Alcance ataque %d-%d" % [int(unit.get("attack_min_range", 1)), int(unit.get("attack_range", 1))]
+        if str(unit.get("role","")) == Cargo.CARRIER_ROLE and int(unit.get("faction",-1)) == int(state.get("faction",-1)):
+            var boarded: Array = Cargo.passengers(unit)
+            var manifest_names: Array[String] = []
+            for passenger in boarded:
+                manifest_names.append("%s (%d HP)" % [str(passenger["id"]),int(passenger["hp"])])
+            text += " | Transporte APC: %d/%d plazas" % [boarded.size(),Cargo.CAPACITY]
+            if not manifest_names.is_empty():
+                text += " | Pasajeros: " + ", ".join(manifest_names)
+            var options: Dictionary = transport(state,unit_id)
+            if not options["embarks"].is_empty():
+                text += "\nToca la infanteria adyacente para embarcar (consume ambas acciones)."
+            if not options["unloads"].is_empty():
+                text += "\nPulsa Desembarcar y elige una casilla adyacente. El soldado actuara el proximo turno."
         text += " | Clima: %s" % Weather.label(Weather.from_state(state))
         var weapon_area: Dictionary = friendly_weapon_coverage(state,unit_id)
         if not weapon_area.is_empty():

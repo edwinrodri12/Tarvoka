@@ -150,7 +150,14 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     var faction: int = int(state.get("faction", -1))
     if faction not in [0,1] or int(state.get("winner", -1)) != -1 or not Rules.inside(factory_pos,state["terrain"]):
         return false
-    if cost(role) <= 0 or state["units"].size() >= MAX_UNITS:
+    # Embarked soldiers are still part of the army's population cap.
+    # Counting only deployed units would allow endless extra production
+    # while 2-seat APCs hide troops inside their manifests.
+    var total_units: int = state["units"].size()
+    for platform in state["units"]:
+        if platform is Dictionary and platform.get("cargo",[]) is Array:
+            total_units += (platform.get("cargo",[]) as Array).size()
+    if cost(role) <= 0 or total_units >= MAX_UNITS:
         return false
     if not valid(state["economy"], state["terrain"]):
         return false
@@ -192,6 +199,10 @@ static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> 
     var existing: Dictionary = {}
     for unit in next["units"]:
         existing[str(unit["id"])] = true
+        # A soldier inside an APC keeps a reserved, globally unique ID.
+        for passenger in unit.get("cargo",[]):
+            if passenger is Dictionary:
+                existing[str(passenger.get("id",""))] = true
     var id := "N%d" % serial
     while existing.has(id) and serial < 99999:
         serial += 1

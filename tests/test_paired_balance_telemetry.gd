@@ -97,7 +97,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
             assert(before == state)
             if not step.get("valid",false):
                 break
-            assert(str(step.get("action","")) in ["move","attack","produce","resupply"])
+            assert(str(step.get("action","")) in ["move","attack","produce","resupply","embark","disembark"])
             var next: Dictionary = step["state"]
             assert(next["faction"] == side and Economy.valid(next["economy"],next["terrain"]))
             var before_credits: int = int(state["economy"]["credits"][side])
@@ -112,6 +112,11 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
                 expected_spend = int(step["cost"])
                 report["rearm_spent"][side] += expected_spend
                 assert(next["units"].size() == state["units"].size())
+            elif str(step["action"]) == "embark":
+                assert(next["units"].size() == state["units"].size()-1)
+                assert(int(step.get("cargo_count",0)) > 0)
+            elif str(step["action"]) == "disembark":
+                assert(next["units"].size() == state["units"].size()+1)
             elif str(step["action"]) == "attack":
                 report["attacks"][side] += 1
             elif str(step["action"]) == "move":
