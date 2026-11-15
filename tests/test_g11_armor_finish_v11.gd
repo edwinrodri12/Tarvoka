@@ -141,8 +141,8 @@ func _run() -> void:
         for i in range(3):
             _check(_find(model,"G11V11_RejillaTecho_%d" % i) != null,
                 "genuine cabin ventilation louver %d" % i)
-        _check(_find(model,"G11_PinturaLateral_1_0") != null,
-            "original faction side paint survives V11")
+        _check(_find(model,"G11V13_PanelFaccionLanzador_1") != null,
+            "team paint survives on the newer V13 real side panel, not duplicate V1 plates")
         _check(Models.pose_model("mlrs",model,"attack",0.50),
             "original twelve-tube rocket launch still elevates correctly")
         _check(_find(model,"G11V11_RozadurasBocas").is_visible_in_tree(),

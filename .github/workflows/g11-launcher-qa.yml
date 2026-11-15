@@ -23,6 +23,9 @@ on:
       - 'scripts/ui/G11AftPodFinishV15.gd'
       - 'scripts/ui/G11FrontFrameV16.gd'
       - 'scripts/ui/G11SurfaceWeatherV17.gd'
+      - 'scripts/ui/G11TrackAssemblyV18.gd'
+      - 'tests/test_g11_track_clearance_v18.gd'
+      - 'tests/test_g11_track_clearance_v18_capture.gd'
       - 'tests/test_g11_surface_weather_v17.gd'
       - 'tests/test_g11_surface_weather_v17_capture.gd'
       - 'tests/test_g11_front_frame_v16.gd'
@@ -143,6 +146,20 @@ jobs:
             echo 'G11 V17 material or color regression'; exit 1
           fi
           grep -F 'PASS G11 V17:' /tmp/g11_v17.log
+      - name: Validate V18 no-overlap track geometry and belt movement
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_track_clearance_v18.gd 2>&1 | tee /tmp/g11_v18.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v18.log; then
+            echo 'G11 V18 track alignment or overlap regression'; exit 1
+          fi
+          grep -F 'PASS G11 V18:' /tmp/g11_v18.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
@@ -346,6 +363,29 @@ jobs:
         with:
           name: tarvoka-g11-v17-16-real-godot-pbr-weather-comparison
           path: /tmp/g11-v17-review/*.png
+          retention-days: 14
+      - name: Render 16 closeups of actual V18 tracks and moving sprockets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v18-review
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v18-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_track_clearance_v18_capture.gd 2>&1 | tee /tmp/g11_v18_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v18_capture.log; then
+            echo 'G11 V18 track GPU render regression'; exit 1
+          fi
+          grep -F 'PASS G11 V18 CAPTURE:' /tmp/g11_v18_capture.log
+          test "$(find /tmp/g11-v18-review -name '*.png' | wc -l)" -eq 16
+      - name: Upload V18 16 actual Godot track clearance review views
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v18-16-track-clearance-real-godot
+          path: /tmp/g11-v18-review/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.

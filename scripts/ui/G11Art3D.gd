@@ -25,6 +25,7 @@ const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
 const AftFinishV15 = preload("res://scripts/ui/G11AftPodFinishV15.gd")
 const FrontFinishV16 = preload("res://scripts/ui/G11FrontFrameV16.gd")
 const WeatherV17 = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
+const TracksV18 = preload("res://scripts/ui/G11TrackAssemblyV18.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -140,10 +141,10 @@ static func build(model: Node3D, paint: Color) -> bool:
         _box(root,"G11_Faldon_%d" % side,Vector3(x,0.66,-0.05),
             Vector3(0.34,0.22,2.71),steel)
         for axle in range(6):
-            var z: float = -1.19+float(axle)*0.47
+            var z: float = -0.875+float(axle)*0.35
             var pivot := Node3D.new()
             pivot.name = "G11_RuedaPivot_%d_%d" % [side,axle]
-            pivot.position = Vector3(x,0.26,z)
+            pivot.position = Vector3(x,0.265,z)
             root.add_child(pivot)
             _cyl(pivot,"G11_Rueda_%d_%d" % [side,axle],
                 Vector3(sign*0.135,0,0),0.18,0.08,edge,
@@ -308,6 +309,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 V16 frame/roof refinement failed; retaining V15 sculpture")
     elif not WeatherV17.apply(model,paint):
         push_warning("G11 V17 procedural material/weathering failed; retaining V16 sculpture")
+    elif not TracksV18.apply(model):
+        push_warning("G11 V18 track overlap/clearance refinement failed; retaining V17 sculpture")
     return true
 
 static func stage(model: Node3D) -> int:
