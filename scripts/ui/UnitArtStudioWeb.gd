@@ -12,6 +12,7 @@ const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -62,6 +63,9 @@ var apc_v3_button: Button
 var apc_damage_button: Button
 var apc_lod_button: Button
 var apc_stress_button: Button
+var apc_mixed_button: Button
+var _apc_mixed_enabled: bool=false
+var _apc_mixed_group: Node3D
 var apc_stress_label: Label
 var _apc_stress_group: Node3D
 var _apc_stress_units: Array[Node3D]=[]
@@ -283,6 +287,9 @@ func _construct() -> void:
         "APC V3 · MODO TÁCTICO: Ocultar microdetalles",_toggle_apc_lod)
     apc_stress_button=_button(apc_controls,
         "APC · PROBAR 32 VEHÍCULOS (8 FACCIONES)",_cycle_apc_stress)
+    apc_mixed_button=_button(apc_controls,
+        "BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles",
+        _toggle_apc_mixed)
     apc_stress_label=_title(apc_controls,
         "Prueba de FPS real: 32 → 64 → salir. Usa Android o el navegador.",11)
 
@@ -441,6 +448,7 @@ func _display_role(role: String) -> void:
         APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
     apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
     apc_stress_button.visible=apc_lod_button.visible
+    apc_mixed_button.visible=apc_lod_button.visible
     apc_stress_label.visible=apc_lod_button.visible
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
@@ -1111,6 +1119,9 @@ func _toggle_apc_lod() -> void:
     _update_details()
 
 func _clear_apc_stress() -> void:
+    # The mixed scene hangs off the stress group and is freed alongside it.
+    _apc_mixed_enabled=false
+    _apc_mixed_group=null
     if _apc_stress_group!=null and is_instance_valid(_apc_stress_group):
         if _apc_stress_group.get_parent()!=null:
             _apc_stress_group.get_parent().remove_child(_apc_stress_group)
@@ -1164,6 +1175,55 @@ func _set_apc_stress(count: int) -> void:
     apc_stress_button.text=("APC · PROBAR 64 VEHÍCULOS"
         if _apc_stress_count==32 else "APC · TERMINAR PRUEBA")
     apc_stress_label.text="Prueba de %d APC · calculando FPS..." % _apc_stress_count
+    apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+
+func _toggle_apc_mixed() -> void:
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            "tarvoka_apc_finish_v3",false):
+        return
+    if _apc_stress_count==0:
+        _set_apc_stress(32)
+    if _apc_mixed_enabled:
+        if _apc_mixed_group!=null and is_instance_valid(_apc_mixed_group):
+            _apc_stress_group.remove_child(_apc_mixed_group)
+            _apc_mixed_group.free()
+        _apc_mixed_group=null
+        _apc_mixed_enabled=false
+        var per_faction: int=int(_apc_stress_count/8)
+        for i in range(_apc_stress_units.size()):
+            var unit: Node3D=_apc_stress_units[i]
+            unit.position=Vector3(
+                (float(i%per_faction)-0.5*float(per_faction-1))*3.2,0,
+                (float(int(i/per_faction))-3.5)*3.3)
+        apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+        _update_camera()
+        return
+    var mixed:=Node3D.new()
+    mixed.name="TARVOKA_BatallaMixta_8Facciones"
+    _apc_stress_group.add_child(mixed)
+    _apc_mixed_group=mixed
+    var per_faction: int=int(_apc_stress_count/8)
+    for faction in range(8):
+        var home:=Vector3((float(faction%4)-1.5)*39.0,0,
+            (float(int(faction/4))-0.5)*78.0)
+        var condition: String=HQMixedStress.CONDITIONS[faction%4]
+        var hq: Node3D=HQMixedStress.build(
+            1+(faction%3),faction,condition,true,true)
+        assert(hq!=null)
+        hq.position=home
+        mixed.add_child(hq)
+        var g09: Node3D=Models.build("tank",faction,true,31)
+        assert(g09!=null)
+        g09.position=home+Vector3(0,0,-12)
+        mixed.add_child(g09)
+        for index in range(per_faction):
+            var apc: Node3D=_apc_stress_units[faction*per_faction+index]
+            apc.position=home+Vector3(
+                (float(index%4)-1.5)*3.4,0,
+                12.0+float(int(index/4))*4.0)
+    _apc_mixed_enabled=true
+    apc_mixed_button.text="BATALLA MIXTA · Volver a solo APC"
+    _update_camera()
 
 func _update_apc_stress(delta: float) -> void:
     _apc_stress_elapsed+=maxf(delta,0.0)
@@ -1180,8 +1240,10 @@ func _update_apc_stress(delta: float) -> void:
         _apc_stress_sample=0.0
         var draws: float=Performance.get_monitor(
             Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
-        apc_stress_label.text=("%d APC · %.0f FPS reales · %.0f llamadas de dibujo · %s"
-            % [_apc_stress_count,Engine.get_frames_per_second(),draws,
+        var scenario: String=(
+            " + 8 G09 + 8 HQ" if _apc_mixed_enabled else "")
+        apc_stress_label.text=("%d APC%s · %.0f FPS reales · %.0f llamadas de dibujo · %s"
+            % [_apc_stress_count,scenario,Engine.get_frames_per_second(),draws,
                 "LOD TÁCTICO" if _apc_tactical_lod else "DETALLE COMPLETO"])
 
 func _set_apc_damage(stage: int) -> void:
@@ -1314,8 +1376,11 @@ func _change_zoom(direction: int) -> void:
 func _update_camera() -> void:
     if camera != null:
         if _apc_stress_count>0:
-            camera.size=33.0 if _apc_stress_count==32 else 49.0
-            camera.position=Vector3(27,32,39) if _apc_stress_count==32 else Vector3(35,41,49)
+            camera.size=(167.0 if _apc_mixed_enabled else
+                33.0 if _apc_stress_count==32 else 49.0)
+            camera.position=(Vector3(78,122,115) if _apc_mixed_enabled else
+                Vector3(27,32,39) if _apc_stress_count==32 else
+                Vector3(35,41,49))
             camera.look_at(Vector3(0,0.50,0),Vector3.UP)
             return
         if _role=="tank" and _underside_view:
