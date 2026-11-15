@@ -27,6 +27,8 @@ const CompareView = preload("res://scripts/ui/UnitComparisonView.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const CommanderStrip = preload("res://scripts/ui/CommanderIdentityStrip.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const MiniMap = preload("res://scripts/ui/BattleMinimap.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -55,6 +57,18 @@ var production_list_body: VBoxContainer
 var production_list_scroll: ScrollContainer
 var production_purchase_buttons: Dictionary = {}
 var _tab_transition: Tween
+var command_buttons: Dictionary = {}
+var command_grid: GridContainer
+var command_extras: VBoxContainer
+var command_more_button: Button
+var command_map: Control
+var command_commander_strip: Control
+var command_detail_label: Label
+var command_overview_title: Label
+var command_confirm_exit: ConfirmationDialog
+var command_compact := false
+var _show_extra_commands := false
+var _command_header_title: Label
 
 # Full-screen, legible controller on phone and tablet. Hidden during combat;
 # the map receives all touches until the player explicitly opens the drawer.
@@ -82,12 +96,13 @@ func _ready() -> void:
     column.add_child(header)
     var title := Label.new()
     title.text = "TARVOKA  /  CENTRO DE MANDO"
+    _command_header_title = title
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     title.add_theme_font_size_override("font_size",25)
     title.add_theme_color_override("font_color",Color("#F1D58C"))
     header.add_child(title)
     var close := Button.new()
-    close.text = "Volver a batalla"
+    close.text = "REANUDAR"
     close.custom_minimum_size = Vector2(130,48)
     close.pressed.connect(func(): close_requested.emit())
     header.add_child(close)
@@ -112,6 +127,16 @@ func _ready() -> void:
     production_body = _add_page("Produccion")
     settings_body = _add_page("Ajustes")
     tabs.tab_changed.connect(_on_tab_changed)
+    command_confirm_exit = ConfirmationDialog.new()
+    command_confirm_exit.title = "Volver al menú principal"
+    command_confirm_exit.dialog_text = (
+        "¿Abandonar la batalla actual? El progreso no guardado puede perderse. "
+        + "La partida únicamente se conservará si ya fue guardada.")
+    command_confirm_exit.ok_button_text = "SALIR AL MENÚ"
+    command_confirm_exit.cancel_button_text = "CANCELAR"
+    command_confirm_exit.confirmed.connect(func(): home_requested.emit())
+    add_child(command_confirm_exit)
+    get_viewport().size_changed.connect(_reflow)
     hide()
 
 # A restrained 160ms content transition makes navigation feel more fluid,
@@ -536,47 +561,118 @@ func refresh() -> void:
             turn_text += "  ·  %d creditos" % int(funds[viewer])
     info_label.text = turn_text
     _clear(battle_body)
+    # The approved command center puts safe actions on the left and the actual
+    # visible battle situation on the right. Both continue to scroll on small
+    # landscape Android devices; neither can issue an unconfirmed board order.
     var tactical: Dictionary = _dashboard_columns(battle_body,"SituacionYAcciones")
     battle_columns = tactical["rail"]
-    var situation: VBoxContainer = tactical["left"]
-    var commands: VBoxContainer = tactical["right"]
-    _heading(situation,"SITUACIÓN TÁCTICA")
-    operational_values.clear()
+    var commands: VBoxContainer = tactical["left"]
+    var situation: VBoxContainer = tactical["right"]
+    _heading(commands,"ORDENES DE MANDO")
+    command_buttons.clear()
+    command_buttons["resume"] = _action(commands,"▶  REANUDAR BATALLA",
+        func(): close_requested.emit())
+    command_buttons["resume"].name = "ReanudarBatalla"
+    command_buttons["resume"].custom_minimum_size.y = 56
+    Chrome.emphasize(command_buttons["resume"],"primary")
+    command_grid = GridContainer.new()
+    command_grid.name = "AccionesDeMando"
+    command_grid.columns = 1
+    command_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    command_grid.add_theme_constant_override("h_separation",7)
+    command_grid.add_theme_constant_override("v_separation",7)
+    commands.add_child(command_grid)
+    command_buttons["objectives"] = _action(command_grid,"⚑  OBJETIVOS",
+        func(): objectives_requested.emit())
+    command_buttons["units"] = _action(command_grid,"◈  ESTADO DE UNIDADES",
+        func(): tabs.current_tab = 1)
+    command_buttons["save"] = _action(command_grid,"▣  GUARDAR PARTIDA",
+        func(): save_requested.emit())
+    command_buttons["settings"] = _action(command_grid,"⚙  AJUSTES",
+        func(): tabs.current_tab = 3)
+    command_buttons["surrender"] = _action(command_grid,"⚑  RENDIRSE · NO DISPONIBLE",
+        Callable(),false)
+    command_buttons["surrender"].tooltip_text = (
+        "La rendición aún no está implementada; este botón no modifica el combate.")
+    command_buttons["exit"] = _action(command_grid,"⇥  SALIR AL MENÚ",
+        func(): command_confirm_exit.popup_centered())
+    command_buttons["exit"].tooltip_text = (
+        "Solicita confirmación antes de abandonar la batalla.")
+    command_more_button = _action(commands,"MÁS OPERACIONES ▾",_toggle_more_commands)
+    command_extras = VBoxContainer.new()
+    command_extras.add_theme_constant_override("separation",5)
+    commands.add_child(command_extras)
+    _action(command_extras,"CARGAR PARTIDA",func(): load_requested.emit())
+    _action(command_extras,"PREPARAR ESCARAMUZA",func(): new_battle_requested.emit())
+    _action(command_extras,"MODO HISTORIA · CAPÍTULO 01",
+        func(): campaign_requested.emit())
+    _show_extra_commands = false
+    command_extras.hide()
+    command_more_button.text = "MÁS OPERACIONES ▾"
+
+    _heading(situation,"ESTADO DE LA BATALLA")
     var overview: Dictionary = BattleReport.operational_snapshot(state,viewer)
+    var economy: Dictionary = state.get("economy",{})
+    var funds: Array = economy.get("credits",[])
+    var own_credits: String = (
+        "%d CRÉDITOS" % int(funds[viewer])
+        if viewer >= 0 and funds.size() > viewer else "SIN ECONOMÍA")
+    command_overview_title = Label.new()
+    command_overview_title.name = "EstadoAutenticoDeLaOperacion"
+    command_overview_title.text = (
+        "%s  ·  %s  ·  %s" % [
+            Identity.name_for(state,viewer),
+            own_credits,
+            Weather.label(Weather.from_state(state)).to_upper()])
+    command_overview_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    command_overview_title.add_theme_color_override("font_color",Chrome.GOLD)
+    command_overview_title.add_theme_font_size_override("font_size",15)
+    situation.add_child(command_overview_title)
+    operational_values.clear()
     var indicators := GridContainer.new()
     indicators.columns = 2
     indicators.name = "IndicadoresTacticos"
     indicators.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    indicators.add_theme_constant_override("h_separation",8)
-    indicators.add_theme_constant_override("v_separation",8)
+    indicators.add_theme_constant_override("h_separation",7)
+    indicators.add_theme_constant_override("v_separation",7)
     situation.add_child(indicators)
     var own_tint: Color = Identity.color_for(state,viewer)
-    operational_values["allies"] = _operational_tile(indicators,"UNIDADES PROPIAS",str(overview["allies"]),own_tint.lightened(0.2))
-    operational_values["move"] = _operational_tile(indicators,"PUEDEN MOVER",str(overview["move_ready"]),Chrome.EDGE_BRIGHT)
-    operational_values["attack"] = _operational_tile(indicators,"PUEDEN ATACAR",str(overview["attack_ready"]),Chrome.GOLD)
+    operational_values["allies"] = _operational_tile(indicators,
+        "UNIDADES PROPIAS",str(overview["allies"]),own_tint.lightened(0.2))
+    operational_values["move"] = _operational_tile(indicators,
+        "PUEDEN MOVER",str(overview["move_ready"]),Chrome.EDGE_BRIGHT)
+    operational_values["attack"] = _operational_tile(indicators,
+        "PUEDEN ATACAR",str(overview["attack_ready"]),Chrome.GOLD)
     operational_values["contacts"] = _operational_tile(indicators,
         "CONTACTOS VISIBLES" if bool(overview["fog"]) else "ENEMIGOS",
         str(overview["contacts"]),Chrome.RED)
-    _description(situation,"Integridad propia: %d HP · %s" % [
-        int(overview["hp"]),
-        "Las fuerzas enemigas ocultas no se contabilizan." if bool(overview["fog"]) else "Campo visible."
-    ])
-    # Reuse the official faction/commander art already loaded for the board.
-    # The strip displays only public identity and the active turn, never
-    # hidden enemies, troop positions or an unimplemented commander power.
-    var commanders := CommanderStrip.new()
-    commanders.name = "ComandantesDelCentroDeMando"
-    situation.add_child(commanders)
-    commanders.bind_state(state,bool(board.ai_enabled))
-    _description(situation,"Consulta los bandos y el turno actual. El radar respeta la niebla de guerra.")
-    _heading(commands,"ACCIONES DISPONIBLES")
-    _action(commands,"Radar de objetivos, ciudades y alertas",func(): objectives_requested.emit())
-    _action(commands,"Volver al mapa",func(): close_requested.emit())
-    _action(commands,"Menu principal",func(): home_requested.emit())
-    _action(commands,"Guardar partida",func(): save_requested.emit())
-    _action(commands,"Cargar partida",func(): load_requested.emit())
-    _action(commands,"Preparar escaramuza nueva",func(): new_battle_requested.emit())
-    _action(commands,"Campana · Capitulo 01",func(): campaign_requested.emit())
+    var map_label := Label.new()
+    map_label.text = "RADAR TÁCTICO  /  NIEBLA PROTEGIDA"
+    map_label.add_theme_color_override("font_color",Chrome.GOLD)
+    map_label.add_theme_font_size_override("font_size",12)
+    situation.add_child(map_label)
+    command_map = MiniMap.new()
+    command_map.name = "RadarSeguroDelCentroDeMando"
+    command_map.set_board(board)
+    command_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    command_map.tooltip_text = "Vista de reconocimiento. No ejecuta órdenes."
+    command_map.custom_minimum_size = Vector2(190,126)
+    command_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    situation.add_child(command_map)
+    command_detail_label = Label.new()
+    command_detail_label.text = (
+        "Integridad propia: %d PV. %s" % [
+            int(overview["hp"]),
+            "Los enemigos ocultos no se muestran." if bool(overview["fog"])
+            else "Visión completa del campo."])
+    command_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    command_detail_label.add_theme_color_override("font_color",Chrome.MUTED)
+    command_detail_label.add_theme_font_size_override("font_size",12)
+    situation.add_child(command_detail_label)
+    command_commander_strip = CommanderStrip.new()
+    command_commander_strip.name = "ComandantesDelCentroDeMando"
+    situation.add_child(command_commander_strip)
+    command_commander_strip.bind_state(state,bool(board.ai_enabled))
 
     # Army uses two independent landscape surfaces: owned roster and
     # read-only unit details. Selection does not execute a movement or attack.
@@ -703,6 +799,61 @@ func refresh() -> void:
     _description(tutorial,"Pellizca con dos dedos para acercar o alejar. Desliza para mover la cámara. Toca una unidad para consultarla y confirma las órdenes antes de ejecutarlas.")
     _heading(tutorial,"Ventajas defensivas")
     _description(tutorial,"Carretera: vehículos motorizados recorren 2 casillas por punto de movimiento; infantería, 1. Bosque: cobertura +1. Montaña: +2 y ventaja de altura. Ciudad: +1.")
+    _reflow()
+
+func _toggle_more_commands() -> void:
+    if command_extras == null:
+        return
+    _show_extra_commands = not _show_extra_commands
+    command_extras.visible = _show_extra_commands
+    command_more_button.text = (
+        "MENOS OPERACIONES ▴" if _show_extra_commands else "MÁS OPERACIONES ▾")
+
+func _reflow() -> void:
+    reflow_for_size(get_viewport_rect().size)
+
+func reflow_for_size(viewport: Vector2) -> void:
+    if battle_columns == null:
+        return
+    command_compact = viewport.x > viewport.y and viewport.y <= 560.0
+    battle_columns.vertical = viewport.y > viewport.x * 1.12
+    if command_grid != null:
+        command_grid.columns = 2 if command_compact and viewport.x >= 760.0 else 1
+    _command_header_title.add_theme_font_size_override(
+        "font_size",17 if command_compact else 25)
+    for key in command_buttons:
+        var item: Button = command_buttons[key]
+        item.custom_minimum_size.y = (
+            44 if command_compact else (56 if key == "resume" else 50))
+        item.add_theme_font_size_override(
+            "font_size",12 if command_compact else 17)
+    if command_buttons.has("units"):
+        command_buttons["units"].text = (
+            "◈  UNIDADES" if command_compact else "◈  ESTADO DE UNIDADES")
+    if command_buttons.has("resume"):
+        command_buttons["resume"].text = (
+            "▶  REANUDAR" if command_compact else "▶  REANUDAR BATALLA")
+    if command_buttons.has("surrender"):
+        command_buttons["surrender"].text = (
+            "RENDIRSE · N/D" if command_compact
+            else "⚑  RENDIRSE · NO DISPONIBLE")
+    if command_buttons.has("exit"):
+        command_buttons["exit"].text = (
+            "⇥  SALIR" if command_compact else "⇥  SALIR AL MENÚ")
+    if command_map != null:
+        command_map.custom_minimum_size = (
+            Vector2(145,87) if command_compact else Vector2(190,126))
+        command_map.queue_redraw()
+    if command_commander_strip != null:
+        command_commander_strip.visible = not command_compact
+    if command_detail_label != null:
+        command_detail_label.visible = not command_compact
+    if command_overview_title != null:
+        command_overview_title.add_theme_font_size_override(
+            "font_size",11 if command_compact else 15)
+    for field in operational_values:
+        operational_values[field].add_theme_font_size_override(
+            "font_size",17 if command_compact else 24)
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):
