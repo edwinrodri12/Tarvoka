@@ -289,6 +289,7 @@ static func _valid_state(state: Dictionary) -> bool:
         return false
     var ids: Dictionary = {}
     var positions: Dictionary = {}
+    var total_population: int = state["units"].size()
     for unit in state["units"]:
         if not unit is Dictionary:
             return false
@@ -320,6 +321,9 @@ static func _valid_state(state: Dictionary) -> bool:
             if str(unit.get("role","")) != Cargo.CARRIER_ROLE or not manifest is Array or manifest.size() > Cargo.CAPACITY:
                 return false
             if int(unit["hp"]) <= 0 and not manifest.is_empty():
+                return false
+            total_population += manifest.size()
+            if total_population > MAX_UNITS:
                 return false
             for passenger in manifest:
                 if not passenger is Dictionary or passenger.has("pos") or passenger.has("cargo"):
