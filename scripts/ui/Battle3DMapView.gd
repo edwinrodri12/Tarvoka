@@ -206,8 +206,8 @@ func _ready() -> void:
     immersive_hud.connect("zoom_requested",Callable(self,"_zoom_from_hud"))
     immersive_hud.connect("center_requested",Callable(self,"_center_camera_on_own_units"))
     # A fullscreen 3D view needs its own explicit return button.
-    immersive_hud.expand_button.hide()
-    var hud_top: HBoxContainer = immersive_hud.top_bar.get_child(0)
+    (immersive_hud.get("expand_button") as Button).hide()
+    var hud_top: HBoxContainer = (immersive_hud.get("top_bar") as PanelContainer).get_child(0)
     var back_to_map := Button.new()
     back_to_map.name = "VolverAlMapaTactico"
     back_to_map.text = "2D"
@@ -255,7 +255,7 @@ func _set_immersive_mode(enabled: bool) -> void:
     holder.offset_bottom = 0 if enabled else -157
     if immersive_hud != null:
         immersive_hud.visible = enabled
-        immersive_hud.expand_button.hide()
+        (immersive_hud.get("expand_button") as Button).hide()
         immersive_hud.call("reflow_for_size",size)
     _three_d_shortcuts.visible = enabled
     call_deferred("_sync_viewport_size")
@@ -425,9 +425,11 @@ func open_from_board(board: Control) -> bool:
     # detached 3D studio preview (where execution must remain impossible).
     _set_immersive_mode(true)
     immersive_hud.call("attach_board",board)
-    immersive_hud.radar_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-    immersive_hud.radar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    immersive_hud.radar_panel.tooltip_text = (
+    var radar_frame: PanelContainer = immersive_hud.get("radar_panel") as PanelContainer
+    var radar_view: Control = immersive_hud.get("radar") as Control
+    radar_frame.mouse_filter = Control.MOUSE_FILTER_STOP
+    radar_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    radar_frame.tooltip_text = (
         "Radar táctico con niebla protegida; arrastra en el mapa para mover cámara.")
     if bool(board.get("battery_saver")):
         for child in preview.get_children():
