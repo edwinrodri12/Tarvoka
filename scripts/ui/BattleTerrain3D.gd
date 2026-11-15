@@ -512,12 +512,12 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     return drawn
 
 static func _make_units(parent: Node3D,state: Dictionary,
-        cells: Dictionary, selected_id: String) -> Dictionary:
+        cells: Dictionary, selected_id: String, viewer: int = 0) -> Dictionary:
     var visible_count := 0
     var detailed := 0
     var apc_lod := 0
     var hidden_enemies := 0
-    var player: int = 0
+    var player: int = viewer
     for unit in state.get("units",[]):
         if not unit is Dictionary or int(unit.get("hp",0))<=0:
             continue
@@ -572,7 +572,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
     return {"visible":visible_count,"detailed":detailed,
         "apc_lod":apc_lod,"hidden_enemies":hidden_enemies}
 
-static func build(state: Dictionary, selected_id: String = "") -> Node3D:
+static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
     var biome: String = Biomes.from_state(state)
     var terrain: Array = state.get("terrain",[])
     if not Rules.valid_terrain(terrain):
@@ -581,8 +581,8 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     scene.name = "MapaTactico3DReal"
     var dims: Vector2i = Rules.map_size(terrain)
     var use_fog: bool = Visibility.enabled(state)
-    var explored: Dictionary = Visibility.explored_cells(state,0) if use_fog else {}
-    var visible: Dictionary = Visibility.visible_cells(state,0) if use_fog else {}
+    var explored: Dictionary = Visibility.explored_cells(state,viewer) if use_fog else {}
+    var visible: Dictionary = Visibility.visible_cells(state,viewer) if use_fog else {}
     var cells: Dictionary = {}
     var chunks: Array[Dictionary] = []
     for y in range(0,dims.y,Adapter.CHUNK_SIDE):
@@ -608,7 +608,7 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     counters["trees"] = _make_cone_trees(scene,cells,biome)
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
-    counters["units"] = _make_units(scene,state,cells,selected_id)
+    counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
     # Camera-based LOD runs at 4 Hz AFTER the scene enters the viewport.
     # Headless battle/test scenes without a camera keep their stable V8 mesh.
     if int(counters["units"].get("apc_lod",0))>0:
@@ -631,6 +631,7 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
         1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
     counters["terrain_blend_palette_samples"] = corner_cache.size()
     scene.set_meta("board_size",dims)
+    scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)
     scene.set_meta("visual_biome",biome)
     scene.set_meta("public_cells",cells)
