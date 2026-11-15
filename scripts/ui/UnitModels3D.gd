@@ -10,6 +10,7 @@ const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const BastionDamage = preload("res://scripts/ui/BastionDamage3D.gd")
+const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -904,6 +905,24 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         apply_faction_palette(model,faction)
         BastionDamage.prepare(model)
     return model
+
+# Single entrypoint for battle/studio visual poses. No gameplay state is changed.
+# Old unit roles keep their existing renderer and pose behavior.
+static func pose_model(role: String, model: Node3D, kind: String,
+        progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
+    match role:
+        "tank":
+            return TankRig.pose(model,kind,progress,target_heading)
+        "apc":
+            return BastionRig.pose(model,kind,progress,target_heading)
+    return false
+
+static func restore_model_pose(role: String, model: Node3D) -> void:
+    match role:
+        "tank":
+            TankRig.restore(model)
+        "apc":
+            BastionRig.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
