@@ -19,6 +19,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -102,7 +103,8 @@ func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     new_game()
 
-func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false) -> void:
+func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false,
+        visual_biome: String = Winter.TEMPERATE) -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -143,6 +145,10 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
+    # Persistent decorative setting: separate from snow weather penalties.
+    # Omitted from normal/legacy matches to preserve v1 save payloads.
+    if visual_biome == Winter.WINTER:
+        state[Winter.FIELD] = Winter.WINTER
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
@@ -432,12 +438,13 @@ func _draw() -> void:
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var dimensions: Vector2i = map_dimensions()
+    var visual_biome: String = Winter.from_state(state)
     for y in range(dimensions.y):
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
             var terrain_color: Color = Weather.blended_tint(
-                VisualStyle.terrain_color(terrain_type,x,y),
+                VisualStyle.terrain_color(terrain_type,x,y,visual_biome),
                 weather_visual_previous,Weather.from_state(state),weather_blend)
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
             # Subtle tile relief reads as depth without changing top-down touch geometry.
@@ -445,7 +452,9 @@ func _draw() -> void:
             draw_line(pos + Vector2(1, tile - 1), pos + Vector2(tile - 1, tile - 1), terrain_color.darkened(0.35), maxf(1.0, tile * 0.024))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
             # Simple self-contained symbols, no borrowed art or sprite assets.
-            if terrain_type == "forest":
+            if visual_biome == Winter.WINTER:
+                Winter.draw_classic(self,terrain_type,pos,tile)
+            elif terrain_type == "forest":
                 draw_circle(pos + tile * Vector2(0.29, 0.31), tile * 0.09, Color(0.25, 0.53, 0.27))
                 draw_circle(pos + tile * Vector2(0.65, 0.27), tile * 0.11, Color(0.20, 0.45, 0.22))
             elif terrain_type == "road":
