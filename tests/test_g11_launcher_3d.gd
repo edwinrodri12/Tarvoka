@@ -8,6 +8,7 @@ const Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
+const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -46,6 +47,19 @@ func _run() -> void:
             "genuine hollow tubes and hydraulic V4 rig installed")
         _check(int(model.get_meta("tarvoka_g11_hollow_tubes",0)) == 12,
             "all twelve tubes replaced by open bore geometry")
+        _check(bool(model.get_meta(MechanicsV5.FLAG,false)),
+            "full sculpt V5 running gear and horizontal bearing installed")
+        _check(int(model.get_meta("tarvoka_g11_v5_sculpted_roadwheels",0)) == 12,
+            "twelve solid wheel proxies replaced by real annular wheels")
+        _check(int(model.get_meta("tarvoka_g11_v5_sprocket_teeth",0)) == 16,
+            "toothed drive sprocket count")
+        var bearing := _find(model,"G11V5_CoronaGiroHorizontal") as MeshInstance3D
+        _check(bearing != null and bearing.mesh is ArrayMesh,
+            "rotating turret uses a horizontal 3D bearing ring")
+        if bearing != null and bearing.mesh != null:
+            var bounds: AABB = bearing.mesh.get_aabb()
+            _check(bounds.size.y < bounds.size.x*0.2,
+                "bearing ring is correctly horizontal, not sideways")
         _check(int(model.get_meta("tarvoka_g11_fastener_count",0)) == 28,
             "maintenance fasteners registered")
         var fasteners: MultiMeshInstance3D = _find(model,
@@ -103,6 +117,32 @@ func _run() -> void:
             for axle in range(6):
                 _check(_find(model,"G11_RuedaPivot_%d_%d" % [side,axle]) != null,
                     "12 articulated roadwheel pivots")
+        for side in [-1,1]:
+            _check(_find(model,"G11V5_PinionTrasero_%d" % side) != null,
+                "toothed rear sprocket each track")
+            _check(_find(model,"G11V5_TensorDelantero_%d" % side) != null,
+                "toothed front tension roller each track")
+            for axle in range(6):
+                var wheel: MeshInstance3D = _find(model,
+                    "G11V5_LlantaEsculpida_%d_%d" % [side,axle]) as MeshInstance3D
+                _check(wheel != null and wheel.mesh is ArrayMesh,
+                    "actual sculpted annular roadwheel side %d axle %d" % [side,axle])
+                if wheel != null and wheel.mesh is ArrayMesh:
+                    _check(wheel.mesh.get_surface_count() == 2,
+                        "rubber tire profile and recessed metal rim are distinct")
+                var bolts: MultiMeshInstance3D = _find(model,
+                    "G11V5_PernosRueda_%d_%d" % [side,axle]) as MultiMeshInstance3D
+                _check(bolts != null and bolts.multimesh != null,
+                    "wheel hub bolts are genuine instanced 3D geometry")
+                if bolts != null and bolts.multimesh != null:
+                    _check(bolts.multimesh.instance_count == 6,
+                        "six nuts per wheel, one GPU batch")
+                _check(_find(model,"G11_Rueda_%d_%d" % [side,axle]) == null,
+                    "old blockout roadwheel disk removed")
+                _check(_find(model,"G11V5_Amortiguador_%d_%d" % [side,axle]) != null,
+                    "active suspension strut side %d axle %d" % [side,axle])
+        _check(_find(model,"G11V5_TapaEscotilla") != null,
+            "round roof access hatch with actual thickness")
         var paint := _find(model,"G11_PinturaLateral_1_0") as MeshInstance3D
         _check(paint != null and paint.material_override != null,
             "faction color on actual mesh")
@@ -115,10 +155,19 @@ func _run() -> void:
             "rear enclosed service module has actual depth")
         var hydraulic_rest: float = _find(model,
             "G11V4_VastagoHidraulico_1").scale.y
+        var shock_rest: float = _find(model,
+            "G11V5_Amortiguador_1_0").scale.y
         var start: Vector3 = model.position
         var inst: MultiMeshInstance3D = _find(model,
             "G11V2_OrugaAnimada_1") as MultiMeshInstance3D
         var at_rest: Transform3D = inst.multimesh.get_instance_transform(0)
+        _check(Models.pose_model("mlrs",model,"move",0.125),
+            "animated roadwheel suspension and drive sprocket")
+        _check(absf(_find(model,"G11V5_Amortiguador_1_0").scale.y
+            -shock_rest) > 0.004,
+            "telescopic suspension follows moving wheel pivots")
+        _check(absf(_find(model,"G11V5_PinionTrasero_1").rotation_degrees.x
+            -90.0) < 0.1,"drive sprocket rotates synchronously with tracks")
         _check(Models.pose_model("mlrs",model,"move",0.25),"moving tracks")
         var while_moving: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(at_rest.origin.distance_to(while_moving.origin) > 0.05,
@@ -160,6 +209,10 @@ func _run() -> void:
             "tread links return to initial position")
         _check(absf(_find(model,"G11V4_VastagoHidraulico_1").scale.y
             -hydraulic_rest) < 0.002,"hydraulic pistons restore after animation")
+        _check(absf(_find(model,"G11V5_Amortiguador_1_0").scale.y
+            -shock_rest) < 0.002,"suspension returns to exact rest length")
+        _check(absf(_find(model,"G11V5_PinionTrasero_1").rotation_degrees.x)
+            < 0.002,"drive sprocket restores original orientation")
         _check(model.position.distance_to(start) < 0.001,
             "restore starting model transform")
         _check(not _find(model,"G11_ImpactoExplosivo").visible,
@@ -170,5 +223,5 @@ func _run() -> void:
         push_error("G11 3D QA FAILED (%d checks)" % failed)
         quit(1)
         return
-    print("PASS G11 3D: V4 genuine 12 hollow bore tubes, articulated dual pistons, closed rear details, 8 factions, moving tracks, hits and damage")
+    print("PASS G11 3D: V5 sculpted 12 annular wheels, 16-tooth rear sprockets, active suspension, horizontal bearing, hollow launch tubes, 8 factions and damage")
     quit(0)
