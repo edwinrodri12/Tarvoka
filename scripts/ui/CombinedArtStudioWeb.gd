@@ -2190,17 +2190,22 @@ func _update_camera() -> void:
 
 func _update_details() -> void:
     if _role=="naval_base" and model_root!=null:
+        var naval_version: String="V1"
+        for spec in [
+            [NavalDetailV2.STAGE_NAME,"V2"],
+            [NavalBerthsV3.STAGE_NAME,"V3"],
+            [NavalMarineV4.STAGE_NAME,"V4"],
+            [NavalYardV5.STAGE_NAME,"V5"],
+            [NavalNightV6.STAGE_NAME,"V6"],
+            [NavalBoardingV7.STAGE_NAME,"V7"],
+            [NavalFendersV8.STAGE_NAME,"V8"],
+            [NavalSculptV9.STAGE_NAME,"V9"],
+            [NavalMooringV10.STAGE_NAME,"V10"]
+        ]:
+            if model_root.has_node(str(spec[0])):
+                naval_version=str(spec[1])
         detail_label.text="Base Naval %s · Nivel %d · %d mallas reales" % [
-            "V10" if model_root.has_node(NavalMooringV10.STAGE_NAME) else (
-                "V9" if model_root.has_node(NavalSculptV9.STAGE_NAME) else (
-                "V8" if model_root.has_node(NavalFendersV8.STAGE_NAME) else (
-                "V7" if model_root.has_node(NavalBoardingV7.STAGE_NAME) else (
-                "V6" if model_root.has_node(NavalNightV6.STAGE_NAME) else (
-                "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
-                "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
-                "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))))))),
-            int(model_root.get_meta("visual_level",1)),
+            naval_version,int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
         status_label.text="%s · %s · defensas y amarres alineados 3D" % [
             str(VisualStyle.FACTIONS[_faction]["name"]),
