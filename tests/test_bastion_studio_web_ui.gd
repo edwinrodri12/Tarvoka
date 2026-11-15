@@ -42,6 +42,12 @@ func _run() -> void:
             "original synchronized automatic sound is built")
         _check(bool(model.get_meta("tarvoka_apc_damage_v7",false)),
             "physical V7 staged damage geometry is built")
+        _check(bool(model.get_meta("tarvoka_apc_rear_design_v10",false)),
+            "V10 actual rear armor, passenger room and hydraulic actuators built")
+        _check(model.find_child("P06V10_Hidraulico_-1",true,false)!=null,
+            "left mechanical ram belongs to real 3D cabin")
+        _check(model.find_child("P06V10_Hidraulico_1",true,false)!=null,
+            "right mechanical ram belongs to real 3D cabin")
         _check(model.find_child("CincoAletasVentilacion",true,false) != null,
             "V6 physical front intake is present")
         _check(model.find_child("NuevePeldañosRampa",true,false) != null,
@@ -60,6 +66,8 @@ func _run() -> void:
         "V6 distress layers follow V3 stage")
     _check(int(model.get_meta("tarvoka_apc_damage_v7_stage",-1)) == 3,
         "V7 bent armor follows damage stage")
+    _check(int(model.get_meta("tarvoka_apc_rear_v10_stage",-1)) == 3,
+        "V10 rear assemblies respect physical damage")
     studio.call("_set_damage",0)
     _check(int(model.get_meta("tarvoka_apc_v6_stage",-1)) == 0,
         "V6 exterior recovers after repair")
@@ -70,9 +78,15 @@ func _run() -> void:
         "EstacionRemotaP06",true,false) as Node3D
     _check(turret != null and absf(turret.rotation_degrees.z)>10.0,
         "terminal wreck turret physically displaced")
+    var lamp: Node3D = model.find_child(
+        "P06V10_PilotoTrasero_1",true,false) as Node3D
+    _check(lamp!=null and not lamp.visible,
+        "rear taillamp disappears on a terminal wreck")
     studio.call("_set_damage",0)
     _check(turret != null and absf(turret.rotation_degrees.z)<0.001,
         "wrecked turret resets after repair")
+    _check(lamp!=null and lamp.visible,
+        "rear taillamp comes back after a full repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -82,9 +96,15 @@ func _run() -> void:
     studio.call("_toggle_p06_version")
     _check(model != null and not model.get_meta(
         "tarvoka_apc_v6_visible",true),"V3 comparison hides V6")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_rear_v10_visible",true),
+        "V3 comparison hides V10 fixed and moving hydraulic elements")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_rear_v10_visible",false),
+        "V10 returns after toggling back from V3")
     studio.call("_play","attack")
     studio.call("_process",0.45)
     var muzzle: Node3D = model.find_child(
@@ -163,8 +183,17 @@ func _run() -> void:
         "fleet can be removed without a duplicate scene")
     _check(model!=null and model.visible,
         "full sculpted V7 hero restored after fleet test")
+    studio.call("_view_p06_angle",180.0)
+    _check(absf(float(studio.get("_yaw"))-180.0)<0.01,
+        "posterior camera view rotates the actual V10 model")
     studio.call("_toggle_p06_ramp")
-    studio.call("_process",1.2)
+    studio.call("_process",0.56)
+    var piston: Node3D=model.find_child(
+        "P06V10_VastagoCromado_-1",true,false) as Node3D
+    var halfway: float=piston.scale.y if piston!=null else 0.0
+    _check(halfway>0.12,
+        "V10 rear hydraulic rod actually extends during UI playback")
+    studio.call("_process",0.64)
     _check(model != null and bool(model.get_meta(
         "tarvoka_apc_ramp_open",false)),"ramp opens from UI")
     studio.call("_toggle_p06_ramp")
@@ -176,5 +205,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V9 LIVE WEB STUDIO: near/mid/far LOD, 64 vehicles steering and firing, original synchronized audio, restored hero")
+    print("PASS BASTION V10 LIVE WEB STUDIO: sculpted rear boarding bay, dual hydraulics, rear-view controls, moving ramp and 8 factions")
     quit(0)
