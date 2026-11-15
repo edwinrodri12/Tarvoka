@@ -31,6 +31,48 @@ func _initialize() -> void:
         assert(Store.save(attacked["state"],PATH))
         print("PASS cross-process write")
         quit(0)
+    elif phase == "backup_write":
+        # Two successive saves must create a previous-state backup on disk.
+        var board: Array = []
+        for y in range(8):
+            var row: Array = []
+            for x in range(10):
+                row.append("plain")
+            board.append(row)
+        var units: Array = [
+            {"id":"a","faction":0,"pos":Vector2i(2,2),"hp":10,"attack":4,"defense":0,"cover":0,"move_points":3,"acted":false},
+            {"id":"b","faction":1,"pos":Vector2i(3,2),"hp":10,"attack":3,"defense":0,"cover":0,"move_points":3,"acted":false}
+        ]
+        var original: Dictionary = Session.start(units,board)
+        var attacked: Dictionary = Session.attack(original,"a","b")
+        assert(attacked.get("valid",false))
+        assert(Store.save(attacked["state"],PATH))
+        var advanced: Dictionary = Session.end_turn(attacked["state"])
+        assert(advanced.get("valid",false))
+        assert(Store.save(advanced["state"],PATH))
+        assert(FileAccess.file_exists(PATH + ".bak"))
+        # Simulate an interrupted/corrupted primary before a fresh process loads.
+        var file := FileAccess.open(PATH,FileAccess.WRITE)
+        assert(file != null)
+        file.store_string('{"version":999}')
+        file.close()
+        print("PASS cross-process backup_write")
+        quit(0)
+    elif phase == "backup_read":
+        var report: Dictionary = Store.load_report(PATH)
+        assert(bool(report.get("recovered",false)))
+        var state: Dictionary = report.get("state",{})
+        assert(not state.is_empty())
+        assert(int(state["faction"]) == 0)
+        assert(bool(state["units"][0]["acted"]))
+        assert(int(state["units"][1]["hp"]) < 10)
+        assert(not Session.attack(state,"a","b").get("valid",false))
+        for suffix in ["", ".bak", ".tmp"]:
+            var path: String = PATH + suffix
+            if FileAccess.file_exists(path):
+                assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK)
+        print("PASS cross-process backup_read")
+        quit(0)
     elif phase == "read":
         assert(FileAccess.file_exists(PATH))
         var report: Dictionary = Store.load_report(PATH)
@@ -51,5 +93,5 @@ func _initialize() -> void:
         print("PASS cross-process read")
         quit(0)
     else:
-        push_error("Specify --phase=write or --phase=read")
+        push_error("Specify --phase=write/read/backup_write/backup_read")
         quit(1)
