@@ -274,3 +274,30 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - CI del PR #419: **G11 native launcher sculpt QA aprobado**. Publicación web de V17 se valida separadamente desde la ejecución de Pages del commit de incorporación a `main`.
 
 **Siguiente prioridad artística:** revisión de lectura visual y materiales bajo iluminación diurna/nocturna; no considerar terminado el G11 ni iniciar las pruebas de estrés Android hasta que se aprueben los acabados.
+
+
+## V18 — reconstrucción de las orugas y eliminación de geometrías encimadas (15-nov-2026)
+
+**Integrada en `main` mediante [PR #424](https://github.com/edwinrodri12/Tarvoka/pull/424)**, conservando el desarrollo simultáneo de **Bastión P06 V22**. La rama preliminar #422 se cerró sin fusionar. Se trata de geometría auténtica en Godot 4.3, no de un boceto.
+
+**Problemas confirmados en el código de las versiones anteriores:**
+
+1. Las ruedas de los extremos quedaban demasiado cerca de los engranajes por sus centros en z=-1.19...+1.16 frente a engranajes ±1.04: el solapamiento era inevitable.
+2. Las llantas, bujes y remaches sobresalían por el lateral del caucho. Engranajes y tapas sobresalían en X.
+3. Persistían seis paneles V1 y seis placas de pintura V1 en el mismo lugar que el blindaje V2, además de una gran falda metálica que invadía la banda superior.
+4. El lado interior y exterior del caucho tenían distinta fase al muestrear las curvas, y el arco **posterior** estaba dibujado **hacia dentro** del vehículo en vez de rodear el engranaje por fuera. Este fue un defecto adicional identificado por el nuevo test nativo.
+5. La suspensión seguía usando una altura de reposo de 0.26 m después de reubicar los pivotes en 0.265 m; se corrigió su regreso exacto.
+
+**Ensamblaje verificado por Godot:**
+
+- En `G11FinishV2.gd`, `TRACK_HALF_LENGTH=1.34`, 46 zapatas por lado, ancho físico de zapata 0.282 m, largo de 0.135 m y espesor de 0.042 m. `_path_matched` dibuja ambas caras con una sola fase y ambos arcos doblan hacia el exterior.
+- En `G11Art3D.gd`, los seis pivotes por lado se distribuyen desde z=-0.875 hasta z=+0.875 en saltos de 0.35 m. Los engranajes en `G11TracksFactionV13.gd` quedan a ±1.34 m, con radio exterior 0.265 m y diez dientes. Las llantas reducen su radio a 0.165 m. La holgura proyectada entre rueda extrema y engranaje es **0.035 m**, y entre ruedas consecutivas **0.020 m**, antes de compresión dinámica.
+- Los perfiles de llanta, buje y pernos se reposicionan para quedar por dentro o a ras de la cara exterior del caucho en X, no por fuera. Los soportes/amortiguadores se montan detrás de la banda, no encima.
+- El módulo nuevo `G11TrackAssemblyV18.gd` elimina físicamente los 12 paneles/pinturas laterales antiguos, reutiliza las dos faldas de acero originales convertidas en guardabarros estrechos sobre el caucho y agrega cuatro pernos de fijación por lado en un MultiMesh. Distancia estática del guardabarros al punto más alto de la zapata ~0.033 m.
+- `G11VisualRig3D.gd` actualiza el movimiento de la suspensión a un recorrido visual de ±0.008 m y devuelve cada pivote a y=0.265 sin holguras residuales tras las animaciones.
+- `BastionStudioAdapter.gd` muestra la versión **G11 V18 orugas reconstruidas** con controles de acercamiento para ambas orugas, engranaje posterior, tensor delantero y marcha; mantiene la comparación limpio/desgaste V17. El flujo de Pages conserva los controles Bastión V22 y exige que G11 V18 permanezca visible.
+- `tests/test_g11_track_clearance_v18.gd` verifica con distancias reales la ausencia de solapamientos entre las 12 ruedas, ambos engranajes y las dos bandas, 46 zapatas por lado, trayectorias, salientes laterales, reparación y ocho pinturas. `tests/test_g11_track_clearance_v18_capture.gd` obtiene 16 imágenes renderizadas verdaderas de perfiles, piñones, marcha y daño.
+- Las pruebas antiguas de G11 V1/V11 dejaron de requerir las piezas V1 duplicadas eliminadas; ahora comprueban que el color continúe en los paneles V13 y que las zonas dañadas queden correctamente visibles. **QA G11 del PR #424: aprobada.**
+- Sin cambios en HP, potencia, costo, movimiento táctico, combustible, munición, poderes ni economía del videojuego.
+
+**Estado:** la geometría está integrada y pasó comprobaciones nativas. Revisar las nuevas 16 capturas y los cuatro acercamientos en el visor web antes de considerar esta apariencia definitiva. El G11 continúa en refinamiento; rendimiento Android se evaluará después.
