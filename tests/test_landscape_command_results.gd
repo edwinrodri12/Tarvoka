@@ -2,6 +2,7 @@ extends SceneTree
 
 const ResultsData = preload("res://scripts/ui/ResultsData.gd")
 const Prefs = preload("res://scripts/ui/DisplayPreferences.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -91,6 +92,31 @@ func _run() -> void:
     assert(menu.command_commander_strip.visible)
     menu.command_buttons["units"].pressed.emit()
     assert(menu.tabs.current_tab == 1)
+    assert(menu.army_filter_picker.item_count == 3)
+    assert(menu.army_row_nodes.size() == menu.army_roster_units.size())
+    assert(menu.army_stats_grid != null)
+    assert(menu.army_stat_cells.size() == 6)
+    menu._set_army_filter(1)
+    for soldier in menu.army_roster_units:
+        var uid: String = str(soldier.get("id",""))
+        assert(menu.army_row_nodes[uid].visible ==
+            not bool(soldier.get("acted",true)))
+    menu._set_army_filter(2)
+    for soldier in menu.army_roster_units:
+        var uid: String = str(soldier.get("id",""))
+        var damaged_or_alert: bool = (
+            int(soldier.get("hp",0)) <= 5 or
+            not Logistics.alert(soldier).is_empty())
+        assert(menu.army_row_nodes[uid].visible == damaged_or_alert)
+    menu._set_army_filter(0)
+    for uid in menu.army_row_nodes:
+        assert(menu.army_row_nodes[uid].visible)
+    menu.reflow_for_size(Vector2(780,360))
+    assert(menu.army_stats_grid.columns == 1)
+    assert(menu.army_filter_picker.custom_minimum_size.y >= 44)
+    menu.reflow_for_size(Vector2(1600,900))
+    assert(menu.army_stats_grid.columns == 2)
+    assert(main.board.state == state_before)
     menu.command_buttons["settings"].pressed.emit()
     assert(menu.tabs.current_tab == 3)
     menu.tabs.current_tab = 0
@@ -98,6 +124,38 @@ func _run() -> void:
     assert(menu.command_confirm_exit.visible)
     assert(main.board.state == state_before)
     menu.command_confirm_exit.hide()
+    assert(main.board.state == state_before)
+
+    # Radar V12 reads the authorized, fog-safe view model and keeps the same
+    # tactical actions. Compact phone navigation never commits board orders.
+    main._open_objectives_radar()
+    var radar: Control = main.objectives_panel
+    assert(radar.visible and not menu.visible)
+    assert(radar.faction_mark.texture is AtlasTexture)
+    assert(radar.tabs.get_tab_count() == 3)
+    assert(radar.metric_labels.size() == 3)
+    assert(radar.mission_label.text == str(radar._data.get("objective","")))
+    assert(radar.metric_labels["cities"].text.contains(
+        str(radar._data.get("owned_cities",0))))
+    assert(radar.metric_labels["bases"].text.contains(
+        str(radar._data.get("owned_bases",0))))
+    assert(radar.metric_labels["alerts"].text.contains(
+        str(radar._priorities.get("total",0))))
+    radar.reflow_for_size(Vector2(915,412))
+    assert(radar.radar_compact)
+    assert(radar.close_button.custom_minimum_size.y >= 44)
+    assert(not radar.summary_label.visible)
+    radar.reflow_for_size(Vector2(780,360))
+    assert(radar.radar_compact)
+    assert(radar.close_button.custom_minimum_size.y >= 44)
+    radar.reflow_for_size(Vector2(1600,900))
+    assert(not radar.radar_compact)
+    assert(radar.summary_label.visible)
+    radar.open_alerts_with_state(state_before,0,false)
+    assert(radar.tabs.current_tab == 2)
+    assert(main.board.state == state_before)
+    radar.close_requested.emit()
+    assert(not radar.visible)
     assert(main.board.state == state_before)
 
     var terminal: Dictionary = state_before.duplicate(true)
