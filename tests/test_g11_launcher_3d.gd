@@ -125,14 +125,18 @@ func _run() -> void:
             "track links actually traverse the contour while moving")
         _check(absf(_find(model,"G11_RuedaPivot_1_0").rotation_degrees.x) > 1.0,
             "roadwheels rotate during movement")
+        # Check hydraulic travel during elevation BEFORE launch recoil; the
+        # recoil briefly returns the actuator toward its initial length.
+        _check(Models.pose_model("mlrs",model,"attack",0.24,Vector2i(1,0)),
+            "launcher elevates and both pistons telescope")
+        _check(absf(_find(model,"G11V4_VastagoHidraulico_1").scale.y
+            -hydraulic_rest) > 0.01,"hydraulic pistons extend with live launcher")
         _check(Models.pose_model("mlrs",model,"attack",0.35,Vector2i(1,0)),
             "launcher aims and fires")
         _check(_find(model,"G11_GiroPlataforma").rotation_degrees.y < -20.0,
             "azimuth rotation")
         _check(_find(model,"G11_ElevacionLanzador").rotation_degrees.x > 20.0,
             "launch elevation")
-        _check(absf(_find(model,"G11V4_VastagoHidraulico_1").scale.y
-            -hydraulic_rest) > 0.01,"hydraulic pistons extend with live launcher")
         _check(_find(model,"G11_EfectoFogonazo").visible,"rocket muzzle flash")
         _check(Models.pose_model("mlrs",model,"hit_bullet",0.15),
             "small-arms impact reaction")
