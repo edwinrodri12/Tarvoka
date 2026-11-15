@@ -678,7 +678,7 @@ jobs:
           grep -q 'APC P06' build/web/index.html
           grep -q 'APC P06' build/web/tanque/index.html
           grep -q 'TANQUE G09 V32' build/web/apc/index.html
-          grep -q 'VOLVER AL ESTUDIO 3D' build/web/apc/index.html
+          grep -q 'BASTIÓN P06 V7 · VERSIÓN ACTUAL' build/web/apc/index.html
           touch build/web/.nojekyll
 
       - name: Upload GitHub Pages web site
