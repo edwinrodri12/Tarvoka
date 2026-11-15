@@ -64,6 +64,14 @@ func _run() -> void:
             "V19 physically unified wheelwell and skirt welds installed")
         _check(bool(model.get_meta("tarvoka_apc_microdetail_v20",false)),
             "V20 true 3D weld beads, hex bolts and washers installed")
+        _check(bool(model.get_meta("tarvoka_apc_materials_v21",false)),
+            "V21 real triplanar PBR material library applied to 3D sculpt")
+        var v21paint: MeshInstance3D=model.find_child(
+            "P06V19_ChaflanSuperior_1_0",true,false) as MeshInstance3D
+        var v21material: StandardMaterial3D=v21paint.material_override as StandardMaterial3D
+        _check(v21material!=null and v21material.uv1_triplanar
+            and v21material.albedo_texture is ImageTexture,
+            "factory paint has true texture/roughness maps on geometry")
         _check(model.find_child("P06V20_PernoFaldon_1_0_0_Hex",true,false)
             is MeshInstance3D,
             "latest three-dimensional hex-head fastener actually exists")
@@ -184,6 +192,8 @@ func _run() -> void:
         "V19 continuous seams fracture coherently at critical damage")
     _check(int(model.get_meta("tarvoka_apc_v20_stage",-1))==3,
         "V20 micro-welds and clean bolts fracture at critical damage")
+    _check(int(model.get_meta("tarvoka_apc_v21_stage",-1))==3,
+        "V21 exposed steel and soot follow critical damage state")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -293,6 +303,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v20_visible",true),
         "V3 comparison hides latest native V20 bolt and weld finish")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v21_visible",true),
+        "V3 comparison restores original paint under V21 finishes")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -329,6 +342,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v20_visible",false),
         "V20 bolt-and-weld finish returns after historical comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v21_visible",false),
+        "V21 textured PBR returns after historical comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -379,6 +395,22 @@ func _run() -> void:
     _check(absf(float(studio.get("_yaw"))-125.0)<0.001 and
         int(model.get_meta("tarvoka_apc_v20_stage",-1))==3,
         "V20 critical damage reveals fractured armor and displaced parts")
+    studio.call("_set_damage",0)
+    studio.call("_inspect_p06_paint_v21")
+    _check(absf(float(studio.get("_yaw"))-86.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v21_stage",-1))==0,
+        "V21 factory paint viewer chooses clean real model")
+    studio.call("_inspect_p06_rubber_v21")
+    _check(absf(float(studio.get("_yaw"))+77.0)<0.001,
+        "V21 opposite rubber/steel camera")
+    studio.call("_inspect_p06_wear_v21")
+    _check(absf(float(studio.get("_yaw"))-92.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v21_stage",-1))==1,
+        "V21 worn paint preview uses stage one")
+    studio.call("_inspect_p06_burnt_v21")
+    _check(absf(float(studio.get("_yaw"))-114.0)<0.001 and
+        int(model.get_meta("tarvoka_apc_v21_stage",-1))==3,
+        "V21 charred metal preview uses stage three")
     studio.call("_set_damage",0)
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
@@ -515,5 +547,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V20 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V21 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
