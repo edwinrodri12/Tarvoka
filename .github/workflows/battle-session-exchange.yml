@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for phase in write read backup_write backup_read missing_primary_write missing_primary_read; do
+          for phase in write read backup_write backup_read missing_primary_write missing_primary_read missing_primary_write resume_write resume_read; do
             timeout --signal=TERM --kill-after=5s 90s \
               /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
               --script res://tests/test_session_cross_process.gd -- --phase="$phase" \
