@@ -25,7 +25,8 @@ static func _root(model: Node3D) -> Node3D:
         return null
     return model.find_child("APC_P06_V1_Blindado6x6",true,false) as Node3D
 
-static func _wheels(model: Node3D,phase: float) -> void:
+static func _wheels(model: Node3D,phase: float,
+        steer: float=0.0,travel_t: float=0.0) -> void:
     var hull: Node3D=_root(model)
     if hull==null:
         return
@@ -35,6 +36,14 @@ static func _wheels(model: Node3D,phase: float) -> void:
                 "RuedaMotorizadaP06_%d_%d" % [side,i],false,false) as Node3D
             if wheel!=null:
                 wheel.rotation_degrees.x=phase*WHEEL_TRAVEL*57.29578
+                # Only the steering axle pivots; all 6 wheels rotate. The
+                # tires, hub bolts and tread batches are wheel descendants.
+                wheel.rotation_degrees.y=steer if i==0 else 0.0
+                var oscillation: float=sin(
+                    TAU*(travel_t*2.15+float(i)*0.17+
+                        (0.0 if side<0 else 0.13)))
+                wheel.position.y=0.43-0.010*maxf(0.0,oscillation)*
+                    sin(PI*travel_t)
 
 static func pose(model: Node3D,kind: String,t: float,
         yaw_degrees: float=35.0) -> bool:
@@ -63,7 +72,7 @@ static func pose(model: Node3D,kind: String,t: float,
         Burst.restore(model)
 
     var progress: float=float(model.get_meta(PHASE,0.0))
-    if kind=="move":
+    if kind in ["move","move_turn"]:
         if not bool(model.get_meta(MOVE_ACTIVE,false)):
             model.set_meta(MOVE_START,progress)
             model.set_meta(MOVE_ACTIVE,true)
@@ -71,10 +80,14 @@ static func pose(model: Node3D,kind: String,t: float,
         model.set_meta(PHASE,progress)
         var envelope: float=sin(PI*t)
         model.position.y-=0.020*absf(sin(TAU*t*2.0))*envelope
-        model.rotation_degrees.z=0.36*sin(TAU*t*2.0)*envelope
+        model.rotation_degrees.z=(
+            -0.82*envelope if kind=="move_turn" else
+            0.36*sin(TAU*t*2.0)*envelope)
     else:
         model.set_meta(MOVE_ACTIVE,false)
-    _wheels(model,progress)
+    _wheels(model,progress,
+        12.0*sin(PI*t) if kind=="move_turn" else 0.0,
+        t if kind in ["move","move_turn"] else 0.0)
 
     match kind:
         "turn_turret":
