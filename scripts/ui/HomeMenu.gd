@@ -7,6 +7,7 @@ signal skirmish_requested
 signal arsenal_requested
 signal settings_requested
 signal saves_requested
+signal credits_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
@@ -28,7 +29,6 @@ var _navigation: VBoxContainer
 var _header_title: Label
 var _continue_button: Button
 var _exit_dialog: ConfirmationDialog
-var _credits_dialog: AcceptDialog
 var _all_menu_buttons: Array[Button] = []
 
 const OFFICIAL_ICON_HD := "res://assets/branding/tarvoka_emblem_fictional_planet_512.webp"
@@ -241,10 +241,6 @@ func _ready() -> void:
     _exit_dialog.ok_button_text = "Salir"
     _exit_dialog.confirmed.connect(func(): get_tree().quit())
     add_child(_exit_dialog)
-    _credits_dialog = AcceptDialog.new()
-    _credits_dialog.title = "TARVOKA · Créditos"
-    _credits_dialog.dialog_text = "TARVOKA · Estrategia militar por turnos.\nDesarrollo independiente en Godot 4.\nArte y facciones originales de TARVOKA.\nVersión de desarrollo, sin lanzamiento comercial."
-    add_child(_credits_dialog)
     get_viewport().size_changed.connect(_reflow)
     call_deferred("_reflow")
     hide()
@@ -296,4 +292,4 @@ func _ask_exit() -> void:
     _exit_dialog.popup_centered()
 
 func _open_credits() -> void:
-    _credits_dialog.popup_centered()
+    credits_requested.emit()
