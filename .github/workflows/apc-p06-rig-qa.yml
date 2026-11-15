@@ -31,8 +31,13 @@ jobs:
         run: |
           set -euo pipefail
           for entry in test_bastion_visual_damage test_bastion_visual_rig; do
+            # Use Mesa software OpenGL via Xvfb instead of the null headless
+            # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
-              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              xvfb-run -a -s '-screen 0 1280x720x24' \
+              env LIBGL_ALWAYS_SOFTWARE=1 \
+              /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --rendering-method gl_compatibility --path . \
               --script "res://tests/${entry}.gd" 2>&1 | tee "/tmp/${entry}.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${entry}.log"; then
               echo "P06 visual regression: ${entry}"; exit 1
