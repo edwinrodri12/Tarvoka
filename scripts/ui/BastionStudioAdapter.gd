@@ -22,6 +22,7 @@ const P06WheelwellV18 = preload("res://scripts/ui/APCWheelwellV18.gd")
 const P06FlankV19 = preload("res://scripts/ui/APCUnifiedFlankV19.gd")
 const P06MicroV20 = preload("res://scripts/ui/APCMicrodetailV20.gd")
 const P06MaterialV21 = preload("res://scripts/ui/APCMaterialFinishV21.gd")
+const P06WeatherV22 = preload("res://scripts/ui/APCWeatherFinishV22.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -37,6 +38,9 @@ var p06_hint: Label
 var p06_version_button: Button
 var p06_ramp_button: Button
 var _p06_show_v5: bool = true
+var _p06_weather_v22: String = "clear"
+var _p06_light_v22: int = 0
+var _p06_night_fill_v22: OmniLight3D
 var _p06_quality_verified: bool = false
 var _p06_fleet: Node3D
 var _p06_fleet_count: int = 0
@@ -59,12 +63,13 @@ func _ready() -> void:
     super._ready()
     _install_p06_controls()
     _install_g11_controls()
+    _install_p06_lighting_v22()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V17 materiales y desgaste PBR")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V21 pintura, acero y caucho · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V22 luz y clima PBR · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -72,11 +77,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V21_MaterialesPBR"
+    p06_controls.name = "BastionP06_V22_LuzYClimaPBR"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V21 · SUPERFICIES PBR Y DESGASTE",14)
+        "BASTIÓN P06 · V22 · LUZ Y CLIMA SOBRE PBR",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -112,6 +117,12 @@ func _install_p06_controls() -> void:
         "V21: caucho y metal",_inspect_p06_rubber_v21)
     _add_paired(p06_controls,"V21: pintura desgastada",_inspect_p06_wear_v21,
         "V21: metal quemado",_inspect_p06_burnt_v21)
+    _add_paired(p06_controls,"V22: clima despejado",func(): _set_p06_weather_v22("clear"),
+        "V22: lluvia húmeda",func(): _set_p06_weather_v22("rain"))
+    _add_paired(p06_controls,"V22: nieve y escarcha",func(): _set_p06_weather_v22("snow"),
+        "V22: luz de día",func(): _set_p06_light_v22(0))
+    _add_paired(p06_controls,"V22: atardecer",func(): _set_p06_light_v22(1),
+        "V22: noche",func(): _set_p06_light_v22(2))
     _add_paired(p06_controls,"Vista inferior completa",_inspect_p06_underside,
         "Acercamiento a transmisión",_inspect_p06_transfer)
     _add_paired(p06_controls,"Vista 3/4 trasera",func(): _view_p06_angle(145.0),
@@ -120,14 +131,14 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V21",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V22",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
         "Prueba 32 vehículos",func(): _show_p06_fleet(32))
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
-        "Volver al Bastión V21",_hide_p06_fleet)
+        "Volver al Bastión V22",_hide_p06_fleet)
     _add_paired(p06_controls,
         "LOD cerca",func(): _set_p06_fleet_quality(0),
         "LOD medio",func(): _set_p06_fleet_quality(1))
@@ -138,9 +149,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V21: pintura de facción con grano PBR triplanar, acero pulido, caucho "
-        + "mate y desconchados con hollín según el daño. Sin alterar "
-        + "blindaje, movimiento 6×6, ni la geometría aprobada.",12)
+        "V22: lluvia con reflejos y pintura húmeda, nieve con escarcha mate y "
+        + "tres iluminaciones reales: día, atardecer y noche. "
+        + "Se conserva la pintura V21 y la respuesta a cinco daños.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -344,7 +355,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V21")
+                if _p06_show_v5 else "Volver al acabado completo V22")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -400,6 +411,7 @@ func _display_role(role: String) -> void:
             P06FlankV19.FLAG,false)) and bool(model_root.get_meta(
             P06MicroV20.FLAG,false)) and bool(model_root.get_meta(
             P06MaterialV21.FLAG,false)) and bool(model_root.get_meta(
+            P06WeatherV22.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -419,8 +431,10 @@ func _display_role(role: String) -> void:
             P06FlankV19.set_stage(model_root,0)
             P06MicroV20.set_stage(model_root,0)
             P06MaterialV21.set_stage(model_root,0)
+            P06WeatherV22.set_stage(model_root,0)
+            P06WeatherV22.set_weather(model_root,_p06_weather_v22)
         else:
-            push_error("TARVOKA P06 V21 PBR materials were not built; do not label it final")
+            push_error("TARVOKA P06 V22 climate materials were not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -432,6 +446,12 @@ func _display_role(role: String) -> void:
             model_root.rotation_degrees.y = _yaw
             _update_camera()
         _g11_animation = ""
+    if role=="apc":
+        _apply_p06_lighting_v22()
+    else:
+        if _p06_night_fill_v22!=null:
+            _p06_night_fill_v22.visible=false
+        _apply_hq_lighting(_hq_light_preset)
     _sync_p06_controls()
     _update_details()
 
@@ -508,6 +528,7 @@ func _set_damage(stage: int) -> void:
         P06FlankV19.set_stage(model_root,stage)
         P06MicroV20.set_stage(model_root,stage)
         P06MaterialV21.set_stage(model_root,stage)
+        P06WeatherV22.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -532,6 +553,7 @@ func _toggle_p06_version() -> void:
     P06FlankV19.set_enabled(model_root,_p06_show_v5)
     P06MicroV20.set_enabled(model_root,_p06_show_v5)
     P06MaterialV21.set_enabled(model_root,_p06_show_v5)
+    P06WeatherV22.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -685,6 +707,84 @@ func _inspect_p06_burnt_v21() -> void:
     _view_p06_angle(114.0)
     _zoom=2.01
     _update_camera()
+
+func _install_p06_lighting_v22() -> void:
+    if preview==null or _p06_night_fill_v22!=null:
+        return
+    _p06_night_fill_v22=OmniLight3D.new()
+    _p06_night_fill_v22.name="P06V22_RefuerzoDeLecturaNocturna"
+    _p06_night_fill_v22.position=Vector3(2.6,3.2,-2.1)
+    _p06_night_fill_v22.omni_range=8.2
+    _p06_night_fill_v22.light_energy=1.1
+    _p06_night_fill_v22.light_color=Color("#a4c8ea")
+    _p06_night_fill_v22.shadow_enabled=false
+    _p06_night_fill_v22.visible=false
+    preview.add_child(_p06_night_fill_v22)
+
+func _set_p06_weather_v22(mode: String) -> void:
+    if _role!="apc" or not mode in P06WeatherV22.WEATHERS:
+        return
+    _p06_weather_v22=mode
+    if model_root!=null:
+        P06WeatherV22.set_weather(model_root,mode)
+    _apply_p06_lighting_v22()
+    _update_details()
+
+func _set_p06_light_v22(preset: int) -> void:
+    if _role!="apc":
+        return
+    _p06_light_v22=clampi(preset,0,2)
+    _apply_p06_lighting_v22()
+    _update_details()
+
+func _apply_p06_lighting_v22() -> void:
+    if _role!="apc" or hq_key_light==null or hq_fill_light==null:
+        return
+    # Dedicated studio lighting, not the weather rules in the battle map.
+    var palette: Array[Color]=[
+        Color("#fff2de"),Color("#ffb675"),Color("#b4cbeb")]
+    var ambient: Array[Color]=[
+        Color("#c8d9e8"),Color("#dfae92"),Color("#a1bbd8")]
+    var key: Array[float]=[1.60,1.13,0.43]
+    var fill: Array[float]=[0.74,0.53,0.31]
+    var sky: Array[Color]=[
+        Color("#253945"),Color("#3d3037"),Color("#101724")]
+    var n: int=clampi(_p06_light_v22,0,2)
+    var cloud: float=1.0
+    if _p06_weather_v22=="rain":
+        cloud=0.61
+    elif _p06_weather_v22=="snow":
+        cloud=0.77
+    hq_key_light.rotation_degrees=Vector3(
+        [-49.0,-17.0,-27.0][n],-32.0,0)
+    hq_key_light.light_color=palette[n]
+    hq_key_light.light_energy=key[n]*cloud
+    hq_key_light.shadow_enabled=true
+    hq_fill_light.light_color=ambient[n]
+    hq_fill_light.light_energy=fill[n]*(
+        0.82 if _p06_weather_v22=="rain" else 1.0)
+    if hq_environment!=null and hq_environment.environment!=null:
+        var scene: Environment=hq_environment.environment
+        scene.background_color=sky[n]
+        scene.ambient_light_color=ambient[n]
+        scene.ambient_light_energy=(
+            0.78 if n==0 else (0.59 if n==1 else 0.46))
+        if _p06_weather_v22=="rain":
+            scene.background_color=scene.background_color.lerp(
+                Color("#253645"),0.67)
+            scene.ambient_light_color=scene.ambient_light_color.lerp(
+                Color("#97b3ca"),0.48)
+        elif _p06_weather_v22=="snow":
+            scene.background_color=scene.background_color.lerp(
+                Color("#8499ab"),0.48)
+            scene.ambient_light_color=scene.ambient_light_color.lerp(
+                Color("#dae5f0"),0.54)
+    for lamp in hq_night_lamps:
+        lamp.visible=false
+    if _p06_night_fill_v22!=null:
+        _p06_night_fill_v22.visible=(n==2)
+        _p06_night_fill_v22.light_energy=(
+            0.96 if _p06_weather_v22=="clear" else 1.16)
 
 func _inspect_p06_turret() -> void:
     if _role!="apc":
@@ -907,10 +1007,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V21 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V22 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V21 cargado" if _p06_quality_verified else
+        "acabado V22 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
