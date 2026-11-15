@@ -1,0 +1,38 @@
+name: TARVOKA balance audit phase 01
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_balance_phase01_economy_combat.gd"
+      - "BALANCE_AUDIT_PHASE_01_20261115.md"
+      - "scripts/core/**"
+      - ".github/workflows/balance-audit-phase01.yml"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3 headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Execute economy and combat baseline (no balance mutations)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_balance_phase01_economy_combat.gd \
+            2>&1 | tee /tmp/tarvoka-balance-phase01.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-balance-phase01.log; then
+            echo 'Phase 01 balance baseline failed'; exit 1
+          fi
+          grep -Fq 'PASS balance phase 01:' /tmp/tarvoka-balance-phase01.log
