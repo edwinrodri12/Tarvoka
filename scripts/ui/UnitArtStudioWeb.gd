@@ -1214,6 +1214,13 @@ func _set_apc_damage(stage: int) -> void:
             not model_root.get_meta("tarvoka_apc_finish_v3",false)):
         return
     _apc_damage_stage=clampi(stage,0,4)
+    if _apc_damage_stage==4:
+        # Studio visualization follows the game's lethal-cargo rule:
+        # no ghost passengers may remain inside a destroyed P06.
+        _stop_animation()
+        APCBoardingV4.set_occupants(model_root,0)
+        model_root.set_meta("tarvoka_apc_ramp_open",false)
+        APCBoardingV4.restore(model_root)
     if APCFinishV3.apply_stage(model_root,_apc_damage_stage):
         apc_damage_button.text="APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
         _update_details()
@@ -1240,6 +1247,9 @@ func _on_faction(index: int) -> void:
     _faction = index
     if _role=="apc" and model_root!=null:
         Models.apply_faction_palette(model_root,index)
+        # Repaint the shared original infantry uniform with the same 8
+        # faction identities; the 3D P06 passenger stays inside the vehicle.
+        APCBoardingV4.recolor(model_root,index)
     if _role == "tank" and model_root != null:
         var clay_was_on: bool = ClayV19.is_enabled(model_root)
         if clay_was_on:
