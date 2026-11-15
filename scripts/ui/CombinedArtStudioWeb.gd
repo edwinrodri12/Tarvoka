@@ -1202,6 +1202,14 @@ func _display_naval_base() -> void:
                                                     naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
                                                 if not ok_v9:
                                                     push_error("Base Naval V9: fallaron las defensas 3D de caucho PBR")
+                                                elif naval_detail_v10_toggle.button_pressed:
+                                                    var ok_v10: bool=NavalMooringV10.apply(model_root,
+                                                        naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
+                                                    if not ok_v10:
+                                                        push_error("Base Naval V10: anclajes no alineados con bolardos")
+                                                    else:
+                                                        NavalMooringV10.set_night(model_root,
+                                                            naval_night_v6_toggle.button_pressed)
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2141,7 +2149,8 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role=="naval_base":
         if camera!=null:
-            camera.size=(9.4 if _naval_camera_view==4 else 20.9)/maxf(0.35,_zoom)
+            camera.size=(8.4 if _naval_camera_view==5 else
+                9.4 if _naval_camera_view==4 else 20.9)/maxf(0.35,_zoom)
         if model_root!=null and model_root.has_node(NavalNightV6.STAGE_NAME):
             NavalNightV6.set_detail(model_root,_zoom>=0.85)
         if model_root!=null and model_root.has_node(NavalBoardingV7.STAGE_NAME):
@@ -2150,6 +2159,8 @@ func _update_camera() -> void:
             NavalFendersV8.set_detail(model_root,_zoom>=0.85)
         if model_root!=null and model_root.has_node(NavalSculptV9.STAGE_NAME):
             NavalSculptV9.set_detail(model_root,_zoom>=0.85)
+        if model_root!=null and model_root.has_node(NavalMooringV10.STAGE_NAME):
+            NavalMooringV10.set_detail(model_root,_zoom>=0.85)
         return
     if _role == "airbase":
         if camera != null:
@@ -2180,17 +2191,18 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="naval_base" and model_root!=null:
         detail_label.text="Base Naval %s · Nivel %d · %d mallas reales" % [
-            "V9" if model_root.has_node(NavalSculptV9.STAGE_NAME) else (
+            "V10" if model_root.has_node(NavalMooringV10.STAGE_NAME) else (
+                "V9" if model_root.has_node(NavalSculptV9.STAGE_NAME) else (
                 "V8" if model_root.has_node(NavalFendersV8.STAGE_NAME) else (
                 "V7" if model_root.has_node(NavalBoardingV7.STAGE_NAME) else (
                 "V6" if model_root.has_node(NavalNightV6.STAGE_NAME) else (
                 "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
                 "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
                 "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))))),
+                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))))),)
             int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
-        status_label.text="%s · %s · defensas esculpidas y caucho PBR 3D" % [
+        status_label.text="%s · %s · defensas y amarres alineados 3D" % [
             str(VisualStyle.FACTIONS[_faction]["name"]),
             str(NavalBaseV1.DAMAGE_STAGES[int(model_root.get_meta(
                 "visual_damage_stage",0))])]
