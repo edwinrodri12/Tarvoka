@@ -1306,7 +1306,7 @@ func _update_apc_stress(delta: float) -> void:
             " + 8 G09 + 8 HQ" if _apc_mixed_enabled else "")
         var data: Dictionary=_apc_perf.report()
         apc_stress_label.text=(
-            "%d APC%s · %.0f FPS · p10 %.0f · %.0f dibujos · RAM pico %.0f MiB · %s"
+            "%d APC%s · %.0f FPS · p10 %.0f · %.0f dibujos · memoria Godot %.0f MiB · %s"
             % [_apc_stress_count,scenario,Engine.get_frames_per_second(),
                 float(data["fps_p10"]),draws,float(data["memory_mib_peak"]),
                 "LOD TÁCTICO" if _apc_tactical_lod else "DETALLE COMPLETO"])
