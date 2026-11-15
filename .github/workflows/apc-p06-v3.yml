@@ -10,6 +10,9 @@ on:
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
       - "tests/test_apc_p06_studio_stress.gd"
+      - "tests/test_mixed_eight_faction_art_stress.gd"
+      - "scripts/ui/Headquarters*.gd"
+      - "scripts/ui/TankBattleScenarioV26.gd"
       - "tests/export_apc_p06_v3_glb.gd"
       - ".github/workflows/apc-p06-v3.yml"
   pull_request:
@@ -20,6 +23,9 @@ on:
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
       - "tests/test_apc_p06_studio_stress.gd"
+      - "tests/test_mixed_eight_faction_art_stress.gd"
+      - "scripts/ui/Headquarters*.gd"
+      - "scripts/ui/TankBattleScenarioV26.gd"
       - "tests/export_apc_p06_v3_glb.gd"
   workflow_dispatch:
 permissions:
@@ -103,6 +109,36 @@ jobs:
             --script res://tests/test_apc_p06_studio_stress.gd 2>&1 | tee /tmp/apc-v3-studio-benchmark.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-studio-benchmark.log; then exit 1; fi
           grep -q 'PASS APC P06 V3 STUDIO STRESS:' /tmp/apc-v3-studio-benchmark.log
+      - name: Mixed stress 32 APC plus 8 real G09 tanks and 8 HQ V3
+        shell: bash
+        env:
+          TARVOKA_MIXED_APC_PER_FACTION: "4"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 220s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mixed_eight_faction_art_stress.gd 2>&1 | tee /tmp/tarvoka-mixed-32.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-mixed-32.log; then exit 1; fi
+          grep -q 'PASS TARVOKA MIXED 3D STRESS:' /tmp/tarvoka-mixed-32.log
+          test -s artifacts/tarvoka_mixed_32_apc_metrics.json
+          test -s artifacts/tarvoka_mixed_32_apc_full.png
+          test -s artifacts/tarvoka_mixed_32_apc_lod.png
+      - name: Mixed stress 64 APC plus 8 real G09 tanks and 8 HQ V3
+        shell: bash
+        env:
+          TARVOKA_MIXED_APC_PER_FACTION: "8"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 220s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mixed_eight_faction_art_stress.gd 2>&1 | tee /tmp/tarvoka-mixed-64.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-mixed-64.log; then exit 1; fi
+          grep -q 'PASS TARVOKA MIXED 3D STRESS:' /tmp/tarvoka-mixed-64.log
+          test -s artifacts/tarvoka_mixed_64_apc_metrics.json
+          test -s artifacts/tarvoka_mixed_64_apc_full.png
+          test -s artifacts/tarvoka_mixed_64_apc_lod.png
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
@@ -136,4 +172,6 @@ jobs:
             artifacts/TARVOKA_APC_P06_V3_Editable.glb
             artifacts/apc_p06_v3_stress_metrics_32.json
             artifacts/apc_p06_v3_stress_metrics_64.json
+            artifacts/tarvoka_mixed_*.png
+            artifacts/tarvoka_mixed_*.json
           if-no-files-found: error
