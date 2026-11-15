@@ -1,0 +1,36 @@
+name: TARVOKA balance phase 03 comeback and material value
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_balance_phase03_recovery.gd"
+      - "docs/BALANCE_PHASE03_COMEBACK_20261115.md"
+      - ".github/workflows/balance-phase03-recovery.yml"
+  workflow_dispatch:
+
+jobs:
+  comeback_audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Measure real economy and army comeback in 48 controlled battles
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 480s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --quit-after 5 --path . \
+            --script res://tests/test_balance_phase03_recovery.gd \
+            2>&1 | tee /tmp/tarvoka-balance-phase03.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-balance-phase03.log; then
+            echo 'Balance phase03 rule/metrics failure'; exit 1
+          fi
+          grep -Fq 'PASS balance phase 03:' /tmp/tarvoka-balance-phase03.log
