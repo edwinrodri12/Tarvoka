@@ -5,6 +5,7 @@ class_name TarvokaNavalBaseDetailV2
 # service gangways, roof drainage, marine crane lattice and animated water.
 # 3D art ONLY; no new health, unit production, collision or gameplay rules.
 const Base=preload("res://scripts/ui/NavalBase3DV1.gd")
+const Style=preload("res://scripts/ui/VisualStyle.gd")
 const WATER_SHADER=preload("res://assets/shaders/naval_port_water_v2.gdshader")
 const STAGE_NAME: String="AcabadosNauticosRealesV2"
 const EDGE=Color("#c7d1cf")
@@ -259,7 +260,7 @@ static func apply(model: Node3D,level: int,
     if model.has_node(STAGE_NAME):
         return false
     var stage:=Base._group(model,STAGE_NAME)
-    var color: Color=Base.Style.faction_color(faction)
+    var color: Color=Style.faction_color(faction)
     _water(stage)
     _quay_edges(stage,level,damage)
     _hangar_finish(stage,level,damage,color)
