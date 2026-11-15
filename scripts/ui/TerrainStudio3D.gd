@@ -18,10 +18,11 @@ const EcotonesV8 = preload("res://scripts/ui/TerrainStudioEcotonesV8.gd")
 const FoothillsV11 = preload("res://scripts/ui/TerrainStudioFoothillsV11.gd")
 const SedimentsV12 = preload("res://scripts/ui/TerrainStudioSedimentsV12.gd")
 const MountainBiomesV13 = preload("res://scripts/ui/TerrainStudioMountainBiomesV13.gd")
+const SnowPaletteV15 = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const WIDTH := 12
 const HEIGHT := 10
 const CELL := 2.40
-const SCENES := ["Valle boscoso", "Canon rocoso", "Delta costero"]
+const SCENES := ["Valle boscoso", "Canon rocoso", "Delta costero", "Bioma nevado"]
 const WATER := Color("#337b96")
 const FOAM := Color("#98d5dc")
 const ROAD := Color("#5a6264")
@@ -130,6 +131,20 @@ static func kind(x: int, z: int, scene: int) -> String:
                 return "forest"
             if x == 7 and z == 8:
                 return "mountain"
+        3:
+            # Winter art sample: continuous highland in the north/west,
+            # sheltered fir woods, a cold eastern lake and visible access.
+            # Logical tile types are unchanged; only their arrangement is new.
+            if (x >= 9 and z >= 4 and z <= 8) or (
+                    x == 8 and z == 6):
+                return "water"
+            if (x <= 2 and z <= 3) or (x >= 9 and z <= 2) or (
+                    x <= 1 and z >= 7):
+                return "mountain"
+            if x == 5 or z == 5:
+                return "road"
+            if (x <= 3 and z >= 4) or (x >= 6 and x <= 8 and z <= 3):
+                return "forest"
     return "plain"
 
 static func height_at(x: int, z: int, scene: int) -> float:
@@ -147,6 +162,8 @@ static func _cell_center(x: int, z: int) -> Vector3:
         (float(z) - float(HEIGHT-1)*0.5)*CELL)
 
 static func _ground_tint(type: String, scene: int, seed: int) -> Color:
+    if scene == 3:
+        return SnowPaletteV15.ground(type,seed)
     var tint: Color = ROCK if type == "mountain" else (
         ROAD_EDGE if type == "road" else (
         MOSS if scene == 2 else SAND if scene == 1 else GRASS))
@@ -214,7 +231,7 @@ static func _vertex_tint(grid_x: int, grid_z: int, scene: int) -> Color:
             result += _ground_tint(biome,scene,x*29+z*43)
             neighbors += 1
     if neighbors == 0:
-        return SAND
+        return SnowPaletteV15.SNOW if scene == 3 else SAND
     return result * (1.0 / float(neighbors))
 
 static func _water_corner_tint(x: int, z: int, scene: int) -> Color:
@@ -226,6 +243,8 @@ static func _water_corner_tint(x: int, z: int, scene: int) -> Color:
             if terrain != "water" and terrain != "outside":
                 near_shore += 1
     var depth_mix: float = 1.0 - float(near_shore)/4.0
+    if scene == 3:
+        return SnowPaletteV15.water_shade(1.0-depth_mix)
     return Color("#4b91a3").lerp(Color("#25536f"),depth_mix)
 
 static func _triangle(surface: SurfaceTool, a: Vector3, b: Vector3,
@@ -319,7 +338,8 @@ static func _continuous_ground(parent: Node3D, scene: int,
     water_surface.material_override = water_mat
     parent.add_child(water_surface)
     _box(parent,"LechoSubmarino",Vector3(0,BASE_LEVEL-0.09,0),
-        Vector3(float(WIDTH)*CELL,0.20,float(HEIGHT)*CELL),DEEP_WATER)
+        Vector3(float(WIDTH)*CELL,0.20,float(HEIGHT)*CELL),
+        SnowPaletteV15.COLD_WATER if scene == 3 else DEEP_WATER)
 
 static func _bush(parent: Node3D, center: Vector3, seed: int,
         coastal: bool) -> void:
@@ -583,6 +603,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
     var root := Node3D.new()
     root.name = "EntornoTARVOKA_Mapa3D"
     root.set_meta("terrain_studio_scene",preset)
+    root.set_meta("terrain_snow_v19",preset == 3)
     root.set_meta("terrain_studio_grid",show_grid)
     root.set_meta("terrain_studio_samples",show_samples)
     root.set_meta("terrain_studio_continuous",continuous)
@@ -665,7 +686,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                             var tree_x: float = -0.43+float(index)*0.72
                             var tree_z: float = -0.28+float(posmod(seed+index*2,5))*0.13
                             var tree_y: float = surface_height_at(x,z,preset,tree_x,tree_z) if continuous and show_scatter else top
-                            _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2)
+                            _tree(props,p+Vector3(tree_x,tree_y,tree_z),seed+index,preset==2,preset==3)
                     if continuous and show_scatter:
                         if not v7_shores:
                             RoadShore.shore(props,p,surface_cell,shore_edges,preset)
@@ -678,7 +699,8 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                     if posmod(seed,3) == 0:
                         var stone_y: float = surface_height_at(x,z,preset,0.45,-0.32) if continuous and show_scatter else top
                         _box(props,"PiedraSuelo",p+Vector3(0.45,stone_y+0.08,-0.32),
-                            Vector3(0.28,0.16,0.33),ROCK_LIGHT.darkened(0.13))
+                            Vector3(0.28,0.16,0.33),
+                            SnowPaletteV15.FROSTED_STONE if preset == 3 else ROCK_LIGHT.darkened(0.13))
                     if continuous and show_scatter:
                         if not v7_shores:
                             RoadShore.shore(props,p,surface_cell,shore_edges,preset)
@@ -693,7 +715,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                             "north":_road_connects(x,z,preset,0,-1),
                             "south":_road_connects(x,z,preset,0,1),
                             "west":_road_connects(x,z,preset,-1,0),
-                            "east":_road_connects(x,z,preset,1,0)})
+                            "east":_road_connects(x,z,preset,1,0)},preset)
                         if not v7_shores:
                             RoadShore.shore(props,p,surface_cell,shore_edges,preset)
                     else:
