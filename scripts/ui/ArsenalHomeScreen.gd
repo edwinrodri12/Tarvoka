@@ -381,7 +381,7 @@ func _select_site(key: String) -> void:
     if key == "city":
         unit_stats.text = "INGRESOS POR TURNO\nClásica: 100 créditos  ·  Moderna: 250 créditos"
     else:
-        var products: Array[String] = []
+        var products := PackedStringArray()
         for role in Arsenal.ORDER:
             if str(Arsenal.profile(str(role)).get("site","")) == key:
                 products.append(Roles.label(str(role)))
@@ -395,7 +395,6 @@ func _select_role(role: String) -> void:
     selected_role = role
     selected_site = ""
     unit_name.text = Roles.label(role)
-    var design: Array = Art.design(role)
     unit_kind.text = "DOMINIO  ·  %s" % (
         "TIERRA" if _role_category(role) == 0 else
         ("AIRE" if _role_category(role) == 1 else "MAR"))
