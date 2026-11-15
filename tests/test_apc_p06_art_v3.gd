@@ -130,6 +130,28 @@ func _run() -> void:
             "DanoP06Etapa_%d" % i,false,false).visible)
     assert(Models.inspect_meshes(modern)==modern_count)
 
+    # Two visually distinct hit reactions; no HP, mesh or stage mutation.
+    var hit_fx: Array=modern.get_meta("tarvoka_apc_v3_hit_fx",[])
+    assert(hit_fx.size()==3)
+    var bullet: MeshInstance3D=hit_fx[0] as MeshInstance3D
+    var blast: MeshInstance3D=hit_fx[1] as MeshInstance3D
+    var cloud: MeshInstance3D=hit_fx[2] as MeshInstance3D
+    assert(bullet!=null and blast!=null and cloud!=null)
+    assert(Finish.animate_impact(modern,"hit_bullet",0.12))
+    assert(bullet.visible and not blast.visible and not cloud.visible)
+    assert(Rig.pose(modern,"hit_bullet",0.33))
+    assert(absf(modern.rotation_degrees.z)>0.01)
+    Rig.restore(modern)
+    assert(Finish.animate_impact(modern,"hit_explosive",0.30))
+    assert(not bullet.visible and blast.visible and cloud.visible)
+    assert(Rig.pose(modern,"hit_explosive",0.35))
+    assert(absf(modern.rotation_degrees.z)>0.1)
+    Rig.restore(modern)
+    assert(Finish.animate_impact(modern,"",1.0))
+    assert(not bullet.visible and not blast.visible and not cloud.visible)
+    assert(Models.inspect_meshes(modern)==modern_count)
+    assert(modern.get_meta("tarvoka_apc_v3_damage_stage",-1)==0)
+
     # Native base animation must remain usable at every injury stage.
     var ramp: Node3D=modern.find_child(
         "BisagraRampaP06",true,false) as Node3D
