@@ -11,6 +11,7 @@ const SalvoV8 = preload("res://scripts/ui/G11SequentialSalvoV8.gd")
 const ExhaustV9 = preload("res://scripts/ui/G11ExhaustV9.gd")
 const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const TracksFactionV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
+const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -145,6 +146,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             pass
         _:
             return false
+    DetailV14.update_hoses(model)
     AtmosphereV7.animate(model,kind,t)
     return true
 
