@@ -108,6 +108,19 @@ func _run() -> void:
         "eight vehicles can be inspected inside the real 3D studio")
     _check(model!=null and not model.visible,
         "V7 exhibit is hidden while showing V8 fleet")
+    studio.call("_set_p06_fleet_quality",0)
+    _check(int(studio.get("_p06_fleet_active_surfaces"))>0,
+        "manual close LOD renders detailed tactical shells")
+    var near_surfaces: int=int(studio.get("_p06_fleet_active_surfaces"))
+    studio.call("_set_p06_fleet_quality",1)
+    var mid_surfaces: int=int(studio.get("_p06_fleet_active_surfaces"))
+    studio.call("_set_p06_fleet_quality",2)
+    var far_surfaces: int=int(studio.get("_p06_fleet_active_surfaces"))
+    _check(near_surfaces>mid_surfaces and mid_surfaces>far_surfaces,
+        "studio near/mid/far controls reduce visible GPU surfaces")
+    studio.call("_set_p06_fleet_quality",-1)
+    _check(int(studio.get("_p06_fleet_quality"))==-1,
+        "automatic camera LOD can be restored")
     studio.call("_show_p06_fleet",32)
     gallery=studio.get("_p06_fleet") as Node3D
     _check(gallery!=null and gallery.get_child_count()==32,
@@ -116,6 +129,23 @@ func _run() -> void:
     gallery=studio.get("_p06_fleet") as Node3D
     _check(gallery!=null and gallery.get_child_count()==64,
         "64 native tactical APCs render in studio")
+    studio.call("_animate_p06_fleet","move_turn")
+    studio.call("_process",0.31)
+    var first_apc: Node3D=gallery.get_child(0) as Node3D
+    _check(first_apc!=null and absf(first_apc.rotation_degrees.z)>0.05,
+        "all units are capable of simulated cornering")
+    studio.call("_process",0.40)
+    _check(str(studio.get("_p06_fleet_animation"))=="",
+        "fleet steering ends and returns to rest")
+    studio.call("_animate_p06_fleet","attack")
+    studio.call("_process",0.52)
+    var turret: Node3D=first_apc.find_child(
+        "P06V8_TorretaRemota",true,false) as Node3D
+    _check(turret!=null and absf(turret.rotation_degrees.y)>0.5,
+        "tactical 64-unit automatic fire tracks target without shell spam")
+    studio.call("_process",0.70)
+    _check(str(studio.get("_p06_fleet_animation"))=="",
+        "fleet weapon animation resets for new battle turn")
     studio.call("_hide_p06_fleet")
     _check(studio.get("_p06_fleet")==null,
         "fleet can be removed without a duplicate scene")
@@ -134,5 +164,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V8 LIVE WEB STUDIO: original machinegun audio, 8/32/64 3D fleet, reversible damage and hero restoration")
+    print("PASS BASTION V9 LIVE WEB STUDIO: near/mid/far LOD, 64 vehicles steering and firing, original synchronized audio, restored hero")
     quit(0)
