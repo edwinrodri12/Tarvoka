@@ -12,6 +12,7 @@ const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
 const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
 const PerfTelemetry=preload("res://scripts/ui/PerformanceTelemetryV1.gd")
@@ -57,12 +58,14 @@ var _v31_preview := false
 var _apc_v1_preview := true
 var _apc_v2_preview := true
 var _apc_v3_preview := true
+var _apc_v5_preview := true
 var _apc_damage_stage := 0
 var _apc_tactical_lod := false
 var apc_controls: VBoxContainer
 var apc_compare_button: Button
 var apc_v2_button: Button
 var apc_v3_button: Button
+var apc_v5_button: Button
 var apc_damage_button: Button
 var apc_lod_button: Button
 var apc_stress_button: Button
@@ -279,6 +282,8 @@ func _construct() -> void:
         "APC P06 V2 · ARMADURA, NEUMÁTICOS Y ACABADO",_toggle_apc_v2)
     apc_v3_button=_button(apc_controls,
         "APC V3 · TECHO, JUNTAS, TORRETA Y DAÑOS",_toggle_apc_v3)
+    apc_v5_button=_button(apc_controls,
+        "P06 V5 · COMPARAR ACABADOS 3D V3/V5",_toggle_apc_v5)
     apc_damage_button=_button(apc_controls,
         "APC V3 · MOSTRAR DAÑO LEVE",_cycle_apc_damage)
     _add_paired(apc_controls,"APC V3 · Próximo nivel de daño",
@@ -459,11 +464,17 @@ func _display_role(role: String) -> void:
     apc_compare_button.text = ("APC P06 · Comparar con prototipo V0" if _apc_v1_preview else "APC P06 · Regresar a V1")
     apc_v2_button.text = ("APC V2/V1 · Ver versión V1 anterior" if _apc_v2_preview else "APC V2 · Ver blindaje y ruedas mejoradas")
     apc_v3_button.text = ("APC V3/V2 · Ver V2 anterior" if _apc_v3_preview else "APC V3 · Ver techo y daño realistas")
+    apc_v5_button.visible=(_role=="apc" and model_root.get_meta(
+        APCDetailV5.FLAG,false))
+    apc_v5_button.text=("P06 V5/V3 · MOSTRAR SOLO V3" if _apc_v5_preview
+        else "P06 V5/V3 · MOSTRAR ACABADOS V5")
     apc_damage_button.text = "APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
     if model_root.get_meta("tarvoka_apc_finish_v3",false):
         APCFinishV3.apply_stage(model_root,_apc_damage_stage)
         APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+        if model_root.get_meta(APCDetailV5.FLAG,false):
+            APCDetailV5.set_enabled(model_root,_apc_v5_preview)
     apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
     apc_stress_button.visible=apc_lod_button.visible
     apc_mixed_button.visible=apc_lod_button.visible
@@ -520,7 +531,16 @@ func _update_details() -> void:
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
         if model_root.get_meta("tarvoka_apc_finish_v3",false):
-            status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
+            status_label.text = ("APC P06 V5 · ACABADOS 3D INTEGRADOS"
+                if model_root.get_meta(APCDetailV5.FLAG,false) and
+                    _apc_v5_preview else "APC P06 V3 · TECHO Y JUNTAS FÍSICAS") + (
+                " · PANELES/JUNTAS/PERNOS/ÓPTICA" if _apc_v5_preview
+                else "") + (" · TORRETA REFINADA · BALAS/EXPLOSIONES"
+                + " · DAÑO %d/4" % _apc_damage_stage)
+            # Old V3-only status is below for the historical comparison
+            # and must not overwrite V5 preview text.
+            if false:
+                status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
                 + " · TORRETA REFINADA · BALAS/EXPLOSIONES · DAÑO %d/4" % _apc_damage_stage)
             if _apc_tactical_lod:
                 status_label.text+=" · LOD TÁCTICO"
@@ -1124,6 +1144,18 @@ func _toggle_apc_v3() -> void:
         if _apc_v3_preview:
             APCFinishV3.apply_stage(model_root,_apc_damage_stage)
     _update_camera()
+    _update_details()
+
+func _toggle_apc_v5() -> void:
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            APCDetailV5.FLAG,false):
+        return
+    if _auto_benchmark.active:
+        return
+    _apc_v5_preview=not _apc_v5_preview
+    APCDetailV5.set_enabled(model_root,_apc_v5_preview)
+    apc_v5_button.text=("P06 V5/V3 · MOSTRAR SOLO V3" if _apc_v5_preview
+        else "P06 V5/V3 · MOSTRAR ACABADOS V5")
     _update_details()
 
 func _toggle_apc_lod() -> void:
