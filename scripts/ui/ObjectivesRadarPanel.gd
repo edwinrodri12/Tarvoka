@@ -177,9 +177,15 @@ func _location_row(body: VBoxContainer, title: String, subtitle: String, cell: V
     GameUiTheme.emphasize(action,"secondary")
 
 func _unit_row(body: VBoxContainer, item: Dictionary) -> void:
+    var alert_card := PanelContainer.new()
+    alert_card.add_theme_stylebox_override("panel",
+        GameUiTheme.box_style(Color("#11283A"),
+            Color("#E56E69") if int(item.get("urgency",3)) == 0
+            else GameUiTheme.EDGE,6,7))
+    body.add_child(alert_card)
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation",6)
-    body.add_child(row)
+    alert_card.add_child(row)
     var labels := VBoxContainer.new()
     labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.add_child(labels)
@@ -200,12 +206,14 @@ func _unit_row(body: VBoxContainer, item: Dictionary) -> void:
 func refresh_from_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
     # Preserve the active tab and read only one valid snapshot per change.
     var tab: int = tabs.current_tab
+    _current_viewer = viewer
     _data = Data.build(state,viewer)
     _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
     tabs.current_tab = tab
 
 func open_with_state(state: Dictionary, viewer: int = 0, vs_ai: bool = false) -> void:
+    _current_viewer = viewer
     _data = Data.build(state,viewer)
     _priorities = TacticalAlerts.build(state,viewer,vs_ai)
     render()
@@ -221,12 +229,28 @@ func render() -> void:
     _clear(sites_body)
     _clear(alerts_body)
     if not bool(_data.get("valid",false)):
+        for key in metric_labels:
+            metric_labels[key].text = "—"
+        summary_label.text = "Sin batalla activa"
         _info(overview_body,"No hay una batalla activa.")
         return
     summary_label.text = str(_data.get("summary",""))
-    _section(overview_body,"OBJETIVO PRINCIPAL")
-    _info(overview_body,str(_data.get("objective","")))
-    _info(overview_body,str(_data.get("details","")))
+    metric_labels["cities"].text = "CIUDADES  %d" % int(_data.get("owned_cities",0))
+    metric_labels["bases"].text = "BASES  %d" % int(_data.get("owned_bases",0))
+    metric_labels["alerts"].text = "ALERTAS  %d" % int(_priorities.get("total",0))
+    mission_banner = PanelContainer.new()
+    mission_banner.name = "MisionActualVerificada"
+    mission_banner.add_theme_stylebox_override("panel",
+        GameUiTheme.box_style(Color("#102C3C"),GameUiTheme.EDGE_BRIGHT,9,10))
+    overview_body.add_child(mission_banner)
+    var mission_column := VBoxContainer.new()
+    mission_column.add_theme_constant_override("separation",5)
+    mission_banner.add_child(mission_column)
+    mission_column.add_child(_label("MISIÓN ACTIVA",12,GameUiTheme.GOLD))
+    mission_label = _label(str(_data.get("objective","")),21,Color("#F5E9CD"))
+    mission_column.add_child(mission_label)
+    mission_caption = _label(str(_data.get("details","")),14,Color("#C1D7E1"))
+    mission_column.add_child(mission_caption)
     var relays: Array = _data.get("relays",[])
     if not relays.is_empty():
         _section(overview_body,"RELÉS DE COMUNICACIONES")
@@ -243,7 +267,7 @@ func render() -> void:
             if int(site.get("priority",3)) >= 3:
                 continue
             _location_row(overview_body,str(site.get("label","Instalación")),
-                str(site.get("status","")),site["pos"],"site")
+                str(site.get("status","")),site["pos"],"site",int(site.get("priority",3)))
             count += 1
         if count == 0:
             _info(overview_body,"No hay instalaciones disputadas conocidas.")
@@ -257,9 +281,9 @@ func render() -> void:
             var caption: String = str(site.get("status",""))
             if int(site.get("income",0)) > 0:
                 caption += " · +%d cr./turno para su propietario" % int(site["income"])
-            _location_row(sites_body,str(site.get("label","Instalación")),caption,site["pos"],"site")
+            _location_row(sites_body,str(site.get("label","Instalación")),caption,site["pos"],"site",int(site.get("priority",3)))
     var alert_count: int = int(_priorities.get("total",0))
-    _section(alerts_body,"PRIORIDADES TÁCTICAS (%d)" % alert_count)
+    _section(alerts_body,"ALERTAS Y PRIORIDADES  /  %d" % alert_count)
     var summary: String = "Críticas %d · Suministros %d · Tropas listas %d · Bases listas %d · Objetivos %d" % [
         int(_priorities.get("urgent",0)),int(_priorities.get("supplies",0)),
         int(_priorities.get("ready_units",0)),int(_priorities.get("ready_bases",0)),
@@ -275,7 +299,8 @@ func render() -> void:
                 _unit_row(alerts_body,item)
             elif str(item.get("kind","")) in ["site","relay"]:
                 _location_row(alerts_body,str(item.get("label","Ubicación")),
-                    str(item.get("status","")),item["pos"],str(item["kind"]))
+                    str(item.get("status","")),item["pos"],str(item["kind"]),
+                    int(item.get("urgency",3)))
         if int(_priorities.get("overflow",0)) > 0:
             _info(alerts_body,"%d prioridades adicionales. Se muestran primero las más urgentes." %
                 int(_priorities["overflow"]))
