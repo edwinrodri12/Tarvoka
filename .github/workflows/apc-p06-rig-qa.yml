@@ -22,6 +22,8 @@ on:
       - 'scripts/ui/APCExteriorV11.gd'
       - 'scripts/ui/APCTurretV12.gd'
       - 'scripts/ui/APCSurfaceV13.gd'
+      - 'scripts/ui/APCWheelV14.gd'
+      - 'tests/test_bastion_v14_wheel_sculpt.gd'
       - 'tests/test_bastion_v13_materials.gd'
       - 'tests/test_bastion_v12_turret.gd'
       - 'tests/test_bastion_v11_exterior.gd'
@@ -58,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
