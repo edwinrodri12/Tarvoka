@@ -824,7 +824,11 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_surface_weather_v17",false)):
+            detail_label.text = detail_label.text.replace("salva V8","superficies y desgaste V17")
+        elif built and bool(model_root.get_meta("tarvoka_g11_front_frame_v16",false)):
+            detail_label.text = detail_label.text.replace("salva V8","blindaje y techo V16")
+        elif built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
             detail_label.text = detail_label.text.replace("salva V8","bastidor y acabados V15")
         elif built and bool(model_root.get_meta("tarvoka_g11_mechanical_detail_v14",false)):
             detail_label.text = detail_label.text.replace("salva V8","hidráulicos V14")
