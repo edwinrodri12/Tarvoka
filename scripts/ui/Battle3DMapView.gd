@@ -31,6 +31,7 @@ var _look_at := Vector3.ZERO
 var _yaw: float = PI*0.25
 var _camera_size: float = 28.0
 var _state_snapshot: Dictionary = {}
+var _viewing_side: int = 0
 var _selected_hint_unit_id: String = ""
 var _ranges_node: Node3D = null
 var _ranges_visible: bool = true
@@ -352,11 +353,12 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
         if str(unit.get("id",""))==selected_id and int(unit.get("hp",0))>0:
             return unit["pos"]
     for unit in state.get("units",[]):
-        if int(unit.get("faction",-1))==0 and int(unit.get("hp",0))>0:
+        if int(unit.get("faction",-1))==_viewing_side and int(unit.get("hp",0))>0:
             return unit["pos"]
     return Vector2i(_dims.x/2,_dims.y/2)
 
-func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
+func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 0) -> bool:
+    _viewing_side = viewer if viewer in [0,1] else 0
     # Standalone and browser tests remain read-only.
     _set_immersive_mode(false)
     _live_board = null
@@ -364,7 +366,7 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     if _scene != null:
         _scene.free()
         _scene = null
-    var model: Node3D = Terrain.build(state,selected_id)
+    var model: Node3D = Terrain.build(state,selected_id,_viewing_side)
     if model == null:
         return false
     _scene = model
@@ -418,7 +420,8 @@ func open_from_board(board: Control) -> bool:
     var state: Variant = board.get("state")
     if not state is Dictionary:
         return false
-    if not open_from_state(state,str(board.get("selected_id"))):
+    var viewer: int = 0 if bool(board.get("ai_enabled")) else int(state.get("faction",0))
+    if not open_from_state(state,str(board.get("selected_id")),viewer):
         return false
     _live_board = board
     # Fullscreen map-first mode is exclusive to a live game, never to a
@@ -656,7 +659,7 @@ func _friendly_unit_at(cell: Vector2i) -> String:
     if not _cells.has(cell) or not bool(_cells[cell].get("visible",false)):
         return ""
     for unit in _state_snapshot.get("units",[]):
-        if unit is Dictionary and int(unit.get("faction",-1)) == 0 and \
+        if unit is Dictionary and int(unit.get("faction",-1)) == _viewing_side and \
                 int(unit.get("hp",0)) > 0 and unit.get("pos",Vector2i(-1,-1)) == cell:
             return str(unit.get("id",""))
     return ""
