@@ -70,5 +70,21 @@ func _initialize() -> void:
     assert(defender["hp"] == 10)
     assert(board[2][1] == "mountain")
 
+    # Counterattack integration: the surviving mountain defender attacks from
+    # high ground, with cover recalculated for the NEW defender (plain tile).
+    # This is a separate deterministic shot, not a combat-engine turn mutation.
+    var counter_modifiers: Dictionary = tactics.modifiers(defender, attacker, board)
+    assert(counter_modifiers["height_delta"] == 1)
+    assert(counter_modifiers["attack_bonus"] == 1)
+    assert(counter_modifiers["defense_cover"] == 0)
+    var counter_hit: Dictionary = combat.resolve(8, 10, 6 + int(counter_modifiers["attack_bonus"]), 1, int(counter_modifiers["defense_cover"]))
+    assert(counter_hit["valid"])
+    assert(counter_hit["damage"] == 6)
+    assert(counter_hit["defender_hp"] == 4)
+    assert(not counter_hit["defeated"])
+    # A counterattack must never inherit the mountain cover from the first hit.
+    assert(counter_hit["damage"] > uphill_hit["damage"])
+    assert(attacker["hp"] == 10 and defender["hp"] == 10)
+
     print("PASS: mountain movement and positional combat integration")
     quit()
