@@ -18,6 +18,7 @@ const AirbaseStructureV10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
 const AirbaseTrussesV11 = preload("res://scripts/ui/AirbaseTrussesV11.gd")
 const AirbaseFractureV12 = preload("res://scripts/ui/AirbaseFractureV12.gd")
 const AirbaseImpactsV13 = preload("res://scripts/ui/AirbaseImpactsV13.gd")
+const AirbaseScarsV14 = preload("res://scripts/ui/AirbaseScarsV14.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -54,6 +55,10 @@ var airbase_structure_v10_toggle: CheckButton
 var airbase_trusses_v11_toggle: CheckButton
 var airbase_fracture_v12_toggle: CheckButton
 var airbase_impacts_v13_toggle: CheckButton
+var airbase_scars_v14_toggle: CheckButton
+var airbase_v14_reset_button: Button
+var airbase_v14_status: Label
+var _airbase_v14_history: Array[Dictionary]=[]
 var airbase_surface_v13_picker: OptionButton
 var airbase_v13_focus_toggle: CheckButton
 var airbase_missile_v13_button: Button
@@ -372,7 +377,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V13 · impactos por material")
+    building_picker.add_item("Base Aérea · V14 · marcas de impactos acumuladas")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -810,6 +815,20 @@ func _add_building_mode() -> void:
     airbase_bombard_v13_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _title(airbase_controls,
         "Usa Impacto de bala, Misil o Bombardeo; V12 conserva la explosión clásica.",12)
+    _title(airbase_controls,
+        "V14 · MARCAS QUE PERMANECEN TRAS CADA IMPACTO",13)
+    airbase_scars_v14_toggle=CheckButton.new()
+    airbase_scars_v14_toggle.name="HuellasPersistentesConRelieveBaseAereaV14"
+    airbase_scars_v14_toggle.text="V14 · abolladuras, desconchones y carbonización (comparar V13)"
+    airbase_scars_v14_toggle.button_pressed=true
+    airbase_scars_v14_toggle.toggled.connect(_toggle_airbase_scars_v14)
+    airbase_controls.add_child(airbase_scars_v14_toggle)
+    airbase_v14_reset_button=_button(airbase_controls,
+        "Limpiar impactos acumulados",_clear_airbase_v14_marks)
+    airbase_v14_reset_button.name="RepararSuperficiesEnEstudioV14"
+    airbase_v14_reset_button.custom_minimum_size.y=46
+    airbase_v14_status=_title(airbase_controls,
+        "V14 · 0 impactos registrados · hasta 3 huellas por superficie.",12)
     airbase_mobile_fx_toggle = CheckButton.new()
     airbase_mobile_fx_toggle.name = "EfectosLivianosAndroidBaseAereaV3"
     airbase_mobile_fx_toggle.text = "Humo reducido · perfil Android"
@@ -1044,6 +1063,13 @@ func _play_airbase_impact(kind: String) -> void:
         var target: String=AirbaseImpactsV13.TARGETS[
             airbase_surface_v13_picker.selected]
         if v13!=null and v13.trigger(kind,target):
+            var scars: TarvokaAirbaseScarsV14=model_root.get_node_or_null(
+                AirbaseScarsV14.STAGE_NAME) as TarvokaAirbaseScarsV14
+            if scars!=null and scars.add_mark(kind,target):
+                _airbase_v14_history.append({"attack":kind,"surface":target})
+                if _airbase_v14_history.size()>12:
+                    _airbase_v14_history.pop_front()
+                _refresh_airbase_v14_status()
             var names: Dictionary={"bullet":"Bala","missile":"Misil",
                 "bombardment":"Bombardeo"}
             airbase_impact_status.text=(
@@ -1069,6 +1095,34 @@ func _play_airbase_impact(kind: String) -> void:
 func _toggle_airbase_impacts_v13(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
+
+func _toggle_airbase_scars_v14(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
+func _clear_airbase_v14_marks() -> void:
+    _airbase_v14_history.clear()
+    if model_root!=null:
+        var scars: TarvokaAirbaseScarsV14=model_root.get_node_or_null(
+            AirbaseScarsV14.STAGE_NAME) as TarvokaAirbaseScarsV14
+        if scars!=null:
+            scars.clear_marks()
+    _refresh_airbase_v14_status()
+
+func _refresh_airbase_v14_status() -> void:
+    if airbase_v14_status==null:
+        return
+    var scars: TarvokaAirbaseScarsV14=null
+    if _role=="airbase" and model_root!=null:
+        scars=model_root.get_node_or_null(
+            AirbaseScarsV14.STAGE_NAME) as TarvokaAirbaseScarsV14
+    var visible_count: int=0
+    if scars!=null:
+        for surface in AirbaseScarsV14.SURFACES:
+            visible_count+=scars.visible_marks(surface)
+    airbase_v14_status.text=(
+        "V14 · %d impactos en historial · %d huellas visibles (máx. 9)" %
+        [_airbase_v14_history.size(),visible_count])
 
 func _toggle_airbase_v13_focus(_enabled: bool) -> void:
     if _role=="airbase" and not _airbase_is_stress():
@@ -1242,6 +1296,7 @@ func _change_airbase_v9_view(index: int) -> void:
 
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
+        _airbase_v14_history.clear()
         _display_airbase()
 
 func _change_airbase_damage(_index: int) -> void:
@@ -1310,7 +1365,16 @@ func _display_airbase() -> void:
             surface_rig.name=AirbaseImpactsV13.STAGE_NAME
             surface_rig.damage_stage=stage
             model_root.add_child(surface_rig)
+            if airbase_scars_v14_toggle.button_pressed:
+                var surface_marks:=TarvokaAirbaseScarsV14.new()
+                surface_marks.name=AirbaseScarsV14.STAGE_NAME
+                surface_marks.damage_stage=stage
+                model_root.add_child(surface_marks)
     preview.add_child(model_root)
+    var persistent_marks: TarvokaAirbaseScarsV14=model_root.get_node_or_null(
+        AirbaseScarsV14.STAGE_NAME) as TarvokaAirbaseScarsV14
+    if persistent_marks!=null:
+        persistent_marks.restore(_airbase_v14_history)
     if stage in [2,3]:
         var smoke: TarvokaAirbaseDamageFXV3 = model_root.get_node_or_null(
             AirbaseDamageV3.STAGE_NAME) as TarvokaAirbaseDamageFXV3
@@ -1349,6 +1413,7 @@ func _display_airbase() -> void:
     _apply_hq_lighting(_hq_light_preset)
     _refresh_airbase_door_ui()
     _refresh_airbase_damage_ui()
+    _refresh_airbase_v14_status()
     _update_details()
 
 func _change_hq_version(index: int) -> void:
