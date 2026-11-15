@@ -37,6 +37,10 @@ var faction_button: Button
 var footer_faction_button: Button
 var faction_portraits: Array[TextureRect] = []
 var faction_names: Array[Label] = []
+var faction_crests: Array[TextureRect] = []
+var preset_buttons: Array[Button] = []
+var active_preset: int = 1
+var briefing_line: Label
 var heading: Label
 var preflight_columns: BoxContainer
 var map_scroll: ScrollContainer
@@ -73,6 +77,12 @@ func _ready() -> void:
     heading.add_theme_color_override("font_color",Color("#F1D58C"))
     heading.add_theme_font_size_override("font_size",26)
     header.add_child(heading)
+    var header_tag := Label.new()
+    header_tag.text = "DESPLIEGUE · PARTIDA PERSONALIZADA"
+    header_tag.add_theme_font_size_override("font_size",12)
+    header_tag.add_theme_color_override("font_color",Chrome.MUTED)
+    header_tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    header.add_child(header_tag)
     var back := Button.new()
     back.text = "Volver"
     back.custom_minimum_size = Vector2(90,46)
@@ -83,6 +93,14 @@ func _ready() -> void:
     # Real landscape composition: terrain and mission on the left; chosen
     # factions and battle rules on the right. Both columns scroll independently.
     # This replaces one excessively long vertical preflight on Android.
+    # The overview always stays in sight as each scroll column moves.
+    briefing_line = Label.new()
+    briefing_line.name = "ResumenCompactoEnVivo"
+    briefing_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    briefing_line.add_theme_font_size_override("font_size",13)
+    briefing_line.add_theme_color_override("font_color",Chrome.GOLD)
+    layout.add_child(briefing_line)
+
     preflight_columns = BoxContainer.new()
     preflight_columns.name = "ConfiguracionHorizontal"
     preflight_columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -112,19 +130,19 @@ func _ready() -> void:
     rules_content.add_theme_constant_override("separation",8)
     rules_scroll.add_child(rules_content)
 
-    _section(content,"1  ·  Elige un estilo de batalla")
+    _section(content,"01  /  ESTILO DE BATALLA")
     var presets := HBoxContainer.new()
     presets.add_theme_constant_override("separation",6)
     content.add_child(presets)
-    _preset(presets,"Clasica",0)
-    _preset(presets,"Moderna",1)
-    _preset(presets,"Territorio",2)
+    _preset(presets,"CLÁSICA",0)
+    _preset(presets,"MODERNA",1)
+    _preset(presets,"TERRITORIO",2)
     _preset_label = Label.new()
     _preset_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     _preset_label.add_theme_color_override("font_color",Color("#B3CCD8"))
     content.add_child(_preset_label)
 
-    _section(content,"2  ·  Campo de batalla")
+    _section(content,"02  /  TEATRO DE OPERACIONES")
     scenario_picker = _picker(content,"Escenario",[
         "Campo abierto","Bosque de las Dos Rutas","Puentes de la Cuenca",
         "Costa de las Dos Bahias","Mapa aleatorio (semilla)"
@@ -189,11 +207,11 @@ func _ready() -> void:
     seed_picker.step = 1
     seed_picker.value = 12345
     seed_picker.custom_minimum_size = Vector2(145,44)
-    seed_picker.value_changed.connect(func(_v: float): _changed())
+    seed_picker.value_changed.connect(func(_v: float): _changed(true))
     seed_row.add_child(seed_picker)
 
     content = rules_content
-    _section(content,"3  ·  Facciones y comandantes")
+    _section(content,"03  /  FACCIONES Y COMANDANTES")
     var faction_card := PanelContainer.new()
     faction_card.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0D273A"),Chrome.GOLD,10,12))
@@ -222,12 +240,21 @@ func _ready() -> void:
         member.add_theme_constant_override("separation",5)
         profile_column.add_child(member)
         var portrait := TextureRect.new()
-        portrait.custom_minimum_size = Vector2(48,48)
+        portrait.custom_minimum_size = Vector2(75,68)
         portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
         portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
         member.add_child(portrait)
         faction_portraits.append(portrait)
+        var crest := TextureRect.new()
+        crest.name = "EscudoOficialBandos%d" % side
+        crest.custom_minimum_size = Vector2(38,43)
+        crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        crest.tooltip_text = "Emblema oficial de la facción"
+        member.add_child(crest)
+        faction_crests.append(crest)
         var name := Label.new()
         name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -246,7 +273,7 @@ func _ready() -> void:
     Chrome.emphasize(faction_button,"primary")
     faction_column.add_child(faction_button)
 
-    _section(content,"4  ·  Reglas")
+    _section(content,"04  /  REGLAS DE COMBATE")
     roster_picker = _picker(content,"Ejercito",[
         "Clasico · unidades de prueba","Experimental · cinco clases",
         "Moderno · 32 clases y bases"
@@ -257,7 +284,7 @@ func _ready() -> void:
     balance_picker = _picker(content,"Equilibrio",["Entrenamiento","Dos fuerzas simetricas"])
     first_picker = _picker(content,"Primer turno",["Azul (jugador)","Rojo (rival)"])
 
-    _section(content,"5  ·  Resumen de preparacion")
+    _section(content,"05  /  ORDEN DE DESPLIEGUE")
     summary = Label.new()
     summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     summary.add_theme_font_size_override("font_size",16)
@@ -273,20 +300,20 @@ func _ready() -> void:
     # Keep faction selection reachable at all times on a phone. The
     # scrollable dossier still contains the detailed button for context.
     footer_faction_button = Button.new()
-    footer_faction_button.text = "Facciones"
+    footer_faction_button.text = "ELEGIR FACCIONES"
     footer_faction_button.custom_minimum_size.y = 54
     footer_faction_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     footer_faction_button.pressed.connect(func(): factions_requested.emit())
     actions.add_child(footer_faction_button)
     Chrome.emphasize(footer_faction_button,"secondary")
     var advanced := Button.new()
-    advanced.text = "Avanzado"
+    advanced.text = "MÁS OPCIONES"
     advanced.custom_minimum_size.y = 54
     advanced.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     advanced.pressed.connect(func(): advanced_requested.emit())
     actions.add_child(advanced)
     start_button = Button.new()
-    start_button.text = "Iniciar batalla"
+    start_button.text = "INICIAR BATALLA"
     start_button.custom_minimum_size.y = 54
     start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     start_button.pressed.connect(func(): start_requested.emit(options()))
@@ -307,7 +334,7 @@ func _reflow() -> void:
     var narrow: bool = viewport.y > viewport.x * 1.12
     preflight_columns.vertical = narrow
     map_preview.custom_minimum_size = Vector2(250,150 if narrow else
-        (154 if viewport.y < 600.0 else 192))
+        (162 if viewport.y < 600.0 else 205))
     map_scroll.size_flags_stretch_ratio = 1.13
     rules_scroll.size_flags_stretch_ratio = 1.0
 
@@ -328,10 +355,10 @@ func _picker(parent: VBoxContainer, caption: String, items: Array) -> OptionButt
     var field := OptionButton.new()
     field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     field.clip_text = true
-    field.custom_minimum_size.y = 45
+    field.custom_minimum_size.y = 48
     for i in range(items.size()):
         field.add_item(str(items[i]),i)
-    field.item_selected.connect(func(_index: int): _changed())
+    field.item_selected.connect(func(_index: int): _changed(true))
     row.add_child(field)
     return field
 
@@ -341,10 +368,13 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
     button.custom_minimum_size.y = 48
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.pressed.connect(func(): apply_preset(index))
+    button.tooltip_text = "Cargar un perfil de batalla; no modifica una partida existente"
     row.add_child(button)
+    preset_buttons.append(button)
     Chrome.emphasize(button,"primary" if index == 1 else "secondary")
 
 func apply_preset(index: int) -> void:
+    active_preset = index
     biome_picker.select(0)
     match index:
         0:
@@ -391,18 +421,23 @@ func load_choices(values: Dictionary) -> void:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
-    _preset_label.text = "Configuracion personalizada."
-    _changed()
+    _preset_label.text = "Configuración personalizada · lista para desplegar."
+    _changed(true)
 
 func set_factions(values: Dictionary) -> void:
     if not Identity.is_valid(values):
         return
     selected_factions = values.duplicate(true)
-    _changed()
+    _changed(true)
 
-func _changed() -> void:
+func _changed(manual: bool = false) -> void:
     if roster_picker == null or summary == null:
         return
+    if manual:
+        active_preset = -1
+        _preset_label.text = "Configuración personalizada · puedes ajustar cada regla."
+    for i in range(preset_buttons.size()):
+        Chrome.emphasize(preset_buttons[i],"primary" if active_preset == i else "secondary")
     # Modern armies need production bases; classic test troops cannot use them.
     if roster_picker.selected == 2:
         economy_picker.select(1)
@@ -436,9 +471,17 @@ func _changed() -> void:
             var key: String = str(selected_factions[str(side)])
             var index: int = Identity.index_for(key)
             faction_portraits[side].texture = Style.commander_texture(index)
+            if faction_crests.size() == 2:
+                faction_crests[side].texture = Style.emblem_texture(index)
+                faction_crests[side].tooltip_text = "Escudo oficial de %s" % (blue if side == 0 else red)
             faction_names[side].text = blue if side == 0 else red
             faction_names[side].add_theme_color_override("font_color",Style.faction_color(index).lightened(0.30))
-    summary.text = preset_summary + "\n%s vs. %s\nEl juego pedirá confirmación antes de empezar." % [blue,red]
+    summary.text = preset_summary + "\n%s vs. %s\nSe solicitará confirmación antes de sustituir la batalla actual." % [blue,red]
+    if briefing_line != null:
+        briefing_line.text = "RECONOCIMIENTO ACTIVO   ·   %s  |  %s  |  %s" % [
+            size_picker.get_item_text(size_picker.selected),
+            "NIEBLA" if fog_picker.selected == 1 else "VISIÓN ABIERTA",
+            "CLIMA VARIABLE" if weather_cycle_picker.selected == 1 else "CLIMA FIJO"]
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,
             int(seed_picker.value),
