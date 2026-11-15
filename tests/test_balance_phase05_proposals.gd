@@ -292,7 +292,7 @@ static func _turn_and_fog_safeguards() -> Dictionary:
         print("PROPOSAL_REPAIR_TURNS side=%d repaired_twice=true capped_at_max=true opening_order_used=1 save_compatible=true" % side)
         engineer_cycles += 1
 
-        var fog: Dictionary = _purchase_fixture(side,"airbase",1000)
+        var fog: Dictionary = _purchase_fixture(side,"airbase",2000)
         var air_i := 0
         for unit in fog["units"]:
             if int(unit["faction"]) != side and str(unit.get("domain","ground")) == "air":
