@@ -35,9 +35,23 @@ func _run() -> void:
     assert(view._three_d_shortcuts.visible)
     hud.reflow_for_size(Vector2(915,412))
     assert(hud.compact_phone)
+    assert(not hud.camera_buttons.vertical)
+    assert(hud.camera_buttons.offset_bottom <= 199)
     assert(hud.radar_panel.offset_bottom <= 150)
     hud.reflow_for_size(Vector2(780,360))
     assert(hud.end_turn_button.offset_bottom <= -9)
+    assert(not hud.camera_buttons.vertical)
+    # Unit card begins at screen y272 on 780x360, so this 44px horizontal
+    # camera rail ending at y199 cannot steal its touches or cover the card.
+    assert(hud.camera_buttons.offset_bottom < 360+hud.unit_panel.offset_top)
+    assert(hud.camera_buttons.get_child_count() == 3)
+    for camera_button in hud.camera_buttons.get_children():
+        assert(camera_button.custom_minimum_size.x >= 44)
+        assert(camera_button.custom_minimum_size.y >= 44)
+    hud.reflow_for_size(Vector2(1600,900))
+    assert(not hud.compact_phone)
+    assert(hud.camera_buttons.vertical)
+    hud.reflow_for_size(Vector2(780,360))
     assert(main.board.state == baseline)
 
     var chosen: Dictionary = {}
@@ -57,7 +71,12 @@ func _run() -> void:
     assert(hud.unit_panel.visible)
     assert(hud.unit_stats.text.contains("PV "))
     assert(main.board.state == baseline)
+    var before_preview_camera: Vector3 = view._look_at
     assert(view.tap_battle_cell(landing)) # Preview only.
+    # V17 must not recenter between the first and second tap of an action.
+    assert(view._look_at.is_equal_approx(before_preview_camera))
+    assert(view._cursor.material_override.albedo_color ==
+        Color("#5BD8FF"))
     assert(not main.board.pending_order.is_empty())
     assert(view._order_quote.get("valid",false))
     assert(hud.order_panel.visible)
@@ -66,12 +85,15 @@ func _run() -> void:
     assert(main.board.state == baseline)
     # On-map X cancels only the preview, preserves unit selection and turn.
     hud.order_cancel.pressed.emit()
+    assert(view._cursor.material_override.albedo_color ==
+        Color("#E9C96B"))
     assert(main.board.pending_order.is_empty())
     assert(str(main.board.selected_id) == str(chosen["id"]))
     assert(not hud.order_panel.visible)
     assert(main.board.state == baseline)
 
     assert(view.tap_battle_cell(landing)) # New preview.
+    assert(view._look_at.is_equal_approx(before_preview_camera))
     assert(main.board.state == baseline)
     assert(view.tap_battle_cell(landing)) # SECOND touch confirms via engine.
     assert(main.board.pending_order.is_empty())
