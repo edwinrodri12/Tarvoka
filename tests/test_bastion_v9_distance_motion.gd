@@ -36,6 +36,14 @@ func _run() -> void:
         Tactical.HUBS,true,false) as MultiMeshInstance3D
     _check(carcass!=null and wheel!=null and hubs!=null,
         "near tactical wheels and real five-ring hull")
+    _check(hubs!=null and hubs.multimesh.mesh is ArrayMesh,
+        "hub visibly sculpted with five 3D spokes, not a uniform cylinder")
+    if hubs!=null and hubs.multimesh.mesh is ArrayMesh:
+        var hub_mesh: ArrayMesh=hubs.multimesh.mesh as ArrayMesh
+        _check(hub_mesh.get_surface_count()==1,
+            "all 5 wheel spokes and disk share one GPU surface")
+        _check(hub_mesh.surface_get_array_len(0)>160,
+            "spoke geometry has real raised 3D edges")
     var counts: Array[int]=[]
     for level in range(3):
         _check(Tactical.set_detail(tactical,level),
