@@ -78,10 +78,27 @@ func _run() -> void:
     assert(before_rules["state"]["terrain"]==normal_rules["state"]["terrain"])
 
     main.board.set_isometric(true)
+    main._continue_from_home()
     main.board.set_battery_saver(true)
     main.board.queue_redraw()
-    await process_frame
+    for i in range(6):
+        await process_frame
     assert(main.board.state.get(Biome.FIELD)==Biome.WINTER)
+    if DisplayServer.get_name() != "headless":
+        DirAccess.make_dir_recursive_absolute(
+            ProjectSettings.globalize_path("res://artifacts"))
+        var iso_image: Image = root.get_texture().get_image()
+        assert(iso_image!=null and not iso_image.is_empty())
+        assert(iso_image.save_png(
+            "res://artifacts/tarvoka_android_winter_v19_iso.png")==OK)
+        main.board.set_isometric(false)
+        for i in range(5):
+            await process_frame
+        var classic_image: Image = root.get_texture().get_image()
+        assert(classic_image!=null and not classic_image.is_empty())
+        assert(classic_image.save_png(
+            "res://artifacts/tarvoka_android_winter_v19_classic.png")==OK)
+        main.board.set_isometric(true)
     assert(Budget.should_draw_terrain(Budget.DETAIL_MEDIUM,"forest"))
 
     # Large maps also remain playable under V19 theme.
