@@ -342,14 +342,16 @@ static func _continuous_ground(parent: Node3D, scene: int,
         SnowPaletteV15.COLD_WATER if scene == 3 else DEEP_WATER)
 
 static func _bush(parent: Node3D, center: Vector3, seed: int,
-        coastal: bool) -> void:
-    var leaf: Color = Color("#56836b") if coastal else Color("#52794b")
+        coastal: bool, winter: bool = false) -> void:
+    var leaf: Color = (
+        Color("#94aca5") if winter else
+        Color("#56836b") if coastal else Color("#52794b"))
     var size: float = 0.28 + float(posmod(seed,5))*0.035
     _cone(parent,"Matorral_%d" % seed,
         center+Vector3(0,size*0.45,0),size,size*0.9,leaf,6)
     _cone(parent,"MatorralCopa_%d" % seed,
         center+Vector3(0,size*0.75,0),size*0.70,size*0.72,
-        leaf.lightened(0.16),6)
+        SnowPaletteV15.HARDPACK if winter else leaf.lightened(0.16),6)
 
 static func _bridge(parent: Node3D, origin: Vector3, col: int) -> void:
     # Visually traversable span above water. No tactical bridge type is added.
@@ -411,6 +413,8 @@ static func _scatter_grass(parent: Node3D, scene: int) -> void:
         grass_tint = Color("#99885e")
     elif scene == 2:
         grass_tint = Color("#3c7765")
+    elif scene == 3:
+        grass_tint = Color("#b7c8c7")
     var mat: StandardMaterial3D = _material(grass_tint)
     var grass_material := mat.duplicate() as StandardMaterial3D
     grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -447,11 +451,14 @@ static func _scatter_grass(parent: Node3D, scene: int) -> void:
     group.multimesh = multi
     parent.add_child(group)
 
-static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> void:
+static func _tree(parent: Node3D, center: Vector3, seed: int,
+        coastal: bool, winter: bool = false) -> void:
     var size: float = 0.75 + float(posmod(seed,5))*0.085
     _cylinder(parent,"Tronco_%d" % seed,center + Vector3(0,size*0.34,0),
         0.095*size,size*0.68,Color("#665746"))
-    var leaf: Color = Color("#326456") if coastal else Color("#365f48")
+    var leaf: Color = (
+        Color("#42655e") if winter else
+        Color("#326456") if coastal else Color("#365f48"))
     if coastal:
         # Coastal broadleaf canopy: avoid pine forests in the warm river delta.
         _ellipsoid(parent,"CopaFrondosa_%d" % seed,
@@ -465,7 +472,13 @@ static func _tree(parent: Node3D, center: Vector3, seed: int, coastal: bool) -> 
             center+Vector3(0,size*0.91,0),0.50*size,0.92*size,leaf,7)
         _cone(parent,"CopaSuperior_%d" % seed,
             center+Vector3(0,size*1.32,0),0.38*size,0.75*size,
-            leaf.lightened(0.14),7)
+            SnowPaletteV15.HARDPACK if winter else leaf.lightened(0.14),7)
+        if winter:
+            # Small snow cap on a real conifer branch, not a texture
+            # pushed through a different mountain mesh.
+            _cone(parent,"NieveEnPino_%d" % seed,
+                center+Vector3(0,size*1.60,0),0.21*size,0.26*size,
+                SnowPaletteV15.SNOW,7)
 
 static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
         radius: float, height: float, seed: int, tint: Color,
@@ -516,7 +529,9 @@ static func _rock_spire(parent: Node3D, name: String, origin: Vector3,
 static func _mountain(parent: Node3D, origin: Vector3, top: float,
         seed: int, scene: int) -> void:
     var peak_h: float = 1.28 + float(posmod(seed,6))*0.18
-    var tint: Color = ROCK.lightened(0.06) if scene == 2 else ROCK
+    var tint: Color = (
+        SnowPaletteV15.FROSTED_STONE if scene == 3 else
+        ROCK.lightened(0.06) if scene == 2 else ROCK)
     _rock_spire(parent,"MacizoTallado_%d" % seed,
         origin+Vector3(-0.07,top,-0.09),1.17,peak_h,seed,tint)
     _rock_spire(parent,"CrestaSecundaria_%d" % seed,
@@ -564,6 +579,7 @@ static func _shore(parent: Node3D, x: int, z: int, scene: int,
         var offset: Vector3 = Vector3(float(direction.x)*1.03,top+0.018,
             float(direction.y)*1.03)
         _box(parent,"OrillaNatural",origin+offset,stripe,
+            SnowPaletteV15.FROZEN_SHORE if scene == 3 else
             SAND.lightened(0.12) if scene != 1 else SAND)
 
 static func _water_details(parent: Node3D, origin: Vector3, x: int,
@@ -571,7 +587,8 @@ static func _water_details(parent: Node3D, origin: Vector3, x: int,
     for wave in range(2):
         var at: Vector3 = origin + Vector3(-0.45+wave*0.64,-0.135,
             -0.28+float(posmod(x+z+wave,3))*0.19)
-        _box(parent,"EspumaOla",at,Vector3(0.67,0.014,0.044),FOAM)
+        _box(parent,"EspumaOla",at,Vector3(0.67,0.014,0.044),
+            SnowPaletteV15.ICE if scene == 3 else FOAM)
     # Shore foam follows the actual shoreline, including meandering rivers.
     for direction in [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]:
         var neighbor: String = kind(x+direction.x,z+direction.y,scene)
@@ -580,7 +597,7 @@ static func _water_details(parent: Node3D, origin: Vector3, x: int,
         var size: Vector3 = Vector3(0.10,0.012,CELL-0.14) if direction.x != 0 else Vector3(CELL-0.14,0.012,0.10)
         _box(parent,"LineaEspumaCosta",
             origin+Vector3(float(direction.x)*1.04,-0.127,float(direction.y)*1.04),
-            size,FOAM.lightened(0.10))
+            size,SnowPaletteV15.FROZEN_SHORE if scene == 3 else FOAM.lightened(0.10))
 
 static func build_demo(scene: int = 0, show_grid: bool = false,
         show_samples: bool = true, faction: int = 0,
@@ -694,7 +711,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,3) != 0:
                         var bush_y: float = surface_height_at(x,z,preset,0.51,-0.49) if show_scatter else top
-                        _bush(props,p+Vector3(0.51,bush_y,-0.49),seed+103,preset==2)
+                        _bush(props,p+Vector3(0.51,bush_y,-0.49),seed+103,preset==2,preset==3)
                 "plain":
                     if posmod(seed,3) == 0:
                         var stone_y: float = surface_height_at(x,z,preset,0.45,-0.32) if continuous and show_scatter else top
@@ -708,7 +725,7 @@ static func build_demo(scene: int = 0, show_grid: bool = false,
                         _shore(props,x,z,preset,p,top)
                     if continuous and posmod(seed,5) == 2:
                         var bush_y: float = surface_height_at(x,z,preset,-0.31,0.43) if show_scatter else top
-                        _bush(props,p+Vector3(-0.31,bush_y,0.43),seed+211,preset==2)
+                        _bush(props,p+Vector3(-0.31,bush_y,0.43),seed+211,preset==2,preset==3)
                 "road":
                     if continuous and show_scatter:
                         RoadShore.road(props,p,surface_cell,{
