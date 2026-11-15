@@ -111,8 +111,8 @@ static func _approved_atlas_texture(index: int, commander: bool) -> Texture2D:
 
 static func terrain_color(kind: String, x: int, y: int,
         biome: String = Winter.TEMPERATE) -> Color:
-    if biome == Winter.WINTER:
-        return Winter.tile_color(kind,x,y)
+    if biome != Winter.TEMPERATE:
+        return Winter.tile_color(kind,x,y,biome)
     var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))
     # Inexpensive deterministic light variation; never affects movement cost.
     return base.lightened(0.055) if (x + y) % 2 == 0 else base.darkened(0.055)
