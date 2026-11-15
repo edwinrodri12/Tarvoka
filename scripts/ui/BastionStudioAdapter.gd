@@ -230,6 +230,7 @@ func _show_p06_fleet(count: int) -> void:
         vehicle.position=Vector3(
             (float(i%cols)-3.5)*0.91,0,
             (float(int(i/cols))-float(rows-1)*0.5)*0.98)
+        P06Tactical.rebase(vehicle)
         fleet.add_child(vehicle)
         surfaces+=P06Tactical.draw_surfaces(vehicle)
     _p06_fleet_build_ms=float(Time.get_ticks_usec()-started)/1000.0
