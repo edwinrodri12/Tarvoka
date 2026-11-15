@@ -1,0 +1,52 @@
+name: Battle session exchange contract
+
+on:
+  pull_request:
+    paths:
+      - 'tests/test_session_exchange_contract.gd'
+      - 'tests/test_session_cross_process.gd'
+      - 'scripts/core/BattleSession.gd'
+      - 'scripts/core/BattleActions.gd'
+      - '.github/workflows/battle-session-exchange.yml'
+  workflow_dispatch:
+
+jobs:
+  session-exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate battle session exchange
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_session_exchange_contract.gd \
+            2>&1 | tee /tmp/session-exchange.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/session-exchange.log; then
+            exit 1
+          fi
+          grep -q 'PASS battle session exchange:' /tmp/session-exchange.log
+      - name: Verify save survives a fresh Godot process
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in write read backup_write backup_read missing_primary_write missing_primary_read missing_primary_write resume_write resume_read; do
+            timeout --signal=TERM --kill-after=5s 90s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script res://tests/test_session_cross_process.gd -- --phase="$phase" \
+              2>&1 | tee "/tmp/session-cross-$phase.log"
+            if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' "/tmp/session-cross-$phase.log"; then
+              exit 1
+            fi
+            grep -q "PASS cross-process $phase" "/tmp/session-cross-$phase.log"
+          done
