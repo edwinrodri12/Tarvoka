@@ -149,9 +149,13 @@ func _run() -> void:
     assert(studio.naval_detail_v8_toggle.button_pressed)
     assert(studio.model_root.has_node(V8.STAGE_NAME))
     await _capture(studio,"overview")
-    studio._zoom=1.72
+    studio.naval_camera_picker.select(4)
+    studio._change_naval_camera(4)
+    studio._zoom=1.30
     studio._update_camera()
     await _frames(8)
+    assert(studio._naval_camera_view==4)
+    assert(studio.camera.size<9.0)
     assert(bool(studio.model_root.get_node(V8.STAGE_NAME)
         .get_meta("naval_v8_close_mode",false)))
     await _capture(studio,"fenders_close")
