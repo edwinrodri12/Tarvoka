@@ -10,6 +10,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
+const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -180,8 +181,13 @@ func _ready() -> void:
 func _sync_viewport_size() -> void:
     if preview == null or holder == null:
         return
-    preview.size = Vector2i(maxi(1,roundi(holder.size.x)),
-        maxi(1,roundi(holder.size.y)))
+    # Limit GPU texture memory in mobile 8-player-sized maps; upscale via
+    # SubViewportContainer, not a full-resolution 2560x1600 render target.
+    var ratio: float = minf(1.0,minf(
+        1280.0/maxf(holder.size.x,1.0),
+        800.0/maxf(holder.size.y,1.0)))
+    preview.size = Vector2i(maxi(1,roundi(holder.size.x*ratio)),
+        maxi(1,roundi(holder.size.y*ratio)))
 
 func _refresh_camera() -> void:
     if camera == null:
@@ -221,6 +227,18 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     if model == null:
         return false
     _scene = model
+    var visual_biome: String = Biomes.from_state(state)
+    var background: Color = Color("#394d5b")
+    match visual_biome:
+        Biomes.WINTER:
+            background = Color("#9fb6c2")
+        Biomes.CANYON:
+            background = Color("#8d8377")
+        Biomes.COASTAL:
+            background = Color("#4d7d89")
+    for child in preview.get_children():
+        if child is WorldEnvironment and child.environment != null:
+            child.environment.background_color = background
     _state_snapshot = state.duplicate(true)
     _selected_hint_unit_id = selected_id
     _ranges_visible = true
@@ -241,8 +259,11 @@ func open_from_state(state: Dictionary, selected_id: String = "") -> bool:
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
         % [_dims.x,_dims.y,int(statistics["chunks"]),
             int(units["visible"]),int(units["detailed"])])
-    stats_label.text += " · relieve V17 %d sectores de suelo" % [
-        int(statistics.get("blended_tiles",0))]
+    stats_label.text += " · bioma %s · %d laderas, %d bosques · %d mallas extra" % [
+        Biomes.label_for(visual_biome),
+        int(statistics.get("mountain_ridges",0)),
+        int(statistics.get("trees",0)),
+        int(statistics.get("biome_extra_batches",0))]
     show()
     move_to_front()
     preview.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -257,6 +278,10 @@ func open_from_board(board: Control) -> bool:
     if not open_from_state(state,str(board.get("selected_id"))):
         return false
     _live_board = board
+    if bool(board.get("battery_saver")):
+        for child in preview.get_children():
+            if child is DirectionalLight3D:
+                child.shadow_enabled = false
     _update_order_ui()
     return true
 
