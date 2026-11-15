@@ -30,7 +30,7 @@ func _run() -> void:
         if unit is Dictionary and int(unit.get("faction",-1)) == 0 and int(unit.get("hp",0)) > 0:
             friendly.append(unit)
     assert(friendly.size() > 0)
-    assert(menu.army_list_body.get_child_count() == friendly.size())
+    assert(menu.army_list_body.get_child_count() == friendly.size() + 1) # Empty-filter notice
     var initial_id: String = menu.army_selected_id
     assert(not initial_id.is_empty())
     assert(menu.army_details_body.find_child("EstadisticasUnidades",true,false) != null)
@@ -53,7 +53,7 @@ func _run() -> void:
     for unit in many.get("units",[]):
         if unit is Dictionary and int(unit.get("faction",-1)) == 0 and int(unit.get("hp",0)) > 0:
             expected += 1
-    assert(menu.army_list_body.get_child_count() == expected)
+    assert(menu.army_list_body.get_child_count() == expected + 1) # Empty-filter notice
     assert(expected > 30)
     assert(main.board.state == many)
     main.board.state = original
