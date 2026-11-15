@@ -312,6 +312,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         "roads":roads_count,"shore_edges":shores_count,
         "blended_tiles":blended_count}
 
+# V20b: use one reusable 21-facet layered fir mesh, NOT hundreds of
+# separate trees. Snow is painted directly into the upper branches.
 static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
@@ -319,23 +321,47 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         var tile: Dictionary = cells[cell]
         if str(tile["kind"]) != "forest" or not bool(tile.get("details",false)):
             continue
-        var tree_pos: Vector3 = world_at(cell)
-        tree_pos.y = height_at(cells,cell,0.38,-0.16)+0.48
-        positions.append(Transform3D(Basis.IDENTITY,tree_pos))
+        for j in range(2 if biome!=Biomes.CANYON else 1):
+            var shift: Vector2 = Vector2(-0.38,0.26) if j==0 else Vector2(0.38,-0.28)
+            var at: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
+            at.y = height_at(cells,cell,shift.x,shift.y)+0.41
+            var angle: float = float(posmod(
+                cell.x*37+cell.y*83+j*19,16))/16.0*TAU
+            var scale: float = 0.82+float(posmod(cell.x*7+cell.y*13+j,5))*0.075
+            var rotated := Basis(Vector3.UP,angle).scaled(
+                Vector3(scale,scale,scale))
+            positions.append(Transform3D(rotated,at))
     if positions.is_empty():
         return 0
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = 0.0
-    mesh.bottom_radius = 0.43
-    mesh.height = 1.02
-    mesh.radial_segments = 7
+    var foliage: Color = (
+        Color("#40625b") if biome==Biomes.WINTER else
+        Color("#91845c") if biome==Biomes.CANYON else
+        Color("#2e7665") if biome==Biomes.COASTAL else Color("#396b4c"))
+    var tree_mesh := SurfaceTool.new()
+    tree_mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for layer in range(3):
+        var radius: float = 0.45-float(layer)*0.10
+        var low: float = -0.32+float(layer)*0.29
+        var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
+        for seg in range(7):
+            var angle_a: float = TAU*float(seg)/7.0
+            var angle_b: float = TAU*float(seg+1)/7.0
+            var a := Vector3(cos(angle_a)*radius,low,sin(angle_a)*radius)
+            var b := Vector3(cos(angle_b)*radius,low,sin(angle_b)*radius)
+            var top_tint: Color = (
+                Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else
+                foliage.lightened(0.08+0.045*float(layer)))
+            var side: Color = foliage.darkened(0.065*float(seg%3))
+            _tri_tinted(tree_mesh,a,b,tip,side,foliage.lightened(0.055),
+                top_tint)
+    tree_mesh.generate_normals()
+    var mesh: ArrayMesh = tree_mesh.commit()
     var mat := StandardMaterial3D.new()
-    mat.albedo_color = (
-        Color("#405e54") if biome == Biomes.WINTER else
-        Color("#7e7656") if biome == Biomes.CANYON else
-        Color("#31715c") if biome == Biomes.COASTAL else Color("#37684d"))
-    mat.roughness = 0.94
-    mesh.material = mat
+    mat.albedo_color = Color.WHITE
+    mat.vertex_color_use_as_albedo = true
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mat.roughness = 0.96
+    mesh.surface_set_material(0,mat)
     var group := MultiMesh.new()
     group.transform_format = MultiMesh.TRANSFORM_3D
     group.mesh = mesh
@@ -349,29 +375,29 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
     if biome == Biomes.WINTER:
         var cap := CylinderMesh.new()
         cap.top_radius = 0.0
-        cap.bottom_radius = 0.21
-        cap.height = 0.28
+        cap.bottom_radius = 0.14
+        cap.height = 0.22
         cap.radial_segments = 7
-        var frost := StandardMaterial3D.new()
-        frost.albedo_color = Biomes.SNOW
-        frost.roughness = 0.99
-        cap.material = frost
+        var snow_mat := StandardMaterial3D.new()
+        snow_mat.albedo_color = Biomes.SNOW
+        snow_mat.roughness = 0.99
+        cap.material = snow_mat
         var snow := MultiMesh.new()
         snow.transform_format = MultiMesh.TRANSFORM_3D
         snow.mesh = cap
         snow.instance_count = positions.size()
         for i in range(positions.size()):
-            snow.set_instance_transform(i,Transform3D(Basis.IDENTITY,
-                positions[i].origin+Vector3(0,0.42,0)))
+            snow.set_instance_transform(i,positions[i].translated_local(
+                Vector3(0,0.99,0)))
         var snow_draw := MultiMeshInstance3D.new()
         snow_draw.name = "NieveEnConiferasInstanciadaV20"
         snow_draw.multimesh = snow
         parent.add_child(snow_draw)
     return positions.size()
 
-# Terrain-owned mountain ridges: one instanced mesh for all visible rock
-# cells, rather than separate triangles floating UNDER the terrain mesh.
-# Decorative ridges never affect logical movement, fog or tap raycasting.
+# Two high points and six lateral faces, all painted in this actual rock
+# mesh. This explicitly replaces the small generic cones that made the
+# battlefield mountains appear separate from the V18b/V19 environments.
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         biome: String) -> int:
     var transforms: Array[Transform3D] = []
@@ -380,29 +406,53 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         if str(tile.get("kind",""))!="mountain" or not bool(tile.get("details",false)):
             continue
         var base: Vector3 = world_at(cell)
-        base.y = height_at(cells,cell)+0.35
-        transforms.append(Transform3D(Basis.IDENTITY,base))
+        base.y = height_at(cells,cell)+0.33
+        var angle: float = float(posmod(
+            cell.x*31+cell.y*17,13))/13.0*TAU
+        var shape := Basis(Vector3.UP,angle).scaled(
+            Vector3(0.95,0.9+float(posmod(cell.x*11+cell.y,4))*0.07,0.95))
+        transforms.append(Transform3D(shape,base))
     if transforms.is_empty():
         return 0
-    var peaks := CylinderMesh.new()
-    peaks.top_radius = 0.08
-    peaks.bottom_radius = 0.62
-    peaks.height = 0.85
-    peaks.radial_segments = 8
-    var mat := StandardMaterial3D.new()
-    mat.albedo_color = _biome_color("mountain",Vector2i(2,2),biome)
-    mat.roughness = 0.96
-    peaks.material = mat
+    var rock: Color = _biome_color("mountain",Vector2i(2,2),biome)
+    var shadow: Color = rock.darkened(0.25)
+    var light: Color = rock.lightened(0.12)
+    var crest: Color = (
+        Biomes.SNOW if biome==Biomes.WINTER else
+        Color("#c2ac89") if biome==Biomes.CANYON else
+        Color("#80a69b") if biome==Biomes.COASTAL else Color("#96a9a0"))
+    var nw := Vector3(-0.84,-0.37,-0.80)
+    var ne := Vector3(0.76,-0.40,-0.86)
+    var se := Vector3(0.85,-0.42,0.74)
+    var sw := Vector3(-0.81,-0.35,0.81)
+    var peak_a := Vector3(-0.33,1.08,-0.18)
+    var peak_b := Vector3(0.35,0.83,0.19)
+    var mesh_tool := SurfaceTool.new()
+    mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    _tri_tinted(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
+    _tri_tinted(mesh_tool,ne,peak_b,peak_a,rock,light,crest)
+    _tri_tinted(mesh_tool,ne,se,peak_b,light,rock,light)
+    _tri_tinted(mesh_tool,se,sw,peak_b,shadow,rock,crest)
+    _tri_tinted(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
+    _tri_tinted(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
+    mesh_tool.generate_normals()
+    var peaks: ArrayMesh = mesh_tool.commit()
+    var material := StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.albedo_color = Color.WHITE
+    material.roughness = 0.97
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    peaks.surface_set_material(0,material)
     var multi := MultiMesh.new()
     multi.mesh = peaks
     multi.transform_format = MultiMesh.TRANSFORM_3D
     multi.instance_count = transforms.size()
     for i in range(transforms.size()):
         multi.set_instance_transform(i,transforms[i])
-    var rock := MultiMeshInstance3D.new()
-    rock.name = "Macizos3DPorBiomaV20"
-    rock.multimesh = multi
-    parent.add_child(rock)
+    var rock_instance := MultiMeshInstance3D.new()
+    rock_instance.name = "Macizos3DPorBiomaV20"
+    rock_instance.multimesh = multi
+    parent.add_child(rock_instance)
     return transforms.size()
 
 static func _make_sites(parent: Node3D,state: Dictionary,
