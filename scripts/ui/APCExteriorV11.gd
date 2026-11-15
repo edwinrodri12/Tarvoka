@@ -278,6 +278,15 @@ static func apply(model: Node3D,faction_color: Color) -> bool:
     _nose(root,paint,darkpaint,steel,dark,lens)
     _side_armor(root,paint,darkpaint,steel)
     _fenders(root,paint,steel)
+    # Replace earlier rectangular fender strips and box-shaped 'tow eyes'
+    # with the new flush curved guards / genuinely hollow circular rings.
+    # Their originals remain in the tree ONLY for historical comparison.
+    for obsolete_name in ["SeisBordesGuardabarro",
+            "ArgollaArrastre_-1","ArgollaArrastre_1"]:
+        var obsolete: Node3D=model.find_child(
+            obsolete_name,true,false) as Node3D
+        if obsolete!=null:
+            obsolete.visible=false
     model.set_meta(FLAG,true)
     model.set_meta(SHOW,true)
     model.set_meta(STAGE,0)
@@ -298,6 +307,10 @@ static func set_stage(model: Node3D,stage: int) -> bool:
         "P06V11_ModuloBlindaje_1_1",true,false) as Node3D
     if right!=null:
         right.visible=enabled and value<2
+    var broken_weld: Node3D=model.find_child(
+        "P06V11_CordonSoldaduraVertical_1_1",true,false) as Node3D
+    if broken_weld!=null:
+        broken_weld.visible=enabled and value<2
     var left_arch: Node3D=model.find_child(
         "P06V11_GuardabarrosCurvo_-1_0",true,false) as Node3D
     if left_arch!=null:
@@ -312,5 +325,13 @@ static func set_stage(model: Node3D,stage: int) -> bool:
 static func set_enabled(model: Node3D,show: bool) -> bool:
     if model==null or not bool(model.get_meta(FLAG,false)):
         return false
+    # When the user compares to V3/V10, the earlier V6 decorative pieces
+    # remain part of their original tier. V11 alone hides its replaced boxes.
+    for obsolete_name in ["SeisBordesGuardabarro",
+            "ArgollaArrastre_-1","ArgollaArrastre_1"]:
+        var obsolete: Node3D=model.find_child(
+            obsolete_name,true,false) as Node3D
+        if obsolete!=null:
+            obsolete.visible=not show
     model.set_meta(SHOW,show)
     return set_stage(model,int(model.get_meta(STAGE,0)))
