@@ -8,7 +8,7 @@ var failures: int = 0
 func _check(ok: bool, message: String) -> void:
     if not ok:
         failures += 1
-        push_error("BASTION V5 WEB UI: " + message)
+        push_error("BASTION V6 WEB UI: " + message)
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -32,9 +32,14 @@ func _run() -> void:
     if model != null:
         _check(bool(model.get_meta("tarvoka_apc_finish_v3",false)),
             "sculpted V3 damage source loaded")
-        _check(bool(model.get_meta("tarvoka_apc_detail_v5",false)) or
-            model.find_child("P06V5_TapasTechoEnrasadas",true,false) != null,
-            "V5 visible geometry loaded")
+        _check(bool(model.get_meta("tarvoka_apc_detail_v5",false)),
+            "V5 base geometry loaded")
+        _check(bool(model.get_meta("tarvoka_apc_finish_v6",false)),
+            "V6 integrated armor and troop bay loaded")
+        _check(model.find_child("CincoAletasVentilacion",true,false) != null,
+            "V6 physical front intake is present")
+        _check(model.find_child("NuevePeldañosRampa",true,false) != null,
+            "V6 ramp hardware actually exists")
         _check(model.find_child("Bastion_P06_Casco",true,false) == null,
             "old blockout removed from displayed model")
     var picker: OptionButton = studio.get("role_picker") as OptionButton
@@ -45,11 +50,21 @@ func _run() -> void:
     _check(model != null and int(model.get_meta(
         "tarvoka_apc_v3_damage_stage",-1)) == 3,
         "critical art stage selected")
+    _check(int(model.get_meta("tarvoka_apc_v6_stage",-1)) == 3,
+        "V6 distress layers follow V3 stage")
     studio.call("_set_damage",0)
+    _check(int(model.get_meta("tarvoka_apc_v6_stage",-1)) == 0,
+        "V6 exterior recovers after repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
-    _check(model != null and model.get_meta("tarvoka_apc_finish_v3",false),
-        "faction change keeps full geometry")
+    _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
+        "faction change keeps the V6 full geometry")
+    studio.call("_toggle_p06_version")
+    _check(model != null and not model.get_meta(
+        "tarvoka_apc_v6_visible",true),"V3 comparison hides V6")
+    studio.call("_toggle_p06_version")
+    _check(model != null and model.get_meta(
+        "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
     studio.call("_play","attack")
     studio.call("_process",0.45)
     studio.call("_stop_animation")
@@ -66,5 +81,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V5 LIVE WEB STUDIO: full startup, factions, damage, animation, boarding ramp")
+    print("PASS BASTION V6 LIVE WEB STUDIO: full startup, detail, factions, reversible damage and articulated boarding ramp")
     quit(0)
