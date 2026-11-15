@@ -22,9 +22,10 @@ permissions:
   id-token: write
 
 concurrency:
-  # Keep a verified V10 site publication from being cancelled by unrelated
-  # model/HQ automation. GitHub serializes page deployments in this group.
-  group: tarvoka-public-studio-pages
+  # Unrelated PR workflow_run completions must NOT evict a real Pages
+  # publication from the single pending slot of the publish group.
+  # Keep actual push/successful source releases serialized as before.
+  group: ${{ github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-public-studio-pages' }}
   cancel-in-progress: false
 
 jobs:
