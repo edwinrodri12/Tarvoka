@@ -30,6 +30,22 @@ func _initialize() -> void:
     corrupted = JSON.parse_string(raw)
     corrupted["units"][1]["id"] = "a"
     assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    # Untrusted JSON must never coerce fractional or boolean combat stats.
+    # Rejections protect deterministic combat and prevent malformed saves.
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["hp"] = 7.5
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["attack"] = true
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["faction"] = 0.5
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    corrupted = JSON.parse_string(raw)
+    corrupted["units"][0]["pos"] = [1.25, 2]
+    assert(Codec.decode(JSON.stringify(corrupted)).is_empty())
+    # Invalid input must not mutate an existing live battle snapshot.
+    assert(state["units"][0]["hp"] == 10)
     assert(Codec.encode({}).is_empty())
     # Reject states that deserialize into unplayable or incoherent battles.
     corrupted = JSON.parse_string(raw)
