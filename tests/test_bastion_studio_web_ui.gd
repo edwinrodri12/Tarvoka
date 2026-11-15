@@ -66,6 +66,10 @@ func _run() -> void:
             "V20 true 3D weld beads, hex bolts and washers installed")
         _check(bool(model.get_meta("tarvoka_apc_materials_v21",false)),
             "V21 real triplanar PBR material library applied to 3D sculpt")
+        _check(bool(model.get_meta("tarvoka_apc_weather_v22",false)),
+            "V22 real PBR weather finishes are attached to the Bastion model")
+        _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="clear",
+            "default display respects original clear V21 paint")
         var v21paint: MeshInstance3D=model.find_child(
             "P06V19_ChaflanSuperior_1_0",true,false) as MeshInstance3D
         var v21material: StandardMaterial3D=v21paint.material_override as StandardMaterial3D
@@ -194,6 +198,8 @@ func _run() -> void:
         "V20 micro-welds and clean bolts fracture at critical damage")
     _check(int(model.get_meta("tarvoka_apc_v21_stage",-1))==3,
         "V21 exposed steel and soot follow critical damage state")
+    _check(int(model.get_meta("tarvoka_apc_v22_stage",-1))==3,
+        "V22 rain/snow finish follows five reversible visual damage stages")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -306,6 +312,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v21_visible",true),
         "V3 comparison restores original paint under V21 finishes")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v22_visible",true),
+        "V3 comparison also hides rain and frost weather overlays")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -345,6 +354,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v21_visible",false),
         "V21 textured PBR returns after historical comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v22_visible",false),
+        "V22 weather overlay is available after historical comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -412,6 +424,31 @@ func _run() -> void:
         int(model.get_meta("tarvoka_apc_v21_stage",-1))==3,
         "V21 charred metal preview uses stage three")
     studio.call("_set_damage",0)
+    studio.call("_set_p06_weather_v22","rain")
+    _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="rain",
+        "rain button changes actual PBR material on live model")
+    var wet_paint: MeshInstance3D=model.find_child(
+        "P06V19_ChaflanSuperior_1_0",true,false) as MeshInstance3D
+    var wet_mat: StandardMaterial3D=wet_paint.material_override as StandardMaterial3D
+    _check(wet_mat!=null and wet_mat.roughness<0.75,
+        "live rainy paint is visibly glossier than dry factory finish")
+    studio.call("_set_p06_light_v22",2)
+    _check(int(studio.get("_p06_light_v22"))==2,
+        "night preset selected without touching gameplay")
+    var night_fill: OmniLight3D=studio.get("_p06_night_fill_v22") as OmniLight3D
+    _check(night_fill!=null and night_fill.visible,
+        "P06 night scene has a real additional 3D soft fill light")
+    studio.call("_set_p06_weather_v22","snow")
+    _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="snow",
+        "snow button restores frosted physical surface materials")
+    studio.call("_set_p06_light_v22",1)
+    _check(int(studio.get("_p06_light_v22"))==1 and not night_fill.visible,
+        "at-dusk sun replaces night fill without duplicate light fixtures")
+    studio.call("_set_p06_weather_v22","clear")
+    studio.call("_set_p06_light_v22",0)
+    _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="clear" and
+        int(studio.get("_p06_light_v22"))==0,
+        "clean daylight preset restores original showroom materials")
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
         "native chassis actually rotates to expose underside")
@@ -547,5 +584,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V21 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V22 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)

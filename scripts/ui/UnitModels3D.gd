@@ -35,6 +35,7 @@ const APCWheelwellV18 = preload("res://scripts/ui/APCWheelwellV18.gd")
 const APCUnifiedFlankV19 = preload("res://scripts/ui/APCUnifiedFlankV19.gd")
 const APCMicrodetailV20 = preload("res://scripts/ui/APCMicrodetailV20.gd")
 const APCMaterialFinishV21 = preload("res://scripts/ui/APCMaterialFinishV21.gd")
+const APCWeatherFinishV22 = preload("res://scripts/ui/APCWeatherFinishV22.gd")
 const APCTacticalV8 = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCWeaponAudioV8 = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const APCFullRigV1 = preload("res://scripts/ui/APCVisualRigV1.gd")
@@ -940,7 +941,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                                                     if APCWheelwellV18.apply(model,enamel):
                                                                         if APCUnifiedFlankV19.apply(model,enamel):
                                                                             if APCMicrodetailV20.apply(model,enamel):
-                                                                                APCMaterialFinishV21.apply(model,enamel)
+                                                                                if APCMaterialFinishV21.apply(model,enamel):
+                                                                                    APCWeatherFinishV22.apply(model)
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
