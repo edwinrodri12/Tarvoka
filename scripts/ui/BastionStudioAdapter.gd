@@ -15,6 +15,9 @@ var _p06_ready: bool = false
 func _ready() -> void:
     super._ready()
     _install_p06_controls()
+    var bastion_index: int = P06Models.ROLES.find("apc")
+    if bastion_index >= 0:
+        role_picker.set_item_text(bastion_index,"Bastión P06 · 6×6 · V6")
     _p06_ready = true
     _sync_p06_controls()
 
@@ -61,6 +64,10 @@ func _display_role(role: String) -> void:
         damage_picker.select(0)
     _sync_p06_controls()
     _update_details()
+
+func _switch_category(index: int) -> void:
+    super._switch_category(index)
+    _sync_p06_controls()
 
 func _on_faction(index: int) -> void:
     super._on_faction(index)
