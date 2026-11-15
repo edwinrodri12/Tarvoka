@@ -1662,6 +1662,7 @@ func _refresh_building_faction(_index: int) -> void:
     if _role == "headquarters":
         _display_headquarters()
     elif _role == "airbase":
+        _airbase_v14_history.clear()
         _display_airbase()
 
 func _display_headquarters() -> void:
