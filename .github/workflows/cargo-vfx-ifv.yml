@@ -1,0 +1,71 @@
+name: TARVOKA cargo animation and IFV one-seat
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/core/CargoActions.gd'
+      - 'scripts/core/SaveCodec.gd'
+      - 'scripts/ui/CargoVFX.gd'
+      - 'scripts/ui/TouchBoard.gd'
+      - 'scripts/ui/IsoRenderer.gd'
+      - 'scripts/core/TacticalHints.gd'
+      - 'scripts/core/ModernArsenal.gd'
+      - 'scripts/ui/Main.gd'
+      - 'tests/test_transport_animated_vfx.gd'
+      - 'tests/test_ifv_single_seat_transport.gd'
+      - '.github/workflows/cargo-vfx-ifv.yml'
+  push:
+    branches:
+      - 'feat/cargo-vfx-ifv-single-seat-20261114'
+  workflow_dispatch:
+
+jobs:
+  ifv-cargo-vfx:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Execute mirrored IFV single-seat tactical and save tests
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ifv_single_seat_transport.gd 2>&1 | tee /tmp/ifv-single-seat.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/ifv-single-seat.log; then exit 1; fi
+          grep -F 'PASS IFV transport:' /tmp/ifv-single-seat.log
+      - name: Draw real cargo embark/disembark VFX on classic and isometric boards
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_transport_animated_vfx.gd 2>&1 | tee /tmp/cargo-vfx.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/cargo-vfx.log; then exit 1; fi
+          grep -F 'PASS transport VFX:' /tmp/cargo-vfx.log
+      - name: Preserve original APC loading, AI, UI, security and anti-armor
+        run: |
+          set -euo pipefail
+          for t in test_apc_transport_engine test_apc_transport_ui test_apc_transport_ai test_apc_transport_save_security test_piercer_g09_regression test_ground_armor_ai_procurement; do
+            timeout --signal=TERM --kill-after=5s 90s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${t}.gd" 2>&1 | tee "/tmp/${t}.log"
+            if grep -E 'SCRIPT ERROR:|Assertion failed' "/tmp/${t}.log"; then exit 1; fi
+            grep -E 'PASS(:| )' "/tmp/${t}.log"
+          done
+      - name: Upload Godot real-animation and IFV comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-IFV-CargoVFX-QA
+          path: |
+            /tmp/ifv-single-seat.log
+            /tmp/cargo-vfx.log
+            /tmp/test_apc_transport_*.log
+            /tmp/test_piercer_g09_regression.log
+            /tmp/test_ground_armor_ai_procurement.log
+          if-no-files-found: warn
