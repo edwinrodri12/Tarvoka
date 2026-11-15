@@ -422,7 +422,8 @@ func _draw() -> void:
         IsoRenderer.draw_board(self,state,selected_id,selected_factory_pos,
             pending_order,combat_effects,iso_zoom,iso_pan,motion_effects,art_phase,unit_headings,battery_saver,
             inspected_enemy_id,site_overlay_snapshots(),inspected_cell,threat_preview(),
-            comparison_cells(),weather_visual_previous,weather_blend)
+            comparison_cells(),weather_visual_previous,weather_blend,
+        TacticalHints.transport(state,selected_id),unload_mode)
         _draw_campaign_markers()
         AlertPainter.draw_iso(self,alert_marker_snapshots(),size,
             iso_zoom,iso_pan,map_dimensions(),battery_saver)
@@ -538,6 +539,18 @@ func _draw() -> void:
             draw_string(font, movement_pos + Vector2(3.0, max(12.0, tile * 0.25)),
                 str(hints["moves"][destination]), HORIZONTAL_ALIGNMENT_LEFT, -1,
                 int(max(10.0, tile * 0.20)), Color.WHITE)
+    # Distinct cargo affordances: blue for adjacent infantry boarding,
+    # amber for empty unload destinations only when unload mode is armed.
+    var cargo_hints: Dictionary = TacticalHints.transport(state,selected_id)
+    for transport_cell in cargo_hints["embarks"]:
+        var board_pos: Vector2 = origin + Vector2(transport_cell)*tile
+        draw_rect(Rect2(board_pos,Vector2.ONE*tile),Color(0.20,0.68,1.0,0.21))
+        draw_rect(Rect2(board_pos,Vector2.ONE*tile),Color(0.22,0.76,1.0,0.92),false,maxf(2.0,tile*0.055))
+    if unload_mode:
+        for transport_cell in cargo_hints["unloads"]:
+            var board_pos: Vector2 = origin + Vector2(transport_cell)*tile
+            draw_rect(Rect2(board_pos,Vector2.ONE*tile),Color(1.0,0.78,0.17,0.27))
+            draw_rect(Rect2(board_pos,Vector2.ONE*tile),Color(1.0,0.82,0.25,0.95),false,maxf(2.0,tile*0.055))
     # Combined amber threat reach (legal move endpoint + weapon range).
     # Red targets remain attacks executable NOW from the current position.
     # The player must still move first, then issue a separate attack order.
@@ -1273,7 +1286,19 @@ func _tap(point: Vector2) -> void:
                 target = actionable[(current_index + 1) % actionable.size()]
         elif not units_here.is_empty():
             target = units_here[0]
+    if not selected_id.is_empty():
+        var transport: Dictionary = TacticalHints.transport(state,selected_id)
+        if unload_mode and transport["unloads"].has(cell) and target.is_empty():
+            _request_transport_order(cell,str(transport["unloads"][cell]["passenger_id"]),"disembark")
+            queue_redraw()
+            return
+        if not unload_mode and transport["embarks"].has(cell) and not target.is_empty():
+            if str(target.get("id","")) == str(transport["embarks"][cell]["passenger_id"]):
+                _request_transport_order(cell,str(target["id"]),"embark")
+                queue_redraw()
+                return
     if not target.is_empty() and int(target["faction"]) == int(state["faction"]):
+        unload_mode = false
         selected_factory_pos = Vector2i(-1,-1)
         inspected_enemy_id = ""
         pending_order.clear()
