@@ -100,7 +100,7 @@ func _ready() -> void:
 
     # A dramatic landscape with generous touch targets; desktop and Android
     # share the same real Godot screen in landscape rather than separate mockups.
-    content_rail = HBoxContainer.new()
+    content_rail = BoxContainer.new()
     content_rail.add_theme_constant_override("separation",14)
     content_rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
     content_rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
