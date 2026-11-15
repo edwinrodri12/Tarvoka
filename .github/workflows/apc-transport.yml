@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/core/CargoActions.gd'
+      - 'scripts/core/APCTransportAI.gd'
+      - 'scripts/core/BasicAI.gd'
       - 'scripts/core/BattleSession.gd'
       - 'scripts/core/BattleActions.gd'
       - 'scripts/core/SaveCodec.gd'
@@ -13,6 +15,7 @@ on:
       - 'scripts/ui/TouchBoard.gd'
       - 'scripts/ui/Main.gd'
       - 'tests/test_apc_transport_engine.gd'
+      - 'tests/test_apc_transport_ai.gd'
       - 'tests/test_apc_transport_save_security.gd'
       - 'tests/test_apc_transport_ui.gd'
       - '.github/workflows/apc-transport.yml'
@@ -62,6 +65,15 @@ jobs:
             | tee /tmp/apc-transport-ui.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-transport-ui.log; then exit 1; fi
           grep -F 'PASS APC transport UI:' /tmp/apc-transport-ui.log
+      - name: Validate fog-safe AI APC delivery and legal city capture
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 85s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_apc_transport_ai.gd 2>&1 \
+            | tee /tmp/apc-transport-ai.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/apc-transport-ai.log; then exit 1; fi
+          grep -F 'PASS APC transport AI:' /tmp/apc-transport-ai.log
       - name: Existing combat fog movement economy and save regressions
         run: |
           set -euo pipefail
@@ -85,6 +97,7 @@ jobs:
           path: |
             /tmp/apc-transport-engine.log
             /tmp/apc-transport-ui.log
+            /tmp/apc-transport-ai.log
             /tmp/apc-transport-save-security.log
             /tmp/*-apc.log
           if-no-files-found: warn
