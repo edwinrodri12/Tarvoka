@@ -87,6 +87,10 @@ func _run() -> void:
     assert(studio._apc_stress_count==0 and studio.model_root.visible)
     assert(not studio._auto_benchmark_report_path.is_empty())
     assert(FileAccess.file_exists(studio._auto_benchmark_report_path))
+    assert(studio._auto_benchmark_diagnosis_text().contains(
+        "Serie incompleta"))
+    assert(studio._auto_benchmark_diagnosis_text().contains(
+        "NO es una medición Android") or OS.get_name()=="Android")
     studio.queue_free()
     await process_frame
     print("PASS APC P06 V3 STUDIO STRESS: 32/64 APC with optional 8 HQ V3, 8 G09 and V26 ground; 8 factions, tactical LOD, FPS/draw-call HUD and clean exit")
