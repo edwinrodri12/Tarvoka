@@ -158,6 +158,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    unload_mode = false
     compare_mode = false
     compare_candidates.clear()
     message = "Apertura equilibrada: %d ordenes disponibles para quien comienza." % Opening.remaining(state)
@@ -1520,6 +1521,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    unload_mode = false
     compare_mode = false
     compare_candidates.clear()
     last_enemy_turn_report = ""
@@ -1570,6 +1572,7 @@ func resume_autosave() -> bool:
     selected_id = ""
     inspected_enemy_id = ""
     pending_order.clear()
+    unload_mode = false
     compare_mode = false
     compare_candidates.clear()
     last_enemy_turn_report = ""
