@@ -80,6 +80,7 @@ func _run() -> void:
         assert(_near(gun.position.z,-0.06))
         assert(not _visible(model,"ImpactoP06_Explosivo"))
         assert(not _visible(model,"EfectoHumoDisparoP06"))
-        model.free()
+        model.queue_free()
+        await process_frame
     print("PASS P06 rig: eight factions, six articulated wheels, suspension, steering, remote weapon and reversible damage")
     quit(0)
