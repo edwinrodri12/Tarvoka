@@ -38,6 +38,16 @@ func _run() -> void:
             var residual := _node(model,"G11V9_HumoResidual_%02d" % tube) as MeshInstance3D
             _check(core != null and tail != null and pressure != null
                 and residual != null,"four 3D components in each launch tube %d" % tube)
+            var flare := _node(model,
+                "G11V9_FlashEsculpido_%02d" % tube) as MeshInstance3D
+            _check(flare != null and flare.mesh is ArrayMesh,
+                "muzzle uses short rounded 3D flame, not blocky V8 square")
+            _check(not _node(model,"G11V8_AnilloPresion_%02d" % tube).visible,
+                "old bright hard torus hidden behind softer sculpted flash")
+            for bar in range(4):
+                _check(not _node(model,
+                    "G11V8_Destello_%02d_%d" % [tube,bar]).visible,
+                    "V8 rectangular flame bars no longer obscure each nozzle")
             if core != null:
                 _check(core.mesh is ArrayMesh,
                     "hot exhaust core uses procedural mesh with vertex color")
@@ -48,6 +58,8 @@ func _run() -> void:
                 _check(tail.mesh is ArrayMesh,
                     "trailing exhaust is authentic tapered 3D surface")
             if pressure != null and residual != null:
+                _check(pressure.mesh.get_aabb().size.x < 0.46,
+                    "base muzzle smoke mesh is narrow enough not to cover neighbors")
                 _check(pressure.get_parent() == residual.get_parent(),
                     "pressure pulse and residual smoke align to identical tube")
                 _check(pressure.get_parent() == _node(model,
@@ -87,6 +99,8 @@ func _run() -> void:
             "residual smoke continues to dissipate after rocket departure")
         _check(cloud.visible and cloud.scale.x > expanded,
             "residual muzzle smoke expands before dispersing")
+        _check(cloud.scale.x < 1.2,
+            "softened exhaust never grows into an oversized gray sheet")
         _check(Models.pose_model("mlrs",model,"attack",0.550),
             "old tube clears while subsequent tubes fire")
         _check(not cloud.visible,"smoke from first shot dissipates completely")
