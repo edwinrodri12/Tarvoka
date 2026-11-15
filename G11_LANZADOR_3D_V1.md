@@ -241,3 +241,19 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - **QA nativa Godot 4.3 del PR #409: aprobada.** La publicación web se valida en el workflow separado «Publish TARVOKA native 3D art studio».
 
 **Estado artístico:** V15 integrada en el juego y el Estudio 3D. Mantener el G11 en diseño activo; inspeccionar las proporciones de las nuevas piezas desde atrás y laterales antes de considerar cualquier optimización Android o declarar finalizado el vehículo.
+
+
+## Actualización V16 — perímetro frontal, uniones de cubierta y 16 vistas reales (15-nov-2026)
+
+**Integrada en `main` con [PR #411](https://github.com/edwinrodri12/Tarvoka/pull/411)**. Continuamos perfeccionando el mismo G11 en Godot, no mediante una ilustración conceptual.
+
+- Módulo `scripts/ui/G11FrontFrameV16.gd` construye cuatro perfiles octagonales de bastidor frontal, extruidos con ocho caras biseladas y volumen real. Se ubican fuera del contorno de las doce bocas de cohetes (y=±0.468, x=±0.613; la parrilla tiene sus centros hasta x=±0.42, y=±0.24 y labios de radio 0.115 m).
+- Las cuatro cartelas de esquina son prismas triangulares físicos con pernos; el marco conserva el hueco central abierto.
+- Dos bordes longitudinales, cuatro cordones de soldadura cilíndricos, dos tapas de registro en el techo con bisagras/cierres y unas juntas posteriores añaden profundidad auténtica sin sustituir la cubierta original pintada por facción.
+- Daño medio muestra rozaduras en el borde frontal; daño crítico agrega una arista doblada; reparación restaura la geometría del estado limpio.
+- No cambia propiedades de combate, economía, movilidad, combustible o animaciones aprobadas. El modelo continúa manteniendo V11 (12 bocas reales), V13 (engranes y pintura), V14 (cuatro circuitos hidráulicos) y V15 (blindaje posterior).
+- `BastionStudioAdapter.gd` actualiza selector y leyenda a **G11 V16**, agregando cuatro vistas: frontal en 3/4, frontal contrario, techo/articulaciones y juntas posteriores. `.github/workflows/tarvoka-3d-pages.yml` incorpora la dependencia V16 a la exportación web.
+- QA `tests/test_g11_front_frame_v16.gd` recorre 8 facciones, comprueba mallas tridimensionales, integridad de las 12 bocas, techo PBR, articulación, daños y reparación. `tests/test_g11_front_frame_v16_capture.gd` genera **16 capturas auténticas de Godot** de frontal, techo, pintura, juntas y daños.
+- Workflow G11 del PR #411 **aprobado**. La publicación de Pages es un workflow independiente: verificar que finalize en verde antes de anunciar un visor actualizado.
+
+**Pendiente artístico:** evaluación de proporciones de los refuerzos frontales en el móvil. No cerrar el modelo ni iniciar pruebas de estrés de Android hasta aprobación del diseño.
