@@ -40,3 +40,52 @@ Fecha: 12 noviembre de 2026. Rama `feat/mobile-large-map-performance-20261112` s
 La optimización es independiente de la PR #148 y se mantiene experimental. La compilación Android y la suite de Godot deben estar verdes, pero el rendimiento real **todavía requiere pruebas en un teléfono** a 10×8/24×18/40×30, con y sin niebla, con número realista de unidades y tras 15–30 min de juego. No se declara FPS fijo, consumo de batería ni temperatura hasta hacer esas mediciones.
 
 No se modifica balance, 32 roles, doctrinas de contraataque, alcance, IA, economía, visibilidad, formato de guardado ni identidad de las ocho facciones.
+
+
+## Protocolo experimental: ocho facciones y APC P06 V3 (14 noviembre 2026)
+
+La rama del PR #330 añade un **segundo instalador independiente** llamado
+`TARVOKA-Estudio3D-Android-FPS-benchmark-arm64` a los artefactos del flujo
+`.github/workflows/android-debug-apk.yml`. Usa una aplicación Android
+distinta (`com.edwinrodri12.tarvoka.studio`) y abre el Estudio 3D Godot
+directamente; no sustituye los datos ni la APK jugable TARVOKA.
+
+**Uso en un teléfono Android ARM64**:
+
+1. Descargar el artefacto del último workflow Android **aprobado**, extraer
+   `TARVOKA-Estudio3D-benchmark.apk` e instalarlo como aplicación aparte.
+   Una APK del PR usa una firma de depuración temporal: si una actualización
+   no se instala encima, desinstalar solo la aplicación Estudio 3D anterior.
+2. Elegir el APC P06 V3 y activar `32 vehículos`. Tomar una muestra estable
+   de 60 segundos en detalle completo; pulsar
+   `GUARDAR / COPIAR INFORME FPS`. Guardar el JSON copiado.
+3. Cambiar a `LOD TÁCTICO`; repetir 60 segundos y conservar otro informe.
+   Repetir con 64 APC; luego activar `BATALLA MIXTA` para incluir
+   ocho tanques G09 y ocho Cuarteles Generales y repetir ambos detalles.
+4. Repetir cada escenario tres veces. Anotar modelo de teléfono, versión
+   Android, frecuencia de pantalla, estado de batería, temperatura
+   ambiental y cualquier degradación visible tras 15–30 minutos.
+5. Comparar preferentemente **p10 FPS, media FPS, fracción de muestras de
+   al menos 30 FPS, draw calls y memoria estática del motor**. La
+   `Performance.MEMORY_STATIC` no mide toda la memoria del teléfono ni su
+   temperatura. No confundir los FPS de WebGL o Mesa/llvmpipe con los nativos.
+   El archivo JSON también queda bajo `user://` de la aplicación.
+
+**Criterios provisionales de aceptación para perfilar, no promesas:**
+p10 FPS ≥30 durante una sesión estable de 60 s en un teléfono Android
+de referencia identificado, sin cierres ni progresión anormal de memoria;
+probar un equipo Android menos potente antes de fijar los requisitos
+comerciales. Si un escenario no alcanza esa meta, conservar el informe
+y priorizar LOD adicional, menos efectos o reducción de capturas.
+
+**Optimización de memoria incorporada**: el renderizador del tablero
+`UnitRender3D` ahora prepara las 22 capturas estáticas (ocho G09,
+ocho P06 y seis clases restantes) en grupos de un máximo de cuatro
+`SubViewport` temporales. Tras cada captura libera el modelo y
+preserva solamente `ImageTexture`; la batalla utiliza las imágenes
+precapturadas y no mantiene 22 cámaras actualizándose.
+
+Las pruebas de laboratorio con 48 y 80 modelos reales de Godot son
+**visuales**: no verifican red, latencia de ocho clientes, IA por turno,
+mapas completos ni consumo térmico del teléfono. La aprobación de QA/CI
+no equivale a aprobación física.
