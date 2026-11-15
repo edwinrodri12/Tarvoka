@@ -1,0 +1,78 @@
+name: TARVOKA experimental liquidity and extended large-map audit v0.8
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_capture_liquidity_by_faction_v06.gd"
+      - "tests/test_capture_long_large_maps_v06.gd"
+      - ".github/workflows/capture-liquidity-long-large-v06.yml"
+  workflow_dispatch:
+
+jobs:
+  side_liquidity:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare faction treasuries and local production blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1000s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_liquidity_by_faction_v06.gd \
+            2>&1 | tee /tmp/tarvoka-liquidity-v06.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-liquidity-v06.log; then
+            exit 1
+          fi
+          grep -Fq 'PASS capture liquidity v06:' /tmp/tarvoka-liquidity-v06.log
+      - name: Archive faction audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-liquidity-v06
+          path: /tmp/tarvoka-liquidity-v06.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  extended_large_map_matches:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run mirrored large-map matches without forced victories
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1620s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_long_large_maps_v06.gd \
+            2>&1 | tee /tmp/tarvoka-large-long-v06.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-large-long-v06.log; then
+            exit 1
+          fi
+          grep -Fq 'PASS capture long large maps v06:' /tmp/tarvoka-large-long-v06.log
+      - name: Archive complete matches
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-large-long-v06
+          path: /tmp/tarvoka-large-long-v06.log
+          retention-days: 30
+          if-no-files-found: ignore
