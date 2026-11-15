@@ -378,10 +378,12 @@ const TACTICAL_PREFIXES: Array[String]=[
     "JuntaFlancoV3_","RemacheSoldadoProaV3_",
     "NervioTorretaV3_","TechoSensorReforzadoV2",
     "RejillasSensorV2","RejillaRefrigeracion_",
-    "LenteInfrarrojaV2","CristalSensorTermicoV3"
+    "LenteInfrarrojaV2","CristalSensorTermicoV3",
+    "P06V5_BordesHatchYJuntas","P06V5_SoldaduraFlancos",
+    "P06V5_RejillasProaYLucesTraseras"
 ]
 const TACTICAL_BATCHES: Array[String]=[
-    "PernosP06","APC_V2_TacosTodoTerreno"
+    "PernosP06","APC_V2_TacosTodoTerreno","P06V5_PernosDeCoraza"
 ]
 
 static func set_tactical_lod(model: Node3D,reduced: bool) -> int:
@@ -453,7 +455,8 @@ static func apply_stage(model: Node3D,stage: int) -> bool:
             "TechoBlindadoContinuoV3",
             "HombroTechoInclinadoV3_-1","HombroTechoInclinadoV3_1",
             "EscotillaTechoOctogonalV3","BlindajeRegistroSuperiorV3",
-            "PeriscopioFrontalV3","JuntaTechoDelanteraV3"]:
+            "PeriscopioFrontalV3","JuntaTechoDelanteraV3",
+            "P06V5_TechoAcabado"]:
         var intact: Node3D=model.find_child(label,true,false) as Node3D
         if intact!=null:
             intact.visible=current<4
