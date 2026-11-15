@@ -19,19 +19,20 @@ static func can_control(board: Control) -> bool:
         return false
     if bool(board.get("ai_enabled")) and int(state.get("faction",-1)) != 0:
         return false
-    return int(state.get("faction",-1)) == 0 and int(state.get("winner",-1)) == -1
+    # Hotseat players may issue orders for the active side; AI stays locked.
+    return int(state.get("faction",-1)) in [0,1] and int(state.get("winner",-1)) == -1
 
 static func visible_friends(state: Dictionary, cell: Vector2i) -> Array[Dictionary]:
     var options: Array[Dictionary] = []
     if not Rules.inside(cell,state.get("terrain",[])):
         return options
-    var visible: Dictionary = Visibility.visible_cells(state,0) if Visibility.enabled(state) else {}
+    var visible: Dictionary = Visibility.visible_cells(state,int(state.get("faction",-1))) if Visibility.enabled(state) else {}
     if Visibility.enabled(state) and not visible.has(cell):
         return options
     for unit in state.get("units",[]):
         if not unit is Dictionary or int(unit.get("hp",0)) <= 0:
             continue
-        if int(unit.get("faction",-1)) == 0 and unit.get("pos") == cell:
+        if int(unit.get("faction",-1)) == int(state.get("faction",-1)) and unit.get("pos") == cell:
             options.append({"id":str(unit.get("id","")),"layer":Domains.layer(unit),
                 "acted":bool(unit.get("acted",false))})
     options.sort_custom(func(a,b):
@@ -52,7 +53,7 @@ static func next_friendly(state: Dictionary, cell: Vector2i, current: String) ->
 
 static func legal_intent(state: Dictionary, unit_id: String,
         cell: Vector2i) -> Dictionary:
-    if unit_id.is_empty() or int(state.get("faction",-1)) != 0:
+    if unit_id.is_empty() or int(state.get("faction",-1)) not in [0,1]:
         return {}
     if not Rules.inside(cell,state.get("terrain",[])):
         return {}
@@ -61,9 +62,9 @@ static func legal_intent(state: Dictionary, unit_id: String,
         if unit is Dictionary and str(unit.get("id","")) == unit_id:
             selected = unit
             break
-    if selected.is_empty() or int(selected.get("faction",-1)) != 0 or int(selected.get("hp",0)) <= 0:
+    if selected.is_empty() or int(selected.get("faction",-1)) != int(state.get("faction",-1)) or int(selected.get("hp",0)) <= 0:
         return {}
-    var visible: Dictionary = Visibility.visible_cells(state,0) if Visibility.enabled(state) else {}
+    var visible: Dictionary = Visibility.visible_cells(state,int(state.get("faction",-1))) if Visibility.enabled(state) else {}
     if Visibility.enabled(state) and not visible.has(cell):
         return {}
     var hints: Dictionary = Hints.for_unit(state,unit_id)
@@ -86,7 +87,7 @@ static func select(board: Control, unit_id: String) -> bool:
     var found := false
     for unit in state.get("units",[]):
         if unit is Dictionary and str(unit.get("id","")) == unit_id and \
-                int(unit.get("faction",-1)) == 0 and int(unit.get("hp",0)) > 0:
+                int(unit.get("faction",-1)) == int(state.get("faction",-1)) and int(unit.get("hp",0)) > 0:
             found = true
             break
     if not found:
@@ -123,7 +124,7 @@ static func request_preview(board: Control, intent: Dictionary) -> Dictionary:
     if safe["kind"] == "attack":
         for enemy in state.get("units",[]):
             if enemy is Dictionary and str(enemy.get("id","")) == safe["target_id"] and \
-                    int(enemy.get("faction",-1)) != 0 and enemy.get("pos") == cell:
+                    int(enemy.get("faction",-1)) != int(state.get("faction",-1)) and enemy.get("pos") == cell:
                 target = enemy
                 break
         if target.is_empty():
