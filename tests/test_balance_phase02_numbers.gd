@@ -45,6 +45,10 @@ static func _check_roster(roles: Array) -> Dictionary:
     var legal_exchanges := 0
     var matrix_checks := 0
     var coastal: Array = Scenarios.terrain(3)
+    # An artificial but legal coastal test lane: sea at y=2, land at y=3.
+    # Keep sea-only units out of soil when probing domain attack legality.
+    for x in range(10):
+        coastal[2][x] = "water"
     for role in roles:
         assert(not distinct.has(role))
         distinct[role] = true
