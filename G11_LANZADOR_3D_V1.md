@@ -144,3 +144,17 @@ Corrección aplicada dentro de `G11ExhaustV9.gd`:
 - [CI Godot 4.3 aprobado para la revisión](https://github.com/edwinrodri12/Tarvoka/actions/runs/43736084201), con 24 capturas actualizadas en `tarvoka-g11-v9-exhaust-gas-24-godot-reviews`. La segunda revisión visual muestra el frente despejado y estelas de tamaño más proporcionado.
 
 Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo sigue pendiente de validación definitiva en el visor 3D a tamaño natural y pantalla Android.
+
+## Actualización V10 — enfriamiento y retorno mecánico (15-nov-2026)
+
+- **Nueva escultura nativa:** `scripts/ui/G11CooldownV10.gd` crea doce anillos 3D biselados y abiertos que brillan en los bordes de los tubos después de cada lanzamiento, sin tapar los doce orificios huecos V4, y doce finas columnas curvas de vapor con gradientes de transparencia.
+- El calor es progresivo por orden de disparo: los primeros tubos disparados se atenúan antes que los últimos; la emisión y el vapor se extinguen gradualmente.
+- `G11VisualRig3D.gd` ahora implementa **dos fases independientes**: la salva original V8/V9 conserva por completo su cronología; la fase `cooldown` dura 0.68 s después y devuelve suavemente plataforma giratoria, elevación y ambos hidráulicos al estado de reposo mediante interpolación `smoothstep`.
+- El humo del último cohete de V9 no desaparece de golpe al cambiar de fase: `G11ExhaustV9.pose` admite ahora progreso ligeramente superior a 1 y permite que ese gas termine de disiparse mientras el lanzador vuelve a reposo.
+- `BastionStudioAdapter.gd` cambia automáticamente desde la salva a `cooldown` sin reiniciar el modelo y añade botón **Ver enfriamiento**. Las ocho facciones conservan su pintura y los cinco daños anteriores.
+- Se mantienen intactos daño, combustible, recursos, munición, turnos y lógica de combate: todo es presentación 3D.
+- **Godot 4.3 QA:** [G11 V10 native cooldown](https://github.com/edwinrodri12/Tarvoka/actions/runs/43737023966) valida ocho facciones, doce bordes térmicos, humo prolongado, continuidad de posición y ángulos, retorno hidráulico y restauración.
+- La misma ejecución entrega el artifact `tarvoka-g11-v10-cooling-hydraulics-18-godot-renders`: **18 renderizados reales** en cámara frontal, lateral y primer plano a distintas fases del enfriamiento, revisados como hoja de contacto.
+- El Studio web de TARVOKA incorpora los nuevos archivos y controles desde el pipeline de publicación de Pages; confirmar la ejecución de Pages para comprobar el estado público.
+
+**Estado artístico:** refinamiento V10 integrado y visualmente inspeccionado en 18 capturas. Pendiente aprobación definitiva del diseño general del G11 desde todos los ángulos en el visor interactivo. El próximo paso puede ser un pase final de proporciones y materiales de los tubos, soporte y carrocería; pruebas de rendimiento al final.
