@@ -379,7 +379,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V15 · fracturas y quemaduras naturales")
+    building_picker.add_item("Base Aérea · V16 · revisión final 360°")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -833,6 +833,8 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_finish_v15_toggle)
     _title(airbase_controls,
         "V15 · un lote de detalle por huella; comparar sin perder historial.",12)
+    _title(airbase_controls,
+        "V16 · inspección final de 8 vistas; ajustes mínimos de las marcas del concreto.",12)
     airbase_v14_reset_button=_button(airbase_controls,
         "Limpiar impactos acumulados",_clear_airbase_v14_marks)
     airbase_v14_reset_button.name="RepararSuperficiesEnEstudioV14"
