@@ -50,6 +50,7 @@ var airbase_finish_v8_toggle: CheckButton
 var airbase_detail_v9_toggle: CheckButton
 var airbase_structure_v10_toggle: CheckButton
 var airbase_trusses_v11_toggle: CheckButton
+var airbase_v11_cutaway_toggle: CheckButton
 var airbase_v9_view_picker: OptionButton
 var _airbase_v9_view := 0
 var airbase_level_picker: OptionButton
@@ -664,6 +665,14 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_trusses_v11_toggle)
     _title(airbase_controls,
         "V11 · soportes 3D bajo cada chapa, sin atravesar huecos destruidos.",12)
+    airbase_v11_cutaway_toggle = CheckButton.new()
+    airbase_v11_cutaway_toggle.name = "InspeccionSinChapasTechoBaseAereaV11"
+    airbase_v11_cutaway_toggle.text = "Inspeccionar cerchas: ocultar chapas del techo"
+    airbase_v11_cutaway_toggle.button_pressed = false
+    airbase_v11_cutaway_toggle.toggled.connect(_toggle_airbase_cutaway_v11)
+    airbase_controls.add_child(airbase_v11_cutaway_toggle)
+    _title(airbase_controls,
+        "Vista desmontable del estudio; no modifica el modelo del juego.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -1065,6 +1074,39 @@ func _toggle_airbase_trusses_v11(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
 
+func _is_airbase_v11_roof_shell(node: Node) -> bool:
+    var label: String=str(node.name)
+    return label.begins_with("CubiertaCurva3D_") or label.begins_with(
+        "NervaduraCubierta_") or label.begins_with(
+        "ExtractorCubierta_") or label.begins_with(
+        "RejillaExtractor_") or label.begins_with(
+        "PanelFotovoltaico_") or label=="CostillasCubiertaCurvaV6" or \
+        label=="RematePerimetralCurvoV9"
+
+func _walk_airbase_v11_cutaway(node: Node, enabled: bool) -> void:
+    if node is Node3D and _is_airbase_v11_roof_shell(node):
+        var body: Node3D=node as Node3D
+        if enabled:
+            if not body.has_meta("tarvoka_v11_cutaway_was_visible"):
+                body.set_meta("tarvoka_v11_cutaway_was_visible",body.visible)
+            body.visible=false
+        elif body.has_meta("tarvoka_v11_cutaway_was_visible"):
+            body.visible=bool(body.get_meta("tarvoka_v11_cutaway_was_visible"))
+            body.remove_meta("tarvoka_v11_cutaway_was_visible")
+    for child in node.get_children():
+        _walk_airbase_v11_cutaway(child,enabled)
+
+func _apply_airbase_v11_cutaway() -> void:
+    if _role!="airbase" or _airbase_is_stress() or model_root==null:
+        return
+    var visible_cutaway: bool=airbase_v11_cutaway_toggle!=null and \
+        airbase_v11_cutaway_toggle.button_pressed
+    _walk_airbase_v11_cutaway(model_root,visible_cutaway)
+    model_root.set_meta("tarvoka_airbase_v11_cutaway",visible_cutaway)
+
+func _toggle_airbase_cutaway_v11(_enabled: bool) -> void:
+    _apply_airbase_v11_cutaway()
+
 func _change_airbase_v9_view(index: int) -> void:
     if _role != "airbase" or _airbase_is_stress():
         return
@@ -1152,6 +1194,7 @@ func _display_airbase() -> void:
     var coating: Dictionary = UniversalClimate.apply(model_root,weather)
     if not bool(coating.get("valid",false)):
         push_error("Base Aerea V1: clima no aplicado")
+    _apply_airbase_v11_cutaway()
     # Reuse V17 environmental precipitation, but not its old HQ snow caps.
     var climate_ready: bool = HQClimateV17.apply(hq_climate_stage,
         weather,"asphalt",tier,"operativo",false)
