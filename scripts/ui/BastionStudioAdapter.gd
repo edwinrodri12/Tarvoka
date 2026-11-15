@@ -30,7 +30,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · 12 tubos · V1 3D")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · Orugas V2 · 12 tubos")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V6 esculpido · 6×6")
@@ -75,7 +75,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ESCULTURA 3D V1 · SISTEMA ARTICULADO",14)
+        "G11 LANZADOR · ACABADO 3D V2 · ORUGAS MÓVILES",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -86,9 +86,9 @@ func _install_g11_controls() -> void:
         "Reparación completa",func(): _set_damage(0))
     _button(g11_controls,"Detener animación",_g11_stop)
     _title(g11_controls,
-        "Casco cerrado, 12 tubos independientes, elevación y giro, "
-        + "orugas con 12 ruedas. Detalle alto en estudio; LOD ligero "
-        + "para batallas Android.",12)
+        "Orugas continuas con 80 eslabones en dos lotes GPU, "
+        + "casco biselado, 12 tubos articulados y ocho facciones. "
+        + "LOD ligero separado para batallas Android.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -332,7 +332,9 @@ func _update_details() -> void:
         var built: bool = G11Art.has_model(model_root)
         detail_label.text = "G11 Lanzador · 12 tubos · %d mallas 3D · %s" % [
             P06Models.inspect_meshes(model_root),
-            "escultura V1" if built else "LOD provisional"]
+            "acabado V2" if built and bool(model_root.get_meta(
+                "tarvoka_g11_finish_v2",false)) else (
+                "escultura V1" if built else "LOD provisional")]
         status_label.text = "%s · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             G11Art.STAGES[G11Art.stage(model_root)],
