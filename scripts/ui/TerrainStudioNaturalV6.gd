@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudioNaturalV6
 # Batches all mountain silhouettes into ONE mesh and the three forest
 # species into THREE MultiMeshes; shore meanders share ONE mesh.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const LAND_ROCK := Color("#61727d")
 const ROCK_HIGHLIGHT := Color("#a7acaa")
 const WATER_LEVEL := -0.17
@@ -82,7 +83,9 @@ static func _ridge(tool: SurfaceTool, cell: Dictionary,
         middle.append(origin+Vector3(
             p.x*shrink,y0+height*(0.31+0.09*_noise(seed+i*7)),
             p.y*shrink))
-    var rock_tint: Color = LAND_ROCK if scene != 1 else Color("#80777b")
+    var rock_tint: Color = (
+        Winter.FROSTED_STONE if scene == 3 else
+        LAND_ROCK if scene != 1 else Color("#80777b"))
     for i in range(n):
         var j: int = (i+1)%n
         var shade: float = 0.11*_noise(seed+i*31)
@@ -93,7 +96,9 @@ static func _ridge(tool: SurfaceTool, cell: Dictionary,
         _triangle(tool,middle[i],foot[j],middle[j],
             mid,dark,mid.lightened(0.08))
         var summit: Vector3 = second if i >= 3 and i <= 6 else peak
-        var top: Color = ROCK_HIGHLIGHT if scene != 1 and height > 1.48 else mid.lightened(0.12)
+        var top: Color = (
+            Winter.SNOW if scene == 3 else
+            ROCK_HIGHLIGHT if scene != 1 and height > 1.48 else mid.lightened(0.12))
         _triangle(tool,middle[i],middle[j],summit,
             mid,mid.lightened(0.09),top)
     # Avoid a straight line of identical summits; the two crest heights,
@@ -110,8 +115,9 @@ static func _tree_geometry(kind: int, scene: int) -> ArrayMesh:
     # Species 0: fir; 1: irregular pine; 2: broadleaf river woodland.
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-    var bark: Color = Color("#675c4b")
+    var bark: Color = Color("#596b6c") if scene == 3 else Color("#675c4b")
     var leaves: Color = (
+        Color("#385d5c") if scene == 3 else
         Color("#3c6854") if kind == 0 else
         Color("#4c7653") if kind == 1 else
         Color("#547957") if scene == 2 else Color("#627d4b"))
@@ -138,10 +144,13 @@ static func _tree_geometry(kind: int, scene: int) -> ArrayMesh:
                 var b: float = TAU*float(i+1)/8.0
                 var p := Vector3(cos(a)*radius,base_h,sin(a)*radius)
                 var q := Vector3(cos(b)*radius,base_h,sin(b)*radius)
+                var snowed: Color = (
+                    Winter.evergreen_needle(leaves,layer,i)
+                    if scene == 3 else leaves)
                 _triangle(tool,p,q,tip,
-                    leaves.darkened(0.07*float(i%3)),
-                    leaves.lightened(0.08*float((i+1)%3)),
-                    leaves.lightened(0.15))
+                    snowed.darkened(0.07*float(i%3)),
+                    snowed.lightened(0.08*float((i+1)%3)),
+                    Winter.SNOW if scene == 3 else leaves.lightened(0.15))
     else:
         # A broadleaf silhouette uses two offset crowns and a rounded
         # faceted canopy, avoiding a row of conifer triangles in the delta.
@@ -180,8 +189,10 @@ static func _forest(parent: Node3D, cells: Array[Dictionary],
             if indexed.get(Vector2i(x+diff.x,z+diff.y),"") == "forest":
                 adjacent += 1
         var count: int = 3 if biome == "forest" else 0
+        if scene == 3 and biome == "forest":
+            count = 2
         if biome == "plain" and adjacent > 0:
-            count = 1
+            count = 0 if scene == 3 else 1
         if count == 0:
             continue
         var center: Vector3 = cell["center"]
@@ -193,6 +204,8 @@ static func _forest(parent: Node3D, cells: Array[Dictionary],
             var species: int = posmod(seed+i*13,3)
             if scene == 2 and posmod(seed+i*5,5) != 0:
                 species = 2
+            elif scene == 3:
+                species = posmod(seed+i*13,2)
             var size: float = 0.79+0.42*_noise(seed+i*31+5)
             var yaw: float = TAU*_noise(seed+i*71+17)
             var transform := Transform3D(Basis(Vector3.UP,yaw).scaled(
@@ -224,7 +237,9 @@ static func _bank(tool: SurfaceTool, cell: Dictionary,
     var half: float = float(cell["half"])
     var direction := Vector2(float(side.x),float(side.y))
     var tangent := Vector2(-direction.y,direction.x)
-    var tint: Color = Color("#bcb59b") if scene != 1 else Color("#b7a188")
+    var tint: Color = (
+        Winter.FROZEN_SHORE if scene == 3 else
+        Color("#bcb59b") if scene != 1 else Color("#b7a188"))
     var seed: int = int(cell["x"])*331+int(cell["z"])*617
     for n in range(7):
         var t0: float = float(n)/7.0
