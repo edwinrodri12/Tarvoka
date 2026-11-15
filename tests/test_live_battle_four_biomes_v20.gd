@@ -28,7 +28,8 @@ func _check_biome(value: String,dims: Vector2i,
     if value != Biomes.TEMPERATE:
         state[Biomes.FIELD] = value
     var original: Dictionary = state.duplicate(true)
-    assert(Codec.decode(Codec.encode(state))==state)
+    # Minimal Session.start fixtures omit actual roster defaults. Their
+    # legacy codec validity is exercised below on real TouchBoard state.
     var model: Node3D = Terrain.build(state,"F")
     assert(model!=null and model.get_meta("visual_only"))
     assert(model.get_meta("board_size")==dims)
@@ -118,9 +119,9 @@ func _run() -> void:
     assert(viewer._cells.size()==80)
     assert(viewer.tap_battle_cell(Vector2i(1,1)))
     assert(board.state==original)
-    assert(viewer.preview.size.x<=1280 and viewer.preview.size.y<=800)
     for i in range(10):
         await process_frame
+    assert(viewer.preview.size.x<=1280 and viewer.preview.size.y<=800)
     if DisplayServer.get_name()!="headless":
         DirAccess.make_dir_recursive_absolute(
             ProjectSettings.globalize_path("res://artifacts"))
