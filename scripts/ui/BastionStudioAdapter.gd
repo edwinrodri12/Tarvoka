@@ -42,6 +42,7 @@ var _p06_fleet_fps_clock: float = 0.0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
+var _g11_playback_speed: float = 1.0
 var _g11_fx_clock: float = 0.0
 
 func _ready() -> void:
@@ -50,7 +51,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · Escultura V7 · humo y fuego")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · Animación V8 · 12 disparos")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V12 torreta y ópticas · 6×6")
@@ -119,10 +120,12 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ESCULTURA V7 · DAÑOS Y FUEGO",14)
+        "G11 LANZADOR · SALVA 3D V8 · 12 COHETES",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
+    _add_paired(g11_controls,"Salva lenta x0.35",func(): _g11_play("attack",0.35),
+        "Salva normal",func(): _g11_play("attack",1.0))
     _add_paired(g11_controls,"Impacto de balas",func(): _g11_play("hit_bullet"),
         "Impacto explosivo",func(): _g11_play("hit_explosive"))
     _add_paired(g11_controls,"Daño siguiente",
@@ -138,9 +141,9 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
         "Lateral opuesto",func(): _g11_view(270.0))
     _title(g11_controls,
-        "V7: humo irregular en volúmenes curvos, lenguas de fuego con "
-        + "gradientes, sin las esferas anteriores. Placas deformadas "
-        + "sin cruces, torreta rota descubierta y reparación reversible.",12)
+        "V8: doce cohetes 3D salen de sus tubos por turnos, con destello "
+        + "y humo individual en cada boca. Usa Salva lenta x0.35 para "
+        + "seguir la secuencia; los daños y acabados V7 se conservan.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -153,7 +156,7 @@ func _g11_view(yaw: float) -> void:
     model_root.rotation_degrees.y = yaw
     _update_camera()
 
-func _g11_play(kind: String) -> void:
+func _g11_play(kind: String, speed: float = 1.0) -> void:
     if _role != "mlrs" or not G11Rig.has_rig(model_root):
         return
     if G11Art.stage(model_root) >= 4 and kind in ["move","attack"]:
@@ -161,11 +164,13 @@ func _g11_play(kind: String) -> void:
         return
     _g11_animation = kind
     _g11_time = 0.0
+    _g11_playback_speed = clampf(speed,0.20,2.0)
     G11Rig.pose(model_root,kind,0.0)
 
 func _g11_stop() -> void:
     _g11_animation = ""
     _g11_time = 0.0
+    _g11_playback_speed = 1.0
     if G11Rig.has_rig(model_root):
         G11Rig.restore(model_root)
 
@@ -511,7 +516,7 @@ func _process(delta: float) -> void:
         _g11_fx_clock += maxf(0.0,delta)
         G11Atmos.animate(model_root,"idle",fmod(_g11_fx_clock/2.2,1.0))
     if _role == "mlrs" and not _g11_animation.is_empty() and G11Rig.has_rig(model_root):
-        _g11_time += maxf(0.0,delta)
+        _g11_time += maxf(0.0,delta)*_g11_playback_speed
         var duration: float = G11Rig.MOVE_DURATION if _g11_animation == "move" else (
             G11Rig.SHOT_DURATION if _g11_animation == "attack" else G11Rig.IMPACT_DURATION)
         var t: float = minf(1.0,_g11_time/maxf(duration,0.01))
@@ -577,8 +582,10 @@ func _update_details() -> void:
         var built: bool = G11Art.has_model(model_root)
         detail_label.text = "G11 Lanzador · 12 tubos · %d mallas 3D · %s" % [
             P06Models.inspect_meshes(model_root),
-            "escultura V7" if built and bool(model_root.get_meta(
-                "tarvoka_g11_atmosphere_v7",false)) else (
+            "salva V8" if built and bool(model_root.get_meta(
+                "tarvoka_g11_salvo_v8",false)) else (
+                "escultura V7" if built and bool(model_root.get_meta(
+                    "tarvoka_g11_atmosphere_v7",false)) else (
                 "escultura V6" if built and bool(model_root.get_meta(
                     "tarvoka_g11_damage_v6",false)) else (
                 "escultura V5" if built and bool(model_root.get_meta(
@@ -589,7 +596,7 @@ func _update_details() -> void:
                     "tarvoka_g11_surface_v3",false)) else (
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
-                    "escultura V1" if built else "LOD provisional"))))))]
+                    "escultura V1" if built else "LOD provisional")))))))]
         status_label.text = "%s · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             G11Art.STAGES[G11Art.stage(model_root)],
