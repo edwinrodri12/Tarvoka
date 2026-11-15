@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaWorldArt
 
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+
 # Original isometric environment artwork. Geometry is visual only; neither
 # heights nor site silhouettes grant cover, income, movement or combat bonuses.
 const SITE_KINDS := ["city","factory","armor_plant","artillery_depot","drone_center","airbase","shipyard"]
@@ -18,8 +20,13 @@ static func _shape(canvas: CanvasItem, center: Vector2, scale: float, coordinate
 static func _line(canvas: CanvasItem, c: Vector2, s: float, a: Vector2, b: Vector2, color: Color, width: float=0.07) -> void:
     canvas.draw_line(c+a*s,c+b*s,color,maxf(1.0,s*width),true)
 
-static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2, hw: float, phase: float, seed: int) -> void:
+static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
+        hw: float, phase: float, seed: int,
+        biome: String = Winter.TEMPERATE) -> void:
     if hw <= 0.0:
+        return
+    if biome == Winter.WINTER:
+        Winter.draw_iso(canvas,kind,c,hw,seed)
         return
     var s: float = hw * 0.58
     # Stable per-cell vegetation arrangement avoids introducing terrain randomness.
