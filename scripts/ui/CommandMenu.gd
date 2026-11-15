@@ -51,6 +51,13 @@ var army_columns: BoxContainer
 var army_list_body: VBoxContainer
 var army_details_body: VBoxContainer
 var army_selected_id := ""
+var army_filter_picker: OptionButton
+var army_filter_index := 0
+var army_roster_units: Array[Dictionary] = []
+var army_row_nodes: Dictionary = {}
+var army_filter_empty: Label
+var army_stats_grid: GridContainer
+var army_stat_cells: Array[PanelContainer] = []
 var army_list_scroll: ScrollContainer
 var production_columns: BoxContainer
 var production_list_body: VBoxContainer
@@ -326,6 +333,7 @@ func _army_row(unit: Dictionary, viewer: int) -> void:
     card.add_theme_stylebox_override("panel",Chrome.box_style(
         Color("#102638"),Chrome.EDGE,7,5))
     army_list_body.add_child(card)
+    army_row_nodes[uid] = card
     var body := HBoxContainer.new()
     body.add_theme_constant_override("separation",7)
     card.add_child(body)
@@ -344,21 +352,26 @@ func _army_row(unit: Dictionary, viewer: int) -> void:
     name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     caption.add_child(name)
     var status := Label.new()
-    status.text = "%d HP · %s" % [
+    var supply_notice: String = Logistics.alert(unit)
+    var damaged: bool = int(unit.get("hp",0)) <= 5
+    var attention: bool = damaged or not supply_notice.is_empty()
+    status.text = "%d PV · %s" % [
         int(unit.get("hp",0)),
-        "Puede atacar" if not bool(unit.get("acted",true)) else "Ya actuó"
-    ]
+        "SIN ACTUAR" if not bool(unit.get("acted",true)) else "ACTUÓ"]
+    if attention:
+        status.text += " · REVISAR"
     status.add_theme_color_override("font_color",
-        Chrome.GOLD if not bool(unit.get("acted",true)) else Chrome.MUTED)
+        Chrome.RED if attention else (
+        Chrome.GOLD if not bool(unit.get("acted",true)) else Chrome.MUTED))
     status.add_theme_font_size_override("font_size",12)
     caption.add_child(status)
     var actions := VBoxContainer.new()
     actions.add_theme_constant_override("separation",4)
     body.add_child(actions)
     var dossier := _action(actions,"Ficha",func(): _select_army_unit(uid))
-    dossier.custom_minimum_size = Vector2(92,42)
+    dossier.custom_minimum_size = Vector2(78,44)
     var locate := _action(actions,"Mapa",func(): inspect_unit_requested.emit(uid))
-    locate.custom_minimum_size = Vector2(92,42)
+    locate.custom_minimum_size = Vector2(78,44)
 
 func _select_army_unit(uid: String) -> void:
     if board == null or army_details_body == null:
@@ -389,6 +402,8 @@ func _select_army_unit(uid: String) -> void:
     _description(text_column,"%s · %s" % [uid,Roles.label(str(selected.get("role","")))])
     _description(text_column,"Dominio: %s" % _domain_label(str(Domains.domain(selected))))
     var stats := GridContainer.new()
+    army_stats_grid = stats
+    army_stat_cells.clear()
     stats.name = "EstadisticasUnidades"
     stats.columns = 2
     stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -406,7 +421,8 @@ func _select_army_unit(uid: String) -> void:
         ["ALCANCE MÁX.",int(selected.get("attack_range",1))]
     ]:
         var cell := PanelContainer.new()
-        cell.custom_minimum_size.x = 190
+        cell.custom_minimum_size.x = 110 if command_compact else 190
+        army_stat_cells.append(cell)
         cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         cell.add_theme_stylebox_override("panel",Chrome.box_style(
             Color("#0C2535"),Chrome.EDGE,6,5))
@@ -433,9 +449,12 @@ func _select_army_unit(uid: String) -> void:
         _description(army_details_body,"Combustible: %d" % int(selected["fuel"]))
     if selected.has("ammo"):
         _description(army_details_body,"Munición: %d" % int(selected["ammo"]))
+    var logistical_alert: String = Logistics.alert(selected)
+    if not logistical_alert.is_empty():
+        _description(army_details_body,"ATENCIÓN · " + logistical_alert)
     _description(army_details_body,"Movimiento: %s · Ataque: %s" % [
-        "usado" if bool(selected.get("moved",false)) else "disponible",
-        "usado" if bool(selected.get("acted",true)) else "disponible"
+        "usado" if bool(selected.get("moved",false)) else "sin usar",
+        "usado" if bool(selected.get("acted",true)) else "sin usar"
     ])
     _action(army_details_body,"LOCALIZAR EN EL MAPA",
         func(): inspect_unit_requested.emit(uid))
@@ -682,6 +701,10 @@ func refresh() -> void:
     _clear(army_body)
     army_list_body = null
     army_details_body = null
+    army_row_nodes.clear()
+    army_roster_units.clear()
+    army_filter_index = 0
+    army_stats_grid = null
     var army_layout: Dictionary = _dashboard_columns(army_body,"EjercitoYFicha")
     army_columns = army_layout["rail"]
     army_columns.custom_minimum_size.y = 495
@@ -691,11 +714,33 @@ func refresh() -> void:
     for unit in state.get("units",[]):
         if unit is Dictionary and int(unit.get("faction",-1)) == viewer and int(unit.get("hp",0)) > 0:
             owned_units.append(unit)
-    _heading(roster,"EJÉRCITO  ·  %d ACTIVAS" % owned_units.size())
-    _description(roster,"Ficha muestra estadísticas; Mapa localiza sin dar una orden.")
+    army_roster_units = owned_units.duplicate(true)
+    _heading(roster,"ESTADO DE UNIDADES  ·  %d ACTIVAS" % owned_units.size())
+    var pending_count := 0
+    var attention_count := 0
+    for friendly in owned_units:
+        if not bool(friendly.get("acted",true)):
+            pending_count += 1
+        if int(friendly.get("hp",0)) <= 5 or not Logistics.alert(friendly).is_empty():
+            attention_count += 1
+    army_filter_picker = OptionButton.new()
+    army_filter_picker.name = "FiltrarEjercito"
+    army_filter_picker.custom_minimum_size.y = 48
+    army_filter_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    army_filter_picker.add_item("TODAS · %d" % owned_units.size())
+    army_filter_picker.add_item("SIN ACTUAR · %d" % pending_count)
+    army_filter_picker.add_item("ATENCIÓN · %d" % attention_count)
+    army_filter_picker.item_selected.connect(_set_army_filter)
+    roster.add_child(army_filter_picker)
+    _description(roster,"Ficha consulta los datos; Mapa solo localiza.")
     army_list_body = _catalog_scroll(roster,"UNIDADES EN SERVICIO")
     for unit in owned_units:
         _army_row(unit,viewer)
+    army_filter_empty = Label.new()
+    army_filter_empty.text = "No hay unidades para este filtro."
+    army_filter_empty.add_theme_color_override("font_color",Chrome.MUTED)
+    army_list_body.add_child(army_filter_empty)
+    _set_army_filter(0)
     if owned_units.is_empty():
         _description(army_list_body,"No hay unidades propias activas.")
         army_selected_id = ""
@@ -809,6 +854,30 @@ func _open_command_tab(index: int) -> void:
         return
     tabs.current_tab = clampi(index,0,3)
 
+func _set_army_filter(index: int) -> void:
+    if army_filter_picker == null or index not in [0,1,2]:
+        return
+    army_filter_index = index
+    if army_filter_picker.selected != index:
+        army_filter_picker.select(index)
+    var shown := 0
+    for unit in army_roster_units:
+        var uid: String = str(unit.get("id",""))
+        if not army_row_nodes.has(uid):
+            continue
+        var needs_attention: bool = (
+            int(unit.get("hp",0)) <= 5 or
+            not Logistics.alert(unit).is_empty())
+        var allowed: bool = (
+            index == 0 or
+            (index == 1 and not bool(unit.get("acted",true))) or
+            (index == 2 and needs_attention))
+        army_row_nodes[uid].visible = allowed
+        if allowed:
+            shown += 1
+    if army_filter_empty != null:
+        army_filter_empty.visible = shown == 0
+
 func _toggle_more_commands() -> void:
     if command_extras == null:
         return
@@ -862,6 +931,18 @@ func reflow_for_size(viewport: Vector2) -> void:
     for field in operational_values:
         operational_values[field].add_theme_font_size_override(
             "font_size",17 if command_compact else 24)
+    if army_columns != null:
+        army_columns.vertical = viewport.y > viewport.x * 1.12
+        army_columns.custom_minimum_size.y = 350 if command_compact else 495
+    if army_list_scroll != null:
+        army_list_scroll.custom_minimum_size.y = 180 if command_compact else 310
+    if army_filter_picker != null:
+        army_filter_picker.custom_minimum_size.y = 44 if command_compact else 48
+    if army_stats_grid != null:
+        army_stats_grid.columns = 1 if command_compact else 2
+    for tile in army_stat_cells:
+        if is_instance_valid(tile):
+            tile.custom_minimum_size.x = 100 if command_compact else 190
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):
