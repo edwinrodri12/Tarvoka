@@ -69,3 +69,9 @@ Commits: `dbdf31525f180e87361f395d396099a2cc516913` (test), `4c50e846d48b61151f3
 Se añadieron fases `backup_write` y `backup_read` a `tests/test_session_cross_process.gd`. Tras el par inicial `write/read`, un nuevo proceso guarda dos estados consecutivos (el segundo crea `.bak`) y reemplaza el principal por JSON sintácticamente válido pero con versión incompatible. Otro proceso independiente debe cargar el respaldo con `recovered=true`, conservar HP, bando y acción gastada, y rechazar repetir el ataque. Las fases limpian únicamente `user://tarvoka_cross_process_contract.json` y sus archivos auxiliares. El workflow ejecuta `write read backup_write backup_read` secuencialmente y falla por errores de Godot o ausencia de cada marcador PASS. Commits `d8c88b4a` y `85bce25f`.
 
 **Estado al registrar:** cambios confirmados en rama PR #356; CI del nuevo SHA sin ejecuciones asociadas al consultar GitHub; prueba física Android **NO EJECUTADO EN DISPOSITIVO**. Esta regresión Linux no valida reinstalación ni firma Android. No fusionar hasta CI satisfactoria y revisión de regresiones generales.
+
+
+## 2026-11-15 — Respaldo sin archivo principal entre procesos
+- `tests/test_session_cross_process.gd` agrega `missing_primary_write` (dos guardados y eliminación del principal) y `missing_primary_read` (nuevo proceso Godot recupera `.bak`, verifica HP, acción consumida y continuación legal del turno).
+- `.github/workflows/battle-session-exchange.yml` ejecuta ambas fases después de las anteriores, en el mismo directorio `user://`, con fallo explícito por errores de Godot o ausencia de `PASS`.
+- **NO EJECUTADO** en Godot para estos commits hasta obtener CI del SHA correspondiente; **NO EJECUTADO EN DISPOSITIVO** Android. No implica validación de reinicio físico Android ni de firma estable.
