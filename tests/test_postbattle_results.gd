@@ -86,7 +86,7 @@ func _run() -> void:
     assert(main.results_scrim.visible)
     assert(main.result_banner.visible)
     assert(main.result_title.text == "VICTORIA")
-    assert(main.compact_confirm.text == "Resultados")
+    assert(main.compact_confirm.text == "RESULTADOS")
     assert(not main.compact_confirm.disabled)
     assert(not main.confirm_button.disabled)
     assert(main.board.state == terminal)
