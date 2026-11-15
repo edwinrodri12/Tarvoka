@@ -151,7 +151,7 @@ static func evaluate(blueprint: Dictionary) -> Dictionary:
     var unreachable_pairs := 0
     var all_connected := true
     for i in range(players):
-        var travel: Dictionary = Rules.reachable(starts[i],200,terrain,[])
+        var travel: Dictionary = _foot_costs(terrain,starts[i])
         var own_home: int = int(travel.get(home_cities[i],-1))
         var own_neutral: int = int(travel.get(neutral_cities[i],-1))
         var own_relay: int = int(travel.get(objectives[i],-1))
@@ -254,3 +254,42 @@ static func _starting_slots(players: int,size: Vector2i) -> Array:
                 Vector2i(w-4,int(h/2)),Vector2i(w-4,h-4),
                 Vector2i(int(w/2),h-4),Vector2i(3,h-4),Vector2i(3,int(h/2))]
     return []
+
+# Bounded-cost Dijkstra for a foot-infantry map fairness baseline.
+# Integer edge weights use the SAME terrain costs as Rules.movement_cost.
+# It is deliberately NOT a replacement for live per-unit/weather pathfinding.
+# Bucket order avoids the large repeated relaxations of the generic reach
+# calculator when auditing hundreds of full 40x30 boards and eight slots.
+static func _foot_costs(terrain: Array, origin: Vector2i) -> Dictionary:
+    var distances: Dictionary = {}
+    if not Rules.valid_terrain(terrain) or not Rules.inside(origin,terrain):
+        return distances
+    if Rules.movement_cost(str(terrain[origin.y][origin.x])) < 0:
+        return distances
+    var size: Vector2i = Rules.map_size(terrain)
+    var max_cost: int = size.x*size.y*3
+    var buckets: Array = []
+    for i in range(max_cost+1):
+        buckets.append([])
+    distances[origin] = 0
+    buckets[0].append(origin)
+    for cost in range(max_cost+1):
+        while not buckets[cost].is_empty():
+            var current: Vector2i = buckets[cost].pop_back()
+            if int(distances[current]) != cost:
+                continue
+            for direction in Rules.DIRECTIONS:
+                var cell: Vector2i = current + direction
+                if cell.x < 0 or cell.y < 0 or cell.x >= size.x or cell.y >= size.y:
+                    continue
+                var step: int = Rules.movement_cost(str(terrain[cell.y][cell.x]))
+                if step < 0:
+                    continue
+                var new_cost: int = cost + step
+                if new_cost > max_cost:
+                    continue
+                if distances.has(cell) and int(distances[cell]) <= new_cost:
+                    continue
+                distances[cell] = new_cost
+                buckets[new_cost].append(cell)
+    return distances
