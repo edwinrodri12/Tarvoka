@@ -9,10 +9,13 @@ const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const AtmosphereV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const SalvoV8 = preload("res://scripts/ui/G11SequentialSalvoV8.gd")
 const ExhaustV9 = preload("res://scripts/ui/G11ExhaustV9.gd")
+const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
 const SHOT_DURATION := 1.05
+const COOLDOWN_DURATION := 0.68
+const LAST_AIM := "tarvoka_g11_v10_last_aim"
 const IMPACT_DURATION := 0.65
 const BASE_PLATFORM := Vector3(0,1.14,0.46)
 const BASE_LAUNCHER := Vector3(0,0.39,0.08)
@@ -45,6 +48,7 @@ static func _reset(model: Node3D) -> void:
     MechanicsV5.update_running_gear(model,0.0)
     SalvoV8.reset(model)
     ExhaustV9.reset(model)
+    CooldownV10.reset(model)
     for name in ["G11_EfectoFogonazo","G11_EfectoHumoDisparo",
             "G11_EfectoPolvoMarcha","G11_ImpactoBalas",
             "G11_ImpactoExplosivo"]:
@@ -92,9 +96,11 @@ static func pose(model: Node3D, kind: String, progress: float,
                 return true
             var aim: float = clampf(t/0.24,0.0,1.0)
             aim = aim*aim*(3.0-2.0*aim)
-            platform.rotation_degrees.y = wrapf(
+            var desired_yaw: float = wrapf(
                 heading_yaw(target_heading)-model.rotation_degrees.y,
-                -180.0,180.0)*aim
+                -180.0,180.0)
+            platform.rotation_degrees.y = desired_yaw*aim
+            model.set_meta(LAST_AIM,desired_yaw)
             launcher.rotation_degrees.x = 20.0+18.0*aim
             var recoil: float = maxf(0.0,sin(
                 clampf((t-0.28)/0.30,0,1)*PI))
@@ -107,6 +113,21 @@ static func pose(model: Node3D, kind: String, progress: float,
             GeometryV4.update_actuators(model)
             SalvoV8.pose(model,t)
             ExhaustV9.pose(model,t)
+            CooldownV10.pose_launch(model,t)
+        "cooldown":
+            if destroyed:
+                return true
+            # A new, separate animation phase preserves the approved V8
+            # salvo timings: return happens only AFTER the last projectile.
+            var settle: float = t*t*(3.0-2.0*t)
+            var yaw: float = float(model.get_meta(LAST_AIM,0.0))
+            platform.rotation_degrees.y = yaw*(1.0-settle)
+            launcher.rotation_degrees.x = 38.0-18.0*settle
+            platform.position.y = BASE_PLATFORM.y
+            launcher.position = BASE_LAUNCHER
+            GeometryV4.update_actuators(model)
+            ExhaustV9.pose(model,1.0+0.080*t)
+            CooldownV10.pose_cooldown(model,t)
         "bullet", "hit_bullet":
             var impact := _node(model,"G11_ImpactoBalas")
             impact.visible = t < 0.42
