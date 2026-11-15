@@ -128,7 +128,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
         if not record.is_empty():
             var former_side: int = int(record["side"])
             var still_present: Dictionary = _occupant(next["units"],pos,former_side,allow_piercer)
-            if still_present.is_empty() or old_owner == former_side:
+            if still_present.is_empty() or (record.has("holder_id") and str(record["holder_id"]) != str(still_present["id"])) or old_owner == former_side:
                 meter.erase(key)
                 record = {}
                 interrupted += 1
@@ -160,7 +160,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
             # as the occupant stood on this tile. Undo only this transition
             # so later income and production are based on actual completion.
             now_site["owner"] = old_owner
-            meter[key] = {"side":side,"points":mini(value,threshold),
+            meter[key] = {"side":side,"holder_id":str(holder["id"]),"points":mini(value,threshold),
                 "turns":turns,"kind":kind}
             advanced += 1
     # Reconcile automatic income that Session.end_turn already paid to the
