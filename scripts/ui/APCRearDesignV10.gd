@@ -237,7 +237,9 @@ static func pose(model: Node3D) -> bool:
         var end: Vector3=hinge.transform * Vector3(
             side*0.415,0.462,0.043)
         var length: float=anchor.distance_to(end)
-        var bearing: Vector3=anchor.lerp(end,0.48)
+        # A hydraulic BARREL must have a fixed metal length; only its
+        # chrome piston rod telescopes. Never stretch both cylinders together.
+        var bearing: Vector3=anchor+(end-anchor).normalized()*0.265
         _link(housing,anchor,bearing)
         _link(piston,bearing,end)
         fixed_joint.position=anchor
@@ -268,6 +270,14 @@ static func apply(model: Node3D,faction_color: Color) -> bool:
     _rear(root,armor,steel,dark,red,amber)
     _cabin(root,cushion,steel,dark,lamp)
     _ramp(root,hinge,armor,steel,dark)
+    # The original V1 pivot decorations were erroneously drawn at the TOP
+    # of the door (y=1.23) even though its hinge really is bottom-mounted.
+    # V10 provides proper pivot pins at y=0.445. Never show both sets.
+    for side in [-1,1]:
+        var obsolete: Node3D=model.find_child(
+            "BisagraRampa_%d" % side,true,false) as Node3D
+        if obsolete!=null:
+            obsolete.visible=false
     model.set_meta(FLAG,true)
     model.set_meta(SHOW,true)
     model.set_meta(STAGE,0)
@@ -307,6 +317,13 @@ static func set_enabled(model: Node3D,value: bool) -> bool:
         root.visible=value
     if door!=null:
         door.visible=value
+    # Comparison to old V3 restores its own old hinge art; production V10
+    # instead displays only the corrected bottom pivot and moving ram.
+    for side in [-1,1]:
+        var obsolete: Node3D=model.find_child(
+            "BisagraRampa_%d" % side,true,false) as Node3D
+        if obsolete!=null:
+            obsolete.visible=not value
     model.set_meta(SHOW,value)
     if value:
         set_stage(model,int(model.get_meta(STAGE,0)))
