@@ -92,6 +92,12 @@ static func generate(player_count: int, archetype: String, seed: int,
         home_cities.append(_toward_steps(spawn,center,2))
         neutral_cities.append(_toward_steps(spawn,center,6))
         objectives.append(_toward_steps(spawn,center,11))
+    # Two-player maps use two truly mirrored center objectives; fractional
+    # toward-center rounding previously collapsed the right-side neutral
+    # city and its objective onto a single tile on 24x18 boards.
+    if player_count == 2:
+        objectives[0] = Vector2i(int(w/2)-1,int(h/2))
+        objectives[1] = Vector2i(int(w/2),int(h/2))
     # Keep every designated capture/objective tile connected to mainland.
     # When a proposed landmark falls inside an interior lake, carve its
     # shortest vertical causeway to the nearest dry shore. Do NOT change
