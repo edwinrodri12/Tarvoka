@@ -7,6 +7,7 @@ extends SceneTree
 const Units=preload("res://scripts/ui/UnitModels3D.gd")
 const APC=preload("res://scripts/ui/APCFinishV3.gd")
 const Headquarters=preload("res://scripts/ui/Headquarters3D.gd")
+const HQLod=preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
 const Terrain=preload("res://scripts/ui/TankBattleScenarioV26.gd")
 const FRAME_COUNT: int=12
 const SCREEN: Vector2i=Vector2i(960,540)
@@ -135,6 +136,24 @@ func _run() -> void:
     assert(lod_shot!=null and not lod_shot.is_empty())
     assert(lod_shot.save_png(
         "res://artifacts/tarvoka_mixed_%s_apc_lod.png" % tag)==OK)
+    # Measure the additional HQ micro-detail saving separately: this
+    # distinguishes vehicle LOD gain from the building LOD gain.
+    var hq_hidden: int=0
+    for hq in hqs:
+        hq_hidden+=HQLod.set_reduced(hq,true)
+        assert(hq.get_meta(HQLod.ACTIVE,false))
+    assert(hq_hidden>0)
+    var mixed_lod_ms: float=await _render_frames(apcs,FRAME_COUNT*2)
+    var draw_mixed_lod: float=Performance.get_monitor(
+        Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+    assert(draw_mixed_lod<draw_lod)
+    var mixed_shot: Image=viewport.get_texture().get_image()
+    assert(mixed_shot!=null and not mixed_shot.is_empty())
+    assert(mixed_shot.save_png(
+        "res://artifacts/tarvoka_mixed_%s_apc_hq_lod.png" % tag)==OK)
+    for hq in hqs:
+        assert(HQLod.set_reduced(hq,false)>0)
+        assert(not hq.get_meta(HQLod.ACTIVE,true))
     for vehicle in apcs:
         assert(APC.apply_stage(vehicle,0))
         assert(APC.set_tactical_lod(vehicle,false)>0)
@@ -162,6 +181,12 @@ func _run() -> void:
         "lod_render_ms_per_frame":snappedf(lod_ms/float(FRAME_COUNT),0.01),
         "full_draw_calls":draw_full,
         "lod_draw_calls":draw_lod,
+        "apc_and_hq_lod_draw_calls":draw_mixed_lod,
+        "hq_tactical_hidden_details":hq_hidden,
+        "apc_and_hq_lod_ms_per_frame":snappedf(
+            mixed_lod_ms/float(FRAME_COUNT),0.01),
+        "apc_and_hq_draw_call_reduction_percent":snappedf(
+            100.0*(draw_full-draw_mixed_lod)/maxf(1.0,draw_full),0.01),
         "apc_tactical_hidden_details":hidden,
         "draw_call_reduction_percent":snappedf(
             100.0*(draw_full-draw_lod)/maxf(1.0,draw_full),0.01),
