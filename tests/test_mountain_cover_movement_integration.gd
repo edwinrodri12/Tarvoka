@@ -128,5 +128,30 @@ func _initialize() -> void:
     assert(same_side_mod["attack_bonus"] == -1)
     assert(ally["pos"] == flank_cell and ally["faction"] == 1)
 
+    # Metamorphic regression: the same legal flank must work from all four
+    # cardinal directions. A diagonal ally must remain ineffective.
+    # Positions are moved to the board interior to avoid edge artifacts.
+    var center := Vector2i(5, 4)
+    var directions: Array[Vector2i] = [
+        Vector2i(1, 0), Vector2i(-1, 0),
+        Vector2i(0, 1), Vector2i(0, -1)
+    ]
+    for direction in directions:
+        var rotated_attacker: Dictionary = attacker.duplicate(true)
+        var rotated_defender: Dictionary = defender.duplicate(true)
+        var rotated_ally: Dictionary = ally.duplicate(true)
+        rotated_attacker["pos"] = center + direction
+        rotated_defender["pos"] = center
+        rotated_ally["pos"] = center - direction
+        var legal: Dictionary = tactics.modifiers(rotated_attacker, rotated_defender, board, {}, [rotated_attacker, rotated_defender, rotated_ally])
+        assert(legal["flanked"])
+        assert(legal["attack_bonus"] == 1)
+        rotated_ally["pos"] = center - direction + Vector2i(direction.y, direction.x) if direction.x == 0 else center - direction + Vector2i(0, 1)
+        var diagonal: Dictionary = tactics.modifiers(rotated_attacker, rotated_defender, board, {}, [rotated_attacker, rotated_defender, rotated_ally])
+        assert(not diagonal["flanked"])
+        assert(diagonal["attack_bonus"] == 0)
+    assert(attacker["pos"] == origin and defender["pos"] == summit)
+    assert(ally["pos"] == flank_cell)
+
     print("PASS: mountain movement and positional combat integration")
     quit()
