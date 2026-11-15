@@ -12,7 +12,7 @@ const Doors=preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const Weather=preload("res://scripts/ui/WeatherCoating3D.gd")
 const Stress=preload("res://scripts/ui/AirbaseStressV4.gd")
 const Studio=preload("res://scenes/UnitArtStudioWeb.tscn")
-const CAPTURES: Array[String]=[
+const CAPTURES := [
     "front_iso","left","rear","right",
     "roof","control_tower","hangar_inside","low_front"]
 
