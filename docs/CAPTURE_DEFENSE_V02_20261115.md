@@ -70,3 +70,34 @@ Las victorias solo se informarán si realmente ocurren; no se inventará una tas
 - Mantener intacta BasicAI como decisión normal y continuar con pruebas emparejadas de 48 medias fases antes de considerar integración.
 
 La prueba mecánica está en tests/test_capture_defense_v03.gd y la comparación prolongada en tests/test_capture_defense_long_v03.gd. Sus resultados no deben inferirse del éxito de v0.4: se registrarán de manera independiente cuando GitHub Actions los confirme.
+
+
+## Resultado verificado de la variante conservadora v0.5
+
+**Godot 4.3 — SUCCESS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43761141745
+
+**8 casos mecánicos PASS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43761061321
+
+La comparación repite los **16 escenarios espejo, 32 partidas, hasta 48 medias fases** y las mismas reglas frente a la IA de apoyo v0.3. El flujo de CI terminó sin errores, pero **el análisis de balance no pasó todavía el criterio de mejora**.
+
+| Indicador, total en 16 sesiones por brazo | IA de apoyo v0.3 | IA conservadora v0.5 |
+|---|---:|---:|
+| Conquistas completadas | 66 | 67 |
+| Avances parciales | 187 | 197 |
+| Interrupciones de captura | 94 | 100 |
+| Muertes del ocupante detectadas al perder el registro | 69 | 70 |
+| Abandonos de ocupante detectados al perder el registro | 20 | 23 |
+| Compras | 1.024 | 1.031 |
+| Movimientos específicos de escolta | 24 | 9 |
+| Disparos específicos de protección | 0 | 0 |
+| Rentas retenidas durante asedios | 14.250 | 15.250 |
+| Partidas con victoria final | 4 | 4 |
+| Victorias del bando que inició | 0 | 0 |
+
+Las interrupciones incluyen reemplazos de ocupantes y otras causas, y la clasificación específica de muertes/abandonos se cuenta solo cuando un registro previo desaparece, por lo que no agota todas las causas. Este conjunto tiene muy pocas partidas decididas para inferir ventaja sistemática del segundo jugador o éxito competitivo global.
+
+**Interpretación:** la variante v0.5 reduce intervenciones innecesarias y recupera la cantidad de capturas, pero no mejora supervivencia, pérdidas de progreso ni el número de victorias. Los **0 disparos especiales** sugieren que los ataques letales priorizados por BasicAI ya cubren la mayoría de las situaciones que activa la nueva regla de emergencia. **No integrar ni v0.4 ni v0.5 al juego oficial**.
+
+### Próxima hipótesis de trabajo
+
+En vez de priorizar aún más los ataques y las órdenes de escolta, revisar **selección de objetivos y retirada previa**: no comenzar una captura si la unidad no puede permanecer viva dos turnos propios, estimar riesgo de emboscada con visión parcial sin hacer trampa, y preservar ocupantes valiosos cuando haya rutas legales y seguras. Evaluarlo contra el mismo baseline antes de modificar balance de unidades, costos o habilidades.
