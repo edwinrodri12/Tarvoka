@@ -22,6 +22,12 @@ const LIGHT := Color("#edebe0")
 const BLACK := Color("#1b2833")
 const RUST := Color("#6f6157")
 const GOLD := Color("#f1bd56")
+# V3: The taxiway and hangar share an exact engineering centerline.
+# Coordinates are within the compact single-tile airbase foundation.
+const HANGAR_CENTER_X := -1.95
+const HANGAR_FRONT_Z := -4.105
+const TAXIWAY_CENTER_X := HANGAR_CENTER_X
+const TAXIWAY_CENTER_Z := -5.00
 static var _materials: Dictionary = {}
 static var _meshes: Dictionary = {}
 
@@ -120,16 +126,34 @@ static func _ground(parent: Node3D, accent: Color) -> void:
         Vector3(8.45,0.08,8.15),CEMENT)
     _box(apron,"LosaPlataformaDeVuelo",Vector3(3.55,0.025,2.75),
         Vector3(5.6,0.085,5.25),Color("#5b676b"))
-    _box(apron,"CarrilRodaje",Vector3(0.80,0.045,-4.72),
-        Vector3(5.25,0.08,1.52),IRON,0.14)
+    # V3 realignment: previously the road center was x=+0.80, a
+    # 2.75 m lateral error relative to the hangar at x=-1.95.
+    # The 6.4 m-wide paved taxiway now joins the gate at z=-4.105.
+    _box(apron,"CarrilRodaje",Vector3(
+        TAXIWAY_CENTER_X,0.075,TAXIWAY_CENTER_Z),
+        Vector3(6.40,0.080,2.63),IRON,0.14)
+    # Dash direction is longitudinal (-Z), not across the taxiway.
     for i in range(4):
         _box(apron,"RayaDiscontinuaRodaje_%d" % i,
-            Vector3(-0.96+float(i)*1.11,0.100,-4.74),
-            Vector3(0.64,0.014,0.075),GOLD)
+            Vector3(TAXIWAY_CENTER_X,0.123,-5.84+float(i)*0.49),
+            Vector3(0.11,0.014,0.27),GOLD)
+    # Gate threshold, aligned and centred with the sliding doors.
+    _box(apron,"LineaUmbralHangarV3",Vector3(
+        TAXIWAY_CENTER_X,0.123,HANGAR_FRONT_Z-0.13),
+        Vector3(6.15,0.014,0.095),LIGHT)
     for side in [-1,1]:
+        var edge_x: float = TAXIWAY_CENTER_X+float(side)*3.04
         _box(apron,"LineaSeguridadLateral_%s" % side,
-            Vector3(-1.91+float(side)*4.0,0.096,-1.06),
-            Vector3(0.075,0.015,6.18),accent,0.04,true)
+            Vector3(edge_x,0.123,TAXIWAY_CENTER_Z),
+            Vector3(0.09,0.014,2.55),accent,0.04,true)
+        _box(apron,"BandaAdvertenciaPortonV3_%s" % side,
+            Vector3(TAXIWAY_CENTER_X+float(side)*2.69,
+                0.123,HANGAR_FRONT_Z-0.31),
+            Vector3(0.44,0.014,0.095),GOLD)
+    apron.set_meta("tarvoka_airbase_v3_taxiway_aligned",true)
+    apron.set_meta("taxiway_center_x",TAXIWAY_CENTER_X)
+    apron.set_meta("hangar_center_x",HANGAR_CENTER_X)
+    apron.set_meta("hangar_front_z",HANGAR_FRONT_Z)
     # Parking blocks, hazard zones, and clear silhouette at tactical distance.
     for i in range(5):
         _box(apron,"BordePavimento_%d" % i,
@@ -138,7 +162,7 @@ static func _ground(parent: Node3D, accent: Color) -> void:
 
 static func _hangar(parent: Node3D, accent: Color,
         level: int, damage: int) -> void:
-    var hangar := _group(parent,"HangarPrincipalV1",Vector3(-1.95,0,-0.76))
+    var hangar := _group(parent,"HangarPrincipalV1",Vector3(HANGAR_CENTER_X,0,-0.76))
     _box(hangar,"MuroTraseroCerrado",Vector3(0,1.43,3.19),
         Vector3(7.18,2.86,0.25),WALL)
     for s in [-1,1]:
