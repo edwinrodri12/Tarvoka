@@ -11,6 +11,8 @@ const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const BastionDamage = preload("res://scripts/ui/BastionDamage3D.gd")
 const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
+const G11Art = preload("res://scripts/ui/G11Art3D.gd")
+const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -867,7 +869,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "tank":
             _tank(model)
         "mlrs":
-            _mlrs(model)
+            # Heavy V1 sculpt only in the art studio; battle retains low-poly LOD.
+            if not (finish_enabled and art_level >= 13):
+                _mlrs(model)
         "attack_heli":
             _helicopter(model)
         "fighter":
@@ -883,6 +887,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
+    # G11 shares the launcher role with the tactical atlas without altering stats.
+    if role == "mlrs" and finish_enabled and art_level >= 13:
+        G11Art.build(model,faction_paint_color(faction))
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
@@ -936,6 +943,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return TankRig.pose(model,kind,progress,target_heading)
         "apc":
             return BastionRig.pose(model,kind,progress,target_heading)
+        "mlrs":
+            return G11Rig.pose(model,kind,progress,target_heading)
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
@@ -944,6 +953,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             TankRig.restore(model)
         "apc":
             BastionRig.restore(model)
+        "mlrs":
+            G11Rig.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
