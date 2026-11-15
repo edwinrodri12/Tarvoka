@@ -16,6 +16,9 @@ on:
       - 'scripts/ui/G11SequentialSalvoV8.gd'
       - 'scripts/ui/G11ExhaustV9.gd'
       - 'scripts/ui/G11CooldownV10.gd'
+      - 'scripts/ui/G11ArmorFinishV11.gd'
+      - 'tests/test_g11_armor_finish_v11.gd'
+      - 'tests/test_g11_armor_finish_v11_capture.gd'
       - 'tests/test_g11_cooldown_v10.gd'
       - 'tests/test_g11_cooldown_v10_capture.gd'
       - 'tests/test_g11_exhaust_v9.gd'
@@ -137,7 +140,21 @@ jobs:
             echo 'G11 V10 cooldown or restoration regression'; exit 1
           fi
           grep -F 'PASS G11 COOLDOWN V10:' /tmp/g11_cooldown_v10.log
-      - name: Render G11 V10 cooling, vapor and hydraulic return at 18 actual native Godot camera frames
+      - name: Verify true beveled G11 V11 metals and structural frame in all 8 factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_armor_finish_v11.gd 2>&1 | tee /tmp/g11_armor_v11.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_armor_v11.log; then
+            echo 'G11 V11 beveled frame and metallic barrel test failed'; exit 1
+          fi
+          grep -F 'PASS G11 ARMOR V11:' /tmp/g11_armor_v11.log
+      - name: Render G11 V11 real 3D beveled launcher from 20 inspection camera positions
         shell: bash
         run: |
           set -euo pipefail
@@ -147,17 +164,17 @@ jobs:
             env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-360 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_g11_cooldown_v10_capture.gd 2>&1 | tee /tmp/g11_cooldown_v10_capture.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_cooldown_v10_capture.log; then
+            --script res://tests/test_g11_armor_finish_v11_capture.gd 2>&1 | tee /tmp/g11_armor_v11_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_armor_v11_capture.log; then
             echo 'G11 eight-angle GPU capture failed'; exit 1
           fi
-          grep -F 'PASS G11 COOLDOWN V10 CAPTURE:' /tmp/g11_cooldown_v10_capture.log
-          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 18
-      - name: Upload G11 V10 hot cooling lips, gentle vapor and mechanism return visual gallery
+          grep -F 'PASS G11 FINISH V11 CAPTURE:' /tmp/g11_armor_v11_capture.log
+          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 20
+      - name: Upload G11 V11 metallic and beveled structure inspection across 20 Godot cameras
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-g11-v10-cooling-hydraulics-18-godot-renders
+          name: tarvoka-g11-v11-beveled-metal-20-native-godot-angles
           path: /tmp/g11-360/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
