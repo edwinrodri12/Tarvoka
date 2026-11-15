@@ -17,6 +17,12 @@ var side_buttons: Array[Button] = []
 var side_commander_portraits: Array[TextureRect] = []
 var side_emblems: Array[TextureRect] = []
 var faction_assignment_labels: Array[Label] = []
+var faction_color_bars: Array[ColorRect] = []
+var header_note: Label
+var header_title: Label
+var header_back_button: Button
+var dossier_balance_note: Label
+var compact_landscape := false
 var faction_grid: GridContainer
 var matchup_caption: Label
 var content_rail: BoxContainer
@@ -66,6 +72,7 @@ func _ready() -> void:
     header_row.add_child(overline)
     var title := Label.new()
     title.text = "TARVOKA  /  FACCIONES Y COMANDANTES"
+    header_title = title
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title.add_theme_color_override("font_color",Chrome.GOLD)
     title.add_theme_font_size_override("font_size",23)
@@ -76,10 +83,12 @@ func _ready() -> void:
     note.add_theme_font_size_override("font_size",13)
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     overline.add_child(note)
+    header_note = note
     var back := Button.new()
     back.text = "‹ VOLVER A ESCARAMUZA"
     back.custom_minimum_size = Vector2(170,50)
     back.pressed.connect(func(): back_requested.emit())
+    header_back_button = back
     Chrome.emphasize(back,"secondary")
     header_row.add_child(back)
 
@@ -173,6 +182,7 @@ func _ready() -> void:
         color_block.color = Style.faction_color(i)
         color_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_child(color_block)
+        faction_color_bars.append(color_block)
         # Show the actual approved shield on each selectable faction row,
         # not a generic placeholder or a recreated symbol.
         var emblem := TextureRect.new()
@@ -311,6 +321,7 @@ func _ready() -> void:
     balance.add_theme_color_override("font_color",Chrome.MUTED)
     balance.add_theme_font_size_override("font_size",12)
     dossier_col.add_child(balance)
+    dossier_balance_note = balance
 
     confirm_button = Button.new()
     confirm_button.text = "CONFIRMAR FACCIONES  ·  VOLVER A ESCARAMUZA"
@@ -367,6 +378,8 @@ func _refresh() -> void:
         var side_index: int = Identity.index_for(str(selected[str(side)]))
         var name: String = str(Style.faction_info(side_index).get("name",""))
         side_buttons[side].text = ("%s · %s" % ["JUGADOR" if side == 0 else "RIVAL",name])
+        if compact_landscape:
+            side_buttons[side].text = "JUGADOR" if side == 0 else "RIVAL"
         side_buttons[side].tooltip_text = "Cambiar la facción de %s" % name
         side_commander_portraits[side].texture = Style.commander_texture(side_index)
         side_emblems[side].texture = Style.emblem_texture(side_index)
@@ -380,6 +393,10 @@ func _refresh() -> void:
             "AZUL" if str(selected["0"]) == key else
             ("ROJO" if str(selected["1"]) == key else ""))
         faction_buttons[i].text = ("✓ " if i == idx else "") + str(Style.FACTIONS[i]["name"])
+        if compact_landscape:
+            faction_buttons[i].text = ("✓ " if i == idx else "") + [
+                "Alianza","Escarlata","Verde","Solar",
+                "Violeta","Ámbar","Turquesa","Ónix"][i]
         faction_buttons[i].tooltip_text = str(Style.FACTIONS[i]["name"]) + " · " + str(Style.FACTIONS[i]["motif"])
         faction_assignment_labels[i].text = allocated
         Chrome.emphasize(faction_buttons[i],"primary" if i == idx else "secondary")
@@ -423,15 +440,64 @@ func reflow_for_size(viewport: Vector2) -> void:
     # Physical Android phones can be 1080px wide yet still be portrait.
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
     is_portrait_layout = viewport.y > viewport.x * 1.12
+    # Compact LANDSCAPE must be laid out by available height too. The old
+    # 2x4 roster would overflow inside Android's shorter browser/OS safe area.
+    compact_landscape = not is_portrait_layout and viewport.y <= 560.0
     content_rail.vertical = is_portrait_layout
     if faction_grid != null:
-        faction_grid.columns = 1 if is_portrait_layout else 2
+        faction_grid.columns = (
+            1 if is_portrait_layout else
+            (4 if compact_landscape and viewport.x >= 760.0 else 2))
     # Portrait headers and long real faction names cannot fit side-by-side.
     # Stack them instead of allowing "Volver" and "Rival" off-screen.
     if header_row != null:
         header_row.vertical = is_portrait_layout
     if sides_row != null:
         sides_row.vertical = is_portrait_layout
+    if header_note != null:
+        header_note.visible = not compact_landscape
+    if header_title != null:
+        header_title.add_theme_font_size_override(
+            "font_size",16 if compact_landscape else 23)
+    if header_back_button != null:
+        header_back_button.text = "‹ VOLVER" if compact_landscape else "‹ VOLVER A ESCARAMUZA"
+        header_back_button.custom_minimum_size = (
+            Vector2(88,44) if compact_landscape else Vector2(170,50))
+    for profile in side_commander_portraits:
+        profile.custom_minimum_size = (
+            Vector2(44,43) if compact_landscape else Vector2(61,60))
+    for crest in side_emblems:
+        crest.custom_minimum_size = (
+            Vector2(32,36) if compact_landscape else Vector2(45,45))
+    for side_button in side_buttons:
+        side_button.custom_minimum_size.y = 44 if compact_landscape else 51
+        side_button.add_theme_font_size_override(
+            "font_size",12 if compact_landscape else 16)
+    for strip in faction_color_bars:
+        strip.visible = not compact_landscape
+    for emblem in faction_card_emblems:
+        emblem.custom_minimum_size = (
+            Vector2(29,32) if compact_landscape else Vector2(50,50))
+    for button in faction_buttons:
+        button.custom_minimum_size = (
+            Vector2(56,44) if compact_landscape else Vector2(104,52))
+        button.add_theme_font_size_override(
+            "font_size",10 if compact_landscape else 15)
+    for assigned in faction_assignment_labels:
+        assigned.visible = not compact_landscape
+    if matchup_caption != null:
+        matchup_caption.visible = not compact_landscape
+    if dossier_balance_note != null:
+        dossier_balance_note.visible = not compact_landscape
+    if preview_motif != null:
+        preview_motif.visible = not compact_landscape
+    if preview_commander != null:
+        preview_commander.visible = not compact_landscape
+    if confirm_button != null:
+        confirm_button.custom_minimum_size.y = 48 if compact_landscape else 58
+        confirm_button.add_theme_font_size_override(
+            "font_size",13 if compact_landscape else 17)
+
     if chooser_card != null and dossier_card != null:
         if is_portrait_layout:
             content_rail.move_child(dossier_card,0)
@@ -440,13 +506,20 @@ func reflow_for_size(viewport: Vector2) -> void:
     for child in content_rail.get_children():
         if child is Control:
             child.custom_minimum_size.x = 0 if is_portrait_layout or viewport.x < 1000.0 else 310
-    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else (104.0 if viewport.x < 1000.0 else 145.0)
+    var art_width: float = (
+        82.0 if is_portrait_layout and viewport.x < 460.0 else
+        (82.0 if compact_landscape else
+        (104.0 if viewport.x < 1000.0 else 145.0)))
     if selection_status != null:
         selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
         emblem_display_box.custom_minimum_size = Vector2(art_width,art_width)
     if commander_display_box != null:
-        commander_display_box.custom_minimum_size = Vector2(maxf(82.0,art_width),maxf(76.0,art_width*0.76))
+        commander_display_box.custom_minimum_size = Vector2(
+            maxf(82.0,art_width),maxf(70.0,art_width*0.76))
+    # Restore truthful, full faction names and selection badges after resize.
+    # No changes to the engine's 2-side identities or confirmed save data.
+    _refresh()
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
