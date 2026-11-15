@@ -174,7 +174,7 @@ func _ready() -> void:
     _toggle_dialogue.custom_minimum_size.y = 46
     _toggle_dialogue.pressed.connect(_toggle_radio)
     dossier.add_child(_toggle_dialogue)
-    dossier.add_child(_voice_panel)
+    # _info_card already attached the radio panel to this dossier.
 
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation",8)
