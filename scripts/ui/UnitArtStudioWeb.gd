@@ -1406,7 +1406,9 @@ func _auto_benchmark_diagnosis_text() -> String:
             str(pair["recommendation"])]
     var quality: Array=finding["quality_issues"]
     if not quality.is_empty():
-        summary_text+="\n\nMuestras insuficientes: "+", ".join(quality)
+        summary_text+="\n\nMuestras insuficientes:"
+        for warning in quality:
+            summary_text+="\n· "+str(warning)
     summary_text+=("\n\nAndroid físico: medición local; sin datos térmicos."
         if bool(finding["on_android_device"]) else
         "\n\nNO es una medición Android: repetir en el teléfono.")
