@@ -105,3 +105,16 @@
 - Godot 4.3 genera **25 imágenes reales** del modelo y comprueba fases de daño, piezas visibles y reparación: [G11 3D V7 QA](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697890831), artifact `tarvoka-g11-v7-physical-fire-smoke-damage-review`.
 - Las pruebas pesadas de rendimiento quedan únicamente disponibles a través de ejecución manual del workflow hasta terminar la escultura.
 - **Pendiente de inspección artística humana**: estudiar superposiciones de cerca, matices de humo/fuego e iluminación en dispositivo. Próximo foco sugerido: detallado real de cada lanzamiento de cohete.
+
+## Actualización V8 — salva 3D individual de doce cohetes (15-nov-2026)
+
+- **Modelo nativo Godot 4.3** `scripts/ui/G11SequentialSalvoV8.gd`, incorporado a la cadena V1–V8 mediante `G11Art3D.gd` y `G11VisualRig3D.gd`. Nada de sprites ni fotomontajes. Se respetan las ocho facciones y todos los valores tácticos.
+- Los doce tubos huecos V4, en orden `[0,5,10,3,8,1,6,11,4,9,2,7]`, reciben cada uno un **cohete 3D propio**, con cuerpo metálico cilíndrico, ojiva cónica, cuatro aletas y chorro del motor.
+- Cada boca usa geometría de encendido **independiente**: anillo de presión `TorusMesh`, cuatro destellos direccionales y tres pequeñas nubes de humo. El antiguo fogonazo y humo esféricos genéricos quedan suprimidos visualmente; solo se conservan las raíces históricas por compatibilidad.
+- Los lanzamientos están separados por `0.0515` en progreso normalizado, después del apuntamiento; la salva completa mantiene un total visual de doce proyectiles, pero **no consume 12 municiones tácticas** ni modifica daño, combate o economía.
+- Los cohetes salen en dirección local `-Z`, solidarios con la elevación real y giro del lanzador. Se alejan de la boca, el chorro oscila y cada efecto se extingue de manera independiente. Al finalizar, reparar o restaurar, las mallas y fogonazos vuelven al estado invisible y reutilizable.
+- En `BastionStudioAdapter.gd` se añadieron botones **Salva normal** y **Salva lenta x0.35**. Permiten revisar cada tubo en el modelo real desde cámara frontal o lateral.
+- **Prueba CI aprobada**: [G11 SALVO V8 (Godot nativo)](https://github.com/edwinrodri12/Tarvoka/actions/runs/43734017448). Verifica ocho facciones, las doce bocas/proyectiles, orden de fuego, salida, restauración y bloqueo tras destrucción. Genera **18 imágenes de Godot** (doce encendidos individuales, cuatro fotos de vuelo desde un lado y vistas anterior/posterior a la salva). Artifact `tarvoka-g11-v8-twelve-individual-rocket-ignitions`.
+- No se ha medido rendimiento Android aquí; antes de finalizar el arte debe hacerse revisión humana del ritmo, separación entre estelas y cámara lenta en el Estudio 3D.
+
+**Próxima posible mejora visual:** suavizar la estela aerodinámica y la disipación de gases del propulsor y mejorar los efectos sincronizados en cada salva, sin alterar la mecánica del combate.
