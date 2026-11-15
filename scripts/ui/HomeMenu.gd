@@ -9,253 +9,288 @@ signal settings_requested
 signal saves_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
-const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
-const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Backdrop = preload("res://scripts/ui/CinematicHomeBackdrop.gd")
 
-# A faithful use of the approved identity, NOT a redesigned logo.
-# The 64-pixel repository preview is deliberately kept near native size.
-# Switch to the high-resolution master only after it is committed.
-const OFFICIAL_ICON := "res://assets/branding/tarvoka_icon_fictional_planet_64.png"
-const OFFICIAL_ICON_HD := "res://assets/branding/tarvoka_emblem_fictional_planet_512.webp"
-
+# Compatibility surface for the other menu layouts and existing UI checks.
 var primary_buttons: Dictionary = {}
 var home_scroll: ScrollContainer
 var hero: PanelContainer
 var content_rail: BoxContainer
 var action_card: PanelContainer
+var faction_showcase: PanelContainer
+var showcase_emblems: Array[TextureRect] = []
 var _brand_image: TextureRect
 var _menu_caption: Label
 var _hero_subtitle: Label
-var faction_showcase: PanelContainer
-var showcase_emblems: Array[TextureRect] = []
+var _root: VBoxContainer
+var _navigation: VBoxContainer
+var _header_title: Label
+var _continue_button: Button
+var _exit_dialog: ConfirmationDialog
+var _credits_dialog: AcceptDialog
+var _all_menu_buttons: Array[Button] = []
+
+const OFFICIAL_ICON_HD := "res://assets/branding/tarvoka_emblem_fictional_planet_512.webp"
+const OFFICIAL_ICON := "res://assets/branding/tarvoka_icon_fictional_planet_64.png"
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var shell := StyleBoxFlat.new()
     shell.bg_color = Chrome.BACKGROUND
-    shell.border_color = Chrome.EDGE_BRIGHT
-    shell.border_width_top = 3
-    shell.content_margin_left = 9
-    shell.content_margin_right = 9
-    shell.content_margin_top = 9
-    shell.content_margin_bottom = 9
+    shell.border_color = Color("#3A6370")
+    shell.border_width_top = 2
+    shell.content_margin_left = 0
+    shell.content_margin_right = 0
+    shell.content_margin_top = 0
+    shell.content_margin_bottom = 0
     add_theme_stylebox_override("panel",shell)
-    var backdrop := Backplate.new()
-    backdrop.mode = "home"
-    add_child(backdrop)
 
-    home_scroll = ScrollContainer.new()
-    home_scroll.custom_minimum_size = Vector2(300,240)
-    home_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    home_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    home_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    add_child(home_scroll)
+    var battlefield := Backdrop.new()
+    battlefield.name = "MapaCinematicoOriginal"
+    add_child(battlefield)
 
-    var outer := MarginContainer.new()
-    outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    for side in ["margin_left","margin_right","margin_top","margin_bottom"]:
-        outer.add_theme_constant_override(side,5)
-    home_scroll.add_child(outer)
+    var safe_area := MarginContainer.new()
+    safe_area.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    for edge in ["margin_left","margin_right","margin_top","margin_bottom"]:
+        safe_area.add_theme_constant_override(edge, 13)
+    add_child(safe_area)
+    _root = VBoxContainer.new()
+    _root.add_theme_constant_override("separation",8)
+    safe_area.add_child(_root)
 
-    content_rail = BoxContainer.new()
-    content_rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    content_rail.add_theme_constant_override("separation",10)
-    outer.add_child(content_rail)
-
-    hero = PanelContainer.new()
-    hero.name = "MarcaTarvokaPlanetaFicticio"
-    hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    hero.size_flags_stretch_ratio = 0.85
-    hero.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    hero.add_theme_stylebox_override("panel",
-        Chrome.box_style(Color("#0B1F30"),Chrome.EDGE_BRIGHT,12,12))
-    content_rail.add_child(hero)
-    var hero_stack := VBoxContainer.new()
-    hero_stack.add_theme_constant_override("separation",5)
-    hero.add_child(hero_stack)
-    var overline := Label.new()
-    overline.text = "CUARTEL GENERAL  /  ACCESO A OPERACIONES"
-    overline.add_theme_color_override("font_color",Chrome.GOLD)
-    overline.add_theme_font_size_override("font_size",12)
-    overline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    hero_stack.add_child(overline)
-
-    var emblem_row := HBoxContainer.new()
-    emblem_row.add_theme_constant_override("separation",9)
-    hero_stack.add_child(emblem_row)
+    var masthead := HBoxContainer.new()
+    masthead.custom_minimum_size.y = 76
+    masthead.add_theme_constant_override("separation",12)
+    _root.add_child(masthead)
     _brand_image = TextureRect.new()
-    _brand_image.name = "EmblemaOficial"
-    _brand_image.custom_minimum_size = Vector2(68,68)
+    _brand_image.name = "LogotipoFicticioOficial"
+    _brand_image.custom_minimum_size = Vector2(66,64)
     _brand_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    _brand_image.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     _brand_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     _brand_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var logo := Image.new()
-    # Prefer the actual approved high-resolution art, which preserves the
-    # fictional planet. The old 64px thumbnail remains a safe fallback.
-    if logo.load(OFFICIAL_ICON_HD) == OK or logo.load(OFFICIAL_ICON) == OK:
-        _brand_image.texture = ImageTexture.create_from_image(logo)
-    emblem_row.add_child(_brand_image)
+    var mark := Image.new()
+    if mark.load(OFFICIAL_ICON_HD) == OK or mark.load(OFFICIAL_ICON) == OK:
+        _brand_image.texture = ImageTexture.create_from_image(mark)
+    masthead.add_child(_brand_image)
+    var brand_labels := VBoxContainer.new()
+    brand_labels.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    masthead.add_child(brand_labels)
+    _header_title = Label.new()
+    _header_title.text = "TARVOKA"
+    _header_title.add_theme_font_size_override("font_size",39)
+    _header_title.add_theme_color_override("font_color",Chrome.TEXT)
+    brand_labels.add_child(_header_title)
+    var slogan := Label.new()
+    slogan.text = "ESTRATEGIA  ·  MANDO  ·  TERRITORIO"
+    slogan.add_theme_font_size_override("font_size",11)
+    slogan.add_theme_color_override("font_color",Chrome.GOLD)
+    brand_labels.add_child(slogan)
+    var flex := Control.new()
+    flex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    masthead.add_child(flex)
+    _continue_button = Button.new()
+    _continue_button.name = "ContinuarOperacion"
+    _continue_button.text = "CONTINUAR OPERACIÓN"
+    _continue_button.custom_minimum_size = Vector2(204,49)
+    _continue_button.pressed.connect(func(): continue_requested.emit())
+    Chrome.emphasize(_continue_button,"primary")
+    masthead.add_child(_continue_button)
 
-    var title_block := VBoxContainer.new()
-    title_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    title_block.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    emblem_row.add_child(title_block)
-    var brand := Label.new()
-    brand.text = "TARVOKA"
-    brand.name = "NombreOficial"
-    brand.add_theme_font_size_override("font_size",38)
-    brand.add_theme_color_override("font_color",Chrome.TEXT)
-    brand.clip_text = true
-    title_block.add_child(brand)
-    var descriptor := Label.new()
-    descriptor.text = "ESTRATEGIA  ·  MANDO  ·  TERRITORIO"
-    descriptor.add_theme_color_override("font_color",Chrome.GOLD)
-    descriptor.add_theme_font_size_override("font_size",12)
-    descriptor.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    title_block.add_child(descriptor)
+    # A dramatic landscape with generous touch targets; desktop and Android
+    # share the same real Godot screen in landscape rather than separate mockups.
+    content_rail = HBoxContainer.new()
+    content_rail.add_theme_constant_override("separation",14)
+    content_rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    content_rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _root.add_child(content_rail)
 
-    var rule := HSeparator.new()
-    hero_stack.add_child(rule)
-    var hero_title := Label.new()
-    hero_title.text = "LA BATALLA COMIENZA AQUÍ"
-    hero_title.add_theme_font_size_override("font_size",19)
-    hero_title.add_theme_color_override("font_color",Chrome.EDGE_BRIGHT)
-    hero_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    hero_stack.add_child(hero_title)
+    home_scroll = ScrollContainer.new()
+    home_scroll.name = "NavegacionTactilHorizontal"
+    home_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    home_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    home_scroll.size_flags_stretch_ratio = 0.43
+    home_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    home_scroll.custom_minimum_size.x = 310
+    content_rail.add_child(home_scroll)
+    action_card = PanelContainer.new()
+    action_card.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#081B2BD9"),Color("#386476"),8,8))
+    action_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    home_scroll.add_child(action_card)
+    _navigation = VBoxContainer.new()
+    _navigation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _navigation.add_theme_constant_override("separation",4)
+    action_card.add_child(_navigation)
+    var section := Label.new()
+    section.text = "CENTRO DE OPERACIONES  /  DESPLEGAR"
+    section.add_theme_font_size_override("font_size",12)
+    section.add_theme_color_override("font_color",Chrome.GOLD)
+    _navigation.add_child(section)
+    _menu_option("Modo historia","Campaña de La Red de Meridian","01",func(): story_requested.emit(),true,true)
+    _menu_option("Escaramuza","Batallas y mapas personalizados","02",func(): skirmish_requested.emit())
+    _menu_option("Online","Multijugador en línea · próximamente","03",Callable(),false)
+    _menu_option("Arsenal","Unidades y modelos de TARVOKA","04",func(): arsenal_requested.emit())
+    _menu_option("Partidas guardadas","Reanudar o cargar una batalla","05",func(): saves_requested.emit())
+    _menu_option("Ajustes","Pantalla, controles y rendimiento","06",func(): settings_requested.emit())
+    _menu_option("Créditos","Información del juego y equipo","07",_open_credits)
+    _menu_option("Salir","Cerrar TARVOKA","08",_ask_exit)
+
+    hero = PanelContainer.new()
+    hero.name = "PersonajesOficialesYEscenario"
+    hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hero.size_flags_stretch_ratio = 0.57
+    hero.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    hero.add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#081A2988"),Color("#385C6A77"),9,11))
+    content_rail.add_child(hero)
+    var hero_column := VBoxContainer.new()
+    hero_column.add_theme_constant_override("separation",9)
+    hero.add_child(hero_column)
+    var intro := Label.new()
+    intro.text = "UN PLANETA · OCHO FACCIONES"
+    intro.add_theme_font_size_override("font_size",16)
+    intro.add_theme_color_override("font_color",Chrome.GOLD)
+    intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    hero_column.add_child(intro)
+    var leader_row := HBoxContainer.new()
+    leader_row.name = "ComandantesAprobados"
+    leader_row.add_theme_constant_override("separation",8)
+    leader_row.alignment = BoxContainer.ALIGNMENT_END
+    hero_column.add_child(leader_row)
+    for faction in [0,1,2,7]:
+        var profile := PanelContainer.new()
+        profile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        profile.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#0B2335E5"),Style.faction_color(faction),7,5))
+        leader_row.add_child(profile)
+        var profile_stack := VBoxContainer.new()
+        profile_stack.add_theme_constant_override("separation",3)
+        profile.add_child(profile_stack)
+        var portrait := TextureRect.new()
+        portrait.name = "RetratoOficial%d" % faction
+        portrait.texture = Style.commander_texture(faction)
+        portrait.custom_minimum_size = Vector2(80,90)
+        portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        profile_stack.add_child(portrait)
+        var caption := Label.new()
+        caption.text = str(Style.FACTIONS[faction]["name"])
+        caption.add_theme_font_size_override("font_size",10)
+        caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        profile_stack.add_child(caption)
+    var stretch := Control.new()
+    stretch.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    hero_column.add_child(stretch)
+    var hero_phrase := Label.new()
+    hero_phrase.text = "TU PRÓXIMA DECISIÓN\nCAMBIA TODO."
+    hero_phrase.add_theme_font_size_override("font_size",32)
+    hero_phrase.add_theme_color_override("font_color",Chrome.TEXT)
+    hero_phrase.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    hero_column.add_child(hero_phrase)
     _hero_subtitle = Label.new()
     _hero_subtitle.text = "Dirige tus fuerzas por tierra, mar y aire.\nCada movimiento puede cambiar la guerra."
     _hero_subtitle.add_theme_font_size_override("font_size",14)
     _hero_subtitle.add_theme_color_override("font_color",Chrome.MUTED)
-    _hero_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    hero_stack.add_child(_hero_subtitle)
+    _hero_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    hero_column.add_child(_hero_subtitle)
+    _menu_caption = Label.new()
+    _menu_caption.text = "LA RED DE MERIDIAN  ·  EDICIÓN EN DESARROLLO"
+    _menu_caption.add_theme_font_size_override("font_size",11)
+    _menu_caption.add_theme_color_override("font_color",Chrome.GOLD)
+    _menu_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    hero_column.add_child(_menu_caption)
 
-    # The broad landscape brand panel should feel like the game's
-    # eight-faction universe, not an empty placeholder. These are the
-    # original approved shield textures, never invented stock imagery.
-    # In portrait this panel stays hidden so the four primary actions
-    # remain reachable before the first scroll.
     faction_showcase = PanelContainer.new()
     faction_showcase.name = "OchoEscudosOficiales"
     faction_showcase.add_theme_stylebox_override("panel",
-        Chrome.box_style(Color("#0F2638"),Chrome.EDGE,9,8))
-    hero_stack.add_child(faction_showcase)
-    var showcase_column := VBoxContainer.new()
-    showcase_column.add_theme_constant_override("separation",6)
-    faction_showcase.add_child(showcase_column)
-    var showcase_title := Label.new()
-    showcase_title.text = "OCHO FACCIONES · UN MUNDO EN DISPUTA"
-    showcase_title.add_theme_color_override("font_color",Chrome.GOLD)
-    showcase_title.add_theme_font_size_override("font_size",12)
-    showcase_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    showcase_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    showcase_column.add_child(showcase_title)
-    for row_id in range(2):
-        var crest_row := HBoxContainer.new()
-        crest_row.alignment = BoxContainer.ALIGNMENT_CENTER
-        crest_row.add_theme_constant_override("separation",8)
-        showcase_column.add_child(crest_row)
-        for col_id in range(4):
-            var index: int = row_id*4+col_id
-            var crest := TextureRect.new()
-            crest.name = "FaccionEscudo%d" % index
-            crest.texture = VisualStyle.emblem_texture(index)
-            crest.custom_minimum_size = Vector2(66,66)
-            crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-            crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-            crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
-            crest.tooltip_text = str(VisualStyle.FACTIONS[index]["name"])
-            crest_row.add_child(crest)
-            showcase_emblems.append(crest)
+        Chrome.box_style(Color("#071623ED"),Chrome.EDGE,6,7))
+    _root.add_child(faction_showcase)
+    var faction_row := HBoxContainer.new()
+    faction_row.add_theme_constant_override("separation",6)
+    faction_showcase.add_child(faction_row)
+    var footer_title := Label.new()
+    footer_title.text = "FACCIONES DE TARVOKA"
+    footer_title.add_theme_font_size_override("font_size",13)
+    footer_title.add_theme_color_override("font_color",Chrome.GOLD)
+    footer_title.custom_minimum_size.x = 188
+    footer_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    faction_row.add_child(footer_title)
+    for index in range(8):
+        var crest := TextureRect.new()
+        crest.name = "EscudoOficial%d" % index
+        crest.texture = Style.emblem_texture(index)
+        crest.custom_minimum_size = Vector2(54,54)
+        crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        crest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        crest.tooltip_text = str(Style.FACTIONS[index]["name"])
+        faction_row.add_child(crest)
+        showcase_emblems.append(crest)
 
-    var hero_spacer := Control.new()
-    hero_spacer.custom_minimum_size.y = 2
-    hero_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    hero_stack.add_child(hero_spacer)
-    var classified := PanelContainer.new()
-    classified.add_theme_stylebox_override("panel",
-        Chrome.box_style(Color("#112D3E"),Chrome.EDGE,7,7))
-    hero_stack.add_child(classified)
-    _menu_caption = Label.new()
-    _menu_caption.text = "CENTRO DE OPERACIONES   •   JUEGO EN DESARROLLO"
-    _menu_caption.add_theme_color_override("font_color",Chrome.MUTED)
-    _menu_caption.add_theme_font_size_override("font_size",12)
-    _menu_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    classified.add_child(_menu_caption)
-
-    action_card = PanelContainer.new()
-    action_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    action_card.size_flags_stretch_ratio = 1.15
-    action_card.add_theme_stylebox_override("panel",
-        Chrome.box_style(Color("#0C1D2C"),Chrome.EDGE,12,9))
-    content_rail.add_child(action_card)
-    var menu := VBoxContainer.new()
-    menu.add_theme_constant_override("separation",6)
-    action_card.add_child(menu)
-    _section(menu,"DESPLEGAR")
-    _option(menu,"Continuar","Volver a la batalla activa",func(): continue_requested.emit())
-    _option(menu,"Modo historia","Campaña · Capítulo 01",func(): story_requested.emit())
-    _option(menu,"Escaramuza","Crear una batalla con mapa y reglas personalizadas",func(): skirmish_requested.emit())
-    _option(menu,"Partidas guardadas","Cargar un guardado automático o manual",func(): saves_requested.emit())
-    _section(menu,"CUARTEL Y SISTEMA")
-    _option(menu,"Arsenal","Unidades, especialidades y modelos",func(): arsenal_requested.emit())
-    _option(menu,"Ajustes","Cámara, pantalla y rendimiento",func(): settings_requested.emit())
-    _option(menu,"Multijugador","En desarrollo · sin partidas online todavía",Callable(),false)
-    var footer := Label.new()
-    footer.text = "TARVOKA  /  VERSIÓN DE DESARROLLO"
-    footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    footer.add_theme_font_size_override("font_size",12)
-    footer.add_theme_color_override("font_color",Chrome.MUTED)
-    menu.add_child(footer)
+    _exit_dialog = ConfirmationDialog.new()
+    _exit_dialog.title = "Salir de TARVOKA"
+    _exit_dialog.dialog_text = "¿Quieres cerrar el juego? Tus partidas guardadas permanecerán disponibles."
+    _exit_dialog.ok_button_text = "Salir"
+    _exit_dialog.confirmed.connect(func(): get_tree().quit())
+    add_child(_exit_dialog)
+    _credits_dialog = AcceptDialog.new()
+    _credits_dialog.title = "TARVOKA · Créditos"
+    _credits_dialog.dialog_text = "TARVOKA · Estrategia militar por turnos.\nDesarrollo independiente en Godot 4.\nArte y facciones originales de TARVOKA.\nVersión de desarrollo, sin lanzamiento comercial."
+    add_child(_credits_dialog)
     get_viewport().size_changed.connect(_reflow)
-    _reflow()
+    call_deferred("_reflow")
     hide()
 
-func _reflow() -> void:
-    if home_scroll == null or content_rail == null:
-        return
-    var viewport: Vector2 = get_viewport_rect().size
-    var portrait: bool = viewport.y > viewport.x * 1.12
-    content_rail.vertical = portrait
-    # In portrait the battle world and the logo stay above large touch targets.
-    hero.custom_minimum_size = Vector2(0,0 if portrait else 310)
-    action_card.custom_minimum_size = Vector2(0 if portrait else 385,0)
-    home_scroll.custom_minimum_size.x = 300
-    _brand_image.custom_minimum_size = Vector2(64,64) if portrait else Vector2(116,116)
-    faction_showcase.visible = not portrait
-
-func _section(parent: VBoxContainer, title_text: String) -> void:
-    var label := Label.new()
-    label.text = title_text
-    label.add_theme_color_override("font_color",Chrome.GOLD)
-    label.add_theme_font_size_override("font_size",15)
-    parent.add_child(label)
-
-func _option(parent: VBoxContainer, title_text: String, detail: String, action: Callable, enabled: bool = true) -> void:
-    var card := PanelContainer.new()
-    card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var accent: Color = Chrome.GOLD if title_text == "Continuar" else (Chrome.EDGE_BRIGHT if title_text in ["Escaramuza","Partidas guardadas"] else Chrome.EDGE)
-    card.add_theme_stylebox_override("panel",
-        Chrome.box_style(Color("#142B3C"),accent.darkened(0.30),9,5))
-    parent.add_child(card)
-    var stack := VBoxContainer.new()
-    stack.add_theme_constant_override("separation",2)
-    card.add_child(stack)
+func _menu_option(title_text: String, caption: String, index: String,
+        callback: Callable, enabled: bool = true, highlight: bool = false) -> void:
     var button := Button.new()
-    button.text = title_text
-    button.custom_minimum_size.y = 48
+    button.name = "Opcion%s" % index
+    button.text = "%s   %s" % [index,title_text.to_upper()]
+    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    button.custom_minimum_size.y = 47
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.disabled = not enabled
-    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-    Chrome.emphasize(button,"primary" if title_text == "Continuar" else "secondary")
+    button.tooltip_text = caption
+    button.add_theme_font_size_override("font_size",17)
+    if highlight:
+        Chrome.emphasize(button,"primary")
+    elif enabled:
+        Chrome.emphasize(button,"secondary")
     if enabled:
-        button.pressed.connect(action)
-    stack.add_child(button)
-    var caption := Label.new()
-    caption.text = detail
-    caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    caption.add_theme_color_override("font_color",Chrome.MUTED)
-    caption.add_theme_font_size_override("font_size",12)
-    stack.add_child(caption)
+        button.pressed.connect(callback)
+    _navigation.add_child(button)
+    var sub := Label.new()
+    sub.text = caption
+    sub.add_theme_font_size_override("font_size",11)
+    sub.add_theme_color_override("font_color",Chrome.MUTED)
+    sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _navigation.add_child(sub)
     primary_buttons[title_text] = button
+    _all_menu_buttons.append(button)
+
+func _reflow() -> void:
+    if content_rail == null:
+        return
+    var bounds := get_viewport_rect().size
+    var vertical: bool = bounds.y > bounds.x
+    content_rail.vertical = vertical
+    var small: bool = bounds.y <= 760.0
+    for button in _all_menu_buttons:
+        button.custom_minimum_size.y = 43 if small else 50
+    hero.visible = not vertical
+    _header_title.add_theme_font_size_override("font_size",30 if small else 39)
+    _continue_button.custom_minimum_size.x = 178 if bounds.x < 1100.0 else 204
+    faction_showcase.visible = not vertical
+    _hero_subtitle.visible = bounds.y > 600.0
+    home_scroll.custom_minimum_size.x = 280 if vertical else 310
+
+func _ask_exit() -> void:
+    _exit_dialog.popup_centered()
+
+func _open_credits() -> void:
+    _credits_dialog.popup_centered()
