@@ -330,14 +330,91 @@ func open_for() -> void:
     show()
     _reflow()
 
+func _role_category(role: String) -> int:
+    if Roles.PROFILES.has(role):
+        return 0
+    var domain: String = str(Arsenal.profile(role).get("domain","ground"))
+    return 1 if domain == "air" else (2 if domain == "naval" else 0)
+
+func _choose_category(index: int) -> void:
+    if index < 0 or index >= CATEGORIES.size():
+        return
+    category_index = index
+    catalog_scroll.scroll_vertical = 0
+    for i in range(category_buttons.size()):
+        Chrome.emphasize(category_buttons[i],"primary" if i == index else "secondary")
+    for role in role_rows:
+        var row: Control = role_rows[role]
+        row.visible = (index < 3 and _role_category(str(role)) == index)
+    for key in site_rows:
+        var row: Control = site_rows[key]
+        row.visible = index == 3
+    status_heading.text = (
+        "CATÁLOGO  /  %s" % CATEGORIES[index] if index < 3 else
+        "INSTALACIONES DEL SISTEMA")
+    controls.visible = index < 3
+    faction_emblem.visible = index < 3
+    unit_preview.visible = index < 3
+    site_notice.visible = index == 3
+    if index == 3:
+        _select_site(selected_site if SITES.has(selected_site) else SITES[0])
+    else:
+        var next_role: String = selected_role
+        if _role_category(next_role) != index:
+            for role in Roles.ORDER + Arsenal.ORDER:
+                if _role_category(str(role)) == index:
+                    next_role = str(role)
+                    break
+        _select_role(next_role)
+    if compact_landscape:
+        _reflow()
+
+func _select_site(key: String) -> void:
+    var index: int = SITES.find(key)
+    if category_index != 3 or index < 0:
+        return
+    selected_site = key
+    unit_name.text = SITE_NAMES[index]
+    unit_kind.text = "INSTALACIÓN  /  CATÁLOGO"
+    unit_code.text = "TIPO  ·  %s" % key
+    unit_note.text = SITE_DESC[index]
+    if key == "city":
+        unit_stats.text = "INGRESOS POR TURNO\nClásica: 100 créditos  ·  Moderna: 250 créditos"
+    else:
+        var products: Array[String] = []
+        for role in Arsenal.ORDER:
+            if str(Arsenal.profile(str(role)).get("site","")) == key:
+                products.append(Roles.label(str(role)))
+        unit_stats.text = ("PRODUCCIÓN: %s" % ", ".join(products)) if not products.is_empty() else "Centro de producción del sistema clásico."
+    for site in site_buttons:
+        Chrome.emphasize(site_buttons[site],"primary" if site == key else "secondary")
+
 func _select_role(role: String) -> void:
     if not role_buttons.has(role):
         return
     selected_role = role
+    selected_site = ""
     unit_name.text = Roles.label(role)
-    var details: Array = Art.design(role)
-    unit_kind.text = "CLASE  ·  %s" % str(details[0]).to_upper()
-    unit_code.text = "IDENTIFICADOR  ·  %s" % role
+    var design: Array = Art.design(role)
+    unit_kind.text = "DOMINIO  ·  %s" % (
+        "TIERRA" if _role_category(role) == 0 else
+        ("AIRE" if _role_category(role) == 1 else "MAR"))
+    var profile: Dictionary = (
+        Roles.PROFILES[role] if Roles.PROFILES.has(role) else Arsenal.profile(role))
+    unit_code.text = "ID  ·  %s" % (
+        str(profile.get("code",role)).to_upper())
+    unit_stats.text = "PV %d   MOV %d   ATQ %d   DEF %d\nVISIÓN %d   ALCANCE %d–%d   COSTE %d" % [
+        int(profile.get("hp",0)),
+        int(profile.get("move_points",0)),
+        int(profile.get("attack",0)),
+        int(profile.get("defense",0)),
+        int(profile.get("vision",0)),
+        int(profile.get("attack_min_range",1)),
+        int(profile.get("attack_range",1)),
+        Economy.cost(role)]
+    unit_note.text = Roles.counter_description(role)
+    site_notice.hide()
+    unit_preview.show()
     _refresh_preview()
 
 func _select_pose(_index: int) -> void:
@@ -353,20 +430,43 @@ func _select_heading(_index: int) -> void:
     _refresh_preview()
 
 func _refresh_preview() -> void:
+    if unit_preview == null or selected_role.is_empty():
+        return
     var tint: Color = Style.faction_color(selected_faction)
     unit_preview.configure(selected_role,tint)
-    unit_preview.set_pose(str(SpriteAtlas.POSES[pose_picker.selected]))
-    unit_preview.set_heading(HEADINGS[heading_picker.selected])
+    if pose_picker != null and pose_picker.selected >= 0:
+        unit_preview.set_pose(str(SpriteAtlas.POSES[pose_picker.selected]))
+    if heading_picker != null and heading_picker.selected >= 0:
+        unit_preview.set_heading(HEADINGS[heading_picker.selected])
+    if faction_emblem != null:
+        faction_emblem.texture = Style.emblem_texture(selected_faction)
+        faction_emblem.tooltip_text = str(Style.FACTIONS[selected_faction]["name"])
     for role in role_buttons:
-        Chrome.emphasize(role_buttons[role],"primary" if str(role) == selected_role else "secondary")
+        Chrome.emphasize(role_buttons[role],
+            "primary" if str(role) == selected_role else "secondary")
 
 func _reflow() -> void:
     if content_rail == null:
         return
     var viewport: Vector2 = get_viewport_rect().size
-    # Android stays landscape. Vertical is a defensive desktop/editor fallback.
+    compact_landscape = viewport.x > viewport.y and viewport.y <= 560.0
     content_rail.vertical = viewport.y > viewport.x * 1.12
-    unit_preview.custom_minimum_size = Vector2(128,128) if viewport.y < 580.0 else Vector2(180,180)
+    var icon_size: int = 104 if compact_landscape else (150 if viewport.y < 720 else 180)
+    unit_preview.custom_minimum_size = Vector2(icon_size,icon_size)
+    page_heading.add_theme_font_size_override("font_size",18 if compact_landscape else 25)
+    unit_name.add_theme_font_size_override("font_size",18 if compact_landscape else 25)
+    unit_stats.add_theme_font_size_override("font_size",12 if compact_landscape else 13)
+    catalog_status.visible = not compact_landscape
+    back_button.custom_minimum_size.y = 46 if compact_landscape else 48
+    for i in range(category_buttons.size()):
+        category_buttons[i].custom_minimum_size.y = 44 if compact_landscape else 48
+        category_buttons[i].add_theme_font_size_override(
+            "font_size",12 if compact_landscape else 16)
+        category_buttons[i].text = (["TIERRA","AIRE","MAR","BASES"][i]
+            if compact_landscape else
+            "%s  %d" % [CATEGORIES[i],16 if i == 0 else (8 if i in [1,2] else SITES.size())])
+    for opt in [pose_picker,faction_picker,heading_picker]:
+        opt.custom_minimum_size.y = 44 if compact_landscape else 48
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
