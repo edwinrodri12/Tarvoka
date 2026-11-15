@@ -127,7 +127,7 @@ func _ready() -> void:
     panel.add_child(lower)
     _button(lower,"Guardar",_save_checkpoint)
     _button(lower,"Reiniciar",_ask_restart)
-    _button(panel,"Volver a batallas libres",_back_to_main)
+    _button(panel,"Volver a capítulos",_back_to_main)
     notice_label = Label.new()
     notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     notice_label.add_theme_color_override("font_color",Color("#FFD27A"))
@@ -279,6 +279,9 @@ func _ask_restart() -> void:
         restart_dialog.popup_centered()
 
 func _back_to_main() -> void:
+    # Return to the chapter selector, not a misleading skirmish screen.
+    # SceneTree metadata is transient UI routing, never saved battle state.
+    get_tree().set_meta("tarvoka_return_to_story",true)
     get_tree().change_scene_to_file("res://scenes/Main.tscn")
 
 func _process(_delta: float) -> void:
