@@ -47,6 +47,9 @@ func _run() -> void:
         assert(screen.skirmish_setup.faction_portraits.size() == 2)
         assert(screen.skirmish_setup.start_button.custom_minimum_size.y >= 48)
         assert(screen.faction_selector.confirm_button.custom_minimum_size.y >= 48)
+        assert(screen.faction_selector.faction_grid.columns == 2)
+        assert(screen.faction_selector.side_commander_portraits.size() == 2)
+        assert(screen.faction_selector.side_emblems.size() == 2)
 
     # Do not load or overwrite a real match when browsing configurations.
     screen._prepare_skirmish()
