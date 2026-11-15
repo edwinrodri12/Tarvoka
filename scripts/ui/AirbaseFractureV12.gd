@@ -197,9 +197,10 @@ static func trigger_explosion(model: Node3D) -> bool:
         var shard: MeshInstance3D = group.get_child(i) as MeshInstance3D
         if shard==null:
             continue
-        var previous: Tween = shard.get_meta("tarvoka_v12_tween",null) as Tween
-        if previous!=null and previous.is_running():
-            previous.kill()
+        if shard.has_meta("tarvoka_v12_tween"):
+            var previous: Tween = shard.get_meta("tarvoka_v12_tween") as Tween
+            if previous!=null and previous.is_running():
+                previous.kill()
         shard.position = IMPACT_ROOT+Vector3(
             -0.25+float(i%3)*0.21,0,0.08*float(i%2))
         shard.rotation_degrees = Vector3.ZERO
