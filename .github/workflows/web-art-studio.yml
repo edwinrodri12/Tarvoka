@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit 2>&1 | tee /tmp/tarvoka-preflight-parse.log
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/tarvoka-preflight-parse.log
           if grep -E "SCRIPT ERROR:|Parse Error:|Cannot infer the type" /tmp/tarvoka-preflight-parse.log; then
             echo "GDScript parse errors before 3D test" >&2
             exit 1
