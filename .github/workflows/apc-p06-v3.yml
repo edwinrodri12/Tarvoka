@@ -9,6 +9,7 @@ on:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
+      - "tests/test_apc_p06_studio_stress.gd"
       - "tests/export_apc_p06_v3_glb.gd"
       - ".github/workflows/apc-p06-v3.yml"
   pull_request:
@@ -18,6 +19,7 @@ on:
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
+      - "tests/test_apc_p06_studio_stress.gd"
       - "tests/export_apc_p06_v3_glb.gd"
   workflow_dispatch:
 permissions:
@@ -91,6 +93,16 @@ jobs:
           test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_stress.png
           test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_tactical_lod.png
           test -s artifacts/apc_p06_v3_stress_metrics_64.json
+      - name: Verify Android and web Studio 32/64 APC test buttons and FPS HUD
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_studio_stress.gd 2>&1 | tee /tmp/apc-v3-studio-benchmark.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-studio-benchmark.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STUDIO STRESS:' /tmp/apc-v3-studio-benchmark.log
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
