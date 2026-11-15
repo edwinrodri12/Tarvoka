@@ -685,7 +685,7 @@ func _draw() -> void:
         draw_rect(Rect2(preview_pos, Vector2.ONE * tile), preview_color, false, maxf(2.0,tile*0.06))
         if tile >= 32.0:
             draw_string(font,preview_pos+Vector2(tile*0.05,tile*0.21),
-                "CONF. ATQ" if preview_attack else "CONF. MOV",
+                "CONF. ATQ" if preview_attack else ("CONF. EMB" if str(pending_order.get("kind","")) == "embark" else ("CONF. SAL" if str(pending_order.get("kind","")) == "disembark" else "CONF. MOV")),
                 HORIZONTAL_ALIGNMENT_LEFT,-1,clampi(int(tile*0.14),10,18),preview_color)
     # Put expected damage above the enemy tile, after units are drawn so it stays readable.
     for destination in hints["attacks"]:
