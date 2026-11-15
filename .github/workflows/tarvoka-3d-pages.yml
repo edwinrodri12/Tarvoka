@@ -9,6 +9,12 @@ on:
       - "scripts/ui/BastionVisualRig3D.gd"
       - "scripts/ui/BastionDamage3D.gd"
       - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/APCArtV1.gd"
+      - "scripts/ui/APCArmorV2.gd"
+      - "scripts/ui/APCBatchingV4.gd"
+      - "scripts/ui/APCFinishV3.gd"
+      - "scripts/ui/APCDetailV5.gd"
+      - "scripts/ui/APCVisualRigV1.gd"
   workflow_dispatch:
   workflow_run:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA"]
@@ -63,7 +69,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd; do
+          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCVisualRigV1.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -128,7 +134,7 @@ jobs:
           test -s scripts/ui/BastionVisualRig3D.gd
           test -s scripts/ui/BastionDamage3D.gd
           test -s scripts/ui/BastionStudioAdapter.gd
-          grep -q 'BastionP06_V6_Animacion3D' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'BastionP06_V5_ArteCompleto' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/Airbase3DV1.gd
           test -s tests/test_airbase_v1_native_studio.gd
           test -s scripts/ui/AirbaseHangarV2.gd
