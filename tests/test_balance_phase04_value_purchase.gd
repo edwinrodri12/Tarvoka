@@ -99,7 +99,7 @@ static func _isolated_ai_picks() -> Dictionary:
     var expected := {
         "factory":"assault",
         "armor_plant":"piercer",
-        "artillery_depot":"spg",
+        "artillery_depot":"sam", # Visible enemy aircraft alter the default list.
         "drone_center":"fpv",
         "airbase":"fighter",
         "shipyard":"patrol"
