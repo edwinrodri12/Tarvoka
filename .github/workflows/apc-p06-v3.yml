@@ -74,6 +74,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-stress.log; then exit 1; fi
           grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress.log
           test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png
+          test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_tactical_lod.png
           test -s artifacts/apc_p06_v3_stress_metrics.json
       - name: Export editable APC V3 model to true native GLB
         shell: bash
