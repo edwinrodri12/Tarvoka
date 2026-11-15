@@ -26,7 +26,9 @@ static func _glass_material(source: StandardMaterial3D, stage: int) -> StandardM
         return _glass_cache[key] as StandardMaterial3D
     var material: StandardMaterial3D = source.duplicate(true) as StandardMaterial3D
     material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.albedo_color.a = 0.77 if stage<=1 else 0.63
+    var glaze: Color = material.albedo_color
+    glaze.a = 0.77 if stage<=1 else 0.63
+    material.albedo_color = glaze
     material.roughness = 0.16 if stage<=1 else 0.31
     material.metallic = 0.045
     material.metallic_specular = 0.88
