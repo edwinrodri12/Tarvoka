@@ -5,6 +5,7 @@ class_name TarvokaAPCVisualRigV1
 # passenger capacity, HP, movement rules or the G09's finalized rig.
 const Burst = preload("res://scripts/ui/APCMachineGunV7.gd")
 const RearV10 = preload("res://scripts/ui/APCRearDesignV10.gd")
+const WheelsV14 = preload("res://scripts/ui/APCWheelV14.gd")
 const MOVE_DURATION := 0.65
 const SHOT_DURATION := 1.12 # Machinegun: six discrete muzzle pulses
 const RAMP_DURATION := 1.05
@@ -89,6 +90,10 @@ static func pose(model: Node3D,kind: String,t: float,
     _wheels(model,progress,
         12.0*sin(PI*t) if kind=="move_turn" else 0.0,
         t if kind in ["move","move_turn"] else 0.0)
+    # Wheel tire/rim meshes spin on V1 pivots; V14 wishbones and brake
+    # calipers follow compression but never spin with the tires.
+    if model.get_meta(WheelsV14.FLAG,false):
+        WheelsV14.pose(model)
 
     match kind:
         "turn_turret":
