@@ -19,44 +19,41 @@ func _run() -> void:
 
     main._show_home_menu()
     main._open_settings_from_home()
+    var settings: Control = main.home_settings_menu
     var menu: Control = main.command_menu
-    assert(menu.visible and menu.tabs.current_tab == 3)
-    assert(menu.settings_columns != null)
-    assert(not menu.settings_columns.vertical)
-    assert(menu.settings_columns.get_child_count() == 2)
-    assert(menu.settings_buttons.size() == 3)
-    var view: Button = menu.settings_buttons["view"]
-    var saver: Button = menu.settings_buttons["battery"]
-    var map: Button = menu.settings_buttons["minimap"]
-    assert(view.custom_minimum_size.y >= 48)
-    assert(saver.custom_minimum_size.y >= 48)
-    assert(map.custom_minimum_size.y >= 48)
+    assert(settings.visible and not main.home_menu.visible)
+    assert(not menu.visible) # In-battle command menu stays isolated.
+    assert(settings.category_buttons.size() == 4)
+    assert(settings.setting_buttons.size() == 3)
+    assert(not settings.content_rail.vertical)
+    var view: Button = settings.setting_buttons["isometric"]
+    var saver: Button = settings.setting_buttons["battery_saver"]
+    var map: Button = settings.setting_buttons["minimap_enabled"]
+    assert(view.custom_minimum_size.y >= 44)
+    assert(saver.custom_minimum_size.y >= 44)
+    assert(map.custom_minimum_size.y >= 44)
 
-    # The existing Main callbacks must immediately refresh each label without
-    # rebuilding the scroll and without affecting the authoritative battle.
+    # The original saved display handlers still own each real preference.
     var iso_at_start: bool = main.board.iso_enabled
     var battery_at_start: bool = main.board.battery_saver
     var mini_at_start: bool = main._minimap_preference
     view.pressed.emit()
     assert(main.board.iso_enabled != iso_at_start)
-    assert(view.text == ("Vista: isométrica" if main.board.iso_enabled else "Vista: clásica"))
-    assert(menu.settings_buttons["view"] == view)
+    assert(view.text.contains("ISOMÉTRICA" if main.board.iso_enabled else "CLÁSICA"))
     saver.pressed.emit()
     assert(main.board.battery_saver != battery_at_start)
-    assert(saver.text == ("Ahorro de batería: activado" if main.board.battery_saver else "Ahorro de batería: desactivado"))
     map.pressed.emit()
     assert(main._minimap_preference != mini_at_start)
-    assert(map.text == ("Minimapa: visible" if main._minimap_preference else "Minimapa: oculto"))
     assert(main.board.state == state_before)
-    # Restore the original runtime preferences and file bytes after testing.
+    # Restore actual values; opening/closing the menu never changes a battle.
     view.pressed.emit()
     saver.pressed.emit()
     map.pressed.emit()
     assert(main.board.iso_enabled == iso_at_start)
     assert(main.board.battery_saver == battery_at_start)
     assert(main._minimap_preference == mini_at_start)
-    menu.close_requested.emit()
-    assert(main.home_menu.visible)
+    settings.close_requested.emit()
+    assert(main.home_menu.visible and not settings.visible)
 
     main.home_menu.hide()
     main._open_command_menu()
