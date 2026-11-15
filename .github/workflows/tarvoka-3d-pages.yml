@@ -13,6 +13,7 @@ on:
       - "scripts/ui/G11FinishV2.gd"
       - "scripts/ui/G11SurfaceV3.gd"
       - "scripts/ui/G11GeometryV4.gd"
+      - "scripts/ui/APCTacticalLOD8.gd"
       - "scripts/ui/G11MobileLOD.gd"
       - "scripts/ui/BastionDamage3D.gd"
       - "scripts/ui/UnitModels3D.gd"
@@ -79,7 +80,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCTacticalLOD8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MobileLOD.gd; do
+          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCTacticalLOD8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MobileLOD.gd APCTacticalLOD8.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -154,6 +155,7 @@ jobs:
           test -s scripts/ui/G11FinishV2.gd
           test -s scripts/ui/G11SurfaceV3.gd
           test -s scripts/ui/G11GeometryV4.gd
+          test -s scripts/ui/APCTacticalLOD8.gd
           test -s scripts/ui/G11MobileLOD.gd
           grep -q 'G11_Lanzador_V1_EstudioReal' scripts/ui/BastionStudioAdapter.gd
           grep -q 'BastionP06_V7_RafagaDestrozos' scripts/ui/BastionStudioAdapter.gd
