@@ -166,8 +166,9 @@ func _run() -> void:
         _check(absf(_find(model,"G11V5_Amortiguador_1_0").scale.y
             -shock_rest) > 0.004,
             "telescopic suspension follows moving wheel pivots")
-        _check(absf(_find(model,"G11V5_PinionTrasero_1").rotation_degrees.x
-            -90.0) < 0.1,"drive sprocket rotates synchronously with tracks")
+        var sprocket: Node3D = _find(model,"G11V5_PinionTrasero_1")
+        _check(sprocket != null and absf(sprocket.rotation_degrees.x-90.0) < 0.1,
+            "drive sprocket rotates synchronously with tracks")
         _check(Models.pose_model("mlrs",model,"move",0.25),"moving tracks")
         var while_moving: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(at_rest.origin.distance_to(while_moving.origin) > 0.05,
