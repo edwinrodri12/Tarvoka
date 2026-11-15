@@ -23,7 +23,6 @@ func _run() -> void:
     root.add_child(lab)
     await process_frame
     await process_frame
-    _check(lab.get(" _units") == null,"no unintended UI metadata")
     var a: Array = lab.get("_models")
     _check(a.size() == 8,"8 real vehicles loaded at startup")
     _check(lab.find_child("G11RendimientoAndroidUI",true,false) != null,
