@@ -47,6 +47,11 @@ func _run() -> void:
     var turret_trim: MeshInstance3D=modern.find_child(
         "CarrilleraTorretaV3_1",true,false) as MeshInstance3D
     assert(roof!=null and roof.mesh is ArrayMesh)
+    var v2_roof: Node3D=modern.find_child(
+        "PlacaTechoFaceteadaV2",true,false) as Node3D
+    assert(v2_roof!=null)
+    var fx_cache: Array=modern.get_meta("tarvoka_apc_v3_cached_fx",[])
+    assert(fx_cache.size()==5)
     assert(side!=null and side.mesh is ArrayMesh)
     assert(seam!=null and turret!=null and turret_trim!=null)
     assert(turret_trim.get_parent().get_parent()==turret)
@@ -108,12 +113,17 @@ func _run() -> void:
                 "DanoP06Etapa_%d" % i,false,false) as Node3D
             assert(group!=null and group.visible==(stage>=i))
         assert(destroyed_wheel.visible==(stage<4))
+        # Wreck must have a visibly open roof, not an intact sheet below it.
+        assert(roof.visible==(stage<4))
+        assert(v2_roof.visible==(stage<4))
+        assert(hatch.visible==(stage<4))
         Finish.animate_damage(modern,1.9+float(stage))
         if stage>=2:
             assert(smoke.position.distance_to(smoke_origin)>0.004)
         assert(Models.inspect_meshes(modern)==modern_count)
     assert(Finish.apply_stage(modern,0))
-    assert(destroyed_wheel.visible)
+    assert(destroyed_wheel.visible and roof.visible and v2_roof.visible)
+    assert(hatch.visible)
     Finish.animate_damage(modern,4.0)
     for i in range(1,5):
         assert(not stage_parent.find_child(
