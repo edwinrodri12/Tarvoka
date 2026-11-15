@@ -38,6 +38,7 @@ const TankTrackAlignmentV31 = preload("res://scripts/ui/TankTrackAlignmentV31.gd
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
 const APCArmorV2 = preload("res://scripts/ui/APCArmorV2.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -773,6 +774,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             APCArmorV2.apply(model,faction_paint_color(faction))
             if art_level >= 13:
                 APCFinishV3.apply(model,faction_paint_color(faction))
+                # Actual Godot mesh pass: installed in gameplay captures,
+                # Android and Web studio, not an external concept image.
+                APCDetailV5.apply(model,faction_paint_color(faction))
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
