@@ -41,6 +41,8 @@ var airbase_open_button: Button
 var airbase_close_button: Button
 var airbase_gate_slider: HSlider
 var airbase_gate_status: Label
+var airbase_camera_button: Button
+var _airbase_camera_interior := false
 var _airbase_saved_gate_fraction := 0.0
 var _hq_specific_controls: Array[Control] = []
 var _unit_only_controls: Array[Control] = []
@@ -638,6 +640,10 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_gate_slider)
     airbase_gate_status = _title(airbase_controls,
         "Portones preparados · apertura: 0 %",12)
+    airbase_camera_button = _button(airbase_controls,
+        "Inspeccionar interior del hangar",_toggle_airbase_camera)
+    airbase_camera_button.name = "InspeccionarInteriorHangarV2"
+    airbase_camera_button.custom_minimum_size.y = 44
     _title(airbase_controls,
         "Hangar cerrado y techo curvo 3D · torre · helipuerto · "
         + "escudos oficiales · daños experimentales. Sin cambios en el combate.",12)
@@ -767,6 +773,34 @@ func _refresh_airbase_door_ui() -> void:
         else "cerrados" if fraction<0.005 else "parciales",
         int(round(fraction*100.0))]
 
+func _toggle_airbase_camera() -> void:
+    if _role != "airbase":
+        return
+    _airbase_camera_interior = not _airbase_camera_interior
+    if _airbase_camera_interior:
+        var rig: TarvokaAirbaseDoorRigV2 = _airbase_gate_rig()
+        if rig != null and rig.is_operational():
+            rig.set_open_fraction(1.0)
+            _airbase_saved_gate_fraction = 1.0
+            _refresh_airbase_door_ui()
+    _apply_airbase_camera()
+
+func _apply_airbase_camera() -> void:
+    if camera == null or _role != "airbase":
+        return
+    if _airbase_camera_interior:
+        camera.position = Vector3(-8.6,5.0,-13.1)
+        camera.look_at(Vector3(-1.95,1.33,0.04),Vector3.UP)
+    else:
+        camera.position = Vector3(-17.5,16.0,-19.0)
+        camera.look_at(Vector3(0,2.25,0),Vector3.UP)
+    if airbase_camera_button != null:
+        airbase_camera_button.text = (
+            "Volver a vista exterior"
+            if _airbase_camera_interior
+            else "Inspeccionar interior del hangar")
+    _update_camera()
+
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
         _display_airbase()
@@ -823,10 +857,9 @@ func _display_airbase() -> void:
     if first:
         _yaw = 32.0
         _zoom = 1.0
+        _airbase_camera_interior = false
     model_root.rotation_degrees.y = _yaw
-    camera.position = Vector3(-17.5,16.0,-19.0)
-    camera.look_at(Vector3(0,2.25,0),Vector3.UP)
-    _update_camera()
+    _apply_airbase_camera()
     _apply_hq_lighting(_hq_light_preset)
     _refresh_airbase_door_ui()
     _update_details()
@@ -1212,12 +1245,10 @@ func _reset_camera() -> void:
     if _role == "airbase":
         _yaw = 32.0
         _zoom = 1.0
-        if camera != null:
-            camera.position = Vector3(-17.5,16.0,-19.0)
-            camera.look_at(Vector3(0,2.25,0),Vector3.UP)
+        _airbase_camera_interior = false
         if model_root != null:
             model_root.rotation_degrees.y = _yaw
-        _update_camera()
+        _apply_airbase_camera()
         return
     if _role == "headquarters":
         _yaw = 32.0
@@ -1234,7 +1265,9 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role == "airbase":
         if camera != null:
-            camera.size = 18.8/maxf(0.35,_zoom)
+            camera.size = (
+                10.5 if _airbase_camera_interior else 18.8
+                )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
         if camera != null:
