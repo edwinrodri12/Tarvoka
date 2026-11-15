@@ -900,8 +900,9 @@ func _apply_airbase_camera() -> void:
             4:
                 camera.position=Vector3(-7,27,7)
             5:
-                camera.position=Vector3(11,9,-12)
-                target=Vector3(4.17,4.8,-2.17)
+                # True close-up, not another distant isometric overview.
+                camera.position=Vector3(7.4,6.5,-7.1)
+                target=Vector3(4.17,4.5,-2.17)
             6:
                 camera.position=Vector3(-8.6,5,-13.1)
                 target=Vector3(-1.95,1.33,0.04)
