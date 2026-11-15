@@ -121,12 +121,12 @@ func _run() -> void:
                 "charred turret fragments appear only on destruction")
             _check(int(model.get_meta(Turret.STAGE,-1))==stage,
                 "exact V12 damage stage recorded")
-        for script in [V3,V6,V7,V10,V11,Turret]:
-            # This API is shared by the progressive 3D art layers only.
-            if script==V3:
-                _check(V3.apply_stage(model,0),"repair base finish")
-            else:
-                _check(script.set_stage(model,0),"repair finish layer")
+        _check(V3.apply_stage(model,0),"repair base finish")
+        _check(V6.set_stage(model,0),"repair V6")
+        _check(V7.set_stage(model,0),"repair V7")
+        _check(V10.set_stage(model,0),"repair V10")
+        _check(V11.set_stage(model,0),"repair V11")
+        _check(Turret.set_stage(model,0),"repair V12")
         _check(body.visible and pristine.visible and not wreck.visible,
             "turret body/optics restored after full repair")
         _check(Turret.set_enabled(model,false),
