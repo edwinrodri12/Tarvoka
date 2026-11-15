@@ -10,6 +10,7 @@ const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
 const AirbaseDamageV4 = preload("res://scripts/ui/AirbaseDamageFXV4.gd")
 const AirbaseStressV4 = preload("res://scripts/ui/AirbaseStressV4.gd")
+const AirbaseExteriorV6 = preload("res://scripts/ui/AirbaseExteriorV6.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -38,6 +39,7 @@ var hq_explosive_test_button: Button
 var hq_impact_status: Label
 var building_controls: VBoxContainer
 var airbase_controls: VBoxContainer
+var airbase_exterior_v6_toggle: CheckButton
 var airbase_level_picker: OptionButton
 var airbase_damage_picker: OptionButton
 var airbase_weather_picker: OptionButton
@@ -349,7 +351,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V4 · efectos y rendimiento")
+    building_picker.add_item("Base Aérea · V4/V6 · acabado arquitectónico")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -601,7 +603,15 @@ func _add_building_mode() -> void:
     airbase_controls.name = "OpcionesBaseAereaV1"
     airbase_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(airbase_controls)
-    _title(airbase_controls,"BASE AÉREA · V4 EFECTOS + LOD",13)
+    _title(airbase_controls,"BASE AÉREA · V6 ACABADOS 3D REALES",13)
+    airbase_exterior_v6_toggle = CheckButton.new()
+    airbase_exterior_v6_toggle.name = "AcabadosArquitectonicosBaseAereaV6"
+    airbase_exterior_v6_toggle.text = "V6 · fachadas, cubierta, torre y pavimento (comparar V4)"
+    airbase_exterior_v6_toggle.button_pressed = true
+    airbase_exterior_v6_toggle.toggled.connect(_toggle_airbase_exterior_v6)
+    airbase_controls.add_child(airbase_exterior_v6_toggle)
+    _title(airbase_controls,
+        "Comparación V6/V4 con los mismos niveles, portones, clima y daños.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -917,7 +927,8 @@ func _change_airbase_stress_count(_index: int) -> void:
 
 func _display_airbase_stress(first: bool) -> void:
     var count: int = [8,32,64][airbase_stress_picker.selected]
-    model_root = AirbaseStressV4.build_grid(count)
+    model_root = AirbaseStressV4.build_grid(
+        count,AirbaseStressV4.MAX_NEAR,airbase_exterior_v6_toggle.button_pressed)
     if model_root==null:
         push_error("Base Aerea V4: no se pudo crear escenario LOD")
         return
@@ -940,6 +951,10 @@ func _display_airbase_stress(first: bool) -> void:
     _refresh_airbase_damage_ui()
     _airbase_stress_seconds=0.0
     _update_details()
+
+func _toggle_airbase_exterior_v6(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
 
 func _change_airbase_level(_index: int) -> void:
     if _role == "airbase":
@@ -975,6 +990,9 @@ func _display_airbase() -> void:
     var hangar_added: bool = AirbaseHangarV2.apply(model_root,tier,_faction,stage)
     if not hangar_added:
         push_error("Base Aerea V2: fallo al instalar arquitectura")
+    if airbase_exterior_v6_toggle.button_pressed:
+        if not AirbaseExteriorV6.apply(model_root,tier,_faction,stage):
+            push_error("Base Aerea V6: acabado arquitectonico no instalado")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
