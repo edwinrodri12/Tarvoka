@@ -12,7 +12,7 @@ const CANYON := "canyon"
 const COASTAL := "coastal"
 # Preserve historic index 1 = winter. New schemes are appended.
 const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL]
-const LABELS := ["Valle boscoso", "Bioma nevado", "Canon rocoso", "Delta costero"]
+const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero"]
 
 static func from_index(index: int) -> String:
     return str(CHOICES[clampi(index,0,CHOICES.size()-1)])
