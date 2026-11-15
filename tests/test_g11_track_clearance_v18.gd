@@ -167,7 +167,7 @@ func _run() -> void:
                     _check(absf(gear.position.z) > 1.33
                         and absf(gear.position.z) < 1.35,
                         "gear at relocated belt end")
-                    _check(absf(gear.position.x) == 0.79,
+                    _check(absf(absf(gear.position.x)-0.79) < 0.001,
                         "gear concentric and recessed inside sidewall")
             for t in [0.0,0.25,0.50,0.85]:
                 _check(Models.pose_model("mlrs",unit,"move",t),
