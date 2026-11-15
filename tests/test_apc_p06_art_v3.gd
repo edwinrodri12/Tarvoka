@@ -67,6 +67,39 @@ func _run() -> void:
     assert(modern_count>base_count+12)
     assert(modern_count<base_count+70)
 
+    # Static batching must preserve the V1 dimensions and local placement.
+    var packed: int=int(modern.get_meta("tarvoka_apc_v4_box_count",0))
+    var batches: int=int(modern.get_meta("tarvoka_apc_v4_batch_count",0))
+    assert(packed>=12 and batches>=2)
+    var mapped: int=0
+    var batch_parent: Node3D=modern.find_child(
+        "APC_P06_V4_BatchesEstaticos",true,false) as Node3D
+    assert(batch_parent!=null)
+    for part_node in modern.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=part_node as MeshInstance3D
+        if not part.get_meta("tarvoka_apc_v4_batched_original",false):
+            continue
+        mapped+=1
+        assert(not part.visible)
+        var batch_name: String=str(part.get_meta("tarvoka_apc_v4_batch_name",""))
+        var batch: MultiMeshInstance3D=batch_parent.find_child(
+            batch_name,false,false) as MultiMeshInstance3D
+        assert(batch!=null)
+        var idx: int=int(part.get_meta("tarvoka_apc_v4_batch_index",-1))
+        assert(idx>=0 and idx<batch.multimesh.instance_count)
+        assert(part.mesh is BoxMesh)
+        var box_mesh: BoxMesh=part.mesh as BoxMesh
+        var actual: Transform3D=batch.multimesh.get_instance_transform(idx)
+        var expected: Transform3D=part.transform*Transform3D(
+            Basis().scaled(box_mesh.size),Vector3.ZERO)
+        assert(actual.is_equal_approx(expected))
+        assert(batch.material_override==part.material_override)
+    assert(mapped==packed)
+    assert(Finish.set_tactical_lod(modern,true)>0)
+    assert(roof.visible and hatch.visible and turret.visible)
+    assert(Finish.set_tactical_lod(modern,false)>0)
+    assert(Models.inspect_meshes(modern)==modern_count)
+
     var hatch_mat: StandardMaterial3D=hatch.material_override as StandardMaterial3D
     assert(hatch_mat!=null and hatch_mat.normal_enabled)
     var original_paint: Color=hatch_mat.albedo_color
