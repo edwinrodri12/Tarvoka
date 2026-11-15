@@ -50,6 +50,9 @@ func _run() -> void:
     var v2_roof: Node3D=modern.find_child(
         "PlacaTechoFaceteadaV2",true,false) as Node3D
     assert(v2_roof!=null)
+    var v1_roof: Node3D=modern.find_child(
+        "TechoServicioCentral",true,false) as Node3D
+    assert(v1_roof!=null)
     var fx_cache: Array=modern.get_meta("tarvoka_apc_v3_cached_fx",[])
     assert(fx_cache.size()==5)
     assert(side!=null and side.mesh is ArrayMesh)
@@ -116,13 +119,14 @@ func _run() -> void:
         # Wreck must have a visibly open roof, not an intact sheet below it.
         assert(roof.visible==(stage<4))
         assert(v2_roof.visible==(stage<4))
+        assert(v1_roof.visible==(stage<4))
         assert(hatch.visible==(stage<4))
         Finish.animate_damage(modern,1.9+float(stage))
         if stage>=2:
             assert(smoke.position.distance_to(smoke_origin)>0.004)
         assert(Models.inspect_meshes(modern)==modern_count)
     assert(Finish.apply_stage(modern,0))
-    assert(destroyed_wheel.visible and roof.visible and v2_roof.visible)
+    assert(destroyed_wheel.visible and roof.visible and v2_roof.visible and v1_roof.visible)
     assert(hatch.visible)
     Finish.animate_damage(modern,4.0)
     for i in range(1,5):
