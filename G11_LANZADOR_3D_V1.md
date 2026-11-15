@@ -257,3 +257,20 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - Workflow G11 del PR #411 **aprobado**. La publicación de Pages es un workflow independiente: verificar que finalize en verde antes de anunciar un visor actualizado.
 
 **Pendiente artístico:** evaluación de proporciones de los refuerzos frontales en el móvil. No cerrar el modelo ni iniciar pruebas de estrés de Android hasta aprobación del diseño.
+
+
+## Actualización V17 — microtexturas PBR, desgaste operativo y modo de comparación (15-nov-2026)
+
+**Implementado en [PR #419](https://github.com/edwinrodri12/Tarvoka/pull/419) y fusionado a `main`.** Continua el diseño del mismo lanzador G11 en Godot 4.3, sin imágenes conceptuales.
+
+- Nuevo `scripts/ui/G11SurfaceWeatherV17.gd`. Aplica materiales independientes `StandardMaterial3D` con rugosidad y metalicidad diferenciadas a la cubierta del lanzador y a los paneles originales. La pintura V13 se conserva idéntica en `albedo_color` y nunca se reemplaza con un color genérico.
+- Textura metálica procedimental de 128×128 píxeles generada una vez por sesión con `ImageTexture.create_from_image`. Aplicada a superficies con coordenadas UV existentes (paneles de facción, compuertas de mantenimiento). No se finge texturizar el techo V11 sin UV: conserva su albedo y recibe variación PBR física, más geometría de pátina independiente.
+- Una malla real de desgaste sobre los labios anulares de las doce bocas delanteras: **576 vértices de `SurfaceTool`**, distribuidos en 24 sectores de acero exterior. Radio mínimo de desgaste 0.105 m frente al hueco interior de 0.078 m: no se obstruyen los tubos.
+- Marcas superficiales del techo mediante planos con textura de rayones y transparencia, placas oscuras en juntas y bordes y suciedad bajo el respiradero posterior. Los detalles visibles se agrupan bajo `G11V17_DesgasteOperativo`.
+- Función interactiva `set_wear(model, enabled)` alterna acabado con desgaste operativo y acabado visualmente limpio en el mismo modelo, sin alterar estadísticas ni las piezas mecánicas.
+- Desgaste añadido por niveles de daño: pintura saltada desde daño moderado, una zona de metal carbonizado desde daño crítico. Reparación elimina esos daños sin borrar el desgaste operativo seleccionado.
+- En `BastionStudioAdapter.gd` el G11 aparece como **V17**, con botones «V17: desgaste operativo» / «V17: pintura limpia» y puntos de vista adicionales para inspeccionar las bocas y el techo. Conserva las vistas anteriores. El flujo Pages copia el módulo V17 y exporta la experiencia interactiva real.
+- QA `tests/test_g11_surface_weather_v17.gd` verifica ocho pinturas diferentes, texturas asignadas, 576 vértices de desgaste, tubos abiertos, alternancia de uso, daños y animaciones existentes. `tests/test_g11_surface_weather_v17_capture.gd` produce **16 imágenes auténticas de Godot** (pares limpio/usado, varias facciones, daño y elevación), artefacto `tarvoka-g11-v17-16-real-godot-pbr-weather-comparison`.
+- CI del PR #419: **G11 native launcher sculpt QA aprobado**. Publicación web de V17 se valida separadamente desde la ejecución de Pages del commit de incorporación a `main`.
+
+**Siguiente prioridad artística:** revisión de lectura visual y materiales bajo iluminación diurna/nocturna; no considerar terminado el G11 ni iniciar las pruebas de estrés Android hasta que se aprueben los acabados.
