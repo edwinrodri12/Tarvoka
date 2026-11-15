@@ -990,7 +990,8 @@ func _display_airbase_stress(first: bool) -> void:
     model_root = AirbaseStressV4.build_grid(
         count,AirbaseStressV4.MAX_NEAR,airbase_exterior_v6_toggle.button_pressed,
         airbase_material_v7_toggle.button_pressed,
-        airbase_finish_v8_toggle.button_pressed)
+        airbase_finish_v8_toggle.button_pressed,
+        airbase_detail_v9_toggle.button_pressed)
     if model_root==null:
         push_error("Base Aerea V4: no se pudo crear escenario LOD")
         return
