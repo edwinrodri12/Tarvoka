@@ -26,10 +26,13 @@ on:
       - 'scripts/ui/APCUndercarriageV15.gd'
       - 'scripts/ui/APCJointFinishV16.gd'
       - 'scripts/ui/APCContourV17.gd'
+      - 'scripts/ui/APCWheelwellV18.gd'
       - 'tests/test_bastion_v15_undercarriage.gd'
       - 'tests/test_bastion_v16_joint_finish.gd'
       - 'tests/test_bastion_v17_contours.gd'
       - 'tests/test_bastion_v17_360_capture.gd'
+      - 'tests/test_bastion_v18_wheelwell.gd'
+      - 'tests/test_bastion_v18_360_capture.gd'
       - 'tests/test_bastion_v14_wheel_sculpt.gd'
       - 'tests/test_bastion_v13_materials.gd'
       - 'tests/test_bastion_v12_turret.gd'
@@ -52,11 +55,14 @@ on:
     paths:
       - 'scripts/ui/APCJointFinishV16.gd'
       - 'scripts/ui/APCContourV17.gd'
+      - 'scripts/ui/APCWheelwellV18.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_bastion_v16_joint_finish.gd'
       - 'tests/test_bastion_v17_contours.gd'
       - 'tests/test_bastion_v17_360_capture.gd'
+      - 'tests/test_bastion_v18_wheelwell.gd'
+      - 'tests/test_bastion_v18_360_capture.gd'
   workflow_dispatch:
 
 jobs:
@@ -77,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage test_bastion_v16_joint_finish test_bastion_v17_contours; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage test_bastion_v16_joint_finish test_bastion_v17_contours test_bastion_v18_wheelwell; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
@@ -91,26 +97,26 @@ jobs:
             fi
             grep -F 'PASS ' "/tmp/${entry}.log"
           done
-      - name: Capture Bastion V17 in 17 native Godot views (not FPS)
+      - name: Capture Bastion V18 in 17 native Godot views (not FPS)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/bastion-p06-v17-360
+          mkdir -p /tmp/bastion-p06-v18-360
           timeout --signal=TERM --kill-after=5s 160s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 P06_CAPTURE_DIR=/tmp/bastion-p06-v17-360 \
+            env LIBGL_ALWAYS_SOFTWARE=1 P06_CAPTURE_DIR=/tmp/bastion-p06-v18-360 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_bastion_v17_360_capture.gd \
-            2>&1 | tee /tmp/p06-v17-360.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/p06-v17-360.log; then
+            --script res://tests/test_bastion_v18_360_capture.gd \
+            2>&1 | tee /tmp/p06-v18-360.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/p06-v18-360.log; then
             exit 1
           fi
-          grep -F 'PASS BASTION V17 360:' /tmp/p06-v17-360.log
-          test "$(find /tmp/bastion-p06-v17-360 -maxdepth 1 -name '*.png' | wc -l)" -eq 17
+          grep -F 'PASS BASTION V18 360:' /tmp/p06-v18-360.log
+          test "$(find /tmp/bastion-p06-v18-360 -maxdepth 1 -name '*.png' | wc -l)" -eq 17
       - name: Attach 17 native 3D model review frames
         uses: actions/upload-artifact@v4
         with:
-          name: bastion-p06-v17-360-godot-frames
-          path: /tmp/bastion-p06-v17-360/*.png
+          name: bastion-p06-v18-360-godot-frames
+          path: /tmp/bastion-p06-v18-360/*.png
           if-no-files-found: error

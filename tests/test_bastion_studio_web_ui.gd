@@ -58,6 +58,13 @@ func _run() -> void:
             "V16 360-degree seams and moving hinges installed")
         _check(bool(model.get_meta("tarvoka_apc_contour_v17",false)),
             "V17 closed 3D contour volumes are installed")
+        _check(bool(model.get_meta("tarvoka_apc_wheelwell_v18",false)),
+            "V18 solid side skirt and static wheelwell finish installed")
+        var lateral: MeshInstance3D=model.find_child(
+            "P06V18_PanelPuente_1_0",true,false) as MeshInstance3D
+        _check(lateral!=null and lateral.mesh is ArrayMesh
+            and (lateral.mesh as ArrayMesh).surface_get_array_len(0)==36,
+            "new V18 wheel bridge is a closed 3D plate")
         var rear_v17: MeshInstance3D = model.find_child(
             "P06V17_CuartonTrasero_1",true,false) as MeshInstance3D
         _check(rear_v17!=null and rear_v17.mesh is ArrayMesh
@@ -157,6 +164,8 @@ func _run() -> void:
         "V16 junctions track staged damage without floating over tears")
     _check(int(model.get_meta("tarvoka_apc_v17_stage",-1))==3,
         "V17 sculpted lids and locks respect critical damage")
+    _check(int(model.get_meta("tarvoka_apc_v18_stage",-1))==3,
+        "V18 torn wheelwell panels follow critical damage")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -257,6 +266,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v17_visible",true),
         "V3 comparison hides V17 rear and weapon bearing contour meshes")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v18_visible",true),
+        "V3 comparison hides all new V18 wheelwell additions")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -284,6 +296,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v17_visible",false),
         "V17 production 3D corner closures return after comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v18_visible",false),
+        "V18 original wheelwell geometry returns after comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -297,6 +312,14 @@ func _run() -> void:
     _check(absf(float(studio.get("_yaw"))-176.0)<0.001 and
         absf(float(model.rotation_degrees.x))<0.001,
         "V17 rear ramp closeup resets real model orientation")
+    studio.call("_inspect_p06_skirts_v18")
+    _check(absf(float(studio.get("_yaw"))-91.0)<0.001,
+        "V18 gap inspection orbits model to broadside")
+    studio.call("_inspect_p06_critical_v18")
+    _check(absf(float(studio.get("_yaw"))-108.0)<0.001
+        and int(model.get_meta("tarvoka_apc_v18_stage",-1))==3,
+        "V18 critical damage button reveals true bent body parts")
+    studio.call("_set_damage",0)
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
         "native chassis actually rotates to expose underside")
@@ -432,5 +455,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V17 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V18 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
