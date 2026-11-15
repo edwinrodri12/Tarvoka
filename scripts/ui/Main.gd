@@ -4,6 +4,7 @@ const BoardScript = preload("res://scripts/ui/TouchBoard.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const BattleReport = preload("res://scripts/ui/BattleReport.gd")
+const ActionCopy = preload("res://scripts/ui/BattleActionPresentation.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
@@ -196,6 +197,7 @@ var expanded_actions: PanelContainer
 var expanded_confirm: Button
 var expanded_cancel: Button
 var expanded_end_turn: Button
+var expanded_order_status: Label
 
 # Lightweight UI-only feedback. A single screen tween is shared across
 # major panels; combat/order widgets do not acquire per-frame processors.
@@ -1221,6 +1223,7 @@ func _build_battle_hud() -> void:
     compact_confirm.custom_minimum_size.y = 48
     compact_confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_confirm.pressed.connect(_confirm_order)
+    GameUiTheme.emphasize(compact_confirm,"success")
     actions.add_child(compact_confirm)
 
     # Mobile supply must be reachable without opening the hidden desktop sidebar.
@@ -1334,6 +1337,20 @@ func _build_battle_hud() -> void:
         shortcut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         shortcut.pressed.connect(definition[1])
         tactical_rail.add_child(shortcut)
+    expanded_order_status = Label.new()
+    expanded_order_status.name = "ResumenDeOrdenEnPC"
+    expanded_order_status.text = ""
+    expanded_order_status.add_theme_font_size_override("font_size",13)
+    expanded_order_status.add_theme_color_override("font_color",GameUiTheme.GOLD)
+    expanded_order_status.autowrap_mode = TextServer.AUTOWRAP_OFF
+    expanded_order_status.clip_text = true
+    expanded_order_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    expanded_order_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    expanded_order_status.custom_minimum_size.x = 180
+    expanded_order_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    expanded_order_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    expanded_order_status.hide()
+    tactical_rail.add_child(expanded_order_status)
     expanded_cancel = Button.new()
     expanded_cancel.text = "CANCELAR"
     expanded_cancel.custom_minimum_size.y = 48
@@ -1681,9 +1698,16 @@ func _process(_delta: float) -> void:
         _update_text(relay_status, relay_text)
     # Compact controls mirror exactly the same guards as the full sidebar.
     # Never bypass pending-order confirmation or turn ownership.
+    var order_copy: Dictionary = ActionCopy.snapshot(
+        board.state,board.selected_id,board.pending_order)
     compact_confirm.disabled = board.pending_order.is_empty() and int(board.state.get("winner",-1)) == -1
-    compact_confirm.text = "Resultados" if int(board.state.get("winner",-1)) != -1 else ("Atacar" if str(board.pending_order.get("kind","")) == "attack" else "Confirmar")
-    compact_cancel.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
+    compact_confirm.text = str(order_copy["confirm"])
+    compact_cancel.text = str(order_copy["cancel"])
+    compact_cancel.disabled = (
+        board.selected_id.is_empty() and
+        board.inspected_enemy_id.is_empty() and
+        board.selected_factory_pos == Vector2i(-1,-1) and
+        board.pending_order.is_empty())
     compact_end_turn.disabled = int(board.state.get("winner",-1)) != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction",0)) != 0)
     resupply_button.visible = board.state.has("economy") and bool(board.state["economy"].get("modern", false))
     resupply_button.disabled = not board.can_resupply_selected()
@@ -1739,7 +1763,12 @@ func _process(_delta: float) -> void:
     battlefield_status.visible = winner == -1
     order_preview_label.visible = winner == -1 and not board.pending_order.is_empty()
     end_button.disabled = winner != -1 or not board.pending_order.is_empty() or (board.ai_enabled and int(board.state.get("faction", 0)) != 0)
-    cancel_button.disabled = board.selected_id.is_empty() and board.inspected_enemy_id.is_empty() and board.selected_factory_pos == Vector2i(-1,-1)
+    cancel_button.disabled = (
+        board.selected_id.is_empty() and
+        board.inspected_enemy_id.is_empty() and
+        board.selected_factory_pos == Vector2i(-1,-1) and
+        board.pending_order.is_empty())
+    cancel_button.text = str(order_copy["cancel"]).capitalize()
     confirm_button.disabled = board.pending_order.is_empty() and winner == -1
     confirm_button.text = "Ver resultados" if winner != -1 else ("Confirmar ataque" if str(board.pending_order.get("kind","")) == "attack" else ("Confirmar movimiento" if str(board.pending_order.get("kind","")) == "move" else "Confirmar orden"))
     result_banner.visible = winner != -1
@@ -1764,7 +1793,15 @@ func _process(_delta: float) -> void:
             team_label = "%s · Bando %d" % [Identity.name_for(board.state,team_id),team_id+1]
         _update_text(status_label, "%s | %s" % [team_label,board.message])
     compact_status.text = status_label.text
-    compact_detail.text = unit_label.text.replace("\n","  ")
+    var has_pending: bool = bool(order_copy["pending"])
+    compact_detail.text = (
+        "%s  ·  %s" % [order_copy["title"],order_copy["detail"]]
+        if has_pending else unit_label.text.replace("\n","  "))
+    compact_detail.add_theme_color_override(
+        "font_color",Color("#FFD884") if has_pending else Color("#D9E6ED"))
+    compact_end_turn.tooltip_text = (
+        "Confirma o cancela la orden pendiente antes de terminar el turno."
+        if has_pending else "Terminar el turno actual.")
     if expanded_header != null:
         var side: int = int(board.state.get("faction",0))
         var header_text: String = ("ALIANZA AZUL" if side == 0 else "PACTO ROJO")
@@ -1786,9 +1823,15 @@ func _process(_delta: float) -> void:
             if relay_scores.size() == 2:
                 header_text += "   |   SEÑAL %d–%d" % [int(relay_scores[0]),int(relay_scores[1])]
         expanded_summary.text = header_text
-        expanded_confirm.text = "RESULTADOS" if winner != -1 else ("CONFIRMAR" if board.pending_order.is_empty() else str(confirm_button.text).to_upper())
+        expanded_confirm.text = str(order_copy["confirm"])
         expanded_confirm.disabled = confirm_button.disabled
+        expanded_cancel.text = str(order_copy["cancel"])
         expanded_cancel.disabled = cancel_button.disabled
+        if expanded_order_status != null:
+            expanded_order_status.text = "%s · %s" % [
+                str(order_copy["title"]),str(order_copy["detail"])]
+            expanded_order_status.visible = (
+                has_pending and get_viewport_rect().size.x >= 1200.0)
         expanded_end_turn.disabled = end_button.disabled
     # Show final results only once per terminal state. Closing the panel to
     # inspect the field must never auto-open it again on subsequent frames.
