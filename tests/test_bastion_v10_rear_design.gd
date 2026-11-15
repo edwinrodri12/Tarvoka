@@ -64,7 +64,14 @@ func _run() -> void:
         _check(left_body!=null and left_rod!=null and left_joint!=null,
             "left-cylinder barrel and chrome extension are independent meshes")
         var closed_length: float=left_body.scale.y+left_rod.scale.y
+        var barrel_length: float=left_body.scale.y
+        var closed_rod: float=left_rod.scale.y
         var closed_end: Vector3=left_joint.position
+        _check(absf(barrel_length-0.265)<0.001,
+            "steel hydraulic barrel has fixed manufactured length")
+        var old_top_hinge: Node3D=_n(model,"BisagraRampa_1")
+        _check(old_top_hinge==null or not old_top_hinge.visible,
+            "false V1 top hinge hidden behind correct bottom pivot")
         _check(closed_length>0.20 and closed_length<0.60,
             "closed actuator connects to back of chassis")
         _check(Rig.pose(model,"open_ramp",0.50),
@@ -81,6 +88,10 @@ func _run() -> void:
         var extended_length: float=left_body.scale.y+left_rod.scale.y
         _check(extended_length>closed_length+0.15,
             "two cylinders physically extend to lowered ramp")
+        _check(absf(left_body.scale.y-barrel_length)<0.001,
+            "metal cylinder does NOT stretch as door moves")
+        _check(left_rod.scale.y>closed_rod+0.15,
+            "ONLY chrome rod extends physically during door motion")
         _check(door.visible,"boarding bars remain on the open ramp")
         _check(_n(model,"P06V10_AntideslizanteBorde_3")!=null,
             "opening the ramp reveals moving mechanical grip")
@@ -109,10 +120,14 @@ func _run() -> void:
             "old V3 comparison can hide V10 additional 3D pieces")
         _check(not detail.visible and not door.visible,
             "comparison hides both fixed and moving V10 geometry")
+        _check(old_top_hinge==null or old_top_hinge.visible,
+            "historical V1 hinges restore only while comparing V3")
         _check(Rear.set_enabled(model,true),
             "restore V10 for inspection")
         _check(detail.visible and door.visible,
             "rear detail and hydraulics restored in original pose")
+        _check(old_top_hinge==null or not old_top_hinge.visible,
+            "V10 uses only accurately bottom-mounted pivot pins")
         model.queue_free()
         await process_frame
     if failures>0:
