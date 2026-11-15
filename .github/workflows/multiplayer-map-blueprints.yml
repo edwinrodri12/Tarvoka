@@ -27,8 +27,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 390s \
-            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+          timeout --signal=TERM --kill-after=5s 100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --quit-after 5 --path . \
             --script res://tests/test_multiplayer_map_blueprints.gd \
             2>&1 | tee /tmp/tarvoka-multi-map-lab.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-multi-map-lab.log; then
