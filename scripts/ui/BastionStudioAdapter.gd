@@ -15,6 +15,7 @@ const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
+const G11Atmos = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -39,6 +40,7 @@ var _p06_fleet_fps_clock: float = 0.0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
+var _g11_fx_clock: float = 0.0
 
 func _ready() -> void:
     super._ready()
@@ -481,6 +483,9 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role == "mlrs" and model_root != null and _g11_animation.is_empty() and G11Art.stage(model_root) >= 2:
+        _g11_fx_clock += maxf(0.0,delta)
+        G11Atmos.animate(model_root,"idle",fmod(_g11_fx_clock/2.2,1.0))
     if _role == "mlrs" and not _g11_animation.is_empty() and G11Rig.has_rig(model_root):
         _g11_time += maxf(0.0,delta)
         var duration: float = G11Rig.MOVE_DURATION if _g11_animation == "move" else (
