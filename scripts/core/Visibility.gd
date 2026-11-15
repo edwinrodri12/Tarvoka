@@ -178,7 +178,14 @@ static func last_known_contacts(state: Dictionary, faction: int) -> Dictionary:
 # Terrain is public for the prototype; enemy positions outside vision are not.
 static func observed_state(state: Dictionary, faction: int) -> Dictionary:
     var observed: Dictionary = state.duplicate(true)
-    if not enabled(state) or faction not in [0, 1] or not state.get("units") is Array:
+    if faction not in [0,1] or not state.get("units") is Array:
+        return observed
+    if not enabled(state):
+        # Even without fog, enemy APC passenger identities/HP/ammo are
+        # private: only the carrier and its public role are inspectable.
+        for unit in observed["units"]:
+            if int(unit.get("faction",-1)) != faction:
+                unit.erase("cargo")
         return observed
     var visible := visible_cells(state, faction)
     var units: Array = []
@@ -186,7 +193,10 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
         if not unit is Dictionary:
             continue
         if int(unit.get("faction", -1)) == faction or (int(unit.get("hp", 0)) > 0 and visible.has(unit.get("pos", null))):
-            units.append(unit.duplicate(true))
+            var copy: Dictionary = unit.duplicate(true)
+            if int(unit.get("faction",-1)) != faction:
+                copy.erase("cargo") # No enemy stowaway identities or hidden stats.
+            units.append(copy)
     observed["units"] = units
     # Relay locations are public mission objectives, but the CURRENT owner
     # of a relay outside sight is not. Mask it in the AI observation just
