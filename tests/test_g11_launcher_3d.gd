@@ -9,6 +9,7 @@ const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
+const DamageV6 = preload("res://scripts/ui/G11DamageSculptV6.gd")
 var failed: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -49,6 +50,16 @@ func _run() -> void:
             "all twelve tubes replaced by open bore geometry")
         _check(bool(model.get_meta(MechanicsV5.FLAG,false)),
             "full sculpt V5 running gear and horizontal bearing installed")
+        _check(bool(model.get_meta(DamageV6.FLAG,false)),
+            "native V6 physically deformed progressive damage model installed")
+        _check(int(model.get_meta("tarvoka_g11_v6_craters",0)) == 3,
+            "three independent geometric bullet impact craters")
+        var folded: MeshInstance3D = _find(model,
+            "G11V6_PanelCostadoDeformado") as MeshInstance3D
+        _check(folded != null and folded.mesh is ArrayMesh,
+            "bent right side armor has true three-dimensional geometry")
+        _check(_find(model,"G11V6_HuecoCoronaTorreta") != null,
+            "destroyed vehicle exposes the broken turntable void")
         _check(int(model.get_meta("tarvoka_g11_v5_sculpted_roadwheels",0)) == 12,
             "twelve solid wheel proxies replaced by real annular wheels")
         _check(int(model.get_meta("tarvoka_g11_v5_sprocket_teeth",0)) == 16,
@@ -191,19 +202,39 @@ func _run() -> void:
         _check(Models.pose_model("mlrs",model,"hit_bullet",0.15),
             "small-arms impact reaction")
         _check(_find(model,"G11_ImpactoBalas").visible,"bullet impact VFX")
+        _check(_find(model,"G11V6_EsquirlaBala_3").is_visible_in_tree(),
+            "four real geometric bullet fragments share the ballistic reaction")
         _check(Models.pose_model("mlrs",model,"hit_explosive",0.30),
             "explosive impact reaction")
         _check(_find(model,"G11_ImpactoExplosivo").visible,"explosion VFX")
+        _check(_find(model,"G11V6_OndaExplosiva").is_visible_in_tree(),
+            "explosive impact uses a physically modeled expanding ring")
         for level in range(5):
             _check(Art.apply_stage(model,level),"damage stage %d" % level)
             _check(Art.stage(model) == level,"persist damage stage")
             _check(_find(model,"G11_ElevacionLanzador").visible == (level < 4),
                 "destruction toggles launcher")
+            _check(_find(model,"G11V2_ProteccionLateral_1").visible == (level < 2),
+                "buckled armor replaces pristine plate at moderate damage")
+            _check(_find(model,"G11_Antena_-1").visible == (level < 3),
+                "rear aerial snaps at critical damage")
+            _check(_find(model,"G11V5_TapaEscotilla").visible == (level < 4),
+                "roof hatch lost only after destruction")
+            _check(_find(model,"G11V6_PanelCostadoDeformado").is_visible_in_tree()
+                == (level >= 2),"deformed sculpt progresses from medium damage")
+            _check(_find(model,"G11V6_BlindajeRasgado").is_visible_in_tree()
+                == (level >= 3),"torn metal exposed from critical damage onward")
         _check(Models.pose_model("mlrs",model,"attack",0.30),
             "destroyed rocket unit safely ignores fire")
         _check(not _find(model,"G11_EfectoFogonazo").visible,
             "destroyed G11 cannot show live salvo")
         _check(Art.apply_stage(model,0),"complete repair")
+        _check(_find(model,"G11V2_ProteccionLateral_1").visible,
+            "factory side armor restored on full repair")
+        _check(_find(model,"G11_Antena_-1").visible,
+            "broken antenna restored on repair")
+        _check(_find(model,"G11V5_TapaEscotilla").visible,
+            "hatch restored on repair")
         Models.restore_model_pose("mlrs",model)
         var reset_link: Transform3D = inst.multimesh.get_instance_transform(0)
         _check(at_rest.origin.distance_to(reset_link.origin) < 0.001,
@@ -224,5 +255,5 @@ func _run() -> void:
         push_error("G11 3D QA FAILED (%d checks)" % failed)
         quit(1)
         return
-    print("PASS G11 3D: V5 sculpted 12 annular wheels, 16-tooth rear sprockets, active suspension, horizontal bearing, hollow launch tubes, 8 factions and damage")
+    print("PASS G11 3D: V6 sculpted reversible damage, buckled armor, exposed engine, fractured turret, impact variants; V5 wheels and 8 factions")
     quit(0)
