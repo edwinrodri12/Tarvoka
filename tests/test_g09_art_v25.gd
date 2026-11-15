@@ -45,6 +45,9 @@ func _run() -> void:
     assert(prior.get_meta("tarvoka_mbt_tactical_v24",false))
     assert(not prior.get_meta("tarvoka_mbt_wear_v25",false))
     assert(current.get_meta("tarvoka_mbt_wear_v25",false))
+    # The V29 track retrofit is a separate structural upgrade: including
+    # it in the V25 material comparison invalidates the clay A/B result.
+    assert(not current.get_meta("tarvoka_mbt_track_final_v29",false))
     assert(int(current.get_meta("tarvoka_mbt_wear_v25_count",0))==17)
     assert(not android.get_meta("tarvoka_mbt_wear_v25",false))
     assert(Wear._targets().size()==Wear.TREATED_PANELS)
