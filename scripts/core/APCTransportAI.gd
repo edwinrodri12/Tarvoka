@@ -38,8 +38,7 @@ static func _preferred_city(cities: Array, origin: Vector2i,
     var score := 999999
     for city in cities:
         var cell: Vector2i = city
-        var candidate: int = _distance(origin,cell)*10000+
-            _rel_x(cell,side,width)*100+cell.y
+        var candidate: int = _distance(origin,cell)*10000+_rel_x(cell,side,width)*100+cell.y
         if candidate < score:
             score = candidate
             best = cell
@@ -113,8 +112,7 @@ static func step(state: Dictionary, knowledge: Dictionary, friends: Array) -> Di
                 var remaining: int = _distance(cell,city)
                 if remaining >= previous:
                     continue
-                var score: int = remaining*10000+int(reachable[cell])*100+
-                    _rel_x(cell,side,width)*4+cell.y
+                var score: int = remaining*10000+int(reachable[cell])*100+_rel_x(cell,side,width)*4+cell.y
                 if score < best_score:
                     best_score = score
                     best_cell = cell
