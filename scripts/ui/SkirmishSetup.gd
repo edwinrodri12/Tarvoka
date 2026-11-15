@@ -12,6 +12,7 @@ const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 
 var scenario_picker: OptionButton
 var biome_picker: OptionButton
@@ -438,7 +439,8 @@ func _changed() -> void:
     summary.text = preset_summary + "\n%s vs. %s\nEl juego pedirá confirmación antes de empezar." % [blue,red]
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,
-            int(seed_picker.value),"snow" if biome_picker.selected==1 else "temperate")
+            int(seed_picker.value),
+            Winter.WINTER if biome_picker.selected==1 else Winter.TEMPERATE)
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
