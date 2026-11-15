@@ -335,7 +335,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V1")
+    building_picker.add_item("Base Aérea · V2 · portones animados")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -587,7 +587,7 @@ func _add_building_mode() -> void:
     airbase_controls.name = "OpcionesBaseAereaV1"
     airbase_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(airbase_controls)
-    _title(airbase_controls,"BASE AÉREA · MODELO NATIVO 3D V1",13)
+    _title(airbase_controls,"BASE AÉREA · HANGAR AVANZADO V2",13)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
