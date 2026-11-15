@@ -95,6 +95,24 @@ func _run() -> void:
     slots.back_requested.emit()
     assert(home.visible)
 
+    # The exit flow cannot quit from a single tap on the Home menu.
+    home.primary_buttons["Salir"].pressed.emit()
+    var exit_prompt: Control = home._exit_confirmation
+    assert(exit_prompt.visible)
+    assert(exit_prompt.cancel_button.custom_minimum_size.y >= 44)
+    assert(exit_prompt.exit_button.custom_minimum_size.y >= 44)
+    assert(exit_prompt.warning_label.text.contains("guardado"))
+    assert(exit_prompt.cancel_button.text.contains("CANCELAR"))
+    exit_prompt.reflow_for_size(Vector2(780,360))
+    assert(exit_prompt.compact_landscape)
+    assert(exit_prompt.cancel_button.custom_minimum_size.y == 44)
+    exit_prompt.reflow_for_size(Vector2(1280,720))
+    assert(not exit_prompt.compact_landscape)
+    exit_prompt.cancel_button.pressed.emit()
+    assert(not exit_prompt.visible)
+    assert(home.visible)
+    assert(screen.board.state == baseline)
+
     # Credits V9 is a real, read-only screen with all eight official crests.
     home.primary_buttons["Créditos"].pressed.emit()
     var credits: Control = screen.home_credits_menu
