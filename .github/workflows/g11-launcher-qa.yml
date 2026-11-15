@@ -9,6 +9,9 @@ on:
       - 'scripts/ui/G11VisualRig3D.gd'
       - 'scripts/ui/G11FinishV2.gd'
       - 'scripts/ui/G11SurfaceV3.gd'
+      - 'scripts/ui/G11MobileLOD.gd'
+      - 'tests/test_g11_mobile_lod.gd'
+      - 'tests/benchmark_g11_mobile_stress.gd'
       - 'tests/test_g11_360_gpu_v3.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g11_launcher_3d.gd'
@@ -19,7 +22,7 @@ on:
 jobs:
   launcher-native-qa:
     runs-on: ubuntu-22.04
-    timeout-minutes: 9
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.3
@@ -44,6 +47,20 @@ jobs:
             echo 'G11 native sculpt or animation regression'; exit 1
           fi
           grep -F 'PASS G11 3D:' /tmp/g11_3d_qa.log
+      - name: Assert G11 two-tier mobile LOD and faction animation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_mobile_lod.gd 2>&1 | tee /tmp/g11_mobile_qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_mobile_qa.log; then
+            echo 'G11 mobile LOD regression'; exit 1
+          fi
+          grep -F 'PASS G11 MOBILE LOD:' /tmp/g11_mobile_qa.log
       - name: Render G11 from eight actual Godot 3D camera angles
         shell: bash
         run: |
@@ -66,4 +83,26 @@ jobs:
         with:
           name: tarvoka-g11-v3-360-review
           path: /tmp/g11-360/*.png
+          retention-days: 14
+      - name: Quantitative G11 8/32/64 native stress benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_BENCH_OUTPUT=/tmp/g11-mobile-benchmark.json \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/benchmark_g11_mobile_stress.gd 2>&1 | tee /tmp/g11_mobile_bench.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_mobile_bench.log; then
+            echo 'G11 mobile stress failed'; exit 1
+          fi
+          grep -F 'PASS G11 STRESS:' /tmp/g11_mobile_bench.log
+          python3 -c 'import json; d=json.load(open("/tmp/g11-mobile-benchmark.json")); assert len(d["cases"]) == 7'
+      - name: Upload machine-readable G11 performance report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-mobile-gl-stress
+          path: /tmp/g11-mobile-benchmark.json
           retention-days: 14
