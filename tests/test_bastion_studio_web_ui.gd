@@ -139,9 +139,9 @@ func _run() -> void:
         "fleet steering ends and returns to rest")
     studio.call("_animate_p06_fleet","attack")
     studio.call("_process",0.52)
-    var turret: Node3D=first_apc.find_child(
+    var fleet_turret: Node3D=first_apc.find_child(
         "P06V8_TorretaRemota",true,false) as Node3D
-    _check(turret!=null and absf(turret.rotation_degrees.y)>0.5,
+    _check(fleet_turret!=null and absf(fleet_turret.rotation_degrees.y)>0.5,
         "tactical 64-unit automatic fire tracks target without shell spam")
     studio.call("_process",0.70)
     _check(str(studio.get("_p06_fleet_animation"))=="",
