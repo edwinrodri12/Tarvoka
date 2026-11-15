@@ -11,6 +11,7 @@ const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
 const AirbaseDamageV4 = preload("res://scripts/ui/AirbaseDamageFXV4.gd")
 const AirbaseStressV4 = preload("res://scripts/ui/AirbaseStressV4.gd")
 const AirbaseExteriorV6 = preload("res://scripts/ui/AirbaseExteriorV6.gd")
+const AirbaseMaterialsV7 = preload("res://scripts/ui/AirbaseMaterialsV7.gd")
 const AirbaseImpactV3 = preload("res://scripts/ui/AirbaseImpactV3.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
@@ -40,6 +41,7 @@ var hq_impact_status: Label
 var building_controls: VBoxContainer
 var airbase_controls: VBoxContainer
 var airbase_exterior_v6_toggle: CheckButton
+var airbase_material_v7_toggle: CheckButton
 var airbase_level_picker: OptionButton
 var airbase_damage_picker: OptionButton
 var airbase_weather_picker: OptionButton
@@ -351,7 +353,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V4/V6 · acabado arquitectónico")
+    building_picker.add_item("Base Aérea · V7 · materiales y desgaste 3D")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -612,6 +614,14 @@ func _add_building_mode() -> void:
     airbase_controls.add_child(airbase_exterior_v6_toggle)
     _title(airbase_controls,
         "Comparación V6/V4 con los mismos niveles, portones, clima y daños.",12)
+    airbase_material_v7_toggle = CheckButton.new()
+    airbase_material_v7_toggle.name = "MaterialesPBRYDesgasteFisicoBaseAereaV7"
+    airbase_material_v7_toggle.text = "V7 · texturas PBR y desgaste (comparar V6)"
+    airbase_material_v7_toggle.button_pressed = true
+    airbase_material_v7_toggle.toggled.connect(_toggle_airbase_material_v7)
+    airbase_controls.add_child(airbase_material_v7_toggle)
+    _title(airbase_controls,
+        "V7 · concreto, metal, techo, cristales y marcas de servicio; clima reversible.",12)
     _title(airbase_controls,"Nivel arquitectónico",12)
     airbase_level_picker = OptionButton.new()
     airbase_level_picker.name = "NivelBaseAereaV1"
@@ -928,7 +938,8 @@ func _change_airbase_stress_count(_index: int) -> void:
 func _display_airbase_stress(first: bool) -> void:
     var count: int = [8,32,64][airbase_stress_picker.selected]
     model_root = AirbaseStressV4.build_grid(
-        count,AirbaseStressV4.MAX_NEAR,airbase_exterior_v6_toggle.button_pressed)
+        count,AirbaseStressV4.MAX_NEAR,airbase_exterior_v6_toggle.button_pressed,
+        airbase_material_v7_toggle.button_pressed)
     if model_root==null:
         push_error("Base Aerea V4: no se pudo crear escenario LOD")
         return
@@ -953,6 +964,10 @@ func _display_airbase_stress(first: bool) -> void:
     _update_details()
 
 func _toggle_airbase_exterior_v6(_enabled: bool) -> void:
+    if _role=="airbase":
+        _display_airbase()
+
+func _toggle_airbase_material_v7(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
 
@@ -993,6 +1008,9 @@ func _display_airbase() -> void:
     if airbase_exterior_v6_toggle.button_pressed:
         if not AirbaseExteriorV6.apply(model_root,tier,_faction,stage):
             push_error("Base Aerea V6: acabado arquitectonico no instalado")
+    if airbase_material_v7_toggle.button_pressed:
+        if not AirbaseMaterialsV7.apply(model_root,tier,_faction,stage):
+            push_error("Base Aerea V7: materiales y desgaste no instalados")
     if stage <= 1:
         model_root.add_child(AirbaseDoorsV2.build(stage))
     if stage in [2,3]:
