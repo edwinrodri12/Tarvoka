@@ -225,3 +225,19 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - Test `tests/test_g11_mechanical_detail_v14.gd` para ocho facciones, los cuatro circuitos, 28 tramos, doce tubos, material de pintura, sincronización con elevación, giro de orugas, daños y reparación. **GitHub Actions G11 native launcher sculpt QA del PR #399: aprobado**.
 
 **Estado:** V14 integrada en la fuente del juego y probada en Godot. La publicación web se comprueba por separado. Aún falta inspección artística del conjunto en el visor desde todos los ángulos; no dar el G11 por terminado antes de esa evaluación.
+
+
+## Actualización V15 — bastidor posterior, blindaje biselado y galerías Godot (15-nov-2026)
+
+**Integrado en `main` desde [PR #409](https://github.com/edwinrodri12/Tarvoka/pull/409).** La rama de revisión se regeneró desde `main` actual para conservar los cambios concurrentes de Bastión P06 V19. El PR antiguo #408 se cerró sin fusionar para evitar conflictos.
+
+- Nuevo módulo `scripts/ui/G11AftPodFinishV15.gd`. Dos paneles de blindaje posterior son **prismas tridimensionales cerrados** de siete lados en el plano Y/Z y espesor real en X, modelados con `SurfaceTool` y normales calculadas. El diseño crea una silueta más oblicua y protegida sin situar un cubo delante de las doce bocas abiertas.
+- El nuevo bastidor posterior lleva dos travesaños octogonales en sentido transversal, dos montantes, seis lamas 3D sobre una toma de ventilación oscura, nervaduras, once pequeños elementos metálicos por lateral y una marca posterior de orientación.
+- Se conserva el material PBR y la pintura del techo de las ocho facciones, los paneles cromáticos V13 y los engranes impulsores de diez dientes. Los cuatro circuitos de mangueras V14 y los paneles de mantenimiento permanecen visibles; las cubiertas V15 están situadas sobre las tomas hidráulicas y detrás de las zonas pintadas del lanzacohetes.
+- Daños complementarios sobre los nuevos paneles: rozaduras en daño medio, una viga torcida en daño crítico y reparación completa que oculta ambos efectos. No se modifican HP, ataque, defensa, combustible, munición, turnos ni economía.
+- `G11Art3D.gd` aplica V15 después de V14. `BastionStudioAdapter.gd` etiqueta correctamente **G11 Lanzador V15** y añade botones «V15: trasera en 3/4» y «V15: blindaje opuesto», además de conservar animaciones, selección de las ocho facciones y el resto del visor. La publicación Pages incluye `G11AftPodFinishV15.gd`.
+- `tests/test_g11_aft_pod_finish_v15.gd` verifica ocho facciones, las geometrías reales con volumen, seis lamas, materiales, animaciones, daños y preservación de doce tubos, V13 y V14.
+- `tests/test_g11_aft_pod_finish_v15_capture.gd` genera **14 capturas verdaderas del render Godot**, distribuidas en seis vistas de la zona posterior, cuatro macros de ambos laterales con elevación, dos pinturas de facción, daño crítico y salva. El workflow G11 exporta el artifact `tarvoka-g11-v15-14-real-godot-aft-pod-review`.
+- **QA nativa Godot 4.3 del PR #409: aprobada.** La publicación web se valida en el workflow separado «Publish TARVOKA native 3D art studio».
+
+**Estado artístico:** V15 integrada en el juego y el Estudio 3D. Mantener el G11 en diseño activo; inspeccionar las proporciones de las nuevas piezas desde atrás y laterales antes de considerar cualquier optimización Android o declarar finalizado el vehículo.
