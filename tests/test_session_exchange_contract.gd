@@ -4,6 +4,7 @@ extends SceneTree
 # of experimental mountain/flanking PRs. Run with Godot 4.3 --headless.
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Actions = preload("res://scripts/core/BattleActions.gd")
+const Codec = preload("res://scripts/core/SaveCodec.gd")
 
 func _terrain() -> Array:
     var board: Array = []
@@ -42,6 +43,18 @@ func _initialize() -> void:
     assert(state == snapshot) # Neither HP nor action flags mutate caller state.
     assert(not Session.attack(outcome["state"],"attacker","defender")["valid"])
     assert(int(outcome["state"]["winner"]) == -1)
+    # Save roundtrip must preserve combat HP and consumed action.
+    var raw: String = Codec.encode(outcome["state"])
+    assert(not raw.is_empty())
+    var restored: Dictionary = Codec.decode(raw)
+    assert(not restored.is_empty())
+    assert(restored == outcome["state"])
+    assert(not Session.attack(restored,"attacker","defender")["valid"])
+    var turn: Dictionary = Session.end_turn(restored)
+    assert(turn.get("valid",false))
+    assert(int(turn["state"]["faction"]) == 1)
+    assert(int(turn["state"]["units"][0]["hp"]) == int(expected["attacker_hp"]))
+    assert(int(turn["state"]["units"][1]["hp"]) == int(expected["defender_hp"]))
 
     # A decisive hit must suppress retaliation and freeze the terminal session.
     var lethal: Array = [
@@ -58,5 +71,14 @@ func _initialize() -> void:
     assert(not Session.end_turn(decisive["state"])["valid"])
     assert(not Session.attack(decisive["state"],"winner","loser")["valid"])
     assert(final_state["units"][1]["hp"] == 2)
-    print("PASS battle session exchange: preview parity, HP, reaction, immutability, victory")
+    # Terminal saves must remain terminal after decode.
+    var terminal_raw: String = Codec.encode(decisive["state"])
+    assert(not terminal_raw.is_empty())
+    var terminal: Dictionary = Codec.decode(terminal_raw)
+    assert(not terminal.is_empty())
+    assert(int(terminal["winner"]) == 0)
+    assert(int(terminal["units"][1]["hp"]) == 0)
+    assert(not Session.end_turn(terminal)["valid"])
+    assert(not Session.attack(terminal,"winner","loser")["valid"])
+    print("PASS battle session exchange: preview parity, HP, reaction, save roundtrip, victory")
     quit(0)
