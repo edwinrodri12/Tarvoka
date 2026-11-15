@@ -513,6 +513,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         cells: Dictionary, selected_id: String) -> Dictionary:
     var visible_count := 0
     var detailed := 0
+    var apc_lod := 0
     var hidden_enemies := 0
     var player: int = 0
     for unit in state.get("units",[]):
@@ -528,7 +529,14 @@ static func _make_units(parent: Node3D,state: Dictionary,
             continue
         var role: String = str(unit.get("role","line"))
         var model: Node3D = null
-        if detailed < MAX_DETAILED_UNITS and Models.supports(role):
+        if role=="apc":
+            # Every visible P06 keeps its authentic 6x6 silhouette even
+            # beyond the eight high-detail slots. Six tires are two GPU
+            # batches and do not expand into hundreds of individual meshes.
+            model = Models.build("apc",faction,false,8)
+            if model!=null:
+                apc_lod+=1
+        elif detailed < MAX_DETAILED_UNITS and Models.supports(role):
             model = Models.build(role,faction,false,6)
             if model != null:
                 detailed += 1
@@ -558,7 +566,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         parent.add_child(model)
         visible_count += 1
     return {"visible":visible_count,"detailed":detailed,
-        "hidden_enemies":hidden_enemies}
+        "apc_lod":apc_lod,"hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     var biome: String = Biomes.from_state(state)
