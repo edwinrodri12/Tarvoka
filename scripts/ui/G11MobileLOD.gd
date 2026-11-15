@@ -11,7 +11,7 @@ const TUBES := 12
 const WHEELS := 12
 const FAR_LEVEL := 8
 const NEAR_LEVEL := 10
-const _MATERIALS := {}
+static var _materials: Dictionary = {}
 
 static func recommended_level(distance: float, visible_units: int,
         high_quality: bool = false) -> int:
@@ -25,13 +25,13 @@ static func _mat(color: Color, metallic: float = 0.18,
     # Cache by palette/material properties to avoid a new PBR resource
     # for every vehicle in an eight-player match.
     var key: String = "%s_%s_%s" % [color.to_html(),str(metallic),str(roughness)]
-    if _MATERIALS.has(key):
-        return _MATERIALS[key] as StandardMaterial3D
+    if _materials.has(key):
+        return _materials[key] as StandardMaterial3D
     var m := StandardMaterial3D.new()
     m.albedo_color = color
     m.metallic = metallic
     m.roughness = roughness
-    _MATERIALS[key] = m
+    _materials[key] = m
     return m
 
 static func _box(parent: Node3D, title: String, center: Vector3,
