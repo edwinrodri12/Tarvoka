@@ -75,7 +75,22 @@ jobs:
           grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress.log
           test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png
           test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_tactical_lod.png
-          test -s artifacts/apc_p06_v3_stress_metrics.json
+          test -s artifacts/apc_p06_v3_stress_metrics_32.json
+      - name: Stress render 64 APC V3 across eight factions with GPU batching
+        shell: bash
+        env:
+          TARVOKA_APC_PER_FACTION: "8"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v3_stress.gd 2>&1 | tee /tmp/apc-v3-stress-64.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-stress-64.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress-64.log
+          test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_stress.png
+          test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_tactical_lod.png
+          test -s artifacts/apc_p06_v3_stress_metrics_64.json
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
@@ -107,5 +122,6 @@ jobs:
             artifacts/tarvoka_apc_p06_v3_*.png
             artifacts/tarvoka_apc_p06_v2_antes.png
             artifacts/TARVOKA_APC_P06_V3_Editable.glb
-            artifacts/apc_p06_v3_stress_metrics.json
+            artifacts/apc_p06_v3_stress_metrics_32.json
+            artifacts/apc_p06_v3_stress_metrics_64.json
           if-no-files-found: error
