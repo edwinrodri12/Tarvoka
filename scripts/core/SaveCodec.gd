@@ -16,6 +16,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
@@ -39,6 +40,8 @@ static func encode(state: Dictionary) -> String:
     }
     if state.has("weather"):
         snapshot["weather"] = state["weather"]
+    if state.has(Winter.FIELD):
+        snapshot[Winter.FIELD] = state[Winter.FIELD]
     if state.has("weather_cycle"):
         snapshot["weather_cycle"] = state["weather_cycle"].duplicate(true)
     if state.has(Identity.STATE_FIELD):
@@ -251,6 +254,10 @@ static func _valid_state(state: Dictionary) -> bool:
     # A seeded map stores its own terrain exactly as before; this
     # optional integer is a reproducibility checksum, not an untrusted
     # instruction to rewrite terrain when the save loads.
+    # Optional V19 art-only setting; old v1 saves have no biome field.
+    # Disallow invalid or unrecognized values from untrusted JSON.
+    if state.has(Winter.FIELD) and not Winter.valid(state[Winter.FIELD]):
+        return false
     if state.has("map_seed"):
         if not state["map_seed"] is int or not Scenarios.valid_seed(int(state["map_seed"])):
             return false

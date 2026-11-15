@@ -3,6 +3,7 @@ class_name TarvokaBattlefieldPreview
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 
 const SIZES := [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]
 const TILES := {
@@ -16,17 +17,21 @@ var preview_map: Array = []
 var scenario_name := ""
 var grid_size := Vector2i.ZERO
 var selected_seed := 0
+var visual_biome := Winter.TEMPERATE
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
     custom_minimum_size = Vector2(250,196)
     resized.connect(queue_redraw)
 
-func configure(scenario_id: int, size_id: int, seed: int) -> void:
+func configure(scenario_id: int, size_id: int, seed: int,
+        biome: String = Winter.TEMPERATE) -> void:
     var next_size: Vector2i = SIZES[clampi(size_id,0,SIZES.size()-1)]
     var next_seed: int = clampi(seed,Scenarios.MIN_SEED,Scenarios.MAX_SEED)
-    if grid_size == next_size and selected_seed == next_seed and scenario_name == str(scenario_id):
+    var next_biome: String = biome if Winter.valid(biome) else Winter.TEMPERATE
+    if grid_size == next_size and selected_seed == next_seed and scenario_name == str(scenario_id) and visual_biome == next_biome:
         return
+    visual_biome = next_biome
     grid_size = next_size
     selected_seed = next_seed
     scenario_name = str(scenario_id)
@@ -46,7 +51,9 @@ func _draw() -> void:
         var row: Array = preview_map[y]
         for x in range(grid_size.x):
             var kind: String = str(row[x])
-            var tile: Color = TILES.get(kind,TILES["plain"])
+            var tile: Color = (
+                Winter.tile_color(kind,x,y) if visual_biome == Winter.WINTER
+                else TILES.get(kind,TILES["plain"]))
             var top_left := inset + Vector2(float(x)*tile_w,float(y)*tile_h)
             var rect := Rect2(top_left,Vector2(tile_w+0.13,tile_h+0.13))
             draw_rect(rect,tile,true)

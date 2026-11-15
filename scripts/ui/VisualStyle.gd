@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaVisualStyle
 
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+
 # Visual-only catalog. Faction IDs and artwork are deliberately NOT battle-state
 # values: no changes to rules, save format, initiative, or approved balance v0.1.
 # Names, ordering, colors and approved icon motifs are fixed references.
@@ -107,7 +109,10 @@ static func _approved_atlas_texture(index: int, commander: bool) -> Texture2D:
     cut.filter_clip = true
     return cut
 
-static func terrain_color(kind: String, x: int, y: int) -> Color:
+static func terrain_color(kind: String, x: int, y: int,
+        biome: String = Winter.TEMPERATE) -> Color:
+    if biome == Winter.WINTER:
+        return Winter.tile_color(kind,x,y)
     var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))
     # Inexpensive deterministic light variation; never affects movement cost.
     return base.lightened(0.055) if (x + y) % 2 == 0 else base.darkened(0.055)

@@ -12,8 +12,10 @@ const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 
 var scenario_picker: OptionButton
+var biome_picker: OptionButton
 var size_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
@@ -126,6 +128,10 @@ func _ready() -> void:
     scenario_picker = _picker(content,"Escenario",[
         "Campo abierto","Bosque de las Dos Rutas","Puentes de la Cuenca",
         "Costa de las Dos Bahias","Mapa aleatorio (semilla)"
+    ])
+    biome_picker = _picker(content,"Bioma V19 · paisaje permanente",[
+        "Templado · roca, bosques y costas",
+        "Nevado · cordilleras nevadas, coníferas e hielo"
     ])
     size_picker = _picker(content,"Tamano",[
         "10 x 8 · Rapida","24 x 18 · Campana amplia","40 x 30 · Gran batalla"
@@ -337,6 +343,7 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
     Chrome.emphasize(button,"primary" if index == 1 else "secondary")
 
 func apply_preset(index: int) -> void:
+    biome_picker.select(0)
     match index:
         0:
             scenario_picker.select(0)
@@ -378,7 +385,7 @@ func apply_preset(index: int) -> void:
 
 func load_choices(values: Dictionary) -> void:
     selected_factions = Identity.resolved(values.get("factions",{}))
-    for name in ["scenario","size","roster","fog","weather","weather_cycle","economy","objective","balance","first"]:
+    for name in ["scenario","biome","size","roster","fog","weather","weather_cycle","economy","objective","balance","first"]:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
@@ -411,6 +418,8 @@ func _changed() -> void:
         economy_picker.get_item_text(economy_picker.selected),
         objective_picker.get_item_text(objective_picker.selected)
     ]
+    preset_summary += " · Bioma: %s" % [
+        "Nevado V19" if biome_picker.selected==1 else "Templado"]
     preset_summary += " · Clima: %s (%s)" % [
         ["Despejado","Lluvia","Nieve"][weather_picker.selected],
         "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
@@ -429,7 +438,9 @@ func _changed() -> void:
             faction_names[side].add_theme_color_override("font_color",Style.faction_color(index).lightened(0.30))
     summary.text = preset_summary + "\n%s vs. %s\nEl juego pedirá confirmación antes de empezar." % [blue,red]
     if map_preview != null:
-        map_preview.configure(scenario_picker.selected,size_picker.selected,int(seed_picker.value))
+        map_preview.configure(scenario_picker.selected,size_picker.selected,
+            int(seed_picker.value),
+            Winter.WINTER if biome_picker.selected==1 else Winter.TEMPERATE)
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
@@ -438,6 +449,7 @@ func _changed() -> void:
 func options() -> Dictionary:
     return {
         "scenario":scenario_picker.get_selected_id(),
+        "biome":biome_picker.get_selected_id(),
         "size":size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(),
         "fog":fog_picker.get_selected_id(),

@@ -17,6 +17,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
+const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 const HeadquartersSprite = preload("res://scripts/ui/HeadquartersSpriteV15.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -71,6 +72,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var visible: Dictionary = Visibility.visible_cells(state, 0) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var detail: int = VisualBudget.detail_level(hw,battery_saver)
+    var visual_biome: String = Winter.from_state(state)
     var bounds: Rect2i = VisualBudget.visible_grid_bounds(canvas.size,zoom,pan,dims)
     var base_origin: Vector2 = IsoTransform.origin(canvas.size,zoom,pan,dims)
     var drawn := 0
@@ -98,7 +100,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     continue
                 var terrain: String = str(state["terrain"][y][x])
                 var tint: Color = Weather.blended_tint(
-                    VisualStyle.terrain_color(terrain,x,y),
+                    VisualStyle.terrain_color(terrain,x,y,visual_biome),
                     weather_before,Weather.from_state(state),weather_blend)
                 _tile(canvas,vertices,tint)
                 if detail == VisualBudget.DETAIL_FULL:
@@ -107,7 +109,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     canvas.draw_line(vertices[2],vertices[3],tint.darkened(0.32),
                         maxf(1.0,hw*0.025),true)
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
-                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x)
+                    WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
+                        visual_biome)
                     decorated += 1
                 WeatherPainter.draw_iso(canvas,cell,c,hw,Weather.from_state(state),battery_saver)
                 if fog and not visible.has(cell):
@@ -115,7 +118,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     last_frame_stats = {
         "size":dims,"candidate_tiles":bounds.size.x*bounds.size.y,
         "tiles_drawn":drawn,"unknown_tiles":unknown,
-        "terrain_detail_cells":decorated,"detail_level":detail
+        "terrain_detail_cells":decorated,"detail_level":detail,
+        "visual_biome":visual_biome
     }
 
     # Objective and installation overlays must never expose an unseen owner.
