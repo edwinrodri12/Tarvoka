@@ -175,3 +175,22 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - El código de G11 V11 se incorpora al pipeline de exportación del Estudio 3D web. La **publicación web** es una comprobación separada de la QA del modelo: no asumirla hasta la última ejecución exitosa de GitHub Pages.
 
 **Pendiente:** un repaso visual del nivel de pintura de facción y piezas del casco inferior en el visor, más la aprobación del diseño general antes de dedicar una etapa aparte a rendimiento y APK. Mantener esta línea de trabajo centrada en el modelo 3D.
+
+## Actualización V12 — cabina, chasis y ventilación exterior (15-nov-2026)
+
+**Escultura 3D real en Godot 4.3**, posterior al G11 V11 y anterior a cualquier trabajo de rendimiento.
+
+- Nuevo `scripts/ui/G11CabChassisV12.gd` se integra desde `G11Art3D.gd`, conservando todo el modelo PBR de V11 y los disparos y enfriamiento hasta V10.
+- Dos puertas laterales blindadas con espesor auténtico, marcos de ventanas sólidos, cristales de superficie separada y manijas; nuevos detalles de pintura por facción sin sustituir los emblemas anteriores.
+- Los antiguos soportes de retrovisor cúbicos V1 desaparecen: se sustituyen por brazos delgados, carcasas 3D biseladas y lentes pulidas.
+- Limpiaparabrisas en ambas mitades del cristal frontal con pivotes, brazos inclinados y goma; un parachoques frontal de sección octagonal y parrilla en relieve con seis insertos.
+- Escalones antideslizantes reforzados por dos soportes en cada lateral, con cinco ribetes negros cada uno, más un protector para el tramo posterior de cada oruga.
+- Rearranques de mantenimiento: cierre y bocallave en ambos extremos del portón trasero, tornillería de puerta y portón en lote `MultiMesh` de 24 cabezas sólidas.
+- Ventilación reconstruida: la anterior parrilla de motor de seis bloques V1 se sustituye por un recinto oscuro con siete lamas de metal. Una inspección posterior de las imágenes nativas demostró que el lanzador elevándose ocultaba ese acabado desde ciertos ángulos; se añadieron por ello dos tomas laterales con marcos metálicos y cuatro lamas auténticas por lado, montadas en el chasis y visibles desde cámaras laterales.
+- Durante daño crítico (nivel 3+), la ventilación intacta central y lateral desaparece para descubrir el motor carbonizado V6, sin afectar el cristal o las puertas de la cabina. Reparación restaura esas piezas de manera reversible.
+- Estudio 3D `BastionStudioAdapter.gd`: entrada «G11 Lanzador · Cabina V12 · interiores y carrocería» y descripción de componentes revisables; conserva los controles de cuatro vistas, daños y salva.
+- QA automatizada `tests/test_g11_cab_chassis_v12.gd`: verifica en las ocho facciones las ventanas de lado, marcos, cristales, superficies, anclajes, cerraduras, parachoques, rejillas laterales/centrales, reparación y compatibilidad con la salva V8, el pulso de enfriamiento V10 y el marco abierto V11.
+- `tests/test_g11_cab_chassis_v12_capture.gd` crea **20 capturas reales de Godot**: ocho vistas orbitales, cuatro acercamientos a cabina, dos parabrisas, dos tomas de motor, dos accesos posteriores y dos etapas de daño; las cámaras de motor están posicionadas para no ocultar sus tomas de aire bajo el lanzador.
+- La integración GitHub Pages `.github/workflows/tarvoka-3d-pages.yml` incluye `G11CabChassisV12.gd` en el exportador del Estudio. Verificar la última ejecución exitosa de publicación antes de afirmar la disponibilidad V12 en el sitio público.
+
+**Pendiente artístico:** evaluación a escala natural de la cabina y pintura de facción desde el teléfono; no declarar completo por aprobar solamente pruebas geométricas. El rendimiento y APK vendrán después.
