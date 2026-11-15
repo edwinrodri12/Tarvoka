@@ -1409,7 +1409,7 @@ func _auto_benchmark_diagnosis_text() -> String:
         summary_text+="\n\nMuestras insuficientes:"
         for warning in quality:
             summary_text+="\n· "+str(warning)
-    summary_text+=("\n\nAndroid físico: medición local; sin datos térmicos."
+    summary_text+=("\n\nAndroid nativo: medición local; dispositivo físico no verificado, sin datos térmicos."
         if bool(finding["on_android_device"]) else
         "\n\nNO es una medición Android: repetir en el teléfono.")
     summary_text+="\nObjetivo provisional: p10 ≥30 FPS. IA, red y mapa completo no medidos."
