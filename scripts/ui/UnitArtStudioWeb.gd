@@ -13,6 +13,7 @@ const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
+const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -1114,6 +1115,12 @@ func _toggle_apc_lod() -> void:
     APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
     for unit in _apc_stress_units:
         APCFinishV3.set_tactical_lod(unit,_apc_tactical_lod)
+    if _apc_mixed_enabled and _apc_mixed_group!=null:
+        for part in _apc_mixed_group.get_children():
+            var building: Node3D=part as Node3D
+            if building!=null and building.get_meta(
+                    "tarvoka_building_kind","")=="headquarters":
+                HQLod.set_reduced(building,_apc_tactical_lod)
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     _update_details()
@@ -1221,6 +1228,7 @@ func _toggle_apc_mixed() -> void:
         assert(hq!=null)
         hq.position=home
         mixed.add_child(hq)
+        HQLod.set_reduced(hq,_apc_tactical_lod)
         var g09: Node3D=Models.build("tank",faction,true,31)
         assert(g09!=null)
         g09.position=home+Vector3(0,0,-12)
