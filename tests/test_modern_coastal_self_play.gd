@@ -60,7 +60,7 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
             assert(state == frozen)
             if not choice.get("valid",false):
                 break
-            assert(choice["action"] in ["produce","move","attack","resupply"])
+            assert(choice["action"] in ["produce","move","attack","resupply","repair"])
             var next: Dictionary = choice["state"]
             assert(int(next.get("faction",-1)) == side)
             assert(Economy.valid(next["economy"],next["terrain"]))
@@ -80,6 +80,17 @@ static func _battle(first: int, fog_enabled: bool) -> Dictionary:
                     assert(int(choice["cost"]) >= 0)
                     assert(int(next["economy"]["credits"][side]) == int(state["economy"]["credits"][side]) - int(choice["cost"]))
                     assert(next["units"].size() == state["units"].size())
+                "repair":
+                    assert(int(choice["restored"]) >= 1 and int(choice["restored"]) <= 3)
+                    assert(int(choice["cost"]) == int(choice["restored"])*35)
+                    assert(int(next["economy"]["credits"][side]) == int(state["economy"]["credits"][side]) - int(choice["cost"]))
+                    assert(next["units"].size() == state["units"].size())
+                    var observed := false
+                    for j in range(state["units"].size()):
+                        if str(state["units"][j]["id"]) == str(choice["target_id"]):
+                            assert(int(next["units"][j]["hp"]) == int(state["units"][j]["hp"])+int(choice["restored"]))
+                            observed = true
+                    assert(observed)
                 "attack":
                     var targets := 0
                     for j in range(state["units"].size()):

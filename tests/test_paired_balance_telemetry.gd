@@ -22,6 +22,8 @@ func _initialize() -> void:
     var total_phases := 0
     var total_buys := 0
     var total_resupplies := 0
+    var total_repairs := 0
+    var total_repair_spend := 0
     var total_paid_rearms := 0
     var total_critical := 0
     for scenario in [0,3]:
@@ -37,6 +39,8 @@ func _initialize() -> void:
                     total_phases += int(report["phases"])
                     total_buys += int(report["bought"][0]) + int(report["bought"][1])
                     total_resupplies += int(report["resupplied"][0]) + int(report["resupplied"][1])
+                    total_repairs += int(report["repaired"][0]) + int(report["repaired"][1])
+                    total_repair_spend += int(report["repair_spent"][0]) + int(report["repair_spent"][1])
                     total_paid_rearms += int(report["rearm_spent"][0]) + int(report["rearm_spent"][1])
                     total_critical += int(report["low_supply"][0]) + int(report["low_supply"][1])
                     relay_moves[0] += int(report["relay_moves"][0])
@@ -70,8 +74,8 @@ func _initialize() -> void:
     assert(matches == 16 and total_actions > 60)
     assert(total_buys > 0)
     assert(pair_wins[0] + pair_wins[1] + undecided == matches)
-    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
-        matches,total_actions,total_phases,total_buys,total_resupplies,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
+    print("BALANCE_SUMMARY games=%d actions=%d phases=%d buys=%d resupplies=%d repairs=%d repair_spend=%d rearm_spend=%d low_supply_observed=%d first_player_wins=%d second_player_wins=%d undecided=%d faction0_wins=%d faction1_wins=%d relay_moves=%s urban_moves=%s" % [
+        matches,total_actions,total_phases,total_buys,total_resupplies,total_repairs,total_repair_spend,total_paid_rearms,total_critical,pair_wins[0],pair_wins[1],undecided,
         faction_wins[0],faction_wins[1],str(relay_moves),str(urban_moves)
     ])
     print("PASS paired balance telemetry: 16 matched games, mirrored starts, action economy, save and supply invariants")
@@ -81,7 +85,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
     var state: Dictionary = Session.start(Roles.modern_armies(true),Scenarios.terrain(map_id),first,fog,relay,true,true)
     var report := {
         "winner":-1, "phases":0, "actions":0,
-        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0],
+        "bought":[0,0], "resupplied":[0,0], "rearm_spent":[0,0], "repaired":[0,0], "repair_spent":[0,0],
         "attacks":[0,0], "low_supply":[0,0],
         "relay_moves":[0,0], "urban_moves":[0,0], "cities":[0,0], "relays":[0,0]
     }
@@ -97,7 +101,7 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
             assert(before == state)
             if not step.get("valid",false):
                 break
-            assert(str(step.get("action","")) in ["move","attack","produce","resupply"])
+            assert(str(step.get("action","")) in ["move","attack","produce","resupply","repair"])
             var next: Dictionary = step["state"]
             assert(next["faction"] == side and Economy.valid(next["economy"],next["terrain"]))
             var before_credits: int = int(state["economy"]["credits"][side])
@@ -112,6 +116,19 @@ static func _run_battle(map_id: int, fog: bool, relay: bool, first: int) -> Dict
                 expected_spend = int(step["cost"])
                 report["rearm_spent"][side] += expected_spend
                 assert(next["units"].size() == state["units"].size())
+            elif str(step["action"]) == "repair":
+                expected_spend = int(step["cost"])
+                report["repaired"][side] += 1
+                report["repair_spent"][side] += expected_spend
+                assert(int(step["restored"]) >= 1 and int(step["restored"]) <= 3)
+                assert(expected_spend == int(step["restored"])*35)
+                assert(next["units"].size() == state["units"].size())
+                var repaired_target := false
+                for j in range(state["units"].size()):
+                    if str(state["units"][j]["id"]) == str(step["target_id"]):
+                        assert(int(next["units"][j]["hp"]) == int(state["units"][j]["hp"])+int(step["restored"]))
+                        repaired_target = true
+                assert(repaired_target)
             elif str(step["action"]) == "attack":
                 report["attacks"][side] += 1
             elif str(step["action"]) == "move":
