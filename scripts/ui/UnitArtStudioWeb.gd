@@ -14,6 +14,7 @@ const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
 const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
+const PerfTelemetry=preload("res://scripts/ui/PerformanceTelemetryV1.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -68,6 +69,8 @@ var apc_mixed_button: Button
 var _apc_mixed_enabled: bool=false
 var _apc_mixed_group: Node3D
 var apc_stress_label: Label
+var apc_perf_button: Button
+var _apc_perf=PerfTelemetry.new()
 var _apc_stress_group: Node3D
 var _apc_stress_units: Array[Node3D]=[]
 var _apc_stress_count: int=0
@@ -293,6 +296,8 @@ func _construct() -> void:
         _toggle_apc_mixed)
     apc_stress_label=_title(apc_controls,
         "Prueba de FPS real: 32 → 64 → salir. Usa Android o el navegador.",11)
+    apc_perf_button=_button(apc_controls,
+        "GUARDAR / COPIAR INFORME FPS",_save_apc_perf)
 
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
@@ -450,6 +455,7 @@ func _display_role(role: String) -> void:
     apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
     apc_stress_button.visible=apc_lod_button.visible
     apc_mixed_button.visible=apc_lod_button.visible
+    apc_perf_button.visible=apc_lod_button.visible
     apc_stress_label.visible=apc_lod_button.visible
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
@@ -1121,11 +1127,15 @@ func _toggle_apc_lod() -> void:
             if building!=null and building.get_meta(
                     "tarvoka_building_kind","")=="headquarters":
                 HQLod.set_reduced(building,_apc_tactical_lod)
+    _reset_apc_perf()
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     _update_details()
 
 func _clear_apc_stress() -> void:
+    # Preserve the previous measured scenario before freeing the stress scene.
+    if _apc_stress_count>0 and int(_apc_perf.report()["sample_count"])>0:
+        _archive_apc_perf()
     # The mixed scene hangs off the stress group and is freed alongside it.
     _apc_mixed_enabled=false
     _apc_mixed_group=null
@@ -1183,6 +1193,7 @@ func _set_apc_stress(count: int) -> void:
         if _apc_stress_count==32 else "APC · TERMINAR PRUEBA")
     apc_stress_label.text="Prueba de %d APC · calculando FPS..." % _apc_stress_count
     apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+    _reset_apc_perf()
 
 func _toggle_apc_mixed() -> void:
     if _role!="apc" or model_root==null or not model_root.get_meta(
@@ -1203,6 +1214,7 @@ func _toggle_apc_mixed() -> void:
                 (float(i%per_faction)-0.5*float(per_faction-1))*3.2,0,
                 (float(int(i/per_faction))-3.5)*3.3)
         apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+        _reset_apc_perf()
         _update_camera()
         return
     var mixed:=Node3D.new()
@@ -1240,11 +1252,44 @@ func _toggle_apc_mixed() -> void:
                 12.0+float(int(index/4))*4.0)
     _apc_mixed_enabled=true
     apc_mixed_button.text="BATALLA MIXTA · Volver a solo APC"
+    _reset_apc_perf()
     _update_camera()
+
+func _reset_apc_perf() -> void:
+    if _apc_stress_count<=0:
+        return
+    var label_text: String=("MIXTO" if _apc_mixed_enabled else "SOLO_APC")
+    _apc_perf.reset(label_text,_apc_stress_count,_apc_tactical_lod)
+
+func _archive_apc_perf() -> String:
+    if int(_apc_perf.report()["sample_count"])==0:
+        return ""
+    var report_data: Dictionary=_apc_perf.report()
+    var path: String="user://tarvoka_perf_%s_%d_%s_%d.json" % [
+        str(report_data["label"]),int(report_data["units"]),
+        "lod" if bool(report_data["tactical_lod"]) else "full",
+        int(Time.get_unix_time_from_system())]
+    if _apc_perf.save(path):
+        print("TARVOKA FPS BENCHMARK: %s | %s" % [path,_apc_perf.as_json()])
+        return path
+    return ""
+
+func _save_apc_perf() -> void:
+    var path: String=_archive_apc_perf()
+    if path.is_empty():
+        apc_stress_label.text="Primero ejecuta la prueba durante al menos 0,5 segundos"
+        return
+    DisplayServer.clipboard_set(_apc_perf.as_json())
+    apc_stress_label.text=("Informe guardado en %s · JSON enviado al portapapeles"
+        % path)
 
 func _update_apc_stress(delta: float) -> void:
     _apc_stress_elapsed+=maxf(delta,0.0)
     _apc_stress_sample+=maxf(delta,0.0)
+    _apc_perf.add(delta,float(Engine.get_frames_per_second()),
+        Performance.get_monitor(
+            Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+        Performance.get_monitor(Performance.MEMORY_STATIC))
     # A real moving subset plus smoke/fire on damaged units: no stand-ins.
     var progress: float=fposmod(_apc_stress_elapsed,APCVisual.MOVE_DURATION) / APCVisual.MOVE_DURATION
     for i in range(_apc_stress_units.size()):
@@ -1259,8 +1304,11 @@ func _update_apc_stress(delta: float) -> void:
             Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
         var scenario: String=(
             " + 8 G09 + 8 HQ" if _apc_mixed_enabled else "")
-        apc_stress_label.text=("%d APC%s · %.0f FPS reales · %.0f llamadas de dibujo · %s"
-            % [_apc_stress_count,scenario,Engine.get_frames_per_second(),draws,
+        var data: Dictionary=_apc_perf.report()
+        apc_stress_label.text=(
+            "%d APC%s · %.0f FPS · p10 %.0f · %.0f dibujos · RAM pico %.0f MiB · %s"
+            % [_apc_stress_count,scenario,Engine.get_frames_per_second(),
+                float(data["fps_p10"]),draws,float(data["memory_mib_peak"]),
                 "LOD TÁCTICO" if _apc_tactical_lod else "DETALLE COMPLETO"])
 
 func _set_apc_damage(stage: int) -> void:
