@@ -14,6 +14,17 @@ var selected: Dictionary = Identity.defaults()
 var faction_buttons: Array[Button] = []
 var faction_card_emblems: Array[TextureRect] = []
 var side_buttons: Array[Button] = []
+var side_commander_portraits: Array[TextureRect] = []
+var side_emblems: Array[TextureRect] = []
+var faction_assignment_labels: Array[Label] = []
+var faction_color_bars: Array[ColorRect] = []
+var header_note: Label
+var header_title: Label
+var header_back_button: Button
+var dossier_balance_note: Label
+var compact_landscape := false
+var faction_grid: GridContainer
+var matchup_caption: Label
 var content_rail: BoxContainer
 var preview_title: Label
 var preview_motif: Label
@@ -50,7 +61,7 @@ func _ready() -> void:
     var frame := VBoxContainer.new()
     frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    frame.add_theme_constant_override("separation",10)
+    frame.add_theme_constant_override("separation",8)
     add_child(frame)
 
     header_row = BoxContainer.new()
@@ -60,33 +71,63 @@ func _ready() -> void:
     overline.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header_row.add_child(overline)
     var title := Label.new()
-    title.text = "TARVOKA  /  ELEGIR FACCIONES"
+    title.text = "TARVOKA  /  FACCIONES Y COMANDANTES"
+    header_title = title
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title.add_theme_color_override("font_color",Chrome.GOLD)
     title.add_theme_font_size_override("font_size",23)
     overline.add_child(title)
     var note := Label.new()
-    note.text = "Ocho identidades oficiales · dos bandos en esta escaramuza"
+    note.text = "Ocho facciones originales · elige los dos mandos de tu escaramuza"
     note.add_theme_color_override("font_color",Chrome.MUTED)
     note.add_theme_font_size_override("font_size",13)
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     overline.add_child(note)
+    header_note = note
     var back := Button.new()
-    back.text = "Volver"
-    back.custom_minimum_size = Vector2(82,50)
+    back.text = "‹ VOLVER A ESCARAMUZA"
+    back.custom_minimum_size = Vector2(170,50)
     back.pressed.connect(func(): back_requested.emit())
+    header_back_button = back
     Chrome.emphasize(back,"secondary")
     header_row.add_child(back)
 
     sides_row = BoxContainer.new()
     sides_row.add_theme_constant_override("separation",8)
     frame.add_child(sides_row)
+    # Each side displays the original commander and shield at all times.
     for side in range(2):
+        var side_card := PanelContainer.new()
+        side_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        side_card.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#0D293B"),Chrome.EDGE,7,7))
+        sides_row.add_child(side_card)
+        var side_row := HBoxContainer.new()
+        side_row.add_theme_constant_override("separation",6)
+        side_card.add_child(side_row)
+        var side_portrait := TextureRect.new()
+        side_portrait.name = "RetratoOficialBando%d" % side
+        side_portrait.custom_minimum_size = Vector2(61,60)
+        side_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        side_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        side_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        side_row.add_child(side_portrait)
+        side_commander_portraits.append(side_portrait)
+        var crest := TextureRect.new()
+        crest.name = "EscudoOficialBando%d" % side
+        crest.custom_minimum_size = Vector2(45,45)
+        crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        side_row.add_child(crest)
+        side_emblems.append(crest)
         var side_button := Button.new()
-        side_button.custom_minimum_size.y = 47
+        side_button.name = "EditarBando%d" % side
+        side_button.custom_minimum_size.y = 51
         side_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        side_button.clip_text = true
         side_button.pressed.connect(_choose_side.bind(side))
-        sides_row.add_child(side_button)
+        side_row.add_child(side_button)
         side_buttons.append(side_button)
 
     scroll = ScrollContainer.new()
@@ -101,6 +142,7 @@ func _ready() -> void:
 
     var chooser := PanelContainer.new()
     chooser.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    chooser.size_flags_stretch_ratio = 1.15
     chooser.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#102736"),Chrome.EDGE,9,11))
     content_rail.add_child(chooser)
@@ -113,16 +155,34 @@ func _ready() -> void:
     heading.add_theme_color_override("font_color",Chrome.GOLD)
     heading.add_theme_font_size_override("font_size",16)
     chooser_col.add_child(heading)
+    var instructions := Label.new()
+    instructions.text = "OCHO FACCIONES · PULSA UN ESCUDO PARA ASIGNARLO"
+    instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    instructions.add_theme_color_override("font_color",Chrome.MUTED)
+    instructions.add_theme_font_size_override("font_size",11)
+    chooser_col.add_child(instructions)
+    faction_grid = GridContainer.new()
+    faction_grid.name = "GaleriaDeOchoFacciones"
+    faction_grid.columns = 2
+    faction_grid.add_theme_constant_override("h_separation",6)
+    faction_grid.add_theme_constant_override("v_separation",6)
+    chooser_col.add_child(faction_grid)
     for i in range(Style.FACTIONS.size()):
         var info: Dictionary = Style.faction_info(i)
+        var card := PanelContainer.new()
+        card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        card.add_theme_stylebox_override("panel",
+            Chrome.box_style(Color("#0D2534"),Style.faction_color(i),6,5))
+        faction_grid.add_child(card)
         var row := HBoxContainer.new()
-        row.add_theme_constant_override("separation",8)
-        chooser_col.add_child(row)
+        row.add_theme_constant_override("separation",4)
+        card.add_child(row)
         var color_block := ColorRect.new()
-        color_block.custom_minimum_size = Vector2(11,50)
+        color_block.custom_minimum_size = Vector2(5,53)
         color_block.color = Style.faction_color(i)
         color_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_child(color_block)
+        faction_color_bars.append(color_block)
         # Show the actual approved shield on each selectable faction row,
         # not a generic placeholder or a recreated symbol.
         var emblem := TextureRect.new()
@@ -134,18 +194,26 @@ func _ready() -> void:
         row.add_child(emblem)
         faction_card_emblems.append(emblem)
         var choice := Button.new()
-        choice.text = str(info["name"]) + "  ·  " + str(info["motif"])
+        choice.text = str(info["name"])
         choice.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        choice.custom_minimum_size.y = 50
+        choice.custom_minimum_size = Vector2(104,52)
         choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         choice.clip_text = true
         choice.tooltip_text = str(info["name"]) + " — " + str(info["motif"])
         choice.pressed.connect(_choose_faction.bind(i))
         row.add_child(choice)
         faction_buttons.append(choice)
+        var assigned := Label.new()
+        assigned.name = "Asignado%d" % i
+        assigned.add_theme_font_size_override("font_size",10)
+        assigned.add_theme_color_override("font_color",Chrome.GOLD)
+        assigned.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        row.add_child(assigned)
+        faction_assignment_labels.append(assigned)
 
     var dossier := PanelContainer.new()
     dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    dossier.size_flags_stretch_ratio = 0.85
     dossier.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#0C2030"),Chrome.EDGE_BRIGHT,10,13))
     content_rail.add_child(dossier)
@@ -154,7 +222,7 @@ func _ready() -> void:
     dossier_col.add_theme_constant_override("separation",5)
     dossier.add_child(dossier_col)
     var dossier_kicker := Label.new()
-    dossier_kicker.text = "DOSSIER DE MANDO"
+    dossier_kicker.text = "DOSSIER DE COMANDANTE  /  ARTE OFICIAL"
     dossier_kicker.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_kicker.add_theme_font_size_override("font_size",16)
     dossier_col.add_child(dossier_kicker)
@@ -177,7 +245,7 @@ func _ready() -> void:
     var portrait_center := CenterContainer.new()
     portrait_shell.add_child(portrait_center)
     var portrait_box := Control.new()
-    portrait_box.custom_minimum_size = Vector2(122,122)
+    portrait_box.custom_minimum_size = Vector2(135,135)
     portrait_center.add_child(portrait_box)
     emblem_display_box = portrait_box
     portrait_fallback = ColorRect.new()
@@ -209,7 +277,7 @@ func _ready() -> void:
     var commander_center := CenterContainer.new()
     commander_shell.add_child(commander_center)
     var commander_box := Control.new()
-    commander_box.custom_minimum_size = Vector2(122,122)
+    commander_box.custom_minimum_size = Vector2(178,135)
     commander_center.add_child(commander_box)
     commander_display_box = commander_box
     commander_fallback = ColorRect.new()
@@ -238,7 +306,7 @@ func _ready() -> void:
     preview_motif.add_theme_color_override("font_color",Chrome.TEXT)
     dossier_col.add_child(preview_motif)
     preview_commander = Label.new()
-    preview_commander.text = "COMANDANTE\nRetrato aprobado: pendiente de incorporar como archivo al proyecto."
+    preview_commander.text = "COMANDANTE  ·  RETRATO OFICIAL"
     preview_commander.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     preview_commander.add_theme_color_override("font_color",Chrome.MUTED)
     dossier_col.add_child(preview_commander)
@@ -248,18 +316,25 @@ func _ready() -> void:
     selection_status.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_col.add_child(selection_status)
     var balance := Label.new()
-    balance.text = "Identidad y colores oficiales. Los poderes de comandante se integrarán por separado."
+    balance.text = "Identidad visual oficial. Este selector no altera estadísticas ni desbloquea poderes adicionales."
     balance.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     balance.add_theme_color_override("font_color",Chrome.MUTED)
     balance.add_theme_font_size_override("font_size",12)
     dossier_col.add_child(balance)
+    dossier_balance_note = balance
 
     confirm_button = Button.new()
-    confirm_button.text = "CONFIRMAR BANDOS  ·  CONTINUAR"
-    confirm_button.custom_minimum_size.y = 56
+    confirm_button.text = "CONFIRMAR FACCIONES  ·  VOLVER A ESCARAMUZA"
+    confirm_button.custom_minimum_size.y = 58
     confirm_button.pressed.connect(_confirm)
     Chrome.emphasize(confirm_button,"primary")
     frame.add_child(confirm_button)
+    matchup_caption = Label.new()
+    matchup_caption.name = "ResumenDeFacciones"
+    matchup_caption.add_theme_font_size_override("font_size",11)
+    matchup_caption.add_theme_color_override("font_color",Chrome.MUTED)
+    matchup_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    frame.add_child(matchup_caption)
     get_viewport().size_changed.connect(_reflow)
     call_deferred("_reflow")
     _refresh()
@@ -300,14 +375,30 @@ func _refresh() -> void:
     if preview_title == null:
         return
     for side in range(2):
-        var name: String = str(Style.faction_info(Identity.index_for(str(selected[str(side)]))).get("name",""))
-        side_buttons[side].text = ("%s: %s" % ["JUGADOR" if side == 0 else "RIVAL",name])
+        var side_index: int = Identity.index_for(str(selected[str(side)]))
+        var name: String = str(Style.faction_info(side_index).get("name",""))
+        side_buttons[side].text = ("%s · %s" % ["JUGADOR" if side == 0 else "RIVAL",name])
+        if compact_landscape:
+            side_buttons[side].text = "JUGADOR" if side == 0 else "RIVAL"
+        side_buttons[side].tooltip_text = "Cambiar la facción de %s" % name
+        side_commander_portraits[side].texture = Style.commander_texture(side_index)
+        side_emblems[side].texture = Style.emblem_texture(side_index)
         Chrome.emphasize(side_buttons[side],"primary" if side == active_side else "secondary")
     var idx: int = Identity.index_for(str(selected[str(active_side)]))
     var data: Dictionary = Style.faction_info(idx)
     var color: Color = Style.faction_color(idx)
     for i in range(faction_buttons.size()):
-        faction_buttons[i].text = ("✓  " if i == idx else "     ") + str(Style.FACTIONS[i]["name"])
+        var key: String = str(Style.FACTIONS[i]["key"])
+        var allocated: String = (
+            "AZUL" if str(selected["0"]) == key else
+            ("ROJO" if str(selected["1"]) == key else ""))
+        faction_buttons[i].text = ("✓ " if i == idx else "") + str(Style.FACTIONS[i]["name"])
+        if compact_landscape:
+            faction_buttons[i].text = ("✓ " if i == idx else "") + [
+                "Alianza","Escarlata","Verde","Solar",
+                "Violeta","Ámbar","Turquesa","Ónix"][i]
+        faction_buttons[i].tooltip_text = str(Style.FACTIONS[i]["name"]) + " · " + str(Style.FACTIONS[i]["motif"])
+        faction_assignment_labels[i].text = allocated
         Chrome.emphasize(faction_buttons[i],"primary" if i == idx else "secondary")
     preview_title.text = str(data.get("name",""))
     preview_title.add_theme_color_override("font_color",color.lightened(0.23))
@@ -329,8 +420,12 @@ func _refresh() -> void:
         commander_fallback.color = color.darkened(0.78)
     preview_commander.text = ("COMANDANTE · Retrato oficial" if approved_commander != null else
         "COMANDANTE · Retrato pendiente")
-    selection_status.text = "BANDO %d  /  %s" % [active_side+1,str(data.get("name",""))]
+    selection_status.text = "EDITANDO %s  /  %s" % ["JUGADOR" if active_side == 0 else "RIVAL",str(data.get("name",""))]
     confirm_button.disabled = not Identity.is_valid(selected)
+    if matchup_caption != null:
+        var player_name: String = str(Style.faction_info(Identity.index_for(str(selected["0"]))).get("name",""))
+        var rival_name: String = str(Style.faction_info(Identity.index_for(str(selected["1"]))).get("name",""))
+        matchup_caption.text = "%s   VS   %s    ·    SIN ALTERAR LA PARTIDA ACTUAL" % [player_name,rival_name]
 
 func _confirm() -> void:
     if Identity.is_valid(selected):
@@ -345,13 +440,64 @@ func reflow_for_size(viewport: Vector2) -> void:
     # Physical Android phones can be 1080px wide yet still be portrait.
     # Use aspect ratio as well as width, not a fixed desktop breakpoint.
     is_portrait_layout = viewport.y > viewport.x * 1.12
+    # Compact LANDSCAPE must be laid out by available height too. The old
+    # 2x4 roster would overflow inside Android's shorter browser/OS safe area.
+    compact_landscape = not is_portrait_layout and viewport.y <= 560.0
     content_rail.vertical = is_portrait_layout
+    if faction_grid != null:
+        faction_grid.columns = (
+            1 if is_portrait_layout else
+            (4 if compact_landscape and viewport.x >= 760.0 else 2))
     # Portrait headers and long real faction names cannot fit side-by-side.
     # Stack them instead of allowing "Volver" and "Rival" off-screen.
     if header_row != null:
         header_row.vertical = is_portrait_layout
     if sides_row != null:
         sides_row.vertical = is_portrait_layout
+    if header_note != null:
+        header_note.visible = not compact_landscape
+    if header_title != null:
+        header_title.add_theme_font_size_override(
+            "font_size",16 if compact_landscape else 23)
+    if header_back_button != null:
+        header_back_button.text = "‹ VOLVER" if compact_landscape else "‹ VOLVER A ESCARAMUZA"
+        header_back_button.custom_minimum_size = (
+            Vector2(88,44) if compact_landscape else Vector2(170,50))
+    for profile in side_commander_portraits:
+        profile.custom_minimum_size = (
+            Vector2(44,43) if compact_landscape else Vector2(61,60))
+    for crest in side_emblems:
+        crest.custom_minimum_size = (
+            Vector2(32,36) if compact_landscape else Vector2(45,45))
+    for side_button in side_buttons:
+        side_button.custom_minimum_size.y = 44 if compact_landscape else 51
+        side_button.add_theme_font_size_override(
+            "font_size",12 if compact_landscape else 16)
+    for strip in faction_color_bars:
+        strip.visible = not compact_landscape
+    for emblem in faction_card_emblems:
+        emblem.custom_minimum_size = (
+            Vector2(29,32) if compact_landscape else Vector2(50,50))
+    for button in faction_buttons:
+        button.custom_minimum_size = (
+            Vector2(56,44) if compact_landscape else Vector2(104,52))
+        button.add_theme_font_size_override(
+            "font_size",10 if compact_landscape else 15)
+    for assigned in faction_assignment_labels:
+        assigned.visible = not compact_landscape
+    if matchup_caption != null:
+        matchup_caption.visible = not compact_landscape
+    if dossier_balance_note != null:
+        dossier_balance_note.visible = not compact_landscape
+    if preview_motif != null:
+        preview_motif.visible = not compact_landscape
+    if preview_commander != null:
+        preview_commander.visible = not compact_landscape
+    if confirm_button != null:
+        confirm_button.custom_minimum_size.y = 48 if compact_landscape else 58
+        confirm_button.add_theme_font_size_override(
+            "font_size",13 if compact_landscape else 17)
+
     if chooser_card != null and dossier_card != null:
         if is_portrait_layout:
             content_rail.move_child(dossier_card,0)
@@ -360,13 +506,20 @@ func reflow_for_size(viewport: Vector2) -> void:
     for child in content_rail.get_children():
         if child is Control:
             child.custom_minimum_size.x = 0 if is_portrait_layout or viewport.x < 1000.0 else 310
-    var art_width: float = 82.0 if is_portrait_layout and viewport.x < 460.0 else (92.0 if viewport.x < 1000.0 else 122.0)
+    var art_width: float = (
+        82.0 if is_portrait_layout and viewport.x < 460.0 else
+        (82.0 if compact_landscape else
+        (104.0 if viewport.x < 1000.0 else 145.0)))
     if selection_status != null:
         selection_status.visible = not is_portrait_layout
     if emblem_display_box != null:
         emblem_display_box.custom_minimum_size = Vector2(art_width,art_width)
     if commander_display_box != null:
-        commander_display_box.custom_minimum_size = Vector2(art_width,art_width)
+        commander_display_box.custom_minimum_size = Vector2(
+            maxf(82.0,art_width),maxf(70.0,art_width*0.76))
+    # Restore truthful, full faction names and selection badges after resize.
+    # No changes to the engine's 2-side identities or confirmed save data.
+    _refresh()
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
