@@ -78,6 +78,11 @@ func _initialize() -> void:
         assert(result.is_empty(), "Structural corruption case %d unexpectedly restored" % i)
         assert(original["units"][0]["hp"] == 10)
         assert(original["units"][0]["pos"] == Vector2i(1,2))
+    # Root JSON values can parse successfully while still being invalid battle objects.
+    var invalid_roots: Array[String] = ["[]", "null"]
+    for payload in invalid_roots:
+        assert(Codec.decode(payload).is_empty(), "Non-object JSON root unexpectedly restored")
+        assert(original["units"][0]["hp"] == 10)
     assert(Codec.decode(encoded) == original)
-    print("PASS save structural corruption: %d malformed snapshots rejected" % cases.size())
+    print("PASS save structural corruption: %d malformed snapshots rejected" % (cases.size() + invalid_roots.size()))
     quit(0)
