@@ -74,9 +74,13 @@ func _run() -> void:
     var capture: Node = Captures.new()
     root.add_child(capture)
     capture.call("prepare")
-    for i in range(8):
+    for i in range(100):
+        if capture.captures_completed:
+            break
         await process_frame
     assert(capture.captures_completed)
+    assert(capture.capture_peak_viewports<=4)
+    assert(capture.capture_batches_finished==6)
     # 8 faction-specific tanks + 8 faction-specific APC P06 + 6 other roles.
     # The added APC renders are frozen; they must not change the G09 rig.
     assert(capture.baked_static_captures == 22)
