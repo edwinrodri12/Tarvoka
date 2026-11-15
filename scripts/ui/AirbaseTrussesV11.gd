@@ -141,7 +141,9 @@ static func _damage_breaks(hangar: Node3D,damage: int,
         var into_gap: float=1.0 if left_kept else -1.0
         var number: int=2 if damage==2 else 3
         for n in range(number):
-            var z: float=-2.15+float(n)*2.08 if damage==3 else                 -1.55+float(n)*2.89
+            var z: float=-1.55+float(n)*2.89
+            if damage==3:
+                z=-2.15+float(n)*2.08
             _bar(hanging,
                 Vector3(x,top-0.19,z),
                 Vector3(x+into_gap*(0.22+float(n%2)*0.10),
