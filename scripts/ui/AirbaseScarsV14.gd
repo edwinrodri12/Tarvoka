@@ -10,6 +10,8 @@ const V1=preload("res://scripts/ui/Airbase3DV1.gd")
 const V10=preload("res://scripts/ui/AirbaseStructureV10.gd")
 const V13=preload("res://scripts/ui/AirbaseImpactsV13.gd")
 const STAGE_NAME: String="MarcasPersistentesImpactosBaseAereaV14"
+signal mark_changed(surface: String,slot: int,attack: String)
+signal marks_cleared()
 const MAX_PER_SURFACE: int=3
 const SURFACES: Array[String]=["gate_metal","tower_concrete","hangar_roof"]
 const ATTACKS: Array[String]=["bullet","missile","bombardment"]
@@ -216,6 +218,7 @@ func add_mark(attack: String,surface: String) -> bool:
             Vector3.FORWARD if surface=="hangar_roof" else Vector3.UP)
         anchor.visible=true
         _counts[surface]=count+1
+        mark_changed.emit(surface,slot,attack)
     _history.append({"attack":attack,"surface":surface})
     return true
 
@@ -226,6 +229,7 @@ func clear_marks() -> void:
             var anchor: Node3D=face["root"] as Node3D
             anchor.visible=false
     _history.clear()
+    marks_cleared.emit()
 
 func restore(events: Array[Dictionary]) -> void:
     clear_marks()
