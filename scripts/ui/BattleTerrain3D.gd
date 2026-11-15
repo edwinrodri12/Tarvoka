@@ -12,6 +12,7 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -76,9 +77,17 @@ static func height_at(cells: Dictionary, cell: Vector2i,
     return SurfaceSampler.height(_cell_height(record),_corners(cells,cell),
         x,z,CELL*0.5)
 
-static func _tint(record: Dictionary) -> Color:
-    var tint: Color = COLORS.get(str(record.get("kind","unknown")),
-        COLORS["unknown"])
+static func _biome_color(kind: String,cell: Vector2i,
+        biome: String) -> Color:
+    if kind == "unknown":
+        return COLORS["unknown"]
+    if biome == Biomes.TEMPERATE:
+        return COLORS.get(kind,COLORS["plain"])
+    return Biomes.tile_color(kind,cell.x,cell.y,biome)
+
+static func _tint(record: Dictionary,biome: String = Biomes.TEMPERATE) -> Color:
+    var tint: Color = _biome_color(str(record.get("kind","unknown")),
+        record.get("cell",Vector2i.ZERO),biome)
     if not bool(record.get("visible",false)) and bool(record.get("seen",false)):
         tint = tint.darkened(0.60)
     return tint
@@ -88,7 +97,8 @@ static func _tint(record: Dictionary) -> Color:
 # to a shared corner, and unexplored tiles never enter the sample.
 # Water reads as alluvial shoreline and roads as a dusty verge, instead of
 # spilling water-blue or dark asphalt across the surrounding ground.
-static func _shared_corner_tint(cells: Dictionary, corner: Vector2i) -> Color:
+static func _shared_corner_tint(cells: Dictionary, corner: Vector2i,
+        biome: String = Biomes.TEMPERATE) -> Color:
     var total := Color(0.0,0.0,0.0,0.0)
     var weight_sum := 0.0
     for dy in [-1,0]:
@@ -97,24 +107,27 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i) -> Color:
             if not bool(tile.get("details",false)):
                 continue
             var kind: String = str(tile.get("kind","unknown"))
-            var tint: Color = COLORS.get(kind,COLORS["plain"])
+            var tint: Color = _biome_color(
+                kind,corner+Vector2i(dx,dy),biome)
             var weight := 1.0
             if kind == "water":
-                tint = Color("#bbaa89")
+                tint = Color("#c6dce0") if biome == Biomes.WINTER else (
+                    Color("#bbaa89") if biome != Biomes.COASTAL else Color("#7aa99b"))
                 weight = 0.74
             elif kind == "road":
-                tint = Color("#999481")
+                tint = Color("#abbac0") if biome == Biomes.WINTER else (
+                    Color("#999481") if biome != Biomes.CANYON else Color("#b79b76"))
                 weight = 0.88
             total += tint*weight
             weight_sum += weight
     if weight_sum <= 0.0:
-        return COLORS["plain"]
+        return _biome_color("plain",corner,biome)
     return total*(1.0/weight_sum)
 
 static func _cached_corner_tint(cells: Dictionary,corner: Vector2i,
-        cache: Dictionary) -> Color:
+        cache: Dictionary,biome: String = Biomes.TEMPERATE) -> Color:
     if not cache.has(corner):
-        cache[corner] = _shared_corner_tint(cells,corner)
+        cache[corner] = _shared_corner_tint(cells,corner,biome)
     return cache[corner]
 
 static func _vertex(tool: SurfaceTool, at: Vector3,
@@ -154,8 +167,27 @@ static func _finish(parent: Node3D, label: String,
     mesh.material_override = mat
     parent.add_child(mesh)
 
+static func _road_color(biome: String) -> Color:
+    if biome == Biomes.WINTER:
+        return Biomes.ROAD_DARK
+    if biome == Biomes.CANYON:
+        return Color("#777068")
+    if biome == Biomes.COASTAL:
+        return Color("#56676b")
+    return Color("#5f6566")
+
+static func _shore_color(biome: String) -> Color:
+    if biome == Biomes.WINTER:
+        return Biomes.FROZEN_SHORE
+    if biome == Biomes.CANYON:
+        return Color("#c5a980")
+    if biome == Biomes.COASTAL:
+        return Color("#7fa896")
+    return Color("#c4b18d")
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
-        cells: Dictionary,corner_cache: Dictionary) -> Dictionary:
+        cells: Dictionary,corner_cache: Dictionary,
+        biome: String = Biomes.TEMPERATE) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -174,7 +206,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var kind: String = str(tile["kind"])
         var at: Vector3 = world_at(cell)
         var half: float = CELL*0.5
-        var tinted: Color = _tint(tile)
+        var tinted: Color = _tint(tile,biome)
         if kind == "unknown":
             var flat: Vector3 = at+Vector3(0,FOG_LEVEL,0)
             _panel(unknown,flat+Vector3(-half,0,-half),
@@ -197,10 +229,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         # No new geometry or draw calls: only vertex pigments change.
         # Explored but not presently visible tiles stay uniformly dim.
         if bool(tile.get("details",false)):
-            var nw_tint: Color = _cached_corner_tint(cells,cell,corner_cache)
-            var ne_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,0),corner_cache)
-            var se_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,1),corner_cache)
-            var sw_tint: Color = _cached_corner_tint(cells,cell+Vector2i(0,1),corner_cache)
+            var nw_tint: Color = _cached_corner_tint(cells,cell,corner_cache,biome)
+            var ne_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,0),corner_cache,biome)
+            var se_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,1),corner_cache,biome)
+            var sw_tint: Color = _cached_corner_tint(cells,cell+Vector2i(0,1),corner_cache,biome)
             _tri_tinted(ground,nw,middle,ne,nw_tint,tinted,ne_tint)
             _tri_tinted(ground,ne,middle,se,ne_tint,tinted,se_tint)
             _tri_tinted(ground,se,middle,sw,se_tint,tinted,sw_tint)
@@ -221,20 +253,20 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         if kind == "road":
             var width := 0.70
             RoadShore._rect(road,at,surface_cell,-width,width,-width,width,
-                Color("#5f6566"),ROAD_LIFT)
+                _road_color(biome),ROAD_LIFT)
             var roads: Dictionary = tile["roads"]
             if bool(roads["north"]):
                 RoadShore._rect(road,at,surface_cell,-width,width,-half,-width,
-                    Color("#5f6566"),ROAD_LIFT)
+                    _road_color(biome),ROAD_LIFT)
             if bool(roads["south"]):
                 RoadShore._rect(road,at,surface_cell,-width,width,width,half,
-                    Color("#5f6566"),ROAD_LIFT)
+                    _road_color(biome),ROAD_LIFT)
             if bool(roads["west"]):
                 RoadShore._rect(road,at,surface_cell,-half,-width,-width,width,
-                    Color("#5f6566"),ROAD_LIFT)
+                    _road_color(biome),ROAD_LIFT)
             if bool(roads["east"]):
                 RoadShore._rect(road,at,surface_cell,width,half,-width,width,
-                    Color("#5f6566"),ROAD_LIFT)
+                    _road_color(biome),ROAD_LIFT)
             roads_count += 1
         else:
             var shore_edges: Dictionary = tile["shore"]
@@ -244,16 +276,16 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
                 var off: float = half-0.22
                 if key=="north":
                     RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        -half+0.04,-off,Color("#c4b18d"),0.033)
+                        -half+0.04,-off,_shore_color(biome),0.033)
                 elif key=="south":
                     RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        off,half-0.04,Color("#c4b18d"),0.033)
+                        off,half-0.04,_shore_color(biome),0.033)
                 elif key=="west":
                     RoadShore._rect(shore,at,surface_cell,-half+0.04,-off,
-                        -half+0.12,half-0.12,Color("#c4b18d"),0.033)
+                        -half+0.12,half-0.12,_shore_color(biome),0.033)
                 else:
                     RoadShore._rect(shore,at,surface_cell,off,half-0.04,
-                        -half+0.12,half-0.12,Color("#c4b18d"),0.033)
+                        -half+0.12,half-0.12,_shore_color(biome),0.033)
                 shores_count += 1
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
@@ -280,7 +312,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         "roads":roads_count,"shore_edges":shores_count,
         "blended_tiles":blended_count}
 
-static func _make_cone_trees(parent: Node3D,cells: Dictionary) -> int:
+static func _make_cone_trees(parent: Node3D,cells: Dictionary,
+        biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
     for cell in cells:
         var tile: Dictionary = cells[cell]
@@ -297,7 +330,10 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary) -> int:
     mesh.height = 1.02
     mesh.radial_segments = 7
     var mat := StandardMaterial3D.new()
-    mat.albedo_color = Color("#37684d")
+    mat.albedo_color = (
+        Color("#405e54") if biome == Biomes.WINTER else
+        Color("#7e7656") if biome == Biomes.CANYON else
+        Color("#31715c") if biome == Biomes.COASTAL else Color("#37684d"))
     mat.roughness = 0.94
     mesh.material = mat
     var group := MultiMesh.new()
@@ -310,7 +346,64 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary) -> int:
     draw.name = "BosqueInstanciado3D"
     draw.multimesh = group
     parent.add_child(draw)
+    if biome == Biomes.WINTER:
+        var cap := CylinderMesh.new()
+        cap.top_radius = 0.0
+        cap.bottom_radius = 0.21
+        cap.height = 0.28
+        cap.radial_segments = 7
+        var frost := StandardMaterial3D.new()
+        frost.albedo_color = Biomes.SNOW
+        frost.roughness = 0.99
+        cap.material = frost
+        var snow := MultiMesh.new()
+        snow.transform_format = MultiMesh.TRANSFORM_3D
+        snow.mesh = cap
+        snow.instance_count = positions.size()
+        for i in range(positions.size()):
+            snow.set_instance_transform(i,Transform3D(Basis.IDENTITY,
+                positions[i].origin+Vector3(0,0.42,0)))
+        var snow_draw := MultiMeshInstance3D.new()
+        snow_draw.name = "NieveEnConiferasInstanciadaV20"
+        snow_draw.multimesh = snow
+        parent.add_child(snow_draw)
     return positions.size()
+
+# Terrain-owned mountain ridges: one instanced mesh for all visible rock
+# cells, rather than separate triangles floating UNDER the terrain mesh.
+# Decorative ridges never affect logical movement, fog or tap raycasting.
+static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
+        biome: String) -> int:
+    var transforms: Array[Transform3D] = []
+    for cell in cells:
+        var tile: Dictionary = cells[cell]
+        if str(tile.get("kind",""))!="mountain" or not bool(tile.get("details",false)):
+            continue
+        var base: Vector3 = world_at(cell)
+        base.y = height_at(cells,cell)+0.35
+        transforms.append(Transform3D(Basis.IDENTITY,base))
+    if transforms.is_empty():
+        return 0
+    var peaks := CylinderMesh.new()
+    peaks.top_radius = 0.08
+    peaks.bottom_radius = 0.62
+    peaks.height = 0.85
+    peaks.radial_segments = 8
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = _biome_color("mountain",Vector2i(2,2),biome)
+    mat.roughness = 0.96
+    peaks.material = mat
+    var multi := MultiMesh.new()
+    multi.mesh = peaks
+    multi.transform_format = MultiMesh.TRANSFORM_3D
+    multi.instance_count = transforms.size()
+    for i in range(transforms.size()):
+        multi.set_instance_transform(i,transforms[i])
+    var rock := MultiMeshInstance3D.new()
+    rock.name = "Macizos3DPorBiomaV20"
+    rock.multimesh = multi
+    parent.add_child(rock)
+    return transforms.size()
 
 static func _make_sites(parent: Node3D,state: Dictionary,
         cells: Dictionary) -> int:
@@ -418,6 +511,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "") -> Node3D:
+    var biome: String = Biomes.from_state(state)
     var terrain: Array = state.get("terrain",[])
     if not Rules.valid_terrain(terrain):
         return null
@@ -446,19 +540,24 @@ static func build(state: Dictionary, selected_id: String = "") -> Node3D:
     # tiles and across 8x8 sectors. Cache only for this render build.
     var corner_cache: Dictionary = {}
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,biome)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
-    counters["trees"] = _make_cone_trees(scene,cells)
+    counters["trees"] = _make_cone_trees(scene,cells,biome)
+    counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
     counters["units"] = _make_units(scene,state,cells,selected_id)
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.
     counters["terrain_blend_extra_batches"] = 0
+    counters["biome_extra_batches"] = (
+        1 if counters["mountain_ridges"]>0 else 0) + (
+        1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
     counters["terrain_blend_palette_samples"] = corner_cache.size()
     scene.set_meta("board_size",dims)
     scene.set_meta("visual_only",true)
+    scene.set_meta("visual_biome",biome)
     scene.set_meta("public_cells",cells)
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)
