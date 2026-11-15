@@ -8,6 +8,7 @@ class_name TarvokaAirbaseImpactsV13
 # 3 approach streaks and 3 surface marks. No OmniLights or new particles.
 const V1 = preload("res://scripts/ui/Airbase3DV1.gd")
 const V10 = preload("res://scripts/ui/AirbaseStructureV10.gd")
+const SOFT_SMOKE = preload("res://assets/shaders/airbase_soft_smoke_v4.gdshader")
 const STAGE_NAME := "ImpactosBalasMisilesBombardeosSuperficiesV13"
 const KINDS := ["bullet","missile","bombardment"]
 const TARGETS := ["gate_metal","tower_concrete","hangar_roof"]
@@ -21,6 +22,7 @@ const BOMBARD_DURATION := 2.40
 var damage_stage: int = 0
 var _sparks: MultiMeshInstance3D
 var _chips: MultiMeshInstance3D
+var _smoke_material: ShaderMaterial
 var _flashes: Array[MeshInstance3D] = []
 var _waves: Array[MeshInstance3D] = []
 var _smokes: Array[MeshInstance3D] = []
@@ -125,14 +127,20 @@ func _ready() -> void:
     flash_mesh.rings=6
     var ring_mesh:=TorusMesh.new()
     ring_mesh.inner_radius=0.69
-    ring_mesh.outer_radius=0.79
+    ring_mesh.outer_radius=0.755
     ring_mesh.rings=10
     ring_mesh.ring_segments=14
     var smoke_mesh:=SphereMesh.new()
     smoke_mesh.radius=0.42
     smoke_mesh.height=0.84
-    smoke_mesh.radial_segments=10
-    smoke_mesh.rings=5
+    smoke_mesh.radial_segments=12
+    smoke_mesh.rings=7
+    _smoke_material=ShaderMaterial.new()
+    _smoke_material.shader=SOFT_SMOKE
+    _smoke_material.set_shader_parameter("smoke_tint",
+        Color(0.27,0.31,0.34,0.47))
+    _smoke_material.set_shader_parameter("drift_speed",0.17)
+    _smoke_material.set_shader_parameter("edge_breakup",1.35)
     var streak_mesh:=CylinderMesh.new()
     streak_mesh.height=1.25
     streak_mesh.top_radius=0.025
@@ -149,11 +157,11 @@ func _ready() -> void:
         add_child(flash)
         _flashes.append(flash)
         var ring:=_mesh_instance("OndaPresionV13_%d" % index,
-            ring_mesh,_material(Color(0.92,0.75,0.51,0.62),1.0,true))
+            ring_mesh,_material(Color(0.81,0.82,0.83,0.43),0.40,true))
         add_child(ring)
         _waves.append(ring)
         var smoke:=_mesh_instance("PolvoYHumoV13_%d" % index,
-            smoke_mesh,_material(Color(0.32,0.35,0.38,0.48),0.0,true))
+            smoke_mesh,_smoke_material)
         add_child(smoke)
         _smokes.append(smoke)
         var streak:=_mesh_instance("EstelaMisilV13_%d" % index,
@@ -213,6 +221,12 @@ func trigger(kind: String,surface: String) -> bool:
     _kind=kind
     _target=surface
     _impact=surface_position(surface)
+    var smoke_tint: Color=Color(0.25,0.28,0.30,0.50)
+    if surface=="tower_concrete":
+        smoke_tint=Color(0.49,0.49,0.46,0.51)
+    elif surface=="hangar_roof":
+        smoke_tint=Color(0.31,0.34,0.37,0.47)
+    _smoke_material.set_shader_parameter("smoke_tint",smoke_tint)
     _duration=BULLET_DURATION if kind=="bullet" else (
         MISSILE_DURATION if kind=="missile" else BOMBARD_DURATION)
     _elapsed=0.0
@@ -317,7 +331,7 @@ func _render(time: float) -> void:
         ring.position=target
         ring.rotation_degrees=Vector3(
             90,0,0) if _target!="hangar_roof" else Vector3.ZERO
-        ring.scale=Vector3.ONE*(0.20+2.50*wave)
+        ring.scale=Vector3.ONE*(0.20+2.12*wave)
         ring.transparency=wave
         var smoke: MeshInstance3D=_smokes[index]
         smoke.visible=after<1.12
@@ -334,7 +348,6 @@ func _render(time: float) -> void:
 
     # A missile is one directed strike; bombardment distributes a second
     # chip stream among all three staggered impacts.
-    var impact_count: int=1 if _kind=="missile" else BLASTS
     var after_first: float=time-0.20
     if after_first>=0.0 and after_first<1.33:
         var spread: float=1.15 if _kind=="missile" else 1.48
