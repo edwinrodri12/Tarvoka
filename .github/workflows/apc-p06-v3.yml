@@ -14,6 +14,7 @@ on:
       - "tests/test_android_benchmark_suite_v2.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_detail_v5.gd"
       - "tests/test_apc_p06_v3_stress.gd"
       - "tests/test_apc_p06_studio_stress.gd"
       - "tests/test_mixed_eight_faction_art_stress.gd"
@@ -33,6 +34,7 @@ on:
       - "tests/test_android_benchmark_suite_v2.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_detail_v5.gd"
       - "tests/test_apc_p06_v3_stress.gd"
       - "tests/test_apc_p06_studio_stress.gd"
       - "tests/test_mixed_eight_faction_art_stress.gd"
@@ -83,6 +85,17 @@ jobs:
             tarvoka_apc_p06_v2_antes.png; do
             test -s "artifacts/$name"
           done
+      - name: Verify genuine Bastion P06 V5 mesh finishing and editable Godot views
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 170s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_detail_v5.gd 2>&1 | tee /tmp/apc-v5-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v5-native.log; then exit 1; fi
+          grep -q 'PASS TARVOKA APC P06 V5 REAL MODEL:' /tmp/apc-v5-native.log
+          test -s artifacts/tarvoka_apc_p06_v3_v5_real_godot_views.png
       - name: Stress render 32 real APC V3 vehicles across eight factions
         shell: bash
         run: |
@@ -211,6 +224,7 @@ jobs:
           name: TARVOKA-APC-P06-V3-Roof-Turret-5-Damage-Stages
           path: |
             artifacts/tarvoka_apc_p06_v3_*.png
+            artifacts/tarvoka_apc_p06_v3_v5_real_godot_views.png
             artifacts/tarvoka_apc_p06_v2_antes.png
             artifacts/TARVOKA_APC_P06_V3_Editable.glb
             artifacts/tarvoka_profiler_sample.json
