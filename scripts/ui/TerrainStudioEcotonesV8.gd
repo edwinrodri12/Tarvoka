@@ -6,6 +6,7 @@ class_name TarvokaTerrainStudioEcotonesV8
 # surfaces maximum across the entire 12x10 artistic study.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const NEIGHBORS := [
     Vector2i(-1,0),Vector2i(1,0),Vector2i(0,-1),Vector2i(0,1)]
 
@@ -48,6 +49,7 @@ static func _talus(tool: SurfaceTool, cell: Dictionary, toward: Vector2i,
     var direction := Vector2(float(toward.x),float(toward.y))
     var tangent := Vector2(-direction.y,direction.x)
     var mineral: Color = (
+        Winter.FROSTED_STONE if scene == 3 else
         Color("#7b8c87") if scene == 0 else
         Color("#9d8975") if scene == 1 else Color("#889389"))
     var count := 5
@@ -87,6 +89,8 @@ static func _undergrowth(tool: SurfaceTool, cell: Dictionary,
         Color("#597e5b"),Color("#719069"),Color("#84957a")]
     if scene == 1:
         greens = [Color("#81765c"),Color("#9c896a"),Color("#6d8065")]
+    elif scene == 3:
+        greens = [Winter.SNOW_FOREST,Winter.HARDPACK,Winter.FROZEN_SHORE]
     var count := 7
     for i in range(count):
         var lateral: float = (_hash(seed+i*37)-0.5)*1.94
