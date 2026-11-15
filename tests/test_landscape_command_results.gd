@@ -131,6 +131,7 @@ func _run() -> void:
     main._open_objectives_radar()
     var radar: Control = main.objectives_panel
     assert(radar.visible and not menu.visible)
+    assert(radar.faction_mark.texture is AtlasTexture)
     assert(radar.tabs.get_tab_count() == 3)
     assert(radar.metric_labels.size() == 3)
     assert(radar.mission_label.text == str(radar._data.get("objective","")))
