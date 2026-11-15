@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
@@ -560,6 +561,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
         # clipping through another unit when both occupy the same cell.
         var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
+        if role=="apc" and APCTactical.has_model(model):
+            APCTactical.rebase(model)
         model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
