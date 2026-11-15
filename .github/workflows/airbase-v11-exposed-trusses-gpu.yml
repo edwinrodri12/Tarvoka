@@ -108,13 +108,17 @@ jobs:
             tarvoka_airbase_v11_inside_v10.png \
             tarvoka_airbase_v11_inside_v11.png \
             tarvoka_airbase_v11_roof_v11.png \
+            tarvoka_airbase_v11_cutaway_v10.png \
+            tarvoka_airbase_v11_cutaway_v11.png \
             tarvoka_airbase_v11_rear_v11.png \
             tarvoka_airbase_v11_exterior_v11.png \
             tarvoka_airbase_v11_medium_damage.png \
             tarvoka_airbase_v11_medium_roof.png \
+            tarvoka_airbase_v11_medium_cutaway.png \
             tarvoka_airbase_v11_medium_inside.png \
             tarvoka_airbase_v11_critical_inside.png \
             tarvoka_airbase_v11_critical_roof.png \
+            tarvoka_airbase_v11_critical_cutaway.png \
             tarvoka_airbase_v11_ruins.png \
             tarvoka_airbase_v11_winter.png; do
             test -s "artifacts/$image"
