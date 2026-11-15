@@ -11,6 +11,12 @@ const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const BastionDamage = preload("res://scripts/ui/BastionDamage3D.gd")
 const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
+# Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
+# running gear, V3 wear/damage and V5 integrated roof/optical finish.
+const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
+const APCArmorV2 = preload("res://scripts/ui/APCArmorV2.gd")
+const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -874,6 +880,15 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
+    # Studio-quality P06 is the actual sculpted V5 source, never the
+    # simplified P06 procedural prototype shown in the previous web release.
+    # Battle map LOD (art_level <= 10) stays lightweight by default.
+    if role == "apc" and finish_enabled and art_level >= 13:
+        var enamel: Color = faction_paint_color(faction)
+        if APCArtV1.apply(model,enamel):
+            if APCArmorV2.apply(model,enamel):
+                if APCFinishV3.apply(model,enamel):
+                    APCDetailV5.apply(model,enamel)
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
@@ -903,7 +918,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         TankDamage.prepare(model)
     elif role == "apc":
         apply_faction_palette(model,faction)
-        BastionDamage.prepare(model)
+        # Sculpted V5 owns its physical damage rig. Only the fallback P06
+        # prototype uses the original procedural 5-stage damage subsystem.
+        if not model.get_meta("tarvoka_apc_finish_v3",false):
+            BastionDamage.prepare(model)
     return model
 
 # Single entrypoint for battle/studio visual poses. No gameplay state is changed.
