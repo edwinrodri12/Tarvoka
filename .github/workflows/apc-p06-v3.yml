@@ -6,6 +6,8 @@ on:
     paths:
       - "scripts/ui/APC*.gd"
       - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitRender3D.gd"
+      - "tests/test_native_unit_models_3d.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
@@ -19,6 +21,8 @@ on:
     paths:
       - "scripts/ui/APC*.gd"
       - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitRender3D.gd"
+      - "tests/test_native_unit_models_3d.gd"
       - "scripts/ui/UnitArtStudioWeb.gd"
       - "tests/test_apc_p06_art_v3.gd"
       - "tests/test_apc_p06_v3_stress.gd"
@@ -141,6 +145,17 @@ jobs:
           test -s artifacts/tarvoka_mixed_64_apc_full.png
           test -s artifacts/tarvoka_mixed_64_apc_lod.png
           test -s artifacts/tarvoka_mixed_64_apc_hq_lod.png
+      - name: Verify actual battle atlas uses eight P06 V3 faction captures once
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 200s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_native_unit_models_3d.gd 2>&1 | tee /tmp/tarvoka-battle-p06-atlas.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-battle-p06-atlas.log; then exit 1; fi
+          grep -q 'PASS native 3D models:' /tmp/tarvoka-battle-p06-atlas.log
+          test -s artifacts/tarvoka_apc_p06_battle_8_factions.png
       - name: Export editable APC V3 model to true native GLB
         shell: bash
         run: |
@@ -175,5 +190,6 @@ jobs:
             artifacts/apc_p06_v3_stress_metrics_32.json
             artifacts/apc_p06_v3_stress_metrics_64.json
             artifacts/tarvoka_mixed_*.png
+            artifacts/tarvoka_apc_p06_battle_8_factions.png
             artifacts/tarvoka_mixed_*.json
           if-no-files-found: error
