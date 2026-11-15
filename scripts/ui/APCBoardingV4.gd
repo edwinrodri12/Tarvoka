@@ -19,6 +19,9 @@ const DURATION := 2.20
 const CAPACITY := 2
 const START := Vector3(0.0,0.09,2.48)
 const INSIDE := Vector3(0.0,0.56,0.80)
+# Tangible end of the physical hinge-mounted step; infantry climbs this
+# contact point before walking along the compartment floor.
+const RAMP_EDGE := Vector3(0.0,0.51,1.80)
 const CLOSED_DEGREES := 8.0
 const OPEN_DEGREES := 78.0
 
@@ -30,6 +33,16 @@ static func _apc(model: Node3D) -> Node3D:
     if model==null or not bool(model.get_meta("tarvoka_apc_sculpt_v1",false)):
         return null
     return model.find_child(ART_ROOT,true,false) as Node3D
+
+static func _walk_path(t: float, boarding: bool) -> Vector3:
+    var step: float=_smooth(t)
+    if boarding:
+        if step<=0.54:
+            return START.lerp(RAMP_EDGE,_smooth(step/0.54))
+        return RAMP_EDGE.lerp(INSIDE,_smooth((step-0.54)/0.46))
+    if step<=0.46:
+        return INSIDE.lerp(RAMP_EDGE,_smooth(step/0.46))
+    return RAMP_EDGE.lerp(START,_smooth((step-0.46)/0.54))
 
 static func _solid(hex: String,metal: float=0.1) -> StandardMaterial3D:
     var material:=StandardMaterial3D.new()
@@ -114,6 +127,15 @@ static func prepare(model: Node3D,faction: int=0) -> bool:
         return false
     if hull.find_child(RIG_ROOT,false,false)!=null:
         return true
+    # V1 sculpt left its antislip tread decoration detached from the ramp.
+    # Reparent it onto the REAL moving hinge so the surface follows when
+    # the carrier opens, without duplicating geometry or painted materials.
+    var hinge: Node3D=hull.find_child(HINGE,false,false) as Node3D
+    var tread: MeshInstance3D=hull.find_child("PeliculaAntideslizanteRampa",true,false) as MeshInstance3D
+    if hinge!=null and tread!=null and tread.get_parent()!=hinge:
+        tread.reparent(hinge,false)
+        tread.position=Vector3(0.0,0.39,-0.045)
+        tread.rotation=Vector3.ZERO
     # Limited, shared material library per model; no continuous allocation
     # during animation updates on Android.
     var uniform:=_solid("#899A8F")
@@ -223,8 +245,7 @@ static func pose(model: Node3D,kind: String,time: float) -> bool:
     if moving==null:
         return false
     moving.visible=t<1.0
-    moving.position=(START.lerp(INSIDE,step) if kind=="embark"
-        else INSIDE.lerp(START,step))
+    moving.position=_walk_path(step,kind=="embark")
     var gait: float=sin(step*TAU*2.5)*minf(1.0,sin(PI*step)*3.0)
     moving.position.y+=absf(gait)*0.024
     moving.rotation_degrees.y=0.0 if kind=="embark" else 180.0
