@@ -91,6 +91,13 @@ static func pose(model: Node3D,kind: String,t: float,
             ramp.rotation_degrees.x=78.0-70.0*_ease(t)
         "hit":
             model.rotation_degrees.z=sin(PI*t*5.0)*0.8*(1.0-t)
+        "hit_bullet":
+            # Light lateral jolt and return; no geometry or HP mutation.
+            model.rotation_degrees.z=sin(PI*t*8.0)*0.46*(1.0-t)
+        "hit_explosive":
+            # Heavy blast rocks the 6x6 and compresses its suspension.
+            model.rotation_degrees.z=sin(PI*t*4.0)*2.15*(1.0-t)
+            model.position.y-=0.052*sin(PI*t)
         _:
             pass
     if t>=1.0 and kind=="open_ramp":

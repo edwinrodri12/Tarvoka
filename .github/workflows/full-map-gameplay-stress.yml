@@ -1,0 +1,111 @@
+name: TARVOKA Full-Map Gameplay and AI Stress QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/**"
+      - "scripts/core/FactionTurnOrderV1.gd"
+      - "tests/test_eight_faction_turn_order_v1.gd"
+      - "scripts/core/FactionVisibilityV1.gd"
+      - "tests/test_eight_faction_fog_privacy_v1.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/VisualBudget.gd"
+      - "tests/test_large_map_gameplay_stress.gd"
+      - "tests/test_pathfinding_index_parity.gd"
+      - ".github/workflows/full-map-gameplay-stress.yml"
+  push:
+    branches:
+      - feat/apc-p06-v3-roof-armor-wear-damage-20261114
+    paths:
+      - "scripts/core/**"
+      - "scripts/core/FactionTurnOrderV1.gd"
+      - "tests/test_eight_faction_turn_order_v1.gd"
+      - "scripts/core/FactionVisibilityV1.gd"
+      - "tests/test_eight_faction_fog_privacy_v1.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "tests/test_large_map_gameplay_stress.gd"
+      - "tests/test_pathfinding_index_parity.gd"
+      - ".github/workflows/full-map-gameplay-stress.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  realistic-two-side-large-map:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/tarvoka-godot.zip
+          unzip -q /tmp/tarvoka-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import project and check all GDScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/large-battle-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' \
+            /tmp/large-battle-import.log; then exit 1; fi
+      - name: Test future eight-faction scheduler without altering legacy match rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_eight_faction_turn_order_v1.gd \
+            2>&1 | tee /tmp/turn-rotation-eight.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/turn-rotation-eight.log; then exit 1; fi
+          grep -q 'PASS TARVOKA FUTURE EIGHT-TURN ROTATION:' \
+            /tmp/turn-rotation-eight.log
+      - name: Verify future eight-faction fog does not leak rival intelligence
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_eight_faction_fog_privacy_v1.gd \
+            2>&1 | tee /tmp/eight-faction-fog-privacy.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/eight-faction-fog-privacy.log; then exit 1; fi
+          grep -q 'PASS TARVOKA EIGHT-FACTION FOG PRIVACY:' \
+            /tmp/eight-faction-fog-privacy.log
+      - name: Guard three-domain pathfinder semantics with indexed blockers
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_pathfinding_index_parity.gd \
+            2>&1 | tee /tmp/pathfinder-index-parity.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/pathfinder-index-parity.log; then exit 1; fi
+          grep -q 'PASS TARVOKA INDEXED PATHFINDING PARITY:' \
+            /tmp/pathfinder-index-parity.log
+      - name: Stress the real 40x30 battle with 24 and 48 mixed units
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 300s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --audio-driver Dummy \
+            --script res://tests/test_large_map_gameplay_stress.gd \
+            2>&1 | tee /tmp/large-map-gameplay-stress.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' \
+            /tmp/large-map-gameplay-stress.log; then exit 1; fi
+          grep -q 'PASS TARVOKA LARGE MAP GAMEPLAY STRESS:' \
+            /tmp/large-map-gameplay-stress.log
+          test -s artifacts/tarvoka_large_map_gameplay_stress.json
+      - name: Upload inspectable AI/Canvas budget metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Real-40x30-Gameplay-AI-Stress
+          path: artifacts/tarvoka_large_map_gameplay_stress.json
+          if-no-files-found: error

@@ -222,10 +222,11 @@ static func step(state: Dictionary) -> Dictionary:
         var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit)
         var from_route := int(route.get(unit["pos"], 999999))
         var from_direct := _closest_enemy_distance(unit["pos"], enemies)
-        for y in range(Rules.map_size(knowledge["terrain"]).y):
-            for x in range(Rules.map_size(knowledge["terrain"]).x):
-                var cell := Vector2i(x, y)
-                if cell == unit["pos"] or not reachable.has(cell):
+        # Movement range is small compared with 40x30 terrain: evaluate
+        # ONLY cells the real pathfinder says this unit can reach.
+        for destination in reachable:
+                var cell: Vector2i=destination
+                if cell == unit["pos"]:
                     continue
                 var travel := int(reachable[cell])
                 var score := -99999999
@@ -499,10 +500,9 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
         for enemy in enemies:
             if not Logistics.can_fire(ally):
                 continue
-            for y in range(Rules.map_size(knowledge["terrain"]).y):
-                for x in range(Rules.map_size(knowledge["terrain"]).x):
-                    var cell := Vector2i(x, y)
-                    if cell == ally["pos"] or not reachable.has(cell) or (fog and not visible.has(cell)):
+            for destination in reachable:
+                    var cell: Vector2i=destination
+                    if cell == ally["pos"] or (fog and not visible.has(cell)):
                         continue
                     var attacker: Dictionary = ally.duplicate(true)
                     attacker["pos"] = cell
@@ -631,10 +631,11 @@ static func _reconnoiter(state: Dictionary, knowledge: Dictionary, friends: Arra
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = Rules.reachable(unit["pos"], Logistics.movement_budget(unit), knowledge["terrain"], blocked, Domains.domain(unit))
         var radius: int = clampi(int(unit.get("vision", Visibility.DEFAULT_VISION)), 1, Visibility.MAX_VISION)
-        for y in range(Rules.map_size(knowledge["terrain"]).y):
-            for x in range(Rules.map_size(knowledge["terrain"]).x):
-                var cell := Vector2i(x, y)
-                if cell == unit["pos"] or not reachable.has(cell) or not visible.has(cell):
+        # Only physically reachable and currently visible destinations can
+        # be chosen. No need to enumerate 1,200 map cells per unit.
+        for destination in reachable:
+                var cell: Vector2i=destination
+                if cell == unit["pos"] or not visible.has(cell):
                     continue
                 var discovery := 0
                 var sweep := 0
@@ -797,7 +798,12 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
 # Bounded by board dimensions; no heuristic path through impassable unknowns.
 static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vector2i]) -> Dictionary:
     var distances: Dictionary = {}
-    if not Rules.valid_terrain(terrain) or not Rules.inside(target,terrain) or target in blocked:
+    if not Rules.valid_terrain(terrain) or not Rules.inside(target,terrain):
+        return distances
+    var blocked_index: Dictionary={}
+    for pos in blocked:
+        blocked_index[pos]=true
+    if blocked_index.has(target):
         return distances
     if Rules.movement_cost(str(terrain[target.y][target.x])) < 0:
         return distances
@@ -810,7 +816,7 @@ static func _route_to_relay(terrain: Array, target: Vector2i, blocked: Array[Vec
         var enter_cost: int = Rules.movement_cost(str(terrain[current.y][current.x]))
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = current + direction
-            if not Rules.inside(previous,terrain) or previous in blocked:
+            if not Rules.inside(previous,terrain) or blocked_index.has(previous):
                 continue
             if Rules.movement_cost(str(terrain[previous.y][previous.x])) < 0:
                 continue
@@ -825,6 +831,9 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
     if not Rules.valid_terrain(terrain):
         return distances
     var queue: Array[Vector2i] = []
+    var blocked_index: Dictionary={}
+    for pos in blocked:
+        blocked_index[pos]=true
     var melee: bool = int(attacker.get("attack_min_range", 1)) == 1 and int(attacker.get("attack_range", 1)) == 1
     var domain: String = Domains.domain(attacker)
     if domain.is_empty():
@@ -842,14 +851,21 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
             # Build actual ranged firing cells instead of trying to approach
             # an enemy until adjacent (illegal for min-range 2 artillery).
             var shooter: Dictionary = attacker.duplicate(true)
-            for y in range(Rules.map_size(terrain).y):
-                for x in range(Rules.map_size(terrain).x):
+            var enemy_pos: Vector2i=enemy["pos"]
+            var reach: int=int(attacker.get("attack_range",1))
+            var dims: Vector2i=Rules.map_size(terrain)
+            # Exactly the same Manhattan-range predicate and row-major
+            # ordering, restricted to the enemy's at-most 17x17 bounds.
+            for y in range(maxi(0,enemy_pos.y-reach),
+                    mini(dims.y-1,enemy_pos.y+reach)+1):
+                for x in range(maxi(0,enemy_pos.x-reach),
+                        mini(dims.x-1,enemy_pos.x+reach)+1):
                     var cell := Vector2i(x, y)
                     shooter["pos"] = cell
                     if Turns.in_attack_range(shooter, enemy):
                         candidates.append(cell)
         for goal in candidates:
-            if not Rules.inside(goal,terrain) or goal in blocked:
+            if not Rules.inside(goal,terrain) or blocked_index.has(goal):
                 continue
             if Rules.movement_cost_for(str(terrain[goal.y][goal.x]), domain) < 0:
                 continue
@@ -863,7 +879,7 @@ static func _approach_costs(terrain: Array, enemies: Array, blocked: Array[Vecto
         var enter_cost := Rules.movement_cost_for(str(terrain[current.y][current.x]), domain)
         for direction in Rules.DIRECTIONS:
             var previous: Vector2i = current + direction
-            if not Rules.inside(previous,terrain) or previous in blocked:
+            if not Rules.inside(previous,terrain) or blocked_index.has(previous):
                 continue
             if Rules.movement_cost_for(str(terrain[previous.y][previous.x]), domain) < 0:
                 continue

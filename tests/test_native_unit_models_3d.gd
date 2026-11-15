@@ -100,10 +100,17 @@ func _run() -> void:
     assert(board.state == original)
     var library: Node = board._models_3d
     assert(library != null) # Real software OpenGL, not Godot dummy headless.
-    for i in range(5):
+    # 22 faction-aware captures are now staged in batches of four rather
+    # than allocating every Godot model and SubViewport in one frame.
+    for i in range(100):
+        if bool(library.get("captures_completed")):
+            break
         await process_frame
     assert(bool(library.get("captures_completed")))
-    assert(int(library.get("baked_static_captures")) == 15)
+    assert(int(library.get("capture_peak_viewports"))<=4)
+    assert(int(library.get("capture_batches_finished"))==6)
+    # Eight G09 + eight real P06 faction portraits, six remaining roles.
+    assert(int(library.get("baked_static_captures")) == 22)
     assert((library.get("viewports") as Dictionary).is_empty())
     var sheet := Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,false,Image.FORMAT_RGBA8)
     sheet.fill(Color("#13212c"))
@@ -139,7 +146,26 @@ func _run() -> void:
         paint_sheet.blit_rect(visual,Rect2i(Vector2i.ZERO,Captures.SIZE),
             Vector2i((faction%4)*Captures.SIZE.x,int(faction/4)*Captures.SIZE.y))
     assert(seen.size() == 8)
+    var apc_palette:=Image.create(Captures.SIZE.x*4,Captures.SIZE.y*2,
+        false,Image.FORMAT_RGBA8)
+    apc_palette.fill(Color("#13212c"))
+    var apc_signatures: Dictionary={}
+    for faction in range(8):
+        assert(library.call("is_ready_for","apc",faction))
+        var apc_tex: Texture2D=library.call("texture_for","apc",faction) as Texture2D
+        assert(apc_tex!=null)
+        var apc_image: Image=apc_tex.get_image()
+        assert(apc_image!=null and apc_image.get_size()==Captures.SIZE)
+        var signature: int=hash(apc_image.get_data())
+        assert(not apc_signatures.has(signature))
+        apc_signatures[signature]=faction
+        apc_palette.blit_rect(apc_image,
+            Rect2i(Vector2i.ZERO,Captures.SIZE),
+            Vector2i((faction%4)*Captures.SIZE.x,int(faction/4)*Captures.SIZE.y))
+    assert(apc_signatures.size()==8)
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+    assert(apc_palette.save_png(
+        "res://artifacts/tarvoka_apc_p06_battle_8_factions.png")==OK)
     assert(paint_sheet.save_png("res://artifacts/tarvoka_mbt_8_faction_colors.png") == OK)
     assert(sheet.save_png("res://artifacts/tarvoka_3d_first8.png") == OK)
     board.queue_redraw()

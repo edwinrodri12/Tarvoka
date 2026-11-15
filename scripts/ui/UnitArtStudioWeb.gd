@@ -11,6 +11,12 @@ const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const HitV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const APCVisual = preload("res://scripts/ui/APCVisualRigV1.gd")
+const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
+const HQMixedStress = preload("res://scripts/ui/Headquarters3D.gd")
+const HQLod = preload("res://scripts/ui/HeadquartersTacticalLOD.gd")
+const PerfTelemetry=preload("res://scripts/ui/PerformanceTelemetryV1.gd")
+const AndroidBenchmarkSuite=preload("res://scripts/ui/AndroidBenchmarkSuiteV2.gd")
 const TankV17 = preload("res://scripts/ui/TankFXV17.gd")
 const ClayV19 = preload("res://scripts/ui/TankClayV19.gd")
 const BattleScenarioV26 = preload("res://scripts/ui/TankBattleScenarioV26.gd")
@@ -51,9 +57,34 @@ var _v30_preview := false
 var _v31_preview := false
 var _apc_v1_preview := true
 var _apc_v2_preview := true
+var _apc_v3_preview := true
+var _apc_v5_preview := true
+var _apc_damage_stage := 0
+var _apc_tactical_lod := false
 var apc_controls: VBoxContainer
 var apc_compare_button: Button
 var apc_v2_button: Button
+var apc_v3_button: Button
+var apc_v5_button: Button
+var apc_damage_button: Button
+var apc_lod_button: Button
+var apc_stress_button: Button
+var apc_mixed_button: Button
+var _apc_mixed_enabled: bool=false
+var _apc_mixed_group: Node3D
+var apc_stress_label: Label
+var apc_perf_button: Button
+var apc_diagnosis_button: Button
+var _apc_perf=PerfTelemetry.new()
+var _auto_benchmark=AndroidBenchmarkSuite.new()
+var _auto_benchmark_button: Button
+var _auto_internal_change: bool=false
+var _auto_benchmark_report_path: String=""
+var _apc_stress_group: Node3D
+var _apc_stress_units: Array[Node3D]=[]
+var _apc_stress_count: int=0
+var _apc_stress_elapsed: float=0.0
+var _apc_stress_sample: float=0.0
 var apc_ramp_button: Button
 var _tactical_view := false
 var _underside_view := false
@@ -235,6 +266,8 @@ func _construct() -> void:
         role_picker.add_item(Roles.label(str(role)))
     column.add_child(role_picker)
     role_picker.item_selected.connect(_on_role)
+    _auto_benchmark_button=_button(column,
+        "ANDROID · AUTOTEST 6 FASES (≈7 MIN)",_toggle_auto_benchmark)
 
     apc_controls=VBoxContainer.new()
     apc_controls.name="APCP06V1_InspeccionTecnica"
@@ -247,14 +280,39 @@ func _construct() -> void:
         "APC V1 · Comparar prototipo original",_toggle_apc_version)
     apc_v2_button=_button(apc_controls,
         "APC P06 V2 · ARMADURA, NEUMÁTICOS Y ACABADO",_toggle_apc_v2)
+    apc_v3_button=_button(apc_controls,
+        "APC V3 · TECHO, JUNTAS, TORRETA Y DAÑOS",_toggle_apc_v3)
+    apc_v5_button=_button(apc_controls,
+        "P06 V5 · COMPARAR ACABADOS 3D V3/V5",_toggle_apc_v5)
+    apc_damage_button=_button(apc_controls,
+        "APC V3 · MOSTRAR DAÑO LEVE",_cycle_apc_damage)
+    _add_paired(apc_controls,"APC V3 · Próximo nivel de daño",
+        _cycle_apc_damage,"APC V3 · Reparar",
+        func(): _set_apc_damage(0))
     _add_paired(apc_controls,"APC: Avanzar 6×6",
         func(): _play("move"),
         "APC: Girar torreta",func(): _play("turn_turret"))
     _add_paired(apc_controls,"APC: Disparar",
         func(): _play("attack"),
-        "APC: Recibir impacto",func(): _play("hit"))
+        "APC: Recibir balas",func(): _play("hit_bullet"))
+    _add_paired(apc_controls,"APC V3: Impacto explosivo",
+        func(): _play("hit_explosive"),
+        "APC V3: Restaurar daños",func(): _set_apc_damage(0))
     apc_ramp_button=_button(apc_controls,
         "APC: Abrir rampa de tropas",_toggle_apc_ramp)
+    apc_lod_button=_button(apc_controls,
+        "APC V3 · MODO TÁCTICO: Ocultar microdetalles",_toggle_apc_lod)
+    apc_stress_button=_button(apc_controls,
+        "APC · PROBAR 32 VEHÍCULOS (8 FACCIONES)",_cycle_apc_stress)
+    apc_mixed_button=_button(apc_controls,
+        "BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles",
+        _toggle_apc_mixed)
+    apc_stress_label=_title(apc_controls,
+        "Prueba de FPS real: 32 → 64 → salir. Usa Android o el navegador.",11)
+    apc_perf_button=_button(apc_controls,
+        "GUARDAR / COPIAR INFORME FPS",_save_apc_perf)
+    apc_diagnosis_button=_button(apc_controls,
+        "VER DIAGNÓSTICO DE RENDIMIENTO",_show_auto_benchmark_diagnosis)
 
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
@@ -321,6 +379,9 @@ func _version_text() -> String:
 func _display_role(role: String) -> void:
     if not Models.supports(role):
         return
+    if _auto_benchmark.active and not _auto_internal_change:
+        _abort_auto_benchmark()
+    _clear_apc_stress()
     _stop_animation()
     if model_root != null:
         preview.remove_child(model_root)
@@ -364,7 +425,7 @@ func _display_role(role: String) -> void:
     if _v25_preview and _v30_preview and _v31_preview:
         art_level = 31
     if _role=="apc" and _apc_v1_preview:
-        art_level=12 if _apc_v2_preview else 11
+        art_level=(13 if _apc_v3_preview else 12) if _apc_v2_preview else 11
     model_root = Models.build(_role,_faction if _role in ["tank","apc"] else -1,
         _final_detail,art_level)
     if _v17_preview or _v18_preview or _v19_preview or _v20_preview or _v21_preview or _v22_preview or _v23_preview or _v24_preview or _v25_preview:
@@ -402,7 +463,26 @@ func _display_role(role: String) -> void:
     apc_controls.visible = (_role=="apc")
     apc_compare_button.text = ("APC P06 · Comparar con prototipo V0" if _apc_v1_preview else "APC P06 · Regresar a V1")
     apc_v2_button.text = ("APC V2/V1 · Ver versión V1 anterior" if _apc_v2_preview else "APC V2 · Ver blindaje y ruedas mejoradas")
+    apc_v3_button.text = ("APC V3/V2 · Ver V2 anterior" if _apc_v3_preview else "APC V3 · Ver techo y daño realistas")
+    apc_v5_button.visible=(_role=="apc" and model_root.get_meta(
+        APCDetailV5.FLAG,false))
+    apc_v5_button.text=("P06 V5/V3 · MOSTRAR SOLO V3" if _apc_v5_preview
+        else "P06 V5/V3 · MOSTRAR ACABADOS V5")
+    apc_damage_button.text = "APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
     apc_ramp_button.text = "APC: Abrir rampa de tropas"
+    if model_root.get_meta("tarvoka_apc_finish_v3",false):
+        APCFinishV3.apply_stage(model_root,_apc_damage_stage)
+        APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+        if model_root.get_meta(APCDetailV5.FLAG,false):
+            APCDetailV5.set_enabled(model_root,_apc_v5_preview)
+    apc_lod_button.visible=(_role=="apc" and model_root.get_meta("tarvoka_apc_finish_v3",false))
+    apc_stress_button.visible=apc_lod_button.visible
+    apc_mixed_button.visible=apc_lod_button.visible
+    apc_perf_button.visible=apc_lod_button.visible
+    apc_diagnosis_button.visible=apc_lod_button.visible
+    apc_stress_label.visible=apc_lod_button.visible
+    apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
+        if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
     tactical_button.visible = (_role == "tank")
     underside_button.visible = (_role == "tank")
     scenario_button.visible = (_role == "tank")
@@ -450,7 +530,16 @@ func _update_details() -> void:
     var meshes: int = Models.inspect_meshes(model_root)
     detail_label.text = "Modelo activo: %s · %d mallas reales" % [Roles.label(_role),meshes]
     if _role=="apc":
-        if model_root.get_meta("tarvoka_apc_armor_v2",false):
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            status_label.text = ("APC P06 V5 · ACABADOS 3D INTEGRADOS"
+                if model_root.get_meta(APCDetailV5.FLAG,false) and
+                    _apc_v5_preview else "APC P06 V3 · TECHO Y JUNTAS FÍSICAS") + (
+                " · PANELES/JUNTAS/PERNOS/ÓPTICA" if _apc_v5_preview
+                else "") + (" · TORRETA REFINADA · BALAS/EXPLOSIONES"
+                + " · DAÑO %d/4" % _apc_damage_stage)
+            if _apc_tactical_lod:
+                status_label.text+=" · LOD TÁCTICO"
+        elif model_root.get_meta("tarvoka_apc_armor_v2",false):
             status_label.text = ("APC P06 BASTIÓN V2 · BLINDAJE ANGULAR"
                 + " · 288 TACOS 3D COMPARTIDOS · PINTURA PBR"
                 + " · RAMPA, TORRETA Y 6 RUEDAS ANIMADAS")
@@ -995,6 +1084,7 @@ func _toggle_apc_version() -> void:
         return
     _apc_v1_preview=not _apc_v1_preview
     _apc_v2_preview=false
+    _apc_v3_preview=false
     var angle: float=_yaw
     var zoom: float=_zoom
     _display_role("apc")
@@ -1013,6 +1103,7 @@ func _toggle_apc_v2() -> void:
         "tarvoka_apc_ramp_open",false)) if model_root!=null else false
     _apc_v1_preview=true
     _apc_v2_preview=not _apc_v2_preview
+    _apc_v3_preview=false
     _display_role("apc")
     _yaw=angle
     _zoom=zoom
@@ -1024,6 +1115,400 @@ func _toggle_apc_v2() -> void:
             apc_ramp_button.text="APC: Cerrar rampa de tropas"
     _update_camera()
     _update_details()
+
+func _toggle_apc_v3() -> void:
+    if _role!="apc":
+        return
+    var angle: float=_yaw
+    var zoom: float=_zoom
+    var opened: bool=bool(model_root.get_meta(
+        "tarvoka_apc_ramp_open",false)) if model_root!=null else false
+    _stop_animation()
+    _apc_v1_preview=true
+    _apc_v2_preview=true
+    _apc_v3_preview=not _apc_v3_preview
+    _display_role("apc")
+    _yaw=angle
+    _zoom=zoom
+    if model_root!=null:
+        model_root.rotation_degrees.y=angle
+        if opened:
+            APCVisual.pose(model_root,"open_ramp",1.0)
+            APCVisual.restore(model_root)
+            apc_ramp_button.text="APC: Cerrar rampa de tropas"
+        if _apc_v3_preview:
+            APCFinishV3.apply_stage(model_root,_apc_damage_stage)
+    _update_camera()
+    _update_details()
+
+func _toggle_apc_v5() -> void:
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            APCDetailV5.FLAG,false):
+        return
+    if _auto_benchmark.active:
+        return
+    _apc_v5_preview=not _apc_v5_preview
+    APCDetailV5.set_enabled(model_root,_apc_v5_preview)
+    apc_v5_button.text=("P06 V5/V3 · MOSTRAR SOLO V3" if _apc_v5_preview
+        else "P06 V5/V3 · MOSTRAR ACABADOS V5")
+    _update_details()
+
+func _toggle_apc_lod() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _apc_tactical_lod=not _apc_tactical_lod
+    APCFinishV3.set_tactical_lod(model_root,_apc_tactical_lod)
+    for unit in _apc_stress_units:
+        APCFinishV3.set_tactical_lod(unit,_apc_tactical_lod)
+    if _apc_mixed_enabled and _apc_mixed_group!=null:
+        for part in _apc_mixed_group.get_children():
+            var building: Node3D=part as Node3D
+            if building!=null and building.get_meta(
+                    "tarvoka_building_kind","")=="headquarters":
+                HQLod.set_reduced(building,_apc_tactical_lod)
+    _reset_apc_perf()
+    apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
+        if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
+    _update_details()
+
+func _clear_apc_stress() -> void:
+    # Preserve the previous measured scenario before freeing the stress scene.
+    if _apc_stress_count>0 and not _auto_benchmark.active and (
+            not _auto_internal_change) and int(
+            _apc_perf.report()["sample_count"])>0:
+        _archive_apc_perf()
+    # The mixed scene hangs off the stress group and is freed alongside it.
+    _apc_mixed_enabled=false
+    _apc_mixed_group=null
+    if _apc_stress_group!=null and is_instance_valid(_apc_stress_group):
+        if _apc_stress_group.get_parent()!=null:
+            _apc_stress_group.get_parent().remove_child(_apc_stress_group)
+        _apc_stress_group.free()
+    _apc_stress_group=null
+    _apc_stress_units.clear()
+    _apc_stress_count=0
+    _apc_stress_elapsed=0.0
+    _apc_stress_sample=0.0
+    if model_root!=null and is_instance_valid(model_root):
+        model_root.visible=true
+
+func _cycle_apc_stress() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
+    if _apc_stress_count==0:
+        _set_apc_stress(32)
+    elif _apc_stress_count==32:
+        _set_apc_stress(64)
+    else:
+        _set_apc_stress(0)
+
+func _set_apc_stress(count: int) -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _clear_apc_stress()
+    if count==0:
+        apc_stress_button.text="APC · PROBAR 32 VEHÍCULOS (8 FACCIONES)"
+        apc_stress_label.text="Prueba finalizada · modelo normal restaurado"
+        _update_camera()
+        return
+    var per_faction: int=4 if count<=32 else 8
+    var group:=Node3D.new()
+    group.name="APC_P06_PruebaFPS_%d" % (8*per_faction)
+    _apc_stress_group=group
+    preview.add_child(group)
+    for faction in range(8):
+        for index in range(per_faction):
+            var unit: Node3D=Models.build("apc",faction,true,13)
+            assert(unit!=null and unit.get_meta("tarvoka_apc_finish_v3",false))
+            unit.position=Vector3(
+                (float(index)-0.5*float(per_faction-1))*3.2,0,
+                (float(faction)-3.5)*3.3)
+            unit.rotation_degrees.y=float((faction*31+index*17)%360)
+            group.add_child(unit)
+            APCFinishV3.apply_stage(unit,(faction+index)%5)
+            APCFinishV3.set_tactical_lod(unit,_apc_tactical_lod)
+            _apc_stress_units.append(unit)
+    _apc_stress_count=_apc_stress_units.size()
+    model_root.visible=false
+    _update_camera()
+    apc_stress_button.text=("APC · PROBAR 64 VEHÍCULOS"
+        if _apc_stress_count==32 else "APC · TERMINAR PRUEBA")
+    apc_stress_label.text="Prueba de %d APC · calculando FPS..." % _apc_stress_count
+    apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+    _reset_apc_perf()
+
+func _toggle_apc_mixed() -> void:
+    if _auto_benchmark.active and not _auto_internal_change:
+        return
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            "tarvoka_apc_finish_v3",false):
+        return
+    if _apc_stress_count==0:
+        _set_apc_stress(32)
+    if _apc_mixed_enabled:
+        if _apc_mixed_group!=null and is_instance_valid(_apc_mixed_group):
+            _apc_stress_group.remove_child(_apc_mixed_group)
+            _apc_mixed_group.free()
+        _apc_mixed_group=null
+        _apc_mixed_enabled=false
+        var per_faction: int=int(_apc_stress_count/8)
+        for i in range(_apc_stress_units.size()):
+            var unit: Node3D=_apc_stress_units[i]
+            unit.position=Vector3(
+                (float(i%per_faction)-0.5*float(per_faction-1))*3.2,0,
+                (float(int(i/per_faction))-3.5)*3.3)
+        apc_mixed_button.text="BATALLA MIXTA · Agregar 8 G09 + 8 cuarteles"
+        _reset_apc_perf()
+        _update_camera()
+        return
+    var mixed:=Node3D.new()
+    mixed.name="TARVOKA_BatallaMixta_8Facciones"
+    _apc_stress_group.add_child(mixed)
+    _apc_mixed_group=mixed
+    # Match the lab's original native Godot V26 terrain material. A large
+    # benchmark plane is representative only, not the full battle-map mesh.
+    var terrain:=MeshInstance3D.new()
+    terrain.name="TARVOKA_TerrenoV26_Referencia"
+    var ground:=PlaneMesh.new()
+    ground.size=Vector2(192,150)
+    terrain.mesh=ground
+    terrain.material_override=BattleScenarioV26._material(1)
+    mixed.add_child(terrain)
+    var per_faction: int=int(_apc_stress_count/8)
+    for faction in range(8):
+        var home:=Vector3((float(faction%4)-1.5)*39.0,0,
+            (float(int(faction/4))-0.5)*78.0)
+        var condition: String=HQMixedStress.CONDITIONS[faction%4]
+        var hq: Node3D=HQMixedStress.build(
+            1+(faction%3),faction,condition,true,true)
+        assert(hq!=null)
+        hq.position=home
+        mixed.add_child(hq)
+        HQLod.set_reduced(hq,_apc_tactical_lod)
+        var g09: Node3D=Models.build("tank",faction,true,31)
+        assert(g09!=null)
+        g09.position=home+Vector3(0,0,-12)
+        mixed.add_child(g09)
+        for index in range(per_faction):
+            var apc: Node3D=_apc_stress_units[faction*per_faction+index]
+            apc.position=home+Vector3(
+                (float(index%4)-1.5)*3.4,0,
+                12.0+float(int(index/4))*4.0)
+    _apc_mixed_enabled=true
+    apc_mixed_button.text="BATALLA MIXTA · Volver a solo APC"
+    _reset_apc_perf()
+    _update_camera()
+
+func _reset_apc_perf() -> void:
+    if _apc_stress_count<=0:
+        return
+    var label_text: String=("MIXTO" if _apc_mixed_enabled else "SOLO_APC")
+    _apc_perf.reset(label_text,_apc_stress_count,_apc_tactical_lod)
+
+func _archive_apc_perf() -> String:
+    if int(_apc_perf.report()["sample_count"])==0:
+        return ""
+    var report_data: Dictionary=_apc_perf.report()
+    var path: String="user://tarvoka_perf_%s_%d_%s_%d.json" % [
+        str(report_data["label"]),int(report_data["units"]),
+        "lod" if bool(report_data["tactical_lod"]) else "full",
+        int(Time.get_unix_time_from_system())]
+    if _apc_perf.save(path):
+        print("TARVOKA FPS BENCHMARK: %s | %s" % [path,_apc_perf.as_json()])
+        return path
+    return ""
+
+func _toggle_auto_benchmark() -> void:
+    if _auto_benchmark.active:
+        _abort_auto_benchmark()
+        return
+    _auto_benchmark.begin()
+    _auto_benchmark_report_path=""
+    _auto_benchmark_button.text="DETENER AUTOTEST · Guardar parcial"
+    _auto_internal_change=true
+    if _role!="apc" or model_root==null or not model_root.get_meta(
+            "tarvoka_apc_finish_v3",false):
+        _display_role("apc")
+    _auto_internal_change=false
+    _begin_auto_benchmark_phase()
+
+func _begin_auto_benchmark_phase() -> void:
+    var phase: Dictionary=_auto_benchmark.phase()
+    if phase.is_empty():
+        return
+    _auto_internal_change=true
+    _set_apc_stress(int(phase["count"]))
+    if bool(phase["mixed"]):
+        _toggle_apc_mixed()
+    if _apc_tactical_lod!=bool(phase["lod"]):
+        _toggle_apc_lod()
+    _reset_apc_perf()
+    _auto_internal_change=false
+    apc_stress_label.text=("AUTOTEST %d/6 · Preparando %s · 6s de calentamiento"
+        % [_auto_benchmark.phase_index+1,str(phase["label"])])
+
+func _tick_auto_benchmark(delta: float) -> void:
+    if not _auto_benchmark.active:
+        return
+    var done: bool=_auto_benchmark.advance_clock(delta)
+    if not done:
+        var phase: Dictionary=_auto_benchmark.phase()
+        var stage: String=("Calentando" if not _auto_benchmark.is_measuring()
+            else "Midiendo")
+        var count: int=int(maxf(0.0,
+            ceilf(_auto_benchmark.warmup_seconds+
+                _auto_benchmark.measure_seconds-
+                _auto_benchmark.phase_elapsed)))
+        apc_stress_label.text=(
+            "AUTOTEST %d/6 · %s · %s · restan %ds · %.0f FPS"
+            % [_auto_benchmark.phase_index+1,str(phase["label"]),stage,
+                count,Engine.get_frames_per_second()])
+        return
+    # Do not save the transition frames into either phase. Sample after
+    # the same six-second warmup for every model/LOD configuration.
+    var stats: Dictionary=_apc_perf.report()
+    var has_more: bool=_auto_benchmark.finish_phase(stats)
+    if has_more:
+        _begin_auto_benchmark_phase()
+        return
+    _auto_benchmark_report_path=_save_auto_benchmark_report()
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (≈7 MIN)"
+    _auto_internal_change=true
+    _set_apc_stress(0)
+    _auto_internal_change=false
+    var finding: Dictionary=_auto_benchmark.evaluate()
+    apc_stress_label.text=(
+        "AUTOTEST COMPLETO · %s · Toca VER DIAGNÓSTICO o COPIAR INFORME"
+        % str(finding["provisional_profile"]))
+
+func _save_auto_benchmark_report() -> String:
+    if _auto_benchmark.reports.is_empty():
+        return ""
+    var path: String="user://tarvoka_android_suite_v2_%d.json" % int(
+        Time.get_unix_time_from_system())
+    if not _auto_benchmark.save(path):
+        return ""
+    print("TARVOKA ANDROID SUITE V2: %s | %s" % [
+        path,JSON.stringify(_auto_benchmark.summary())])
+    return path
+
+func _abort_auto_benchmark() -> void:
+    if not _auto_benchmark.active:
+        return
+    if int(_apc_perf.report()["sample_count"])>0:
+        # Partial results are deliberately marked cancelled, never passed.
+        _auto_benchmark.finish_phase(_apc_perf.report())
+    _auto_benchmark.abort()
+    _auto_benchmark_report_path=_save_auto_benchmark_report()
+    _auto_benchmark_button.text="ANDROID · AUTOTEST 6 FASES (≈7 MIN)"
+    _auto_internal_change=true
+    _set_apc_stress(0)
+    _auto_internal_change=false
+    apc_stress_label.text=(
+        "Autotest detenido · informe parcial guardado (si hubo muestras)")
+
+func _auto_benchmark_diagnosis_text() -> String:
+    if _auto_benchmark.reports.is_empty():
+        return "Sin mediciones: ejecuta el autotest Android para comparar perfiles."
+    var finding: Dictionary=_auto_benchmark.evaluate()
+    var title_text: String="TARVOKA · Diagnóstico gráfico provisional"
+    var status: String=(
+        "Serie completa" if bool(finding["complete"]) else
+        "Serie incompleta: no tomar decisiones definitivas")
+    var profile: String=str(finding["provisional_profile"])
+    var summary_text: String="%s\n%s\nPerfil evaluado: %s" % [
+        title_text,status,profile]
+    for pair in finding["pair_comparisons"]:
+        summary_text+="\n\n%s | p10 detalle %.1f / LOD %.1f FPS" % [
+            str(pair["scenario"]),float(pair["full_p10_fps"]),
+            float(pair["tactical_p10_fps"])]
+        summary_text+="\nDibujo LOD: %.1f%% menos · %s" % [
+            float(pair["draw_call_reduction_percent"]),
+            str(pair["recommendation"])]
+    var quality: Array=finding["quality_issues"]
+    if not quality.is_empty():
+        summary_text+="\n\nMuestras insuficientes:"
+        for warning in quality:
+            summary_text+="\n· "+str(warning)
+    summary_text+=("\n\nAndroid nativo: medición local; dispositivo físico no verificado, sin datos térmicos."
+        if bool(finding["on_android_device"]) else
+        "\n\nNO es una medición Android: repetir en el teléfono.")
+    summary_text+="\nObjetivo provisional: p10 ≥30 FPS. IA, red y mapa completo no medidos."
+    return summary_text
+
+func _show_auto_benchmark_diagnosis() -> void:
+    var dialog:=AcceptDialog.new()
+    dialog.title="TARVOKA · Rendimiento y calidad gráfica"
+    dialog.dialog_text=_auto_benchmark_diagnosis_text()
+    dialog.exclusive=false
+    add_child(dialog)
+    dialog.confirmed.connect(dialog.queue_free)
+    dialog.close_requested.connect(dialog.queue_free)
+    dialog.popup_centered()
+
+func _save_apc_perf() -> void:
+    if not _auto_benchmark.active and _apc_stress_count==0 and (
+            _auto_benchmark.reports.size()>0):
+        # Export the complete native Android A/B series by explicit tap.
+        DisplayServer.clipboard_set(JSON.stringify(
+            _auto_benchmark.summary(),"  "))
+        apc_stress_label.text=("Serie de %d/6 fases copiada · informe %s"
+            % [_auto_benchmark.reports.size(),_auto_benchmark_report_path])
+        return
+    var path: String=_archive_apc_perf()
+    if path.is_empty():
+        apc_stress_label.text="Primero ejecuta la prueba durante al menos 0,5 segundos"
+        return
+    DisplayServer.clipboard_set(_apc_perf.as_json())
+    apc_stress_label.text=("Informe guardado en %s · JSON enviado al portapapeles"
+        % path)
+
+func _update_apc_stress(delta: float) -> void:
+    _apc_stress_elapsed+=maxf(delta,0.0)
+    _apc_stress_sample+=maxf(delta,0.0)
+    if not _auto_benchmark.active or _auto_benchmark.is_measuring():
+        _apc_perf.add(delta,float(Engine.get_frames_per_second()),
+            Performance.get_monitor(
+                Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+            Performance.get_monitor(Performance.MEMORY_STATIC))
+    # A real moving subset plus smoke/fire on damaged units: no stand-ins.
+    var progress: float=fposmod(_apc_stress_elapsed,APCVisual.MOVE_DURATION) / APCVisual.MOVE_DURATION
+    for i in range(_apc_stress_units.size()):
+        var unit: Node3D=_apc_stress_units[i]
+        if i%3==0:
+            APCVisual.pose(unit,"move",progress)
+        if int(unit.get_meta("tarvoka_apc_v3_damage_stage",0))>=2:
+            APCFinishV3.animate_damage(unit,_apc_stress_elapsed)
+    if _apc_stress_sample>=0.70:
+        _apc_stress_sample=0.0
+        var draws: float=Performance.get_monitor(
+            Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+        var scenario: String=(
+            " + 8 G09 + 8 HQ" if _apc_mixed_enabled else "")
+        var data: Dictionary=_apc_perf.report()
+        apc_stress_label.text=(
+            "%d APC%s · %.0f FPS · p10 %.0f · %.0f dibujos · memoria Godot %.0f MiB · %s"
+            % [_apc_stress_count,scenario,Engine.get_frames_per_second(),
+                float(data["fps_p10"]),draws,float(data["memory_mib_peak"]),
+                "LOD TÁCTICO" if _apc_tactical_lod else "DETALLE COMPLETO"])
+
+func _set_apc_damage(stage: int) -> void:
+    if _role!="apc" or model_root==null or (
+            not model_root.get_meta("tarvoka_apc_finish_v3",false)):
+        return
+    _apc_damage_stage=clampi(stage,0,4)
+    if APCFinishV3.apply_stage(model_root,_apc_damage_stage):
+        apc_damage_button.text="APC V3 · DAÑO %d/4 · Siguiente nivel" % _apc_damage_stage
+        _update_details()
+
+func _cycle_apc_damage() -> void:
+    _set_apc_damage((_apc_damage_stage+1)%5)
 
 func _toggle_apc_ramp() -> void:
     if _role!="apc" or model_root==null or (
@@ -1073,6 +1558,8 @@ func _play(kind: String) -> void:
     _animation_time=0.0
     if _role=="apc":
         APCVisual.pose(model_root,kind,0.0)
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            APCFinishV3.animate_impact(model_root,kind,0.0)
     else:
         TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
         TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
@@ -1082,6 +1569,8 @@ func _stop_animation() -> void:
     _animation_time = 0.0
     if _role=="apc" and model_root!=null:
         APCVisual.restore(model_root)
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            APCFinishV3.animate_impact(model_root,"",1.0)
     elif _role == "tank" and model_root != null:
         var stage: int = TankDamage.current_stage(model_root)
         TankRig.restore(model_root)
@@ -1090,7 +1579,15 @@ func _stop_animation() -> void:
 func _process(delta: float) -> void:
     if model_root==null:
         return
+    if _apc_stress_count>0:
+        _update_apc_stress(delta)
+        if _auto_benchmark.active:
+            _tick_auto_benchmark(delta)
+        return
     if _role=="apc":
+        if model_root.get_meta("tarvoka_apc_finish_v3",false) and _apc_damage_stage>=2:
+            _effect_time+=delta
+            APCFinishV3.animate_damage(model_root,_effect_time)
         if not _animation.is_empty():
             _animation_time+=maxf(delta,0.0)
             var duration: float=(APCVisual.MOVE_DURATION if _animation=="move"
@@ -1098,6 +1595,8 @@ func _process(delta: float) -> void:
                 else APCVisual.SHOT_DURATION)
             var t: float=minf(_animation_time/maxf(duration,0.01),1.0)
             APCVisual.pose(model_root,_animation,t)
+            if model_root.get_meta("tarvoka_apc_finish_v3",false):
+                APCFinishV3.animate_impact(model_root,_animation,t)
             if t>=1.0:
                 _stop_animation()
         return
@@ -1130,6 +1629,14 @@ func _change_zoom(direction: int) -> void:
 
 func _update_camera() -> void:
     if camera != null:
+        if _apc_stress_count>0:
+            camera.size=(167.0 if _apc_mixed_enabled else
+                33.0 if _apc_stress_count==32 else 49.0)
+            camera.position=(Vector3(78,122,115) if _apc_mixed_enabled else
+                Vector3(27,32,39) if _apc_stress_count==32 else
+                Vector3(35,41,49))
+            camera.look_at(Vector3(0,0.50,0),Vector3.UP)
+            return
         if _role=="tank" and _underside_view:
             camera.size = Models.preview_frame_height(_role)*1.26/_zoom
             camera.position = Vector3(6.0,-1.75,2.1)

@@ -37,6 +37,8 @@ const TankHitReactionV30 = preload("res://scripts/ui/TankHitReactionV30.gd")
 const TankTrackAlignmentV31 = preload("res://scripts/ui/TankTrackAlignmentV31.gd")
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
 const APCArmorV2 = preload("res://scripts/ui/APCArmorV2.gd")
+const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
+const APCDetailV5 = preload("res://scripts/ui/APCDetailV5.gd")
 const TANK_PAINT_META := "tarvoka_paint_zone"
 const TANK_TURRET := "TorretaGiratoria"
 const TANK_BARREL_PIVOT := "ElevacionCanon"
@@ -363,6 +365,8 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
         painted += APCArtV1.recolor(model,faction_paint_color(faction))
     if model.get_meta("tarvoka_apc_armor_v2",false):
         painted += APCArmorV2.recolor(model,faction_paint_color(faction))
+    if model.get_meta("tarvoka_apc_finish_v3",false):
+        painted += APCFinishV3.recolor(model,faction_paint_color(faction))
     return painted
 
 static func paintable_count(model: Node) -> int:
@@ -768,6 +772,11 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         APCArtV1.apply(model,faction_paint_color(faction))
         if art_level >= 12:
             APCArmorV2.apply(model,faction_paint_color(faction))
+            if art_level >= 13:
+                APCFinishV3.apply(model,faction_paint_color(faction))
+                # Actual Godot mesh pass: installed in gameplay captures,
+                # Android and Web studio, not an external concept image.
+                APCDetailV5.apply(model,faction_paint_color(faction))
     if role == "tank":
         # Physical finish is authored on the neutral geometry BEFORE PBR and
         # strictly independent of the fourteen faction-color mesh panels.
@@ -835,7 +844,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                             TankTacticalV24.apply(model,faction_paint_color(faction))
                                             if art_level >= 25:
                                                 TankWearV25.apply(model)
-                                                TankFinalTracksV29.apply(model)
+                                                # V25 must remain geometry-identical to
+                                                # V24 in the clay/PBR A-B studio.
+                                                # The V29 structural tread conversion
+                                                # belongs only to V29+ models.
+                                                if art_level >= 29:
+                                                    TankFinalTracksV29.apply(model)
                                                 if art_level >= 30:
                                                     TankDamagePolishV30.apply(model)
                                                     TankHitReactionV30.apply(model)

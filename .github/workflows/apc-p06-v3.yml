@@ -1,0 +1,237 @@
+name: TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA
+on:
+  push:
+    branches:
+      - feat/apc-p06-v3-roof-armor-wear-damage-20261114
+    paths:
+      - "scripts/ui/APC*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitRender3D.gd"
+      - "tests/test_native_unit_models_3d.gd"
+      - "tests/test_performance_telemetry_v1.gd"
+      - "scripts/ui/PerformanceTelemetryV1.gd"
+      - "scripts/ui/AndroidBenchmarkSuiteV2.gd"
+      - "tests/test_android_benchmark_suite_v2.gd"
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_detail_v5.gd"
+      - "tests/test_apc_p06_v3_stress.gd"
+      - "tests/test_apc_p06_studio_stress.gd"
+      - "tests/test_mixed_eight_faction_art_stress.gd"
+      - "scripts/ui/Headquarters*.gd"
+      - "scripts/ui/TankBattleScenarioV26.gd"
+      - "tests/export_apc_p06_v3_glb.gd"
+      - ".github/workflows/apc-p06-v3.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/APC*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/UnitRender3D.gd"
+      - "tests/test_native_unit_models_3d.gd"
+      - "tests/test_performance_telemetry_v1.gd"
+      - "scripts/ui/PerformanceTelemetryV1.gd"
+      - "scripts/ui/AndroidBenchmarkSuiteV2.gd"
+      - "tests/test_android_benchmark_suite_v2.gd"
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "tests/test_apc_p06_art_v3.gd"
+      - "tests/test_apc_p06_detail_v5.gd"
+      - "tests/test_apc_p06_v3_stress.gd"
+      - "tests/test_apc_p06_studio_stress.gd"
+      - "tests/test_mixed_eight_faction_art_stress.gd"
+      - "scripts/ui/Headquarters*.gd"
+      - "scripts/ui/TankBattleScenarioV26.gd"
+      - "tests/export_apc_p06_v3_glb.gd"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apc-v3-art-damage:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and OpenGL software display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 libxrandr2 > /dev/null
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import and verify all native 3D GDScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/apc-v3-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Cannot infer the type' /tmp/apc-v3-import.log; then exit 1; fi
+      - name: Verify native APC V3 geometry, damage, stage transitions and faction paint
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_art_v3.gd 2>&1 | tee /tmp/apc-v3-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-native.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3:' /tmp/apc-v3-native.log
+          for name in \
+            tarvoka_apc_p06_v3_frente_techo.png \
+            tarvoka_apc_p06_v3_superior_torreta.png \
+            tarvoka_apc_p06_v3_juntas_laterales.png \
+            tarvoka_apc_p06_v3_cinco_niveles_dano.png \
+            tarvoka_apc_p06_v3_impacto_balas.png \
+            tarvoka_apc_p06_v3_impacto_explosivo.png \
+            tarvoka_apc_p06_v2_antes.png; do
+            test -s "artifacts/$name"
+          done
+      - name: Verify genuine Bastion P06 V5 mesh finishing and editable Godot views
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 170s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_detail_v5.gd 2>&1 | tee /tmp/apc-v5-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v5-native.log; then exit 1; fi
+          grep -q 'PASS TARVOKA APC P06 V5 REAL MODEL:' /tmp/apc-v5-native.log
+          test -s artifacts/tarvoka_apc_p06_v3_v5_real_godot_views.png
+      - name: Stress render 32 real APC V3 vehicles across eight factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v3_stress.gd 2>&1 | tee /tmp/apc-v3-stress.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-stress.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress.log
+          test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_stress.png
+          test -s artifacts/tarvoka_apc_p06_v3_32_vehicle_tactical_lod.png
+          test -s artifacts/apc_p06_v3_stress_metrics_32.json
+      - name: Stress render 64 APC V3 across eight factions with GPU batching
+        shell: bash
+        env:
+          TARVOKA_APC_PER_FACTION: "8"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v3_stress.gd 2>&1 | tee /tmp/apc-v3-stress-64.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-stress-64.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STRESS:' /tmp/apc-v3-stress-64.log
+          test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_stress.png
+          test -s artifacts/tarvoka_apc_p06_v3_64_vehicle_tactical_lod.png
+          test -s artifacts/apc_p06_v3_stress_metrics_64.json
+      - name: Verify on-device FPS profiling percentiles, memory and report serialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy \
+            --script res://tests/test_performance_telemetry_v1.gd 2>&1 | tee /tmp/tarvoka-profiler.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-profiler.log; then exit 1; fi
+          grep -q 'PASS TARVOKA PERF TELEMETRY:' /tmp/tarvoka-profiler.log
+          test -s artifacts/tarvoka_profiler_sample.json
+      - name: Verify six-phase native Android A-B benchmark protocol
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy \
+            --script res://tests/test_android_benchmark_suite_v2.gd 2>&1 | tee /tmp/tarvoka-auto-suite-v2.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-auto-suite-v2.log; then exit 1; fi
+          grep -q 'PASS TARVOKA ANDROID AUTO SUITE:' /tmp/tarvoka-auto-suite-v2.log
+          test -s artifacts/tarvoka_android_auto_suite_sample.json
+      - name: Verify Android and web Studio 32/64 APC test buttons and FPS HUD
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_studio_stress.gd 2>&1 | tee /tmp/apc-v3-studio-benchmark.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-studio-benchmark.log; then exit 1; fi
+          grep -q 'PASS APC P06 V3 STUDIO STRESS:' /tmp/apc-v3-studio-benchmark.log
+      - name: Mixed stress 32 APC plus 8 real G09 tanks and 8 HQ V3
+        shell: bash
+        env:
+          TARVOKA_MIXED_APC_PER_FACTION: "4"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 220s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mixed_eight_faction_art_stress.gd 2>&1 | tee /tmp/tarvoka-mixed-32.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-mixed-32.log; then exit 1; fi
+          grep -q 'PASS TARVOKA MIXED 3D STRESS:' /tmp/tarvoka-mixed-32.log
+          test -s artifacts/tarvoka_mixed_32_apc_metrics.json
+          test -s artifacts/tarvoka_mixed_32_apc_full.png
+          test -s artifacts/tarvoka_mixed_32_apc_lod.png
+          test -s artifacts/tarvoka_mixed_32_apc_hq_lod.png
+      - name: Mixed stress 64 APC plus 8 real G09 tanks and 8 HQ V3
+        shell: bash
+        env:
+          TARVOKA_MIXED_APC_PER_FACTION: "8"
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 220s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_mixed_eight_faction_art_stress.gd 2>&1 | tee /tmp/tarvoka-mixed-64.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-mixed-64.log; then exit 1; fi
+          grep -q 'PASS TARVOKA MIXED 3D STRESS:' /tmp/tarvoka-mixed-64.log
+          test -s artifacts/tarvoka_mixed_64_apc_metrics.json
+          test -s artifacts/tarvoka_mixed_64_apc_full.png
+          test -s artifacts/tarvoka_mixed_64_apc_lod.png
+          test -s artifacts/tarvoka_mixed_64_apc_hq_lod.png
+      - name: Verify actual battle atlas uses eight P06 V3 faction captures once
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 200s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_native_unit_models_3d.gd 2>&1 | tee /tmp/tarvoka-battle-p06-atlas.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-battle-p06-atlas.log; then exit 1; fi
+          grep -q 'PASS native 3D models:' /tmp/tarvoka-battle-p06-atlas.log
+          test -s artifacts/tarvoka_apc_p06_battle_8_factions.png
+      - name: Export editable APC V5 Bastion as true native GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/export_apc_p06_v3_glb.gd 2>&1 | tee /tmp/apc-v3-editable-glb.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-editable-glb.log; then exit 1; fi
+          grep -q 'PASS APC P06 V5 GLB:' /tmp/apc-v3-editable-glb.log
+          test -s artifacts/TARVOKA_APC_P06_V5_Editable.glb
+      - name: Regress P06 V2 wheel and troop ramp and final G09 V32
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_apc_p06_art_v2 test_g09_animation_final_v32; do
+            timeout --signal=TERM --kill-after=5s 170s xvfb-run -a -s "-screen 0 1280x800x24" \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+              --rendering-driver opengl3 --audio-driver Dummy \
+              --script "res://tests/${test}.gd" 2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q 'PASS' "/tmp/${test}.log"
+          done
+      - name: Export authentic native screenshots for V3 damage review
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-APC-P06-V3-Roof-Turret-5-Damage-Stages
+          path: |
+            artifacts/tarvoka_apc_p06_v3_*.png
+            artifacts/tarvoka_apc_p06_v3_v5_real_godot_views.png
+            artifacts/tarvoka_apc_p06_v2_antes.png
+            artifacts/TARVOKA_APC_P06_V5_Editable.glb
+            artifacts/tarvoka_profiler_sample.json
+            artifacts/tarvoka_android_auto_suite_sample.json
+            artifacts/apc_p06_v3_stress_metrics_32.json
+            artifacts/apc_p06_v3_stress_metrics_64.json
+            artifacts/tarvoka_mixed_*.png
+            artifacts/tarvoka_apc_p06_battle_8_factions.png
+            artifacts/tarvoka_mixed_*.json
+          if-no-files-found: error
