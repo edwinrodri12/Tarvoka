@@ -104,7 +104,7 @@ func _run() -> void:
     var persisted: Dictionary = Codec.decode(Codec.encode(main.board.state))
     assert(persisted[Biome.FIELD]==Biome.WINTER)
     var round: Dictionary = Session.end_turn(main.board.state)
-    assert(round.get("ok",false))
+    assert(round.get("valid",false))
     assert(round["state"].get(Biome.FIELD)==Biome.WINTER)
     assert(Weather.from_state(round["state"]) in Weather.TYPES)
 
