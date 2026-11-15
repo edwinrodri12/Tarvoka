@@ -29,3 +29,24 @@ La variedad **estructural** de los mapas —rutas alternativas, cuellos de botel
 
 ## Decisión posterior a los resultados
 Si los escenarios nuevos bajan el sesgo por iniciador en varias categorías, ampliar el generador con topologías versionadas, no sustituir las semillas actuales. Si no lo bajan, investigar causas estructurales (primer ataque/compra, renta urbana, unidades iniciales, puntuación y turno) sin abandonar la diversidad como objetivo de diseño. Cada forma debería ofrecer rutas o estrategias alternativas reales.
+
+## Resultado medido en CI de Godot 4.3
+
+Ejecución: https://github.com/edwinrodri12/Tarvoka/actions/runs/43691083929 — **SUCCESS**, test PASÓ, 56/56 partidas terminadas antes del límite de 56 fases. Mismo motor/IA, 7 mapas × 2 nieblas × 2 iniciadores × 2 reglas de apertura; **n=4 encuentros por mapa en cada regla**.
+
+| Forma | Quien inicia gana, apertura SIN límite | Quien inicia gana, apertura con 3 órdenes |
+|---|---:|---:|
+| Campo abierto | 2/4 | 2/4 |
+| Bosque de dos rutas | 4/4 | 2/4 |
+| Puentes | 4/4 | 0/4 |
+| Costa | 2/4 | 0/4 |
+| Alturas y corredores (prototipo) | 4/4 | 0/4 |
+| Lagunas centrales (prototipo) | 4/4 | 2/4 |
+| Bosques cruzados (prototipo) | 0/4 | 2/4 |
+| **TOTAL** | **20/28 (71,4%)** | **8/28 (28,6%)** |
+
+**Lectura:** El mapa influye claramente en quién gana según el modelo de IA probado; **la diversidad no neutralizó globalmente** la ventaja del inicio sin límite (20/28). La regla experimental de solo 3 órdenes aparentemente **sobrecompensa** en esta cohorte, favoreciendo al segundo (20/28). Los resultados por geometría van desde 0/4 a 4/4: **no hay una única configuración justa para todos los mapas** con la evidencia disponible.
+
+**Límites:** n=4 por combinación de forma/regla es muy pequeño; agentes de IA deterministas con una formación inicial y reglas de relés; no se han medido jugadores humanos, 8 facciones con poderes activos, tamaño de mapa 24×18/40×30 ni más composiciones. No extrapolar porcentajes a PvP. Las siete geometrías son simétricas y los prototipos no aparecen en el selector jugable.
+
+**Decisión:** no modificar todavía la apertura global ni elegir automáticamente un límite por mapa. Siguiente ensayo: mapas más grandes, bases/ciudades y objetivos distribuidos de formas diferentes, varias aperturas/ejércitos y pruebas con participantes humanos; preservar semillas antiguas.
