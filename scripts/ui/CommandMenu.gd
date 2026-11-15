@@ -29,6 +29,7 @@ const Backplate = preload("res://scripts/ui/GameUiBackdrop.gd")
 const CommanderStrip = preload("res://scripts/ui/CommanderIdentityStrip.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const MiniMap = preload("res://scripts/ui/BattleMinimap.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
 
 var board: Control
 var minimap_enabled := false
@@ -63,6 +64,21 @@ var production_columns: BoxContainer
 var production_list_body: VBoxContainer
 var production_list_scroll: ScrollContainer
 var production_purchase_buttons: Dictionary = {}
+var production_site_picker: OptionButton
+var production_site_positions: Array[Vector2i] = []
+var production_filter_picker: OptionButton
+var production_filter_index := 0
+var production_list_rows: Dictionary = {}
+var production_candidates: Dictionary = {}
+var production_funds_label: Label
+var production_status_label: Label
+var production_selection_label: Label
+var production_available_count := 0
+var production_confirm_dialog: ConfirmationDialog
+var pending_production_role := ""
+var production_header_crest: TextureRect
+var production_compare_scroll: ScrollContainer
+var production_empty_filter: Label
 var _tab_transition: Tween
 var command_buttons: Dictionary = {}
 var command_grid: GridContainer
@@ -143,6 +159,12 @@ func _ready() -> void:
     command_confirm_exit.cancel_button_text = "CANCELAR"
     command_confirm_exit.confirmed.connect(func(): home_requested.emit())
     add_child(command_confirm_exit)
+    production_confirm_dialog = ConfirmationDialog.new()
+    production_confirm_dialog.title = "Confirmar producción"
+    production_confirm_dialog.ok_button_text = "PRODUCIR UNIDAD"
+    production_confirm_dialog.cancel_button_text = "CANCELAR"
+    production_confirm_dialog.confirmed.connect(_confirm_production)
+    add_child(production_confirm_dialog)
     get_viewport().size_changed.connect(_reflow)
     hide()
 
@@ -480,6 +502,8 @@ func _production_unit_row(role: String, viewer: int) -> void:
     card.add_theme_stylebox_override("panel",Chrome.box_style(
         Color("#122A3A"),Chrome.EDGE if available else Color("#344B59"),7,7))
     production_list_body.add_child(card)
+    production_list_rows[role] = card
+    production_candidates[role] = record.duplicate(true)
     var stack := VBoxContainer.new()
     stack.add_theme_constant_override("separation",5)
     card.add_child(stack)
@@ -524,11 +548,11 @@ func _production_unit_row(role: String, viewer: int) -> void:
     var commands := HBoxContainer.new()
     commands.add_theme_constant_override("separation",6)
     stack.add_child(commands)
-    var sheet := _action(commands,"Ficha A",func(): _select_production_role(role))
+    var sheet := _action(commands,"FICHA A",func(): _select_production_role(role))
     sheet.tooltip_text = "Mostrar estadísticas y disponibilidad de esta unidad"
-    var compare := _action(commands,"Comparar B",func(): _compare_production_role(role))
+    var compare := _action(commands,"COMPARAR B",func(): _compare_production_role(role))
     compare.tooltip_text = "Comparar este modelo con la selección A"
-    var buy: Button = _action(commands,"Comprar",func(): purchase_requested.emit(role),available)
+    var buy: Button = _action(commands,"PRODUCIR",func(): _request_production(role),available)
     buy.tooltip_text = str(record.get("reason",""))
     production_purchase_buttons[role] = buy
 
@@ -552,6 +576,10 @@ func _update_comparison_preview() -> void:
     comparison_preview.show_comparison(CompareData.compare(
         board.state,board.selected_factory_pos,selected_catalog_role,comparison_catalog_role,viewer),
         Identity.color_for(board.state,viewer))
+    if production_selection_label != null:
+        var a_name: String = Roles.label(selected_catalog_role) if not selected_catalog_role.is_empty() else "Sin selección"
+        var b_name: String = Roles.label(comparison_catalog_role) if not comparison_catalog_role.is_empty() else "Sin comparación"
+        production_selection_label.text = "A · %s    |    B · %s" % [a_name,b_name]
 
 func open_for(source: Control, section: String = "") -> void:
     board = source
@@ -762,18 +790,90 @@ func refresh() -> void:
             chosen = str(owned_units[0].get("id",""))
         _select_army_unit(chosen)
 
-    # Real producer-specific candidate collection. Purchase eligibility,
-    # amount, domain and blocking reason always come from CompareData and
-    # ultimately Economy.can_purchase, not duplicated UI rules.
+    # V13 is presentation only: all costs, purchase eligibility and
+    # producer roles remain sourced from the economy and comparison engines.
     _clear(production_body)
     production_purchase_buttons.clear()
+    production_list_rows.clear()
+    production_candidates.clear()
+    production_site_positions.clear()
+    production_filter_index = 0
+    production_available_count = 0
+    production_filter_picker = null
+    production_empty_filter = null
+    production_funds_label = null
+    production_status_label = null
+    production_selection_label = null
+    production_header_crest = null
     comparison_preview = null
     production_list_body = null
+    production_compare_scroll = null
+
+    var economy_for_picker: Dictionary = state.get("economy",{})
+    var site_selector := HBoxContainer.new()
+    site_selector.name = "SelectorDeBasesPropias"
+    site_selector.add_theme_constant_override("separation",8)
+    production_body.add_child(site_selector)
+    var picker_label := Label.new()
+    picker_label.text = "BASE"
+    picker_label.add_theme_color_override("font_color",Chrome.GOLD)
+    picker_label.add_theme_font_size_override("font_size",14)
+    picker_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    site_selector.add_child(picker_label)
+    production_site_picker = OptionButton.new()
+    production_site_picker.name = "SeleccionarInstalacionPropia"
+    production_site_picker.custom_minimum_size.y = 48
+    production_site_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    site_selector.add_child(production_site_picker)
+    for candidate_site in economy_for_picker.get("sites",[]):
+        if not candidate_site is Dictionary:
+            continue
+        if int(candidate_site.get("owner",-1)) != viewer:
+            continue
+        if str(candidate_site.get("kind","")) == "city":
+            continue
+        var location: Vector2i = candidate_site.get("pos",Vector2i(-1,-1))
+        if location.x < 0 or location.y < 0:
+            continue
+        var label_text := "%s · (%d,%d)" % [
+            _installation_label(str(candidate_site.get("kind",""))),
+            location.x+1,location.y+1]
+        production_site_positions.append(location)
+        production_site_picker.add_item(label_text)
+    if production_site_positions.is_empty():
+        production_site_picker.add_item("SIN BASES PROPIAS")
+        production_site_picker.disabled = true
+    else:
+        var site_selection: int = production_site_positions.find(board.selected_factory_pos)
+        if site_selection < 0:
+            site_selection = 0
+            # Only UI target selection changes. No turn, funds, unit or
+            # economy state is modified by browsing another owned base.
+            board.selected_factory_pos = production_site_positions[0]
+        production_site_picker.select(site_selection)
+        production_site_picker.item_selected.connect(_change_production_site)
+
     var shop_layout: Dictionary = _dashboard_columns(production_body,"InstalacionYCatalogo")
     production_columns = shop_layout["rail"]
     var shop_summary: VBoxContainer = shop_layout["left"]
     var shop_catalog: VBoxContainer = shop_layout["right"]
-    _heading(shop_summary,"CENTRO DE PRODUCCIÓN")
+    var production_header := HBoxContainer.new()
+    production_header.add_theme_constant_override("separation",7)
+    shop_summary.add_child(production_header)
+    var production_title := Label.new()
+    production_title.text = "CENTRO DE PRODUCCIÓN"
+    production_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    production_title.add_theme_color_override("font_color",Chrome.GOLD)
+    production_title.add_theme_font_size_override("font_size",19)
+    production_header.add_child(production_title)
+    production_header_crest = TextureRect.new()
+    production_header_crest.texture = Style.emblem_texture(
+        Identity.index_for(Identity.key_for(state,viewer)))
+    production_header_crest.custom_minimum_size = Vector2(37,37)
+    production_header_crest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    production_header_crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    production_header_crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    production_header.add_child(production_header_crest)
     var economy: Dictionary = state.get("economy",{})
     if economy.is_empty():
         _description(shop_summary,"La economía no está activada en esta batalla.")
@@ -794,10 +894,26 @@ func refresh() -> void:
                 comparison_catalog_role = ""
             var credits: Array = economy.get("credits",[])
             var funds: int = int(credits[viewer]) if credits.size() > viewer and viewer >= 0 else 0
-            _description(shop_summary,"INSTALACIÓN · %s  (%d,%d)" % [
-                _installation_label(kind),board.selected_factory_pos.x+1,board.selected_factory_pos.y+1
-            ])
-            _description(shop_summary,"FONDOS PROPIOS: %d CRÉDITOS" % funds)
+            production_status_label = Label.new()
+            production_status_label.text = "BASE · %s (%d,%d)" % [
+                _installation_label(kind),
+                board.selected_factory_pos.x+1,board.selected_factory_pos.y+1]
+            production_status_label.add_theme_font_size_override("font_size",14)
+            production_status_label.add_theme_color_override("font_color",Chrome.TEXT)
+            shop_summary.add_child(production_status_label)
+            production_funds_label = Label.new()
+            var used_this_turn: bool = (
+                int(site.get("produced_turn",-1)) == int(economy.get("turn",-2)))
+            var status_text: String = (
+                "YA PRODUJO ESTE TURNO" if used_this_turn else
+                ("TURNO RIVAL" if int(state.get("faction",-1)) != viewer
+                else "LISTA PARA PRODUCIR"))
+            production_funds_label.text = "%d CRÉDITOS · %s" % [funds,status_text]
+            production_funds_label.add_theme_font_size_override("font_size",14)
+            production_funds_label.add_theme_color_override("font_color",
+                Chrome.MUTED if used_this_turn else Chrome.GOLD)
+            production_funds_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            shop_summary.add_child(production_funds_label)
             var modern: bool = bool(economy.get("modern",false))
             var roles: Array = Roles.ORDER.duplicate()
             if modern:
@@ -812,7 +928,14 @@ func refresh() -> void:
             if comparison_catalog_role not in filtered or comparison_catalog_role == selected_catalog_role:
                 comparison_catalog_role = str(filtered[1]) if filtered.size() > 1 and selected_catalog_role == str(filtered[0]) else ""
             _heading(shop_summary,"COMPARADOR A / B")
+            production_selection_label = Label.new()
+            production_selection_label.name = "ComparacionSeleccionActual"
+            production_selection_label.add_theme_color_override("font_color",Chrome.MUTED)
+            production_selection_label.add_theme_font_size_override("font_size",12)
+            production_selection_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            shop_summary.add_child(production_selection_label)
             var preview_scroll := ScrollContainer.new()
+            production_compare_scroll = preview_scroll
             preview_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
             preview_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
             preview_scroll.custom_minimum_size.y = 330
@@ -822,13 +945,35 @@ func refresh() -> void:
             comparison_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
             preview_scroll.add_child(comparison_preview)
             _update_comparison_preview()
-            _description(shop_summary,"Ficha A selecciona el modelo; Comparar B lo contrasta con otro.")
-            production_list_body = _catalog_scroll(shop_catalog,"CATÁLOGO · %d MODELOS" % filtered.size())
+            _description(shop_summary,"A: ficha principal · B: comparación opcional.")
+            var availability: int = 0
+            for role in filtered:
+                var candidate_data: Dictionary = CompareData.candidate(
+                    state,board.selected_factory_pos,str(role),viewer)
+                if bool(candidate_data.get("available",false)):
+                    availability += 1
+            production_available_count = availability
+            production_filter_picker = OptionButton.new()
+            production_filter_picker.name = "FiltrarCatalogoDeProduccion"
+            production_filter_picker.custom_minimum_size.y = 48
+            production_filter_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            production_filter_picker.add_item("TODOS · %d" % filtered.size())
+            production_filter_picker.add_item("DISPONIBLES · %d" % availability)
+            production_filter_picker.add_item("BLOQUEADOS · %d" % (
+                filtered.size()-availability))
+            production_filter_picker.item_selected.connect(_filter_production)
+            shop_catalog.add_child(production_filter_picker)
+            production_list_body = _catalog_scroll(
+                shop_catalog,"CATÁLOGO · %d MODELOS" % filtered.size())
             for role in filtered:
                 _production_unit_row(role,viewer)
-            if filtered.is_empty():
-                _description(production_list_body,"Esta instalación no produce unidades en este escenario.")
-            _description(shop_catalog,"Comprar usa el saldo real y respeta los bloqueos del motor.")
+            production_empty_filter = Label.new()
+            production_empty_filter.text = "No hay modelos en este filtro."
+            production_empty_filter.add_theme_color_override("font_color",Chrome.MUTED)
+            production_list_body.add_child(production_empty_filter)
+            _filter_production(0)
+            _update_comparison_preview()
+            _description(shop_catalog,"La producción requiere confirmación y verifica la disponibilidad al ejecutarla.")
 
     _clear(settings_body)
     settings_buttons.clear()
@@ -848,6 +993,69 @@ func refresh() -> void:
     _heading(tutorial,"Ventajas defensivas")
     _description(tutorial,"Carretera: vehículos motorizados recorren 2 casillas por punto de movimiento; infantería, 1. Bosque: cobertura +1. Montaña: +2 y ventaja de altura. Ciudad: +1.")
     _reflow()
+
+func _change_production_site(index: int) -> void:
+    if board == null or index < 0 or index >= production_site_positions.size():
+        return
+    var pos: Vector2i = production_site_positions[index]
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var economy: Dictionary = board.state.get("economy",{})
+    var site: Dictionary = Economy.site_at(economy,pos)
+    if site.is_empty() or int(site.get("owner",-1)) != viewer or str(site.get("kind","")) == "city":
+        return
+    board.selected_factory_pos = pos
+    # Only the inspected UI target changes. No orders, funds or turns.
+    refresh()
+    tabs.current_tab = 2
+
+func _filter_production(index: int) -> void:
+    if index not in [0,1,2] or production_filter_picker == null:
+        return
+    production_filter_index = index
+    if production_filter_picker.selected != index:
+        production_filter_picker.select(index)
+    var count := 0
+    for role in production_list_rows:
+        var record: Dictionary = production_candidates.get(role,{})
+        var available: bool = bool(record.get("available",false))
+        var allowed: bool = (
+            index == 0 or (index == 1 and available) or (index == 2 and not available))
+        production_list_rows[role].visible = allowed
+        if allowed:
+            count += 1
+    if production_empty_filter != null:
+        production_empty_filter.visible = count == 0
+
+func _request_production(role: String) -> void:
+    if board == null:
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var record: Dictionary = CompareData.candidate(
+        board.state,board.selected_factory_pos,role,viewer)
+    if record.is_empty() or not bool(record.get("available",false)):
+        return
+    pending_production_role = role
+    production_confirm_dialog.dialog_text = (
+        "¿Producir %s por %d créditos en %s (%d,%d)?\n"
+        + "La unidad será creada únicamente si la compra sigue permitida.") % [
+        str(record.get("name",role)),int(record.get("price",0)),
+        _installation_label(str(Economy.site_at(
+            board.state.get("economy",{}),board.selected_factory_pos).get("kind",""))),
+        board.selected_factory_pos.x+1,board.selected_factory_pos.y+1]
+    production_confirm_dialog.popup_centered()
+
+func _confirm_production() -> void:
+    var role: String = pending_production_role
+    pending_production_role = ""
+    if board == null or role.is_empty():
+        return
+    var viewer: int = 0 if bool(board.ai_enabled) else int(board.state.get("faction",-1))
+    var record: Dictionary = CompareData.candidate(
+        board.state,board.selected_factory_pos,role,viewer)
+    if bool(record.get("available",false)):
+        purchase_requested.emit(role)
+    else:
+        refresh()
 
 func _open_command_tab(index: int) -> void:
     if tabs == null:
@@ -957,6 +1165,29 @@ func reflow_for_size(viewport: Vector2) -> void:
     for tile in army_stat_cells:
         if is_instance_valid(tile):
             tile.custom_minimum_size.x = 100 if command_compact else 190
+    if production_columns != null:
+        production_columns.vertical = viewport.y > viewport.x * 1.12
+    if production_site_picker != null:
+        production_site_picker.custom_minimum_size.y = 44 if command_compact else 48
+        production_site_picker.add_theme_font_size_override(
+            "font_size",12 if command_compact else 16)
+    if production_filter_picker != null:
+        production_filter_picker.custom_minimum_size.y = 44 if command_compact else 48
+    if production_list_scroll != null:
+        production_list_scroll.custom_minimum_size.y = 175 if command_compact else 310
+    if production_compare_scroll != null:
+        production_compare_scroll.custom_minimum_size.y = 205 if command_compact else 330
+    if production_header_crest != null:
+        production_header_crest.custom_minimum_size = (
+            Vector2(28,28) if command_compact else Vector2(37,37))
+    if production_funds_label != null:
+        production_funds_label.add_theme_font_size_override(
+            "font_size",12 if command_compact else 14)
+    for role in production_purchase_buttons:
+        var buy: Button = production_purchase_buttons[role]
+        buy.custom_minimum_size.y = 44 if command_compact else 48
+        buy.add_theme_font_size_override(
+            "font_size",12 if command_compact else 15)
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if visible and event.is_action_pressed("ui_cancel"):
