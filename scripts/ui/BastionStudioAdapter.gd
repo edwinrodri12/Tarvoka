@@ -200,7 +200,7 @@ func _install_g11_controls() -> void:
     _title(g11_controls,
         "V18: orugas reconstruidas con seis ruedas espaciadas, tensores y "
         + "zapatas sin piezas duplicadas. Prueba marcha y observa ambos "
-        + "perfiles; la pintura V17 y los 12 tubos siguen intactos.",12
+        + "perfiles; la pintura V17 y los 12 tubos siguen intactos.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
