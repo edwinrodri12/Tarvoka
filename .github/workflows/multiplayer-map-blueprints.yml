@@ -1,0 +1,37 @@
+name: TARVOKA multi-slot map blueprint fairness lab
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/MapBlueprintLab.gd"
+      - "tests/test_multiplayer_map_blueprints.gd"
+      - "docs/MULTIPLAYER_MAPS_FAIRNESS_BLUEPRINT_V01.md"
+      - ".github/workflows/multiplayer-map-blueprints.yml"
+  workflow_dispatch:
+
+jobs:
+  prototypes:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit 64 prototype maps (not a playable multiplayer test)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 390s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_multiplayer_map_blueprints.gd \
+            2>&1 | tee /tmp/tarvoka-multi-map-lab.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-multi-map-lab.log; then
+            echo 'Map blueprint audit emitted a Godot error'; exit 1
+          fi
+          grep -Fq 'PASS multiplayer blueprint lab:' /tmp/tarvoka-multi-map-lab.log
