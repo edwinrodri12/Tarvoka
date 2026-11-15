@@ -7,6 +7,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Doctrine = preload("res://scripts/core/CombatDoctrine.gd")
 const Terrain = preload("res://scripts/core/TerrainTactics.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
 
 # These guided munitions ARE the projectile, not reusable weapon platforms.
 const ONE_WAY_ROLES := ["fpv", "loitering", "usv"]
@@ -149,6 +150,9 @@ static func attack(units: Array, attacker_id: String, defender_id: String, facti
         # An executed one-way attack removes its own platform even if the
         # target survives. Dead units keep their ID for old save compatibility.
         attacker["hp"] = 0
+    # Both a destroyed defending APC and an APC destroyed by counterfire
+    # lose their passengers. No hidden survivor or captured cargo spawns.
+    result = Cargo.eliminate_destroyed_cargo(result)
     return {
         "valid": true, "units": result, "damage": int(exchange["damage"]),
         "counter_damage": int(exchange["counter_damage"]),
