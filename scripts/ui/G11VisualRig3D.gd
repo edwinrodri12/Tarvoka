@@ -6,6 +6,7 @@ const Art = preload("res://scripts/ui/G11Art3D.gd")
 const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
+const AtmosphereV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -114,6 +115,7 @@ static func pose(model: Node3D, kind: String, progress: float,
             pass
         _:
             return false
+    AtmosphereV7.animate(model,kind,t)
     return true
 
 static func restore(model: Node3D) -> void:
