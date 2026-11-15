@@ -1039,7 +1039,7 @@ func _add_naval_controls() -> void:
     naval_camera_picker.name="CamaraBaseNavalV1"
     naval_camera_picker.custom_minimum_size.y=48
     for label in ["Puerto completo","Vista desde el mar",
-            "Parte posterior","Vista superior"]:
+            "Parte posterior","Vista superior","Detalle defensas y rampa"]:
         naval_camera_picker.add_item(label)
     naval_camera_picker.item_selected.connect(_change_naval_camera)
     naval_controls.add_child(naval_camera_picker)
@@ -1092,7 +1092,7 @@ func _change_naval_setting(_index: int) -> void:
         _display_naval_base()
 
 func _change_naval_camera(index: int) -> void:
-    _naval_camera_view=clampi(index,0,3)
+    _naval_camera_view=clampi(index,0,4)
     if _role=="naval_base":
         _apply_naval_camera()
 
@@ -1101,9 +1101,12 @@ func _apply_naval_camera() -> void:
         return
     var spots: Array[Vector3]=[
         Vector3(-19.0,17.5,-18.0),Vector3(-23.0,11.5,0.5),
-        Vector3(19.0,13.5,16.0),Vector3(-0.01,31.0,9.0)]
+        Vector3(19.0,13.5,16.0),Vector3(-0.01,31.0,9.0),
+        Vector3(-9.5,7.8,9.2)]
     camera.position=spots[_naval_camera_view]
-    camera.look_at(Vector3(0,1.65,0),Vector3.UP)
+    camera.look_at(
+        Vector3(1.28,0.78,1.36) if _naval_camera_view==4 else
+        Vector3(0,1.65,0),Vector3.UP)
     _update_camera()
 
 func _display_naval_base() -> void:
@@ -2104,7 +2107,7 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role=="naval_base":
         if camera!=null:
-            camera.size=20.9/maxf(0.35,_zoom)
+            camera.size=(9.4 if _naval_camera_view==4 else 20.9)/maxf(0.35,_zoom)
         if model_root!=null and model_root.has_node(NavalNightV6.STAGE_NAME):
             NavalNightV6.set_detail(model_root,_zoom>=0.85)
         if model_root!=null and model_root.has_node(NavalBoardingV7.STAGE_NAME):
