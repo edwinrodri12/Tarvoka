@@ -9,6 +9,7 @@ on:
       - 'scripts/core/SaveCodec.gd'
       - 'scripts/core/Visibility.gd'
       - 'scripts/core/TacticalHints.gd'
+      - 'scripts/ui/IsoRenderer.gd'
       - 'scripts/ui/TouchBoard.gd'
       - 'scripts/ui/Main.gd'
       - 'tests/test_apc_transport_engine.gd'
@@ -60,7 +61,7 @@ jobs:
               --script "res://tests/${test}.gd" 2>&1 \
               | tee "/tmp/${test}-apc.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${test}-apc.log"; then exit 1; fi
-            grep -F 'PASS ' "/tmp/${test}-apc.log"
+            grep -E 'PASS(:| )' "/tmp/${test}-apc.log"
           done
       - name: Upload APC evidence
         if: always()
