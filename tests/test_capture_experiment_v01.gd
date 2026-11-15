@@ -189,6 +189,14 @@ static func _rules_test() -> Dictionary:
         assert(int(contested["withheld"]) == 250)
         assert(int(contested["state"]["economy"]["credits"][1-side]) == start_cash)
         assert(contested["tracking"].has(Capture._key(enemy_city)))
+        # A lone 150-credit Scout contributes only 1/4 point on entry:
+        # the defender must NOT lose an entire city income immediately.
+        var scouting: Dictionary = _fixture(side,"scout","enemy_city")
+        var scout_probe: Dictionary = _tick(scouting,{})
+        assert(int(scout_probe["withheld"]) == 0)
+        assert(int(scout_probe["state"]["economy"]["credits"][1-side]) == start_cash+250)
+        assert(int(scout_probe["tracking"][Capture._key(enemy_city)]["points"]) == 1)
+        tested += 1
         var defender_reply: Dictionary = _tick(contested["state"],contested["tracking"])
         assert(defender_reply["tracking"].has(Capture._key(enemy_city)))
         var conquered: Dictionary = _tick(defender_reply["state"],defender_reply["tracking"])
