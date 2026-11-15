@@ -106,6 +106,18 @@ func _initialize() -> void:
     assert(recovered["recovered"])
     assert(recovered["state"] == outcome["state"])
     assert(not Session.attack(recovered["state"], "attacker", "defender")["valid"])
+    # Both copies invalid: never manufacture a battle state or silently resume.
+    # This protects the caller from loading an unrelated/partial match.
+    var invalid_backup := FileAccess.open(disk_path + ".bak", FileAccess.WRITE)
+    assert(invalid_backup != null)
+    invalid_backup.store_string('{"version":999,"units":[],"terrain":[]}')
+    invalid_backup.close()
+    var unrecoverable: Dictionary = Store.load_report(disk_path)
+    assert(unrecoverable.get("state", {}).is_empty())
+    assert(Store.load(disk_path).is_empty())
+    # The previously recovered snapshot remains a valid in-memory session.
+    assert(recovered["state"] == outcome["state"])
+    assert(not Session.attack(recovered["state"], "attacker", "defender")["valid"])
     for suffix in ["", ".bak", ".tmp"]:
         var candidate: String = disk_path + suffix
         if FileAccess.file_exists(candidate):
