@@ -307,7 +307,7 @@ static func _match(map_id: int, first: int, fog: bool, weather: String,
                 captures += 1
                 var capturer := {}
                 for occupant in current["units"]:
-                    if int(occupant.get("hp",0)) > 0 and int(occupant.get("faction",-1)) == side and occupant.get("pos") == pos:
+                    if int(occupant.get("hp",0)) > 0 and int(occupant.get("faction",-1)) == side and occupant.get("pos") == pos and Economy.can_capture(occupant):
                         capturer = occupant
                         break
                 assert(not capturer.is_empty() and Economy.can_capture(capturer))
