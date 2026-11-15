@@ -91,6 +91,31 @@ func _run() -> void:
     assert(menu.command_commander_strip.visible)
     menu.command_buttons["units"].pressed.emit()
     assert(menu.tabs.current_tab == 1)
+    assert(menu.army_filter_picker.item_count == 3)
+    assert(menu.army_row_nodes.size() == menu.army_roster_units.size())
+    assert(menu.army_stats_grid != null)
+    assert(menu.army_stat_cells.size() == 6)
+    menu._set_army_filter(1)
+    for soldier in menu.army_roster_units:
+        var uid: String = str(soldier.get("id",""))
+        assert(menu.army_row_nodes[uid].visible ==
+            not bool(soldier.get("acted",true)))
+    menu._set_army_filter(2)
+    for soldier in menu.army_roster_units:
+        var uid: String = str(soldier.get("id",""))
+        var damaged_or_alert: bool = (
+            int(soldier.get("hp",0)) <= 5 or
+            not menu.Logistics.alert(soldier).is_empty())
+        assert(menu.army_row_nodes[uid].visible == damaged_or_alert)
+    menu._set_army_filter(0)
+    for uid in menu.army_row_nodes:
+        assert(menu.army_row_nodes[uid].visible)
+    menu.reflow_for_size(Vector2(780,360))
+    assert(menu.army_stats_grid.columns == 1)
+    assert(menu.army_filter_picker.custom_minimum_size.y >= 44)
+    menu.reflow_for_size(Vector2(1600,900))
+    assert(menu.army_stats_grid.columns == 2)
+    assert(main.board.state == state_before)
     menu.command_buttons["settings"].pressed.emit()
     assert(menu.tabs.current_tab == 3)
     menu.tabs.current_tab = 0
