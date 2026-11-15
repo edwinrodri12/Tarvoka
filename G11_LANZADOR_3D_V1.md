@@ -80,3 +80,18 @@
 - El artifact `tarvoka-g11-v5-running-gear-bearing-360-review` contiene **14 capturas Godot reales**: ocho ángulos, inspección de tubos huecos, trasera, suspensión, corona de giro, daño crítico y disparo.
 
 **Pendiente artístico:** revisar manualmente los acercamientos en el visor (alineación de llantas y orugas, contacto de amortiguadores, proporciones del soporte de torreta y coherencia de daños). Esta revisión por capturas automatizadas no implica aprobación visual final. Las pruebas de FPS, APK y escenarios con ocho jugadores se posponen mientras se perfecciona el modelado.
+
+## Actualización V6 — blindaje deformado y daños tridimensionales (15-nov-2026)
+
+**Objetivo artístico:** que cada estado de daño parezca una transformación física progresiva del G11, no una esfera de partículas o una caja colocada encima del blindaje.
+
+- `scripts/ui/G11DamageSculptV6.gd` añade geometría nativa para tres cráteres de proyectil con anillos deformados e interior oscuro, rozaduras sobre cabina y partículas metálicas sólidas.
+- Daño medio: el panel lateral derecho intacto **desaparece** y es sustituido por una nueva malla cerrada de blindaje doblado en dos pliegues. Se descubre una junta oscura bajo la deformación y se aplasta parcialmente una tapa del motor.
+- Daño crítico: panel izquierdo rasgado y con espesor real, compartimiento interior oscuro expuesto, tres conducciones metálicas visibles, cubierta del motor carbonizada y brasas integradas en el volumen.
+- Destrucción: el módulo original del lanzador deja de verse, aparece un hueco oscuro en el anillo de la torreta, tres fragmentos sólidos desprendidos que descansan sobre el casco, tubo hidráulico roto y restos carbonizados. Se pierden la antena trasera y la tapa de escotilla en etapas apropiadas.
+- Reacciones diferenciadas: pequeñas esquirlas duras durante impactos de balas y, para explosivos, un anillo real tipo `TorusMesh` con cinco fragmentos metálicos, encima de los efectos suaves existentes.
+- `G11Art3D.apply_stage` restaura exactamente la protección lateral, antena, escotilla, corona y elevación cuando se regresa al estado intacto. No se alteran HP, defensa, movilidad, ataques ni consumos.
+- `BastionStudioAdapter.gd` ofrece botones directos para daño leve, moderado, crítico, destrucción y reparación, manteniendo control de cámaras y animaciones.
+- QA automatizada [G11 V6 Godot 4.3 — ejecución aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697047907) verifica que el nuevo modelo existe en las ocho facciones, prueba las cinco etapas y sus reparaciones y crea **21 fotografías renderizadas por Godot**, incluyendo todos los daños y las dos clases de impacto. Artifact: `tarvoka-g11-v6-physical-damage-360-review`.
+
+**Estado:** la geometría está integrada y los tests pasan, pero falta una inspección estética humana de las imágenes renderizadas para resolver posibles intersecciones y terminar el acabado comercial; no declarar completo sin esa inspección. Continuar con el modelado, no con benchmarks ni APK.
