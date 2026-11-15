@@ -79,33 +79,33 @@ func _draw() -> void:
         Vector2(bounds.x*0.27,bounds.y*0.51),Vector2(0,bounds.y*0.31)
     ],Color("#2B5255"))
     _polygon([
-        Vector2(bounds.x*0.54,0),Vector2(bounds.x,0),Vector2(bounds.x,bounds.y*.31),
-        Vector2(bounds.x*.81,bounds.y*.46),Vector2(bounds.x*.64,bounds.y*.36)
+        Vector2(bounds.x*0.54,0),Vector2(bounds.x,0),Vector2(bounds.x,bounds.y*0.31),
+        Vector2(bounds.x*0.81,bounds.y*0.46),Vector2(bounds.x*0.64,bounds.y*0.36)
     ],Color("#31485D"))
     _polygon([
-        Vector2(0,bounds.y*.55),Vector2(bounds.x*.25,bounds.y*.49),
-        Vector2(bounds.x*.47,bounds.y*.80),Vector2(bounds.x*.35,bounds.y),
+        Vector2(0,bounds.y*0.55),Vector2(bounds.x*0.25,bounds.y*0.49),
+        Vector2(bounds.x*0.47,bounds.y*0.80),Vector2(bounds.x*0.35,bounds.y),
         Vector2(0,bounds.y)
     ],Color("#315345"))
     _polygon([
-        Vector2(bounds.x*.52,bounds.y*.65),Vector2(bounds.x,bounds.y*.43),
-        Vector2(bounds.x,bounds.y),Vector2(bounds.x*.65,bounds.y)
+        Vector2(bounds.x*0.52,bounds.y*0.65),Vector2(bounds.x,bounds.y*0.43),
+        Vector2(bounds.x,bounds.y),Vector2(bounds.x*0.65,bounds.y)
     ],Color("#2F5141"))
     var river := PackedVector2Array([
-        Vector2(bounds.x*.67,0),Vector2(bounds.x*.72,bounds.y*.25),
-        Vector2(bounds.x*.66,bounds.y*.48),Vector2(bounds.x*.77,bounds.y*.71),
-        Vector2(bounds.x*.92,bounds.y)
+        Vector2(bounds.x*0.67,0),Vector2(bounds.x*0.72,bounds.y*0.25),
+        Vector2(bounds.x*0.66,bounds.y*0.48),Vector2(bounds.x*0.77,bounds.y*0.71),
+        Vector2(bounds.x*0.92,bounds.y)
     ])
     draw_polyline(river,Color("#17456C"),21.0,true)
     draw_polyline(river,Color("#4C95AE"),2.0,true)
     for index in range(1,13):
         var x := float(index)*bounds.x/13.0
         draw_line(Vector2(x,0),Vector2(x,bounds.y),
-            Color(.6,.8,.85,.055),1.0)
+            Color(0.6,0.8,0.85,0.055),1.0)
     for index in range(1,8):
         var y := float(index)*bounds.y/8.0
         draw_line(Vector2(0,y),Vector2(bounds.x,y),
-            Color(.6,.8,.85,.055),1.0)
+            Color(0.6,0.8,0.85,0.055),1.0)
     var chain := PackedVector2Array()
     for node_position in NODES:
         chain.append(Vector2(node_position.x*bounds.x,node_position.y*bounds.y))
