@@ -87,6 +87,7 @@ func _create_controls() -> void:
     _make_button(row,"LOD cercano",func(): set_scenario(_units,10))
     _make_button(row,"LOD lejano",func(): set_scenario(_units,8))
     _make_button(row,"Guardar",save_report)
+    _make_button(row,"Copiar",copy_report)
     _message = Label.new()
     _message.text = "Iniciando captura…"
     _message.add_theme_font_size_override("font_size",14)
@@ -157,19 +158,27 @@ func _process(delta: float) -> void:
             fps,_sample_time*1000.0/float(SAMPLE_FRAMES),draw_avg]
         save_report()
 
-func save_report() -> void:
+func _report_json() -> String:
     var payload: Dictionary = {
         "platform":OS.get_name(),
         "kind":"G11 Android physical-device visual benchmark",
         "tests":_history
     }
+    return JSON.stringify(payload,"\t")
+
+func copy_report() -> void:
+    DisplayServer.clipboard_set(_report_json())
+    if _message != null:
+        _message.text = "Resultados copiados. Pégalos en el chat para analizarlos."
+
+func save_report() -> void:
     var file: FileAccess = FileAccess.open(OUTPUT,FileAccess.WRITE)
     if file == null:
         push_error("G11 Android Lab: failed to open user JSON")
         if _message != null:
             _message.text = "Error: no pude guardar el informe"
         return
-    file.store_string(JSON.stringify(payload,"\t"))
+    file.store_string(_report_json())
     file.close()
     if _sample_frames >= SAMPLE_FRAMES and _message != null:
         _message.text += " · informe guardado"
