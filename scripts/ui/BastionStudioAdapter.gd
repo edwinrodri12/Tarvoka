@@ -33,6 +33,8 @@ var _p06_fleet_active_surfaces: int = 0
 var _p06_fleet_animation: String = ""
 var _p06_fleet_animation_time: float = 0.0
 var _p06_fleet_update_clock: float = 0.0
+var _p06_fleet_fps_sample: int = -1
+var _p06_fleet_fps_clock: float = 0.0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
@@ -196,6 +198,8 @@ func _hide_p06_fleet() -> void:
     _p06_fleet_count=0
     _p06_fleet_surfaces=0
     _p06_fleet_active_surfaces=0
+    _p06_fleet_fps_sample=-1
+    _p06_fleet_fps_clock=0.0
     _p06_fleet_animation=""
     _p06_fleet_animation_time=0.0
     if model_root != null and is_instance_valid(model_root):
@@ -232,6 +236,8 @@ func _show_p06_fleet(count: int) -> void:
     _p06_fleet_count=count
     _p06_fleet_surfaces=surfaces
     _p06_fleet=fleet
+    _p06_fleet_fps_sample=-1
+    _p06_fleet_fps_clock=0.0
     model_root.visible=false
     preview.add_child(fleet)
     _update_camera()
@@ -484,6 +490,13 @@ func _process(delta: float) -> void:
             _p06_fleet_update_clock=0.0
             if _p06_fleet_quality<0:
                 _refresh_p06_fleet_quality()
+        # Collect actual in-viewport FPS on the user device (mobile WebGL
+        # if opened in Android Chrome); never present it as native APK FPS.
+        _p06_fleet_fps_clock+=maxf(0.0,delta)
+        if _p06_fleet_fps_clock>=1.0:
+            _p06_fleet_fps_clock=0.0
+            _p06_fleet_fps_sample=Engine.get_frames_per_second()
+            _update_details()
         return
     if not _studio_p06():
         return
@@ -535,8 +548,10 @@ func _update_details() -> void:
         var tier_name: String=(
             "automático" if _p06_fleet_quality<0 else
             ["cerca","media","lejos"][_p06_fleet_quality])
-        status_label.text="LOD %s · construcción %.1f ms · NO son FPS Android" % [
-            tier_name,_p06_fleet_build_ms]
+        var fps_text: String=("muestreando" if _p06_fleet_fps_sample<0
+            else str(_p06_fleet_fps_sample))
+        status_label.text="LOD %s · FPS del visor %s · carga %.1f ms · NO FPS APK" % [
+            tier_name,fps_text,_p06_fleet_build_ms]
         return
     if model_root == null or detail_label == null or status_label == null:
         return
