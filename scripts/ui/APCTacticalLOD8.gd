@@ -17,6 +17,18 @@ const BASE := "tarvoka_apc_lod8_rest"
 const LAST := "tarvoka_apc_lod8_last_pose"
 const WHEEL_TURNS := TAU*1.7
 const MAX_DRAW_SURFACES := 15
+# Same native hull silhouette for every tier, only visibility of small
+# glass/hubs changes. Pixel-height thresholds work for orthographic as well
+# as perspective camera without inventing fixed geographic distances.
+const LOD_NEAR := 0
+const LOD_MEDIUM := 1
+const LOD_FAR := 2
+const LOD_META := "tarvoka_apc_v9_distance_tier"
+const VISUAL_HEIGHT := 2.15
+const HUB_HOME := 0.145
+const TIRES_HOME := 0.0
+const TURN_DEGREES := 14.0
+const BUMP_AMPLITUDE := 0.025
 static var _wheel_mesh: CylinderMesh
 static var _hub_mesh: CylinderMesh
 static var _wheel_mat: StandardMaterial3D
@@ -148,6 +160,7 @@ static func build(model: Node3D, faction_color: Color) -> bool:
     model.set_meta("tarvoka_apc_lod8_faction_color",faction_color)
     model.set_meta("tarvoka_apc_lod8_render_surfaces",draw_surfaces(model))
     model.set_meta(BASE,model.position)
+    model.set_meta(LOD_META,LOD_NEAR)
     return tires.multimesh.instance_count==6
 
 static func has_model(model: Node3D) -> bool:
@@ -162,6 +175,96 @@ static func draw_surfaces(model: Node3D) -> int:
     for node in model.find_children("*","MultiMeshInstance3D",true,false):
         count+=1
     return count
+
+static func detail_tier(model: Node3D) -> int:
+    if not has_model(model):
+        return LOD_FAR
+    return clampi(int(model.get_meta(LOD_META,LOD_NEAR)),LOD_NEAR,LOD_FAR)
+
+static func tier_from_pixels(pixel_height: float,old_tier: int=-1) -> int:
+    # 15% hysteresis avoids shimmering when a mobile user pinch-zooms.
+    if old_tier==LOD_NEAR and pixel_height>=115.0:
+        return LOD_NEAR
+    if old_tier==LOD_FAR and pixel_height<65.0:
+        return LOD_FAR
+    if old_tier==LOD_MEDIUM:
+        if pixel_height>=145.0:
+            return LOD_NEAR
+        if pixel_height>=48.0:
+            return LOD_MEDIUM
+        return LOD_FAR
+    if pixel_height>=130.0:
+        return LOD_NEAR
+    if pixel_height>=55.0:
+        return LOD_MEDIUM
+    return LOD_FAR
+
+static func set_detail(model: Node3D,tier: int) -> bool:
+    if not has_model(model):
+        return false
+    var level: int=clampi(tier,LOD_NEAR,LOD_FAR)
+    var root: Node3D=model.find_child(ROOT,true,false) as Node3D
+    if root==null:
+        return false
+    # NEVER hide the five-section hull, six tires, turret outline, cannon,
+    # rear door or faction paint; avoid 2D impostors and silhouette popping.
+    var hub: Node3D=root.find_child(HUBS,false,false) as Node3D
+    if hub!=null:
+        hub.visible=level<=LOD_MEDIUM
+    var optic: Node3D=root.find_child(
+        "P06V8_OpticaTorreta",true,false) as Node3D
+    if optic!=null:
+        optic.visible=level==LOD_NEAR
+    for side in [-1,1]:
+        var glass: Node3D=root.find_child(
+            "P06V8_VisorConductor_%d" % side,false,false) as Node3D
+        if glass!=null:
+            glass.visible=level<=LOD_MEDIUM
+    model.set_meta(LOD_META,level)
+    return true
+
+static func set_detail_from_pixels(model: Node3D,pixel_height: float) -> bool:
+    if not has_model(model):
+        return false
+    var current: int=detail_tier(model)
+    var desired: int=tier_from_pixels(pixel_height,current)
+    if desired==current:
+        return true
+    return set_detail(model,desired)
+
+static func visible_surfaces(model: Node3D) -> int:
+    if not has_model(model):
+        return 0
+    var count: int=0
+    var root: Node3D=model.find_child(ROOT,true,false) as Node3D
+    if root==null:
+        return 0
+    for piece in root.find_children("*","MeshInstance3D",true,false):
+        var item: Node3D=piece as Node3D
+        var visible: bool=item.visible
+        var parent: Node=item.get_parent()
+        while visible and parent!=root and parent!=null:
+            if parent is Node3D and not (parent as Node3D).visible:
+                visible=false
+            parent=parent.get_parent()
+        if visible:
+            count+=1
+    for piece in root.find_children("*","MultiMeshInstance3D",true,false):
+        if (piece as Node3D).visible:
+            count+=1
+    return count
+
+static func _wheel_transform(side: float,axle: int,travel: float,
+        steering: float,offset: float) -> Transform3D:
+    var yaw: float=steering if axle==0 else 0.0
+    # Rotate about physical cylinder axle and yaw only the front pair.
+    var wheel_axis: Basis=Basis(Vector3.FORWARD,PI/2.0)
+    var pose_basis: Basis=Basis(Vector3.UP,yaw)*wheel_axis*Basis(
+        Vector3.UP,travel)
+    var height: float=Sculpt.WHEEL_RADIUS+0.08
+    return Transform3D(pose_basis,Vector3(
+        side*(Sculpt.WHEEL_X+offset),height,
+        float(Sculpt.WHEEL_Z[axle])))
 
 static func pose(model: Node3D,kind: String,progress: float,
         heading: Vector2i=Vector2i(0,-1)) -> bool:
@@ -181,17 +284,33 @@ static func pose(model: Node3D,kind: String,progress: float,
         return false
     remote.rotation_degrees.y=0.0
     gun.rotation_degrees.x=0.0
-    if kind=="move":
-        # Six transforms are changed IN PLACE, no mesh allocations per frame.
+    model.rotation_degrees.z=0.0
+    var hubs: MultiMeshInstance3D=root.find_child(
+        HUBS,false,false) as MultiMeshInstance3D
+    if kind in ["move","move_turn"]:
+        var travel: float=WHEEL_TURNS*t
+        var turning: bool=kind=="move_turn"
+        var steering: float=deg_to_rad(TURN_DEGREES)*sin(PI*t) if turning else 0.0
         for i in range(6):
             var side: float=-1.0 if i<3 else 1.0
             var axle: int=i%3
-            var at:=Vector3(side*Sculpt.WHEEL_X,Sculpt.WHEEL_RADIUS+0.08,
-                float(Sculpt.WHEEL_Z[axle]))
-            tires.multimesh.set_instance_transform(i,Transform3D(
-                Basis(Vector3.FORWARD,PI/2.0) *
-                Basis(Vector3.UP,WHEEL_TURNS*t),at))
-        model.position.y=base_pos.y+0.014*sin(TAU*t*3.0)
+            tires.multimesh.set_instance_transform(i,
+                _wheel_transform(side,axle,travel,steering,TIRES_HOME))
+            # Metallic hubs spin WITH their tires, unlike V8 where hubs
+            # remained visually static while tread rotation advanced.
+            if hubs!=null:
+                hubs.multimesh.set_instance_transform(i,
+                    _wheel_transform(side,axle,travel,steering,HUB_HOME))
+        var envelope: float=sin(PI*t)
+        model.position.y=base_pos.y-BUMP_AMPLITUDE*absf(
+            sin(TAU*2.4*t))*envelope
+        model.rotation_degrees.z=(
+            -0.75*sin(PI*t) if turning else
+            0.22*sin(TAU*2.0*t)*envelope)
+    elif kind=="idle":
+        # Restoration must not rewind the tires: parking never teleports a
+        # wheel or changes the last accumulated vehicle heading.
+        pass
     elif kind=="attack":
         # Distanced shots retain six short separate weapon kicks, no
         # glowing V7 muzzle particles or individual shell actors.
@@ -203,10 +322,11 @@ static func pose(model: Node3D,kind: String,progress: float,
         remote.rotation_degrees.y=rad_to_deg(
             atan2(float(heading.x),-float(heading.y)))*0.37
         gun.rotation_degrees.x= -0.80*maxf(0.0,shot)
-    elif kind=="idle":
-        pass
     elif kind in ["hit_bullet","hit_explosive"]:
-        model.position.y=base_pos.y+0.014*sin(PI*t*4.0)*(1.0-t)
+        var strength: float=0.055 if kind=="hit_explosive" else 0.012
+        model.position.y=base_pos.y-strength*sin(PI*t)
+        model.rotation_degrees.z=(
+            1.45 if kind=="hit_explosive" else 0.24) * sin(PI*t*3.0) * (1.0-t)
     model.set_meta(LAST,kind)
     return true
 
