@@ -171,7 +171,7 @@ static func _dirt(parent: Node3D, stage: int,
             # sections at medium and critical damage stages.
             if x<-5.6 or x>1.6 or (stage>=2 and i in [2,3]):
                 continue
-            _quad(batch,Vector3(x,y+0.16,z),
+            _quad(batch,Vector3(x,y+0.022,z),
                 Vector3(0.13,0,0),Vector3(0,0,0.31),
                 Color(0.14,0.16,0.15,0.21+float(stage)*0.04),
                 Color(0.19,0.21,0.19,0.0))
