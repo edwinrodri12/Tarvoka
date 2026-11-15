@@ -2199,7 +2199,7 @@ func _update_details() -> void:
                 "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
                 "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
                 "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))))),)
+                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))))))))),
             int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
         status_label.text="%s · %s · defensas y amarres alineados 3D" % [
