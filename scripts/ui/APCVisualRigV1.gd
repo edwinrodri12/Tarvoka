@@ -3,8 +3,9 @@ class_name TarvokaAPCVisualRigV1
 
 # 6x6 wheeled P06 native animation. Entirely cosmetic; it never changes
 # passenger capacity, HP, movement rules or the G09's finalized rig.
+const Burst = preload("res://scripts/ui/APCMachineGunV7.gd")
 const MOVE_DURATION := 0.65
-const SHOT_DURATION := 0.62
+const SHOT_DURATION := 1.12 # Machinegun: six discrete muzzle pulses
 const RAMP_DURATION := 1.05
 const ROOF := "EstacionRemotaP06"
 const RAMP := "BisagraRampaP06"
@@ -58,6 +59,8 @@ static func pose(model: Node3D,kind: String,t: float,
     ramp.rotation_degrees.x=78.0 if model.get_meta("tarvoka_apc_ramp_open",false) else 8.0
     flash.visible=false
     flash.scale=Vector3.ONE
+    if kind!="attack" and Burst.has(model):
+        Burst.restore(model)
 
     var progress: float=float(model.get_meta(PHASE,0.0))
     if kind=="move":
@@ -77,14 +80,22 @@ static func pose(model: Node3D,kind: String,t: float,
         "turn_turret":
             turret.rotation_degrees.y=lerpf(0.0,yaw_degrees,_ease(t))
         "attack":
-            var aim: float=_ease(t/0.31)
-            var settle: float=1.0-_ease((t-0.76)/0.24)
+            var aim: float=_ease(t/0.20)
+            var settle: float=1.0-_ease((t-0.87)/0.13)
+            # Keep the remote station on target throughout six individual
+            # automatic shots, then return smoothly to its rest direction.
             turret.rotation_degrees.y=yaw_degrees*aim*settle
-            var burst: float=_ease((t-0.39)/0.08)*(1.0-_ease((t-0.50)/0.23))
-            gun.rotation_degrees.x=-1.7*burst
-            model.rotation_degrees.z=0.25*sin(t*PI*6.0)*burst
-            flash.visible=t>=0.40 and t<0.56
-            flash.scale=Vector3.ONE*(0.90+0.28*burst)
+            if Burst.has(model):
+                Burst.pose(model,t)
+                model.rotation_degrees.z=0.10*Burst.recoil(t)
+            else:
+                # Backwards compatibility with early P06 V1-V5 art levels.
+                var impulse: float=_ease((t-0.39)/0.08)*(
+                    1.0-_ease((t-0.50)/0.23))
+                gun.rotation_degrees.x=-1.7*impulse
+                model.rotation_degrees.z=0.25*sin(t*PI*6.0)*impulse
+                flash.visible=t>=0.40 and t<0.56
+                flash.scale=Vector3.ONE*(0.90+0.28*impulse)
         "open_ramp":
             ramp.rotation_degrees.x=8.0+70.0*_ease(t)
         "close_ramp":
