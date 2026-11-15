@@ -59,6 +59,9 @@ func _run() -> void:
         "GPU-visible surfaces decrease near-to-far")
     _check(Tactical.set_detail(tactical,Tactical.LOD_NEAR),
         "return to near without rebuilding")
+    tactical.position=Vector3(9.25,1.10,-6.50)
+    Tactical.rebase(tactical)
+    var grid_origin: Vector3=tactical.position
     var initial_tire: Transform3D=wheel.multimesh.get_instance_transform(0)
     var initial_hub: Transform3D=hubs.multimesh.get_instance_transform(0)
     _check(Models.pose_model("apc",tactical,"move_turn",0.50),
@@ -74,6 +77,8 @@ func _run() -> void:
     Models.restore_model_pose("apc",tactical)
     _check(absf(tactical.rotation_degrees.z)<0.01,
         "hull settles after a turn")
+    _check(tactical.position.distance_to(grid_origin)<0.001,
+        "tactical APC remains in its real world cell after steering")
     _check(Models.pose_model("apc",tactical,"hit_explosive",0.35),
         "strong impact suspension")
     _check(tactical.position.y<float(tactical.get_meta(
