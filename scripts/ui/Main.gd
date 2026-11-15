@@ -2506,6 +2506,13 @@ func _open_battle_3d() -> void:
         add_child(battle_3d_view)
         battle_3d_view.focus_requested.connect(
             func(cell: Vector2i): board.focus_view_cell(cell))
+        # Live 3D shares the same safe battle actions and real command menus.
+        # Menu and Objectives close the 3D viewport before opening their
+        # existing interfaces, preventing modal input from leaking through.
+        battle_3d_view.connect("command_center_requested",Callable(self,"_open_command_menu"))
+        battle_3d_view.connect("objectives_requested",Callable(self,"_open_objectives_radar"))
+        battle_3d_view.connect("end_turn_requested",Callable(self,"_end_turn"))
+        battle_3d_view.connect("resupply_requested",Callable(self,"_resupply_unit"))
     if not battle_3d_view.open_from_board(board):
         board.message = "No se pudo abrir el terreno 3D de esta partida."
         board.queue_redraw()

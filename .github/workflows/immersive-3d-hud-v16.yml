@@ -1,0 +1,41 @@
+name: TARVOKA V16 immersive 3D HUD
+on:
+  push:
+    branches: [ui/immersive-3d-battle-hud-v16]
+  pull_request:
+    paths:
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'scripts/ui/Main.gd'
+      - 'scripts/ui/ImmersiveBattleHud.gd'
+      - 'scripts/ui/Battle3DOrders.gd'
+      - 'tests/test_immersive_battle_3d_hud.gd'
+jobs:
+  test-3d-hud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          curl -fLsS --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -oq /tmp/godot.zip -d /tmp/
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Godot import assets and parse scripts
+        shell: bash
+        run: |
+          timeout 130s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit 2>&1 | tee /tmp/hud-import.log
+      - name: Validate native 3D HUD and orders
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_immersive_battle_3d_hud.gd 2>&1 | tee /tmp/hud-3d-test.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:|Invalid call\.' /tmp/hud-3d-test.log; then
+            exit 1
+          fi
+          grep -F 'PASS immersive 3D HUD V16' /tmp/hud-3d-test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TARVOKA-3D-HUD-V16-logs
+          path: /tmp/hud-*.log
