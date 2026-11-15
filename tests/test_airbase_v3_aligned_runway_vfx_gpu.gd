@@ -61,7 +61,7 @@ func _runway(model: Node3D) -> void:
         assert(absf((hangar.position.z-3.345)-Airbase.HANGAR_FRONT_Z)<0.005)
         var gate: MeshInstance3D = hangar.get_node_or_null("CompuertaPrincipal_1") as MeshInstance3D
         if gate!=null:
-            assert(absf((gate.global_position.x-road.position.x))<3.3)
+            assert(absf((hangar.position.x+gate.position.x-road.position.x))<3.3)
 
 func _test() -> void:
     var maximum := 0
