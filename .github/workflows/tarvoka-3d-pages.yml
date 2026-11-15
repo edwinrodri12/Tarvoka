@@ -11,7 +11,7 @@ on:
     types: [completed]
     branches:
       - feat/airbase-v1-native-model-studio-20261114
-      - fix/terrain-v18b-direct-mountain-material-20261114
+      - feat/terrain-v19-snow-biome-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
       - feat/apc-p06-v3-roof-armor-wear-damage-20261114
@@ -179,13 +179,13 @@ jobs:
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
-      - name: Check out V18b real-surface mountain biome studio with V17 seamless battles
+      - name: Check out V19 winter terrain with V18b real-mesh mountains and V17 battle
         uses: actions/checkout@v4
         with:
-          ref: fix/terrain-v18b-direct-mountain-material-20261114
+          ref: feat/terrain-v19-snow-biome-20261114
           path: battle-source
           persist-credentials: false
-      - name: Export V18b direct-pigment mountains and V17 battles to /batalla/
+      - name: Export V19 snow biome and V18b mountain finish to /batalla/
         shell: bash
         run: |
           set -euo pipefail
@@ -207,6 +207,10 @@ jobs:
           test -s battle-source/tests/test_terrain_studio_v18_biomes.gd
           test -s battle-source/scripts/ui/TerrainStudioBiomePaletteV14.gd
           test -s battle-source/tests/test_terrain_v18b_direct_mountain_material.gd
+          test -s battle-source/scripts/ui/TerrainStudioSnowPaletteV15.gd
+          test -s battle-source/tests/test_terrain_studio_v19_snow.gd
+          grep -q 'Bioma nevado' battle-source/scripts/ui/TerrainStudio3D.gd
+          grep -q 'PASS TERRAIN_STUDIO_V19_SNOW:' battle-source/tests/test_terrain_studio_v19_snow.gd
           grep -q 'MaterialDirectoMontanaV18b' battle-source/scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS TERRAIN_V18B_DIRECT_MATERIAL:' battle-source/tests/test_terrain_v18b_direct_mountain_material.gd
           grep -q 'ComparadorTerrenoV12V13' battle-source/scripts/ui/CombinedArtStudioWeb.gd
