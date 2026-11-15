@@ -284,24 +284,31 @@ static func _apc(root: Node3D) -> void:
             Vector3(0.19,0.14,2.65),DARK)
         for axle in range(3):
             var z: float = -0.91+float(axle)*0.91
-            var hub_x: float = sign*0.94
-            _cylinder(chassis,"NeumaticoBastion%s_%d" % [side,axle],
-                Vector3(sign*0.79,0.355,z),
-                0.35,0.30,RUBBER,Vector3(0,0,90),20)
-            _cylinder(chassis,"PerfilNeumatico%s_%d" % [side,axle],
-                Vector3(hub_x,0.355,z),0.274,0.025,BLACK,
+            # Steering pivot holds the entire wheel assembly at the axle,
+            # and a nested spin pivot keeps tyre, rim, hub and bolts coherent.
+            var steering := Node3D.new()
+            steering.name = "DireccionP06_%s_%d" % [side,axle]
+            steering.position = Vector3(sign*0.79,0.355,z)
+            chassis.add_child(steering)
+            var wheel := Node3D.new()
+            wheel.name = "GiroRuedaP06_%s_%d" % [side,axle]
+            steering.add_child(wheel)
+            _cylinder(wheel,"NeumaticoBastion%s_%d" % [side,axle],
+                Vector3.ZERO,0.35,0.30,RUBBER,Vector3(0,0,90),20)
+            _cylinder(wheel,"PerfilNeumatico%s_%d" % [side,axle],
+                Vector3(sign*0.15,0,0),0.274,0.025,BLACK,
                 Vector3(0,0,90),20)
-            _cylinder(chassis,"RinBlindado%s_%d" % [side,axle],
-                Vector3(sign*0.965,0.355,z),0.165,0.034,
+            _cylinder(wheel,"RinBlindado%s_%d" % [side,axle],
+                Vector3(sign*0.175,0,0),0.165,0.034,
                 STEEL.darkened(0.16),Vector3(0,0,90),14)
-            _cylinder(chassis,"BujeCentral%s_%d" % [side,axle],
-                Vector3(sign*0.988,0.355,z),0.065,0.045,
+            _cylinder(wheel,"BujeCentral%s_%d" % [side,axle],
+                Vector3(sign*0.198,0,0),0.065,0.045,
                 DARK,Vector3(0,0,90),12)
             for bolt in range(6):
                 var angle: float = TAU*float(bolt)/6.0
-                _sphere(chassis,"Tuerca%s_%d_%d" % [side,axle,bolt],
-                    Vector3(sign*1.001,0.355+cos(angle)*0.118,
-                        z+sin(angle)*0.118),
+                _sphere(wheel,"Tuerca%s_%d_%d" % [side,axle,bolt],
+                    Vector3(sign*0.211,cos(angle)*0.118,
+                        sin(angle)*0.118),
                     Vector3(0.034,0.034,0.034),METAL)
             # Segmented wheel arches with black relief, rather than
             # squared passenger-car wheel housings.
@@ -370,10 +377,37 @@ static func _apc(root: Node3D) -> void:
         Vector3(0.20,0.19,0.085),GLASS)
     _sphere(remote,"OpticaTermica",Vector3(-0.12,0.40,-0.40),
         Vector3(0.11,0.11,0.045),BLACK)
-    _cylinder(remote,"AmetralladoraRemota",Vector3(0.13,0.42,-0.55),
+    # Elevation and recoil are limited to the weapon, never the whole turret.
+    var gun := Node3D.new()
+    gun.name = "ElevacionArmaP06"
+    gun.position = Vector3(0.13,0.42,-0.06)
+    remote.add_child(gun)
+    _cylinder(gun,"AmetralladoraRemota",Vector3(0,0,-0.49),
         0.040,0.86,BLACK,Vector3(90,0,0),12)
-    _cylinder(remote,"BocachaRemota",Vector3(0.13,0.42,-0.99),
+    _cylinder(gun,"BocachaRemota",Vector3(0,0,-0.93),
         0.064,0.11,DARK,Vector3(90,0,0),12)
+    var flash := Node3D.new()
+    flash.name = "EfectoFogonazoP06"
+    flash.position = Vector3(0,0,-1.02)
+    gun.add_child(flash)
+    _tank_effect_mesh(flash,"LuzDisparoP06",Vector3(0,0,-0.10),
+        Vector3(0.21,0.22,0.43),Color(1,0.74,0.28,0.88),true)
+    flash.visible = false
+    var discharge := Node3D.new()
+    discharge.name = "EfectoHumoDisparoP06"
+    discharge.position = Vector3(0,0,-1.08)
+    gun.add_child(discharge)
+    _tank_effect_mesh(discharge,"HumoBocaP06",Vector3(0,0,-0.11),
+        Vector3(0.36,0.26,0.35),Color(0.52,0.57,0.60,0.35))
+    discharge.visible = false
+    var dust := Node3D.new()
+    dust.name = "EfectoPolvoRuedasP06"
+    root.add_child(dust)
+    for side in [-1,1]:
+        _tank_effect_mesh(dust,"PolvoP06%s" % side,
+            Vector3(float(side)*0.92,0.15,1.20),
+            Vector3(0.43,0.24,0.57),Color(0.60,0.57,0.49,0.30))
+    dust.visible = false
     _box(remote,"CajaAlimentacion",Vector3(0.30,0.36,0.08),
         Vector3(0.24,0.24,0.30),STEEL)
     _paint_box(remote,"FaccionAPC_Torre",Vector3(0,0.58,0.10),
