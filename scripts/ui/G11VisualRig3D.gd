@@ -46,7 +46,7 @@ static func _reset(model: Node3D) -> void:
             var wheel := _node(model,"G11_RuedaPivot_%d_%d" % [side,axle])
             if wheel != null:
                 wheel.rotation_degrees = Vector3.ZERO
-                wheel.position.y = 0.26
+                wheel.position.y = 0.265
     MechanicsV5.update_running_gear(model,0.0)
     TracksFactionV13.update_tracks(model,0.0)
     SalvoV8.reset(model)
