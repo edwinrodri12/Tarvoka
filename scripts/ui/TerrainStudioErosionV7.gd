@@ -8,6 +8,7 @@ const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const MaterialsV9 = preload("res://scripts/ui/TerrainStudioMaterialsV9.gd")
 const RidgeV10 = preload("res://scripts/ui/TerrainStudioRidgeV10.gd")
 const BiomePaletteV14 = preload("res://scripts/ui/TerrainStudioBiomePaletteV14.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const WATER_LEVEL := -0.17
 const WORLD_CELL := 2.4
 static var _fracture_noise: FastNoiseLite
@@ -110,7 +111,9 @@ static func ridge_height(cell: Dictionary, offset: Vector2,
 static func lithology_color(pos: Vector3, elevation: float,
         scene: int, layered: bool = true) -> Color:
     # World-space strata are vertex colors, no heavy textures/shaders.
-    var rock: Color = Color("#53666b") if scene != 1 else Color("#776861")
+    var rock: Color = (
+        Winter.SLATE if scene == 3 else
+        Color("#53666b") if scene != 1 else Color("#776861"))
     var top: float = clampf(elevation/2.0,0.0,1.0)
     if not layered:
         rock = rock.lerp(Color("#829193") if scene != 1
@@ -123,9 +126,11 @@ static func lithology_color(pos: Vector3, elevation: float,
     var phase: float = pos.y*3.8+pos.x*0.19+pos.z*0.12+fold*0.82
     var band: float = fposmod(phase,1.0)
     var mineral: Color = (
+        Winter.SLATE if scene == 3 else
         Color("#526269") if scene == 0 else
         Color("#847266") if scene == 1 else Color("#677a76"))
     var palette: Color = (
+        Winter.FROSTED_STONE if scene == 3 else
         Color("#8b9590") if scene == 0 else
         Color("#ad967f") if scene == 1 else Color("#8a9689"))
     if band < 0.14:
@@ -139,7 +144,9 @@ static func lithology_color(pos: Vector3, elevation: float,
     var fractures: float = _geology(Vector2(pos.x,pos.z)*3.0,scene)*0.11
     rock = rock.lightened(fractures) if fractures > 0.0 else rock.darkened(-fractures)
     if top < 0.38 and scene != 1:
-        var lichen: Color = Color("#647865") if scene == 0 else Color("#687f70")
+        var lichen: Color = (
+            Winter.HARDPACK if scene == 3 else
+            Color("#647865") if scene == 0 else Color("#687f70"))
         var cover: float = (0.38-top)*0.47*clampf(
             _geology(Vector2(pos.x,pos.z)*1.25,scene)+0.65,0.0,1.0)
         rock = rock.lerp(lichen,cover)
@@ -231,6 +238,7 @@ static func _bank(parent: Node3D, cells: Array[Dictionary],
         var half: float = float(cell["half"])
         var seed: int = int(cell["x"])*113+int(cell["z"])*719
         var col: Color = (
+            Winter.FROZEN_SHORE if scene == 3 else
             Color("#a4a392") if scene == 0 else
             Color("#ac9480") if scene == 1 else Color("#c5ae8b"))
         for side in cell.get("water_edges",[]):
@@ -295,7 +303,9 @@ static func _wave(parent: Node3D, cells: Array[Dictionary],
             var start: Vector2 = Vector2(
                 (_hash(seed+17+k*31)-0.5)*1.05,
                 (_hash(seed+7+k*59)-0.5)*1.05)-flow*length*0.5
-            var color := Color(0.57,0.77,0.81,0.13+0.15*r)
+            var color := (
+                Color(0.77,0.88,0.90,0.19+0.16*r) if scene == 3 else
+                Color(0.57,0.77,0.81,0.13+0.15*r))
             strips += 1
             for i in range(3):
                 var t0: float = float(i)/3.0

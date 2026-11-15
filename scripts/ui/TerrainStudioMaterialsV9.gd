@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaTerrainStudioMaterialsV9
 
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
+
 # A terrain-art finish, not a new game renderer. Shade EXISTING vertex
 # colors using measured geometric slope, facet orientation and deterministic
 # world-space mineral grain. No textures, shader variants or new draw calls.
@@ -20,6 +22,7 @@ static func rock_color(base: Color, pos: Vector3, slope: Vector2,
     var steep: float = clampf(slope.length()/1.55,0.0,1.0)
     var shade: float = clampf(0.83+sun*0.18-steep*0.10,0.69,1.02)
     var mineral: Color = (
+        Winter.SLATE if scene == 3 else
         Color("#51676a") if scene == 0 else
         Color("#867368") if scene == 1 else
         Color("#647876"))
@@ -33,7 +36,9 @@ static func rock_color(base: Color, pos: Vector3, slope: Vector2,
     # Weathered foothills become slightly warmer and less bright.
     if pos.y < 0.80:
         var weather: float = (0.80-pos.y)*0.025
-        result = result.lerp(Color("#6c7163"),clampf(weather,0.0,0.09))
+        result = result.lerp(
+            Winter.WINTER_SOIL if scene == 3 else Color("#6c7163"),
+            clampf(weather,0.0,0.09))
     result.a = 1.0
     return result
 
@@ -43,7 +48,9 @@ static func edge_color(base: Color, pos: Vector3, scene: int,
     # as blends instead of isolated saturated markers in the distance.
     var grain: float = _grain(pos+Vector3(2.7,0.3,-1.4))
     var factor: float = (0.88+grain*0.11) if woody else (0.90+grain*0.095)
-    var earth := Color("#77775f") if scene == 1 else Color("#617264")
+    var earth := (
+        Winter.WINTER_SOIL if scene == 3 else
+        Color("#77775f") if scene == 1 else Color("#617264"))
     return (base*clampf(factor,0.74,1.0)).lerp(earth,0.07 if woody else 0.05)
 
 static func daylight_profile(setting: int, improved: bool) -> Dictionary:

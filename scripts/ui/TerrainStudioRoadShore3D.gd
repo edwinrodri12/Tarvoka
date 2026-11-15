@@ -4,6 +4,7 @@ class_name TarvokaTerrainRoadShore3D
 # A preview-only, slope-following surface treatment. The existing tactical
 # movement/bridge/river system remains independent of this decoration mesh.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const ASPHALT := Color("#5b6063")
 const SHOULDER := Color("#938c78")
 const MARKINGS := Color("#f0e5bd")
@@ -55,7 +56,7 @@ static func _finish(parent: Node3D, label: String,
     return mesh
 
 static func road(parent: Node3D, at: Vector3, cell: Dictionary,
-        connected: Dictionary) -> MeshInstance3D:
+        connected: Dictionary, scene: int = 0) -> MeshInstance3D:
     var asphalt := SurfaceTool.new()
     asphalt.begin(Mesh.PRIMITIVE_TRIANGLES)
     var center_width: float = 0.68
@@ -64,7 +65,10 @@ static func road(parent: Node3D, at: Vector3, cell: Dictionary,
     # Draw the shoulder beneath the asphalt, with visible narrow edges.
     for layer in range(2):
         var width: float = border_width if layer == 0 else center_width
-        var material: Color = SHOULDER if layer == 0 else ASPHALT
+        var material: Color = (
+            Winter.ROAD_SLUSH if layer == 0 and scene == 3 else
+            Winter.ROAD_DARK if layer == 1 and scene == 3 else
+            SHOULDER if layer == 0 else ASPHALT)
         var lift: float = 0.033 if layer == 0 else 0.060
         _rect(asphalt,at,cell,-width,width,-width,width,material,lift)
         if bool(connected.get("north",false)):
@@ -83,11 +87,13 @@ static func road(parent: Node3D, at: Vector3, cell: Dictionary,
     if n and s and not e and not w:
         for z_center in [-0.83,0.0,0.83]:
             _rect(asphalt,at,cell,-0.038,0.038,
-                z_center-0.19,z_center+0.19,MARKINGS,0.078)
+                z_center-0.19,z_center+0.19,
+                Winter.SNOW if scene == 3 else MARKINGS,0.078)
     elif e and w and not n and not s:
         for x_center in [-0.83,0.0,0.83]:
             _rect(asphalt,at,cell,x_center-0.19,x_center+0.19,
-                -0.038,0.038,MARKINGS,0.078)
+                -0.038,0.038,
+                Winter.SNOW if scene == 3 else MARKINGS,0.078)
     return _finish(parent,"CalzadaContinuaV3_%d_%d" % [
         int(cell["x"]),int(cell["z"])],asphalt)
 
@@ -98,7 +104,9 @@ static func shore(parent: Node3D, at: Vector3, cell: Dictionary,
     var beach := SurfaceTool.new()
     beach.begin(Mesh.PRIMITIVE_TRIANGLES)
     var half: float = float(cell["half"])
-    var color: Color = SHORE if scene != 1 else Color("#b29a7b")
+    var color: Color = (
+        Winter.FROZEN_SHORE if scene == 3 else
+        SHORE if scene != 1 else Color("#b29a7b"))
     # Each beach lip follows the actual land slope at its water boundary.
     for direction in edges:
         if direction.x > 0:

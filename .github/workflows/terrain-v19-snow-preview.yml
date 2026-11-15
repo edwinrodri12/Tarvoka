@@ -1,0 +1,62 @@
+name: TARVOKA V19 snow biome GPU preview
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/TerrainStudio3D.gd"
+      - "scripts/ui/TerrainStudioSnowPaletteV15.gd"
+      - "scripts/ui/TerrainStudioBiomePaletteV14.gd"
+      - "scripts/ui/TerrainStudioNaturalV6.gd"
+      - "scripts/ui/TerrainStudioErosionV7.gd"
+      - "scripts/ui/TerrainStudioRoadShore3D.gd"
+      - "tests/test_terrain_studio_v19_snow.gd"
+      - ".github/workflows/terrain-v19-snow-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-winter:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Godot 4.3 for the real snow biome mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fsSL --retry 3 "$base/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/terrain-v19-import.log
+          if grep -E 'SCRIPT ERROR:|Import failed' /tmp/terrain-v19-import.log; then
+            exit 1
+          fi
+      - name: Check snow/rock/roads and export real screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 185s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v19_snow.gd \
+            2>&1 | tee /tmp/terrain-v19-snow-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-v19-snow-gpu.log; then
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V19_SNOW:' /tmp/terrain-v19-snow-gpu.log
+          test -s artifacts/tarvoka_v19_bioma_nevado.png
+          test -s artifacts/tarvoka_v19_snow_surface_comparison.png
+      - name: Archive winter images and mesh verification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-V19-Bioma-Nevado-3D-Vistas-GPU
+          path: |
+            artifacts/tarvoka_v19_*.png
+            /tmp/terrain-v19-snow-gpu.log
+          if-no-files-found: warn
+          retention-days: 30

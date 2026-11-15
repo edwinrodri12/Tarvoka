@@ -17,6 +17,8 @@ on:
       - "tests/test_terrain_studio_v16_valley.gd"
       - "scripts/ui/TerrainStudioMountainBiomesV13.gd"
       - "scripts/ui/TerrainStudioBiomePaletteV14.gd"
+      - "scripts/ui/TerrainStudioSnowPaletteV15.gd"
+      - "tests/test_terrain_studio_v19_snow.gd"
       - "tests/test_terrain_v18b_direct_mountain_material.gd"
       - "tests/test_terrain_studio_v18_biomes.gd"
       - "tests/test_terrain_studio_v15_foothills.gd"
@@ -256,6 +258,22 @@ jobs:
           grep -q 'PASS WEB_3D_BATTLE_STUDIO_V8:' /tmp/web-battle-studio-v8.log
           test -s artifacts/tarvoka_studio_battle_3d_medium.png
           test -s artifacts/tarvoka_studio_battle_3d_orders.png
+      - name: Verify V19 permanent snow biome with REAL GPU and original scene preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s "-screen 0 1366x860x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_terrain_studio_v19_snow.gd 2>&1 | tee /tmp/terrain-v19-snow.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/terrain-v19-snow.log; then
+            echo "V19 winter surface, direct mountains, woods, roads or previous scenes regressed" >&2
+            exit 1
+          fi
+          grep -q 'PASS TERRAIN_STUDIO_V19_SNOW:' /tmp/terrain-v19-snow.log
+          test -s artifacts/tarvoka_v19_bioma_nevado.png
+          test -s artifacts/tarvoka_v19_snow_surface_comparison.png
+          test -s artifacts/tarvoka_v19_snow_mountain_profile.png
       - name: Verify V18b direct mountain and foothill material, no buried overlays
         shell: bash
         run: |
@@ -633,6 +651,7 @@ jobs:
             artifacts/tarvoka_terrain_v15_profile.png
             artifacts/tarvoka_terrain_v15_v14_comparison.png
             artifacts/tarvoka_v18b_*.png
+            artifacts/tarvoka_v19_*.png
             artifacts/tarvoka_terrain_v4_v5_same_camera.png
             artifacts/tarvoka_terrain_scene_*.png
             artifacts/tarvoka_terrain_v1_v2_same_camera.png

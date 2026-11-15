@@ -5,6 +5,7 @@ class_name TarvokaTerrainStudioSedimentsV12
 # Visual-only, deterministic, terrain-following mesh batches. The tactical
 # grid, water, roads, collision, heights, movement, fog and saves do not change.
 const Sampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
+const Winter = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
 const DIRECTIONS := [
     Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]
 
@@ -12,6 +13,8 @@ static func _hash(seed: int) -> float:
     return float(posmod(seed*3571+19171,65521))/65521.0
 
 static func _base_color(cell: Dictionary, scene: int) -> Color:
+    if scene == 3:
+        return Winter.ground(str(cell["kind"]),int(cell["x"])*29+int(cell["z"])*43)
     var soil: Color = (
         Color("#bb9e74") if scene == 1 else
         Color("#648677") if scene == 2 else Color("#668868"))
@@ -20,6 +23,8 @@ static func _base_color(cell: Dictionary, scene: int) -> Color:
     return soil
 
 static func _deposit_color(scene: int, source: String) -> Color:
+    if scene == 3:
+        return Winter.sedimental_tint(source)
     if source == "mountain":
         return Color("#8d9185") if scene == 0 else (
             Color("#a28f7c") if scene == 1 else Color("#89988a"))
