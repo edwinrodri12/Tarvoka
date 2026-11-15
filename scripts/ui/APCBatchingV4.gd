@@ -94,6 +94,8 @@ static func apply(model: Node3D) -> int:
                 Vector3.ZERO))
             part.visible=false
             part.set_meta(ORIGINAL_META,true)
+            part.set_meta("tarvoka_apc_v4_batch_name",str(batch.name))
+            part.set_meta("tarvoka_apc_v4_batch_index",index)
             packed+=1
         groups_count+=1
     model.set_meta("tarvoka_apc_v4_static_boxes",true)
