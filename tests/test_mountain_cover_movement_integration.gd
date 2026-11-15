@@ -86,5 +86,27 @@ func _initialize() -> void:
     assert(counter_hit["damage"] > uphill_hit["damage"])
     assert(attacker["hp"] == 10 and defender["hp"] == 10)
 
+    # Flanking is positional: a live ground ally directly behind the defender
+    # adds +1 attack, but a defeated ally or aircraft at that tile cannot flank.
+    var flank_cell := Vector2i(1, 3)
+    var ally := {"id":"flank", "faction":1, "pos":flank_cell, "hp":10, "domain":"ground"}
+    var flanked: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, ally])
+    assert(flanked["flanked"])
+    assert(flanked["attack_bonus"] == 0) # uphill -1 + flank +1
+    assert(flanked["defense_cover"] == 2)
+    var flank_hit: Dictionary = combat.resolve(10, 10, 6 + int(flanked["attack_bonus"]), 1, int(flanked["defense_cover"]))
+    assert(flank_hit["damage"] == 3)
+    var dead_ally: Dictionary = ally.duplicate(true)
+    dead_ally["hp"] = 0
+    var dead_flank: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, dead_ally])
+    assert(not dead_flank["flanked"])
+    assert(dead_flank["attack_bonus"] == -1)
+    var air_ally: Dictionary = ally.duplicate(true)
+    air_ally["domain"] = "air"
+    var air_flank: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, air_ally])
+    assert(not air_flank["flanked"])
+    assert(air_flank["attack_bonus"] == -1)
+    assert(ally["hp"] == 10 and attacker["hp"] == 10 and defender["hp"] == 10)
+
     print("PASS: mountain movement and positional combat integration")
     quit()
