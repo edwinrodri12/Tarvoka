@@ -104,9 +104,11 @@ func _run() -> void:
         camera.fov = 28.0
         await _capture(view,"g11_v12_windshield_wipers_%d.png" % side,folder)
     for side in [-1,1]:
-        camera.position = Vector3(float(side)*1.35,2.60,2.10)
-        camera.look_at(Vector3(0,1.15,0.95),Vector3.UP)
-        camera.fov = 36.0
+        # Frame the actual lower side-engine intakes; an elevated camera
+        # would see only the launcher's roof and conceal the real V12 detail.
+        camera.position = Vector3(float(side)*2.15,1.57,1.72)
+        camera.look_at(Vector3(float(side)*0.71,0.97,1.09),Vector3.UP)
+        camera.fov = 32.0
         await _capture(view,"g11_v12_engine_louvers_%d.png" % side,folder)
     for side in [-1,1]:
         camera.position = Vector3(float(side)*1.12,1.76,2.85)
