@@ -129,9 +129,11 @@ func _ready() -> void:
         "Campo abierto","Bosque de las Dos Rutas","Puentes de la Cuenca",
         "Costa de las Dos Bahias","Mapa aleatorio (semilla)"
     ])
-    biome_picker = _picker(content,"Bioma V19 · paisaje permanente",[
-        "Templado · roca, bosques y costas",
-        "Nevado · cordilleras nevadas, coníferas e hielo"
+    biome_picker = _picker(content,"Bioma · cuatro paisajes completos",[
+        "Valle boscoso · templado",
+        "Bioma nevado · pinos, nieve y hielo",
+        "Canon rocoso · montanas secas",
+        "Delta costero · bosque humedo y litoral"
     ])
     size_picker = _picker(content,"Tamano",[
         "10 x 8 · Rapida","24 x 18 · Campana amplia","40 x 30 · Gran batalla"
@@ -419,7 +421,7 @@ func _changed() -> void:
         objective_picker.get_item_text(objective_picker.selected)
     ]
     preset_summary += " · Bioma: %s" % [
-        "Nevado V19" if biome_picker.selected==1 else "Templado"]
+        Winter.label_for(Winter.from_index(biome_picker.selected))]
     preset_summary += " · Clima: %s (%s)" % [
         ["Despejado","Lluvia","Nieve"][weather_picker.selected],
         "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
@@ -440,7 +442,7 @@ func _changed() -> void:
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,
             int(seed_picker.value),
-            Winter.WINTER if biome_picker.selected==1 else Winter.TEMPERATE)
+            Winter.from_index(biome_picker.selected))
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
