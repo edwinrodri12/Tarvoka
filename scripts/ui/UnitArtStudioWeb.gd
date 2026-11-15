@@ -264,7 +264,10 @@ func _construct() -> void:
         "APC: Girar torreta",func(): _play("turn_turret"))
     _add_paired(apc_controls,"APC: Disparar",
         func(): _play("attack"),
-        "APC: Recibir impacto",func(): _play("hit"))
+        "APC: Recibir balas",func(): _play("hit_bullet"))
+    _add_paired(apc_controls,"APC V3: Impacto explosivo",
+        func(): _play("hit_explosive"),
+        "APC V3: Restaurar daños",func(): _set_apc_damage(0))
     apc_ramp_button=_button(apc_controls,
         "APC: Abrir rampa de tropas",_toggle_apc_ramp)
 
@@ -468,7 +471,7 @@ func _update_details() -> void:
     if _role=="apc":
         if model_root.get_meta("tarvoka_apc_finish_v3",false):
             status_label.text = ("APC P06 V3 · TECHO Y JUNTAS FÍSICAS"
-                + " · TORRETA REFINADA · DAÑO %d/4, HUMO Y FUEGO" % _apc_damage_stage)
+                + " · TORRETA REFINADA · BALAS/EXPLOSIONES · DAÑO %d/4" % _apc_damage_stage)
         elif model_root.get_meta("tarvoka_apc_armor_v2",false):
             status_label.text = ("APC P06 BASTIÓN V2 · BLINDAJE ANGULAR"
                 + " · 288 TACOS 3D COMPARTIDOS · PINTURA PBR"
@@ -1131,6 +1134,8 @@ func _play(kind: String) -> void:
     _animation_time=0.0
     if _role=="apc":
         APCVisual.pose(model_root,kind,0.0)
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            APCFinishV3.animate_impact(model_root,kind,0.0)
     else:
         TankRig.pose(model_root,kind,0.0,Vector2i(1,-1))
         TankDamage.apply_stage(model_root,TankDamage.current_stage(model_root))
@@ -1140,6 +1145,8 @@ func _stop_animation() -> void:
     _animation_time = 0.0
     if _role=="apc" and model_root!=null:
         APCVisual.restore(model_root)
+        if model_root.get_meta("tarvoka_apc_finish_v3",false):
+            APCFinishV3.animate_impact(model_root,"",1.0)
     elif _role == "tank" and model_root != null:
         var stage: int = TankDamage.current_stage(model_root)
         TankRig.restore(model_root)
@@ -1159,6 +1166,8 @@ func _process(delta: float) -> void:
                 else APCVisual.SHOT_DURATION)
             var t: float=minf(_animation_time/maxf(duration,0.01),1.0)
             APCVisual.pose(model_root,_animation,t)
+            if model_root.get_meta("tarvoka_apc_finish_v3",false):
+                APCFinishV3.animate_impact(model_root,_animation,t)
             if t>=1.0:
                 _stop_animation()
         return
