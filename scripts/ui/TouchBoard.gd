@@ -614,7 +614,7 @@ func _draw() -> void:
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(10.0, tile * (0.20 if airborne else 0.30))), Color.WHITE)
         # Own APC capacity badge: a quick count for touch users. Never show
         # enemy passenger counts, even when the carrier itself is visible.
-        if is_player and str(unit.get("role","")) == "apc" and unit.get("cargo",[]) is Array and not unit["cargo"].is_empty() and tile >= 36.0:
+        if is_player and str(unit.get("role","")) == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and tile >= 36.0:
             var count_pos := origin + Vector2(cell)*tile + Vector2(tile*0.54,tile*0.02)
             var count_box := Rect2(count_pos,Vector2(tile*0.43,tile*0.24))
             draw_rect(count_box,Color(0.02,0.10,0.16,0.92))
