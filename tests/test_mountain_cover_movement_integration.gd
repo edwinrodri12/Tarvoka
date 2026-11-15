@@ -108,5 +108,25 @@ func _initialize() -> void:
     assert(air_flank["attack_bonus"] == -1)
     assert(ally["hp"] == 10 and attacker["hp"] == 10 and defender["hp"] == 10)
 
+    # Flanking must be from the opposite adjacent cell, not merely any ally
+    # close to the defender. Wrong faction, diagonal and same-side allies
+    # must not grant a hidden +1 combat bonus.
+    var wrong_faction: Dictionary = ally.duplicate(true)
+    wrong_faction["faction"] = 2
+    var wrong_faction_mod: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, wrong_faction])
+    assert(not wrong_faction_mod["flanked"])
+    assert(wrong_faction_mod["attack_bonus"] == -1)
+    var diagonal_ally: Dictionary = ally.duplicate(true)
+    diagonal_ally["pos"] = Vector2i(2, 3)
+    var diagonal_mod: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, diagonal_ally])
+    assert(not diagonal_mod["flanked"])
+    assert(diagonal_mod["attack_bonus"] == -1)
+    var same_side_ally: Dictionary = ally.duplicate(true)
+    same_side_ally["pos"] = Vector2i(0, 1)
+    var same_side_mod: Dictionary = tactics.modifiers(attacker, defender, board, {}, [attacker, defender, same_side_ally])
+    assert(not same_side_mod["flanked"])
+    assert(same_side_mod["attack_bonus"] == -1)
+    assert(ally["pos"] == flank_cell and ally["faction"] == 1)
+
     print("PASS: mountain movement and positional combat integration")
     quit()
