@@ -4,6 +4,7 @@ class_name TarvokaCombinedArtStudioWeb
 # Add the approved Headquarters to the existing actual Godot Web studio.
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
+const AirbaseV1 = preload("res://scripts/ui/Airbase3DV1.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
@@ -30,6 +31,11 @@ var hq_bullet_test_button: Button
 var hq_explosive_test_button: Button
 var hq_impact_status: Label
 var building_controls: VBoxContainer
+var airbase_controls: VBoxContainer
+var airbase_level_picker: OptionButton
+var airbase_damage_picker: OptionButton
+var airbase_weather_picker: OptionButton
+var _hq_specific_controls: Array[Control] = []
 var _unit_only_controls: Array[Control] = []
 var hq_compare_button: Button
 var hq_v3_compare_button: Button
@@ -130,7 +136,7 @@ func _setup_architecture_stage() -> void:
 func _apply_hq_lighting(index: int) -> void:
     if hq_key_light == null or hq_environment == null:
         return
-    var active: bool = _role == "headquarters"
+    var active: bool = _role in ["headquarters","airbase"]
     _hq_light_preset = clampi(index,0,2)
     var preset: int = _hq_light_preset if active else 0
     # Three reproducible lighting rigs, same camera and exact 3D material.
@@ -322,6 +328,8 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
+    building_picker.add_item("Base Aérea · V1")
+    building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
     var climate_row := HBoxContainer.new()
@@ -562,6 +570,46 @@ func _add_building_mode() -> void:
     _title(building_controls,
         "Modelo editable de prueba. La arquitectura, daños y niveles "
         + "son visuales: no cambian estadísticas, recursos ni partidas.",12)
+    # Group only the HQ-specific items; shared building/faction/camera
+    # selectors remain intact. This avoids hiding functional controls
+    # by guessing label names when the Airbase is selected.
+    for control in building_controls.get_children():
+        if control != building_heading and control != building_picker and control is Control:
+            _hq_specific_controls.append(control as Control)
+    airbase_controls = VBoxContainer.new()
+    airbase_controls.name = "OpcionesBaseAereaV1"
+    airbase_controls.add_theme_constant_override("separation",8)
+    building_controls.add_child(airbase_controls)
+    _title(airbase_controls,"BASE AÉREA · MODELO NATIVO 3D V1",13)
+    _title(airbase_controls,"Nivel arquitectónico",12)
+    airbase_level_picker = OptionButton.new()
+    airbase_level_picker.name = "NivelBaseAereaV1"
+    airbase_level_picker.custom_minimum_size.y = 49
+    for label in ["Nivel 1 · Aeródromo táctico","Nivel 2 · Radar y apoyo",
+            "Nivel 3 · Complejo aéreo avanzado"]:
+        airbase_level_picker.add_item(label)
+    airbase_level_picker.item_selected.connect(_change_airbase_level)
+    airbase_controls.add_child(airbase_level_picker)
+    _title(airbase_controls,"Cinco estados visuales de daño",12)
+    airbase_damage_picker = OptionButton.new()
+    airbase_damage_picker.name = "DanoFisicoBaseAereaV1"
+    airbase_damage_picker.custom_minimum_size.y = 49
+    for label in AirbaseV1.DAMAGE_STAGES:
+        airbase_damage_picker.add_item(str(label))
+    airbase_damage_picker.item_selected.connect(_change_airbase_damage)
+    airbase_controls.add_child(airbase_damage_picker)
+    _title(airbase_controls,"Clima de estudio",12)
+    airbase_weather_picker = OptionButton.new()
+    airbase_weather_picker.name = "ClimaBaseAereaV1"
+    airbase_weather_picker.custom_minimum_size.y = 49
+    for label in ["Despejado","Lluvia","Nieve"]:
+        airbase_weather_picker.add_item(label)
+    airbase_weather_picker.item_selected.connect(_change_airbase_weather)
+    airbase_controls.add_child(airbase_weather_picker)
+    _title(airbase_controls,
+        "Hangar cerrado y techo curvo 3D · torre · helipuerto · "
+        + "escudos oficiales · daños experimentales. Sin cambios en el combate.",12)
+    airbase_controls.visible = false
     building_controls.visible = false
 
     # Place above the shared faction selector.
@@ -629,6 +677,73 @@ func _sync_faction_gallery(index: int) -> void:
         button.set_pressed_no_signal(i == index)
         button.modulate = Color.WHITE if i == index else Color(0.79,0.81,0.85,0.88)
 
+func _change_selected_building(index: int) -> void:
+    if index < 0 or index >= building_picker.item_count:
+        return
+    building_picker.select(index)
+    for control in _hq_specific_controls:
+        control.visible = index == 0
+    airbase_controls.visible = index == 1
+    if index == 1:
+        _display_airbase()
+    else:
+        _display_headquarters()
+
+func _change_airbase_level(_index: int) -> void:
+    if _role == "airbase":
+        _display_airbase()
+
+func _change_airbase_damage(_index: int) -> void:
+    if _role == "airbase":
+        _display_airbase()
+
+func _change_airbase_weather(_index: int) -> void:
+    if _role == "airbase":
+        _display_airbase()
+
+func _display_airbase() -> void:
+    if preview == null:
+        return
+    var first: bool = _role != "airbase"
+    _stop_animation()
+    if model_root != null:
+        preview.remove_child(model_root)
+        model_root.queue_free()
+    _role = "airbase"
+    var tier: int = airbase_level_picker.selected+1
+    var stage: int = airbase_damage_picker.selected
+    model_root = AirbaseV1.build(tier,_faction,stage)
+    if model_root == null:
+        push_error("Base Aerea V1: especificacion no valida")
+        return
+    preview.add_child(model_root)
+    var weather: String = ["clear","rain","snow"][airbase_weather_picker.selected]
+    var coating: Dictionary = UniversalClimate.apply(model_root,weather)
+    if not bool(coating.get("valid",false)):
+        push_error("Base Aerea V1: clima no aplicado")
+    # Reuse V17 environmental precipitation, but not its old HQ snow caps.
+    var climate_ready: bool = HQClimateV17.apply(hq_climate_stage,
+        weather,"asphalt",tier,"operativo",false)
+    if not climate_ready:
+        push_error("Base Aerea V1: precipitacion ambiental no disponible")
+    hq_climate_stage.visible = true
+    for i in range(3):
+        var old_cap: Node3D = hq_climate_stage.get_node_or_null(
+            "NieveAcumuladaCubiertaV17_%d" % i) as Node3D
+        if old_cap != null:
+            old_cap.visible = false
+    hq_map_lod_toggle.visible = false
+    faction_picker.visible = true
+    if first:
+        _yaw = 32.0
+        _zoom = 1.0
+    model_root.rotation_degrees.y = _yaw
+    camera.position = Vector3(-17.5,16.0,-19.0)
+    camera.look_at(Vector3(0,2.25,0),Vector3.UP)
+    _update_camera()
+    _apply_hq_lighting(_hq_light_preset)
+    _update_details()
+
 func _change_hq_version(index: int) -> void:
     if index < 0 or index > 3:
         return
@@ -682,7 +797,10 @@ func _switch_category(index: int) -> void:
         widget.visible = not building
     if building:
         faction_picker.visible = true
-        _display_headquarters()
+        if building_picker.selected == 1:
+            _display_airbase()
+        else:
+            _display_headquarters()
     else:
         camera.position = Vector3(5.3,4.2,6.3)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
@@ -871,6 +989,8 @@ func _refresh_building_faction(_index: int) -> void:
     # selected paint colour rather than tinting an entire concrete building.
     if _role == "headquarters":
         _display_headquarters()
+    elif _role == "airbase":
+        _display_airbase()
 
 func _display_headquarters() -> void:
     if preview == null:
@@ -1002,6 +1122,16 @@ func _display_headquarters() -> void:
     _update_details()
 
 func _reset_camera() -> void:
+    if _role == "airbase":
+        _yaw = 32.0
+        _zoom = 1.0
+        if camera != null:
+            camera.position = Vector3(-17.5,16.0,-19.0)
+            camera.look_at(Vector3(0,2.25,0),Vector3.UP)
+        if model_root != null:
+            model_root.rotation_degrees.y = _yaw
+        _update_camera()
+        return
     if _role == "headquarters":
         _yaw = 32.0
         _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
@@ -1015,6 +1145,10 @@ func _reset_camera() -> void:
     super._reset_camera()
 
 func _update_camera() -> void:
+    if _role == "airbase":
+        if camera != null:
+            camera.size = 18.8/maxf(0.35,_zoom)
+        return
     if _role == "headquarters":
         if camera != null:
             camera.size = (153.0 * float(_hq_grid_dimension)/7.0 if hq_batch_toggle.button_pressed and _hq_show_v4 else 18.6) / _zoom
@@ -1024,6 +1158,18 @@ func _update_camera() -> void:
     super._update_camera()
 
 func _update_details() -> void:
+    if _role == "airbase":
+        if model_root == null:
+            return
+        var tier: int = int(model_root.get_meta("visual_level",1))
+        var stage: int = int(model_root.get_meta("visual_damage_stage",0))
+        detail_label.text = "Base Aérea · MODELO NATIVO V1 · Nivel %d · %d mallas 3D" % [
+            tier,AirbaseV1.mesh_count(model_root)]
+        status_label.text = "%s · %s · %d piezas de facción · casco cerrado" % [
+            str(Factions.FACTIONS[_faction]["name"]),
+            str(AirbaseV1.DAMAGE_STAGES[stage]),
+            AirbaseV1.count_faction_panels(model_root)]
+        return
     if _role != "headquarters":
         super._update_details()
         return
@@ -1072,9 +1218,9 @@ func _update_details() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
-    if _role == "headquarters" and hq_climate_stage != null and hq_climate_stage.visible:
+    if _role in ["headquarters","airbase"] and hq_climate_stage != null and hq_climate_stage.visible:
         _hq_weather_time += delta
-        if model_root != null:
+        if model_root != null and _role == "headquarters":
             HQClimateV17.orient_roof_caps(hq_climate_stage,model_root.rotation.y)
         HQClimateV17.animate(hq_climate_stage,_hq_weather_time)
     if _role != "headquarters" or hq_batch_toggle == null or not hq_batch_toggle.button_pressed:
