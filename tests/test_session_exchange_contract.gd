@@ -95,10 +95,12 @@ func _initialize() -> void:
     assert(Store.save(decisive["state"], disk_path))
     assert(FileAccess.file_exists(disk_path + ".bak"))
     assert(Store.load(disk_path) == decisive["state"])
-    # A corrupt primary must fall back to the last verified valid snapshot.
+    # A structurally invalid but parseable primary must fall back to the verified backup.
+    # Avoid deliberately malformed JSON: Godot logs ERROR on parse failure,
+    # which correctly trips the strict CI log gate even when recovery succeeds.
     var corrupted := FileAccess.open(disk_path, FileAccess.WRITE)
     assert(corrupted != null)
-    corrupted.store_string("{invalid json")
+    corrupted.store_string('{"version":999,"units":[],"terrain":[]}')
     corrupted.close()
     var recovered: Dictionary = Store.load_report(disk_path)
     assert(recovered["recovered"])
