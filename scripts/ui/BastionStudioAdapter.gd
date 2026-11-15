@@ -24,6 +24,10 @@ var p06_version_button: Button
 var p06_ramp_button: Button
 var _p06_show_v5: bool = true
 var _p06_quality_verified: bool = false
+var _p06_fleet: Node3D
+var _p06_fleet_count: int = 0
+var _p06_fleet_surfaces: int = 0
+var _p06_fleet_build_ms: float = 0.0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
@@ -63,6 +67,12 @@ func _install_p06_controls() -> void:
         "Reparar completamente",func(): _set_damage(0))
     p06_version_button = _button(p06_controls,"Comparar acabado V3 / V6",
         _toggle_p06_version)
+    _add_paired(p06_controls,
+        "Prueba 8 vehículos",func(): _show_p06_fleet(8),
+        "Prueba 32 vehículos",func(): _show_p06_fleet(32))
+    _add_paired(p06_controls,
+        "Prueba 64 vehículos",func(): _show_p06_fleet(64),
+        "Volver al Bastión V7",_hide_p06_fleet)
     p06_hint = _title(p06_controls,
         "V7: seis fogonazos individuales y casquillos expulsados. "
         + "Daños progresivos con placas dobladas, rueda afectada y torreta "
@@ -112,6 +122,62 @@ func _g11_stop() -> void:
     if G11Rig.has_rig(model_root):
         G11Rig.restore(model_root)
 
+func _hide_p06_fleet() -> void:
+    if _p06_fleet != null and is_instance_valid(_p06_fleet):
+        var parent: Node=_p06_fleet.get_parent()
+        if parent != null:
+            parent.remove_child(_p06_fleet)
+        _p06_fleet.queue_free()
+    _p06_fleet=null
+    _p06_fleet_count=0
+    _p06_fleet_surfaces=0
+    if model_root != null and is_instance_valid(model_root):
+        model_root.visible=true
+    if _role=="apc":
+        _update_camera()
+        _update_details()
+
+func _show_p06_fleet(count: int) -> void:
+    if not _studio_p06() or count not in [8,32,64]:
+        return
+    _stop_animation()
+    _hide_p06_fleet()
+    var fleet:=Node3D.new()
+    fleet.name="P06V8_FlotaTactica_%d" % count
+    var cols: int=8
+    var rows: int=int(ceil(float(count)/float(cols)))
+    var started: int=Time.get_ticks_usec()
+    var surfaces: int=0
+    for i in range(count):
+        var vehicle: Node3D=P06Models.build("apc",i%8,false,8)
+        if vehicle==null or not P06Tactical.has_model(vehicle):
+            fleet.free()
+            status_label.text="Error construyendo flota P06 V8"
+            return
+        vehicle.name="P06V8_Faccion_%d_Unidad_%d" % [i%8,i]
+        vehicle.scale=Vector3.ONE*0.34
+        vehicle.position=Vector3(
+            (float(i%cols)-3.5)*0.91,0,
+            (float(int(i/cols))-float(rows-1)*0.5)*0.98)
+        fleet.add_child(vehicle)
+        surfaces+=P06Tactical.draw_surfaces(vehicle)
+    _p06_fleet_build_ms=float(Time.get_ticks_usec()-started)/1000.0
+    _p06_fleet_count=count
+    _p06_fleet_surfaces=surfaces
+    _p06_fleet=fleet
+    model_root.visible=false
+    preview.add_child(fleet)
+    _update_camera()
+    _update_details()
+
+func _update_camera() -> void:
+    super._update_camera()
+    if _role=="apc" and _p06_fleet!=null and camera!=null:
+        # Orthographic view needs size rather than moving the camera closer.
+        var full: float=13.4 if _p06_fleet_count<=8 else (
+            15.0 if _p06_fleet_count<=32 else 18.2)
+        camera.size=full/maxf(0.35,_zoom)
+
 func _studio_p06() -> bool:
     return _role == "apc" and model_root != null and \
         bool(model_root.get_meta("tarvoka_apc_finish_v3",false))
@@ -156,6 +222,8 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    if _p06_fleet!=null:
+        _hide_p06_fleet()
     super._display_role(role)
     if role == "apc" and model_root != null:
         # Replace the proxy outright: leaving hundreds of invisible meshes
@@ -249,6 +317,8 @@ func _set_damage(stage: int) -> void:
     if _role != "apc":
         super._set_damage(stage)
         return
+    if _p06_fleet!=null:
+        _hide_p06_fleet()
     if not _studio_p06():
         return
     _stop_animation()
@@ -259,6 +329,8 @@ func _set_damage(stage: int) -> void:
         _update_details()
 
 func _toggle_p06_version() -> void:
+    if _p06_fleet!=null:
+        _hide_p06_fleet()
     if not _studio_p06():
         return
     _p06_show_v5 = not _p06_show_v5
@@ -279,6 +351,8 @@ func _play(kind: String) -> void:
     if _role != "apc":
         super._play(kind)
         return
+    if _p06_fleet!=null:
+        _hide_p06_fleet()
     if not _studio_p06():
         return
     if _stage_p06() >= 4 and kind not in ["hit_bullet","hit_explosive"]:
@@ -318,7 +392,7 @@ func _process(delta: float) -> void:
         if t >= 1.0:
             _g11_stop()
             _update_details()
-    if not _studio_p06():
+    if _p06_fleet!=null or not _studio_p06():
         return
     if _stage_p06() >= 2:
         _effect_time += maxf(0.0,delta)
@@ -359,6 +433,12 @@ func _update_details() -> void:
         return
     if _role != "apc":
         super._update_details()
+        return
+    if _p06_fleet!=null and detail_label!=null and status_label!=null:
+        detail_label.text="Bastión V8 táctico · %d vehículos · 8 facciones · %d superficies" % [
+            _p06_fleet_count,_p06_fleet_surfaces]
+        status_label.text="Construcción %.1f ms · prueba Godot PC/Web, NO FPS medidos en Android" % [
+            _p06_fleet_build_ms]
         return
     if model_root == null or detail_label == null or status_label == null:
         return
