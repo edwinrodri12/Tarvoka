@@ -58,7 +58,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V13 orugas y colores de facción")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V15 bastidor y paneles traseros")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V19 blindaje lateral integrado · 6×6")
@@ -141,7 +141,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ENGRANES Y FACCIÓN V13",14)
+        "G11 LANZADOR · ESCULTURA POSTERIOR V15",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -163,10 +163,12 @@ func _install_g11_controls() -> void:
         "Ver orugas y suspensión",func(): _g11_view(90.0))
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
         "Lateral opuesto",func(): _g11_view(270.0))
+    _add_paired(g11_controls,"V15: trasera en 3/4",func(): _g11_view(145.0),
+        "V15: blindaje opuesto",func(): _g11_view(215.0))
     _title(g11_controls,
-        "V13: engranes alineados con ambas orugas y giro sincronizado "
-        + "con sus zapatas; sin piezas duplicadas. El techo del lanzador "
-        + "y los paneles laterales muestran el color de tu facción.",12)
+        "V15: inspecciona las dos cubiertas traseras biseladas, el bastidor "
+        + "reforzado y seis lamas 3D. Durante la salva verás los hidráulicos V14; "
+        + "las diez puntas del engrane V13 y la pintura siguen intactas.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -767,7 +769,11 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_tracks_faction_v13",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_aft_pod_finish_v15",false)):
+            detail_label.text = detail_label.text.replace("salva V8","bastidor y acabados V15")
+        elif built and bool(model_root.get_meta("tarvoka_g11_mechanical_detail_v14",false)):
+            detail_label.text = detail_label.text.replace("salva V8","hidráulicos V14")
+        elif built and bool(model_root.get_meta("tarvoka_g11_tracks_faction_v13",false)):
             detail_label.text = detail_label.text.replace("salva V8","engranes y facción V13")
         elif built and bool(model_root.get_meta("tarvoka_g11_cab_chassis_v12",false)):
             detail_label.text = detail_label.text.replace("salva V8","cabina V12")
