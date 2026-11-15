@@ -9,6 +9,7 @@ const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
+const BastionDamage = preload("res://scripts/ui/BastionDamage3D.gd")
 const TankFinish = preload("res://scripts/ui/TankFinish3D.gd")
 const TankProduction = preload("res://scripts/ui/TankProduction3D.gd")
 const TankSilhouette = preload("res://scripts/ui/TankSilhouetteV5.gd")
@@ -805,6 +806,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         if role == "tank":
             apply_faction_palette(imported,faction)
             TankDamage.prepare(imported)
+        elif role == "apc":
+            apply_faction_palette(imported,faction)
+            BastionDamage.prepare(imported)
         return imported
     # Authored native 3D mesh fallback, never a fake 2D illustration.
     var model := Node3D.new()
@@ -862,6 +866,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 if art_level >= 10:
                     TankArmorV10.finish_materials(model)
         TankDamage.prepare(model)
+    elif role == "apc":
+        apply_faction_palette(model,faction)
+        BastionDamage.prepare(model)
     return model
 
 static func inspect_meshes(model: Node) -> int:
