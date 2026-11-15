@@ -220,11 +220,11 @@ static func _hangar(parent: Node3D, accent: Color,
     if damage==4:
         # Ruins, not an intact sealed hangar under decals.
         for part in hangar.get_children():
-            if part is Node3D and (part.name.begins_with("Muro") or
-                    part.name.begins_with("Compuerta") or
-                    part.name.begins_with("Dintel") or part.name.begins_with("Pil") or
-                    part.name.begins_with("Marco") or part.name.begins_with("Canalon") or
-                    part.name.begins_with("Contrafuerte")):
+            if part is Node3D and (str(part.name).begins_with("Muro") or
+                    str(part.name).begins_with("Compuerta") or
+                    str(part.name).begins_with("Dintel") or str(part.name).begins_with("Pil") or
+                    str(part.name).begins_with("Marco") or str(part.name).begins_with("Canalon") or
+                    str(part.name).begins_with("Contrafuerte")):
                 (part as Node3D).visible = false
 
 static func _tower(parent: Node3D, accent: Color, level: int, damage: int) -> void:
