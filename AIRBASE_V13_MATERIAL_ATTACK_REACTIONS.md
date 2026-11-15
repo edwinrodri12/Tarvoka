@@ -16,7 +16,7 @@ Los puntos seleccionados pertenecen a geometría conservada incluso en **daño c
 
 ### Integración del visor
 
-Selecciona **Edificios 3D → Base Aérea V13**. El interruptor *V13 · efectos específicos (comparar V12)* activa la nueva animación de impactos. Justo bajo los botones existentes hay un selector de objetivos de metal, concreto y cubierta. Usa **Impacto de bala**, **Misil** o **Bombardeo**. El botón **Impacto explosivo** mantiene el efecto anterior de V12 para comparación.
+Selecciona **Edificios 3D → Base Aérea V13**. El interruptor *V13 · efectos específicos (comparar V12)* activa la nueva animación de impactos. Justo bajo los botones existentes hay un selector de objetivos de metal, concreto y cubierta. Usa **Impacto de bala**, **Misil** o **Bombardeo**. El botón **Impacto explosivo** mantiene el efecto anterior de V12 para comparación. **«Enfocar objetivo para inspeccionar impactos de cerca»** activa un encuadre ortográfico que sigue la posición transformada de la superficie real incluso después de girar el modelo. El control es opcional y no cambia el tamaño de los efectos durante una partida.
 
 La animación V13 está separada de V12, por lo que no dispara dos veces partículas/escombros del mismo impacto. Todas las animaciones son reproducibles y se pueden volver a activar sin instanciar más geometría.
 
