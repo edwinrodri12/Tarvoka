@@ -14,13 +14,14 @@ static func legal_snapshot(state: Dictionary, unit_id: String,
         public_cells: Dictionary) -> Dictionary:
     var result: Dictionary = {"moves":{},"coverage":{},"attacks":{}}
     var selected: Dictionary = {}
-    if unit_id.is_empty() or int(state.get("faction",-1)) != 0:
+    var viewer: int = int(state.get("faction",-1))
+    if unit_id.is_empty() or viewer not in [0,1]:
         return result
     for unit in state.get("units",[]):
         if unit is Dictionary and str(unit.get("id","")) == unit_id:
             selected = unit
             break
-    if selected.is_empty() or int(selected.get("hp",0)) <= 0 or int(selected.get("faction",-1)) != 0:
+    if selected.is_empty() or int(selected.get("hp",0)) <= 0 or int(selected.get("faction",-1)) != viewer:
         return result
     var authoritative: Dictionary = Hints.for_unit(state,unit_id)
     var footprint: Dictionary = Hints.friendly_weapon_coverage(state,unit_id)
