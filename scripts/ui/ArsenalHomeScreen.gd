@@ -11,6 +11,19 @@ const SpriteAtlas = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Backdrop = preload("res://scripts/ui/GameUiBackdrop.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+
+const CATEGORIES := ["TIERRA","AIRE","MAR","INSTALACIONES"]
+const SITES := ["city","factory","armor_plant","artillery_depot","drone_center","airbase","shipyard"]
+const SITE_NAMES := ["Ciudad","Fábrica","Planta de blindados","Depósito de artillería","Centro de drones","Base aérea","Astillero"]
+const SITE_DESC := [
+    "Las ciudades generan créditos al finalizar los turnos. Su control es estratégico.",
+    "Instalación de producción de infantería y unidades básicas.",
+    "Instalación de producción de vehículos y tanques.",
+    "Instalación que produce artillería y unidades antiaéreas.",
+    "Instalación que produce drones y plataformas aéreas ligeras.",
+    "Instalación que produce helicópteros, cazas y bombarderos.",
+    "Instalación costera necesaria para producir unidades navales."]
 
 const HEADINGS := [
     Vector2.ZERO,Vector2.UP,Vector2(1,-1),Vector2.RIGHT,
@@ -18,6 +31,23 @@ const HEADINGS := [
 ]
 
 var entries: VBoxContainer
+var category_buttons: Array[Button] = []
+var category_tabs: HBoxContainer
+var category_index := 0
+var role_rows: Dictionary = {}
+var site_rows: Dictionary = {}
+var site_buttons: Dictionary = {}
+var selected_site: String = ""
+var status_heading: Label
+var unit_stats: Label
+var unit_note: Label
+var site_notice: Label
+var preview_row: HBoxContainer
+var controls: HBoxContainer
+var faction_emblem: TextureRect
+var compact_landscape := false
+var page_heading: Label
+var back_button: Button
 var catalog_scroll: ScrollContainer
 var content_rail: BoxContainer
 var pose_picker: OptionButton
@@ -51,21 +81,37 @@ func _ready() -> void:
     layout.add_child(header)
     var heading := Label.new()
     heading.text = "TARVOKA  /  ARSENAL"
+    page_heading = heading
     heading.add_theme_font_size_override("font_size",25)
     heading.add_theme_color_override("font_color",Chrome.GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(heading)
     var back := Button.new()
-    back.text = "Volver"
+    back.text = "‹ VOLVER"
     back.custom_minimum_size = Vector2(96,48)
     back.pressed.connect(func(): close_requested.emit())
+    back_button = back
     Chrome.emphasize(back,"secondary")
     header.add_child(back)
 
     catalog_status = Label.new()
     catalog_status.add_theme_color_override("font_color",Chrome.MUTED)
     catalog_status.add_theme_font_size_override("font_size",14)
-    catalog_status.text = "%d unidades disponibles para previsualización · Arte de unidades en desarrollo" % (Roles.ORDER.size()+Arsenal.ORDER.size())
+    catalog_status.text = "32 unidades · 7 instalaciones · Catálogo visual (sin modificar la batalla)"
+    category_tabs = HBoxContainer.new()
+    category_tabs.name = "CategoriasDelArsenal"
+    category_tabs.add_theme_constant_override("separation",7)
+    layout.add_child(category_tabs)
+    for idx in range(CATEGORIES.size()):
+        var tab := Button.new()
+        tab.name = "Categoria%d" % idx
+        tab.text = "%s  %d" % [CATEGORIES[idx],
+            (16 if idx == 0 else (8 if idx in [1,2] else SITES.size()))]
+        tab.custom_minimum_size.y = 48
+        tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        tab.pressed.connect(_choose_category.bind(idx))
+        category_tabs.add_child(tab)
+        category_buttons.append(tab)
     layout.add_child(catalog_status)
 
     content_rail = BoxContainer.new()
@@ -86,7 +132,8 @@ func _ready() -> void:
     list_column.add_theme_constant_override("separation",7)
     catalog_card.add_child(list_column)
     var catalog_title := Label.new()
-    catalog_title.text = "CATÁLOGO DE UNIDADES"
+    catalog_title.text = "UNIDADES · TIERRA"
+    status_heading = catalog_title
     catalog_title.add_theme_color_override("font_color",Chrome.GOLD)
     catalog_title.add_theme_font_size_override("font_size",17)
     list_column.add_child(catalog_title)
@@ -105,6 +152,7 @@ func _ready() -> void:
         var row := HBoxContainer.new()
         row.add_theme_constant_override("separation",7)
         entries.add_child(row)
+        role_rows[role] = row
         var icon: Control = Icon.new()
         row.add_child(icon)
         icon.custom_minimum_size = Vector2(50,50)
@@ -120,6 +168,29 @@ func _ready() -> void:
         button.pressed.connect(_select_role.bind(role))
         row.add_child(button)
         role_buttons[role] = button
+    for idx in range(SITES.size()):
+        var site_key: String = SITES[idx]
+        var site_row := HBoxContainer.new()
+        site_row.add_theme_constant_override("separation",7)
+        entries.add_child(site_row)
+        site_rows[site_key] = site_row
+        var mark := Label.new()
+        mark.text = "▣"
+        mark.custom_minimum_size = Vector2(48,48)
+        mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        mark.add_theme_color_override("font_color",Chrome.GOLD)
+        mark.add_theme_font_size_override("font_size",30)
+        site_row.add_child(mark)
+        var site_button := Button.new()
+        site_button.text = SITE_NAMES[idx]
+        site_button.custom_minimum_size.y = 52
+        site_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        site_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+        site_button.clip_text = true
+        site_button.pressed.connect(_select_site.bind(site_key))
+        site_row.add_child(site_button)
+        site_buttons[site_key] = site_button
 
     var preview_card := PanelContainer.new()
     preview_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -133,7 +204,7 @@ func _ready() -> void:
     dossier.add_theme_constant_override("separation",9)
     preview_card.add_child(dossier)
     var dossier_heading := Label.new()
-    dossier_heading.text = "VISOR DE UNIDADES  /  DISEÑO EN PRUEBAS"
+    dossier_heading.text = "FICHA TÉCNICA  /  MODELO VISUAL ACTUAL"
     dossier_heading.add_theme_color_override("font_color",Chrome.GOLD)
     dossier_heading.add_theme_font_size_override("font_size",16)
     dossier.add_child(dossier_heading)
@@ -143,7 +214,7 @@ func _ready() -> void:
     unit_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     dossier.add_child(unit_name)
 
-    var preview_row := HBoxContainer.new()
+    preview_row = HBoxContainer.new()
     preview_row.add_theme_constant_override("separation",12)
     preview_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     dossier.add_child(preview_row)
@@ -157,6 +228,14 @@ func _ready() -> void:
     unit_preview = Icon.new()
     preview_center.add_child(unit_preview)
     unit_preview.custom_minimum_size = Vector2(180,180)
+    site_notice = Label.new()
+    site_notice.text = "SIN VISTA 3D INTEGRADA\nFICHA INFORMATIVA"
+    site_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    site_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    site_notice.add_theme_color_override("font_color",Chrome.MUTED)
+    site_notice.add_theme_font_size_override("font_size",14)
+    preview_center.add_child(site_notice)
+    site_notice.hide()
 
     var details := VBoxContainer.new()
     details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -172,14 +251,25 @@ func _ready() -> void:
     unit_code.add_theme_font_size_override("font_size",14)
     unit_code.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(unit_code)
+    unit_stats = Label.new()
+    unit_stats.name = "DatosRealesDeUnidad"
+    unit_stats.add_theme_color_override("font_color",Chrome.TEXT)
+    unit_stats.add_theme_font_size_override("font_size",13)
+    unit_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    details.add_child(unit_stats)
+    unit_note = Label.new()
+    unit_note.add_theme_color_override("font_color",Chrome.MUTED)
+    unit_note.add_theme_font_size_override("font_size",12)
+    unit_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    details.add_child(unit_note)
     var notice := Label.new()
-    notice.text = "Observa el aspecto, movimiento, ataque y daños. Esta pantalla no ejecuta órdenes de combate."
+    notice.text = "Vista de consulta: no realiza compras ni órdenes de combate."
     notice.add_theme_color_override("font_color",Chrome.MUTED)
     notice.add_theme_font_size_override("font_size",13)
     notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(notice)
 
-    var controls := HBoxContainer.new()
+    controls = HBoxContainer.new()
     controls.add_theme_constant_override("separation",7)
     dossier.add_child(controls)
     pose_picker = _control(controls,"Animación",["Reposo","Movimiento","Ataque","Dañado"])
@@ -187,6 +277,20 @@ func _ready() -> void:
         Style.FACTIONS.map(func(item: Dictionary): return str(item["name"])))
     heading_picker = _control(controls,"Dirección",
         ["Sin giro","N","NE","E","SE","S","SO","O","NO"])
+    var emblem_panel := HBoxContainer.new()
+    emblem_panel.add_theme_constant_override("separation",5)
+    dossier.add_child(emblem_panel)
+    var emblem_label := Label.new()
+    emblem_label.text = "ESCUDO DE FACCIÓN"
+    emblem_label.add_theme_font_size_override("font_size",12)
+    emblem_label.add_theme_color_override("font_color",Chrome.GOLD)
+    emblem_panel.add_child(emblem_label)
+    faction_emblem = TextureRect.new()
+    faction_emblem.custom_minimum_size = Vector2(42,42)
+    faction_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    faction_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    faction_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    emblem_panel.add_child(faction_emblem)
     pose_picker.item_selected.connect(_select_pose)
     faction_picker.item_selected.connect(_select_faction)
     heading_picker.item_selected.connect(_select_heading)
@@ -198,6 +302,7 @@ func _ready() -> void:
     footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     dossier.add_child(footer)
     _select_role(str((Roles.ORDER + Arsenal.ORDER)[0]))
+    _choose_category(0)
     get_viewport().size_changed.connect(_reflow)
     call_deferred("_reflow")
     hide()
