@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'tests/test_session_exchange_contract.gd'
+      - 'tests/test_session_cross_process.gd'
       - 'scripts/core/BattleSession.gd'
       - 'scripts/core/BattleActions.gd'
       - '.github/workflows/battle-session-exchange.yml'
@@ -35,3 +36,17 @@ jobs:
             exit 1
           fi
           grep -q 'PASS battle session exchange:' /tmp/session-exchange.log
+      - name: Verify save survives a fresh Godot process
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in write read; do
+            timeout --signal=TERM --kill-after=5s 90s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script res://tests/test_session_cross_process.gd -- --phase="$phase" \
+              2>&1 | tee "/tmp/session-cross-$phase.log"
+            if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' "/tmp/session-cross-$phase.log"; then
+              exit 1
+            fi
+            grep -q "PASS cross-process $phase" "/tmp/session-cross-$phase.log"
+          done
