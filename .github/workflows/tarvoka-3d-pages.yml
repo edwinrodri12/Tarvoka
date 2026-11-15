@@ -647,16 +647,16 @@ jobs:
                    '../tanque/', 'G09 · REVISIÓN ARTÍSTICA',
                    'Inspeccionar materiales de tanque V25 y escenarios V26', 136)
           add_link(Path('build/web/index.html'),
-                   'apc/', 'APC P06 V3 · TECHO Y DAÑOS',
-                   'APC V3 6x6: techo, juntas, torreta, cinco daños y rampa animada', 196)
+                   'apc/', 'APC P06 V3 · ARCHIVO ANTERIOR',
+                   'Modelo V3 histórico: consulta el Bastión V7 actual en el Estudio principal', 196)
           add_link(Path('build/web/tanque/index.html'),
-                   '../apc/', 'SIGUIENTE UNIDAD · APC P06 V3',
+                   '../apc/', 'APC P06 V3 · HISTÓRICO',
                    'Abrir el nuevo blindado sin alterar G09 V32', 196)
           add_link(Path('build/web/batalla/index.html'),
-                   '../apc/', 'APC P06 V3 · MODELO 3D',
+                   '../apc/', 'APC P06 V3 · ARCHIVO',
                    'Revisar el nuevo transporte de tropas', 196)
           add_link(Path('build/web/apc/index.html'),
-                   '../', 'VOLVER AL ESTUDIO 3D',
+                   '../', 'BASTIÓN P06 V7 · VERSIÓN ACTUAL',
                    'Volver al Estudio TARVOKA')
           add_link(Path('build/web/apc/index.html'),
                    '../tanque/', 'TANQUE G09 V32 · FINAL',
