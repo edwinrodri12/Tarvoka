@@ -16,27 +16,16 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
-const REPAIR_HP_LIMIT := 2
-const REPAIR_DISCOUNT_PCT := 85
-const REPAIR_MIN_CREDITS := 20
-const REPAIRABLE_GROUND := [
-    "apc", "ifv", "tank", "spg", "mlrs", "mobile_aa",
-    "sam", "ew", "logistics"
-]
-const DEFERRED_CORE_SUPPORT := ["ew", "transport_heli", "landing_ship"]
+const DEFERRED_CORE_SUPPORT := ["engineer", "ew", "transport_heli", "landing_ship"]
+# Engineer repair already lives in separate draft PR #320 with +3 HP
+# and 35 credits/HP, followed by AI paths in dependent draft #323.
+# Do not buy engineer based on a duplicate, newly invented repair action.
 
 static func _unit(state: Dictionary, uid: String) -> Dictionary:
     for unit in state.get("units", []):
         if unit is Dictionary and str(unit.get("id", "")) == uid:
             return unit
     return {}
-
-static func _max_hp(role: String) -> int:
-    if Roles.PROFILES.has(role):
-        return int(Roles.PROFILES[role]["hp"])
-    if Arsenal.valid(role):
-        return int(Arsenal.profile(role)["hp"])
-    return 0
 
 # Proposed Asaltante identity: ignore just the +1 CITY cover on a
 # defending ground unit. Native forest/mountain cover remains untouched.
@@ -67,72 +56,6 @@ static func urban_assault_attack(state: Dictionary, attacker_id: String,
     result["experimental_urban_pierce"] = true
     return result
 
-# Proposed Ingeniero identity: repair up to 2 HP on adjacent allied ground
-# vehicles, consuming the engineer's entire action and owner credits.
-# Price is 85% of repaired replacement HP value, min 20. No repair
-# of dead units, air/sea craft, infantry, or the engineer itself.
-# No repair/attack twice on a single turn; no new unit or save fields.
-static func engineer_quote(state: Dictionary, engineer_id: String,
-        target_id: String) -> Dictionary:
-    var denied := {"valid":false}
-    if engineer_id.is_empty() or target_id.is_empty() or engineer_id == target_id:
-        return denied
-    if int(state.get("winner",-1)) != -1 or not Opening.can_order(state):
-        return denied
-    var side: int = int(state.get("faction",-1))
-    if side not in [0,1] or not state.get("economy") is Dictionary:
-        return denied
-    var economy: Dictionary = state["economy"]
-    if not bool(economy.get("modern",false)) or not Economy.valid(economy,state.get("terrain",[])):
-        return denied
-    var engineer: Dictionary = _unit(state, engineer_id)
-    var target: Dictionary = _unit(state, target_id)
-    if engineer.is_empty() or target.is_empty() or str(engineer.get("role","")) != "engineer":
-        return denied
-    if not Turns.can_act(engineer,side) or int(target.get("faction",-1)) != side:
-        return denied
-    if str(target.get("role","")) not in REPAIRABLE_GROUND or Domains.domain(target) != Domains.GROUND:
-        return denied
-    var source = engineer.get("pos",null)
-    var destination = target.get("pos",null)
-    if not source is Vector2i or not destination is Vector2i:
-        return denied
-    if not Rules.inside(source,state["terrain"]) or not Rules.inside(destination,state["terrain"]):
-        return denied
-    if absi(source.x-destination.x)+absi(source.y-destination.y) != 1:
-        return denied
-    var full: int = _max_hp(str(target["role"]))
-    var current: int = int(target.get("hp",0))
-    if current <= 0 or current >= full or full <= 0:
-        return denied
-    var healing: int = mini(REPAIR_HP_LIMIT,full-current)
-    var cost: int = maxi(REPAIR_MIN_CREDITS,
-        ceili(float(Economy.cost(str(target["role"])) * healing * REPAIR_DISCOUNT_PCT)
-            / float(full * 100)))
-    if int(economy["credits"][side]) < cost:
-        return denied
-    return {"valid":true,"hp":healing,"cost":cost,"target":target_id,
-        "engineer":engineer_id,"side":side}
-
-static func engineer_repair(state: Dictionary, engineer_id: String,
-        target_id: String) -> Dictionary:
-    var quote: Dictionary = engineer_quote(state,engineer_id,target_id)
-    var denied := {"valid":false,"state":state.duplicate(true)}
-    if not bool(quote.get("valid",false)):
-        return denied
-    var next: Dictionary = state.duplicate(true)
-    var engineer: Dictionary = _unit(next,engineer_id)
-    var target: Dictionary = _unit(next,target_id)
-    var side: int = int(quote["side"])
-    target["hp"] = mini(_max_hp(str(target["role"])),int(target["hp"])+int(quote["hp"]))
-    engineer["acted"] = true
-    next["economy"]["credits"][side] = int(next["economy"]["credits"][side])-int(quote["cost"])
-    Opening.record(next)
-    if Visibility.enabled(next):
-        next = Visibility.update_exploration(next)
-    return {"valid":true,"state":next,"cost":int(quote["cost"]),
-        "repaired_hp":int(quote["hp"]),"engineer_id":engineer_id,"target_id":target_id}
-
 # Advisor used solely for A/B, not automatically installed into BasicAI.
 # Avoid expensive support roles whose ONLY core ability is not implemented.
 # Maintain fog-safe enemy knowledge, actual production rules and spending caps.
@@ -149,7 +72,6 @@ static func purchase_proposal(state: Dictionary, site_pos: Vector2i) -> Dictiona
     var knowledge: Dictionary = Visibility.observed_state(state,side)
     var known_enemies: Array = []
     var counts: Dictionary = {}
-    var armor_needs_help := false
     var city_defended_by_enemy := false
     for u in knowledge.get("units",[]):
         if not u is Dictionary or int(u.get("hp",0)) <= 0:
@@ -157,9 +79,6 @@ static func purchase_proposal(state: Dictionary, site_pos: Vector2i) -> Dictiona
         if int(u.get("faction",-1)) == side:
             var role: String = str(u.get("role",""))
             counts[role] = int(counts.get(role,0))+1
-            if role in REPAIRABLE_GROUND and int(u["hp"]) <= _max_hp(role)-2:
-                if absi(u["pos"].x-site_pos.x)+absi(u["pos"].y-site_pos.y) <= 5:
-                    armor_needs_help = true
         else:
             known_enemies.append(u)
             if Terrain.city_at(knowledge.get("economy",{}),u.get("pos",Vector2i(-1,-1))):
@@ -175,12 +94,10 @@ static func purchase_proposal(state: Dictionary, site_pos: Vector2i) -> Dictiona
     var order: Array = []
     match str(site["kind"]):
         "factory":
-            if armor_needs_help and int(counts.get("engineer",0)) < 1:
-                order = ["engineer","line","assault","scout","logistics"]
-            elif city_defended_by_enemy:
-                order = ["assault","line","scout","logistics","engineer"]
+            if city_defended_by_enemy:
+                order = ["assault","line","scout","logistics"]
             else:
-                order = ["line","scout","assault","logistics","engineer"]
+                order = ["line","scout","assault","logistics"]
         "armor_plant":
             if bulwark_threat and not tank_threat:
                 order = ["piercer","tank","ifv","bulwark","apc"]
