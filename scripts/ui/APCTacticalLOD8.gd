@@ -30,7 +30,7 @@ const TIRES_HOME := 0.0
 const TURN_DEGREES := 14.0
 const BUMP_AMPLITUDE := 0.025
 static var _wheel_mesh: CylinderMesh
-static var _hub_mesh: CylinderMesh
+static var _hub_mesh: Mesh
 static var _wheel_mat: StandardMaterial3D
 static var _hub_mat: StandardMaterial3D
 static var _black_mat: StandardMaterial3D
@@ -45,6 +45,67 @@ static func _color(color: Color, metal: float, rough: float) -> StandardMaterial
     mat.cull_mode=BaseMaterial3D.CULL_DISABLED
     return mat
 
+static func _add_face(st: SurfaceTool,a: Vector3,b: Vector3,
+        c: Vector3,d: Vector3) -> void:
+    st.add_vertex(a)
+    st.add_vertex(b)
+    st.add_vertex(c)
+    st.add_vertex(a)
+    st.add_vertex(c)
+    st.add_vertex(d)
+
+static func _spoked_hub() -> ArrayMesh:
+    # One 3D surface with a real disc, recessed rim and five raised radial
+    # spokes on BOTH outward faces. Six instances remain exactly one draw.
+    # A uniform CylinderMesh looks stationary even when its transform spins.
+    var st:=SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var radius: float=0.218
+    var half: float=0.010
+    for seg in range(20):
+        var a: float=TAU*float(seg)/20.0
+        var b: float=TAU*float(seg+1)/20.0
+        var top_a:=Vector3(radius*cos(a),half,radius*sin(a))
+        var top_b:=Vector3(radius*cos(b),half,radius*sin(b))
+        var bot_a:=Vector3(radius*cos(a),-half,radius*sin(a))
+        var bot_b:=Vector3(radius*cos(b),-half,radius*sin(b))
+        st.add_vertex(Vector3(0,half,0))
+        st.add_vertex(top_b)
+        st.add_vertex(top_a)
+        st.add_vertex(Vector3(0,-half,0))
+        st.add_vertex(bot_a)
+        st.add_vertex(bot_b)
+        _add_face(st,top_a,top_b,bot_b,bot_a)
+    for side in [-1,1]:
+        var sign: float=float(side)
+        var inner_y: float=sign*0.011
+        var raised_y: float=sign*0.031
+        for spoke in range(5):
+            var a: float=TAU*float(spoke)/5.0
+            var out:=Vector2(cos(a),sin(a))
+            var across:=Vector2(-sin(a),cos(a))
+            var p0: Vector2=out*0.060+across*0.021
+            var p1: Vector2=out*0.198+across*0.021
+            var p2: Vector2=out*0.198-across*0.021
+            var p3: Vector2=out*0.060-across*0.021
+            var front: Array[Vector3]=[
+                Vector3(p0.x,raised_y,p0.y),
+                Vector3(p1.x,raised_y,p1.y),
+                Vector3(p2.x,raised_y,p2.y),
+                Vector3(p3.x,raised_y,p3.y)]
+            var back: Array[Vector3]=[
+                Vector3(p0.x,inner_y,p0.y),
+                Vector3(p1.x,inner_y,p1.y),
+                Vector3(p2.x,inner_y,p2.y),
+                Vector3(p3.x,inner_y,p3.y)]
+            _add_face(st,front[0],front[1],front[2],front[3])
+            for side_index in range(4):
+                var nxt: int=(side_index+1)%4
+                _add_face(st,back[side_index],back[nxt],
+                    front[nxt],front[side_index])
+    st.generate_normals()
+    return st.commit()
+
 static func _resources() -> void:
     if _wheel_mesh!=null:
         return
@@ -53,11 +114,7 @@ static func _resources() -> void:
     _wheel_mesh.bottom_radius=Sculpt.WHEEL_RADIUS
     _wheel_mesh.height=0.235
     _wheel_mesh.radial_segments=14
-    _hub_mesh=CylinderMesh.new()
-    _hub_mesh.top_radius=0.218
-    _hub_mesh.bottom_radius=0.218
-    _hub_mesh.height=0.018
-    _hub_mesh.radial_segments=12
+    _hub_mesh=_spoked_hub()
     _wheel_mat=_color(Color("#252a2c"),0.05,0.95)
     _hub_mat=_color(Color("#566168"),0.55,0.73)
     _black_mat=_color(Color("#1d282e"),0.16,0.86)
