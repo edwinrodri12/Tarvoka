@@ -96,7 +96,7 @@ static func _battle(map_id: int, fog: bool, first: int, responder_bonus: int, sc
             assert(before == state)
             if not action.get("valid",false):
                 break
-            assert(action.get("action","") in ["move","attack","produce","resupply"])
+            assert(action.get("action","") in ["move","attack","produce","resupply","embark","disembark"])
             state = action["state"]
             assert(int(state["faction"]) == side)
             assert(Economy.valid(state["economy"],state["terrain"]))
