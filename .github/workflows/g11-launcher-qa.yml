@@ -8,6 +8,8 @@ on:
       - 'scripts/ui/G11Art3D.gd'
       - 'scripts/ui/G11VisualRig3D.gd'
       - 'scripts/ui/G11FinishV2.gd'
+      - 'scripts/ui/G11SurfaceV3.gd'
+      - 'tests/test_g11_360_gpu_v3.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g11_launcher_3d.gd'
       - '.github/workflows/g11-launcher-qa.yml'
@@ -42,3 +44,26 @@ jobs:
             echo 'G11 native sculpt or animation regression'; exit 1
           fi
           grep -F 'PASS G11 3D:' /tmp/g11_3d_qa.log
+      - name: Render G11 from eight actual Godot 3D camera angles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-360
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-360 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_360_gpu_v3.gd 2>&1 | tee /tmp/g11_360_v3.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_360_v3.log; then
+            echo 'G11 eight-angle GPU capture failed'; exit 1
+          fi
+          grep -F 'PASS G11 360 V3:' /tmp/g11_360_v3.log
+          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 10
+      - name: Upload G11 V3 360 review screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v3-360-review
+          path: /tmp/g11-360/*.png
+          retention-days: 14
