@@ -371,7 +371,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
             if VisualBudget.should_draw_label(detail,hw):
                 canvas.draw_string(font,
                     _center(pending_cell,canvas,zoom,pan,dims)+Vector2(-hw*0.42,-hh*0.65),
-                    "CONF. ATQ" if pending_attack else "CONF. MOV",
+                    "CONF. ATQ" if pending_attack else ("CONF. EMB" if str(pending_order.get("kind","")) == "embark" else ("CONF. SAL" if str(pending_order.get("kind","")) == "disembark" else "CONF. MOV")),
                     HORIZONTAL_ALIGNMENT_LEFT,-1,clampi(int(hw*0.21),11,19),pending_tint)
 
     for destination in hints["attacks"]:
