@@ -7,7 +7,7 @@ class_name TarvokaG11MechanicsV5
 const FLAG := "tarvoka_g11_mechanics_v5"
 const WHEELS_PER_SIDE := 6
 const TOOTH_COUNT := 16
-const SPRING_TRAVEL := 0.015
+const SPRING_TRAVEL := 0.008
 const ROOT := "G11_CascoRaiz"
 const TURRET := "G11_GiroPlataforma"
 static var _wheel_mesh: ArrayMesh
@@ -55,14 +55,14 @@ static func _wheel_geometry() -> ArrayMesh:
     for i in range(segments):
         var a: float = TAU*float(i)/float(segments)
         var b: float = TAU*float(i+1)/float(segments)
-        _quad(rubber,_on_x(-0.063,0.182,a),_on_x(-0.063,0.182,b),
-            _on_x(0.061,0.182,b),_on_x(0.061,0.182,a))
-        _quad(rubber,_on_x(0.061,0.182,a),_on_x(0.061,0.182,b),
-            _on_x(0.075,0.164,b),_on_x(0.075,0.164,a))
-        _quad(rim,_on_x(0.076,0.164,a),_on_x(0.076,0.164,b),
-            _on_x(0.088,0.112,b),_on_x(0.088,0.112,a))
-        _quad(rim,_on_x(0.088,0.112,a),_on_x(0.088,0.112,b),
-            _on_x(0.109,0.089,b),_on_x(0.109,0.089,a))
+        _quad(rubber,_on_x(-0.063,0.165,a),_on_x(-0.063,0.165,b),
+            _on_x(0.061,0.165,b),_on_x(0.061,0.165,a))
+        _quad(rubber,_on_x(0.061,0.165,a),_on_x(0.061,0.165,b),
+            _on_x(0.075,0.148,b),_on_x(0.075,0.148,a))
+        _quad(rim,_on_x(0.076,0.148,a),_on_x(0.076,0.148,b),
+            _on_x(0.088,0.102,b),_on_x(0.088,0.102,a))
+        _quad(rim,_on_x(0.088,0.102,a),_on_x(0.088,0.102,b),
+            _on_x(0.109,0.083,b),_on_x(0.109,0.083,a))
     _wheel_mesh = _surface(rubber,_mat(Color("#282d2e"),0.06,0.92))
     _surface(rim,_mat(Color("#7b898a"),0.57,0.55),_wheel_mesh)
     return _wheel_mesh
@@ -185,9 +185,9 @@ static func update_running_gear(model: Node3D, travel: float = 0.0) -> bool:
                 true,false) as MeshInstance3D
             if pivot == null or damper == null or piston == null:
                 return false
-            var z: float = -1.19+float(axle)*0.47
+            var z: float = pivot.position.z
             var upper := Vector3(sign*0.97,0.735,z+0.115)
-            var lower := pivot.position+Vector3(sign*0.175,0.105,0)
+            var lower := pivot.position+Vector3(sign*0.124,0.105,0)
             _position_link(damper,upper,upper.lerp(lower,0.64))
             _position_link(piston,upper.lerp(lower,0.43),lower)
         var drive := root.find_child(
@@ -250,11 +250,11 @@ static func apply(model: Node3D) -> bool:
             # Mirror the profile so both wheels face the camera outward.
             var wheel := _mesh(pivot,
                 "G11V5_LlantaEsculpida_%d_%d" % [side,axle],
-                _wheel_geometry(),Vector3(sign*0.175,0,0))
+                _wheel_geometry(),Vector3(sign*0.018,0,0))
             if side < 0:
                 wheel.scale.x = -1.0
             _cylinder(pivot,"G11V5_BujeCerrado_%d_%d" % [side,axle],
-                Vector3(sign*0.296,0,0),0.059,0.027,dark,
+                Vector3(sign*0.128,0,0),0.059,0.027,dark,
                 Vector3(0,0,90))
             # Six genuine hardware heads are batched within the rotating pivot.
             var mm := MultiMesh.new()
@@ -263,8 +263,8 @@ static func apply(model: Node3D) -> bool:
             mm.instance_count = 6
             for i in range(6):
                 var angle: float = TAU*float(i)/6.0
-                var p := Vector3(sign*0.283,
-                    cos(angle)*0.134,sin(angle)*0.134)
+                var p := Vector3(sign*0.123,
+                    cos(angle)*0.121,sin(angle)*0.121)
                 mm.set_instance_transform(i,
                     Transform3D(Basis(Vector3.FORWARD,PI*0.5),p))
             var rivets := MultiMeshInstance3D.new()
