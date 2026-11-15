@@ -284,7 +284,7 @@ func _reflow() -> void:
     content_rail.vertical = vertical
     var small: bool = bounds.y <= 760.0
     for button in _all_menu_buttons:
-        button.custom_minimum_size.y = 43 if small else 50
+        button.custom_minimum_size.y = 46 if small else 50
     hero.visible = not vertical
     _header_title.add_theme_font_size_override("font_size",30 if small else 39)
     _continue_button.custom_minimum_size.x = 178 if bounds.x < 1100.0 else 204
