@@ -67,6 +67,7 @@ static func _east_wall_supports(model: Node3D,
     var near: Node3D=stage.get_node("AnclajesCercanosV10")
     var far: Node3D=stage.get_node("ReferenciasTacticasV10")
     var night: Node3D=stage.get_node("GuiasNocturnasV10")
+    stage.set_meta("naval_v10_east_wall_face",EAST_QUAY_FACE)
     if damage==4:
         _box(near,"PernoArrancadoMuelleEsteV10",
             Vector3(1.20,0.18,-3.83),
@@ -147,6 +148,7 @@ static func _pier_supports(model: Node3D,
         stage: Node3D,damage: int,accent: Color) -> void:
     var near: Node3D=stage.get_node("AnclajesCercanosV10")
     var far: Node3D=stage.get_node("ReferenciasTacticasV10")
+    stage.set_meta("naval_v10_pier_wall_face",INNER_PIER_FACE)
     if damage==4:
         _box(near,"CadenaSueltaEspigonV10",
             Vector3(-4.71,0.18,-4.34),
