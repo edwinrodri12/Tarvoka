@@ -8,6 +8,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
 const UnitMotionVFX = preload("res://scripts/ui/UnitMotionVFX.gd")
 const TankDamage = preload("res://scripts/ui/TankDamage3D.gd")
+const APCFinishV3 = preload("res://scripts/ui/APCFinishV3.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const SIZE := Vector2i(224,224)
 const ORBIT := Vector3(5.1,4.1,6.0)
@@ -37,10 +38,11 @@ func prepare() -> void:
         return
     prepared = true
     for role in Models.ROLES:
-        # A single neutral capture per regular role; the tank has eight
-        # genuine per-faction painted captures, not a whole-vehicle tint.
-        # Each camera renders once then is disabled to protect phone battery.
-        var variants: Array = range(8) if str(role) == "tank" else [-1]
+        # Tank and APC use eight true faction-color captures; each is
+        # frozen into one static texture rather than 3D-rendered per unit.
+        # This integrates the finished APC P06 art WITHOUT making an
+        # eight-player battle instantiate dozens of live detailed APCs.
+        var variants: Array = range(8) if str(role) in ["tank","apc"] else [-1]
         for faction in variants:
             var id: String = str(role) + ("#%d" % faction if int(faction) >= 0 else "")
             var viewport := SubViewport.new()
@@ -51,9 +53,14 @@ func prepare() -> void:
             viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
             viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
             add_child(viewport)
-            var model: Node3D = Models.build(str(role),int(faction))
+            var model: Node3D = (Models.build("apc",int(faction),true,13)
+                if str(role)=="apc" else Models.build(str(role),int(faction)))
             if model == null:
                 continue
+            if str(role)=="apc":
+                # Tread bolts and distant micro hardware are below 1px in
+                # the 224x224 combat portrait, so render tactical LOD.
+                APCFinishV3.set_tactical_lod(model,true)
             viewport.add_child(model)
             var camera := Camera3D.new()
             camera.name = "CamaraIsometrica"
@@ -77,8 +84,8 @@ func prepare() -> void:
             viewport.add_child(fill)
             previews[id] = viewport.get_texture()
             viewports[id] = viewport
-            if role == "tank" and int(faction) == 0:
-                previews["tank"] = viewport.get_texture()
+            if str(role) in ["tank","apc"] and int(faction) == 0:
+                previews[str(role)] = viewport.get_texture()
     # Captures need a couple of real graphical frames after attaching to
     # scene tree. Stop rendering afterward so Android is not driving 8 live
     # cameras in every battle frame.
@@ -92,7 +99,7 @@ func _finish_captures() -> void:
     for role in viewports:
         var viewport: SubViewport = viewports[role]
         viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-        # Baked static previews must not hold 15 entire 3D models and
+        # Baked static previews must not hold the 22 capture models and
         # cameras in Android memory for the rest of the match. One guarded
         # GPU readback per role creates a lightweight permanent ImageTexture.
         var image: Image = viewport.get_texture().get_image()
@@ -100,8 +107,8 @@ func _finish_captures() -> void:
             var frozen: ImageTexture = ImageTexture.create_from_image(image)
             if frozen != null:
                 previews[role] = frozen
-                if str(role) == "tank#0":
-                    previews["tank"] = frozen
+                if str(role) in ["tank#0","apc#0"]:
+                    previews[str(role).split("#")[0]] = frozen
                 baked_static_captures += 1
                 viewport.queue_free()
     if baked_static_captures == viewports.size():
@@ -123,8 +130,8 @@ func texture_for(role: String, faction: int = -1, unit_id: String = "") -> Textu
             if retained != null:
                 return retained.get_texture()
     var key: String = role
-    if role == "tank" and faction >= 0 and faction < 8:
-        key = "tank#%d" % faction
+    if role in ["tank","apc"] and faction >= 0 and faction < 8:
+        key = "%s#%d" % [role,faction]
     return previews.get(key,null) as Texture2D
 
 func completed_roles() -> Array:
@@ -133,7 +140,7 @@ func completed_roles() -> Array:
 func is_ready_for(role: String, faction: int = -1) -> bool:
     if not captures_completed:
         return false
-    var key: String = "tank#%d" % faction if role == "tank" and faction >= 0 and faction < 8 else role
+    var key: String = "%s#%d" % [role,faction] if role in ["tank","apc"] and faction >= 0 and faction < 8 else role
     return previews.has(key)
 
 func live_tank_count() -> int:
