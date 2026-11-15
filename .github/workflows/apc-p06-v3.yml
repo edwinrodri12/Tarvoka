@@ -195,7 +195,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-battle-p06-atlas.log; then exit 1; fi
           grep -q 'PASS native 3D models:' /tmp/tarvoka-battle-p06-atlas.log
           test -s artifacts/tarvoka_apc_p06_battle_8_factions.png
-      - name: Export editable APC V3 model to true native GLB
+      - name: Export editable APC V5 Bastion as true native GLB
         shell: bash
         run: |
           set -euo pipefail
@@ -204,8 +204,8 @@ jobs:
             --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/export_apc_p06_v3_glb.gd 2>&1 | tee /tmp/apc-v3-editable-glb.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/apc-v3-editable-glb.log; then exit 1; fi
-          grep -q 'PASS APC P06 V3 GLB:' /tmp/apc-v3-editable-glb.log
-          test -s artifacts/TARVOKA_APC_P06_V3_Editable.glb
+          grep -q 'PASS APC P06 V5 GLB:' /tmp/apc-v3-editable-glb.log
+          test -s artifacts/TARVOKA_APC_P06_V5_Editable.glb
       - name: Regress P06 V2 wheel and troop ramp and final G09 V32
         shell: bash
         run: |
@@ -226,7 +226,7 @@ jobs:
             artifacts/tarvoka_apc_p06_v3_*.png
             artifacts/tarvoka_apc_p06_v3_v5_real_godot_views.png
             artifacts/tarvoka_apc_p06_v2_antes.png
-            artifacts/TARVOKA_APC_P06_V3_Editable.glb
+            artifacts/TARVOKA_APC_P06_V5_Editable.glb
             artifacts/tarvoka_profiler_sample.json
             artifacts/tarvoka_android_auto_suite_sample.json
             artifacts/apc_p06_v3_stress_metrics_32.json
