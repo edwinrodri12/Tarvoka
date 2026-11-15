@@ -404,7 +404,7 @@ static func _duel_matrix(roles: Array) -> Dictionary:
                 assert(preview.get("valid",false))
                 assert(int(preview["damage"]) >= 1)
                 var dealt_value: int = int(round(float(preview["damage"])*float(Economy.cost(defending_role))/float(_maxhp(defending_role))))
-                var consumed := attacking_role in Battle.ONE_WAY_ROLES
+                var consumed: bool = attacking_role in Battle.ONE_WAY_ROLES
                 var received_value: int = Economy.cost(attacking_role) if consumed else int(round(float(preview["counter_damage"])*float(Economy.cost(attacking_role))/float(_maxhp(attacking_role))))
                 sum_net += dealt_value-received_value
                 valid_cases += 1
