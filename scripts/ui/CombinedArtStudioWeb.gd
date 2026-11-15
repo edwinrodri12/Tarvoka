@@ -1551,8 +1551,12 @@ func _update_camera() -> void:
                 var cols: int = int(model_root.get_meta("tarvoka_stress_grid_cols",4))
                 camera.size=(18.0+float(cols)*16.5)/maxf(0.35,_zoom)
             else:
+                # In an orthographic camera, changing distance does NOT
+                # zoom in: the inspection lens needs its own frustum size.
+                var tower_close: bool = airbase_detail_v9_toggle != null and \
+                    airbase_detail_v9_toggle.button_pressed and _airbase_v9_view==5
                 camera.size = (
-                    10.5 if _airbase_camera_interior else 18.8
+                    5.8 if tower_close else 10.5 if _airbase_camera_interior else 18.8
                     )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
