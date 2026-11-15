@@ -241,7 +241,9 @@ static func unit_summary(state: Dictionary, unit_id: String) -> String:
                 text += " | Pasajeros: " + ", ".join(manifest_names)
             var options: Dictionary = transport(state,unit_id)
             if not options["embarks"].is_empty():
-                text += "\nToca la infanteria adyacente para embarcar (consume ambas acciones). El IFV acepta solo un capturador, no Rompedor."
+                text += "\nToca la infanteria adyacente para embarcar (consume ambas acciones)."
+                if str(unit["role"]) == "ifv":
+                    text += " IFV: solo 1 infante capturador, sin Rompedor."
             if not options["unloads"].is_empty():
                 text += "\nPulsa Desembarcar y elige una casilla adyacente. El soldado actuara el proximo turno."
         text += " | Clima: %s" % Weather.label(Weather.from_state(state))
