@@ -840,7 +840,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                             TankTacticalV24.apply(model,faction_paint_color(faction))
                                             if art_level >= 25:
                                                 TankWearV25.apply(model)
-                                                TankFinalTracksV29.apply(model)
+                                                # V25 must remain geometry-identical to
+                                                # V24 in the clay/PBR A-B studio.
+                                                # The V29 structural tread conversion
+                                                # belongs only to V29+ models.
+                                                if art_level >= 29:
+                                                    TankFinalTracksV29.apply(model)
                                                 if art_level >= 30:
                                                     TankDamagePolishV30.apply(model)
                                                     TankHitReactionV30.apply(model)
