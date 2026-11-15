@@ -295,6 +295,17 @@ static func apply(model: Node3D,color: Color) -> bool:
         detail.queue_free()
         return false
     _damage(detail,paint,burned,steel)
+    # Cache the five animated cards once per APC. On a crowded 8-player map
+    # this avoids five deep scene-tree searches per unit and rendered frame.
+    var cards: Array=[]
+    for key in ["HumoMotorMedio","HumoMotorGrave","HumoDestruccionP06",
+            "FogonMotorGrave","FuegoDestruccionP06"]:
+        var card: MeshInstance3D=model.find_child(key,true,false) as MeshInstance3D
+        if card==null:
+            detail.queue_free()
+            return false
+        cards.append(card)
+    model.set_meta("tarvoka_apc_v3_cached_fx",cards)
     model.set_meta("tarvoka_apc_finish_v3",true)
     model.set_meta("tarvoka_apc_v3_damage_stage",0)
     model.set_meta("tarvoka_apc_v3_damage_effect_count",7)
@@ -337,6 +348,16 @@ static func apply_stage(model: Node3D,stage: int) -> bool:
         if group==null:
             return false
         group.visible=current>=i
+    # At destruction the intact roof must NOT remain under the fallen panel.
+    # A real opening replaces the roof/hatch meshes; repairs restore exactly
+    # the same original nodes/materials without rebuilding the APC.
+    for label in ["PlacaTechoFaceteadaV2","TechoBlindadoContinuoV3",
+            "HombroTechoInclinadoV3_-1","HombroTechoInclinadoV3_1",
+            "EscotillaTechoOctogonalV3","BlindajeRegistroSuperiorV3",
+            "PeriscopioFrontalV3","JuntaTechoDelanteraV3"]:
+        var intact: Node3D=model.find_child(label,true,false) as Node3D
+        if intact!=null:
+            intact.visible=current<4
     # Visually fracture one wheel only at terminal wreck state, including
     # restoring its original 48-tread batch whenever the unit is repaired.
     var wheel: Node3D=model.find_child(
@@ -355,11 +376,13 @@ static func animate_damage(model: Node3D,seconds: float) -> void:
     # No particles or scene allocations during animation. Alpha cards are
     # reused per vehicle; smoke travels slowly and flames flicker. No
     # material mutation shared with another faction or model.
-    for key in ["HumoMotorMedio","HumoMotorGrave","HumoDestruccionP06",
-            "FogonMotorGrave","FuegoDestruccionP06"]:
-        var fx: MeshInstance3D=model.find_child(key,true,false) as MeshInstance3D
-        if fx==null:
+    var cards: Array=model.get_meta("tarvoka_apc_v3_cached_fx",[])
+    for fx_node in cards:
+        var fx: MeshInstance3D=fx_node as MeshInstance3D
+        if fx==null or not is_instance_valid(fx):
             continue
+        # The card's stable mesh name distinguishes luminous fire from smoke.
+        var key: String=str(fx.name)
         var home: Vector3=fx.get_meta(
             "apc_v3_effect_origin",fx.position) as Vector3
         var fire: bool=key.begins_with("Fogon") or key.begins_with("Fuego")
