@@ -32,6 +32,9 @@ static func _material(color: Color,metal: float=0.42,
     mat.albedo_color=color
     mat.metallic=metal
     mat.roughness=rough
+    # Mirrored inward/outward spoke faces have real 3D depth and should
+    # never vanish due to a negative-X wheel-side orientation.
+    mat.cull_mode=BaseMaterial3D.CULL_DISABLED
     return mat
 
 static func _group(parent: Node3D,name: String) -> Node3D:
