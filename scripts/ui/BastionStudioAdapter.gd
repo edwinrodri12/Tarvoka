@@ -28,6 +28,11 @@ var _p06_fleet: Node3D
 var _p06_fleet_count: int = 0
 var _p06_fleet_surfaces: int = 0
 var _p06_fleet_build_ms: float = 0.0
+var _p06_fleet_quality: int = -1 # -1 = camera auto, 0/1/2 = forced
+var _p06_fleet_active_surfaces: int = 0
+var _p06_fleet_animation: String = ""
+var _p06_fleet_animation_time: float = 0.0
+var _p06_fleet_update_clock: float = 0.0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
@@ -57,6 +62,8 @@ func _install_p06_controls() -> void:
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
+    _add_paired(p06_controls,"Giro con dirección 6×6",
+        func(): _play("move_turn"),"Movimiento recto",func(): _play("move"))
     _add_paired(p06_controls,"Ráfaga de ametralladora (6)",func(): _play("attack"),
         "Detener",_stop_animation)
     _add_paired(p06_controls,"Impacto de balas",func(): _play("hit_bullet"),
@@ -73,6 +80,15 @@ func _install_p06_controls() -> void:
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
         "Volver al Bastión V7",_hide_p06_fleet)
+    _add_paired(p06_controls,
+        "LOD cerca",func(): _set_p06_fleet_quality(0),
+        "LOD medio",func(): _set_p06_fleet_quality(1))
+    _add_paired(p06_controls,
+        "LOD lejos",func(): _set_p06_fleet_quality(2),
+        "LOD automático",func(): _set_p06_fleet_quality(-1))
+    _add_paired(p06_controls,
+        "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
+        "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
         "V7: seis fogonazos individuales y casquillos expulsados. "
         + "Daños progresivos con placas dobladas, rueda afectada y torreta "
@@ -134,6 +150,42 @@ func _g11_stop() -> void:
     if G11Rig.has_rig(model_root):
         G11Rig.restore(model_root)
 
+func _set_p06_fleet_quality(tier: int) -> void:
+    _p06_fleet_quality=clampi(tier,-1,2)
+    _refresh_p06_fleet_quality()
+    if _role=="apc":
+        _update_details()
+
+func _refresh_p06_fleet_quality() -> void:
+    if _p06_fleet==null or not is_instance_valid(_p06_fleet):
+        return
+    var samples: float=720.0
+    if camera!=null and camera.get_viewport()!=null:
+        samples=float(camera.get_viewport().get_visible_rect().size.y)
+    var count: int=0
+    for node in _p06_fleet.get_children():
+        var apc: Node3D=node as Node3D
+        if apc==null or not P06Tactical.has_model(apc):
+            continue
+        if _p06_fleet_quality<0:
+            var projected: float=P06Tactical.VISUAL_HEIGHT*samples*
+                apc.scale.y/maxf(0.05,camera.size) if camera!=null else 160.0
+            P06Tactical.set_detail_from_pixels(apc,projected)
+        else:
+            P06Tactical.set_detail(apc,_p06_fleet_quality)
+        count+=P06Tactical.visible_surfaces(apc)
+    _p06_fleet_active_surfaces=count
+
+func _animate_p06_fleet(kind: String) -> void:
+    if _p06_fleet==null or kind not in ["move_turn","attack"]:
+        return
+    _p06_fleet_animation=kind
+    _p06_fleet_animation_time=0.0
+    for node in _p06_fleet.get_children():
+        var model: Node3D=node as Node3D
+        if model!=null:
+            P06Tactical.restore(model)
+
 func _hide_p06_fleet() -> void:
     if _p06_fleet != null and is_instance_valid(_p06_fleet):
         var parent: Node=_p06_fleet.get_parent()
@@ -143,6 +195,9 @@ func _hide_p06_fleet() -> void:
     _p06_fleet=null
     _p06_fleet_count=0
     _p06_fleet_surfaces=0
+    _p06_fleet_active_surfaces=0
+    _p06_fleet_animation=""
+    _p06_fleet_animation_time=0.0
     if model_root != null and is_instance_valid(model_root):
         model_root.visible=true
     if _role=="apc":
@@ -180,6 +235,7 @@ func _show_p06_fleet(count: int) -> void:
     model_root.visible=false
     preview.add_child(fleet)
     _update_camera()
+    _refresh_p06_fleet_quality()
     _update_details()
 
 func _update_camera() -> void:
@@ -189,6 +245,7 @@ func _update_camera() -> void:
         var full: float=13.4 if _p06_fleet_count<=8 else (
             15.0 if _p06_fleet_count<=32 else 18.2)
         camera.size=full/maxf(0.35,_zoom)
+        _refresh_p06_fleet_quality()
 
 func _studio_p06() -> bool:
     return _role == "apc" and model_root != null and \
@@ -404,7 +461,31 @@ func _process(delta: float) -> void:
         if t >= 1.0:
             _g11_stop()
             _update_details()
-    if _p06_fleet!=null or not _studio_p06():
+    if _p06_fleet!=null:
+        if not _p06_fleet_animation.is_empty():
+            _p06_fleet_animation_time+=maxf(0.0,delta)
+            var fleet_duration: float=P06Visual.MOVE_DURATION if (
+                _p06_fleet_animation=="move_turn") else P06Visual.SHOT_DURATION
+            var fleet_progress: float=minf(1.0,
+                _p06_fleet_animation_time/maxf(0.01,fleet_duration))
+            for node in _p06_fleet.get_children():
+                var unit: Node3D=node as Node3D
+                if unit!=null:
+                    P06Tactical.pose(unit,_p06_fleet_animation,
+                        fleet_progress,Vector2i(1,-1))
+            if fleet_progress>=1.0:
+                _p06_fleet_animation=""
+                for node in _p06_fleet.get_children():
+                    var unit: Node3D=node as Node3D
+                    if unit!=null:
+                        P06Tactical.restore(unit)
+        _p06_fleet_update_clock+=maxf(0.0,delta)
+        if _p06_fleet_update_clock>=0.25:
+            _p06_fleet_update_clock=0.0
+            if _p06_fleet_quality<0:
+                _refresh_p06_fleet_quality()
+        return
+    if not _studio_p06():
         return
     if _stage_p06() >= 2:
         _effect_time += maxf(0.0,delta)
@@ -415,7 +496,7 @@ func _process(delta: float) -> void:
     var duration: float = P06Visual.MOVE_DURATION
     if _animation in ["open_ramp","close_ramp"]:
         duration = P06Visual.RAMP_DURATION
-    elif _animation != "move":
+    elif _animation not in ["move","move_turn"]:
         duration = P06Visual.SHOT_DURATION
     var t: float = minf(1.0,_animation_time/maxf(duration,0.01))
     P06Visual.pose(model_root,_animation,t,42.0)
@@ -449,10 +530,13 @@ func _update_details() -> void:
         super._update_details()
         return
     if _p06_fleet!=null and detail_label!=null and status_label!=null:
-        detail_label.text="Bastión V8 táctico · %d vehículos · 8 facciones · %d superficies" % [
-            _p06_fleet_count,_p06_fleet_surfaces]
-        status_label.text="Construcción %.1f ms · prueba Godot PC/Web, NO FPS medidos en Android" % [
-            _p06_fleet_build_ms]
+        detail_label.text="Bastión V9 · %d vehículos · %d/%d superficies visibles" % [
+            _p06_fleet_count,_p06_fleet_active_surfaces,_p06_fleet_surfaces]
+        var tier_name: String=(
+            "automático" if _p06_fleet_quality<0 else
+            ["cerca","media","lejos"][_p06_fleet_quality])
+        status_label.text="LOD %s · construcción %.1f ms · NO son FPS Android" % [
+            tier_name,_p06_fleet_build_ms]
         return
     if model_root == null or detail_label == null or status_label == null:
         return
