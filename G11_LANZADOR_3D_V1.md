@@ -95,3 +95,13 @@
 - QA automatizada [G11 V6 Godot 4.3 — ejecución aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697047907) verifica que el nuevo modelo existe en las ocho facciones, prueba las cinco etapas y sus reparaciones y crea **21 fotografías renderizadas por Godot**, incluyendo todos los daños y las dos clases de impacto. Artifact: `tarvoka-g11-v6-physical-damage-360-review`.
 
 **Estado:** la geometría está integrada y los tests pasan, pero falta una inspección estética humana de las imágenes renderizadas para resolver posibles intersecciones y terminar el acabado comercial; no declarar completo sin esa inspección. Continuar con el modelado, no con benchmarks ni APK.
+
+## Actualización V7 — humo, fuego y corrección de intersecciones (15-nov-2026)
+
+- `scripts/ui/G11DamageAtmosphereV7.gd`: **10 columnas de humo** y **8 lenguas de fuego** en `ArrayMesh`, con volúmenes irregulares curvados y colores/transparencias graduados. Sustituyen las esferas primitivas anteriores; medio = humo, crítico = llamas + humo, destruido = fuego en la cavidad de la torreta.
+- El Estudio 3D anima estos volúmenes en reposo, sin requerir movimiento ni disparo. El rig de Godot los mueve durante las animaciones del vehículo.
+- A partir de daño moderado oculta las placas y franjas derechas que obstruían el blindaje plegado; desde daño crítico despeja las cubiertas izquierdas que ocultaban el compartimento abierto y sus conducciones. En destrucción oculta la torreta intacta para descubrir la cavidad real. La reparación revierte todo.
+- Se respetan las ocho facciones, color, armamento y estadísticas tácticas. La escultura no modifica costes, daño o defensa.
+- Godot 4.3 genera **25 imágenes reales** del modelo y comprueba fases de daño, piezas visibles y reparación: [G11 3D V7 QA](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697890831), artifact `tarvoka-g11-v7-physical-fire-smoke-damage-review`.
+- Las pruebas pesadas de rendimiento quedan únicamente disponibles a través de ejecución manual del workflow hasta terminar la escultura.
+- **Pendiente de inspección artística humana**: estudiar superposiciones de cerca, matices de humo/fuego e iluminación en dispositivo. Próximo foco sugerido: detallado real de cada lanzamiento de cohete.
