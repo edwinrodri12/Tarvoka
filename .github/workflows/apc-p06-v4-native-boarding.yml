@@ -3,17 +3,19 @@ name: TARVOKA APC P06 V4 native troop boarding QA
 on:
   push:
     branches:
-      - feat/apc-p06-v4-native-boarding-rig-20261114
+      - feat/apc-p06-v4-native-boarding-20261114
     paths:
       - 'scripts/ui/APCBoardingV4.gd'
       - 'scripts/ui/UnitArtStudioWeb.gd'
       - 'tests/test_apc_p06_v4_native_boarding.gd'
+      - 'tests/test_apc_p06_v4_studio_ui.gd'
       - '.github/workflows/apc-p06-v4-native-boarding.yml'
   pull_request:
     paths:
       - 'scripts/ui/APCBoardingV4.gd'
       - 'scripts/ui/UnitArtStudioWeb.gd'
       - 'tests/test_apc_p06_v4_native_boarding.gd'
+      - 'tests/test_apc_p06_v4_studio_ui.gd'
       - '.github/workflows/apc-p06-v4-native-boarding.yml'
   workflow_dispatch:
 
@@ -55,6 +57,16 @@ jobs:
           for f in 00_filmstrip_real_3d 01_cerrado 02_rampa_abierta 03_soldado_subiendo 04_soldado_dentro 05_soldado_bajando; do
             test -s "artifacts/apc-p06-v4/${f}.png"
           done
+      - name: Test real Web studio buttons, faction repaint and destroyed passengers
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_apc_p06_v4_studio_ui.gd 2>&1 | tee /tmp/p06-v4-studio-ui.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/p06-v4-studio-ui.log; then exit 1; fi
+          grep -F 'PASS APC P06 V4 studio:' /tmp/p06-v4-studio-ui.log
       - name: Preserve P06 V1/V2 original armor, wheel and G09 native art
         shell: bash
         run: |
@@ -63,9 +75,9 @@ jobs:
             timeout --signal=TERM --kill-after=5s 165s xvfb-run -a -s "-screen 0 1280x800x24" \
               /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
               --rendering-driver opengl3 --audio-driver Dummy \
-              --script "res://tests/${t}.gd" 2>&1 | tee "/tmp/${t}-v3.log"
-            if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' "/tmp/${t}-v3.log"; then exit 1; fi
-            grep -q 'PASS' "/tmp/${t}-v3.log"
+              --script "res://tests/${t}.gd" 2>&1 | tee "/tmp/${t}-v4.log"
+            if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' "/tmp/${t}-v4.log"; then exit 1; fi
+            grep -q 'PASS' "/tmp/${t}-v4.log"
           done
       - name: Upload genuine Godot 3D APC troop action frames and QA
         if: always()
@@ -75,8 +87,9 @@ jobs:
           path: |
             artifacts/apc-p06-v4/*.png
             /tmp/p06-v4-native.log
+            /tmp/p06-v4-studio-ui.log
             /tmp/p06-v4-import.log
-            /tmp/test_apc_p06_art_v1-v3.log
-            /tmp/test_apc_p06_art_v2-v3.log
-            /tmp/test_native_unit_models_3d-v3.log
+            /tmp/test_apc_p06_art_v1-v4.log
+            /tmp/test_apc_p06_art_v2-v4.log
+            /tmp/test_native_unit_models_3d-v4.log
           if-no-files-found: warn
