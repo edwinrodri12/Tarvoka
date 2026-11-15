@@ -29,3 +29,10 @@ Se espera `PASS: mountain movement and positional combat integration` y código 
 - Comprobar que el contraataque no hereda cobertura montañosa del primer disparo, no declara derrota errónea y no muta diccionarios de unidades.
 - Código: commit `513b0e1c6052c6441b2287000ef6da8c4094e55b`. Godot 4.3/CI: **NO EJECUTADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**.
 - Alcance limitado: prueba de funciones puras; no acredita que el controlador de turnos dispare automáticamente el contraataque ni que el HUD lo presente correctamente.
+
+## Extensión — flanqueo y montaña (2026-11-14)
+- Positivo: aliado terrestre vivo en (1,3), detrás del defensor montañoso en (1,2), añade +1 al ataque de (1,1); el -1 por atacar cuesta arriba se compensa y el daño esperado pasa de 2 a 3.
+- Adversarial: el mismo aliado con HP 0 o dominio `air` NO habilita flanqueo ni cambia la penalización por altura.
+- La cobertura de montaña del defensor permanece +2; unidades y terreno no se mutan.
+- CI anterior para `3ac5778`: Godot general 43666142242, suite de montaña 43666142263 y exportación Android 43666142265, todos SUCCESS. **Esos resultados no validan este nuevo commit.**
+- Godot/CI del commit de esta extensión: NO EJECUTADO / pendiente de resultado. Android físico: NO EJECUTADO EN DISPOSITIVO. No integra el controlador de turnos ni verifica visualización de flanqueo.
