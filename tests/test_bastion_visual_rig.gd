@@ -10,6 +10,10 @@ func _initialize() -> void:
 func _near(a: float, b: float, eps: float = 0.001) -> bool:
     return absf(a-b) <= eps
 
+func _visible(model: Node3D, label: String) -> bool:
+    var node: Node3D = model.find_child(label,true,false) as Node3D
+    return node != null and node.visible
+
 func _run() -> void:
     # Every approved faction uses exactly the same physical running gear.
     for faction in range(8):
@@ -39,22 +43,22 @@ func _run() -> void:
         assert(_near(spinning.rotation_degrees.x,270.0))
         assert(absf(steering.rotation_degrees.y) > 2.0)
         assert(absf(suspension.position.y-0.355) > 0.001)
-        assert(model.find_child("EfectoPolvoRuedasP06",true,false).visible)
+        assert(_visible(model,"EfectoPolvoRuedasP06"))
         # The same chassis can attack without showing move dust.
         assert(Models.pose_model("apc",model,"attack",0.36,Vector2i(1,0)))
         var turret: Node3D = model.find_child("TorretaRemotaP06",true,false) as Node3D
         var gun: Node3D = model.find_child("ElevacionArmaP06",true,false) as Node3D
         assert(turret.rotation_degrees.y < -20.0)
         assert(gun.position.z > -0.06)
-        assert(model.find_child("EfectoFogonazoP06",true,false).visible)
-        assert(not model.find_child("EfectoPolvoRuedasP06",true,false).visible)
+        assert(_visible(model,"EfectoFogonazoP06"))
+        assert(not _visible(model,"EfectoPolvoRuedasP06"))
         assert(Models.pose_model("apc",model,"attack",0.52,Vector2i(0,-1)))
-        assert(model.find_child("EfectoHumoDisparoP06",true,false).visible)
-        assert(not model.find_child("EfectoFogonazoP06",true,false).visible)
+        assert(_visible(model,"EfectoHumoDisparoP06"))
+        assert(not _visible(model,"EfectoFogonazoP06"))
         assert(Models.pose_model("apc",model,"bullet",0.18))
-        assert(model.find_child("ImpactoP06_Balas",true,false).visible)
+        assert(_visible(model,"ImpactoP06_Balas"))
         assert(Models.pose_model("apc",model,"explosive",0.25))
-        assert(model.find_child("ImpactoP06_Explosivo",true,false).visible)
+        assert(_visible(model,"ImpactoP06_Explosivo"))
         # Rigid meshes are never detached; critical damage hides selected
         # panels and repair restores them without resetting official paint.
         assert(Damage.apply_stage(model,3))
@@ -66,7 +70,7 @@ func _run() -> void:
         assert(Damage.apply_stage(model,4))
         assert(not turret.visible)
         assert(Models.pose_model("apc",model,"attack",0.35))
-        assert(not model.find_child("EfectoFogonazoP06",true,false).visible)
+        assert(not _visible(model,"EfectoFogonazoP06"))
         assert(Damage.apply_stage(model,0))
         Models.restore_model_pose("apc",model)
         assert(turret.visible and plate.visible)
@@ -74,8 +78,8 @@ func _run() -> void:
         assert(_near(spinning.rotation_degrees.x,0.0))
         assert(_near(steering.rotation_degrees.y,0.0))
         assert(_near(gun.position.z,-0.06))
-        assert(not model.find_child("ImpactoP06_Explosivo",true,false).visible)
-        assert(not model.find_child("EfectoHumoDisparoP06",true,false).visible)
+        assert(not _visible(model,"ImpactoP06_Explosivo"))
+        assert(not _visible(model,"EfectoHumoDisparoP06"))
         model.free()
     print("PASS P06 rig: eight factions, six articulated wheels, suspension, steering, remote weapon and reversible damage")
     quit(0)
