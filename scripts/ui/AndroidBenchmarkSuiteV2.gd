@@ -67,6 +67,110 @@ func abort() -> void:
     aborted=true
     active=false
 
+# Quality interpretation never asserts Android results when run on CI,
+# Desktop or Browser. The FPS gate is provisional, not commercial certification.
+const TARGET_P10_FPS: float=30.0
+const EXPECTED_SAMPLE_INTERVAL: float=0.5
+
+func evaluate() -> Dictionary:
+    var pairs: Array[Dictionary]=[]
+    var index: Dictionary={}
+    var quality_issues: Array[String]=[]
+    var completed: bool=not active and not aborted and reports.size()==PHASES.size()
+    var minimum_samples: int=maxi(1,int(ceilf(
+        measure_seconds/EXPECTED_SAMPLE_INTERVAL*0.75)))
+    for item in reports:
+        var label_text: String=str(item.get("label",""))
+        var scenario: String=label_text.trim_suffix("_FULL").trim_suffix("_LOD")
+        var key: String="lod" if bool(item.get("lod",false)) else "full"
+        var data: Dictionary=item.get("metrics",{})
+        var samples: int=int(data.get("sample_count",0))
+        if samples<minimum_samples:
+            quality_issues.append("%s: only %d/%d expected samples" % [
+                label_text,samples,minimum_samples])
+        if not index.has(scenario):
+            index[scenario]={}
+        var comparison: Dictionary=index[scenario]
+        comparison[key]={
+            "p10":float(data.get("fps_p10",0.0)),
+            "mean":float(data.get("mean_fps",0.0)),
+            "draw_calls":float(data.get("draw_calls_mean",0.0)),
+            "peak_static_memory_mib":float(data.get("memory_mib_peak",0.0)),
+            "sample_count":samples,
+            "enough_samples":samples>=minimum_samples
+        }
+    var all_full_good: bool=completed
+    var all_lod_good: bool=completed
+    for phase in PHASES:
+        var scenario: String=str(phase["label"]).trim_suffix(
+            "_FULL").trim_suffix("_LOD")
+        if index.has(scenario):
+            var found: bool=false
+            for check in pairs:
+                if str(check["scenario"])==scenario:
+                    found=true
+                    break
+            if found:
+                continue
+            var comparison: Dictionary=index[scenario]
+            var full: Dictionary=comparison.get("full",{})
+            var lod: Dictionary=comparison.get("lod",{})
+            if full.is_empty() or lod.is_empty():
+                all_full_good=false
+                all_lod_good=false
+                quality_issues.append(scenario+": missing full/LOD pair")
+                continue
+            var full_good: bool=bool(full["enough_samples"]) and (
+                float(full["p10"])>=TARGET_P10_FPS)
+            var lod_good: bool=bool(lod["enough_samples"]) and (
+                float(lod["p10"])>=TARGET_P10_FPS)
+            all_full_good=all_full_good and full_good
+            all_lod_good=all_lod_good and lod_good
+            var draws_full: float=float(full["draw_calls"])
+            var draws_lod: float=float(lod["draw_calls"])
+            var cut_percent: float=0.0
+            if draws_full>0.0:
+                cut_percent=snappedf(
+                    100.0*(draws_full-draws_lod)/draws_full,0.1)
+            var recommendation: String="insufficient_data"
+            if bool(full["enough_samples"]) and bool(lod["enough_samples"]):
+                if full_good:
+                    recommendation="full_detail_meets_provisional_target"
+                elif lod_good:
+                    recommendation="tactical_lod_meets_provisional_target"
+                else:
+                    recommendation="further_optimization_needed"
+            pairs.append({
+                "scenario":scenario,
+                "full_p10_fps":full["p10"],
+                "tactical_p10_fps":lod["p10"],
+                "p10_lod_gain":snappedf(
+                    float(lod["p10"])-float(full["p10"]),0.1),
+                "draw_call_reduction_percent":cut_percent,
+                "full_memory_mib_peak":full["peak_static_memory_mib"],
+                "lod_memory_mib_peak":lod["peak_static_memory_mib"],
+                "recommendation":recommendation
+            })
+    var candidate: String="insufficient_data"
+    if completed and quality_issues.is_empty() and pairs.size()==3:
+        if all_full_good:
+            candidate="full_detail"
+        elif all_lod_good:
+            candidate="tactical_lod"
+        else:
+            candidate="further_optimization_needed"
+    return {
+        "complete":completed,
+        "target_p10_fps":TARGET_P10_FPS,
+        "minimum_samples_per_phase":minimum_samples,
+        "quality_issues":quality_issues,
+        "pair_comparisons":pairs,
+        "provisional_profile":candidate,
+        "on_android_device":OS.get_name()=="Android",
+        "requires_physical_android_validation":OS.get_name()!="Android",
+        "note":"Only the measured local visual scene. Not a guarantee of battery, heat, multiplayer, AI, or whole-map performance."
+    }
+
 func summary() -> Dictionary:
     var results: Array=[]
     for item in reports:
@@ -84,6 +188,7 @@ func summary() -> Dictionary:
         "screen_px":str(DisplayServer.screen_get_size()),
         "renderer":"Godot native renderer when run in the Android benchmark APK",
         "scope":"Visual art load only: no multiplayer networking, AI, full map, battery or temperature measurement",
+        "analysis":evaluate(),
         "results":results
     }
 
