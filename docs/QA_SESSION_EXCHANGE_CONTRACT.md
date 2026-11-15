@@ -75,3 +75,10 @@ Se añadieron fases `backup_write` y `backup_read` a `tests/test_session_cross_p
 - `tests/test_session_cross_process.gd` agrega `missing_primary_write` (dos guardados y eliminación del principal) y `missing_primary_read` (nuevo proceso Godot recupera `.bak`, verifica HP, acción consumida y continuación legal del turno).
 - `.github/workflows/battle-session-exchange.yml` ejecuta ambas fases después de las anteriores, en el mismo directorio `user://`, con fallo explícito por errores de Godot o ausencia de `PASS`.
 - **NO EJECUTADO** en Godot para estos commits hasta obtener CI del SHA correspondiente; **NO EJECUTADO EN DISPOSITIVO** Android. No implica validación de reinicio físico Android ni de firma estable.
+
+
+## Reanudación persistida después de recuperar respaldo (2026-11-15)
+
+`tests/test_session_cross_process.gd` incorpora `resume_write` y `resume_read`: después de simular la pérdida del principal, otro proceso carga `.bak`, avanza un turno y guarda un nuevo principal; un tercer proceso comprueba que ese turno persistió y que los HP y acciones consumidas no se reiniciaron. El workflow repite `missing_primary_write` para preparar el fixture, sin tocar la ranura real del jugador. Commits de prueba/CI: `122de925`, `211afb50`.
+
+**Estado:** implementación registrada, CI del nuevo SHA **NO EJECUTADO** al documentar; **NO EJECUTADO EN DISPOSITIVO ANDROID**. Requiere validar `Battle session exchange contract`, regresiones IA/victoria y comportamiento de SaveStore antes de merge. No demuestra continuidad de firma APK ni rendimiento móvil.
