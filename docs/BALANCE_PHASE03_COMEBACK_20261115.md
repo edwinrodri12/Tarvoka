@@ -38,3 +38,60 @@ El precio de una unidad, el dinero disponible y las ciudades no cuentan toda la 
 
 ## Próxima fase
 Si las diferencias de material revelan riesgo real, añadir mapas alternativos y composiciones militares controladas, simular partidas hasta victoria o estancamiento, medir calidad de ingresos, uso real de cada unidad y rango de coste/efecto. La calidad visual 3D se sigue desarrollando independientemente.
+
+## Resultados reales de Godot 4.3 — fase 03
+
+**CI auditada:** [GitHub Actions #43697467718 — SUCCESS](https://github.com/edwinrodri12/Tarvoka/actions/runs/43697467718) (prueba original #43696957230 y segunda revisión #43697237582 también SUCCESS).
+
+Se ejecutaron **48 partidas de IA**, con un límite de **24 medias fases**, de las cuales **46 estaban sin resolver** y **dos terminaron por eliminación** (ambas en la condición experimental de ciudad extra para quien responde en el mapa costero). Se registraron **8.984 acciones**, **1.787 compras**, **218 cambios de control de ciudad** y **184 reabastecimientos**. No es una muestra de tasas de victoria definitiva.
+
+### Renta, materiales y ventaja de iniciativa
+
+En las cifras siguientes, «brecha» es la diferencia media **absoluta** entre bandos al final, no necesariamente una ventaja para quien tenía la ciudad extra. «Ventaja firmada» es `material_del_bando_de_referencia - material_del_otro`, donde el bando de referencia es **el iniciador en partidas normales**, o **el dueño experimental de la ciudad adicional** en tratamientos. Un número positivo favorece a ese bando. Cada fila representa **ocho ejecuciones deterministas**, con dos bandos intercambiados; no son ocho situaciones independientes de jugadores humanos.
+
+| Mapa / tratamiento | Brecha media de caja | Brecha media de material total | Ventaja firmada media de referencia | Brecha media final de ingreso por turno |
+|---|---:|---:|---:|---:|
+| Bosque / normal | 1.369 | **1.688** | +229 (iniciador) | 0 |
+| Bosque / ciudad para iniciador | 2.305 | **2.318** | +1.800 (iniciador) | 63 |
+| Bosque / ciudad para respondedor | 1.123 | **1.843** | +537 (respondedor) | 250 |
+| Costa / normal | 2.975 | **3.784** | +1.651 (iniciador) | 500 |
+| Costa / ciudad para iniciador | 3.684 | **4.127** | +4.127 (iniciador) | 688 |
+| Costa / ciudad para respondedor | 2.446 | **4.241** | +4.241 (respondedor) | 500 |
+
+El resultado sobre **costa** justifica analizar por qué la distribución urbana, el orden de compras/combates y las rutas tienden a separarse más que en bosque. **No demuestra por sí solo que el mapa deba rediseñarse o que el jugador iniciador gane**: después de 12 turnos propios la mayor parte de partidas seguían abiertas.
+
+### Remontadas: distinguir un instante favorable del resultado sostenido
+
+Las 16 sesiones **normales** no tienen una ciudad asignada en forma artificial y se excluyen de este denominador. En las **32 sesiones con un bando favorecido por una ciudad inicial**, el bando originalmente desfavorecido registró:
+
+- **32/32**: al menos una ronda completa con ingresos iguales o superiores a los del favorecido.
+- **26/32**: ingresos iguales o superiores durante **tres rondas completas consecutivas** en algún momento.
+- **15/32**: ingresos iguales o superiores **al final de la sesión**.
+- **10/32**: **alguna inversión de la ventaja de material** después de haber estado por debajo.
+- **6/32**: **mayor o igual material total al final** del periodo observado.
+
+Estos eventos se superponen; no son porcentajes de victorias ni confianza estadística. La recuperación de ingresos no implica recuperación de ejército o terreno; el desequilibrio puede reaparecer después de tres rondas favorables.
+
+Desglose de recuperación del bando **sin ciudad adicional** al final:
+
+| Tratamiento | Ingresos recuperados al final | Material total recuperado al final |
+|---|---:|---:|
+| Bosque, ciudad extra del iniciador | 7/8 | 2/8 |
+| Bosque, ciudad extra del respondedor | 6/8 | 4/8 |
+| Costa, ciudad extra del iniciador | **0/8** | **0/8** |
+| Costa, ciudad extra del respondedor | **2/8** | **0/8** |
+
+De nuevo: un juego sin ingresos igualados puede seguir teniendo contrajuego táctico; el ensayo no incluye poderes de comandantes activos, diplomacia, 8 jugadores, relés de victoria, ni playtests humanos.
+
+### Distribución de compras de la IA: cobertura pendiente, no una orden de nerf
+
+Principales compras entre los **1.787 reclutamientos**: `scout=365`, `piercer=272`, `assault=195`, `logistics=181`, `fpv=127`, `mobile_aa=118`, `engineer=110`. El tanque principal se adquirió **70** veces. No se compraron estas **11 clases** en este ensayo: `mlrs`, `ew`, `loitering`, `bomber`, `patrol`, `missile_boat`, `corvette`, `frigate`, `destroyer`, `submarine`, `landing_ship`.
+
+**No concluir que once unidades son inútiles o costosas:** esta telemetría refleja heurísticas de compra de BasicAI, dos mapas 10×8, una composición inicial y un horizonte de 24 medias fases. Varias especializaciones, como interferencia EW y transportes, aún tienen acciones pendientes, y la IA puede estar infrautilizando el mar. El costo aislado o DPS por crédito de una unidad no representan todo su valor.
+
+### Decisión de diseño tras esta evidencia
+
+1. **Mantener la economía y los costos actuales**, pero estudiar el mapa costero, donde los desbalances de ingresos y material persisten más; rastrear la secuencia de capturas y posiciones a lo largo de rondas antes de cambiar ingresos.
+2. **No compensar automáticamente al segundo jugador con créditos ni fijar todavía tres órdenes globalmente**; la iniciativa requiere experimentos separados con objetivos de victoria, ventanas temporales y distintos tipos de mapas.
+3. **Próximo ensayo prioritario:** probar composición y compra de `scout` frente a `assault` y `piercer`, detectar sesgo de la IA hacia unidades baratas, y escenarios especializados navales/aéreos/antiblindaje donde el objetivo justifique sus instalaciones.
+4. **Fase posterior:** partida completa o estancamiento, capacidades de remontada real, costo por HP efectivo, munición, combustible, reacción y poder de combate. Los niveles de mejoras siguen **sin implementación verificada**, y los ocho bonos de facción aprobados no se alteran hasta pruebas reales de habilidad y contrajuego.
