@@ -1,0 +1,44 @@
+name: TARVOKA experimental progressive capture sensitivity v0.2
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/CaptureExperimentV01.gd"
+      - "tests/test_capture_sensitivity_v02.gd"
+      - ".github/workflows/capture-sensitivity-v02.yml"
+  workflow_dispatch:
+
+jobs:
+  sensitivity_matrix:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare 3 4 5 points and two denial policies in real AI turns
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_sensitivity_v02.gd \
+            2>&1 | tee /tmp/tarvoka-capture-sensitivity-v02.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-capture-sensitivity-v02.log; then
+            echo 'Progressive capture sensitivity failed'; exit 1
+          fi
+          grep -Fq 'PASS capture phase02:' /tmp/tarvoka-capture-sensitivity-v02.log
+      - name: Archive audit matrix, traces and failure information
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-capture-sensitivity-v02
+          path: /tmp/tarvoka-capture-sensitivity-v02.log
+          retention-days: 30
+          if-no-files-found: ignore
