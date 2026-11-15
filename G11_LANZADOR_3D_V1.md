@@ -158,3 +158,20 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - El Studio web de TARVOKA incorpora los nuevos archivos y controles desde el pipeline de publicación de Pages; confirmar la ejecución de Pages para comprobar el estado público.
 
 **Estado artístico:** refinamiento V10 integrado y visualmente inspeccionado en 18 capturas. Pendiente aprobación definitiva del diseño general del G11 desde todos los ángulos en el visor interactivo. El próximo paso puede ser un pase final de proporciones y materiales de los tubos, soporte y carrocería; pruebas de rendimiento al final.
+
+## Actualización V11 — bastidor hueco, proporciones y acabado metálico real (15-nov-2026)
+
+**Avance artístico aplicado directamente a la escultura nativa de Godot 4.3:**
+
+- Nuevo módulo `scripts/ui/G11ArmorFinishV11.gd`, integrado después de la secuencia de lanzamiento y enfriamiento V10. No se modifica balance, combate, mapas ni economía.
+- **Corrección geométrica importante descubierta en las capturas reales:** el V1 conservaba `G11_ArmazonLanzador` como **caja sólida** (1.18 × 0.82 × 1.48 m). Su cara frontal obstruía los doce tubos huecos V4 aproximadamente a 0.11 m del labio. V11 sustituye esa caja por una **estructura de cuatro paredes cerradas y una abertura frontal realmente libre**, manteniendo el alojamiento de servicio posterior y la profundidad del interior de los tubos.
+- La tapa superior `G11_TapaSuperior` se rehízo como una placa de **ocho aristas biseladas y material metálico satinado oscuro**, con tres nervaduras longitudinales en relieve y dos cordones discretos de soldadura. Las vistas superiores ya no presentan la anterior placa lisa y excesivamente clara.
+- Añadidos cuatro rieles de cantonera extruidos con chaflanes reales; el borde exterior se mantiene separado de los labios de las bocas y de los anillos de enfriamiento V10. Tres divisores delgados pasan por los espacios exactos entre las cuatro columnas, sin cubrir ninguna abertura.
+- Los doce tubos mantienen tres superficies reales: exterior metálico PBR, labio acerado y conducto interior oscuro/recesado. Se modelan 36 pequeñas marcas de desgaste metálico en un único `ArrayMesh`, y 16 cabezas de tornillo reales en un `MultiMesh`.
+- Nuevos soportes trapezoidales laterales, juntas negras, bisagras de mantenimiento traseras, cerraduras de servicio y filtro ventilado del techo de cabina. Los colores y emblemas de las ocho facciones se conservan intactos.
+- `BastionStudioAdapter.gd` presenta «G11 Lanzador · Acabados V11 · marco y metales» y mantiene los controles de giro, cámara, daños, salva lenta y enfriamiento.
+- **QA nativa Godot 4.3 aprobada**: [G11 V11 — pruebas y revisión](https://github.com/edwinrodri12/Tarvoka/actions/runs/43738970713). Valida ocho facciones, la ausencia física de la cara que obstruía las bocas, 12 tubos con material PBR y abertura conservada, biseles, tornillos, desgaste y conservación de disparo, retorno hidráulico y cinco daños.
+- Artifact `tarvoka-g11-v11-beveled-metal-20-native-godot-angles`: **20 capturas Godot reales**, con ocho vistas de órbita, cinco macro vistas de bocas, dos posteriores, dos de techo, dos estados de daño y enfriamiento. La inspección de esas imágenes confirmó ahora mayor profundidad visual de los doce tubos y mejores superficies superiores.
+- El código de G11 V11 se incorpora al pipeline de exportación del Estudio 3D web. La **publicación web** es una comprobación separada de la QA del modelo: no asumirla hasta la última ejecución exitosa de GitHub Pages.
+
+**Pendiente:** un repaso visual del nivel de pintura de facción y piezas del casco inferior en el visor, más la aprobación del diseño general antes de dedicar una etapa aparte a rendimiento y APK. Mantener esta línea de trabajo centrada en el modelo 3D.
