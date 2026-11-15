@@ -91,6 +91,10 @@ static func defend_capture(state: Dictionary, tracking: Dictionary,
                 if int(preview["attacker_hp"]) <= 0:
                     continue
                 var score: int = expected_hit*1000+int(holder["hp"])*10-int(preview["counter_damage"])*15
+                # Save the precious occupant’s action where an escort can
+                # eliminate exactly the same danger without spending it.
+                if str(friend["id"]) != str(holder["id"]):
+                    score += 200
                 if score > best_score or (score == best_score and (str(friend["id"]) < best_shooter or (str(friend["id"]) == best_shooter and str(enemy["id"]) < best_target))):
                     best_score = score
                     best_shooter = str(friend["id"])
