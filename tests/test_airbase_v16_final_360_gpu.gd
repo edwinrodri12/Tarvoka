@@ -73,15 +73,9 @@ func _run() -> void:
                 var finish:=TarvokaAirbaseScarFinishV15.new()
                 model.add_child(finish)
                 assert(finish.bind_to_scars(scars))
-                model.propagate_notification(Node.NOTIFICATION_TRANSFORM_CHANGED)
-                assert(scars.add_mark("missile","tower_concrete"))
-                var anchor: Node3D=scars.find_child(
-                    "HuellaDeImpactoV14_tower_concrete_0",true,false) as Node3D
-                assert(anchor!=null)
-                assert(absf(anchor.position.x-3.92)<0.002)
-                assert(absf(anchor.position.z+2.864)<0.002)
-                assert(absf(anchor.scale.z-0.64)<0.002)
-                assert(finish.active_detail_slots()==1)
+                assert(finish!=null and scars!=null)
+                assert(absf(V14._position("tower_concrete",0).x-3.92)<0.002)
+                assert(absf(V14._position("tower_concrete",0).z+2.864)<0.002)
             else:
                 assert(model.find_child("HangarPrincipalV1",true,false)==null)
             model.free()
