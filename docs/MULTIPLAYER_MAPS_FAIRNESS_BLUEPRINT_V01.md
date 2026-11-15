@@ -57,3 +57,25 @@ El mapa debe crear **decisiones diferentes** en cada partida, no solo una textur
 5. **Interfaz y Android:** mapa general, minimapa, pantalla de facciones/turnos, avisos, rendimiento real y largos turnos; modo online posterior con reanudación y desconexiones.
 
 **Política:** no integrar un mapa competitivo si la ruta a ciudades, la producción, la visibilidad o la regla de victoria no son verificables; no prometer una partida de ocho jugadores hasta que motor + UI + guardados + IA + tests humanos demuestren que es real.
+
+## Fase 02 — Manifiestos versionados y resultados reales de CI (2026-11-15)
+
+La siguiente etapa añade `scripts/core/MapScenarioManifest.gd` y `tests/test_map_scenario_manifests.gd`: cada mapa de prueba se identifica por **versión + cantidad de plazas + arquetipo + semilla + dimensiones** y se puede convertir a JSON sin perder sus coordenadas. Todas las instalaciones son posiciones propias del mapa (no render o lógica de batalla): **cinco edificios de producción por plaza** — fábrica, planta de blindados, depósito artillero, centro de drones y base aérea — más **una ciudad propia, una neutral y un objetivo** para cada plaza. Hay predisposiciones para todos contra todos, 2v2, 3v3, 4v4, y combinaciones de equipos para seis y ocho plazas.
+
+Se prueban 8 arquetipos × 4 números de plazas (2/4/6/8) × 8 semillas = **256 manifestaciones verificables**. Un ensayo alterado por coordenadas fraccionarias, duplicación de emplazamientos, crédito inicial fraudulento, versión incorrecta, ID falso o terreno ilegal debe ser rechazado. Los mapas y semillas existentes se conservan idénticos, y el nuevo contrato **no se incorpora a partidas guardadas v1**.
+
+**Godot Actions CI:** [workflow #43693813850 — SUCCESS](https://github.com/edwinrodri12/Tarvoka/actions/runs/43693813850). Resultados de filtro geométrico de **muestras con IA/PvP aún no ejecutadas**:
+
+| Plazas | Muestras | Candidatos geométricos sin alertas de distancia* | Revisar geometría |
+|---|---:|---:|---:|
+| 2 | 64 | 61 | 3 |
+| 4 | 64 | 64 | 0 |
+| 6 | 64 | 50 | 14 |
+| 8 | 64 | 37 | 27 |
+| **Total** | **256** | **212** | **44** |
+
+*Un candidato geométrico solo pasa controles de ruta terrestre y diferencias de costo de acceso. **No indica que el escenario esté equilibrado en combate, sea divertido, admita mar, clima, ocho jugadores reales o esté apto para lanzar.** Los 96 candidatos con agua (contados independientemente de la tabla) requieren pruebas navales específicas. Para 8 plazas, el escenario genera 40 instalaciones de producción y 16 ciudades, más 8 objetivos, por lo que NO cabe en el límite actual de 16 instalaciones de la economía de dos bandos.*
+
+**Conclusiones del primer filtro:** 24×18 y cuatro posiciones de inicio presentan accesos relativamente parejos para estas muestras; 8 participantes requieren más tratamiento de cordilleras, lagunas y posiciones centrales. En 8 plazas, no certificar un diseño por tener bosques bonitos o simetría superficial: priorizar accesibilidad al objetivo, movimiento en clima adverso, capacidad de recuperar ciudades y ritmo de turnos. Reservar algunas topologías asimétricas para historia/modos especiales cuando la desventaja sea deliberada, comprensible y compensada.
+
+**Gate siguiente:** crear una selección curada de estos candidatos, evaluar los que necesitan revisión sin retocar precios para ocultar problemas geográficos y ampliar el motor de dos facciones a 4/6/8 con pruebas deterministas; mientras no exista, el resultado es **solo preparación de contenido**.
