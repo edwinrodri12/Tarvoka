@@ -190,6 +190,11 @@ jobs:
           test -s AIRBASE_V11_EXPOSED_ROOF_TRUSSES.md
           grep -q 'AirbaseTrussesV11.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'CerchasCruzadasYDesgarrosRealesBaseAereaV11' scripts/ui/CombinedArtStudioWeb.gd
+          # QA-verified V11 reversible roof-cutaway inspector.
+          grep -q 'InspeccionSinChapasTechoBaseAereaV11' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'func _apply_airbase_v11_cutaway()' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q '_shot(studio,"cutaway_v11")' tests/test_airbase_v11_exposed_trusses_gpu.gd
+          grep -q '_shot(studio,"critical_cutaway")' tests/test_airbase_v11_exposed_trusses_gpu.gd
           grep -q 'PASS AIRBASE V11:' tests/test_airbase_v11_exposed_trusses_gpu.gd
           test -s tests/test_airbase_v10_roof_rear_gpu.gd
           test -s AIRBASE_V10_ROOF_REAR_FINISH.md
