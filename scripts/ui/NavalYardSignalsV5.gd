@@ -219,9 +219,8 @@ static func _lamps(stage: Node3D,level: int,damage: int) -> void:
         lamp.spot_range=3.6
         lamp.spot_angle=42.0
         lamp.shadow_enabled=false
-        lamp.look_at_from_position(lamp.position,
-            Vector3(1.75,0.62,z),Vector3.UP)
         light_group.add_child(lamp)
+        lamp.look_at(Vector3(1.75,0.62,z),Vector3.UP)
     light_group.set_meta("naval_v5_spot_shadow_maps",0)
 
 static func apply(model: Node3D,level: int,
