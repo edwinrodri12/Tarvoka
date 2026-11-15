@@ -7,10 +7,10 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA"]
     types: [completed]
     branches:
-      - feat/airbase-v4-soft-fire-mobile-stress-20261114
+      - feat/airbase-v6-architecture-finish-20261115
       - feat/terrain-v19-snow-biome-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -37,7 +37,7 @@ jobs:
       - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/airbase-v4-soft-fire-mobile-stress-20261114
+          ref: feat/airbase-v6-architecture-finish-20261115
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets build/web
           git rev-parse --short=12 HEAD > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/airbase-v4-soft-fire-mobile-stress-20261114" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/airbase-v4-soft-fire-mobile-stress-20261114)"
+          test "$(git branch --show-current)" = "feat/airbase-v6-architecture-finish-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/airbase-v6-architecture-finish-20261115)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -124,6 +124,13 @@ jobs:
           test -s scripts/ui/AirbaseDamageFXV4.gd
           test -s scripts/ui/AirbaseMapLODV4.gd
           test -s scripts/ui/AirbaseStressV4.gd
+          # V6 native architectural finishing and compare slider, CI-verified.
+          test -s scripts/ui/AirbaseExteriorV6.gd
+          test -s tests/test_airbase_v6_exterior_visual_gpu.gd
+          test -s AIRBASE_V6_ARCHITECTURE_FINISH.md
+          grep -q 'AirbaseExteriorV6.apply' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'AcabadosArquitectonicosBaseAereaV6' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'PASS AIRBASE V6 VISUAL:' tests/test_airbase_v6_exterior_visual_gpu.gd
           test -s assets/shaders/airbase_soft_smoke_v4.gdshader
           test -s assets/shaders/airbase_soft_flame_v4.gdshader
           test -s tests/test_airbase_v4_soft_fire_stress_gpu.gd
@@ -145,7 +152,7 @@ jobs:
           grep -q 'AnimacionPortonesHangarV2' scripts/ui/AirbaseDoorRigV2.gd
           grep -q 'NichoRecesoMantenimiento' scripts/ui/AirbaseHangarV2.gd
           grep -q 'PASS AIRBASE V2:' tests/test_airbase_v2_hangar_doors_gpu.gd
-          grep -q 'building_picker.add_item("Base Aérea · V4 · efectos y rendimiento")' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'building_picker.add_item("Base Aérea · V4/V6 · acabado arquitectónico")' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'AirbaseV1.build' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'HelipuertoDespliegue' scripts/ui/Airbase3DV1.gd
           grep -q 'MuroTraseroCerrado' scripts/ui/Airbase3DV1.gd
