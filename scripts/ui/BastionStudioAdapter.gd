@@ -168,8 +168,8 @@ func _refresh_p06_fleet_quality() -> void:
         if apc==null or not P06Tactical.has_model(apc):
             continue
         if _p06_fleet_quality<0:
-            var projected: float=P06Tactical.VISUAL_HEIGHT*samples*
-                apc.scale.y/maxf(0.05,camera.size) if camera!=null else 160.0
+            var projected: float=(P06Tactical.VISUAL_HEIGHT*samples*
+                apc.scale.y/maxf(0.05,camera.size)) if camera!=null else 160.0
             P06Tactical.set_detail_from_pixels(apc,projected)
         else:
             P06Tactical.set_detail(apc,_p06_fleet_quality)
