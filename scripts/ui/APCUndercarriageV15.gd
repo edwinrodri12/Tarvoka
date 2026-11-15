@@ -306,9 +306,10 @@ static func pose(model: Node3D) -> bool:
     for idx in range(SHAFT_NAMES.size()):
         var shaft: Node3D=model.find_child(
             SHAFT_NAMES[idx],true,false) as Node3D
-        var cross: Node3D=shaft.find_child(
-            "P06V15_CrucetaCardan",false,false) as Node3D if (
-            shaft!=null) else null
+        var cross: Node3D=null
+        if shaft!=null:
+            cross=shaft.find_child(
+                "P06V15_CrucetaCardan",false,false) as Node3D
         if cross==null:
             return false
         cross.rotation_degrees.z=phase*720.0
