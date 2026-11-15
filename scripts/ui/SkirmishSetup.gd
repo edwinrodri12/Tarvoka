@@ -342,6 +342,7 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
     Chrome.emphasize(button,"primary" if index == 1 else "secondary")
 
 func apply_preset(index: int) -> void:
+    biome_picker.select(0)
     match index:
         0:
             scenario_picker.select(0)
