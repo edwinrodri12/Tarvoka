@@ -76,6 +76,10 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
     if not bool(settled.get("valid",false)):
         return denied
     var next: Dictionary = settled["state"]
+    if int(next.get("winner",-1)) != -1:
+        return {"valid":true,"state":next,"tracking":unchanged,
+            "completed":0,"advanced":0,"interrupted":0,
+            "contested":0,"withheld":0,"production_frozen":0}
     # Save the actual amount paid by native end_turn BEFORE changing the
     # experimental site ownership (next aliases settled["state"]).
     var next_side: int = int(next.get("faction",-1))
@@ -86,6 +90,7 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
     var interrupted := 0
     var contested := 0
     var paid_withheld := 0
+    var production_frozen := 0
     for previous_site in state["economy"]["sites"]:
         var pos: Vector2i = previous_site["pos"]
         var key: String = _key(pos)
@@ -144,12 +149,19 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
         var withheld: int = 0
         var one_city: int = Economy.MODERN_CITY_INCOME if bool(next["economy"].get("modern",false)) else Economy.CITY_INCOME
         for site in next["economy"]["sites"]:
-            if str(site["kind"]) != "city" or int(site["owner"]) != next_side:
+            if int(site["owner"]) != next_side:
                 continue
             var key: String = _key(site["pos"])
-            if meter.has(key) and not meter[key].is_empty() and int(meter[key]["side"]) != next_side:
+            if not meter.has(key) or meter[key].is_empty() or int(meter[key]["side"]) == next_side:
+                continue
+            if str(site["kind"]) == "city":
                 withheld += one_city
                 contested += 1
+            else:
+                # Occupied military site cannot manufacture for its
+                # former owner while the occupation remains unresolved.
+                site["produced_turn"] = int(next["economy"]["turn"])
+                production_frozen += 1
         var adjust: int = income_new-original_paid_income-withheld
         if adjust != 0:
             next["economy"]["credits"][next_side] = maxi(0,mini(Economy.MAX_CREDITS,
@@ -159,4 +171,4 @@ static func finish_and_advance(state: Dictionary, tracking: Dictionary,
     return {"valid":true,"state":next,"tracking":meter,
         "completed":completed,"advanced":advanced,
         "interrupted":interrupted,"contested":contested,
-        "withheld":paid_withheld}
+        "withheld":paid_withheld,"production_frozen":production_frozen}
