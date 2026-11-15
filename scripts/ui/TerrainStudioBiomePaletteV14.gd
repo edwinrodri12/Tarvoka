@@ -1,6 +1,8 @@
 extends RefCounted
 class_name TarvokaTerrainStudioBiomePaletteV14
 
+const WinterV15 = preload("res://scripts/ui/TerrainStudioSnowPaletteV15.gd")
+
 # V18b: biome colour is baked directly into the V7 ridge and V11 apron
 # vertex colours. No hidden decal, no floating overlay, no extra geometry.
 # All functions are pure and deterministic (world-space rather than cell IDs).
@@ -11,6 +13,8 @@ static func _grain(p: Vector3) -> float:
 
 static func mountain_color(base: Color, p: Vector3, rise: float,
         scene: int, open_contact: float) -> Color:
+    if scene == 3:
+        return WinterV15.mountain(base,p,rise,open_contact)
     # Higher rock stays mineral. Low/medium slopes inherit surrounding
     # forest moss, arid sandstone or tidal rock, continuously across tiles.
     var altitude: float = clampf(rise/2.2,0.0,1.0)
@@ -41,6 +45,8 @@ static func mountain_color(base: Color, p: Vector3, rise: float,
 
 static func foothill_color(base: Color,p: Vector3,scene: int,
         forest: bool,inward: float) -> Color:
+    if scene == 3:
+        return WinterV15.foothill(base,p,inward)
     # The real V11 footslope surface has four inward contours. Colour
     # them in place instead of placing a near-coplanar triangle layer
     # that could be hidden by the true mountain or z-fight with it.
