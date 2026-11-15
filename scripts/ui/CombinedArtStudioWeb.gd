@@ -55,6 +55,7 @@ var airbase_trusses_v11_toggle: CheckButton
 var airbase_fracture_v12_toggle: CheckButton
 var airbase_impacts_v13_toggle: CheckButton
 var airbase_surface_v13_picker: OptionButton
+var airbase_v13_focus_toggle: CheckButton
 var airbase_missile_v13_button: Button
 var airbase_bombard_v13_button: Button
 var airbase_v11_cutaway_toggle: CheckButton
@@ -784,7 +785,15 @@ func _add_building_mode() -> void:
             "Cubierta del hangar · quemaduras y fragmentos"]:
         airbase_surface_v13_picker.add_item(surface_name)
     airbase_surface_v13_picker.select(0)
+    airbase_surface_v13_picker.item_selected.connect(
+        _change_airbase_v13_target)
     airbase_controls.add_child(airbase_surface_v13_picker)
+    airbase_v13_focus_toggle = CheckButton.new()
+    airbase_v13_focus_toggle.name = "EnfoqueCercanoImpactoBaseAereaV13"
+    airbase_v13_focus_toggle.text = "Enfocar objetivo para inspeccionar impactos de cerca"
+    airbase_v13_focus_toggle.button_pressed = false
+    airbase_v13_focus_toggle.toggled.connect(_toggle_airbase_v13_focus)
+    airbase_controls.add_child(airbase_v13_focus_toggle)
     var attacks_v13 := HBoxContainer.new()
     attacks_v13.name = "AtaquesV13Diferenciados"
     attacks_v13.add_theme_constant_override("separation",6)
@@ -966,6 +975,22 @@ func _toggle_airbase_camera() -> void:
 func _apply_airbase_camera() -> void:
     if camera == null or _role != "airbase":
         return
+    # Optional orthographic close-up; focus the transformed physical
+    # impact anchor so it keeps working after rotating the model.
+    if model_root!=null and not _airbase_is_stress() and \
+            airbase_v13_focus_toggle!=null and \
+            airbase_v13_focus_toggle.button_pressed and \
+            airbase_impacts_v13_toggle.button_pressed:
+        var surface: String=AirbaseImpactsV13.TARGETS[
+            airbase_surface_v13_picker.selected]
+        var point: Vector3=model_root.transform*AirbaseImpactsV13.surface_position(
+            surface)
+        camera.position=point+(
+            Vector3(-3.1,6.1,-4.3) if surface=="hangar_roof" else
+            Vector3(3.8,2.8,-5.8))
+        camera.look_at(point,Vector3.UP)
+        _update_camera()
+        return
     var target:=Vector3(0,2.25,0)
     if airbase_detail_v9_toggle!=null and airbase_detail_v9_toggle.button_pressed:
         match _airbase_v9_view:
@@ -1044,6 +1069,15 @@ func _play_airbase_impact(kind: String) -> void:
 func _toggle_airbase_impacts_v13(_enabled: bool) -> void:
     if _role=="airbase":
         _display_airbase()
+
+func _toggle_airbase_v13_focus(_enabled: bool) -> void:
+    if _role=="airbase" and not _airbase_is_stress():
+        _apply_airbase_camera()
+
+func _change_airbase_v13_target(_index: int) -> void:
+    if _role=="airbase" and not _airbase_is_stress() and \
+            airbase_v13_focus_toggle.button_pressed:
+        _apply_airbase_camera()
 
 func _set_airbase_mobile_vfx(enabled: bool) -> void:
     if _role != "airbase" or model_root == null:
@@ -1730,10 +1764,14 @@ func _update_camera() -> void:
             else:
                 # In an orthographic camera, changing distance does NOT
                 # zoom in: the inspection lens needs its own frustum size.
+                var focus_close: bool=airbase_v13_focus_toggle!=null and \
+                    airbase_v13_focus_toggle.button_pressed and \
+                    airbase_impacts_v13_toggle.button_pressed
                 var tower_close: bool = airbase_detail_v9_toggle != null and \
                     airbase_detail_v9_toggle.button_pressed and _airbase_v9_view==5
                 camera.size = (
-                    6.4 if tower_close else 10.5 if _airbase_camera_interior else 18.8
+                    5.6 if focus_close else 6.4 if tower_close else
+                    10.5 if _airbase_camera_interior else 18.8
                     )/maxf(0.35,_zoom)
         return
     if _role == "headquarters":
