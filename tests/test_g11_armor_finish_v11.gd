@@ -35,6 +35,35 @@ func _run() -> void:
             "thirty-six modeled individual patches on twelve real tube lips")
         var launcher := _find(model,Art.ELEVATION)
         var turret := _find(model,Art.TURRET)
+        _check(bool(model.get_meta("tarvoka_g11_v11_real_open_casing",false)),
+            "solid front obstruction genuinely replaced with an open frame")
+        var casing := _find(model,"G11_ArmazonLanzador") as MeshInstance3D
+        _check(casing != null and casing.mesh is ArrayMesh,
+            "former V1 opaque launch chassis replaced with custom hole-preserving geometry")
+        if casing != null and casing.mesh is ArrayMesh:
+            var casing_mesh: ArrayMesh = casing.mesh as ArrayMesh
+            var vertex_array: PackedVector3Array = casing_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+            _check(vertex_array.size() >= 140,
+                "four distinct closed casing walls, not an old single solid box")
+            var blocked: bool = false
+            for point in vertex_array:
+                if absf(point.x) < 0.54 and absf(point.y) < 0.36 and point.z < -0.72:
+                    blocked = true
+            _check(not blocked,
+                "no opaque metal across middle of open V4 physical tube bores")
+        var top_cover := _find(model,"G11_TapaSuperior") as MeshInstance3D
+        _check(top_cover != null and top_cover.mesh is ArrayMesh,
+            "former flat launcher roof is now a real beveled octagonal plate")
+        if top_cover != null and top_cover.material_override is StandardMaterial3D:
+            var roof_metal: StandardMaterial3D = top_cover.material_override as StandardMaterial3D
+            _check(roof_metal.metallic > 0.40 and roof_metal.roughness > 0.65,
+                "roof has grounded satin dark-metal PBR rather than an empty white rectangle")
+        for stiffener in range(3):
+            _check(_find(model,"G11V11_NervioTecho_%d" % stiffener) != null,
+                "thin three-dimensional longitudinal roof stiffener %d" % stiffener)
+        for weld in range(2):
+            _check(_find(model,"G11V11_SoldaduraTecho_%d" % weld) != null,
+                "subtle real metallic welding seam on launch container")
         _check(launcher != null and turret != null,
             "V11 decorative frame belongs to real animated launcher")
         if launcher == null:
@@ -135,5 +164,5 @@ func _run() -> void:
         push_error("G11 V11 HARD-SURFACE QA FAILED (%d assertions)" % failures)
         quit(1)
         return
-    print("PASS G11 ARMOR V11: eight factions, twelve open PBR tubes, four beveled rails, 36 metal scuffs, 16 fasteners, trim and all V10 animations")
+    print("PASS G11 ARMOR V11: eight factions, genuinely unblocked 12 PBR tubes, open four-wall case, beveled metal roof and frame, 16 bolts, V10 animation")
     quit(0)
