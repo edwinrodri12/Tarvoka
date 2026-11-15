@@ -13,6 +13,9 @@ on:
       - 'scripts/ui/G11MechanicsV5.gd'
       - 'scripts/ui/G11DamageSculptV6.gd'
       - 'scripts/ui/G11DamageAtmosphereV7.gd'
+      - 'scripts/ui/G11SequentialSalvoV8.gd'
+      - 'tests/test_g11_salvo_v8.gd'
+      - 'tests/test_g11_salvo_v8_capture.gd'
       - 'tests/test_g11_360_gpu_v7.gd'
       - 'tests/test_g11_360_gpu_v6.gd'
       - 'tests/test_g11_360_gpu_v5.gd'
@@ -86,7 +89,21 @@ jobs:
             echo 'G11 on-device benchmark scene failed'; exit 1
           fi
           grep -F 'PASS G11 ANDROID LAB:' /tmp/g11_android_lab.log
-      - name: Render G11 from eight actual Godot 3D camera angles
+      - name: Verify each G11 V8 rocket and muzzle fires independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_salvo_v8.gd 2>&1 | tee /tmp/g11_v8_salvo.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v8_salvo.log; then
+            echo 'G11 12-tube rocket animation regression'; exit 1
+          fi
+          grep -F 'PASS G11 SALVO V8:' /tmp/g11_v8_salvo.log
+      - name: Render G11 V8 from twelve actual individual rocket firings
         shell: bash
         run: |
           set -euo pipefail
@@ -96,17 +113,17 @@ jobs:
             env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-360 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_g11_360_gpu_v7.gd 2>&1 | tee /tmp/g11_360_v7.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_360_v7.log; then
+            --script res://tests/test_g11_salvo_v8_capture.gd 2>&1 | tee /tmp/g11_salvo_v8_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_salvo_v8_capture.log; then
             echo 'G11 eight-angle GPU capture failed'; exit 1
           fi
-          grep -F 'PASS G11 360 V7:' /tmp/g11_360_v7.log
-          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 25
-      - name: Upload G11 V7 smoke-fire sculpt and unclipped damage screenshots
+          grep -F 'PASS G11 SALVO V8 CAPTURE:' /tmp/g11_salvo_v8_capture.log
+          test "$(find /tmp/g11-360 -name '*.png' | wc -l)" -eq 18
+      - name: Upload G11 V8 12-rocket salvo visual inspection screenshots
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-g11-v7-physical-fire-smoke-damage-review
+          name: tarvoka-g11-v8-twelve-individual-rocket-ignitions
           path: /tmp/g11-360/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
