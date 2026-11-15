@@ -21,6 +21,7 @@ const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 const HeadquartersSprite = preload("res://scripts/ui/HeadquartersSpriteV15.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
+const CargoVFX = preload("res://scripts/ui/CargoVFX.gd")
 const VisualBudget = preload("res://scripts/ui/VisualBudget.gd")
 const ComparisonPainter = preload("res://scripts/ui/DestinationComparisonPainter.gd")
 const ThreatPainter = preload("res://scripts/ui/ThreatAwarenessPainter.gd")
@@ -60,7 +61,8 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
         unit_headings: Dictionary = {}, battery_saver: bool = false, inspected_enemy_id: String = "",
         site_markers: Array = [], inspected_cell: Vector2i = Vector2i(-1,-1),
         threat_preview: Dictionary = {}, compared_cells: Array[Vector2i] = [], weather_before: String = "clear", weather_blend: float = 1.0,
-        transport_options: Dictionary = {}, unload_mode: bool = false) -> void:
+        transport_options: Dictionary = {}, unload_mode: bool = false,
+        cargo_effects: Array[Dictionary] = []) -> void:
     if not state.has("terrain") or not Rules.valid_terrain(state["terrain"]):
         return
     var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -382,3 +384,6 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     # Effects belong to rendering only, and their stored origins already
     # passed the fog-safety check in the core TouchBoard code.
     BattleVFX.draw_effects(canvas,combat_effects,hw,canvas.size,zoom,pan,dims,battery_saver)
+    # Draw short-lived soldier/hatch animation on the physical carrier tile.
+    # No separate unit sprites, hitboxes or enemy-manifest information.
+    CargoVFX.draw_iso(canvas,cargo_effects,canvas.size,zoom,pan,dims,hw,battery_saver)
