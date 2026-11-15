@@ -135,7 +135,7 @@ func _run() -> void:
                 assert(_count(model,"PlacaAnclajeEste_00_-1")==0)
                 assert(_count(model,"PernoArrancadoMuelleEsteV10")==1)
                 assert(_count(model,"CadenaSueltaEspigonV10")==1)
-                assert(_count(model,"Bolardo_-1_0")==0)
+                assert(_count(model,"Bolardo_-1_0")==1)
                 assert(_count(model,"RetenedorCubiertaEspigon_-1_0")==0)
             model.free()
             verified+=1
