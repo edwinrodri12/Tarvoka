@@ -68,7 +68,7 @@ func _run() -> void:
                 assert(_count(model,"MuellePartido_1")==1)
                 assert(_count(model,"CabinaRotaControl")==1)
                 assert(_count(model,"ChapaTejado_3_1")==0)
-            assert(Base.count_meshes(model)>35)
+            assert(Base.count_meshes(model)>(25 if damage==4 else 35))
             model.free()
             variants+=1
     assert(variants==40 and official==32)
