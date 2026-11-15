@@ -62,6 +62,31 @@ func _run() -> void:
     assert(not studio._apc_mixed_enabled)
     assert(studio.model_root.visible)
     assert(studio.apc_stress_button.text.contains("32"))
+    # Native 6-phase Android autotest: first phase, warmup, A/B transition,
+    # partial cancellation and restoring the normal inspector safely.
+    studio._toggle_auto_benchmark()
+    assert(studio._auto_benchmark.active)
+    assert(studio._auto_benchmark.phase_index==0)
+    assert(studio._apc_stress_count==32)
+    assert(not studio._apc_tactical_lod)
+    assert(not studio._apc_mixed_enabled)
+    studio._auto_benchmark.measure_seconds=0.5
+    studio._auto_benchmark.warmup_seconds=0.0
+    studio._update_apc_stress(0.6)
+    studio._tick_auto_benchmark(0.6)
+    assert(studio._auto_benchmark.active)
+    assert(studio._auto_benchmark.phase_index==1)
+    assert(studio._auto_benchmark.reports.size()==1)
+    assert(studio._apc_stress_count==32 and studio._apc_tactical_lod)
+    assert(not studio._apc_mixed_enabled)
+    studio._toggle_auto_benchmark()
+    assert(not studio._auto_benchmark.active)
+    assert(studio._auto_benchmark.summary()["cancelled"])
+    assert(studio._auto_benchmark.reports.size()==1)
+    assert(studio._apc_stress_group==null)
+    assert(studio._apc_stress_count==0 and studio.model_root.visible)
+    assert(not studio._auto_benchmark_report_path.is_empty())
+    assert(FileAccess.file_exists(studio._auto_benchmark_report_path))
     studio.queue_free()
     await process_frame
     print("PASS APC P06 V3 STUDIO STRESS: 32/64 APC with optional 8 HQ V3, 8 G09 and V26 ground; 8 factions, tactical LOD, FPS/draw-call HUD and clean exit")
