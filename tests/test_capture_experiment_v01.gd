@@ -158,6 +158,27 @@ static func _rules_test() -> Dictionary:
         var after_leave: Dictionary = _tick(flee["state"],before_leave["tracking"])
         assert(not after_leave["tracking"].has(key))
         tested += 1
+        # If an occupying soldier dies but a friendly escort survives,
+        # its unfinished progress disappears immediately.
+        var casualty: Dictionary = _tick(_fixture(side,"scout","city",1),{})
+        var killed: Dictionary = casualty["state"].duplicate(true)
+        for unit in killed["units"]:
+            if str(unit["id"]) == "CAP":
+                unit["hp"] = 0
+        var interrupted: Dictionary = _tick(killed,casualty["tracking"])
+        assert(not interrupted["tracking"].has(key))
+        assert(int(Economy.site_at(interrupted["state"]["economy"],_target(side,"city"))["owner"]) == -1)
+        tested += 1
+        # Revenue from neutral capture begins only AFTER a complete
+        # occupation and the purchaser returns to their next turn.
+        var finance: Dictionary = _tick(_fixture(side,"line"),{})
+        var before_finish: Dictionary = _tick(finance["state"],finance["tracking"])
+        assert(int(before_finish["state"]["economy"]["credits"][side]) == 2750)
+        var owner_claim: Dictionary = _tick(before_finish["state"],before_finish["tracking"])
+        assert(int(owner_claim["state"]["economy"]["credits"][side]) == 2750)
+        var next_cycle: Dictionary = _tick(owner_claim["state"],owner_claim["tracking"])
+        assert(int(next_cycle["state"]["economy"]["credits"][side]) == 3250)
+        tested += 1
         # Enemy-owned city: no enemy income during active siege, while
         # the defender still retains legal ownership until completion.
         var siege: Dictionary = _fixture(side,"line","enemy_city")
