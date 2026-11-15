@@ -14,6 +14,7 @@ const SurfaceV3 = preload("res://scripts/ui/G11SurfaceV3.gd")
 const GeometryV4 = preload("res://scripts/ui/G11GeometryV4.gd")
 const MechanicsV5 = preload("res://scripts/ui/G11MechanicsV5.gd")
 const DamageV6 = preload("res://scripts/ui/G11DamageSculptV6.gd")
+const AtmosphereV7 = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -275,6 +276,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 mechanical sculpt V5 failed; retaining V4 sculpt")
     elif not DamageV6.apply(model):
         push_warning("G11 3D damage V6 failed; retaining V5 sculpt")
+    elif not AtmosphereV7.apply(model):
+        push_warning("G11 damage atmosphere V7 failed; retaining V6 sculpture")
     return true
 
 static func stage(model: Node3D) -> int:
@@ -292,4 +295,5 @@ static func apply_stage(model: Node3D, value: int) -> bool:
     var launcher: Node3D = model.find_child(ELEVATION,true,false) as Node3D
     launcher.visible = s < 4
     DamageV6.update_stage(model,s)
+    AtmosphereV7.set_stage(model,s)
     return true
