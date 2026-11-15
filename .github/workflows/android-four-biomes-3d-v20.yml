@@ -1,0 +1,69 @@
+name: TARVOKA Android V20 four biomes playable 3D
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/Battle3DOrders.gd"
+      - "scripts/ui/BattleTerrainPicker3D.gd"
+      - "scripts/ui/TerrainVisualMapBridge3D.gd"
+      - "scripts/ui/WinterBattleBiome.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/SkirmishSetup.gd"
+      - "tests/test_live_battle_four_biomes_v20.gd"
+      - ".github/workflows/android-four-biomes-3d-v20.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playable-four-biomes:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3 and import real Android game
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fsSL --retry 3 "$url/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 140s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . \
+            --import --quit 2>&1 | tee /tmp/v20-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/v20-import.log; then exit 1; fi
+      - name: Verify GDScript import and no headless mesh validation
+        shell: bash
+        run: |
+          # Preflight above runs Godot headless import. Actual Mesh surface
+          # queries REQUIRE OpenGL and are validated in the next step.
+          set -euo pipefail
+          test -s /tmp/v20-import.log
+          grep -q 'Godot Engine v4.3' /tmp/v20-import.log
+      - name: OpenGL playable 3D landscape GPU and mobile HUD integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 200s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_live_battle_four_biomes_v20.gd \
+            2>&1 | tee /tmp/v20-gpu.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v20-gpu.log; then exit 1; fi
+          grep -q 'PASS TARVOKA_3D_FOUR_BIOMES_V20:' /tmp/v20-gpu.log
+          test -s artifacts/tarvoka_biomes_v20_delta_in_battle.png
+      - name: Archive true 3D battle frame and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-V20-Live-Android-3D-Biomes-QA
+          path: |
+            artifacts/tarvoka_biomes_v20_*.png
+            /tmp/v20-import.log
+            /tmp/v20-gpu.log
+          if-no-files-found: warn
+          retention-days: 30

@@ -37,6 +37,7 @@ const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const BattleView3D = preload("res://scripts/ui/Battle3DMapView.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
 const DestinationComparison = preload("res://scripts/ui/DestinationComparison.gd")
@@ -102,6 +103,8 @@ var unit_art_gallery: Control
 var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
+var battle_3d_button: Button
+var battle_3d_view: Control
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -175,6 +178,7 @@ var compact_top_shortcuts: HBoxContainer
 var compact_options_button: Button
 var compact_center: Button
 var compact_iso: Button
+var compact_3d: Button
 var expanded_header: PanelContainer
 var expanded_summary: Label
 var expanded_turn_cue: Label
@@ -392,6 +396,13 @@ func _ready() -> void:
     iso_view_button.pressed.connect(_toggle_isometric_view)
     # Keep controls separate so landscape sidebars down to ~300px never overflow.
     panel.add_child(iso_view_button)
+    battle_3d_button = Button.new()
+    battle_3d_button.name = "AbrirBatalla3DConBiomas"
+    battle_3d_button.text = "MAPA 3D · 4 BIOMAS · JUGAR"
+    battle_3d_button.tooltip_text = "Mapa tridimensional real; inspecciona casillas y confirma órdenes desde el motor tactico"
+    battle_3d_button.custom_minimum_size.y = 51
+    battle_3d_button.pressed.connect(_open_battle_3d)
+    panel.add_child(battle_3d_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -656,9 +667,11 @@ func _ready() -> void:
     biome_picker = OptionButton.new()
     biome_picker.name = "SelectorBiomaV19"
     biome_picker.custom_minimum_size.y = 54
-    biome_picker.add_item("Templado · vegetación y roca",0)
-    biome_picker.add_item("Nevado V19 · montañas, pinos y hielo",1)
-    biome_picker.select(1 if Winter.from_state(board.state)==Winter.WINTER else 0)
+    biome_picker.add_item("Valle boscoso · templado",0)
+    biome_picker.add_item("Nevado V19 · nieve y hielo",1)
+    biome_picker.add_item("Canon rocoso · montanas y tierra seca",2)
+    biome_picker.add_item("Delta costero · humedal y litoral",3)
+    biome_picker.select(Winter.index_for(board.state))
     panel.add_child(biome_picker)
     var biome_help := Label.new()
     biome_help.text = "El bioma es el paisaje. El clima de abajo controla movilidad y precipitaciones, independientemente."
@@ -1363,6 +1376,14 @@ func _build_battle_hud() -> void:
     compact_iso.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     compact_iso.pressed.connect(_toggle_isometric_view)
     compact_top_shortcuts.add_child(compact_iso)
+    compact_3d = Button.new()
+    compact_3d.name = "Batalla3DMobile"
+    compact_3d.text = "3D"
+    compact_3d.custom_minimum_size.y = 44
+    compact_3d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    compact_3d.tooltip_text = "Abrir batalla 3D jugable con el bioma de esta partida"
+    compact_3d.pressed.connect(_open_battle_3d)
+    compact_top_shortcuts.add_child(compact_3d)
     compact_options_button = Button.new()
     compact_options_button.text = "Opciones"
     compact_options_button.custom_minimum_size.y = 44
@@ -1928,7 +1949,7 @@ func _save_game() -> void:
 func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
     if board.load_game(path):
         scenario_picker.select(board.current_scenario_id)
-        biome_picker.select(1 if Winter.from_state(board.state)==Winter.WINTER else 0)
+        biome_picker.select(Winter.index_for(board.state))
         var grid: Vector2i = board.map_dimensions()
         map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
@@ -1962,7 +1983,8 @@ func _new_game() -> void:
     var starter_name := "Azul" if first_picker.get_selected_id() == 0 else "Rojo"
     var dimensions: Vector2i = _selected_map_size()
     var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
-    var biome_name: String = "Nevado V19" if biome_picker.get_selected_id()==1 else "Templado"
+    var biome_name: String = Winter.label_for(
+        Winter.from_index(biome_picker.get_selected_id()))
     if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s, bioma %s, clima %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, biome_name, weather_name, objective_name, starter_name]
@@ -1987,7 +2009,7 @@ func _confirm_new_game() -> void:
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
         str(Weather.TYPES[weather_picker.get_selected_id()]),
         weather_cycle_picker.get_selected_id() == 1,
-        Winter.WINTER if biome_picker.get_selected_id()==1 else Winter.TEMPERATE)
+        Winter.from_index(biome_picker.get_selected_id()))
     _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
@@ -2382,6 +2404,20 @@ func _toggle_battery_saver() -> void:
     _save_display_preferences()
     if command_menu != null:
         command_menu.refresh_settings_controls()
+
+func _open_battle_3d() -> void:
+    # Lazy creation: a normal Android match pays no 3D GPU/memory cost.
+    if board == null or board.state.is_empty():
+        return
+    if battle_3d_view == null or not is_instance_valid(battle_3d_view):
+        battle_3d_view = BattleView3D.new()
+        battle_3d_view.name = "Batalla3DConCuatroBiomasV20"
+        add_child(battle_3d_view)
+        battle_3d_view.focus_requested.connect(
+            func(cell: Vector2i): board.focus_view_cell(cell))
+    if not battle_3d_view.open_from_board(board):
+        board.message = "No se pudo abrir el terreno 3D de esta partida."
+        board.queue_redraw()
 
 func _toggle_isometric_view() -> void:
     board.set_isometric(not board.iso_enabled)

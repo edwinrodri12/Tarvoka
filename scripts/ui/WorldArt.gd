@@ -25,8 +25,8 @@ static func draw_terrain(canvas: CanvasItem, kind: String, c: Vector2,
         biome: String = Winter.TEMPERATE) -> void:
     if hw <= 0.0:
         return
-    if biome == Winter.WINTER:
-        Winter.draw_iso(canvas,kind,c,hw,seed)
+    if biome != Winter.TEMPERATE:
+        Winter.draw_biome_iso(canvas,kind,c,hw,seed,biome)
         return
     var s: float = hw * 0.58
     # Stable per-cell vegetation arrangement avoids introducing terrain randomness.

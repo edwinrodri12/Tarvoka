@@ -147,8 +147,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
     # Persistent decorative setting: separate from snow weather penalties.
     # Omitted from normal/legacy matches to preserve v1 save payloads.
-    if visual_biome == Winter.WINTER:
-        state[Winter.FIELD] = Winter.WINTER
+    if Winter.valid(visual_biome) and visual_biome != Winter.TEMPERATE:
+        state[Winter.FIELD] = visual_biome
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
@@ -452,8 +452,8 @@ func _draw() -> void:
             draw_line(pos + Vector2(1, tile - 1), pos + Vector2(tile - 1, tile - 1), terrain_color.darkened(0.35), maxf(1.0, tile * 0.024))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
             # Simple self-contained symbols, no borrowed art or sprite assets.
-            if visual_biome == Winter.WINTER:
-                Winter.draw_classic(self,terrain_type,pos,tile)
+            if visual_biome != Winter.TEMPERATE:
+                Winter.draw_biome_classic(self,terrain_type,pos,tile,visual_biome)
             elif terrain_type == "forest":
                 draw_circle(pos + tile * Vector2(0.29, 0.31), tile * 0.09, Color(0.25, 0.53, 0.27))
                 draw_circle(pos + tile * Vector2(0.65, 0.27), tile * 0.11, Color(0.20, 0.45, 0.22))

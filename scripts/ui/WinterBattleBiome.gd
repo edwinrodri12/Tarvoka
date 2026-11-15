@@ -8,6 +8,21 @@ class_name TarvokaWinterBattleBiome
 const FIELD := "visual_biome"
 const TEMPERATE := "temperate"
 const WINTER := "winter"
+const CANYON := "canyon"
+const COASTAL := "coastal"
+# Preserve historic index 1 = winter. New schemes are appended.
+const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL]
+const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero"]
+
+static func from_index(index: int) -> String:
+    return str(CHOICES[clampi(index,0,CHOICES.size()-1)])
+
+static func index_for(state: Dictionary) -> int:
+    return CHOICES.find(from_state(state))
+
+static func label_for(value: String) -> String:
+    var index: int = CHOICES.find(value)
+    return str(LABELS[index]) if index >= 0 else str(LABELS[0])
 const SNOW := Color("#dce5e7")
 const HARDPACK := Color("#b9c9d3")
 const ICE := Color("#91b7c4")
@@ -20,17 +35,32 @@ const ROAD_DARK := Color("#525b64")
 const ROAD_SLUSH := Color("#abbac0")
 
 static func valid(value: Variant) -> bool:
-    return value is String and value in [TEMPERATE, WINTER]
+    return value is String and value in CHOICES
 
 static func from_state(state: Dictionary) -> String:
     var value: Variant = state.get(FIELD,TEMPERATE)
     return str(value) if valid(value) else TEMPERATE
 
-static func tile_color(kind: String,x: int,y: int) -> Color:
+static func tile_color(kind: String,x: int,y: int,
+        biome: String = WINTER) -> Color:
     # V19 permanent palette. The checker+grain is deterministic; no time or
     # faction/team information is used. Existing grass/rocks stay unchanged
     # in temperate games, including every historical save.
     var grain: float = float(posmod(x*37+y*59,11))/10.0
+    if biome == CANYON:
+        match kind:
+            "plain": return Color("#bfa27b").lerp(Color("#d2ba94"),0.16*grain)
+            "forest": return Color("#98896c").lerp(Color("#acaa7f"),0.24*grain)
+            "mountain": return Color("#8f7565").lerp(Color("#b69b80"),0.26*grain)
+            "road": return Color("#736c63")
+            "water": return Color("#316f8d").lerp(Color("#3f91a8"),0.12*grain)
+    elif biome == COASTAL:
+        match kind:
+            "plain": return Color("#82a583").lerp(Color("#9ebe91"),0.17*grain)
+            "forest": return Color("#4a836c").lerp(Color("#669c81"),0.20*grain)
+            "mountain": return Color("#718985").lerp(Color("#88a39c"),0.22*grain)
+            "road": return Color("#58676b")
+            "water": return Color("#24748d").lerp(Color("#4398a9"),0.17*grain)
     match kind:
         "plain":
             return SNOW.lerp(HARDPACK,0.17+grain*0.20)
@@ -114,6 +144,76 @@ static func draw_iso(canvas: CanvasItem,kind: String,
                 Vector2(0.72,-0.03),FROZEN_SHORE,0.04)
             _line(canvas,center,s,Vector2(-0.49,0.39),
                 Vector2(-0.09,0.36),HARDPACK.darkened(0.04),0.035)
+
+# Distinct canyon and coastal terrain drawings. Temperate retains WorldArt.
+static func draw_biome_iso(canvas: CanvasItem,kind: String,
+        center: Vector2,half_width: float,seed: int,biome: String) -> void:
+    if biome == WINTER:
+        draw_iso(canvas,kind,center,half_width,seed)
+        return
+    var s: float = half_width*0.56
+    var rock: Color = Color("#957864") if biome==CANYON else Color("#778d86")
+    var foliage: Color = Color("#8e8a59") if biome==CANYON else Color("#346f63")
+    match kind:
+        "mountain":
+            _poly(canvas,center,s,[[-1.00,0.62],[-0.31,-0.96],[0.13,0.56]],
+                rock.darkened(0.14))
+            _poly(canvas,center,s,[[-0.31,-0.96],[0.75,0.51],[0.13,0.56]],
+                rock.lightened(0.14))
+            _poly(canvas,center,s,[[0.10,0.45],[0.51,-1.15],[1.02,0.45]],
+                rock.darkened(0.03))
+        "forest":
+            for offset in [Vector2(-0.48,0.18),Vector2(0.42,-0.08)]:
+                var at: Vector2 = center+offset*s
+                _line(canvas,at,s,Vector2.ZERO,Vector2(0.0,0.44),
+                    rock.darkened(0.37),0.13)
+                _poly(canvas,at,s,[[-0.32,0.08],[0.0,-0.79],[0.36,0.08]],
+                    foliage)
+                _poly(canvas,at,s,[[-0.18,-0.19],[0.0,-0.74],[0.17,-0.19]],
+                    foliage.lightened(0.15))
+        "road":
+            _line(canvas,center,s,Vector2(-1.02,-0.18),Vector2(1.02,0.18),
+                rock.lightened(0.13),0.42)
+            _line(canvas,center,s,Vector2(-0.98,-0.18),Vector2(0.98,0.18),
+                Color("#636a6a") if biome==COASTAL else Color("#80776a"),0.29)
+        "water":
+            for j in range(3):
+                var y: float = float(j)*0.31-0.37
+                _line(canvas,center,s,Vector2(-0.85,y),
+                    Vector2(0.22,y+0.05),Color("#8bb9c2"),0.045)
+        _:
+            _line(canvas,center,s,Vector2(-0.49,0.17),Vector2(0.53,0.10),
+                rock.lightened(0.29),0.041)
+
+static func draw_biome_classic(canvas: CanvasItem,kind: String,
+        corner: Vector2,tile: float,biome: String) -> void:
+    if biome == WINTER:
+        draw_classic(canvas,kind,corner,tile)
+        return
+    var c: Vector2 = corner+Vector2.ONE*tile*0.5
+    var s: float = tile*0.30
+    var rock: Color = Color("#a1876b") if biome==CANYON else Color("#708b80")
+    var foliage: Color = Color("#95925d") if biome==CANYON else Color("#36735f")
+    match kind:
+        "mountain":
+            _poly(canvas,c,s,[[-1.32,0.93],[-0.20,-1.05],[0.76,0.93]],rock)
+            _poly(canvas,c+Vector2(0.34*s,0),s,
+                [[-0.2,0.93],[0.44,-0.79],[1.10,0.93]],rock.darkened(0.17))
+        "forest":
+            for offset in [-0.36,0.32]:
+                _poly(canvas,c+Vector2(offset*tile,0),s,
+                    [[-0.34,0.35],[0,-0.90],[0.35,0.35]],foliage)
+        "road":
+            _line(canvas,c,s,Vector2(-1.25,0),Vector2(1.25,0),
+                rock.lightened(0.12),0.36)
+            _line(canvas,c,s,Vector2(-1.23,0),Vector2(1.23,0),
+                Color("#626566"),0.26)
+        "water":
+            _line(canvas,c,s,Vector2(-1.05,-0.34),Vector2(0.91,-0.34),
+                Color("#8cb8c4"),0.07)
+        _:
+            _line(canvas,c,s,Vector2(-0.91,-0.08),Vector2(0.54,0.0),
+                rock.lightened(0.28),0.038)
 
 static func draw_classic(canvas: CanvasItem,kind: String,
         corner: Vector2,tile: float) -> void:

@@ -52,7 +52,7 @@ func _draw() -> void:
         for x in range(grid_size.x):
             var kind: String = str(row[x])
             var tile: Color = (
-                Winter.tile_color(kind,x,y) if visual_biome == Winter.WINTER
+                Winter.tile_color(kind,x,y,visual_biome) if visual_biome != Winter.TEMPERATE
                 else TILES.get(kind,TILES["plain"]))
             var top_left := inset + Vector2(float(x)*tile_w,float(y)*tile_h)
             var rect := Rect2(top_left,Vector2(tile_w+0.13,tile_h+0.13))
