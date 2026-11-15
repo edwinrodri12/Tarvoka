@@ -134,5 +134,12 @@ func _initialize() -> void:
     assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(disk_path + ".bak")) == OK)
     assert(not FileAccess.file_exists(disk_path))
     assert(not FileAccess.file_exists(disk_path + ".bak"))
+    # A fresh installation / cleared save slot must not report a phantom recovery.
+    var empty_slot: Dictionary = Store.load_report(disk_path)
+    assert(empty_slot.get("state", {}).is_empty())
+    assert(not empty_slot.get("recovered", false))
+    assert(Store.load(disk_path).is_empty())
+    assert(not FileAccess.file_exists(disk_path))
+    assert(not FileAccess.file_exists(disk_path + ".bak"))
     print("PASS battle session exchange: preview parity, HP, reaction, save roundtrip, disk backup recovery, victory")
     quit(0)
