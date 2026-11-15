@@ -14,6 +14,7 @@ const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Cargo = preload("res://scripts/core/CargoActions.gd")
 const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
@@ -321,13 +322,13 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 Color("#FFE451"), maxf(2.0, hw * 0.055))
         # Identical local-only manifest indicator in the isometric view.
         # Enemy APC sprites never disclose passenger occupancy or IDs.
-        if own and role == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and hw >= 23.0:
+        if own and Cargo.capacity(role) > 0 and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and hw >= 23.0:
             var cargo_box: Rect2 = Rect2(c+Vector2(radius*0.15,-radius*1.25),
                 Vector2(hw*0.67,hw*0.26))
             canvas.draw_rect(cargo_box,Color(0.02,0.10,0.16,0.94))
             canvas.draw_rect(cargo_box,Color(0.22,0.77,1.0,0.93),false,maxf(1.0,hw*0.018))
             canvas.draw_string(font,cargo_box.position+Vector2(hw*0.07,hw*0.20),
-                "%d/2" % int(unit["cargo"].size()),
+                "%d/%d" % [int(unit["cargo"].size()),Cargo.capacity(role)],
                 HORIZONTAL_ALIGNMENT_LEFT,-1,int(maxf(10.0,hw*0.19)),Color(0.90,0.97,1.0))
         if hw >= 23.0:
             canvas.draw_string(font,c+Vector2(-radius*0.16,radius+hh*0.42),
