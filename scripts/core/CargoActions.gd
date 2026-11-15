@@ -6,15 +6,30 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 
-# Initial ground-only transport. Two infantry slots on the APC G07; IFV
-# cargo needs its own independent balance decision and later release.
-const CAPACITY := 2
+# Distinct strategic transport capacities. A G07 APC carries two light
+# infantry INCLUDING anti-armor Rompedores; the G08 IFV carries only one
+# capture-capable foot soldier and retains its superior gun/vision at 500 cr.
+# Both spend their whole action to load or unload; no free IFV gunfire.
+const CAPACITY := 2 # Legacy APC constant retained for original API/tests.
 const CARRIER_ROLE := "apc"
+const CARRIER_ROLES := ["apc","ifv"]
 const PASSENGER_ROLES := ["line","scout","assault","engineer","piercer"]
+const IFV_PASSENGER_ROLES := ["line","scout","assault","engineer"]
+
+static func capacity(role: String) -> int:
+    match role:
+        "apc":
+            return 2
+        "ifv":
+            return 1
+    return 0
+
+static func allowed_passenger(role: String, passenger_role: String) -> bool:
+    return passenger_role in (IFV_PASSENGER_ROLES if role == "ifv" else PASSENGER_ROLES) and capacity(role) > 0
 
 static func passengers(unit: Dictionary) -> Array:
     var stored = unit.get("cargo",[])
-    return stored if stored is Array and str(unit.get("role","")) == CARRIER_ROLE else []
+    return stored if stored is Array and capacity(str(unit.get("role",""))) > 0 else []
 
 static func _adjacent(a: Vector2i, b: Vector2i) -> bool:
     return absi(a.x-b.x)+absi(a.y-b.y) == 1
@@ -36,7 +51,12 @@ static func _preflight(units: Array, side: int, terrain: Array) -> bool:
             return false
         if not (unit.get("cargo",[]) is Array):
             return false
-        if unit.has("cargo") and (str(unit.get("role","")) != CARRIER_ROLE or (unit["cargo"] as Array).size() > CAPACITY):
+        if unit.has("cargo") and (capacity(str(unit.get("role",""))) == 0 or (unit["cargo"] as Array).size() > capacity(str(unit.get("role","")))):
+            return false
+        if unit.has("cargo"):
+            for occupied in unit["cargo"]:
+                if not occupied is Dictionary or not allowed_passenger(str(unit.get("role","")),str(occupied.get("role",""))):
+                    return false
             return false
         for passenger in passengers(unit):
             if not passenger is Dictionary or not passenger.get("id") is String:
@@ -44,7 +64,7 @@ static func _preflight(units: Array, side: int, terrain: Array) -> bool:
             if ids.has(passenger["id"]) or passenger.has("pos") or passenger.has("cargo"):
                 return false
             ids[passenger["id"]] = true
-            if str(passenger.get("role","")) not in PASSENGER_ROLES or int(passenger.get("faction",-1)) != int(unit["faction"]) or int(passenger.get("hp",0)) <= 0:
+            if not allowed_passenger(str(unit.get("role","")),str(passenger.get("role",""))) or int(passenger.get("faction",-1)) != int(unit["faction"]) or int(passenger.get("hp",0)) <= 0:
                 return false
     return true
 
@@ -70,13 +90,13 @@ static func embark(units: Array, passenger_id: String, carrier_id: String,
     var vehicle: Dictionary = next[carrier_index]
     if not Turns.can_move(troop,side) or not Turns.can_move(vehicle,side):
         return reject
-    if str(troop.get("role","")) not in PASSENGER_ROLES or str(vehicle.get("role","")) != CARRIER_ROLE:
+    if not allowed_passenger(str(vehicle.get("role","")),str(troop.get("role",""))):
         return reject
     if Domains.domain(troop) != Domains.GROUND or Domains.domain(vehicle) != Domains.GROUND:
         return reject
     if not _adjacent(troop["pos"],vehicle["pos"]):
         return reject
-    if passengers(vehicle).size() >= CAPACITY or not (vehicle.get("cargo",[]) is Array):
+    if passengers(vehicle).size() >= capacity(str(vehicle["role"])) or not (vehicle.get("cargo",[]) is Array):
         return reject
     # The passenger keeps its own HP, ammunition, custom stats and identity,
     # but cannot occupy a tile, capture, fire or provide independent sight.
@@ -94,8 +114,8 @@ static func embark(units: Array, passenger_id: String, carrier_id: String,
         "passenger_id":passenger_id,"cargo_count":passengers(vehicle).size()}
 
 # Unload ONE passenger into a visible, unoccupied orthogonal ground tile.
-# The APC may have moved earlier this turn, but cannot have attacked or
-# unloaded another soldier. The deployed infantry cannot act until next turn.
+# An APC/IFV may have moved earlier but cannot have attacked/unloaded.
+# The deployed infantry cannot act until next turn.
 static func disembark(units: Array, carrier_id: String, passenger_id: String,
         destination: Vector2i, side: int, terrain: Array) -> Dictionary:
     var reject := {"valid":false,"units":units.duplicate(true)}
@@ -107,7 +127,7 @@ static func disembark(units: Array, carrier_id: String, passenger_id: String,
         if str(unit["id"]) == carrier_id:
             vehicle = unit
             break
-    if vehicle.is_empty() or not Turns.can_act(vehicle,side) or str(vehicle.get("role","")) != CARRIER_ROLE:
+    if vehicle.is_empty() or not Turns.can_act(vehicle,side) or capacity(str(vehicle.get("role",""))) <= 0:
         return reject
     if not Rules.inside(destination,terrain) or not _adjacent(vehicle["pos"],destination):
         return reject
@@ -136,12 +156,11 @@ static func disembark(units: Array, carrier_id: String, passenger_id: String,
         "passenger_id":passenger_id,"destination":destination,
         "cargo_count":manifest.size()}
 
-# No free evacuation when a carrier is destroyed by combat or counterfire.
-# Passengers disappear from the active roster; the dropped manifest cannot
-# provide independent vision or resurrect after save/load.
+# No free evacuation from either carrier after attack/counterfire. Dead
+# vehicles may remain in the save as zero-HP shells with EMPTY manifests.
 static func eliminate_destroyed_cargo(units: Array) -> Array:
     var next: Array = units.duplicate(true)
     for unit in next:
-        if unit is Dictionary and str(unit.get("role","")) == CARRIER_ROLE and int(unit.get("hp",0)) <= 0 and unit.has("cargo"):
+        if unit is Dictionary and capacity(str(unit.get("role",""))) > 0 and int(unit.get("hp",0)) <= 0 and unit.has("cargo"):
             unit["cargo"] = []
     return next
