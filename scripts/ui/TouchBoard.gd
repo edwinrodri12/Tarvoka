@@ -614,13 +614,13 @@ func _draw() -> void:
         draw_string(font, center + Vector2(-tile * 0.11, tile * 0.10), str(unit["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(max(10.0, tile * (0.20 if airborne else 0.30))), Color.WHITE)
         # Own APC capacity badge: a quick count for touch users. Never show
         # enemy passenger counts, even when the carrier itself is visible.
-        if is_player and str(unit.get("role","")) == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and tile >= 36.0:
+        if is_player and Cargo.capacity(str(unit.get("role",""))) > 0 and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and tile >= 36.0:
             var count_pos := origin + Vector2(cell)*tile + Vector2(tile*0.54,tile*0.02)
             var count_box := Rect2(count_pos,Vector2(tile*0.43,tile*0.24))
             draw_rect(count_box,Color(0.02,0.10,0.16,0.92))
             draw_rect(count_box,Color(0.22,0.77,1.0,0.92),false,maxf(1.0,tile*0.025))
             draw_string(font,count_pos+Vector2(tile*0.035,tile*0.18),
-                "%d/%d" % [unit["cargo"].size(),Cargo.CAPACITY],
+                "%d/%d" % [unit["cargo"].size(),Cargo.capacity(str(unit["role"]))],
                 HORIZONTAL_ALIGNMENT_LEFT,-1,int(maxf(10.0,tile*0.16)),Color(0.88,0.97,1.0))
         # A second visual marker identifies the tactical role independently
         # of faction color and unit ID; no borrowed game sprites.
@@ -887,7 +887,7 @@ func can_unload_selected() -> bool:
 
 func arm_unload_selected() -> bool:
     if not can_unload_selected():
-        message = "Desembarco no disponible: selecciona un APC propio con pasajeros y una casilla libre."
+        message = "Desembarco no disponible: selecciona un APC o IFV propio con pasajeros y una casilla libre."
         return false
     unload_mode = not unload_mode
     message = "Toca una casilla amarilla adyacente para desembarcar. El soldado actuara el proximo turno." if unload_mode else "Desembarco cancelado."
@@ -903,7 +903,7 @@ func confirm_pending_order() -> bool:
     return committed
 
 # Explicit confirmation and the same transaction path as combat/move.
-# A selected APC taps neighboring infantry to embark. After pressing the
+# A selected APC/IFV taps adjacent eligible infantry. After pressing the
 # Desembarcar control, a free adjacent tile becomes a safe unload target.
 func _request_transport_order(cell: Vector2i, passenger_id: String,
         kind: String) -> void:
@@ -917,7 +917,7 @@ func _request_transport_order(cell: Vector2i, passenger_id: String,
         "kind":kind,"target_id":passenger_id}
     if require_order_confirmation and pending_order != order:
         pending_order = order
-        message = ("Embarcar %s en APC (consume ambas acciones)." if kind == "embark" else
+        message = ("Embarcar %s en transporte propio (consume ambas acciones)." if kind == "embark" else
             "Desembarcar %s; quedara inactivo hasta el proximo turno.") % passenger_id
         message += " Toca otra vez o Confirmar orden."
         return
@@ -1018,8 +1018,8 @@ func _commit_order(order: Dictionary) -> bool:
             message = "Movimiento completado. Sin objetivos visibles en alcance."
     elif kind == "embark":
         selected_id = ""
-        message = "Embarque completado: %s en APC. Acciones consumidas, pasajeros %d/%d." % [
-            enemy_id,int(result.get("cargo_count",0)),Cargo.CAPACITY]
+        message = "Embarque completado: %s en transporte. Acciones consumidas, pasajeros %d/%d." % [
+            enemy_id,int(result.get("cargo_count",0)),int(result.get("cargo_capacity",0))]
     elif kind == "disembark":
         selected_id = ""
         message = "Desembarco de %s completado. Disponible a partir del proximo turno." % enemy_id
