@@ -3,6 +3,7 @@ class_name TarvokaG11VisualRig3D
 
 # Reversible G11 visual animation, independent of turns/HP/ammo.
 const Art = preload("res://scripts/ui/G11Art3D.gd")
+const FinishV2 = preload("res://scripts/ui/G11FinishV2.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -26,6 +27,7 @@ static func _reset(model: Node3D) -> void:
     var launcher := _node(model,Art.ELEVATION)
     platform.position = BASE_PLATFORM
     platform.rotation_degrees = Vector3.ZERO
+    FinishV2.pose_tracks(model,0.0)
     launcher.position = BASE_LAUNCHER
     launcher.rotation_degrees = Vector3(20,0,0)
     for side in [-1,1]:
@@ -72,6 +74,8 @@ static func pose(model: Node3D, kind: String, progress: float,
                         wheel.position.y = 0.26+0.015*sin(phase+float(axle))
             model.position.y -= absf(sin(phase))*0.018
             model.rotation_degrees.z = sin(phase)*0.34
+            # Both tread belts scroll physically around the idlers.
+            FinishV2.pose_tracks(model,t)
             _node(model,"G11_EfectoPolvoMarcha").visible = t > 0.02 and t < 0.95
         "attack", "fire":
             if destroyed:
