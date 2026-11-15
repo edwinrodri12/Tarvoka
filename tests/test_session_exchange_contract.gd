@@ -5,6 +5,7 @@ extends SceneTree
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Actions = preload("res://scripts/core/BattleActions.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
+const Store = preload("res://scripts/core/SaveStore.gd")
 
 func _terrain() -> Array:
     var board: Array = []
@@ -80,5 +81,34 @@ func _initialize() -> void:
     assert(int(terminal["units"][1]["hp"]) == 0)
     assert(not Session.end_turn(terminal)["valid"])
     assert(not Session.attack(terminal,"winner","loser")["valid"])
-    print("PASS battle session exchange: preview parity, HP, reaction, save roundtrip, victory")
+    # Exercise actual user:// disk writes and backup recovery, not just JSON.
+    # Use a dedicated filename so no player's real save is ever touched.
+    var disk_path := "user://tarvoka_session_exchange_contract_test.json"
+    for suffix in ["", ".bak", ".tmp"]:
+        var candidate: String = disk_path + suffix
+        if FileAccess.file_exists(candidate):
+            assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(candidate)) == OK)
+    assert(Store.save(outcome["state"], disk_path))
+    var first_report: Dictionary = Store.load_report(disk_path)
+    assert(not first_report["recovered"])
+    assert(first_report["state"] == outcome["state"])
+    assert(Store.save(decisive["state"], disk_path))
+    assert(FileAccess.file_exists(disk_path + ".bak"))
+    assert(Store.load(disk_path) == decisive["state"])
+    # A corrupt primary must fall back to the last verified valid snapshot.
+    var corrupted := FileAccess.open(disk_path, FileAccess.WRITE)
+    assert(corrupted != null)
+    corrupted.store_string("{invalid json")
+    corrupted.close()
+    var recovered: Dictionary = Store.load_report(disk_path)
+    assert(recovered["recovered"])
+    assert(recovered["state"] == outcome["state"])
+    assert(not Session.attack(recovered["state"], "attacker", "defender")["valid"])
+    for suffix in ["", ".bak", ".tmp"]:
+        var candidate: String = disk_path + suffix
+        if FileAccess.file_exists(candidate):
+            assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(candidate)) == OK)
+    assert(not FileAccess.file_exists(disk_path))
+    assert(not FileAccess.file_exists(disk_path + ".bak"))
+    print("PASS battle session exchange: preview parity, HP, reaction, save roundtrip, disk backup recovery, victory")
     quit(0)
