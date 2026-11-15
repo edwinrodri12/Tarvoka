@@ -10,6 +10,7 @@ const NavalDetailV2 = preload("res://scripts/ui/NavalBaseDetailV2.gd")
 const NavalBerthsV3 = preload("res://scripts/ui/NavalBaseBerthsV3.gd")
 const NavalMarineV4 = preload("res://scripts/ui/NavalMarineFinishV4.gd")
 const NavalYardV5 = preload("res://scripts/ui/NavalYardSignalsV5.gd")
+const NavalNightV6 = preload("res://scripts/ui/NavalNightReadabilityV6.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -58,6 +59,9 @@ var naval_detail_v2_toggle: CheckButton
 var naval_detail_v3_toggle: CheckButton
 var naval_detail_v4_toggle: CheckButton
 var naval_detail_v5_toggle: CheckButton
+var naval_detail_v6_toggle: CheckButton
+var naval_night_v6_toggle: CheckButton
+var _naval_saved_light_preset: int=0
 var naval_level_picker: OptionButton
 var naval_damage_picker: OptionButton
 var naval_camera_picker: OptionButton
@@ -395,7 +399,7 @@ func _add_building_mode() -> void:
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
-    building_picker.add_item("Base Naval · V5 · astillero e iluminación")
+    building_picker.add_item("Base Naval · V6 · noche y lectura táctica")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -958,7 +962,7 @@ func _add_naval_controls() -> void:
     naval_controls.name="OpcionesBaseNavalV1"
     naval_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(naval_controls)
-    _title(naval_controls,"BASE NAVAL V5 · SEÑALES Y LUCES 3D",14)
+    _title(naval_controls,"BASE NAVAL V6 · NOCHE Y ZOOM TÁCTICO",14)
     _title(naval_controls,
         "Dársena en U, espigones, grúa, hangar marítimo, torre y servicios.",12)
     naval_detail_v2_toggle=CheckButton.new()
@@ -985,6 +989,18 @@ func _add_naval_controls() -> void:
     naval_detail_v5_toggle.button_pressed=true
     naval_detail_v5_toggle.toggled.connect(_toggle_naval_detail_v5)
     naval_controls.add_child(naval_detail_v5_toggle)
+    naval_detail_v6_toggle=CheckButton.new()
+    naval_detail_v6_toggle.name="AcabadosNocheYZoomNavalV6"
+    naval_detail_v6_toggle.text="V6 · señalización distante y acabados (comparar V5)"
+    naval_detail_v6_toggle.button_pressed=true
+    naval_detail_v6_toggle.toggled.connect(_toggle_naval_detail_v6)
+    naval_controls.add_child(naval_detail_v6_toggle)
+    naval_night_v6_toggle=CheckButton.new()
+    naval_night_v6_toggle.name="VistaNocturnaBaseNavalV6"
+    naval_night_v6_toggle.text="Vista nocturna · reflectores y balizas reales"
+    naval_night_v6_toggle.button_pressed=false
+    naval_night_v6_toggle.toggled.connect(_toggle_naval_night_v6)
+    naval_controls.add_child(naval_night_v6_toggle)
     _title(naval_controls,"NIVEL ARQUITECTÓNICO",12)
     naval_level_picker=OptionButton.new()
     naval_level_picker.name="NivelBaseNavalV1"
@@ -1032,6 +1048,17 @@ func _toggle_naval_detail_v5(_enabled: bool) -> void:
     if _role=="naval_base":
         _display_naval_base()
 
+func _toggle_naval_detail_v6(_enabled: bool) -> void:
+    if _role=="naval_base":
+        _display_naval_base()
+
+func _toggle_naval_night_v6(_enabled: bool) -> void:
+    if _role!="naval_base" or model_root==null:
+        return
+    var active: bool=model_root.has_node(NavalNightV6.STAGE_NAME)
+    NavalNightV6.set_night(model_root,active and naval_night_v6_toggle.button_pressed)
+    _apply_hq_lighting(2 if active and naval_night_v6_toggle.button_pressed else _naval_saved_light_preset)
+
 func _change_naval_setting(_index: int) -> void:
     if _role=="naval_base":
         _display_naval_base()
@@ -1055,6 +1082,8 @@ func _display_naval_base() -> void:
     if preview==null:
         return
     var first: bool=_role!="naval_base"
+    if first:
+        _naval_saved_light_preset=_hq_light_preset
     _stop_animation()
     if model_root!=null:
         preview.remove_child(model_root)
@@ -1085,6 +1114,13 @@ func _display_naval_base() -> void:
                         naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
                     if not ok_v5:
                         push_error("Base Naval V5: no se pudo completar señalización ni astillero")
+                    elif naval_detail_v6_toggle.button_pressed:
+                        var ok_v6: bool=NavalNightV6.apply(model_root,
+                            naval_level_picker.selected+1,_faction,naval_damage_picker.selected)
+                        if not ok_v6:
+                            push_error("Base Naval V6: fallaron los acabados de noche y zoom")
+                        else:
+                            NavalNightV6.set_night(model_root,naval_night_v6_toggle.button_pressed)
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -1098,12 +1134,15 @@ func _display_naval_base() -> void:
         naval_camera_picker.select(0)
     model_root.rotation_degrees.y=_yaw
     _apply_naval_camera()
-    _apply_hq_lighting(_hq_light_preset)
+    var show_night: bool=model_root.has_node(NavalNightV6.STAGE_NAME) and naval_night_v6_toggle.button_pressed
+    _apply_hq_lighting(2 if show_night else _naval_saved_light_preset)
     _update_details()
 
 func _change_selected_building(index: int) -> void:
     if index < 0 or index >= building_picker.item_count:
         return
+    if _role=="naval_base" and index!=2:
+        _apply_hq_lighting(_naval_saved_light_preset)
     building_picker.select(index)
     for control in _hq_specific_controls:
         control.visible = index == 0
@@ -2022,6 +2061,8 @@ func _update_camera() -> void:
     if _role=="naval_base":
         if camera!=null:
             camera.size=20.9/maxf(0.35,_zoom)
+        if model_root!=null and model_root.has_node(NavalNightV6.STAGE_NAME):
+            NavalNightV6.set_detail(model_root,_zoom>=0.85)
         return
     if _role == "airbase":
         if camera != null:
@@ -2052,10 +2093,11 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="naval_base" and model_root!=null:
         detail_label.text="Base Naval %s · Nivel %d · %d mallas reales" % [
-            "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
+            "V6" if model_root.has_node(NavalNightV6.STAGE_NAME) else (
+                "V5" if model_root.has_node(NavalYardV5.STAGE_NAME) else (
                 "V4" if model_root.has_node(NavalMarineV4.STAGE_NAME) else (
                 "V3" if model_root.has_node(NavalBerthsV3.STAGE_NAME) else (
-                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1"))),
+                "V2" if model_root.has_node(NavalDetailV2.STAGE_NAME) else "V1")))),
             int(model_root.get_meta("visual_level",1)),
             NavalBaseV1.count_meshes(model_root)]
         status_label.text="%s · %s · astillero, atraques y señales 3D" % [
