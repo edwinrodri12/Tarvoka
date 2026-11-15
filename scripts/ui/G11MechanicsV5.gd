@@ -186,7 +186,7 @@ static func update_running_gear(model: Node3D, travel: float = 0.0) -> bool:
             if pivot == null or damper == null or piston == null:
                 return false
             var z: float = pivot.position.z
-            var upper := Vector3(sign*0.97,0.735,z+0.115)
+            var upper := Vector3(sign*0.730,0.715,z+0.115)
             var lower := pivot.position+Vector3(sign*0.124,0.105,0)
             _position_link(damper,upper,upper.lerp(lower,0.64))
             _position_link(piston,upper.lerp(lower,0.43),lower)
@@ -278,8 +278,8 @@ static func apply(model: Node3D) -> bool:
                 0.027,silver)
             # Extra suspension clevis at bodywork attachment.
             _box(root,"G11V5_SoporteSuspension_%d_%d" % [side,axle],
-                Vector3(sign*0.952,0.734,z+0.115),
-                Vector3(0.13,0.085,0.14),steel)
+                Vector3(sign*0.730,0.715,z+0.115),
+                Vector3(0.10,0.080,0.14),steel)
         for axle in range(2):
             _remove(root,"G11V2_AroPiñon_%d_%d" % [side,axle])
         _mesh(root,"G11V5_TensorDelantero_%d" % side,
