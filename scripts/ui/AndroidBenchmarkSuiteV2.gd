@@ -167,7 +167,10 @@ func evaluate() -> Dictionary:
         "pair_comparisons":pairs,
         "provisional_profile":candidate,
         "on_android_device":OS.get_name()=="Android",
-        "requires_physical_android_validation":OS.get_name()!="Android",
+        # Android OS detection alone cannot distinguish an emulator from a
+        # physical phone. Only a human/device test can clear that gate.
+        "requires_physical_android_validation":true,
+        "platform_is_android":OS.get_name()=="Android",
         "note":"Only the measured local visual scene. Not a guarantee of battery, heat, multiplayer, AI, or whole-map performance."
     }
 
