@@ -321,7 +321,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                 Color("#FFE451"), maxf(2.0, hw * 0.055))
         # Identical local-only manifest indicator in the isometric view.
         # Enemy APC sprites never disclose passenger occupancy or IDs.
-        if own and role == "apc" and unit.get("cargo",[]) is Array and not unit["cargo"].is_empty() and hw >= 23.0:
+        if own and role == "apc" and unit.get("cargo",[]) is Array and not (unit.get("cargo",[]) as Array).is_empty() and hw >= 23.0:
             var cargo_box: Rect2 = Rect2(c+Vector2(radius*0.15,-radius*1.25),
                 Vector2(hw*0.67,hw*0.26))
             canvas.draw_rect(cargo_box,Color(0.02,0.10,0.16,0.94))
