@@ -351,7 +351,7 @@ func _add_building_mode() -> void:
     building_picker.name = "TipoDeEdificio"
     building_picker.custom_minimum_size.y = 49
     building_picker.add_item("Cuartel General")
-    building_picker.add_item("Base Aérea · V6 · acabados arquitectónicos")
+    building_picker.add_item("Base Aérea · V4/V6 · acabado arquitectónico")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
