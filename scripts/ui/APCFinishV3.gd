@@ -6,6 +6,7 @@ class_name TarvokaAPCFinishV3
 # Built once per unit. Damage is hidden/visible staging, not model rebuild.
 const V1=preload("res://scripts/ui/APCArtV1.gd")
 const V2=preload("res://scripts/ui/APCArmorV2.gd")
+const BatchingV4=preload("res://scripts/ui/APCBatchingV4.gd")
 const ROOT: String="APC_P06_V3_TechoJuntasYDesgaste"
 const STAGES: String="APC_P06_V3_DanoPorEtapas"
 const PAINT: String="tarvoka_apc_v3_faction_zone"
@@ -341,6 +342,9 @@ static func apply(model: Node3D,color: Color) -> bool:
         return false
     _damage(detail,paint,burned,steel)
     _impact_fx(detail,model)
+    # The optional V3 artwork becomes cheaper when dozens of APCs render.
+    # No armament, wheel assembly, ramp or faction-colored panels are batched.
+    BatchingV4.apply(model)
     # Cache the five animated cards once per APC. On a crowded 8-player map
     # this avoids five deep scene-tree searches per unit and rendered frame.
     var cards: Array=[]
@@ -387,6 +391,8 @@ static func set_tactical_lod(model: Node3D,reduced: bool) -> int:
         return 0
     var changed: int=0
     for part in model.find_children("*","MeshInstance3D",true,false):
+        if part.get_meta(BatchingV4.ORIGINAL_META,false):
+            continue
         var name_text: String=str(part.name)
         for prefix in TACTICAL_PREFIXES:
             if name_text.begins_with(prefix):
@@ -398,6 +404,7 @@ static func set_tactical_lod(model: Node3D,reduced: bool) -> int:
         if name_text in TACTICAL_BATCHES:
             (batch as MultiMeshInstance3D).visible=not reduced
             changed+=1
+    changed+=BatchingV4.set_tactical_lod(model,reduced)
     model.set_meta("tarvoka_apc_v3_tactical_lod",reduced)
     model.set_meta("tarvoka_apc_v3_tactical_hidden_meshes",changed)
     return changed
