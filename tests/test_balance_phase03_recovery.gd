@@ -27,7 +27,7 @@ func _initialize() -> void:
     var totals: Dictionary = {}
     var overall := {
         "games":0, "actions":0, "buys":0, "captures":0, "resupplies":0,
-        "income_recoveries":0, "material_reversals":0, "undecided":0,
+        "income_recoveries":0, "sustained_income":0, "end_income":0, "end_material":0, "material_reversals":0, "undecided":0,
         "finished":0
     }
     var products: Dictionary = {}
@@ -45,7 +45,7 @@ func _initialize() -> void:
                             totals[kind] = {
                                 "games":0, "credit_gap":0, "material_gap":0,
                                 "army_gap":0, "income_gap":0,
-                                "recover_income":0, "reverse_material":0,
+                                "recover_income":0, "sustained_income":0, "end_income":0, "end_material":0, "reverse_material":0,
                                 "actions":0, "buys":0, "captures":0,
                                 "resupplies":0, "first_wins":0,
                                 "second_wins":0, "undecided":0
@@ -57,6 +57,9 @@ func _initialize() -> void:
                         group["army_gap"] += int(record["army_gap"])
                         group["income_gap"] += int(record["income_gap"])
                         group["recover_income"] += 1 if record["income_recovered"] else 0
+                        group["sustained_income"] += 1 if record["income_sustained"] else 0
+                        group["end_income"] += 1 if record["end_income_recovered"] else 0
+                        group["end_material"] += 1 if record["end_material_ahead"] else 0
                         group["reverse_material"] += 1 if record["material_reversed"] else 0
                         for metric in ["actions","buys","captures","resupplies"]:
                             group[metric] += int(record[metric])
@@ -72,10 +75,13 @@ func _initialize() -> void:
                                 group["second_wins"] += 1
                         overall["games"] += 1
                         overall["income_recoveries"] += 1 if record["income_recovered"] else 0
+                        overall["sustained_income"] += 1 if record["income_sustained"] else 0
+                        overall["end_income"] += 1 if record["end_income_recovered"] else 0
+                        overall["end_material"] += 1 if record["end_material_ahead"] else 0
                         overall["material_reversals"] += 1 if record["material_reversed"] else 0
                         for role in record["products"]:
                             products[role] = int(products.get(role,0)) + int(record["products"][role])
-                        print("BALANCE_PHASE03_GAME map=%d fog=%s cap=%s first=%d treatment=%s favored=%d phases=%d winner=%d material=%s army=%s credits=%s incomes=%s alive=%s ammo_fill=%s fuel_fill=%s actions=%d bought=%d captures=%d resupplies=%d income_recovered=%s material_reversed=%s" % [
+                        print("BALANCE_PHASE03_GAME map=%d fog=%s cap=%s first=%d treatment=%s favored=%d phases=%d winner=%d material=%s army=%s credits=%s incomes=%s alive=%s ammo_fill=%s fuel_fill=%s actions=%d bought=%d captures=%d resupplies=%d income_recovered=%s income_longest_streak=%d income_sustained=%s end_income_recovered=%s material_reversed=%s end_material_ahead=%s" % [
                             map_id,str(fog),str(capped),first,condition,int(record["favored"]),
                             int(record["phases"]),int(record["winner"]),
                             str(record["final"]["material"]),str(record["final"]["army_value"]),
@@ -84,7 +90,8 @@ func _initialize() -> void:
                             str(record["final"]["fuel_fill"]),
                             int(record["actions"]),int(record["buys"]),int(record["captures"]),
                             int(record["resupplies"]),str(record["income_recovered"]),
-                            str(record["material_reversed"])
+                            int(record["income_longest_streak"]),str(record["income_sustained"]),str(record["end_income_recovered"]),
+                            str(record["material_reversed"]),str(record["end_material_ahead"])
                         ])
     assert(overall["games"] == 48)
     assert(overall["buys"] > 0 and overall["actions"] > 200)
@@ -94,25 +101,34 @@ func _initialize() -> void:
         var g: Dictionary = totals[key]
         assert(int(g["games"]) == 8)
         n_cases += 1
-        print("BALANCE_PHASE03_GROUP key=%s games=%d mean_credit_gap=%d mean_material_gap=%d mean_army_gap=%d mean_income_gap=%d income_catchups=%d material_reversals=%d buys=%d captures=%d resupplies=%d first_wins=%d second_wins=%d unresolved=%d" % [
+        print("BALANCE_PHASE03_GROUP key=%s games=%d mean_credit_gap=%d mean_material_gap=%d mean_army_gap=%d mean_income_gap=%d income_catchups=%d sustained_income=%d end_income=%d material_reversals=%d end_material_ahead=%d buys=%d captures=%d resupplies=%d first_wins=%d second_wins=%d unresolved=%d" % [
             key,int(g["games"]),int(round(float(g["credit_gap"])/float(g["games"]))),
             int(round(float(g["material_gap"])/float(g["games"]))),
             int(round(float(g["army_gap"])/float(g["games"]))),
             int(round(float(g["income_gap"])/float(g["games"]))),
-            int(g["recover_income"]),int(g["reverse_material"]),int(g["buys"]),
+            int(g["recover_income"]),int(g["sustained_income"]),int(g["end_income"]),
+            int(g["reverse_material"]),int(g["end_material"]),int(g["buys"]),
             int(g["captures"]),int(g["resupplies"]),int(g["first_wins"]),
             int(g["second_wins"]),int(g["undecided"])
         ])
     assert(n_cases == 6)
+    var unbought_roles: Array = []
+    var all_roles: Array = Roles.ORDER.duplicate()
+    all_roles.append_array(Arsenal.ORDER)
+    for role in all_roles:
+        if not products.has(role):
+            unbought_roles.append(role)
     var top_roles: Array = products.keys()
     top_roles.sort_custom(func(a,b): return int(products[a]) > int(products[b]))
-    print("BALANCE_PHASE03_SUMMARY games=%d phases_limit=%d actions=%d buys=%d captures=%d resupplies=%d income_catchups=%d material_reversals=%d concluded=%d unresolved=%d purchased_by_role=%s" % [
+    print("BALANCE_PHASE03_SUMMARY games=%d phases_limit=%d actions=%d buys=%d captures=%d resupplies=%d income_catchups=%d sustained_income=%d end_income=%d material_reversals=%d end_material_ahead=%d concluded=%d unresolved=%d purchased_by_role=%s" % [
         int(overall["games"]),PHASE_LIMIT,int(overall["actions"]),int(overall["buys"]),
         int(overall["captures"]),int(overall["resupplies"]),
-        int(overall["income_recoveries"]),int(overall["material_reversals"]),
+        int(overall["income_recoveries"]),int(overall["sustained_income"]),
+        int(overall["end_income"]),int(overall["material_reversals"]),int(overall["end_material"]),
         int(overall["finished"]),int(overall["undecided"]),str(products)
     ])
     print("BALANCE_PHASE03_TOP_ROLES %s" % str(top_roles.slice(0,8)))
+    print("BALANCE_PHASE03_NOT_PURCHASED %s" % str(unbought_roles))
     print("PASS balance phase 03: 48 real AI sessions, wealth not just cash, monitored supply, controlled city head start, comeback checkpoints, save and spending invariants")
     quit(0)
 
@@ -154,6 +170,8 @@ static func _play(map_id: int,fog: bool,capped: bool,first: int,condition: Strin
     var phases := 0
     var produced: Dictionary = {}
     var income_caught := false
+    var income_streak := 0
+    var longest_income_streak := 0
     var material_fell_behind := false
     var material_reversed := false
     var midpoint: Dictionary = {}
@@ -214,11 +232,21 @@ static func _play(map_id: int,fog: bool,capped: bool,first: int,condition: Strin
             var trailing: int = 1-favored
             if int(checkpoint["incomes"][trailing]) >= int(checkpoint["incomes"][favored]):
                 income_caught = true
+                income_streak += 1
+                longest_income_streak = maxi(longest_income_streak,income_streak)
+            else:
+                income_streak = 0
             if int(checkpoint["material"][trailing]) < int(checkpoint["material"][favored]):
                 material_fell_behind = true
             elif material_fell_behind:
                 material_reversed = true
     var final: Dictionary = _snapshot(state)
+    var income_at_end := false
+    var material_at_end := false
+    if favored != -1:
+        var trailing_side: int = 1-favored
+        income_at_end = int(final["incomes"][trailing_side]) >= int(final["incomes"][favored])
+        material_at_end = int(final["material"][trailing_side]) >= int(final["material"][favored])
     if midpoint.is_empty():
         midpoint = final.duplicate(true)
     return {
@@ -227,6 +255,10 @@ static func _play(map_id: int,fog: bool,capped: bool,first: int,condition: Strin
         "actions":actions,"buys":bought,"captures":captures,"resupplies":resupplied,
         "products":produced, "midpoint":midpoint,"final":final,
         "income_recovered":income_caught,
+        "income_longest_streak":longest_income_streak,
+        "income_sustained":longest_income_streak >= 3,
+        "end_income_recovered":income_at_end,
+        "end_material_ahead":material_at_end,
         "material_reversed":material_reversed,
         "cash_gap":absi(int(final["credits"][0])-int(final["credits"][1])),
         "material_gap":absi(int(final["material"][0])-int(final["material"][1])),
