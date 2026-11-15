@@ -32,6 +32,11 @@ func _run() -> void:
     studio._toggle_apc_mixed()
     assert(studio._apc_mixed_enabled)
     assert(studio._apc_mixed_group!=null)
+    var hq: Node3D=studio._apc_mixed_group.find_child(
+        "CuartelGeneral3D",false,false) as Node3D
+    assert(hq!=null)
+    assert(hq.get_meta("tarvoka_building_kind","")=="headquarters")
+    assert(hq.get_meta("tarvoka_hq_tactical_lod_active",false))
     # Eight actual G09s, eight actual HQs and the V26 terrain reference.
     assert(studio._apc_mixed_group.get_child_count()==17)
     assert(studio._apc_stress_count==32)
