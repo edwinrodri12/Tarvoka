@@ -30,7 +30,7 @@ const HEADINGS := [
     Vector2(1,1),Vector2.DOWN,Vector2(-1,1),Vector2.LEFT,Vector2(-1,-1)
 ]
 
-var entries: VBoxContainer
+var entries: GridContainer
 var category_buttons: Array[Button] = []
 var category_tabs: HBoxContainer
 var category_index := 0
@@ -142,15 +142,18 @@ func _ready() -> void:
     catalog_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     catalog_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     list_column.add_child(catalog_scroll)
-    entries = VBoxContainer.new()
+    entries = GridContainer.new()
+    entries.columns = 2
     entries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    entries.add_theme_constant_override("separation",5)
+    entries.add_theme_constant_override("h_separation",7)
+    entries.add_theme_constant_override("v_separation",6)
     catalog_scroll.add_child(entries)
 
     for code in Roles.ORDER + Arsenal.ORDER:
         var role: String = str(code)
         var row := HBoxContainer.new()
-        row.add_theme_constant_override("separation",7)
+        row.add_theme_constant_override("separation",4)
+        row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         entries.add_child(row)
         role_rows[role] = row
         var icon: Control = Icon.new()
@@ -171,7 +174,8 @@ func _ready() -> void:
     for idx in range(SITES.size()):
         var site_key: String = SITES[idx]
         var site_row := HBoxContainer.new()
-        site_row.add_theme_constant_override("separation",7)
+        site_row.add_theme_constant_override("separation",4)
+        site_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         entries.add_child(site_row)
         site_rows[site_key] = site_row
         var mark := Label.new()
