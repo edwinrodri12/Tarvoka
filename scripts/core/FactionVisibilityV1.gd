@@ -101,7 +101,9 @@ static func observed_state(state: Dictionary,faction: int,roster: Array) -> Dict
         "units":[],
         "winner":int(state.get("winner",-1))
     }
-    if state.has("map_seed"):
+    # A deterministic map seed would let a client reconstruct every
+    # unexplored tile. Only expose it when fog is OFF.
+    if state.has("map_seed") and not fog:
         observed["map_seed"]=state["map_seed"]
     for unit in state["units"]:
         if not unit is Dictionary or int(unit.get("hp",0))<=0:
@@ -112,37 +114,63 @@ static func observed_state(state: Dictionary,faction: int,roster: Array) -> Dict
     var largest_faction: int=0
     for participant in roster:
         largest_faction=maxi(largest_faction,int(participant))
+    # Build STRICT whitelists. Copying a future economy/control Dictionary
+    # wholesale could accidentally expose secret orders or participant data.
     if state.get("economy") is Dictionary:
-        var economy: Dictionary=state["economy"].duplicate(true)
-        # Arrays are indexed by actual faction ID. A 2-item array cannot
-        # masquerade as a budget for roster [2,7].
-        if economy.get("credits") is Array and (
-                (economy["credits"] as Array).size()>largest_faction) and (
-                (economy["credits"] as Array).size()<=TurnOrder.MAX_FACTIONS):
-            for side in range(economy["credits"].size()):
+        var economy: Dictionary=state["economy"]
+        var credits=economy.get("credits",null)
+        if credits is Array and credits.size()>largest_faction and (
+                credits.size()<=TurnOrder.MAX_FACTIONS):
+            var private_credits: Array=credits.duplicate(true)
+            for side in range(private_credits.size()):
                 if side!=faction:
-                    economy["credits"][side]=-1
-            for site in economy.get("sites",[]):
-                if site is Dictionary and fog and not visible.has(
-                        site.get("pos",null)) and int(site.get("owner",-1))!=faction:
-                    site["owner"]=-2
-                    if str(site.get("kind",""))=="factory":
-                        site["produced_turn"]=-1
-            observed["economy"]=economy
+                    private_credits[side]=-1
+            var safe_sites: Array=[]
+            if economy.get("sites") is Array:
+                for site in economy["sites"]:
+                    if not site is Dictionary or not site.get("pos") is Vector2i:
+                        continue
+                    var pos: Vector2i=site["pos"]
+                    var owner: int=int(site.get("owner",-1))
+                    var concealed: bool=fog and not visible.has(pos) and owner!=faction
+                    var public_site: Dictionary={
+                        "pos":pos,
+                        "kind":str(site.get("kind","")),
+                        "owner":-2 if concealed else owner
+                    }
+                    if site.has("produced_turn"):
+                        public_site["produced_turn"]=(
+                            -1 if concealed else int(site["produced_turn"]))
+                    safe_sites.append(public_site)
+            observed["economy"]={
+                "credits":private_credits,"sites":safe_sites
+            }
     if state.get("control") is Dictionary:
-        var control: Dictionary=state["control"].duplicate(true)
-        if control.get("scores") is Array and (
-                (control["scores"] as Array).size()>largest_faction) and (
-                (control["scores"] as Array).size()<=TurnOrder.MAX_FACTIONS):
-            # Other sides' hidden score state must not leak into AI clients.
-            for side in range(control["scores"].size()):
+        var control: Dictionary=state["control"]
+        var scores=control.get("scores",null)
+        if scores is Array and scores.size()>largest_faction and (
+                scores.size()<=TurnOrder.MAX_FACTIONS):
+            var private_scores: Array=scores.duplicate(true)
+            for side in range(private_scores.size()):
                 if side!=faction:
-                    control["scores"][side]=-1
-            for relay in control.get("nodes",[]):
-                if relay is Dictionary and fog and not visible.has(
-                        relay.get("pos",null)) and int(relay.get("owner",-1))!=faction:
-                    relay["owner"]=-2
-            observed["control"]=control
+                    private_scores[side]=-1
+            var safe_nodes: Array=[]
+            if control.get("nodes") is Array:
+                for relay in control["nodes"]:
+                    if not relay is Dictionary or not relay.get("pos") is Vector2i:
+                        continue
+                    var location: Vector2i=relay["pos"]
+                    var owner: int=int(relay.get("owner",-1))
+                    var concealed: bool=fog and not visible.has(location) and (
+                        owner!=faction)
+                    safe_nodes.append({
+                        "pos":location,
+                        "owner":-2 if concealed else owner
+                    })
+            observed["control"]={
+                "scores":private_scores,"nodes":safe_nodes,
+                "target":int(control.get("target",0))
+            }
     # No default pass-through of any other fields: contacts, full exploration,
     # hidden orders, secrets, auth tokens, etc. are NEVER returned.
     return observed
