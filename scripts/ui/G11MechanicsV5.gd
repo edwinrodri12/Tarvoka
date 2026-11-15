@@ -306,13 +306,13 @@ static func apply(model: Node3D) -> bool:
     # Round sealed commander's hatch replaces the former plain roof box.
     _remove(root,"G11_EscotillaComandante")
     _cylinder(root,"G11V5_AroEscotilla",
-        Vector3(-0.33,1.583,-0.77),0.235,0.041,
+        Vector3(-0.33,1.561,-0.77),0.235,0.041,
         silver)
     _cylinder(root,"G11V5_TapaEscotilla",
-        Vector3(-0.33,1.609,-0.77),0.199,0.025,
+        Vector3(-0.33,1.592,-0.77),0.199,0.025,
         dark)
     _box(root,"G11V5_BisagraEscotilla",
-        Vector3(-0.33,1.616,-0.52),
+        Vector3(-0.33,1.602,-0.52),
         Vector3(0.24,0.046,0.08),steel)
     # Antenna bases now have actual reinforced mounting collars.
     for side in [-1,1]:
