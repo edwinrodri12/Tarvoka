@@ -24,13 +24,16 @@ func _run() -> void:
             "hp":10,"vision":3,"pos":LOCATIONS[faction]})
     var state: Dictionary={
         "terrain":terrain,"units":army,"fog_enabled":true,
+        "map_seed":98761,
         "winner":-1,"faction":0,"secret_admin_token":"NEVER_LEAK",
         "contacts":{"0":{"U7":LOCATIONS[7]}},
         "economy":{"credits":[100,110,120,130,140,150,160,170],
+            "secret_orders":{"7":["MOVE_ARMY_TO_BASE"]},
             "sites":[{"kind":"city","owner":7,"pos":Vector2i(21,14)},
                      {"kind":"factory","owner":0,
                       "pos":Vector2i(2,1),"produced_turn":2}]},
         "control":{"scores":[1,2,3,4,5,6,7,8],
+            "secret_deployments":{"7":"SUBMARINE"},
             "nodes":[{"owner":7,"pos":Vector2i(21,14)}]}
     }
     var original: Dictionary=state.duplicate(true)
@@ -49,6 +52,9 @@ func _run() -> void:
     assert(not f0.has("secret_admin_token"))
     assert(not f0.has("contacts"))
     assert(not f0.has("explored"))
+    assert(not f0.has("map_seed"))
+    assert(not f0["economy"].has("secret_orders"))
+    assert(not f0["control"].has("secret_deployments"))
     assert(not f0["units"].has(army[7]))
     assert(f0["units"].size()>=1)
     assert(int(f0["economy"]["credits"][0])==100)
