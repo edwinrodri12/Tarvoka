@@ -71,6 +71,7 @@ var _apc_mixed_enabled: bool=false
 var _apc_mixed_group: Node3D
 var apc_stress_label: Label
 var apc_perf_button: Button
+var apc_diagnosis_button: Button
 var _apc_perf=PerfTelemetry.new()
 var _auto_benchmark=AndroidBenchmarkSuite.new()
 var _auto_benchmark_button: Button
@@ -305,6 +306,8 @@ func _construct() -> void:
         "Prueba de FPS real: 32 → 64 → salir. Usa Android o el navegador.",11)
     apc_perf_button=_button(apc_controls,
         "GUARDAR / COPIAR INFORME FPS",_save_apc_perf)
+    apc_diagnosis_button=_button(apc_controls,
+        "VER DIAGNÓSTICO DE RENDIMIENTO",_show_auto_benchmark_diagnosis)
 
     _title(column,"FACCION",12)
     faction_picker = OptionButton.new()
@@ -465,6 +468,7 @@ func _display_role(role: String) -> void:
     apc_stress_button.visible=apc_lod_button.visible
     apc_mixed_button.visible=apc_lod_button.visible
     apc_perf_button.visible=apc_lod_button.visible
+    apc_diagnosis_button.visible=apc_lod_button.visible
     apc_stress_label.visible=apc_lod_button.visible
     apc_lod_button.text=("APC V3 · MODO DETALLE COMPLETO"
         if _apc_tactical_lod else "APC V3 · MODO TÁCTICO: Ocultar microdetalles")
@@ -1351,8 +1355,10 @@ func _tick_auto_benchmark(delta: float) -> void:
     _auto_internal_change=true
     _set_apc_stress(0)
     _auto_internal_change=false
+    var finding: Dictionary=_auto_benchmark.evaluate()
     apc_stress_label.text=(
-        "AUTOTEST COMPLETO · 6/6 fases · Toca GUARDAR/COPIAR INFORME FPS")
+        "AUTOTEST COMPLETO · %s · Toca VER DIAGNÓSTICO o COPIAR INFORME"
+        % str(finding["provisional_profile"]))
 
 func _save_auto_benchmark_report() -> String:
     if _auto_benchmark.reports.is_empty():
@@ -1379,6 +1385,43 @@ func _abort_auto_benchmark() -> void:
     _auto_internal_change=false
     apc_stress_label.text=(
         "Autotest detenido · informe parcial guardado (si hubo muestras)")
+
+func _auto_benchmark_diagnosis_text() -> String:
+    if _auto_benchmark.reports.is_empty():
+        return "Sin mediciones: ejecuta el autotest Android para comparar perfiles."
+    var finding: Dictionary=_auto_benchmark.evaluate()
+    var title_text: String="TARVOKA · Diagnóstico gráfico provisional"
+    var status: String=(
+        "Serie completa" if bool(finding["complete"]) else
+        "Serie incompleta: no tomar decisiones definitivas")
+    var profile: String=str(finding["provisional_profile"])
+    var summary_text: String="%s\n%s\nPerfil evaluado: %s" % [
+        title_text,status,profile]
+    for pair in finding["pair_comparisons"]:
+        summary_text+="\n\n%s | p10 detalle %.1f / LOD %.1f FPS" % [
+            str(pair["scenario"]),float(pair["full_p10_fps"]),
+            float(pair["tactical_p10_fps"])]
+        summary_text+="\nDibujo LOD: %.1f%% menos · %s" % [
+            float(pair["draw_call_reduction_percent"]),
+            str(pair["recommendation"])]
+    var quality: Array=finding["quality_issues"]
+    if not quality.is_empty():
+        summary_text+="\n\nMuestras insuficientes: "+", ".join(quality)
+    summary_text+=("\n\nAndroid físico: medición local; sin datos térmicos."
+        if bool(finding["on_android_device"]) else
+        "\n\nNO es una medición Android: repetir en el teléfono.")
+    summary_text+="\nObjetivo provisional: p10 ≥30 FPS. IA, red y mapa completo no medidos."
+    return summary_text
+
+func _show_auto_benchmark_diagnosis() -> void:
+    var dialog:=AcceptDialog.new()
+    dialog.title="TARVOKA · Rendimiento y calidad gráfica"
+    dialog.dialog_text=_auto_benchmark_diagnosis_text()
+    dialog.exclusive=false
+    add_child(dialog)
+    dialog.confirmed.connect(dialog.queue_free)
+    dialog.close_requested.connect(dialog.queue_free)
+    dialog.popup_centered()
 
 func _save_apc_perf() -> void:
     if not _auto_benchmark.active and _apc_stress_count==0 and (
