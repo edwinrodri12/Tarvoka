@@ -39,6 +39,8 @@ func _run() -> void:
             "seven independent metallic engine intake louvers")
         _check(int(model.get_meta("tarvoka_g11_v12_hardware",0)) == 24,
             "twenty-four real door/rear panel fasteners")
+        _check(int(model.get_meta("tarvoka_g11_v12_lateral_air_slats",0)) == 8,
+            "eight additional real side engine cooling louvers remain visible")
 
         var rivets := _node(model,"G11V12_PernosBlindajeLote") as MultiMeshInstance3D
         _check(rivets != null and rivets.multimesh != null,
@@ -87,6 +89,16 @@ func _run() -> void:
                     "each steel step has five rubber non-slip bars")
             _check(_node(model,"G11V12_GuardaLodoTrasera_%d" % side) != null,
                 "rear running gear receives physical mudguard")
+            _check(_node(model,
+                "G11V12_BaseRespiraderoCostado_%d" % side) != null,
+                "side engine vent has a solid recessed outer enclosure")
+            _check(_node(model,
+                "G11V12_MarcoRespiraderoCostado_%d" % side) != null,
+                "each visible lateral engine intake has distinct metallic trim")
+            for slit in range(4):
+                _check(_node(model,
+                    "G11V12_AletaRespiraderoCostado_%d_%d" % [side,slit]) != null,
+                    "four true 3D engine airflow slats per side")
             _check(_node(model,
                 "G11V12_BrazoLimpiaparabrisas_%d" % side) != null,
                 "two real windshield wiper arms attached to front glass")
@@ -145,9 +157,13 @@ func _run() -> void:
             "pristine V12 motor grille no longer obscures burned engine")
         _check(not _node(model,"G11V12_AletaVentilacionMotor_0").visible,
             "new metal louvers disappear only when engine bay is destroyed")
+        _check(not _node(model,"G11V12_AletaRespiraderoCostado_1_0").visible,
+            "new lateral engine vent also yields to charred engine damage")
         _check(Art.apply_stage(model,0),"G11 full repair still reversible")
         _check(_node(model,"G11V12_CajaVentilacionMotor").visible,
             "repair restores seven metallic engine louvers and housing")
+        _check(_node(model,"G11V12_AletaRespiraderoCostado_1_0").visible,
+            "repair restores genuine side ventilation geometry")
         _check(_node(model,"G11V12_CristalLateral_1").is_visible_in_tree(),
             "both windows survive all reversible damage states")
         Models.restore_model_pose("mlrs",model)
