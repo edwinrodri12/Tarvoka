@@ -57,3 +57,9 @@ Tras eliminar los archivos exclusivos del test, la suite vuelve a invocar `SaveS
 La regresión de `test_session_exchange_contract.gd` ahora reanuda una partida recuperada de `.bak`: cambia al bando 1, conserva HP de ambos combatientes, impide reutilizar la acción consumida del atacante original, permite un ataque legal del defensor en su turno y bloquea repetir ese ataque. También comprueba que el estado recuperado no se muta al continuar. Commit de prueba `62edfc9efbbd5493bb3e5101bd539f82c6edab20`.
 
 **Estado:** código registrado en rama de PR #356; ejecución Godot 4.3 del nuevo SHA **NO EJECUTADO**, Android físico **NO EJECUTADO EN DISPOSITIVO**. La prueba continúa en un mismo proceso Godot y no certifica cierre/reapertura de la aplicación; se requiere CI verde antes de merge. No modifica reglas ni estadísticas.
+
+## Persistencia entre procesos Godot independientes (2026-11-15)
+
+Se agregó `tests/test_session_cross_process.gd` y se amplió `.github/workflows/battle-session-exchange.yml`. El CI inicia Godot dos veces: `-- --phase=write` guarda una sesión después de atacar; `-- --phase=read` arranca otro proceso, lee el mismo `user://`, verifica HP, facción, acción consumida y continuación legal, y limpia los archivos de prueba. El test no toca la ranura normal del jugador. Si cualquier ejecución genera ERROR, falla una aserción o falta el marcador PASS, el workflow debe fallar.
+
+Commits: `dbdf31525f180e87361f395d396099a2cc516913` (test), `4c50e846d48b61151f3f8b189f73d7d6648d502c` (CI). **Godot/CI del nuevo SHA: NO EJECUTADO hasta comprobar resultado del workflow. Android físico: NO EJECUTADO EN DISPOSITIVO.** Dos procesos Godot en Linux no equivalen a cerrar/reabrir Android. No se modificaron las reglas, estadísticas ni SaveStore.
