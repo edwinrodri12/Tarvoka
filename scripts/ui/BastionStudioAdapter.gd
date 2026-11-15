@@ -52,7 +52,7 @@ func _ready() -> void:
     _install_g11_controls()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · Estelas V9 · 12 cohetes")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · Enfriamiento V10 · cierre de salva")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V13 materiales y soldaduras · 6×6")
@@ -121,12 +121,14 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · GASES Y ESTELAS V9",14)
+        "G11 LANZADOR · ENFRIAMIENTO V10",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
     _add_paired(g11_controls,"Salva lenta x0.35",func(): _g11_play("attack",0.35),
         "Salva normal",func(): _g11_play("attack",1.0))
+    _add_paired(g11_controls,"Ver enfriamiento",func(): _g11_play("cooldown",0.50),
+        "Volver a reposo",_g11_stop)
     _add_paired(g11_controls,"Impacto de balas",func(): _g11_play("hit_bullet"),
         "Impacto explosivo",func(): _g11_play("hit_explosive"))
     _add_paired(g11_controls,"Daño siguiente",
@@ -142,9 +144,9 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
         "Lateral opuesto",func(): _g11_view(270.0))
     _title(g11_controls,
-        "V9: doce cohetes con estelas volumétricas graduadas, gases "
-        + "en expansión y humo residual que se disipa tras cada lanzamiento. "
-        + "Prueba Salva lenta x0.35 para distinguir los doce tubos.",12)
+        "V10: tras la salva, doce bocas se enfrían individualmente con "
+        + "anillos de calor, vapor suave y retorno hidráulico sin saltos. "
+        + "La animación de enfriamiento se reproduce automáticamente.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -523,12 +525,20 @@ func _process(delta: float) -> void:
     if _role == "mlrs" and not _g11_animation.is_empty() and G11Rig.has_rig(model_root):
         _g11_time += maxf(0.0,delta)*_g11_playback_speed
         var duration: float = G11Rig.MOVE_DURATION if _g11_animation == "move" else (
-            G11Rig.SHOT_DURATION if _g11_animation == "attack" else G11Rig.IMPACT_DURATION)
+            G11Rig.SHOT_DURATION if _g11_animation == "attack" else (
+            G11Rig.COOLDOWN_DURATION if _g11_animation == "cooldown" else G11Rig.IMPACT_DURATION))
         var t: float = minf(1.0,_g11_time/maxf(duration,0.01))
         G11Rig.pose(model_root,_g11_animation,t)
         if t >= 1.0:
-            _g11_stop()
-            _update_details()
+            if _g11_animation == "attack" and G11Art.stage(model_root) < 4:
+                # Preserve the end of the rocket salvo and continue directly
+                # with a separate slow mechanical return to the home pose.
+                _g11_animation = "cooldown"
+                _g11_time = 0.0
+                G11Rig.pose(model_root,"cooldown",0.0)
+            else:
+                _g11_stop()
+                _update_details()
     if _p06_fleet!=null:
         if not _p06_fleet_animation.is_empty():
             _p06_fleet_animation_time+=maxf(0.0,delta)
@@ -602,7 +612,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_exhaust_v9",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_cooldown_v10",false)):
+            detail_label.text = detail_label.text.replace("salva V8","enfriamiento V10")
+        elif built and bool(model_root.get_meta("tarvoka_g11_exhaust_v9",false)):
             detail_label.text = detail_label.text.replace("salva V8","estelas V9")
         status_label.text = "%s · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
