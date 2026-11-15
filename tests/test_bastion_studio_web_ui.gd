@@ -50,6 +50,20 @@ func _run() -> void:
             "V12 fully sculpted remote weapon station is built")
         _check(bool(model.get_meta("tarvoka_apc_surface_v13",false)),
             "V13 real PBR coating and welded steel applied")
+        _check(bool(model.get_meta("tarvoka_apc_wheel_v14",false)),
+            "V14 all six true mechanical wheel assemblies installed")
+        var rim: MeshInstance3D=model.find_child(
+            "P06V14_SeisRadiosCalados",true,false) as MeshInstance3D
+        _check(rim!=null and rim.mesh is ArrayMesh,
+            "six-spoke 3D wheel sculpt renders in actual Godot studio")
+        var v14_susp: Node3D=model.find_child(
+            "P06V14_SuspensionArticulada",true,false) as Node3D
+        _check(v14_susp!=null and v14_susp.get_child_count()==6,
+            "six chassis-mounted independent suspension modules loaded")
+        var v14_coil: MeshInstance3D=model.find_child(
+            "P06V14_ResorteHelicoidalReal",true,false) as MeshInstance3D
+        _check(v14_coil!=null and v14_coil.mesh is ArrayMesh,
+            "actual helical coil springs are three-dimensional")
         var finish: MeshInstance3D=model.find_child(
             "P06V11_ModuloBlindaje_1_0",true,false) as MeshInstance3D
         _check(finish!=null and finish.material_override is StandardMaterial3D
@@ -108,6 +122,12 @@ func _run() -> void:
         "V12 weapon station responds to critical stage")
     _check(int(model.get_meta("tarvoka_apc_v13_damage_stage",-1)) == 3,
         "paint weathering follows damage without changing game HP")
+    _check(int(model.get_meta("tarvoka_apc_wheel_v14_stage",-1)) == 3,
+        "V14 wheels follow critical damaged state")
+    var tire_tear: Node3D=model.find_child(
+        "P06V14_NeumaticoCortado",true,false) as Node3D
+    _check(tire_tear!=null and tire_tear.visible,
+        "front-left damaged tire exposes inner cords")
     var burnt_paint: Node3D=model.find_child(
         "P06V13_MetalChamuscado",true,false) as Node3D
     _check(burnt_paint!=null and burnt_paint.visible,
@@ -134,6 +154,10 @@ func _run() -> void:
         "P06V12_RestosTorreta",true,false) as Node3D
     _check(v12_wreck!=null and v12_wreck.visible,
         "burnt station and broken machinegun visible after destruction")
+    var busted_axle: Node3D=model.find_child(
+        "P06V14_SuspensionDesprendida",true,false) as Node3D
+    _check(busted_axle!=null and busted_axle.visible,
+        "broken fork and shock remains visible on destroyed 6x6")
     var lamp: Node3D = model.find_child(
         "P06V10_PilotoTrasero_1",true,false) as Node3D
     _check(lamp!=null and not lamp.visible,
@@ -151,6 +175,10 @@ func _run() -> void:
         "burnt turret fragments disappear after repair")
     _check(burnt_paint!=null and not burnt_paint.visible,
         "full repair clears burnt coating")
+    _check(tire_tear!=null and not tire_tear.visible,
+        "new tire puncture disappears after repair")
+    _check(busted_axle!=null and not busted_axle.visible,
+        "wrecked axle fragments removed after repair")
     studio.call("_on_faction",3)
     model = studio.get("model_root") as Node3D
     _check(model != null and model.get_meta("tarvoka_apc_finish_v6",false),
@@ -172,6 +200,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v13_visible",true),
         "historical version reverts applied materials and hides welds")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_wheel_v14_visible",true),
+        "historical comparison hides V14 rims and mechanical suspension")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -187,6 +218,24 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v13_visible",false),
         "modern enamel, roughness and real weld beads return")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_wheel_v14_visible",false),
+        "six commercial spoke wheels and their suspensions return")
+    studio.call("_inspect_p06_wheels")
+    _check(absf(float(studio.get("_yaw"))-90.0)<0.001 and
+        absf(float(studio.get("_zoom"))-1.43)<0.001,
+        "wheel closeup displays three real axles from side")
+    studio.call("_inspect_p06_suspension")
+    _check(absf(float(studio.get("_yaw"))-69.0)<0.001 and
+        absf(float(studio.get("_zoom"))-1.63)<0.001,
+        "suspension closeup exposes wishbones and steel coils")
+    studio.call("_play","move_turn")
+    studio.call("_process",0.30)
+    var front_knuckle: Node3D=model.find_child(
+        "P06V14_ManguetaFreno",true,false) as Node3D
+    _check(front_knuckle!=null,
+        "mechanical brake steering remains accessible during live studio motion")
+    studio.call("_stop_animation")
     studio.call("_inspect_p06_turret")
     _check(absf(float(studio.get("_yaw"))-34.0)<0.001 and
         absf(float(studio.get("_zoom"))-2.05)<0.001,
@@ -297,5 +346,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V13 LIVE WEB STUDIO: triplanar armor enamel, roughness, real weld beads, turret bolts, 8 factions, damage repair and inspection")
+    print("PASS BASTION V14 LIVE WEB STUDIO: six open-spoke wheels, real articulated suspension, tire damage, steering, historical comparison and full repairs")
     quit(0)
