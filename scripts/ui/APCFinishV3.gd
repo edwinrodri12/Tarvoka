@@ -357,6 +357,51 @@ static func apply(model: Node3D,color: Color) -> bool:
     model.set_meta("tarvoka_apc_v3_damage_effect_count",7)
     return true
 
+# Tactical LOD intentionally keeps every structural silhouette piece, faction
+# paint, active hit cards and the six mechanical wheel pivots. Only tiny
+# close-up details/interior upholstery/tread protrusions are hidden. This is
+# a reversible visibility budget, not geometry loss or a new combat unit.
+const TACTICAL_PREFIXES: Array[String]=[
+    "BrazoSuspension_","CerrojoEscotillaLateral_",
+    "TiradorEscotilla_","EscaleraAntideslizante_",
+    "SoporteAntena_","AntenaBlindada_",
+    "PuertoOpticoConductor_","MarcoPuertoConductor_",
+    "BancoTropas_","RespaldoBanco_",
+    "ParedInterior","PisoAntideslizanteCompartimento",
+    "MontanteRampa_","DintelRampaSuperior","UmbralRampaInferior",
+    "BisagraRampa_","PeliculaAntideslizanteRampa",
+    "PernoAnclajeTecho_","SoldaduraUnidaTechoV3_",
+    "JuntaFlancoV3_","RemacheSoldadoProaV3_",
+    "NervioTorretaV3_","TechoSensorReforzadoV2",
+    "RejillasSensorV2","RejillaRefrigeracion_",
+    "LenteInfrarrojaV2","CristalSensorTermicoV3"
+]
+const TACTICAL_BATCHES: Array[String]=[
+    "PernosP06","APC_V2_TacosTodoTerreno"
+]
+
+static func set_tactical_lod(model: Node3D,reduced: bool) -> int:
+    if model==null or not model.get_meta("tarvoka_apc_finish_v3",false):
+        return 0
+    if bool(model.get_meta("tarvoka_apc_v3_tactical_lod",false))==reduced:
+        return 0
+    var changed: int=0
+    for part in model.find_children("*","MeshInstance3D",true,false):
+        var name_text: String=str(part.name)
+        for prefix in TACTICAL_PREFIXES:
+            if name_text.begins_with(prefix):
+                (part as MeshInstance3D).visible=not reduced
+                changed+=1
+                break
+    for batch in model.find_children("*","MultiMeshInstance3D",true,false):
+        var name_text: String=str(batch.name)
+        if name_text in TACTICAL_BATCHES:
+            (batch as MultiMeshInstance3D).visible=not reduced
+            changed+=1
+    model.set_meta("tarvoka_apc_v3_tactical_lod",reduced)
+    model.set_meta("tarvoka_apc_v3_tactical_hidden_meshes",changed)
+    return changed
+
 static func recolor(model: Node3D,color: Color) -> int:
     if model==null or not model.get_meta("tarvoka_apc_finish_v3",false):
         return 0
