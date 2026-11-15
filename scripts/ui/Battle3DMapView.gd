@@ -183,11 +183,15 @@ func _sync_viewport_size() -> void:
         return
     # Limit GPU texture memory in mobile 8-player-sized maps; upscale via
     # SubViewportContainer, not a full-resolution 2560x1600 render target.
-    var ratio: float = minf(1.0,minf(
-        1280.0/maxf(holder.size.x,1.0),
-        800.0/maxf(holder.size.y,1.0)))
-    preview.size = Vector2i(maxi(1,roundi(holder.size.x*ratio)),
-        maxi(1,roundi(holder.size.y*ratio)))
+    # Stretch containers override a child's size on the next frame.
+    # Set stretch_shrink on the *container*, which is the authoritative
+    # control for both rendered pixel count and the presented texture.
+    var shrink: int = maxi(1,ceili(maxf(
+        holder.size.x/1280.0,holder.size.y/800.0)))
+    holder.stretch_shrink = shrink
+    preview.size = Vector2i(
+        maxi(1,roundi(holder.size.x/float(shrink))),
+        maxi(1,roundi(holder.size.y/float(shrink))))
 
 func _refresh_camera() -> void:
     if camera == null:
