@@ -110,7 +110,7 @@ on:
       - "scripts/ui/APCVisualRigV1.gd"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA", "TARVOKA Airbase V15 Organic Fracture and Char Godot QA", "TARVOKA Airbase V16 Final 360 Degree Visual Acceptance Godot QA", "TARVOKA Naval Base V1 Native Godot Visual QA", "TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA", "TARVOKA Naval Base V3 Berths Ramps Shipyard Native Godot QA", "TARVOKA Naval Base V4 Marine Weathering Coast Native Godot QA", "TARVOKA Naval Base V5 Shipyard Signage Lighting Native Godot QA", "TARVOKA Naval Base V6 Night Readability LOD Native Godot QA", "TARVOKA Naval Base V7 Boarding Detail Native Godot QA", "TARVOKA Naval Base V8 Fenders Foam Shipyard Native Godot QA", "TARVOKA Naval Base V9 Sculpted Fenders PBR Native Godot QA", "TARVOKA Naval Base V10 Mooring Alignment Native Godot QA", "TARVOKA Naval Base V11 Contact Seals Chain Native Godot QA", "TARVOKA Naval Base V12 Final 360 Contact Chain Native Godot QA", "TARVOKA Naval Base V13 Visual Audit Cameras Native Godot QA", "TARVOKA Infantry Barracks V1 Three Distinct Levels Native Godot QA", "TARVOKA Infantry Barracks V3 Procedural Materials Native Godot QA", "TARVOKA Infantry Barracks V4 Real Rear and Side Facades Native Godot QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA", "TARVOKA Airbase V15 Organic Fracture and Char Godot QA", "TARVOKA Airbase V16 Final 360 Degree Visual Acceptance Godot QA", "TARVOKA Naval Base V1 Native Godot Visual QA", "TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA", "TARVOKA Naval Base V3 Berths Ramps Shipyard Native Godot QA", "TARVOKA Naval Base V4 Marine Weathering Coast Native Godot QA", "TARVOKA Naval Base V5 Shipyard Signage Lighting Native Godot QA", "TARVOKA Naval Base V6 Night Readability LOD Native Godot QA", "TARVOKA Naval Base V7 Boarding Detail Native Godot QA", "TARVOKA Naval Base V8 Fenders Foam Shipyard Native Godot QA", "TARVOKA Naval Base V9 Sculpted Fenders PBR Native Godot QA", "TARVOKA Naval Base V10 Mooring Alignment Native Godot QA", "TARVOKA Naval Base V11 Contact Seals Chain Native Godot QA", "TARVOKA Naval Base V12 Final 360 Contact Chain Native Godot QA", "TARVOKA Naval Base V13 Visual Audit Cameras Native Godot QA", "TARVOKA Infantry Barracks V1 Three Distinct Levels Native Godot QA", "TARVOKA Infantry Barracks V3 Procedural Materials Native Godot QA", "TARVOKA Infantry Barracks V4 Real Rear and Side Facades Native Godot QA", "TARVOKA Infantry Barracks V5 Tower Clearance and Detail Native Godot QA"]
     types: [completed]
     branches:
       - feat/naval-base-v2-quays-hangar-crane-water-20261115
@@ -128,6 +128,7 @@ on:
       - feat/infantry-barracks-v1-three-distinct-levels-20261116
       - feat/infantry-barracks-v3-procedural-materials-20261116
       - feat/infantry-barracks-v4-rear-side-facades-20261116
+      - feat/infantry-barracks-v5-final-corner-clearance-20261116
       - feat/terrain-v19-snow-biome-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -154,7 +155,7 @@ jobs:
       - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/infantry-barracks-v4-rear-side-facades-20261116
+          ref: feat/infantry-barracks-v5-final-corner-clearance-20261116
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -304,7 +305,7 @@ jobs:
           # branch, but Bastion P06 is overlaid from this main revision.
           # Show the deployed revision, not the misleading older HQ SHA.
           printf 'Bastión P06 · seis carcasas de neumáticos cerradas V25 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/infantry-barracks-v4-rear-side-facades-20261116" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/infantry-barracks-v4-rear-side-facades-20261116)"
+          test "$(git branch --show-current)" = "feat/infantry-barracks-v5-final-corner-clearance-20261116" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/infantry-barracks-v5-final-corner-clearance-20261116)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -444,7 +445,8 @@ jobs:
           test -s tests/test_naval_base_v1_gpu.gd
           test -s NAVAL_BASE_V1_ARCHITECTURE.md
           grep -q 'Base Naval · V13 · inspección real de amarres' scripts/ui/CombinedArtStudioWeb.gd
-          grep -q 'Cuartel de Infantería · V4 · fachadas reales 360°' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Cuartel de Infantería · V5 · uniones y remates 360°' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'InfantryBarracksV5.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV4.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV3.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'func _display_infantry_barracks' scripts/ui/CombinedArtStudioWeb.gd
@@ -537,6 +539,10 @@ jobs:
           test -s tests/test_infantry_barracks_v4_gpu.gd
           test -s INFANTRY_BARRACKS_V4_REAL_FACADES_360.md
           grep -q 'PASS INFANTRY BARRACKS V4:' tests/test_infantry_barracks_v4_gpu.gd
+          test -s scripts/ui/InfantryBarracksFinishV5.gd
+          test -s tests/test_infantry_barracks_v5_gpu.gd
+          test -s INFANTRY_BARRACKS_V5_TOWER_CLEARANCE_FINAL.md
+          grep -q 'PASS INFANTRY BARRACKS V5:' tests/test_infantry_barracks_v5_gpu.gd
           grep -q 'func _display_naval_base()' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V1:' tests/test_naval_base_v1_gpu.gd
           test -s scripts/ui/Airbase3DV1.gd
