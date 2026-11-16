@@ -190,6 +190,30 @@ static func repair(state: Dictionary, progress: Dictionary,
         attempt["progress"] = progress.duplicate(true)
     return attempt
 
+# Explicit step boundary: avoid transferring an upgraded producer to an
+# enemy after capture. The production game will need this in real saves.
+static func reconcile(state: Dictionary, progress: Dictionary) -> Dictionary:
+    var result: Dictionary = progress.duplicate(true)
+    var facilities: Dictionary = result.get("facilities",{})
+    if not state.has("economy"):
+        return result
+    for site in state["economy"].get("sites",[]):
+        if not site is Dictionary or str(site.get("kind","")) not in UPGRADE_COSTS:
+            continue
+        var key: String = _tag(site)
+        if facilities.has(key) and int(facilities[key].get("owner",-99)) != int(site.get("owner",-1)):
+            facilities.erase(key)
+    result["facilities"] = facilities
+    return result
+
+static func end_turn(state: Dictionary, progress: Dictionary) -> Dictionary:
+    var ended: Dictionary = Session.end_turn(state)
+    if not bool(ended.get("valid",false)):
+        ended["progress"] = progress.duplicate(true)
+        return ended
+    ended["progress"] = reconcile(ended["state"],progress)
+    return ended
+
 static func missing_catalog_roles() -> Array:
     var missing: Array = []
     for role in Roles.ORDER:
