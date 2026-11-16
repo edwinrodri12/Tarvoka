@@ -21,6 +21,7 @@ const NavalAuditV13 = preload("res://scripts/ui/NavalInspectionV13.gd")
 const InfantryBarracksV1 = preload("res://scripts/ui/InfantryBarracks3DV1.gd")
 const InfantryBarracksV2 = preload("res://scripts/ui/InfantryBarracksFinishV2.gd")
 const InfantryBarracksV3 = preload("res://scripts/ui/InfantryBarracksMaterialsV3.gd")
+const InfantryBarracksV4 = preload("res://scripts/ui/InfantryBarracksRearFacadeV4.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -68,6 +69,7 @@ var naval_controls: VBoxContainer
 var infantry_controls: VBoxContainer
 var infantry_detail_v2_toggle: CheckButton
 var infantry_material_v3_toggle: CheckButton
+var infantry_rear_v4_toggle: CheckButton
 var infantry_level_picker: OptionButton
 var infantry_damage_picker: OptionButton
 var infantry_camera_picker: OptionButton
@@ -1323,7 +1325,7 @@ func _add_infantry_controls() -> void:
     infantry_controls.name="OpcionesCuartelInfanteriaV1"
     infantry_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(infantry_controls)
-    _title(infantry_controls,"CUARTEL DE INFANTERÍA V3 · TRES SILUETAS",14)
+    _title(infantry_controls,"CUARTEL DE INFANTERÍA V4 · TRES SILUETAS",14)
     infantry_detail_v2_toggle=CheckButton.new()
     infantry_detail_v2_toggle.name="AccesosFachadasTorresYEntrenamientoV2"
     infantry_detail_v2_toggle.text="V2 · accesos, cristales y torres (comparar V1)"
@@ -1336,6 +1338,12 @@ func _add_infantry_controls() -> void:
     infantry_material_v3_toggle.button_pressed=true
     infantry_material_v3_toggle.toggled.connect(_toggle_infantry_material_v3)
     infantry_controls.add_child(infantry_material_v3_toggle)
+    infantry_rear_v4_toggle=CheckButton.new()
+    infantry_rear_v4_toggle.name="FachadaPosteriorDetallesV4"
+    infantry_rear_v4_toggle.text="V4 · fachada posterior (comparar V3)"
+    infantry_rear_v4_toggle.button_pressed=true
+    infantry_rear_v4_toggle.toggled.connect(_toggle_infantry_rear_v4)
+    infantry_controls.add_child(infantry_rear_v4_toggle)
     _title(infantry_controls,"NIVEL · CADA MEJORA RECONSTRUYE LA ARQUITECTURA",12)
     infantry_level_picker=OptionButton.new()
     infantry_level_picker.name="NivelArquitecturaInfanteriaV1"
@@ -1372,10 +1380,16 @@ func _add_infantry_controls() -> void:
 
 func _toggle_infantry_detail_v2(_enabled: bool) -> void:
     infantry_material_v3_toggle.disabled=not infantry_detail_v2_toggle.button_pressed
+    infantry_rear_v4_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
 func _toggle_infantry_material_v3(_enabled: bool) -> void:
+    infantry_rear_v4_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed)
+    if _role=="infantry_barracks":
+        _display_infantry_barracks()
+
+func _toggle_infantry_rear_v4(_enabled: bool) -> void:
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1437,6 +1451,10 @@ func _display_infantry_barracks() -> void:
         var material_ok: bool=InfantryBarracksV3.apply(model_root,level,_faction,damage)
         if not material_ok:
             push_error("Cuartel de Infantería V3: materiales no aplicados")
+    if infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed:
+        var rear_ok: bool=InfantryBarracksV4.apply(model_root,level,_faction,damage)
+        if not rear_ok:
+            push_error("Cuartel de Infantería V4: fachada posterior no aplicada")
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2444,6 +2462,7 @@ func _update_details() -> void:
     if _role=="infantry_barracks" and model_root!=null:
         var level: int=int(model_root.get_meta("visual_level",1))
         detail_label.text="Cuartel de Infantería %s · Nivel %d · %d mallas 3D" % [
+            "V4" if model_root.has_node(InfantryBarracksV4.STAGE_NAME) else
             "V3" if model_root.has_node(InfantryBarracksV3.STAGE_NAME) else
             "V2" if model_root.has_node(InfantryBarracksV2.STAGE_NAME) else "V1",
             level,InfantryBarracksV1.mesh_count(model_root)]
