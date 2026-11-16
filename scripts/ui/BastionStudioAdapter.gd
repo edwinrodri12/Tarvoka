@@ -242,7 +242,15 @@ func _g11_cutaway(side: int) -> void:
         return
     if not G11JointsV22.set_inspection(model_root,side):
         return
-    _g11_mount_inspect(90.0 if side >= 0 else 270.0,true)
+    if side == 0:
+        _g11_view(90.0)
+        _zoom = 1.48
+        _update_camera()
+    else:
+        _g11_mount_inspect(90.0 if side > 0 else 270.0,true)
+        if camera != null:
+            camera.position.y = 0.34
+            camera.look_at(Vector3(0,0.37,0),Vector3.UP)
     status_label.text = ("G11 V22 · blindaje completo" if side == 0
         else "G11 V22 · interior real visible, lado %s" % ("A" if side > 0 else "B"))
 
