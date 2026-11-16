@@ -96,20 +96,20 @@ func _run() -> void:
             "reversible left/right actual armor cutaway for hinge closeups")
         for axle in [1,4]:
             var z: float = -0.875+float(axle)*0.35
-            camera.position = Vector3(float(side)*1.78,0.48,z-0.32)
-            camera.look_at(Vector3(float(side)*0.73,0.47,z+0.04),
+            camera.position = Vector3(float(side)*1.64,0.34,z-0.22)
+            camera.look_at(Vector3(float(side)*0.73,0.35,z+0.04),
                 Vector3.UP)
-            camera.fov = 30.0
+            camera.fov = 43.0
             await _capture(view,folder,
                 "g11_v22_seats_side_%d_axle_%d.png" % [side,axle])
     # Two very low, underside angles reveal the retained original mount.
     for side in [-1,1]:
         _check(Finish.set_inspection(model,side),
             "clear the actual steel fender from undercarriage macro")
-        camera.position = Vector3(float(side)*2.42,0.37,0.20)
-        camera.look_at(Vector3(float(side)*0.73,0.54,0.17),
+        camera.position = Vector3(float(side)*2.28,0.32,0.20)
+        camera.look_at(Vector3(float(side)*0.73,0.41,0.17),
             Vector3.UP)
-        camera.fov = 32.0
+        camera.fov = 39.0
         await _capture(view,folder,
             "g11_v22_underside_suspension_%d.png" % side)
     # Two moving snapshots of the genuine articulated original cylinders.
@@ -118,9 +118,9 @@ func _run() -> void:
     for travel in [0.28,0.71]:
         _check(Models.pose_model("mlrs",model,"move",travel),
             "actual wheeled and sprung rig animates")
-        camera.position = Vector3(2.20,0.53,0.35)
-        camera.look_at(Vector3(0.74,0.49,0.17),Vector3.UP)
-        camera.fov = 33.0
+        camera.position = Vector3(2.10,0.36,0.35)
+        camera.look_at(Vector3(0.74,0.36,0.17),Vector3.UP)
+        camera.fov = 41.0
         await _capture(view,folder,
             "g11_v22_mount_movement_%02d.png" % int(travel*100.0))
     Models.restore_model_pose("mlrs",model)
