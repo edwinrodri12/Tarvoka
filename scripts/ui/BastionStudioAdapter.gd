@@ -147,19 +147,19 @@ func _ready() -> void:
     _install_heli_lighting_v10()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V33 · revisión final y Android")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · Antiaéreo móvil · boceto 3D V1")
+        role_picker.set_item_text(aa_index,"G13 · Antiaéreo V10")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V10 cristales y acabados 3D")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 · V10")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V25")
     var tank_index: int = P06Models.ROLES.find("tank")
     if tank_index >= 0:
-        role_picker.set_item_text(tank_index,"Tanque G09 · V32 FINAL · modelo 3D aprobado")
+        role_picker.set_item_text(tank_index,"Tanque G09 · V32 FINAL")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -335,6 +335,12 @@ func _install_unified_studio_navigation() -> void:
                     "El mismo modelo de Godot") or label_text=="TARVOKA · ESTUDIO 3D":
                 (item as Label).visible=false
 
+    # Keep exactly one Reset Camera command in the Camera tab. The base
+    # inspector's second reset button used to appear under Animar.
+    for item in column.get_children():
+        if item is Button and not item is OptionButton and (
+                (item as Button).text=="Restablecer cámara"):
+            (item as Button).visible=false
     # Put the original advanced building tools below the compact navigation.
     # They remain fully functional; the selector itself is now at the top.
     column.move_child(studio_versions_fold,5)
@@ -610,9 +616,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,
-            "A01 · Helicóptero V10" if compact else
-            "Helicóptero de ataque A01 · V10 cristales y acabados 3D")
+        role_picker.set_item_text(role_index,"Helicóptero A01 · V10")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
