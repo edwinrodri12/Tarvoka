@@ -178,7 +178,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13SurfaceFinishV8.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -214,64 +214,53 @@ jobs:
           # are exchanged. HQ, naval base, airbase, barracks, APC, G11 and
           # helicopter modules retain their existing tested implementations.
           cp g09-unified-source/scripts/ui/Tank*.gd scripts/ui/
-          # Preserve post-V32 new roles (notably G13) while upgrading the
-          # approved tank geometry and rig from the exact V32 branch.
-          cp scripts/ui/UnitModels3D.gd /tmp/tarvoka-models-before-g09.gd
-          cp g09-unified-source/scripts/ui/UnitModels3D.gd scripts/ui/UnitModels3D.gd
+          # Keep the latest main catalogue, including APC, G11 and G13.
+          # Bring the approved G09 geometry+animations only; never replace
+          # modern UnitModels3D.gd with a 2026-11-14 snapshot.
           cp g09-unified-source/scripts/ui/UnitArtStudioWeb.gd scripts/ui/UnitArtStudioWeb.gd
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/ui/UnitModels3D.gd')
-          current=p.read_text()
-          previous=Path('/tmp/tarvoka-models-before-g09.gd').read_text()
-          def replace_once(old,new):
-              global current
-              assert current.count(old)==1, 'G09 bridge mismatch: '+old[:65]
-              current=current.replace(old,new,1)
-          assert 'const G13AA = preload(' in previous
-          assert 'const G13DetailV2 = preload(' in previous
-          replace_once('const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]',
-              'const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile"]')
-          replace_once('const VisualStyle = preload(',
-              'const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")\n'
-              'const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")\n'
-              'const VisualStyle = preload(')
-          replace_once('"destroyer":5.10', '"destroyer":5.10,\n    "aa_mobile":3.85')
-          replace_once('        "destroyer":\n            _destroyer(model)',
-              '        "destroyer":\n            _destroyer(model)\n'
-              '        "aa_mobile":\n'
-              '            if not G13AA.build(model,faction_paint_color(faction),'
-              ' finish_enabled and art_level>=13):\n'
-              '                return null\n'
-              '            if finish_enabled and art_level>=13:\n'
-              '                G13DetailV2.apply(model,faction_paint_color(faction))')
-          replace_once('    else:\n        model.scale = Vector3.ONE * 0.83',
-              '    elif role=="aa_mobile":\n'
-              '        model.scale=Vector3.ONE*0.83\n'
-              '        model.position.y=0.0\n'
-              '    else:\n        model.scale = Vector3.ONE * 0.83')
-          # The V32 branch predates the shared pose_model API. Add only
-          # the preview role callbacks that the G13 inspection controls need.
-          insert = (
-              'static func pose_model(role: String, model: Node3D, kind: String,\n'
-              '        progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:\n'
-              '    if role=="aa_mobile":\n'
-              '        return G13AA.pose(model,kind,progress,target_heading)\n'
-              '    if role=="tank":\n'
-              '        return TankRig.pose(model,kind,progress,target_heading)\n'
-              '    return false\n\n'
-              'static func restore_model_pose(role: String, model: Node3D) -> void:\n'
-              '    if role=="aa_mobile":\n'
-              '        G13AA.restore(model)\n'
-              '    elif role=="tank":\n'
-              '        TankRig.restore(model)\n\n'
-          )
-          replace_once('static func inspect_meshes(model: Node) -> int:',
-              insert+'static func inspect_meshes(model: Node) -> int:')
-          p.write_text(current)
-          assert 'TankTrackAlignmentV31.apply(model)' in current
-          assert 'G13DetailV2.apply(model' in current
-          assert '"aa_mobile"' in current
+          import re
+          
+          main_path = Path('scripts/ui/UnitModels3D.gd')
+          approved_path = Path('g09-unified-source/scripts/ui/UnitModels3D.gd')
+          current = main_path.read_text()
+          approved = approved_path.read_text()
+          
+          # Integrate ONLY approved tank geometry passes. Never replace the newer
+          # P06, G11, A01, G13 or battle rendering logic with an old role catalogue.
+          tank_preloads = [
+              line for line in approved.splitlines()
+              if re.match(r'^const Tank[A-Za-z0-9_]+ = preload\(', line)
+              and line not in current
+          ]
+          anchor = 'const TankArmorV10 = preload("res://scripts/ui/TankArmorV10.gd")'
+          assert current.count(anchor) == 1, 'New tank preload anchor moved'
+          current = current.replace(anchor, anchor + ''.join('\n' + line for line in tank_preloads), 1)
+          
+          tank_anchor = '    if role == "tank":\n        # Physical finish'
+          approved_start = approved.index(tank_anchor, approved.index('static func build('))
+          approved_end = approved.index('    return model\n', approved_start)
+          approved_tank = approved[approved_start:approved_end]
+          assert 'TankTrackAlignmentV31.apply(model)' in approved_tank
+          
+          start = current.index(tank_anchor, current.index('static func build('))
+          end = current.index('    return model\n', start)
+          legacy_chunk = current[start:end]
+          # Keep the current P06 post-build setup, not the V32 branch's older APC.
+          apc_pos = legacy_chunk.rfind('    elif role == "apc":\n')
+          assert apc_pos >= 0, 'Current P06 post-build logic not found'
+          apc_tail = legacy_chunk[apc_pos:]
+          assert 'BastionDamage.prepare' in apc_tail
+          current = current[:start] + approved_tank + apc_tail + current[end:]
+          assert current.count(tank_anchor) == 1, 'Duplicate G09 build stages remain'
+          for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
+                            'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
+                            'G11Art.build', 'APCClosedTiresV25.apply',
+                            'static func pose_model(', 'static func restore_model_pose(']:
+              assert preserved in current, 'Lost newer unit feature: ' + preserved
+          main_path.write_text(current)
+          print('PASS G09 NATIVE MERGE: V32 sculpt in current P06/G11/G13/A01 catalogue')
           PY
           test -s scripts/ui/G13MobileAirDefenseV1.gd
           test -s scripts/ui/G13GroundAirFinishV4.gd
