@@ -1118,6 +1118,11 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    # The central 3D studio's historical tank graph is not the approved
+    # G09 V32. Route tank selections to the actual V32 WebGL build published
+    # at /tanque/ instead of silently displaying the obsolete proxy.
+    if role == "tank" and OS.has_feature("web"):
+        JavaScriptBridge.eval("window.tarvokaOpenApprovedTank && window.tarvokaOpenApprovedTank();", true)
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
     if role!="mlrs":
@@ -1232,6 +1237,10 @@ func _display_role(role: String) -> void:
 
 func _switch_category(index: int) -> void:
     super._switch_category(index)
+    # The parent calls super._display_role("tank") directly on category
+    # changes; intercept that path too, without affecting other models.
+    if index == 0 and OS.has_feature("web") and _role == "tank":
+        JavaScriptBridge.eval("window.tarvokaOpenApprovedTank && window.tarvokaOpenApprovedTank();", true)
     _sync_p06_controls()
 
 func _on_faction(index: int) -> void:
