@@ -78,5 +78,19 @@ func _initialize() -> void:
     assert(Codec.decode(modified_a) == snapshot_a, "Modified recovery must round-trip independently")
     assert(Codec.decode(first) == before, "Original bytes must still restore original state")
     assert(Codec.encode(state) == first, "Active battle encoding must remain unchanged")
+    # Distinct valid states must remain independently recoverable, not merely stable
+    # when the exact same bytes are encoded repeatedly.
+    var unique_encodings: Dictionary = {}
+    for hp in range(1, 11):
+        var variant: Dictionary = state.duplicate(true)
+        variant["units"][0]["hp"] = hp
+        var encoded_variant: String = Codec.encode(variant)
+        assert(not encoded_variant.is_empty(), "Every legal HP variant must encode")
+        assert(not unique_encodings.has(encoded_variant), "Different legal HP values must not collide")
+        unique_encodings[encoded_variant] = true
+        assert(Codec.decode(encoded_variant) == variant, "Every legal HP variant must round-trip")
+        assert(state == before, "Encoding a variant must preserve active battle")
+        assert(Codec.encode(state) == first, "Variant encoding must preserve original bytes")
+    assert(unique_encodings.size() == 10, "All ten legal HP variants must be distinct")
     print("PASS save encode determinism: 20 iterations, no mutation or aliasing")
     quit(0)
