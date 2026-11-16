@@ -41,7 +41,7 @@ const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const BattleView3D = preload("res://scripts/ui/Battle3DMapView.gd")
-const NativeArtStudio3D = preload("res://scripts/ui/BastionStudioAdapter.gd")
+const NATIVE_STUDIO_PATH := "res://scripts/ui/BastionStudioAdapter.gd"
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
@@ -2269,7 +2269,20 @@ func _open_native_3d_studio() -> void:
         native_studio_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
         native_studio_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
         add_child(native_studio_overlay)
-        var studio: Control = NativeArtStudio3D.new()
+        # Load on demand so headless gameplay rules do not compile the
+        # extensive native art studio when no visual inspection is requested.
+        var studio_script: Script = load(NATIVE_STUDIO_PATH) as Script
+        if studio_script == null or not studio_script.can_instantiate():
+            native_studio_overlay.queue_free()
+            native_studio_overlay = null
+            home_menu.show()
+            return
+        var studio: Control = studio_script.new() as Control
+        if studio == null:
+            native_studio_overlay.queue_free()
+            native_studio_overlay = null
+            home_menu.show()
+            return
         studio.name = "ModelosOriginales3D"
         native_studio_overlay.add_child(studio)
         studio.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
