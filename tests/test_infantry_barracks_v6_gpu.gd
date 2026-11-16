@@ -155,6 +155,15 @@ func _audit(level: int,faction: int,damage: int) -> void:
         var roof_material: StandardMaterial3D=roof_accent.material_override as StandardMaterial3D
         assert(roof_material.albedo_color.is_equal_approx(Style.faction_color(faction)))
         assert(V1.mesh_count(model)>before_v6)
+        assert(int(roof6.get_meta("pbr_v3_textured_meshes",0))>0)
+        assert(int(roof6.get_meta("faction_paint_untouched",0))>0)
+        var extractor: MeshInstance3D=model.find_child(
+            "CajaExtractor",true,false) as MeshInstance3D
+        assert(extractor!=null)
+        var extractor_mat: StandardMaterial3D=extractor.material_override as StandardMaterial3D
+        assert(extractor_mat.albedo_texture!=null)
+        assert(extractor_mat.metallic>0.30)
+        assert(roof_material.albedo_texture==null)
     if damage<=2:
         var expected_roofs: int=(
             4 if damage==0 else 3 if damage==1 else 2)
