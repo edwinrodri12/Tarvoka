@@ -1587,10 +1587,9 @@ func _display_role(role: String) -> void:
     # All eight units and the buildings share the SAME viewport and camera.
     # For the native G09 V32, V25 materials + V30 damage + V31 inboard
     # geometry activate the final V32 animation rig in TankVisualRig3D.gd.
-    if role == "tank":
-        _v25_preview = true
-        _v30_preview = true
-        _v31_preview = true
+    # The current CombinedArtStudioWeb base has no _v25/_v30/_v31
+    # switches: these unused legacy writes broke real Studio import.
+    # Tank rendering continues through the base role-selection code.
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
     if _g13_v4_tween!=null and _g13_v4_tween.is_running():
