@@ -69,7 +69,7 @@ static func _rear_module(stage: Node3D,module: Dictionary,
     # Actual architectural windows along the large blind rear walls.
     # Low and middle floors remain well below the existing V3 high vents.
     # Keep the service hatch center clear and do not close damage openings.
-    for floor in range(floors):
+    for floor in range(floors if w>=4.0 else 0):
         var window_y: float=1.45+float(floor)*2.22
         if window_y+0.44>=h-0.27:
             continue
