@@ -94,7 +94,7 @@ func _run() -> void:
     var layout: Dictionary = Sites.layout(terrain)
     var base: Dictionary = {}
     for site in layout["sites"]:
-        if str(site["kind"]) == "armor_plant" and int(site["owner"]) == -1:
+        if str(site["kind"]) != "city" and str(site["kind"]) != "shipyard" and int(site["owner"]) == -1:
             base = site
             break
     assert(not base.is_empty())
