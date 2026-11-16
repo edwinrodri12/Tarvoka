@@ -66,5 +66,13 @@ func _initialize() -> void:
     snapshot_a["terrain"][0][0] = "forest"
     assert(snapshot_b == before, "Separate decoded snapshots must not share nested data")
     assert(state == before, "Decoded mutations must not leak into active battle")
+    # Encoding one modified recovery must not rewrite the other recovery.
+    var modified_a: String = Codec.encode(snapshot_a)
+    assert(not modified_a.is_empty(), "Modified recovered snapshot must remain valid")
+    assert(modified_a != first, "Modified recovery must produce a different serialized value")
+    assert(Codec.encode(snapshot_b) == first, "Encoding modified recovery must not alter sibling recovery")
+    assert(Codec.decode(modified_a) == snapshot_a, "Modified recovery must round-trip independently")
+    assert(Codec.decode(first) == before, "Original bytes must still restore original state")
+    assert(Codec.encode(state) == first, "Active battle encoding must remain unchanged")
     print("PASS save encode determinism: 20 iterations, no mutation or aliasing")
     quit(0)
