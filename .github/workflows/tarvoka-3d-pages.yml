@@ -988,6 +988,9 @@ jobs:
               open.setAttribute('aria-expanded', 'false');
               open.focus();
             };
+            // Called both by the catalogue button and the native Godot
+            // unit selector, so no historical tank is mistaken for V32.
+            window.tarvokaOpenApprovedTank = show;
             open.addEventListener('click', show);
             back.addEventListener('click', hide);
             document.addEventListener('keydown', event => {
