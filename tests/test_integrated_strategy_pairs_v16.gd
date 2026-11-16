@@ -33,6 +33,9 @@ func _initialize() -> void:
         assert(int(data["ending_city_count"]) == 4*int(group.split(":")[0]))
         assert(int(data["total_income"]) >= 0)
         assert(int(data["tier_investment"]) > 0)
+        assert(int(data["mass_apc"]) >= 8)
+        assert(int(data["advanced_recruits"]) >= 4)
+        assert(int(data["production"]) == int(data["mass_apc"])+int(data["advanced_recruits"]))
         assert(int(data["moves"]) > 0)
         assert(int(data["city_captures"]) >= 0)
         assert(int(data["winner_matches"]) <= int(data["matches"]))
@@ -43,7 +46,7 @@ func _initialize() -> void:
 static func _blank() -> Dictionary:
     return {"matches":0,"turns":0,"moves":0,"attacks":0,
         "damage":0,"kills":0,"promotions":0,"city_captures":0,
-        "capture_interruptions":0,"production":0,"tier_investment":0,
+        "capture_interruptions":0,"production":0,"mass_apc":0,"advanced_recruits":0,"tier_investment":0,
         "technologies":0,"spent":0,"total_income":0,"ending_cash":0,
         "ending_units":0,"ending_city_count":0,"winner_matches":0,
         "first_wins":0,"censored":0,"neutral_cities_end":0}
@@ -85,6 +88,9 @@ static func _play(map_id: int, city_count: int, first: int, policies: Array) -> 
                 neutral += 1
     assert(cities_end == city_count)
     assert(int(totals["turns"]) <= HALF_TURNS)
+    assert(int(totals["purchases_mass"]) >= 2)
+    assert(int(totals["purchases_advanced"]) >= 1)
+    assert(int(totals["research"]) >= 1)
     var winner: int = int(b["state"].get("winner",-1))
     var ended := int(b["state"]["economy"]["credits"][0])+int(b["state"]["economy"]["credits"][1])
     return {"matches":1,"turns":int(totals["turns"]),"moves":int(totals["moves"]),
@@ -93,6 +99,7 @@ static func _play(map_id: int, city_count: int, first: int, policies: Array) -> 
         "city_captures":int(totals["captures"]),
         "capture_interruptions":int(totals["capture_interruptions"]),
         "production":int(totals["production"]),
+        "mass_apc":int(totals["purchases_mass"]),"advanced_recruits":int(totals["purchases_advanced"]),
         "tier_investment":int(totals["upgrades"]),"technologies":int(totals["research"]),
         "spent":int(totals["spent"]),
         "total_income":int(totals["income"][0])+int(totals["income"][1]),
