@@ -17,3 +17,7 @@ Next autonomous task: inspect Godot logs, fix any failing malformed case without
 2026-11-15 additional root-shape regression: added `[]` and `null` as syntactically valid but semantically invalid top-level JSON payloads. The previous 16-case workflow passed at https://github.com/edwinrodri12/Tarvoka/actions/runs/43767139157; Android export passed at run 43767139151; general Godot rules CI failed at run 43767139173. The expanded 18-case SHA requires its own CI result. Physical Android NOT EXECUTED.
 
 2026-11-15: Expanded root-type rejection from `[]`/`null` to boolean `true`, number `42`, and JSON string `"orphan"` (21 cases total). Prior 18-case head 2a913d2 passed dedicated Godot 4.3 CI run 43772725923 and Android export run 43772725914; general rules run 43772725926 failed independently. New 21-case head remains UNVERIFIED until its own CI completes. Physical Android NOT EXECUTED.
+
+
+## Ampliación 2026-11-15 — 23 casos
+Se añaden `null` en una celda del terreno y una columna extra en una fila, además de comprobar que **cada** rechazo mantiene idéntico el estado de batalla previo (`duplicate(true)`). El workflow exige `PASS save structural corruption: 23 malformed snapshots rejected`. Esta ampliación está registrada en la rama de PR #416; **Godot 4.3 y Android físico: NO EJECUTADO** para estos commits hasta obtener una ejecución nueva. No modifica el codec ni reglas de producción.
