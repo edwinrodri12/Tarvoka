@@ -24,3 +24,6 @@ Se añaden `null` en una celda del terreno y una columna extra en una fila, adem
 
 ## Regresión de recuperación tras cada rechazo (2026-11-15)
 Después de **cada** uno de los 23 intentos de decodificación corrupta, la prueba decodifica de nuevo el snapshot original válido y exige igualdad exacta con el estado previo. Esto detecta contaminación del decodificador que un único round-trip final podría ocultar. No cambia reglas ni SaveCodec; Godot 4.3 en el nuevo SHA: **NO EJECUTADO** hasta CI. Android físico: **NO EJECUTADO EN DISPOSITIVO**.
+
+## Regresión de sintaxis JSON (2026-11-15)
+Tres entradas que ni siquiera son JSON válido (`{`, objeto incompleto y objeto seguido de texto) deben rechazarse sin alterar la sesión y sin impedir cargar inmediatamente el snapshot legítimo. Total: **26 casos** (18 corrupciones estructurales + 5 raíces JSON inválidas como partida + 3 errores sintácticos). CI exige el marcador de 26 casos. **Godot 4.3 en este commit: NO EJECUTADO** hasta confirmar workflow; **Android físico: NO EJECUTADO EN DISPOSITIVO**. No se modifica SaveCodec ni el gameplay. Próxima tarea: verificar CI de este SHA, investigar fallo general y ejecutar regresiones de IA/victoria.
