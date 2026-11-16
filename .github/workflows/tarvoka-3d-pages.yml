@@ -70,7 +70,7 @@ on:
       - "scripts/ui/APCVisualRigV1.gd"
   workflow_dispatch:
   workflow_run:
-    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA", "TARVOKA Airbase V15 Organic Fracture and Char Godot QA", "TARVOKA Airbase V16 Final 360 Degree Visual Acceptance Godot QA", "TARVOKA Naval Base V1 Native Godot Visual QA", "TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA", "TARVOKA Naval Base V3 Berths Ramps Shipyard Native Godot QA", "TARVOKA Naval Base V4 Marine Weathering Coast Native Godot QA", "TARVOKA Naval Base V5 Shipyard Signage Lighting Native Godot QA", "TARVOKA Naval Base V6 Night Readability LOD Native Godot QA", "TARVOKA Naval Base V7 Boarding Detail Native Godot QA", "TARVOKA Naval Base V8 Fenders Foam Shipyard Native Godot QA", "TARVOKA Naval Base V9 Sculpted Fenders PBR Native Godot QA", "TARVOKA Naval Base V10 Mooring Alignment Native Godot QA"]
+    workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA", "TARVOKA Airbase V15 Organic Fracture and Char Godot QA", "TARVOKA Airbase V16 Final 360 Degree Visual Acceptance Godot QA", "TARVOKA Naval Base V1 Native Godot Visual QA", "TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA", "TARVOKA Naval Base V3 Berths Ramps Shipyard Native Godot QA", "TARVOKA Naval Base V4 Marine Weathering Coast Native Godot QA", "TARVOKA Naval Base V5 Shipyard Signage Lighting Native Godot QA", "TARVOKA Naval Base V6 Night Readability LOD Native Godot QA", "TARVOKA Naval Base V7 Boarding Detail Native Godot QA", "TARVOKA Naval Base V8 Fenders Foam Shipyard Native Godot QA", "TARVOKA Naval Base V9 Sculpted Fenders PBR Native Godot QA", "TARVOKA Naval Base V10 Mooring Alignment Native Godot QA", "TARVOKA Naval Base V11 Contact Seals Chain Native Godot QA"]
     types: [completed]
     branches:
       - feat/naval-base-v2-quays-hangar-crane-water-20261115
@@ -82,6 +82,7 @@ on:
       - feat/naval-base-v8-fenders-foam-shipyard-20261115
       - feat/naval-base-v9-sculpted-fenders-pbr-20261115
       - feat/naval-base-v10-mooring-alignment-20261115
+      - feat/naval-base-v11-contact-seals-chain-20261115
       - feat/terrain-v19-snow-biome-20261114
       - feat/g09-v32-studio-final-animation-20261114
       - feat/g09-v32-final-animation-pass-20261114
@@ -108,7 +109,7 @@ jobs:
       - name: Check out native HQ V21 complete rear geometry and staged hit animation studio with nine original Android HQ V15 sprites
         uses: actions/checkout@v4
         with:
-          ref: feat/naval-base-v10-mooring-alignment-20261115
+          ref: feat/naval-base-v11-contact-seals-chain-20261115
           persist-credentials: false
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
@@ -166,7 +167,7 @@ jobs:
           # branch, but Bastion P06 is overlaid from this main revision.
           # Show the deployed revision, not the misleading older HQ SHA.
           printf 'Bastión P06 · iluminación y clima PBR V22 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
-          test "$(git branch --show-current)" = "feat/naval-base-v10-mooring-alignment-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/naval-base-v10-mooring-alignment-20261115)"
+          test "$(git branch --show-current)" = "feat/naval-base-v11-contact-seals-chain-20261115" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/naval-base-v11-contact-seals-chain-20261115)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
           test -s scripts/ui/HeadquartersEmblems3D.gd
@@ -256,7 +257,7 @@ jobs:
           grep -q 'PASS NAVAL BASE V2:' tests/test_naval_base_v2_gpu.gd
           test -s tests/test_naval_base_v1_gpu.gd
           test -s NAVAL_BASE_V1_ARCHITECTURE.md
-          grep -q 'Base Naval · V10 · anclajes y bolardos reales' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Base Naval · V11 · juntas, pernos y cadenas' scripts/ui/CombinedArtStudioWeb.gd
           test -s scripts/ui/NavalBaseBerthsV3.gd
           test -s tests/test_naval_base_v3_gpu.gd
           test -s NAVAL_BASE_V3_BERTHS_SHIPYARD.md
@@ -295,7 +296,7 @@ jobs:
           grep -q 'NavalFendersV8.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'DefensasContactoAguaNavalV8' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'Detalle defensas y rampa' scripts/ui/CombinedArtStudioWeb.gd
-          grep -q 'camera.size=(8.4 if _naval_camera_view==5 else' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'camera.size=(6.2 if _naval_camera_view==6 else' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V8:' tests/test_naval_base_v8_gpu.gd
           test -s scripts/ui/NavalSculptedFendersV9.gd
           test -s assets/shaders/naval_rubber_pbr_v9.gdshader
@@ -311,6 +312,13 @@ jobs:
           grep -q 'AnclajesFenderYAmarresAlineadosV10' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'Anclajes y bolardos' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V10:' tests/test_naval_base_v10_gpu.gd
+          test -s scripts/ui/NavalContactFinishV11.gd
+          test -s tests/test_naval_base_v11_gpu.gd
+          test -s NAVAL_BASE_V11_CONTACT_FINISH.md
+          grep -q 'NavalContactV11.apply' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'ContactosSellosYCadenaNavalV11' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Unión caucho y hormigón' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'PASS NAVAL BASE V11:' tests/test_naval_base_v11_gpu.gd
           grep -q 'func _display_naval_base()' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'PASS NAVAL BASE V1:' tests/test_naval_base_v1_gpu.gd
           test -s scripts/ui/Airbase3DV1.gd
