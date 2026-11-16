@@ -110,6 +110,9 @@ var unit_art_gallery_button: Button
 var campaign_button: Button
 var iso_view_button: Button
 var battle_3d_button: Button
+var territory_lab_button: Button
+var territory_lab: Control
+var _territory_from_home := false
 var battle_3d_view: Control
 var battery_saver_button: Button
 var battle_minimap: Control
@@ -409,6 +412,13 @@ func _ready() -> void:
     battle_3d_button.custom_minimum_size.y = 51
     battle_3d_button.pressed.connect(_open_battle_3d)
     panel.add_child(battle_3d_button)
+    territory_lab_button = Button.new()
+    territory_lab_button.name = "TerritoriosYCampamentosExperimental"
+    territory_lab_button.text = "CONQUISTA · CAMPAMENTOS · PRUEBA"
+    territory_lab_button.tooltip_text = "Modo de prueba independiente; no reemplaza partidas guardadas ni el APK oficial."
+    territory_lab_button.custom_minimum_size.y = 48
+    territory_lab_button.pressed.connect(_open_territory_lab)
+    panel.add_child(territory_lab_button)
     battery_saver_button = Button.new()
     battery_saver_button.text = "Ahorro de batería: desactivado"
     battery_saver_button.custom_minimum_size.y = 43
@@ -909,6 +919,7 @@ func _ready() -> void:
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
     home_menu.credits_requested.connect(_open_credits_from_home)
+    home_menu.territorial_lab_requested.connect(_open_territory_lab)
 
     home_settings_menu = SettingsHomeScreen.new()
     add_child(home_settings_menu)
@@ -2515,3 +2526,31 @@ func _open_campaign() -> void:
 func _open_faction_gallery() -> void:
     if faction_gallery != null:
         faction_gallery.popup_centered_ratio(0.85)
+
+# A real, opt-in battle with the v19 capture/camp economy. It is intentionally
+# separate from the shipping TouchBoard: no normal autosave, AI, or HQ art is
+# changed until the extra-site save/UI migration has passed review.
+func _open_territory_lab() -> void:
+    if territory_lab != null and is_instance_valid(territory_lab):
+        return
+    _territory_from_home = home_menu != null and home_menu.visible
+    if home_menu != null:
+        home_menu.hide()
+    if command_menu != null:
+        command_menu.hide()
+    var lab_script: Script = load("res://scripts/ui/FixedSiteBattleV20.gd")
+    if lab_script == null:
+        if _territory_from_home and home_menu != null:
+            home_menu.show()
+        return
+    territory_lab = lab_script.new()
+    territory_lab.close_requested.connect(_close_territory_lab)
+    add_child(territory_lab)
+
+func _close_territory_lab() -> void:
+    if territory_lab != null and is_instance_valid(territory_lab):
+        territory_lab.queue_free()
+    territory_lab = null
+    if _territory_from_home and home_menu != null:
+        home_menu.show()
+    _territory_from_home = false
