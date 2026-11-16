@@ -95,12 +95,12 @@ func _run() -> void:
             "one-time build of all physical parts")
         check(Models.pose_model("aa_mobile", hero, "aim_ground", 0.5),
             "ground aim works with new trunnions")
-        var ground_basis: Basis = pitch.global_transform.basis if pitch != null else Basis.IDENTITY
+        var ground_basis: Basis = pitch.transform.basis if pitch != null else Basis.IDENTITY
         check(Models.pose_model("aa_mobile", hero, "aim_air", 0.5),
             "air aim works with new trunnions")
         if pitch != null:
             check(pitch.rotation_degrees.x >= 35.0 and
-                ground_basis != pitch.global_transform.basis,
+                ground_basis != pitch.transform.basis,
                 "moving bearing followers rotate with actual cannon elevation")
         check(Models.pose_model("aa_mobile", hero, "attack_ground", 0.42),
             "ground firing and original 2.5 cm recoil work")
