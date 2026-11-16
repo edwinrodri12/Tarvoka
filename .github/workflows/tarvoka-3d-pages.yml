@@ -176,7 +176,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -210,8 +210,56 @@ jobs:
           # are exchanged. HQ, naval base, airbase, barracks, APC, G11 and
           # helicopter modules retain their existing tested implementations.
           cp g09-unified-source/scripts/ui/Tank*.gd scripts/ui/
+          # Preserve post-V32 new roles (notably G13) while upgrading the
+          # approved tank geometry and rig from the exact V32 branch.
+          cp scripts/ui/UnitModels3D.gd /tmp/tarvoka-models-before-g09.gd
           cp g09-unified-source/scripts/ui/UnitModels3D.gd scripts/ui/UnitModels3D.gd
           cp g09-unified-source/scripts/ui/UnitArtStudioWeb.gd scripts/ui/UnitArtStudioWeb.gd
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/ui/UnitModels3D.gd')
+          current=p.read_text()
+          previous=Path('/tmp/tarvoka-models-before-g09.gd').read_text()
+          def replace_once(old,new):
+              global current
+              assert current.count(old)==1, 'G09 bridge mismatch: '+old[:65]
+              current=current.replace(old,new,1)
+          assert 'const G13AA = preload(' in previous
+          assert 'const G13DetailV2 = preload(' in previous
+          replace_once('"fighter","destroyer"]', '"fighter","destroyer","aa_mobile"]')
+          replace_once('const VisualStyle = preload(',
+              'const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")\\n'
+              'const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")\\n'
+              'const VisualStyle = preload(')
+          replace_once('"destroyer":5.10', '"destroyer":5.10,\\n    "aa_mobile":3.85')
+          replace_once('        "destroyer":\\n            _destroyer(model)',
+              '        "destroyer":\\n            _destroyer(model)\\n'
+              '        "aa_mobile":\\n'
+              '            if not G13AA.build(model,faction_paint_color(faction),'
+              ' finish_enabled and art_level>=13):\\n'
+              '                return null\\n'
+              '            if finish_enabled and art_level>=13:\\n'
+              '                G13DetailV2.apply(model,faction_paint_color(faction))')
+          replace_once('    else:\\n        model.scale = Vector3.ONE * 0.83',
+              '    elif role=="aa_mobile":\\n'
+              '        model.scale=Vector3.ONE*0.83\\n'
+              '        model.position.y=0.0\\n'
+              '    else:\\n        model.scale = Vector3.ONE * 0.83')
+          # Preserve the G13 animation interface along with the model.
+          source_pose='        "attack_heli":\\n            return AttackHelicopterV1.pose(model,kind,progress,target_heading)'
+          replace_once(source_pose,source_pose+
+              '\\n        "aa_mobile":\\n'
+              '            return G13AA.pose(model,kind,progress,target_heading)')
+          source_restore='        "attack_heli":\\n            AttackHelicopterV1.restore(model)'
+          replace_once(source_restore,source_restore+
+              '\\n        "aa_mobile":\\n            G13AA.restore(model)')
+          p.write_text(current)
+          assert 'TankTrackAlignmentV31.apply(model)' in current
+          assert 'G13DetailV2.apply(model' in current
+          assert '"aa_mobile"' in current
+          PY
+          test -s scripts/ui/G13MobileAirDefenseV1.gd
+          test -s scripts/ui/G13DetailV2.gd
           test -s scripts/ui/TankTrackAlignmentV31.gd
           test -s scripts/ui/TankHitReactionV30.gd
           grep -q 'var _v31_preview := false' scripts/ui/UnitArtStudioWeb.gd
