@@ -66,6 +66,11 @@ on:
       - 'tests/test_g11_360_gpu_v4.gd'
       - 'scripts/ui/G11MobileLOD.gd'
       - 'scripts/ui/G11TacticalReadabilityV24.gd'
+      - 'scripts/ui/G11BattleLODControllerV25.gd'
+      - 'scripts/ui/G11BattleContextV25.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'tests/test_g11_live_battle_context_v25.gd'
+      - 'tests/test_g11_live_battle_context_v25_capture.gd'
       - 'tests/test_g11_tactical_readability_v24.gd'
       - 'tests/test_g11_tactical_readability_v24_capture.gd'
       - 'tests/test_g11_mobile_lod.gd'
@@ -276,6 +281,20 @@ jobs:
             echo 'G11 V24 real battle-scale wheel clearance or LOD geometry failed'; exit 1
           fi
           grep -F 'PASS G11 V24:' /tmp/g11_v24.log
+      - name: Validate G11 V25 inside production 3D battle and 4 actual biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 160s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_live_battle_context_v25.gd 2>&1 | tee /tmp/g11_v25.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v25.log; then
+            echo 'G11 V25 actual BattleTerrain3D / camera LOD regression'; exit 1
+          fi
+          grep -F 'PASS G11 V25:' /tmp/g11_v25.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
@@ -626,6 +645,29 @@ jobs:
         with:
           name: tarvoka-g11-v24-16-real-godot-actual-battle-scale-lod8-lod10
           path: /tmp/g11-v24-tactical/*.png
+          retention-days: 14
+      - name: Render 16 true G11 V25 mixed-unit battlefield images across 4 biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v25-real-battle
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v25-real-battle \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_live_battle_context_v25_capture.gd 2>&1 | tee /tmp/g11_v25_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v25_capture.log; then
+            echo 'G11 V25 true combat-map screenshots failed'; exit 1
+          fi
+          grep -F 'PASS G11 V25 CAPTURE:' /tmp/g11_v25_capture.log
+          test "$(find /tmp/g11-v25-real-battle -name '*.png' | wc -l)" -eq 16
+      - name: Upload 16 real G11 V25 battle context Godot captures
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v25-16-real-mixed-unit-battles-four-biomes
+          path: /tmp/g11-v25-real-battle/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
