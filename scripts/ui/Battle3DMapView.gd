@@ -399,8 +399,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
         elif child is DirectionalLight3D:
             child.light_energy = 0.64 if climate == Weather.RAIN else (0.81 if climate == Weather.SNOW else 1.06)
     if climate != Weather.CLEAR:
-        var effect: TarvokaBattleWeather3D = Weather3D.new()
-        if effect.configure(climate):
+        var effect: Node3D = Weather3D.new()
+        if bool(effect.call("configure",climate)):
             _weather_layer = effect
             preview.add_child(_weather_layer)
         else:
