@@ -7,6 +7,8 @@ on:
       - "tests/test_role_specialization_v08.gd"
       - "tests/test_specialization_sensitivity_v09.gd"
       - "tests/test_specialization_tactical_v10.gd"
+      - "scripts/experiments/SpecializationEconomicsV11.gd"
+      - "tests/test_specialization_opportunity_cost_v11.gd"
       - ".github/workflows/role-specialization-v08.yml"
   workflow_dispatch:
 
@@ -60,6 +62,18 @@ jobs:
             echo 'Specialization tactical battle failed'; exit 1
           fi
           grep -Fq 'PASS specialization tactical v10:' /tmp/tarvoka-specialization-tactical-v10.log
+      - name: Compare real same-turn recruitment against field repair and optional antiarmor tech costs
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 520s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_specialization_opportunity_cost_v11.gd \
+            2>&1 | tee /tmp/tarvoka-specialization-economics-v11.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-specialization-economics-v11.log; then
+            echo 'Economic opportunity cost test failed'; exit 1
+          fi
+          grep -Fq 'PASS specialization opportunity v11:' /tmp/tarvoka-specialization-economics-v11.log
       - name: Archive combat and recovery evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,5 +83,6 @@ jobs:
             /tmp/tarvoka-role-specialization-v08.log
             /tmp/tarvoka-specialization-sensitivity-v09.log
             /tmp/tarvoka-specialization-tactical-v10.log
+            /tmp/tarvoka-specialization-economics-v11.log
           retention-days: 30
           if-no-files-found: ignore
