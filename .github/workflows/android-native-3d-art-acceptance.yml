@@ -1,0 +1,56 @@
+name: TARVOKA native 3D models Android acceptance
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/BastionStudioAdapter.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/UnitArtStudioWeb.gd"
+      - "scripts/ui/ApprovedBattleAssets3D.gd"
+      - "scripts/ui/Headquarters3D.gd"
+      - "scripts/ui/NavalBase3DV1.gd"
+      - "scripts/ui/Airbase3DV1.gd"
+      - "scripts/ui/SupplyCenter3DV1.gd"
+      - "tests/test_native_3d_studio_android.gd"
+      - ".github/workflows/android-native-3d-art-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  studio-native-geometry:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get official Godot 4.3 and import original sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl --fail --location --retry 3 "$base/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout 140s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/native-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/native-import.log; then exit 1; fi
+      - name: Construct and inspect four actual Godot 3D buildings
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_native_3d_studio_android.gd 2>&1 | tee /tmp/native-art-acceptance.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/native-art-acceptance.log; then exit 1; fi
+          grep -F 'PASS TARVOKA_NATIVE_3D_STUDIO_ANDROID:' /tmp/native-art-acceptance.log
+      - name: Save model validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-native-3D-studio-acceptance
+          path: |
+            /tmp/native-import.log
+            /tmp/native-art-acceptance.log
+          if-no-files-found: warn
+          retention-days: 14
