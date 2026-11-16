@@ -79,7 +79,7 @@ func _initialize() -> void:
         assert(original["units"][0]["hp"] == 10)
         assert(original["units"][0]["pos"] == Vector2i(1,2))
     # Root JSON values can parse successfully while still being invalid battle objects.
-    var invalid_roots: Array[String] = ["[]", "null"]
+    var invalid_roots: Array[String] = ["[]", "null", "true", "42", "\"orphan\""]
     for payload in invalid_roots:
         assert(Codec.decode(payload).is_empty(), "Non-object JSON root unexpectedly restored")
         assert(original["units"][0]["hp"] == 10)
