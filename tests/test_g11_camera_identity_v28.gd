@@ -59,9 +59,9 @@ func _run() -> void:
                 "nine units remain on authentic battle board")
             for step in [
                 {"size":34.0,"lod":8},
-                {"size":20.0,"lod":8},
+                {"size":15.5,"lod":8},
                 {"size":9.0,"lod":10},
-                {"size":20.0,"lod":10},
+                {"size":15.5,"lod":10},
                 {"size":34.0,"lod":8}
             ]:
                 camera.position=Vector3(18.0,26.0,20.0)
