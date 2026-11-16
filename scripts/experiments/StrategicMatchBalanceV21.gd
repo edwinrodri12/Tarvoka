@@ -261,8 +261,8 @@ static func _move(battle: Dictionary, side: int, policy: String) -> Dictionary:
                     range_factor = 140
                 if improvement <= 0 and range_factor <= 0:
                     continue
-                var value: int = improvement*16-new_dist+
-                    int(objective["weight"])+range_factor
+                var value: int = (improvement*16-new_dist+
+                    int(objective["weight"])+range_factor)
                 if str(objective["kind"]) == "site" and policy == "expansion":
                     value += 45
                 if str(objective["kind"]) == "enemy" and policy == "pressure":
