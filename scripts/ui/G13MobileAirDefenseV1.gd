@@ -263,6 +263,9 @@ static func pose(root: Node3D,kind: String,t: float,
     var yaw: float=0.0
     if heading!=Vector2i.ZERO:
         yaw=rad_to_deg(atan2(float(heading.x),-float(heading.y)))
+    # Preserve original V1 studio sweep for legacy generic aim/attack.
+    if kind in ["aim","attack"] and heading==Vector2i(0,-1):
+        yaw=-38.0+76.0*p
     var air: bool=kind in ["aim","attack","aim_air","attack_air"]
     var ground: bool=kind in ["aim_ground","attack_ground"]
     var firing: bool=kind in ["attack","attack_air","attack_ground"]
