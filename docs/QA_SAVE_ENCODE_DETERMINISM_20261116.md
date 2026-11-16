@@ -30,3 +30,9 @@ Tras recuperar dos copias independientes, la prueba modifica HP y terreno de la 
 Se añade una matriz de HP legal 1–10 para la primera unidad, conservando todos los demás campos. Cada variante debe producir bytes distintos, recuperar exactamente su estado y no modificar la batalla original ni sus bytes. Es una prueba de no colisión entre estados válidos, complementaria a los 20 ciclos del mismo estado.
 
 **Estado:** código registrado; Godot 4.3 CI del commit nuevo **NO EJECUTADO / pendiente de verificación**. Android físico **NO EJECUTADO EN DISPOSITIVO**. No se cambian reglas, serializador ni formato de guardado.
+
+## 2026-11-16 — Rechazo de JSON malformado y salida estricta
+
+La prueba cubre seis entradas externas inválidas: cadena vacía, objeto truncado, arreglo, null, objeto vacío y versión no compatible. Cada rechazo exige que el estado activo permanezca intacto y que una partida válida se recupere inmediatamente después. El workflow activa `set -euo pipefail`: errores o timeout de Godot no pueden ocultarse detrás de `tee` ni de un marcador PASS anterior.
+
+**Commits:** prueba `ee483eb1`, workflow `38d1b11a`. **Godot 4.3 de estos commits: NO EJECUTADO** hasta evidencia CI; **Android físico: NO EJECUTADO EN DISPOSITIVO**. Sin modificación del codec ni del formato de guardado; PR continúa DRAFT.
