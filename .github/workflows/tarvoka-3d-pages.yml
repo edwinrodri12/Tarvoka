@@ -10,6 +10,9 @@ on:
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
+      - "scripts/ui/G13CabRearFinishV11.gd"
+      - "scripts/ui/G13BodyFinishV11.gd"
+      - "scripts/ui/G13MechanicalFinishV12.gd"
       - "scripts/ui/G13DetailV2.gd"
       - "scripts/ui/G13UndercarriageV6.gd"
       - "scripts/ui/AttackHelicopterV1.gd"
@@ -198,6 +201,8 @@ jobs:
             cp "$g13_source" scripts/ui/
           done
           test -s scripts/ui/G13SilhouetteV10.gd
+          test -s scripts/ui/G13CabRearFinishV11.gd
+          test -s scripts/ui/G13BodyFinishV11.gd
           test -s hq-android-v15/tests/test_bastion_studio_web_ui.gd
           cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
           test -s hq-android-v15/tests/test_g13_studio_web_v1.gd
