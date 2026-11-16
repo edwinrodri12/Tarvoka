@@ -39,8 +39,14 @@ func _run() -> void:
             continue
         var hero_count: int=Models.inspect_meshes(hero)
         var belly:=_find(hero,"G11_ProteccionInferior")
-        _check(belly!=null and belly.mesh is ArrayMesh,
-            "rear underbody rectangle becomes original-place tapered hull")
+        var octagonal_hull:=_find(hero,"G11V2_CascoOctogonalCerrado")
+        _check(belly==null,
+            "square underbody geometry actually REMOVED, not recolored or tapered")
+        _check(octagonal_hull!=null and octagonal_hull.mesh is ArrayMesh,
+            "approved closed V2 octagonal hull keeps undercarriage covered")
+        _check(bool(hero.get_meta(
+            "tarvoka_g11_v30_redundant_underbody_removed",false)),
+            "V30 removal is explicitly recorded on actual hero node")
         for side in [-1,1]:
             var foot:=_find(hero,"G11_ZapataEstabilizador_%d" % side)
             var support:=_find(hero,"G11_Estabilizador_%d" % side)
@@ -53,7 +59,7 @@ func _run() -> void:
         _check(not Repair.apply_hero(hero),
             "hero repair idempotent: no duplicate rear geometry")
         _check(hero_count==Models.inspect_meshes(hero),
-            "hero rear correction adds no MeshInstance nodes")
+            "hero rear removal and correction never increase mesh count")
         _check(bool(hero.get_meta("tarvoka_g11_track_finish_v19",false))
             and bool(hero.get_meta("tarvoka_g11_joint_finish_v23",false)),
             "approved links, gears and suspension pins remain installed")
