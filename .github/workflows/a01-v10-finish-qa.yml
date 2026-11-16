@@ -1,0 +1,82 @@
+name: TARVOKA A01 V10 optical and mechanical finish native QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/AttackHelicopterFinishV10.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v10.gd'
+      - 'tests/test_attack_helicopter_v10_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v10-finish-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/AttackHelicopterFinishV10.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v10.gd'
+      - 'tests/test_attack_helicopter_v10_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v10-finish-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  a01-v10-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install original Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate native V10 physical finish, exact PBR rollback and lightweight battle compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v10.gd \
+            2>&1 | tee /tmp/a01-v10-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v10-qa.log; then
+            echo 'Native V10 QA failed'; exit 1
+          fi
+          grep -F 'PASS A01 V10:' /tmp/a01-v10-qa.log
+      - name: Capture 8 V10 angles, 4 exact V8 baselines and 4 real optical/motor closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v10-review
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v10-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v10_capture.gd \
+            2>&1 | tee /tmp/a01-v10-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v10-capture.log; then
+            echo 'Native V10 16-frame rendering failed'; exit 1
+          fi
+          grep -F 'PASS A01 V10 CAPTURE:' /tmp/a01-v10-capture.log
+          test "$(find /tmp/a01-v10-review -maxdepth 1 -name '*.png' | wc -l)" -eq 16
+      - name: Save all 16 actual Godot frames plus detailed QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v10-real-godot-16-frame-review
+          path: |
+            /tmp/a01-v10-review/*.png
+            /tmp/a01-v10-qa.log
+            /tmp/a01-v10-capture.log
+          if-no-files-found: warn
+          retention-days: 14

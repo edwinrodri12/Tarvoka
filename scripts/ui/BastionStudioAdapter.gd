@@ -44,6 +44,7 @@ const HeliV5 = preload("res://scripts/ui/AttackHelicopterLandingV5.gd")
 const HeliV6 = preload("res://scripts/ui/AttackHelicopterLandingFinishV6.gd")
 const HeliV7 = preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
 const HeliV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
+const HeliV10 = preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
@@ -78,6 +79,11 @@ var _heli_v7_enabled: bool=true
 var _heli_v7_button: Button
 var _heli_v8_enabled: bool=true
 var _heli_v8_button: Button
+var _heli_v10_enabled: bool=true
+var _heli_v10_button: Button
+var _heli_v10_rim_light: DirectionalLight3D
+var _heli_camera_base: Vector3=Vector3.ZERO
+var _heli_focus_local: Vector3=Vector3.ZERO
 var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_time: float=0.0
@@ -102,6 +108,7 @@ var _g11_context_biome_v25: String = ""
 
 func _ready() -> void:
     super._ready()
+    _heli_camera_base=camera.position if camera!=null else Vector3(5.3,4.2,6.3)
     _install_p06_controls()
     _install_g11_controls()
     _install_heli_controls()
@@ -109,12 +116,13 @@ func _ready() -> void:
     get_viewport().size_changed.connect(_heli_on_viewport_resize)
     _install_p06_lighting_v22()
     _install_g11_lighting_v23()
+    _install_heli_lighting_v10()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33 · revisión final y Android")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V8 silueta táctica de facción")
+        role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V10 cristales y acabados 3D")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -128,7 +136,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO A01 · V8 · IDENTIDAD DE SILUETA",14)
+    _title(heli_controls,"HELICÓPTERO A01 · V10 · ACABADO ÓPTICO Y MECÁNICO",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -167,13 +175,22 @@ func _install_heli_controls() -> void:
         "V8: alas y motor dorsal",func(): _heli_inspect(82.0,27.0,1.68))
     _add_paired(heli_controls,"V8: aleta de cola",func(): _heli_inspect(132.0,14.0,1.70),
         "V8: simetría desde arriba",func(): _heli_inspect(28.0,43.0,1.57))
+    _add_paired(heli_controls,"V10: cristal tándem",
+        func(): _heli_inspect_focus(34.0,12.0,2.26,Vector3(0,1.53,-0.76)),
+        "V10: corona de rotor",
+        func(): _heli_inspect_focus(38.0,48.0,2.30,Vector3(0,1.97,0.08)))
+    _add_paired(heli_controls,"V10: motor y escape",
+        func(): _heli_inspect_focus(130.0,24.0,2.04,Vector3(0.37,1.58,0.77)),
+        "V10: cañón y soporte",
+        func(): _heli_inspect_focus(25.0,-13.0,2.26,Vector3(0,0.59,-1.49)))
+    _heli_v10_button=_button(heli_controls,"Comparar acabados V8 / V10",_heli_toggle_v10)
     _heli_v8_button=_button(heli_controls,"Comparar identidad V7 / V8",_heli_toggle_v8)
     _heli_v7_button=_button(heli_controls,"Comparar legibilidad V6 / V7",_heli_toggle_v7)
     _heli_compare_button=_button(heli_controls,"Comparar casco anterior V1",_heli_toggle_v2)
     _button(heli_controls,"Detener y restaurar hélices",_heli_stop)
     _title(heli_controls,
-        "V8: paneles cerrados en las alas, hombros de motor y aleta vertical. "
-        + "Lectura a 320p sin modificar el LOD de batalla Android.",12)
+        "V10: cristales brillantes, aleación de motor, fijaciones físicas de rotor "
+        + "y remates de arma. Solo arte 3D de Estudio; no cambia el combate.",12)
     var index: int=column.get_children().find(detail_label)
     column.move_child(heli_controls,maxi(0,index))
     heli_controls.visible=false
@@ -249,8 +266,8 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
         role_picker.set_item_text(role_index,
-            "A01 · Helicóptero V8" if compact else
-            "Helicóptero de ataque A01 · V8 silueta táctica de facción")
+            "A01 · Helicóptero V10" if compact else
+            "Helicóptero de ataque A01 · V10 cristales y acabados 3D")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
@@ -309,10 +326,42 @@ func _heli_on_viewport_resize() -> void:
     if _role=="attack_heli" and model_root!=null:
         _update_camera()
 
+func _install_heli_lighting_v10() -> void:
+    # Single cool reflection with no extra WebGL shadows; disabled for other roles.
+    if preview==null:
+        return
+    _heli_v10_rim_light=DirectionalLight3D.new()
+    _heli_v10_rim_light.name="A01V10_LuzRasanteEstudio"
+    _heli_v10_rim_light.rotation_degrees=Vector3(-23.0,137.0,0.0)
+    _heli_v10_rim_light.light_color=Color("#c8e1ef")
+    _heli_v10_rim_light.light_energy=0.50
+    _heli_v10_rim_light.shadow_enabled=false
+    _heli_v10_rim_light.visible=false
+    preview.add_child(_heli_v10_rim_light)
+
+func _heli_inspect_focus(yaw: float,tilt: float,zoom_level: float,
+        local_point: Vector3) -> void:
+    _heli_inspect(yaw,tilt,zoom_level)
+    if _role!="attack_heli" or model_root==null:
+        return
+    _heli_focus_local=local_point
+    _update_camera()
+
+func _heli_toggle_v10() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV10.has_model(model_root):
+        return
+    _heli_stop()
+    _heli_v10_enabled=not _heli_v10_enabled
+    HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
+    _sync_p06_controls()
+    _update_details()
+    _update_camera()
+
 func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     if _role!="attack_heli" or model_root==null:
         return
     _heli_stop()
+    _heli_focus_local=Vector3.ZERO
     _yaw=yaw
     _zoom=zoom_level
     model_root.rotation_degrees=Vector3(tilt,yaw,0.0)
@@ -330,6 +379,7 @@ func _heli_toggle_v2() -> void:
     HeliV6.set_enabled(model_root,_heli_v2_enabled)
     HeliV7.set_enabled(model_root,_heli_v2_enabled and _heli_v7_enabled)
     HeliV8.set_enabled(model_root,_heli_v2_enabled and _heli_v8_enabled)
+    HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
     _update_details()
     _update_camera()
     _sync_p06_controls()
@@ -360,6 +410,7 @@ func _heli_view(yaw: float) -> void:
     _heli_stop()
     _yaw=yaw
     model_root.rotation_degrees=Vector3(0,yaw,0)
+    _heli_focus_local=Vector3.ZERO
     _update_camera()
 
 func _heli_top_view() -> void:
@@ -368,6 +419,7 @@ func _heli_top_view() -> void:
     _heli_stop()
     _yaw=38.0
     model_root.rotation_degrees=Vector3(43.0,_yaw,0.0)
+    _heli_focus_local=Vector3.ZERO
     _update_camera()
 
 func _heli_play(kind: String) -> void:
@@ -991,7 +1043,11 @@ func _update_camera() -> void:
         var normal: float=P06Models.preview_frame_height("attack_heli")*1.10/maxf(0.65,_zoom)
         var width_limit: float=6.5/aspect/maxf(0.65,_zoom)
         camera.size=maxf(normal,width_limit)
-        camera.look_at(Vector3(0,0.98,0.12),Vector3.UP)
+        var home:=Vector3(0,0.98,0.12)
+        var target: Vector3=(model_root.to_global(_heli_focus_local)
+            if _heli_focus_local!=Vector3.ZERO else home)
+        camera.position=_heli_camera_base+(target-home)
+        camera.look_at(target,Vector3.UP)
     if _role=="apc" and _p06_fleet!=null and camera!=null:
         # Orthographic view needs size rather than moving the camera closer.
         var full: float=13.4 if _p06_fleet_count<=8 else (
@@ -1007,7 +1063,12 @@ func _sync_p06_controls() -> void:
     var p06: bool = _role == "apc"
     if heli_controls != null:
         _heli_refresh_mobile_layout(get_viewport().get_visible_rect().size)
+    if _heli_v10_rim_light!=null:
+        _heli_v10_rim_light.visible=_role=="attack_heli"
     if _role == "attack_heli" and damage_picker != null:
+        if _heli_v10_button!=null:
+            _heli_v10_button.text=("Comparar acabado anterior V8" if _heli_v10_enabled
+                else "Activar acabado V10")
         damage_picker.visible=false
         faction_picker.visible=true
         if _heli_v8_button != null:
@@ -1063,6 +1124,9 @@ func _display_role(role: String) -> void:
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
         _hide_p06_fleet()
+    if role!="attack_heli" and _role=="attack_heli" and camera!=null:
+        camera.position=_heli_camera_base
+        _heli_focus_local=Vector3.ZERO
     super._display_role(role)
     if role == "attack_heli" and model_root != null:
         preview.remove_child(model_root)
@@ -1076,6 +1140,7 @@ func _display_role(role: String) -> void:
             HeliV6.set_enabled(model_root,_heli_v2_enabled)
             HeliV7.set_enabled(model_root,_heli_v2_enabled and _heli_v7_enabled)
             HeliV8.set_enabled(model_root,_heli_v2_enabled and _heli_v8_enabled)
+            HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
