@@ -1380,11 +1380,11 @@ func _apply_infantry_camera() -> void:
         return
     var points: Array[Vector3]=[
         Vector3(0,2.5,0),Vector3(0,1.25,-3.4),
-        Vector3(-5.55,1.0,-3.1),Vector3(0,1.5,0)]
+        Vector3(-6.05,0.48,-3.45),Vector3(0,1.5,0)]
     var offsets: Array[Vector3]=[
         Vector3(-17.1,11.6,-17.7),
         Vector3(-8.2,5.2,-11.3),
-        Vector3(-7.8,6.0,-8.7),
+        Vector3(-2.65,4.15,-4.30),
         Vector3(-0.02,28.0,-0.02)]
     var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
     var focus: Vector3=rotate*points[_infantry_camera_view]
@@ -2363,7 +2363,7 @@ func _update_camera() -> void:
     if _role=="infantry_barracks":
         if camera!=null:
             camera.size=(13.8 if _infantry_camera_view==1 else
-                15.2 if _infantry_camera_view==2 else
+                9.8 if _infantry_camera_view==2 else
                 19.5 if _infantry_camera_view==3 else
                 20.5)/maxf(0.35,_zoom)
         return
