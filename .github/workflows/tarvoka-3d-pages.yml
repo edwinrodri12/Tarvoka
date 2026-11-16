@@ -641,11 +641,14 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path battle-source --export-release 'Web Studio' \
-            build/web/index.html 2>&1 | tee /tmp/battle-pages-export.log
+            "$PWD/battle-source/build/web/index.html" 2>&1 | tee /tmp/battle-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/battle-pages-export.log; then
             echo 'TARVOKA Battle V8 WebGL export failed' >&2
             exit 1
           fi
+          test -s battle-source/build/web/index.pck
+          test -s battle-source/build/web/index.js
+          test -s battle-source/build/web/index.wasm
           cp -a battle-source/build/web/. build/web/batalla/
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla/$asset"
@@ -716,11 +719,14 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path tank-source --export-release 'Web Studio' \
-            build/web/index.html 2>&1 | tee /tmp/tank-pages-export.log
+            "$PWD/tank-source/build/web/index.html" 2>&1 | tee /tmp/tank-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/tank-pages-export.log; then
             echo 'G09 V32 WebGL export failed' >&2
             exit 1
           fi
+          test -s tank-source/build/web/index.pck
+          test -s tank-source/build/web/index.js
+          test -s tank-source/build/web/index.wasm
           cp -a tank-source/build/web/. build/web/tanque/
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/tanque/$asset"
@@ -773,72 +779,70 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
             --path battle-g09-source --export-release 'Web Studio' \
-            build/web/index.html 2>&1 | tee /tmp/g09-v27-pages-export.log
+            "$PWD/battle-g09-source/build/web/index.html" 2>&1 | tee /tmp/g09-v27-pages-export.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/g09-v27-pages-export.log; then
             echo 'G09 V32 live battle WebGL export failed' >&2
             exit 1
           fi
+          test -s battle-g09-source/build/web/index.pck
+          test -s battle-g09-source/build/web/index.js
+          test -s battle-g09-source/build/web/index.wasm
           cp -a battle-g09-source/build/web/. build/web/batalla-g09/
           for asset in index.html index.js index.pck index.wasm; do
             test -s "build/web/batalla-g09/$asset"
           done
-      # The next 3D unit is published in its OWN native Godot viewer.
-      # Do not replace G09 V32, terrain, battle or the approved HQ gallery.
-      - name: Check out sculpted APC P06 Bastión 6x6 source
-        uses: actions/checkout@v4
-        with:
-          ref: feat/apc-p06-v3-roof-armor-wear-damage-20261114
-          path: apc-p06-source
-          persist-credentials: false
-      - name: Export real APC P06 model and interactive 6x6/ramp controls at /apc/
+      # /apc/ MUST serve the same QA-tested, CURRENT Godot 3D studio that
+      # passed test_bastion_studio_web_ui.gd above. Never export the pinned
+      # 2026-11-14 APC V3 branch over the current V25 root bundle again.
+      # Copy root index.* after sibling exports have been isolated in their
+      # own paths; this keeps .pck, .js, .wasm, HTML and optional icons paired.
+      - name: Publish current QA-tested Bastión P06 under /apc/
         shell: bash
         run: |
           set -euo pipefail
-          test -s apc-p06-source/scripts/ui/APCArtV1.gd
-          test -s apc-p06-source/scripts/ui/APCArmorV2.gd
-          test -s apc-p06-source/scripts/ui/APCFinishV3.gd
-          test -s apc-p06-source/tests/test_apc_p06_art_v3.gd
-          test -s apc-p06-source/tests/export_apc_p06_v3_glb.gd
-          grep -q 'var _apc_v3_preview := true' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          grep -q '_cycle_apc_damage' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          grep -q 'APC V3 · TECHO, JUNTAS, TORRETA Y DAÑOS' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          grep -q 'APCFinishV3.apply_stage' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          test -s apc-p06-source/tests/test_apc_p06_art_v2.gd
-          test -s apc-p06-source/tests/export_apc_p06_v2_glb.gd
-          grep -q 'var _apc_v2_preview := true' apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          test -s apc-p06-source/scripts/ui/APCVisualRigV1.gd
-          test -s apc-p06-source/tests/test_apc_p06_art_v1.gd
-          test -s apc-p06-source/scripts/ui/UnitArtStudioWeb.gd
-          mkdir -p apc-p06-source/assets apc-p06-source/build/web build/web/apc
-          git -C apc-p06-source rev-parse --short=12 HEAD > apc-p06-source/assets/art_studio_revision.txt
-          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/UnitArtStudioWeb.tscn"|' apc-p06-source/project.godot
-          grep -q 'run/main_scene="res://scenes/UnitArtStudioWeb.tscn"' apc-p06-source/project.godot
+          test -s scripts/ui/APCClosedTiresV25.gd
+          test -s scripts/ui/APCRubberArchV24.gd
+          grep -q 'BastionP06_V25_CarcasasCerradas' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'PASS BASTION V25 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
+          for asset in index.html index.js index.pck index.wasm; do
+            test -s "build/web/${asset}"
+          done
+          rm -rf build/web/apc
+          mkdir -p build/web/apc
+          cp -a build/web/index.* build/web/apc/
+          # Guard against stale V3 assets in a newly published APC folder.
+          for asset in index.js index.pck index.wasm; do
+            cmp -s "build/web/${asset}" "build/web/apc/${asset}"
+          done
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('apc-p06-source/scripts/ui/UnitArtStudioWeb.gd')
-          src=p.read_text(encoding='utf-8')
-          needle='    _construct()\n    _display_role("tank")\n'
-          assert src.count(needle)==1
-          src=src.replace(needle,'    _construct()\n    _display_role("apc")\n',1)
-          p.write_text(src,encoding='utf-8')
+          import html
+          import os
+          import re
+
+          source = Path('scripts/ui/BastionStudioAdapter.gd').read_text(encoding='utf-8')
+          match = re.search(r'role_picker\.set_item_text\(idx,"([^"]+)"\)', source)
+          assert match and 'Bastión P06 · V25' in match.group(1), 'Current APC selection missing'
+          revision = os.environ['GITHUB_SHA'][:12]
+          viewer = Path('build/web/apc/index.html')
+          content = viewer.read_text(encoding='utf-8')
+          assert content.count('</body>') == 1
+          badge = (
+              '<div id="tarvoka-apc-build" role="status" '
+              'style="position:fixed;right:8px;bottom:8px;z-index:950;'
+              'padding:4px 7px;border-radius:6px;'
+              'background:#14202acc;color:#ffe3a5;'
+              'font:600 11px system-ui,Arial,sans-serif;pointer-events:none">'
+              + html.escape(match.group(1)) + ' · ' + revision + '</div>'
+          )
+          viewer.write_text(
+              content.replace('</body>', badge + '\n</body>'),
+              encoding='utf-8'
+          )
+          assert revision in viewer.read_text(encoding='utf-8')
           PY
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
-            --path apc-p06-source --import --quit 2>&1 | tee /tmp/apc-p06-pages-import.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Import failed' /tmp/apc-p06-pages-import.log; then
-            echo 'APC P06 source import failed' >&2
-            exit 1
-          fi
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
-            --path apc-p06-source --export-release 'Web Studio' \
-            build/web/index.html 2>&1 | tee /tmp/apc-p06-pages-export.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Export failed' /tmp/apc-p06-pages-export.log; then
-            echo 'APC P06 WebGL export failed' >&2
-            exit 1
-          fi
-          cp -a apc-p06-source/build/web/. build/web/apc/
-          for asset in index.html index.js index.pck index.wasm; do
-            test -s "build/web/apc/$asset"
-          done
+          test -s build/web/apc/index.html
+          test -s build/web/apc/index.pck
       - name: Add visible navigation among HQ V12, Battle V8 and G09 V32 studios
         shell: bash
         run: |
@@ -902,17 +906,17 @@ jobs:
                    '../tanque/', 'G09 · REVISIÓN ARTÍSTICA',
                    'Inspeccionar materiales de tanque V25 y escenarios V26', 136)
           add_link(Path('build/web/index.html'),
-                   'apc/', 'APC P06 V3 · ARCHIVO ANTERIOR',
-                   'Modelo V3 histórico: consulta el Bastión V7 actual en el Estudio principal', 196)
+                   'apc/', 'BASTIÓN P06 V25 · MODELO ACTUAL',
+                   'Bastión V25 con las seis carcasas cerradas y controles de inspección', 196)
           add_link(Path('build/web/tanque/index.html'),
-                   '../apc/', 'APC P06 V3 · HISTÓRICO',
-                   'Abrir el nuevo blindado sin alterar G09 V32', 196)
+                   '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
+                   'Inspeccionar Bastión V25 sin alterar G09 V32', 196)
           add_link(Path('build/web/batalla/index.html'),
-                   '../apc/', 'APC P06 V3 · ARCHIVO',
-                   'Revisar el nuevo transporte de tropas', 196)
+                   '../apc/', 'BASTIÓN P06 V25 · MODELO ACTUAL',
+                   'Revisar los seis neumáticos completos y sus daños', 196)
           add_link(Path('build/web/apc/index.html'),
-                   '../', 'BASTIÓN P06 V7 · VERSIÓN ACTUAL',
-                   'Volver al Estudio TARVOKA')
+                   '../', 'ESTUDIO CENTRAL · BASTIÓN P06 V25',
+                   'Volver al Estudio TARVOKA con Bastión V25')
           add_link(Path('build/web/apc/index.html'),
                    '../tanque/', 'TANQUE G09 V32 · FINAL',
                    'Inspeccionar el tanque terminado', 76)
@@ -930,10 +934,14 @@ jobs:
           grep -q 'G09 V32' build/web/tanque/index.html
           grep -q 'ESTUDIO' build/web/batalla-g09/index.html
           grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
-          grep -q 'APC P06' build/web/index.html
-          grep -q 'APC P06' build/web/tanque/index.html
+          grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
+          grep -q 'BASTIÓN P06 V25 · ACTUAL' build/web/tanque/index.html
           grep -q 'TANQUE G09 V32' build/web/apc/index.html
-          grep -q 'BASTIÓN P06 V7 · VERSIÓN ACTUAL' build/web/apc/index.html
+          grep -q 'ESTUDIO CENTRAL · BASTIÓN P06 V25' build/web/apc/index.html
+          grep -q 'tarvoka-apc-build' build/web/apc/index.html
+          cmp -s build/web/index.pck build/web/apc/index.pck
+          cmp -s build/web/index.js build/web/apc/index.js
+          cmp -s build/web/index.wasm build/web/apc/index.wasm
           touch build/web/.nojekyll
 
       - name: Upload GitHub Pages web site
