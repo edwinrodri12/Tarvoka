@@ -1,0 +1,78 @@
+name: TARVOKA integrated battle with veteran units cities and building tech v1.6
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/IntegratedBalanceBattleV16.gd"
+      - "tests/test_integrated_balance_rules_v16.gd"
+      - "tests/test_integrated_strategy_pairs_v16.gd"
+      - ".github/workflows/integrated-balance-v16.yml"
+      - "scripts/experiments/UnitVeterancyV14.gd"
+      - "scripts/experiments/CityDensityV14.gd"
+      - "scripts/experiments/BuildingProgressionV12.gd"
+  workflow_dispatch:
+
+jobs:
+  integrated_rules:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate distributed economy, progressive ownership and XP
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_integrated_balance_rules_v16.gd \
+            2>&1 | tee /tmp/tarvoka-integrated-rules-v16.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-integrated-rules-v16.log; then exit 1; fi
+          grep -Fq 'PASS integrated balance rules v16:' /tmp/tarvoka-integrated-rules-v16.log
+      - name: Archive validity log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-integrated-rules-v16
+          path: /tmp/tarvoka-integrated-rules-v16.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  strategy_ab:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run mirrored real-action city count and technology matches
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_integrated_strategy_pairs_v16.gd \
+            2>&1 | tee /tmp/tarvoka-integrated-ab-v16.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-integrated-ab-v16.log; then exit 1; fi
+          grep -Fq 'PASS integrated strategy pairs v16:' /tmp/tarvoka-integrated-ab-v16.log
+      - name: Archive A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-integrated-ab-v16
+          path: /tmp/tarvoka-integrated-ab-v16.log
+          retention-days: 30
+          if-no-files-found: ignore
