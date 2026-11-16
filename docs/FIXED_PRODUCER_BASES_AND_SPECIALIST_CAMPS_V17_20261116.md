@@ -81,7 +81,7 @@ Los campamentos de Rastreador e Ingeniero se pueden colocar solo en terrenos com
 - `scripts/experiments/SpecialistCampsV17.gd` — cuatro clases de campamentos con constructores exclusivos y bloqueo de roles no implementados.
 - `tests/test_fixed_producer_sites_v17.gd` — matrices de **12 mapas** (tres tamaños × cuatro tipos de escenario), ubicaciones espejo, cantidades máximas, bases neutrales y captura en dos fases propias.
 - `tests/test_specialist_camps_v17.gd` — coloca campamentos con Rastreador/Ingeniero, rechaza unidad incorrecta, fondos insuficientes, solapamiento, falsa especialización y construcción de centros de producción.
-- Workflow `.github/workflows/strategic-map-camps-v17.yml`. **No afirmar que las pruebas han aprobado hasta verificar el registro PASS en GitHub Actions.**
+- Workflow `.github/workflows/strategic-map-camps-v17.yml`. **Primera ejecución Godot 4.3 SUCCESS con PASS en ambos jobs:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43801006107. Registros confirman 12 mapas simétricos (10×8, 24×18, 40×30 × cuatro terrenos), parejas navales solo sobre agua, costes/constructores de campamentos y capturas en dos fases propias sin crear más instalaciones. **Se amplió después** el test para agotar los límites de campamentos y comprobar la reconquista de una base por el bando contrario; estos casos adicionales requieren una nueva ejecución independiente antes de proclamarlos aprobados.
 
 ## Siguientes prioridades después de validar
 
