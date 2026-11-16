@@ -452,3 +452,45 @@ QA: `tests/test_g11_tactical_paint_v27.gd` verifica las ocho facciones
 animación, conteo de geometría, bocas, orugas e integridad del modelo hero.
 Las 16 capturas existentes V25 se siguen generando con la nueva pintura
 táctica, para comparar visibilidad real en cuatro biomas.
+
+
+## V28 · contraste de identificación dependiente del zoom real
+
+**Problema:** después de V27 las cuatro placas pintadas originales tenían
+mayor superficie, pero seguían usando exactamente el mismo sombreado cuando
+el G11 ocupaba aproximadamente 40 píxeles de altura que cuando aparecía
+en primer plano. En los cuatro biomas las placas distantes aún podían
+perderse entre los otros vehículos.
+
+**Solución:** `G11CameraIdentityV28.gd` se integra en el controlador de
+cámara del mapa **real** `G11BattleLODControllerV25.gd`. Usa los LOD
+previos y su histéresis:
+- Vista lejana LOD8: conserva albedo de facción y aplica una emisión de la
+  **misma tonalidad** con multiplicador suave 0,22 a las cuatro placas
+  existentes (dos costados, insignia del techo y marca del módulo).
+- Vista cercana LOD10: restaura las referencias originales de material
+  exactamente como eran antes del refuerzo; evita halos y luces o
+  indicadores falsos.
+- Zoom intermedio: sigue la histéresis existente, por lo que los tonos y
+  las orugas no cambian repetidamente en la frontera entre niveles.
+
+En lugar de editar los materiales compartidos de las unidades del juego,
+el acabado atenuado se obtiene una vez por modelo mediante una copia.
+Se conservan los ocho tonos oficiales, el modelo hero V23, las bandas
+originales V27, las doce bocas V25 y la geometría de orugas V24. No se añaden
+mallas, nodos, contornos, luces de escena, marcadores ni unidades nuevas.
+`G11BattleContextV25` vuelve a enlazar las nuevas paletas de V26 tras
+repintar sus placas, para impedir colores desincronizados.
+
+El Estudio 3D añade zoom intermedio a sus controles cercano/lejano.
+El test `test_g11_camera_identity_v28.gd` recorre 4 biomas × 8 facciones
+× 2 G11 × cinco distancias con histéresis, confirma que el caché oficial
+de materiales no se alteró y que no cambiaron equipos, órdenes o estado
+de partida. La captura nativa `test_g11_camera_identity_v28_capture.gd`
+produce 24 imágenes de los cuatro biomas a distancias lejana, intermedia
+y cercana, directamente con la cámara/renderizador de Godot 4.3.
+
+**Alcance exclusivo:** apariencia del lanzador en partidas 3D, sin afectar
+combate, visión, niebla de guerra, IA, movimiento, estadísticas, munición,
+combustible, economía o guardados. El refuerzo visual nunca instancia una
+unidad que el renderizador de batalla oculte por niebla.
