@@ -48,6 +48,22 @@ func _audit_model(level: int,faction: int,damage: int) -> void:
         0 if damage==4 else level))
     assert(bool(v2.get_meta("infantry_v2_ruins_only",false))==(damage==4))
     assert(V1.mesh_count(model)>=v1_meshes)
+    if level==3 and damage<4:
+        # Genuine geometric non-overlap: N3 training CANNOT be under
+        # the west wing or the observation tower, even in damaged scenes.
+        var course: MeshInstance3D=model.find_child(
+            "SueloPista",true,false) as MeshInstance3D
+        var wing: MeshInstance3D=model.find_child(
+            "Piso_AlaOesteDosPisosN3",true,false) as MeshInstance3D
+        assert(course!=null and wing!=null)
+        var course_size: Vector3=(course.mesh as BoxMesh).size
+        var wing_size: Vector3=(wing.mesh as BoxMesh).size
+        var course_east: float=course.position.x+course_size.x*0.5
+        var wing_west: float=wing.position.x-wing_size.x*0.5
+        assert(course_east < wing_west-0.10)
+        var course_north: float=course.position.z+course_size.z*0.5
+        var tower_north_limit: float=3.65-1.62*0.5
+        assert(course_north < tower_north_limit-0.20)
     if damage==4:
         assert(V2.added_meshes(model)==0)
         assert(_count(model,"PuertaAcceso")==0)
