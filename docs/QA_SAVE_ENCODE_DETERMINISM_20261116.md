@@ -22,3 +22,5 @@ Diez intentos consecutivos de serializar HP negativo (−1 a −10), cada uno se
 
 ## Aislamiento de serializaciones hermanas — 2026-11-16
 Tras recuperar dos copias independientes, la prueba modifica HP y terreno de la primera, la serializa y exige: JSON distinto del original, roundtrip fiel de la copia modificada, JSON original intacto para la segunda copia y para la batalla activa. Código commit `38a20a7c`. Godot 4.3 del nuevo commit: **NO EJECUTADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**. Mantener PR #448 DRAFT hasta CI y regresiones pertinentes; no altera SaveCodec ni partidas comerciales.
+
+2026-11-16: Extended aliasing checks to mutate **both opposing units** and **opposite corners of the 10×8 terrain** in recovered snapshots. Expected: original and independently decoded snapshots stay unchanged. Godot 4.3 on this commit: **NO EJECUTADO**; Android physical: **NO EJECUTADO EN DISPOSITIVO**. No gameplay rules or save format changed.
