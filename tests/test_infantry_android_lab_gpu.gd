@@ -1,0 +1,94 @@
+extends SceneTree
+
+# Native Godot 4.3/OpenGL acceptance: the same V1-V5 meshes as Android.
+# Measures mesh visibility, never claims real Android FPS on Linux.
+const Lab=preload("res://scenes/InfantryBarracksAndroidLab.tscn")
+const BarracksV5=preload("res://scripts/ui/InfantryBarracksEntranceYardV5.gd")
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _frames(n: int=8) -> void:
+    for _i in range(n):
+        await process_frame
+
+func _capture(name: String) -> void:
+    await _frames(9)
+    var img: Image=root.get_texture().get_image()
+    assert(img!=null and img.get_width()>=640 and img.get_height()>=400)
+    var folder: String=ProjectSettings.globalize_path("res://artifacts")
+    assert(DirAccess.make_dir_recursive_absolute(folder)==OK)
+    assert(img.save_png("res://artifacts/infantry_android_%s.png" % name)==OK)
+
+func _run() -> void:
+    root.content_scale_size=Vector2i(1280,720)
+    var lab: Node3D=Lab.instantiate()
+    root.add_child(lab)
+    await _frames(9)
+    assert(lab._models.size()==1)
+    assert(lab._models[0].has_node(BarracksV5.STAGE_NAME))
+    assert(not lab._far_lod)
+    var first_stats: Dictionary=lab.model_mesh_stats()
+    assert(int(first_stats["visible_meshes"])>100)
+    print("INFANTRY ANDROID MODEL N3/1/CLOSE: ",JSON.stringify(first_stats))
+    await _capture("n3_close_1")
+
+    lab.set_scenario(3,1,0,0,true)
+    await _frames(6)
+    var far_one: Dictionary=lab.model_mesh_stats()
+    assert(int(far_one["total_meshes"])==int(first_stats["total_meshes"]))
+    assert(int(far_one["visible_meshes"])<int(first_stats["visible_meshes"]))
+    var one_hidden: int=int(far_one["hidden_meshes"])
+    assert(one_hidden>0)
+    print("INFANTRY ANDROID MODEL N3/1/FAR: ",JSON.stringify(far_one))
+    await _capture("n3_far_1")
+
+    lab.set_scenario(3,9,0,0,false)
+    await _frames(6)
+    var near_nine: Dictionary=lab.model_mesh_stats()
+    assert(lab._models.size()==9)
+    assert(int(near_nine["hidden_meshes"])==0)
+    await _capture("n3_close_9")
+    lab.set_scenario(3,9,0,0,true)
+    await _frames(6)
+    var far_nine: Dictionary=lab.model_mesh_stats()
+    assert(int(far_nine["total_meshes"])==int(near_nine["total_meshes"]))
+    assert(int(near_nine["visible_meshes"])-int(far_nine["visible_meshes"])==9*one_hidden)
+    assert(int(far_nine["hidden_meshes"])==9*one_hidden)
+    print("INFANTRY ANDROID MODEL N3/9/NEAR: ",JSON.stringify(near_nine))
+    print("INFANTRY ANDROID MODEL N3/9/FAR: ",JSON.stringify(far_nine))
+    await _capture("n3_far_9")
+
+    for level in range(1,4):
+        lab.set_scenario(level,4,2,0,false)
+        await _frames(4)
+        var near: Dictionary=lab.model_mesh_stats()
+        lab.set_scenario(level,4,2,0,true)
+        await _frames(4)
+        var far: Dictionary=lab.model_mesh_stats()
+        assert(int(far["total_meshes"])==int(near["total_meshes"]))
+        assert(int(far["hidden_meshes"])>0)
+        assert(int(far["visible_meshes"])<int(near["visible_meshes"]))
+        print("INFANTRY ANDROID MODEL N%d/4 LOD DELTA: %d/%d" % [
+            level,int(far["hidden_meshes"]),int(near["visible_meshes"])])
+
+    lab.set_scenario(3,4,7,4,true)
+    await _frames(5)
+    assert(lab._models.size()==4)
+    for model in lab._models:
+        assert(model.has_node(BarracksV5.STAGE_NAME))
+        assert(int(model.get_meta("visual_damage_stage",-1))==4)
+        assert(BarracksV5.lod_stats(model).get("total_meshes",-1)==0)
+    await _capture("n3_destroyed_4")
+
+    lab.set_scenario(2,4,1,2,false)
+    await _frames(5)
+    assert(lab._models.size()==4)
+    await _capture("n2_damaged_4")
+    var report_payload=JSON.parse_string(lab._report_json())
+    assert(report_payload is Dictionary)
+    assert(not bool(report_payload.get("hardware_android_tested",false)))
+    print("PASS INFANTRY ANDROID LAB: real V1-V5 meshes, LOD visibility scales 1/4/9, level 1-3, five damage states preserved, six original OpenGL captures, separate from production gameplay")
+    lab.queue_free()
+    await _frames(3)
+    quit(0)
