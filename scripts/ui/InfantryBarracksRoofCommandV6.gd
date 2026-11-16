@@ -184,8 +184,8 @@ static func _finish_surfaces(stage: Node3D,accent: Color) -> void:
                 kind="glass"
             elif name.contains("perfiltechodanado"):
                 kind="rubble"
-            elif name.contains("cubierta") or name.contains("tapa") or
-                    name.contains("remate") or name.contains("borde"):
+            elif (name.contains("cubierta") or name.contains("tapa") or
+                    name.contains("remate") or name.contains("borde")):
                 kind="roof"
             piece.material_override=V3._finish_material(material,kind)
             textured+=1
