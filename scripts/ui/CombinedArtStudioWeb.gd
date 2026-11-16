@@ -2429,6 +2429,9 @@ func _update_camera() -> void:
                 9.8 if _infantry_camera_view==2 else
                 19.5 if _infantry_camera_view==3 else
                 20.5)/maxf(0.35,_zoom)
+        if model_root!=null and model_root.has_node(InfantryBarracksV5.STAGE_NAME):
+            # Keep architectural silhouette; hide tiny pieces at wide zoom.
+            InfantryBarracksV5.set_detail_lod(model_root,camera!=null and camera.size<=21.0)
         return
     if _role=="naval_base":
         if camera!=null:
