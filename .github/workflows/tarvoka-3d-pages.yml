@@ -14,6 +14,7 @@ on:
       - "scripts/ui/G13BodyFinishV11.gd"
       - "scripts/ui/G13MechanicalFinishV12.gd"
       - "scripts/ui/G13SurfaceFinishV13.gd"
+      - "scripts/ui/G13SensorSculptV14.gd"
       - "scripts/ui/G13DetailV2.gd"
       - "scripts/ui/G13UndercarriageV6.gd"
       - "scripts/ui/AttackHelicopterV1.gd"
