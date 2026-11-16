@@ -31,6 +31,15 @@ func _initialize() -> void:
         assert(state == before, "Decoded unit/terrain must not alias active state")
         assert(Codec.encode(state) == first, "Mutated decoded copy must not change serialized source")
         assert(Codec.decode(first) == before, "Fresh decode after mutation must recover pristine snapshot")
+    # A serialized snapshot must be independent of subsequent source edits.
+    var edited_source: Dictionary = state.duplicate(true)
+    var frozen: String = Codec.encode(edited_source)
+    assert(frozen == first, "Independent source must encode identically")
+    edited_source["units"][0]["hp"] = 3
+    edited_source["terrain"][0][0] = "forest"
+    assert(Codec.decode(frozen) == before, "Serialized snapshot must not track later source edits")
+    assert(Codec.encode(edited_source) != frozen, "Changed source must produce a distinct snapshot")
+    assert(state == before, "Source edits must not leak into active battle")
     # Invalid inputs must fail closed without mutating the caller's state.
     var invalid: Dictionary = state.duplicate(true)
     invalid["units"][0]["hp"] = -1
