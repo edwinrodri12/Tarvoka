@@ -27,7 +27,9 @@ static func base_material(model: Node3D) -> StandardMaterial3D:
     # Return the unmodified original, not an emission-enhanced finish.
     if model==null:
         return null
-    return model.get_meta(NORMAL_KEY,null) as StandardMaterial3D
+    if not model.has_meta(NORMAL_KEY):
+        return null
+    return model.get_meta(NORMAL_KEY) as StandardMaterial3D
 
 static func _paint_parts(model: Node3D) -> Array[MeshInstance3D]:
     var out: Array[MeshInstance3D]=[]
@@ -49,7 +51,9 @@ static func bind(model: Node3D,level: int = FAR_LEVEL) -> bool:
         return false
     var current := parts[0].material_override as StandardMaterial3D
     var normal := base_material(model)
-    var far := model.get_meta(FAR_KEY,null) as StandardMaterial3D
+    var far: StandardMaterial3D=null
+    if model!=null and model.has_meta(FAR_KEY):
+        far=model.get_meta(FAR_KEY) as StandardMaterial3D
     # On first bind take the factory paint; on rebind take the V26 gallery
     # paint. Neither is ever mutated, which avoids repainting other units.
     if normal==null or far==null or (
@@ -73,7 +77,9 @@ static func set_detail(model: Node3D,level: int) -> bool:
     if parts.size()!=PARTS.size():
         return false
     var normal := base_material(model)
-    var far := model.get_meta(FAR_KEY,null) as StandardMaterial3D
+    var far: StandardMaterial3D=null
+    if model!=null and model.has_meta(FAR_KEY):
+        far=model.get_meta(FAR_KEY) as StandardMaterial3D
     if normal==null or far==null:
         return false
     var finish: StandardMaterial3D=far if level==FAR_LEVEL else normal
