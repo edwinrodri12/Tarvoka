@@ -13,6 +13,8 @@ const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
+const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
+const G11Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
@@ -516,6 +518,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var visible_count := 0
     var detailed := 0
     var apc_lod := 0
+    var g11_lod := 0
     var hidden_enemies := 0
     var player: int = viewer
     for unit in state.get("units",[]):
@@ -538,6 +541,13 @@ static func _make_units(parent: Node3D,state: Dictionary,
             model = Models.build("apc",faction,false,8)
             if model!=null:
                 apc_lod+=1
+        elif role=="mlrs":
+            # V25: the actual 3D battle camera must use the corrected V24
+            # rounded tracks rather than a legacy G11 LOD6 box silhouette.
+            # One logical unit, no hero art and never a gameplay mutation.
+            model = Models.build("mlrs",faction,false,8)
+            if model!=null and bool(model.get_meta(G11Tactical.FLAG,false)):
+                g11_lod+=1
         elif detailed < MAX_DETAILED_UNITS and Models.supports(role):
             model = Models.build(role,faction,false,6)
             if model != null:
@@ -570,7 +580,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
         parent.add_child(model)
         visible_count += 1
     return {"visible":visible_count,"detailed":detailed,
-        "apc_lod":apc_lod,"hidden_enemies":hidden_enemies}
+        "apc_lod":apc_lod,"g11_lod":g11_lod,
+        "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
     var biome: String = Biomes.from_state(state)
@@ -622,6 +633,17 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
         counters["apc_distance_lod"]=true
     else:
         counters["apc_distance_lod"]=false
+    if int(counters["units"].get("g11_lod",0))>0:
+        var g11_driver: Node=G11BattleLOD.new()
+        g11_driver.name="G11V25_LOD_Camara"
+        scene.add_child(g11_driver)
+        for child in scene.get_children():
+            if child is Node3D and bool(child.get_meta(
+                    G11Tactical.FLAG,false)):
+                g11_driver.register(child as Node3D)
+        counters["g11_camera_lod"]=true
+    else:
+        counters["g11_camera_lod"]=false
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.
