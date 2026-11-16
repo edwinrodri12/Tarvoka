@@ -45,7 +45,7 @@ func _run() -> void:
             world.add_child(context)
             await process_frame
             var scene := _find(context,"MapaTactico3DReal")
-            var driver := _find(context,"G11V25_LOD_Camara") as Driver
+            var driver := context.find_child("G11V25_LOD_Camara",true,false) as Driver
             _check(scene!=null and driver!=null and driver.units.size()==2,
                 "production map creates a single LOD driver for both true G11")
             if driver==null or scene==null:
