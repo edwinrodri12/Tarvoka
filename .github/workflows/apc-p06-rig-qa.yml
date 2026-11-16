@@ -31,6 +31,7 @@ on:
       - 'scripts/ui/APCMicrodetailV20.gd'
       - 'scripts/ui/APCMaterialFinishV21.gd'
       - 'scripts/ui/APCWeatherFinishV22.gd'
+      - 'scripts/ui/APCTireFinishV23.gd'
       - 'tests/test_bastion_v15_undercarriage.gd'
       - 'tests/test_bastion_v16_joint_finish.gd'
       - 'tests/test_bastion_v17_contours.gd'
@@ -45,6 +46,8 @@ on:
       - 'tests/test_bastion_v21_360_capture.gd'
       - 'tests/test_bastion_v22_weather.gd'
       - 'tests/test_bastion_v22_climate_capture.gd'
+      - 'tests/test_bastion_v23_tires.gd'
+      - 'tests/test_bastion_v23_tire_capture.gd'
       - 'tests/test_bastion_v14_wheel_sculpt.gd'
       - 'tests/test_bastion_v13_materials.gd'
       - 'tests/test_bastion_v12_turret.gd'
@@ -72,6 +75,7 @@ on:
       - 'scripts/ui/APCMicrodetailV20.gd'
       - 'scripts/ui/APCMaterialFinishV21.gd'
       - 'scripts/ui/APCWeatherFinishV22.gd'
+      - 'scripts/ui/APCTireFinishV23.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_bastion_v16_joint_finish.gd'
@@ -87,6 +91,8 @@ on:
       - 'tests/test_bastion_v21_360_capture.gd'
       - 'tests/test_bastion_v22_weather.gd'
       - 'tests/test_bastion_v22_climate_capture.gd'
+      - 'tests/test_bastion_v23_tires.gd'
+      - 'tests/test_bastion_v23_tire_capture.gd'
   workflow_dispatch:
 
 jobs:
@@ -107,7 +113,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage test_bastion_v16_joint_finish test_bastion_v17_contours test_bastion_v18_wheelwell test_bastion_v19_unified_flank test_bastion_v20_microdetail test_bastion_v21_materials test_bastion_v22_weather; do
+          for entry in test_bastion_visual_damage test_bastion_visual_rig test_bastion_v5_studio test_bastion_v6_finish test_bastion_v7_machinegun_damage test_bastion_v8_mobile_stress test_bastion_v8_audio test_bastion_v9_distance_motion test_bastion_v10_rear_design test_bastion_v11_exterior test_bastion_v12_turret test_bastion_v13_materials test_bastion_v14_wheel_sculpt test_bastion_v15_undercarriage test_bastion_v16_joint_finish test_bastion_v17_contours test_bastion_v18_wheelwell test_bastion_v19_unified_flank test_bastion_v20_microdetail test_bastion_v21_materials test_bastion_v22_weather test_bastion_v23_tires; do
             # Use Mesa software OpenGL via Xvfb instead of the null headless
             # renderer (whose mesh teardown emits 'Parameter m is null').
             timeout --signal=TERM --kill-after=5s 90s \
@@ -121,26 +127,26 @@ jobs:
             fi
             grep -F 'PASS ' "/tmp/${entry}.log"
           done
-      - name: Capture Bastion V22 under 9 lighting and climate scenarios (not FPS)
+      - name: Capture 17 detailed Godot tire views of all six V23 wheels (not FPS)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/bastion-p06-v22-climate
+          mkdir -p /tmp/bastion-p06-v23-tires
           timeout --signal=TERM --kill-after=5s 160s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 P06_CAPTURE_DIR=/tmp/bastion-p06-v22-climate \
+            env LIBGL_ALWAYS_SOFTWARE=1 P06_CAPTURE_DIR=/tmp/bastion-p06-v23-tires \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_bastion_v22_climate_capture.gd \
-            2>&1 | tee /tmp/p06-v22-climate.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/p06-v22-climate.log; then
+            --script res://tests/test_bastion_v23_tire_capture.gd \
+            2>&1 | tee /tmp/p06-v23-tires.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/p06-v23-tires.log; then
             exit 1
           fi
-          grep -F 'PASS BASTION V22 CLIMATE:' /tmp/p06-v22-climate.log
-          test "$(find /tmp/bastion-p06-v22-climate -maxdepth 1 -name '*.png' | wc -l)" -eq 17
+          grep -F 'PASS BASTION V23 TIRE CAPTURE:' /tmp/p06-v23-tires.log
+          test "$(find /tmp/bastion-p06-v23-tires -maxdepth 1 -name '*.png' | wc -l)" -eq 17
       - name: Attach 17 native 3D model review frames
         uses: actions/upload-artifact@v4
         with:
-          name: bastion-p06-v22-climate-godot-frames
-          path: /tmp/bastion-p06-v22-climate/*.png
+          name: bastion-p06-v23-tires-godot-frames
+          path: /tmp/bastion-p06-v23-tires/*.png
           if-no-files-found: error

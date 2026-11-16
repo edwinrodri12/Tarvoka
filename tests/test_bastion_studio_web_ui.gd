@@ -68,6 +68,15 @@ func _run() -> void:
             "V21 real triplanar PBR material library applied to 3D sculpt")
         _check(bool(model.get_meta("tarvoka_apc_weather_v22",false)),
             "V22 real PBR weather finishes are attached to the Bastion model")
+        _check(bool(model.get_meta("tarvoka_apc_complete_tires_v23",false)),
+            "V23 all six tires have genuine tread and sculpted sidewalls")
+        var first_wheel: Node3D=model.find_child(
+            "RuedaMotorizadaP06_1_0",true,false) as Node3D
+        var first_tread: MeshInstance3D=first_wheel.find_child(
+            "P06V23_BandaContinua160Tacos",true,false) as MeshInstance3D
+        _check(first_tread!=null and first_tread.mesh is ArrayMesh and
+            (first_tread.mesh as ArrayMesh).surface_get_array_len(0)==5760,
+            "actual 160 closed curved 3D tire blocks are in web scene")
         _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="clear",
             "default display respects original clear V21 paint")
         var v21paint: MeshInstance3D=model.find_child(
@@ -200,6 +209,8 @@ func _run() -> void:
         "V21 exposed steel and soot follow critical damage state")
     _check(int(model.get_meta("tarvoka_apc_v22_stage",-1))==3,
         "V22 rain/snow finish follows five reversible visual damage stages")
+    _check(int(model.get_meta("tarvoka_apc_v23_stage",-1))==3,
+        "V23 front tire cut follows progressive cosmetic damage")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -315,6 +326,9 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v22_visible",true),
         "V3 comparison also hides rain and frost weather overlays")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v23_visible",true),
+        "V3 comparison hides new dense tires, exposes legacy tread")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -357,6 +371,9 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v22_visible",false),
         "V22 weather overlay is available after historical comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v23_visible",false),
+        "V23 complete tire geometry returns after comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -449,6 +466,20 @@ func _run() -> void:
     _check(str(model.get_meta("tarvoka_apc_v22_weather",""))=="clear" and
         int(studio.get("_p06_light_v22"))==0,
         "clean daylight preset restores original showroom materials")
+    studio.call("_inspect_p06_tread_v23")
+    _check(absf(float(studio.get("_yaw"))-96.0)<0.01,
+        "V23 new 3D tire tread closeup camera is functional")
+    studio.call("_inspect_p06_sidewall_v23")
+    _check(absf(float(studio.get("_yaw"))-81.0)<0.01,
+        "V23 both-wheel sidewall inspection camera works")
+    studio.call("_inspect_p06_opposite_v23")
+    _check(absf(float(studio.get("_yaw"))+94.0)<0.01,
+        "V23 opposite-side six-wheel inspection works")
+    studio.call("_inspect_p06_snow_v23")
+    _check(str(model.get_meta("tarvoka_apc_v23_weather",""))=="snow" and
+        model.find_child("P06V23_NieveSobreHombros",true,false).visible,
+        "V23 snow preset actually deposits physical 3D snow on tire")
+    studio.call("_set_p06_weather_v22","clear")
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
         "native chassis actually rotates to expose underside")
@@ -584,5 +615,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V22 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V23 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
