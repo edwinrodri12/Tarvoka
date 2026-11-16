@@ -122,7 +122,9 @@ static func build(model: Node3D, faction_color: Color,
         Vector3(1.04,0.25,0.82),steel)
     var pod := Node3D.new()
     pod.name = POD
-    pod.rotation_degrees.x = 25.0
+    # V25: rear-facing rocket mouths must elevate toward an overhead camera.
+    # Positive X tipped the +Z muzzles down into the body; use -25 degrees.
+    pod.rotation_degrees.x = -25.0
     pod.position = Vector3(0,0.32,0.04)
     rotator.add_child(pod)
     _box(pod,"BloqueLanzador",Vector3(0,0,0.10),
@@ -170,12 +172,12 @@ static func pose(model: Node3D, kind: String, progress: float,
             var desired_yaw: float = rad_to_deg(
                 atan2(-float(target_heading.x),-float(target_heading.y)))
             rotator.rotation_degrees.y = desired_yaw*t
-            pod.rotation_degrees.x = 25.0+12.0*t
+            pod.rotation_degrees.x = -25.0-12.0*t
         "move":
-            pod.rotation_degrees.x = 25.0+sin(t*TAU*2.0)*0.5
+            pod.rotation_degrees.x = -25.0+sin(t*TAU*2.0)*0.5
         "idle":
             rotator.rotation_degrees = Vector3.ZERO
-            pod.rotation_degrees = Vector3(25,0,0)
+            pod.rotation_degrees = Vector3(-25,0,0)
         _:
             return false
     return true
