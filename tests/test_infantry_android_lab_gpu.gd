@@ -106,6 +106,18 @@ func _run() -> void:
     assert(lab._ab_active and lab._ab_phase==0 and not lab._far_lod)
     lab.set_scenario(1,1,0,0,false)
     assert(not lab._ab_active)
+    # Exercise the entire A/B sequence through the actual _process loop:
+    # warmup + 180 samples near, then warmup + 180 samples far.
+    lab.begin_ab_compare()
+    await _frames(2*(lab.WARMUP_FRAMES+lab.SAMPLE_FRAMES)+16)
+    assert(not lab._ab_active)
+    assert(lab._ab_comparisons.size()==1)
+    var completed_ab: Dictionary=lab._ab_comparisons[0]
+    assert(not bool(completed_ab["android_hardware_tested"]))
+    assert(int(completed_ab["near_visible_meshes"])>
+        int(completed_ab["far_visible_meshes"]))
+    print("INFANTRY ANDROID LAB A/B desktop-smoke: ",
+        JSON.stringify(completed_ab))
     var report_payload=JSON.parse_string(lab._report_json())
     assert(report_payload is Dictionary)
     assert(not bool(report_payload.get("hardware_android_tested",false)))
