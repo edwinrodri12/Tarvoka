@@ -11,7 +11,7 @@ const REQUIRED := "tarvoka_g11_shock_mount_finish_v21"
 const CUTAWAY := "tarvoka_g11_v22_studio_cutaway_side"
 const ROOT := "G11_CascoRaiz"
 const AXLES := 6
-const SIDE_X := 0.124
+const SIDE_X := 0.115
 const LOWER_OFFSET_Y := 0.105
 const UPPER_Y := -0.053
 const EAR_X := 0.020
@@ -169,7 +169,7 @@ static func apply(model: Node3D) -> bool:
 static func set_inspection(model: Node3D,side: int) -> bool:
     if model == null or not bool(model.get_meta(FLAG,false)):
         return false
-    if side not in [-1,0,1]:
+    if side != -1 and side != 0 and side != 1:
         return false
     var root := _part(model,ROOT)
     if root == null:
