@@ -28,15 +28,15 @@ static func _free(terrain: Array, banned: Array) -> Vector2i:
     return Vector2i(-1,-1)
 
 func _run() -> void:
-    var main: Control = load("res://scenes/Main.tscn").instantiate()
+    print("V20_CHECKPOINT START main")\n    var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
     await process_frame
-    var prior: Dictionary = main.board.state.duplicate(true)
+    print("V20_CHECKPOINT MAIN ready")\n    var prior: Dictionary = main.board.state.duplicate(true)
     main._show_home_menu()
     assert(main.home_menu.visible)
     assert(main.home_menu.primary_buttons.has("Conquistas · prueba"))
     main.home_menu.territorial_lab_requested.emit()
-    assert(main.territory_lab != null)
+    print("V20_CHECKPOINT LAB opened")\n    assert(main.territory_lab != null)
     assert(not main.home_menu.visible)
     var ui: Control = main.territory_lab
     assert(ui.session.get("valid",false))
@@ -48,7 +48,7 @@ func _run() -> void:
     assert(ui.attack_button.disabled)
     assert(ui.session["world"]["layout"]["core_site_cap_exceeded"])
     var initial_sites: int = ui.session["world"]["layout"]["sites"].size()
-    var first: Dictionary = {}
+    print("V20_CHECKPOINT STARTERS")\n    var first: Dictionary = {}
     for unit in ui.session["world"]["state"]["units"]:
         if int(unit["faction"]) == 0 and str(unit["role"]) == "scout":
             first = unit
@@ -65,7 +65,7 @@ func _run() -> void:
     assert(bool(_unit(ui.session["world"]["state"]["units"],str(first["id"]))["acted"]))
     assert(ui.session["world"]["layout"]["sites"].size() == initial_sites)
     assert(ui.camp_button.disabled)
-    ui.save_lab()
+    print("V20_CHECKPOINT CAMP built")\n    ui.save_lab()
     assert(FileAccess.file_exists(LabUI.SAVE_PATH))
     var snapshot: String = Orders.encode(ui.session)
     ui.load_lab()
@@ -83,7 +83,7 @@ func _run() -> void:
     ui._change_zoom(-3)
     assert(ui.board_view.cell_pixels == 22)
 
-    var size := Vector2i(24,18)
+    print("V20_CHECKPOINT NEW CAPTURE MAP")\n    var size := Vector2i(24,18)
     var terrain: Array = Scenarios.terrain(0,size)
     var layout: Dictionary = Sites.layout(terrain)
     var base: Dictionary = {}
@@ -103,12 +103,12 @@ func _run() -> void:
     ui.select_cell(base["pos"])
     assert(ui.buy_button.disabled)
     assert(str(ui.info.text).contains("Captura: 0/2"))
-    ui._end_turn() # First own phase, 1/2.
+    print("V20_CHECKPOINT CAPTURE turn 1")\n    ui._end_turn() # First own phase, 1/2.
     assert(str(ui.info.text).contains("Captura: 1/2"))
     assert(int(Orders.site_card(ui.session,base["pos"])["owner"]) == -1)
     ui._end_turn() # Enemy phase, do not erase original hold.
     assert(int(Orders.site_card(ui.session,base["pos"])["progress"]) == 1)
-    ui._end_turn() # Second own phase -> factory switches owner.
+    print("V20_CHECKPOINT CAPTURE turn 2")\n    ui._end_turn() # Second own phase -> factory switches owner.
     assert(int(Orders.site_card(ui.session,base["pos"])["owner"]) == 0)
     assert(ui.session["world"]["layout"]["sites"].size() == layout["sites"].size())
     ui._end_turn() # Back to the new owner's phase.
@@ -116,7 +116,7 @@ func _run() -> void:
     ui.select_cell(base["pos"]) # Soldier is currently blocking surface production.
     assert(ui.buy_button.disabled)
     assert(ui.selected_unit_id == "CAP")
-    var legal: Dictionary = Hints.for_unit(ui.session["world"]["state"],"CAP")
+    print("V20_CHECKPOINT MOVE AFTER CAPTURE")\n    var legal: Dictionary = Hints.for_unit(ui.session["world"]["state"],"CAP")
     var destination := Vector2i(-1,-1)
     for cell in legal.get("moves",{}):
         destination = cell
@@ -132,7 +132,7 @@ func _run() -> void:
     var funds_before: int = int(ui.session["world"]["state"]["economy"]["credits"][0])
     var units_before: int = ui.session["world"]["state"]["units"].size()
     var role: String = str(ui.buy_picker.get_selected_metadata())
-    ui.buy_button.pressed.emit()
+    print("V20_CHECKPOINT PURCHASE")\n    ui.buy_button.pressed.emit()
     assert(ui.session["world"]["state"]["units"].size() == units_before+1)
     assert(int(ui.session["world"]["state"]["economy"]["credits"][0]) == funds_before-Economy.cost(role))
     assert(ui.buy_button.disabled) # One production per facility per phase.
@@ -149,7 +149,7 @@ func _run() -> void:
         assert(card["kind"] == "shipyard")
         assert(card["position"] == coast["pos"])
         assert(card["capture_position"] == coast["capture_pos"])
-    main._close_territory_lab()
+    print("V20_CHECKPOINT CLOSE")\n    main._close_territory_lab()
     assert(main.territory_lab == null)
     assert(main.home_menu.visible)
     assert(main.board.state == prior)
