@@ -7,6 +7,8 @@ signal close_requested
 # engine and its independent saves. It is NOT the shipping two-faction mode,
 # nor does it touch any old save/autosave or the core combat logic.
 const Orders = preload("res://scripts/experiments/FixedSiteOrdersV19.gd")
+const Lab = preload("res://scripts/experiments/CapturableProductionV18.gd")
+const Sites = preload("res://scripts/experiments/StrategicMapSitesV17.gd")
 const Grid = preload("res://scripts/ui/FixedSiteMapV20.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -236,7 +238,7 @@ func _new_trial_from_picker() -> void:
     _new_trial(scenario,SIZES[index])
 
 func _new_trial(scenario: int, size: Vector2i) -> void:
-    var layout: Dictionary = Orders.Lab.Sites.layout(Scenarios.terrain(scenario,size))
+    var layout: Dictionary = Sites.layout(Scenarios.terrain(scenario,size))
     if not bool(layout.get("valid",false)):
         last_notice = "No es posible generar esta combinación de mapa."
         _refresh()
@@ -336,7 +338,9 @@ func _execute_buy() -> void:
     if buy_picker.selected < 0 or selected_cell.x < 0:
         return
     var role: String = str(buy_picker.get_selected_metadata())
-    var result: Dictionary = Orders.purchase(session,selected_cell,role)
+    var card: Dictionary = Orders.site_card(session,selected_cell)
+    var production_cell: Vector2i = card.get("position",Vector2i(-1,-1))
+    var result: Dictionary = Orders.purchase(session,production_cell,role)
     _accept_action(result,"Unidad producida en base fija: %s." % Roles.label(role))
 
 func _end_turn() -> void:
@@ -376,7 +380,7 @@ func _refresh() -> void:
             city_count += 1
     summary.text = "%s · Fase %d · %d créditos · %d ciudades (+%d/turno)" % [
         "AZUL" if active == 0 else "ROJO",int(state["economy"]["turn"])+1,
-        credits,city_count,Orders.Lab.income(world,active)]
+        credits,city_count,Lab.income(world,active)]
     var details: Array[String] = []
     var unit: Dictionary = _unit()
     if not unit.is_empty():
