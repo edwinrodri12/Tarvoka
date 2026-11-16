@@ -579,17 +579,22 @@ func _g13_attack_v2(kind: String) -> void:
     var tween: Tween=player.create_tween()
     _g13_attack_tween_v2=tween
     tween.set_trans(Tween.TRANS_LINEAR)
-    tween.tween_method(func(t: float) -> void:
-        if is_instance_valid(player):
-            P06Models.pose_model("aa_mobile",player,kind,t),
-        0.0,0.99,1.60)
-    tween.tween_callback(func() -> void:
-        if is_instance_valid(player):
-            P06Models.restore_model_pose("aa_mobile",player))
+    tween.tween_method(
+        Callable(self,"_g13_v2_tick").bind(player,kind),0.0,0.99,1.60)
+    tween.tween_callback(
+        Callable(self,"_g13_v2_finish").bind(player))
     status_label.text=(
         "G13 V2 · ráfaga terrestre, baja elevación (solo demostración 3D)"
         if kind=="attack_ground" else
         "G13 V2 · ráfaga antiaérea, radar y elevación (solo demostración 3D)")
+
+func _g13_v2_tick(progress: float,player: Node3D,kind: String) -> void:
+    if is_instance_valid(player):
+        P06Models.pose_model("aa_mobile",player,kind,progress)
+
+func _g13_v2_finish(player: Node3D) -> void:
+    if is_instance_valid(player):
+        P06Models.restore_model_pose("aa_mobile",player)
 
 func _g13_demo_v1(kind: String,progress: float) -> void:
     if _role!="aa_mobile" or model_root==null or (
