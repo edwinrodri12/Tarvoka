@@ -28,6 +28,9 @@ on:
       - 'scripts/ui/G11WheelSuspensionV20.gd'
       - 'scripts/ui/G11ShockMountFinishV21.gd'
       - 'scripts/ui/G11SuspensionJointsV22.gd'
+      - 'scripts/ui/G11JointFinishV23.gd'
+      - 'tests/test_g11_joint_finish_v23.gd'
+      - 'tests/test_g11_joint_finish_v23_capture.gd'
       - 'tests/test_g11_suspension_joints_v22.gd'
       - 'tests/test_g11_suspension_joints_v22_capture.gd'
       - 'tests/test_g11_shock_mount_finish_v21.gd'
@@ -228,6 +231,20 @@ jobs:
             echo 'G11 V22 forged joints or real armor cutaway regressed'; exit 1
           fi
           grep -F 'PASS G11 V22:' /tmp/g11_v22.log
+      - name: Check V23 24 machined steel pins, 48 retaining rings and 8 paint sets
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 130s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_joint_finish_v23.gd 2>&1 | tee /tmp/g11_v23.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v23.log; then
+            echo 'G11 V23 machined-pin geometry or clearance regression'; exit 1
+          fi
+          grep -F 'PASS G11 V23:' /tmp/g11_v23.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
@@ -546,6 +563,29 @@ jobs:
         with:
           name: tarvoka-g11-v22-16-native-forged-hinge-cutaway-frames
           path: /tmp/g11-v22-joints/*.png
+          retention-days: 14
+      - name: Render 16 real Godot V23 day/sunset/night mechanical macro views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v23-light
+          timeout --signal=TERM --kill-after=5s 155s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v23-light \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_joint_finish_v23_capture.gd 2>&1 | tee /tmp/g11_v23_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v23_capture.log; then
+            echo 'G11 V23 native night-light/hinge gallery failed'; exit 1
+          fi
+          grep -F 'PASS G11 V23 CAPTURE:' /tmp/g11_v23_capture.log
+          test "$(find /tmp/g11-v23-light -name '*.png' | wc -l)" -eq 16
+      - name: Upload G11 V23 native day-sunset-night forged hinge comparisons
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v23-16-native-godot-hinge-light-comparison
+          path: /tmp/g11-v23-light/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
