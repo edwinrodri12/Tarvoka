@@ -9,7 +9,6 @@ on:
       - "scripts/ui/InfantryBarracksFinishV2.gd"
       - "scripts/ui/InfantryBarracksMaterialsV3.gd"
       - "scripts/ui/InfantryBarracksFacadeV4.gd"
-      - "scripts/ui/InfantryBarracksFacadeV4.gd"
       - "scripts/ui/CombinedArtStudioWeb.gd"
       - "tests/test_infantry_barracks_v4_gpu.gd"
       - ".github/workflows/infantry-barracks-v4-native-gpu.yml"
