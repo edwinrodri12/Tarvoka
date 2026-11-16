@@ -35,12 +35,18 @@ static func _vent(root: Node3D,tag: String,at: Vector3,
         Vector3(width,0.43,0.73),metal_color,0.37)
     _part(node,"TapaInclinadaExtractor",
         at+Vector3(0,0.39,-0.03),
-        Vector3(width+0.16,0.09,0.82),EDGE if damage==0 else DAMAGE,0.37)
+        Vector3(width+0.16,0.09,0.82),
+        STEEL if damage==0 else DAMAGE,0.37)
+    # Horizontal black intake louvres and metal side uprights make the
+    # extractor legible as HVAC, instead of a white cube on a corrugated roof.
     for i in range(3):
         _part(node,"LamaExtractor_%d" % i,
-            at+Vector3(-width*0.31+float(i)*width*0.31,
-                0.12,-0.389),
-            Vector3(0.12,0.23,0.035),DARK,0.21)
+            at+Vector3(0,0.02+float(i)*0.115,-0.402),
+            Vector3(width*0.78,0.038,0.040),DARK,0.18)
+    for side in [-1,1]:
+        _part(node,"MarcoExtractor_%d" % side,
+            at+Vector3(float(side)*(width*0.5-0.055),0.14,-0.412),
+            Vector3(0.066,0.43,0.048),EDGE,0.38)
 
 static func _roof(stage: Node3D,module: Dictionary,level: int,
         damage: int,accent: Color) -> void:
