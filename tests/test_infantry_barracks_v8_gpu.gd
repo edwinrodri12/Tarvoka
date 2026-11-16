@@ -471,19 +471,42 @@ func _run() -> void:
     assert(studio.model_root.has_node(V6.STAGE_NAME))
     assert(studio.model_root.has_node(V7.STAGE_NAME))
     await _capture(studio,"compare_v6_roof")
-    studio.infantry_camera_picker.select(4)
-    studio._change_infantry_camera(4)
+    # Fixed eye/target for genuine V7 vs V8 tower comparison.
+    # Earlier V7/V8 captures were almost identical because camera #4
+    # aimed at courtyard windows, not at the relocated watchtower.
+    studio.infantry_camera_picker.select(5)
+    studio._change_infantry_camera(5)
+    studio._zoom=1.12
+    studio._update_camera()
+    var tower_eye: Vector3=studio.camera.position
+    var tower_target: Vector3=(
+        Basis(Vector3.UP,deg_to_rad(studio._yaw))*
+        Vector3(6.47,5.69,3.90))
     studio.infantry_tower_v8_toggle.set_pressed_no_signal(false)
     studio._toggle_infantry_tower_v8(false)
     await _frames(7)
     assert(not studio.model_root.has_node(V8.STAGE_NAME))
     assert(studio.model_root.has_node(V7.STAGE_NAME))
+    studio.camera.position=tower_eye
+    studio.camera.look_at(tower_target,Vector3.UP)
+    studio._update_camera()
     await _capture(studio,"compare_v7_without_v8")
+    var old_tower_pixels: PackedByteArray=(
+        studio.preview.get_texture().get_image().get_data())
     studio.infantry_tower_v8_toggle.set_pressed_no_signal(true)
     studio._toggle_infantry_tower_v8(true)
     await _frames(7)
     assert(studio.model_root.has_node(V8.STAGE_NAME))
+    studio.camera.position=tower_eye
+    studio.camera.look_at(tower_target,Vector3.UP)
+    studio._update_camera()
     await _capture(studio,"compare_v8_tower_finish")
+    var new_tower_pixels: PackedByteArray=(
+        studio.preview.get_texture().get_image().get_data())
+    assert(old_tower_pixels!=new_tower_pixels)
+    studio._zoom=1.0
+    studio.infantry_camera_picker.select(4)
+    studio._change_infantry_camera(4)
     studio.infantry_side_v7_toggle.set_pressed_no_signal(false)
     studio._toggle_infantry_side_v7(false)
     await _frames(7)
