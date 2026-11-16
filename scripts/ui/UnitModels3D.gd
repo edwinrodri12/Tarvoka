@@ -15,6 +15,7 @@ const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
+const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -922,7 +923,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     if role == "mlrs" and finish_enabled and art_level >= 13:
         G11Art.build(model,faction_paint_color(faction))
     if role == "attack_heli" and finish_enabled and art_level >= 13:
-        AttackHelicopterV1.build(model,faction_paint_color(faction))
+        if AttackHelicopterV1.build(model,faction_paint_color(faction)):
+            AttackHelicopterCabinV2.apply(model,faction_paint_color(faction))
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
