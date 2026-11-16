@@ -57,7 +57,8 @@ static func apply(root: Node3D,enamel: Color)->bool:
         return false
     if not bool(root.get_meta("tarvoka_g13_detail_v2",false)):
         return false
-    var faction:=_mat(enamel.darkened(0.08),0.34,0.53)
+    # Match the V1 enamel on low LOD exactly; only PBR response varies.
+    var faction:=_mat(enamel.darkened(0.10),0.34,0.53)
     var armor:=_mat(Color("#788589"),0.38,0.69)
     var optical:=_mat(Color("#295366"),0.13,0.25)
     var rubber:=_mat(Color("#242b2f"),0.02,0.92)
