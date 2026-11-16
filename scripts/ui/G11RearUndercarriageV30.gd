@@ -43,11 +43,14 @@ static func _wedge(bottom: Array[Vector3],
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     for n in range(8):
         var next: int=(n+1)%8
-        _tri(st,bottom[n],bottom[next],top[next])
-        _tri(st,bottom[n],top[next],top[n])
+        # Profile winding in XZ is CCW when viewed from below;
+        # invert the side faces to expose outward-facing front/rear armor.
+        _tri(st,bottom[n],top[next],bottom[next])
+        _tri(st,bottom[n],top[n],top[next])
     for n in range(1,7):
-        _tri(st,bottom[0],bottom[n+1],bottom[n])
-        _tri(st,top[0],top[n],top[n+1])
+        # Correct Godot +Y top and -Y underside normals (no culled rear).
+        _tri(st,bottom[0],bottom[n],bottom[n+1])
+        _tri(st,top[0],top[n+1],top[n])
     st.generate_normals()
     return st.commit()
 
