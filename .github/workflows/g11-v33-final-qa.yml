@@ -1,0 +1,72 @@
+name: TARVOKA G11 V33 accurate Android LOD and final sculpture QA
+
+on:
+  push:
+    branches: [main, feat/g11-v33-android-final-qa-and-material-audit]
+    paths:
+      - 'scripts/ui/G11AndroidPerfLab.gd'
+      - 'scripts/ui/G11FinalAuditV33.gd'
+      - 'tests/test_g11_android_lab.gd'
+      - 'tests/test_g11_final_audit_v33.gd'
+      - 'tests/test_g11_final_audit_v33_capture.gd'
+      - '.github/workflows/g11-v33-final-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/G11AndroidPerfLab.gd'
+      - 'scripts/ui/G11FinalAuditV33.gd'
+      - 'tests/test_g11_android_lab.gd'
+      - 'tests/test_g11_final_audit_v33.gd'
+      - 'tests/test_g11_final_audit_v33_capture.gd'
+  workflow_dispatch:
+
+jobs:
+  g11-v33-native-art-and-real-lod:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify final G11 hero, real tactical materials and correct Android test lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_final_audit_v33.gd 2>&1 | tee /tmp/g11_v33_audit.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v33_audit.log; then
+            echo 'V33 final source-backed G11 visual/LOD audit failed'; exit 1
+          fi
+          grep -F 'PASS G11 V33:' /tmp/g11_v33_audit.log
+      - name: Render six production LOD8/LOD10 fleet configurations with 8 32 64 units
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v33-tactical
+          timeout --signal=TERM --kill-after=5s 210s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V33_CAPTURE_DIR=/tmp/g11-v33-tactical \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_final_audit_v33_capture.gd 2>&1 | tee /tmp/g11_v33_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v33_capture.log; then
+            echo 'V33 true tactical G11 3D render capture failed'; exit 1
+          fi
+          grep -F 'PASS G11 V33 CAPTURE:' /tmp/g11_v33_capture.log
+          test "$(find /tmp/g11-v33-tactical -name '*.png' | wc -l)" -eq 6
+      - name: Upload six genuine LOD8 LOD10 Android lab 3D frames
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v33-six-true-mobile-lod-fleet-captures
+          path: /tmp/g11-v33-tactical/*.png
+          retention-days: 14
