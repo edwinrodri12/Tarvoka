@@ -106,3 +106,35 @@ static func apply(model: Node3D,level: int,faction: int,damage: int) -> bool:
     stage.set_meta("visual_only",true)
     stage.set_meta("training_corridor_preserved",true)
     return true
+
+# Pixel-density driven visibility for true 3D parts. No generated sprites.
+# Retain silhouette and bollards at a wide tactical view; bring back the
+# small stripes, light and ornaments automatically when zooming in.
+const FINE_DETAIL_PREFIXES=["CapuchonBolardo_","LineaAcceso_",
+    "InsigniaLateral_","LuzEntradaProtegida","MarcaPuestoFormacion_",
+    "BandaDeSeguridadPatio","MarcacionCentroU_"]
+
+static func set_detail_lod(model: Node3D,near_view: bool) -> int:
+    if model==null:
+        return 0
+    var stage: Node3D=model.get_node_or_null(STAGE_NAME) as Node3D
+    if stage==null:
+        return 0
+    var affected: int=0
+    var pending: Array[Node]=[stage]
+    while not pending.is_empty():
+        var current: Node=pending.pop_back()
+        for child in current.get_children():
+            pending.append(child)
+            if not child is MeshInstance3D:
+                continue
+            var piece: MeshInstance3D=child as MeshInstance3D
+            var named: String=str(piece.name)
+            for prefix in FINE_DETAIL_PREFIXES:
+                if named.begins_with(prefix):
+                    piece.visible=near_view
+                    affected+=1
+                    break
+    stage.set_meta("lod_near",near_view)
+    stage.set_meta("lod_fine_meshes",affected)
+    return affected
