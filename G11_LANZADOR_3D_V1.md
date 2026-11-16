@@ -616,3 +616,46 @@ como un cohete a la distancia normal de las partidas.
   `test_g11_rocket_flight_v31_capture.gd` prueban el mismo lanzador de
   batalla de Godot, sin alterar el motor de órdenes, y generan doce
   capturas originales (primer disparo, fase intermedia, fase final).
+
+
+## V32 · última revisión de orugas, ruedas, suspensión y desniveles
+
+**Hallazgo:** la escultura hero V23 ya anima las 92 zapatas (46 por
+oruga) y las ruedas, pero la representación táctica V24–V31 no hacía
+girar sus doce ruedas LOD10 durante un desplazamiento. Además, las
+cadenas hero giraban a idéntica velocidad en giros y el casco táctico
+no respondía visualmente a los pequeños cambios de altura.
+
+`G11RunningGearV32.gd` aprovecha los nodos y mallas existentes:
+- **Hero:** las 92 zapatas desplazables y los doce pivotes animan cada
+  oruga a distinta velocidad al girar a derecha o izquierda, manteniendo
+  los amortiguadores, clevis, pernos y holguras físicas V18–V23. El
+  avance recto conserva el ritmo anterior.
+- **LOD10:** se actualizan únicamente las 12 transformaciones del
+  `G11Mobile_Lote12Ruedas` original (un solo MultiMesh), con
+  rotación diferencial y pequeños desplazamientos de suspensión,
+  de hasta 9 mm por rueda.
+- **LOD8:** la banda física cerrada y sin ruedas sigue intacta; no
+  se generan ruedas ocultas ni nuevas llamadas de dibujo al avanzar.
+- **Desnivel:** inclinación dinámica del casco limitada a 4°, balanceo
+  como máximo 0,55° y un giro temporal del tren a velocidades laterales
+  desiguales. Todas las rotaciones se restauran al finalizar la acción
+  legal; ninguna modifica el terreno, la casilla ni las órdenes.
+- **Holguras:** el radio de rueda LOD10 de 0,160 m, radio interior
+  de banda de 0,184 m y balanceo máximo 0,009 m dejan como mínimo
+  0,015 m entre rueda y borde interior.
+- **Integración:** `G11VisualRig3D.gd` conserva el control hero;
+  `G11MobileLOD.gd` mueve las ruedas reales; el controlador V29
+  pasa la dirección y diferencia de altura visual capturadas de
+  las casillas ya autorizadas. Las doce bocas, estelas V31, pintura
+  y reparación trasera V30 permanecen idénticas.
+
+`test_g11_running_gear_v32.gd` comprueba ocho colores hero, ocho
+facciones × dos LOD y cuatro biomas con órdenes reproducidas,
+preservación de mallas y reposo. La galería de veinte fotogramas
+`test_g11_running_gear_v32_capture.gd` muestra ocho acercamientos
+hero y doce desplazamientos reales (avance, giro, desnivel) de Godot.
+
+El sistema solo añade animación de presentación. **No cambia** la
+distancia real recorrida, velocidad de unidad, daño, combustible,
+municiones, terreno, niebla de guerra o partidas guardadas.
