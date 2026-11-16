@@ -494,3 +494,44 @@ y cercana, directamente con la cámara/renderizador de Godot 4.3.
 combate, visión, niebla de guerra, IA, movimiento, estadísticas, munición,
 combustible, economía o guardados. El refuerzo visual nunca instancia una
 unidad que el renderizador de batalla oculte por niebla.
+
+
+## V29 · animación post-confirmación del G11 dentro de una batalla jugable 3D
+
+El G11 ya tenía animación hero V8–V23, pero el mapa táctico
+`Battle3DMapView` regeneraba las unidades después de ejecutar una orden
+válida, perdiendo movimiento y disparo visibles. V29 integra
+`G11BattleActionsV29.gd` en **el renderizador de producción**
+`BattleTerrain3D` y se activa **únicamente después** de que
+`Battle3DOrders.confirm` haya confirmado la orden del motor.
+
+- Movimiento: un único G11 ya existente interpola visualmente desde
+  la casilla de origen confirmada hasta su casilla final autorizada;
+  tiempo de animación 0,92 s y restauración exacta del estado visual.
+- Disparo: el módulo del vehículo se orienta a la casilla de ataque
+  confirmada y muestra **12 destellos secuenciales**, uno por boca;
+  aparece un pequeño humo residual usando solamente un lote de tres
+  instancias. Se emplean dos MultiMesh nuevos solo al disparar,
+  no doce meshes individuales; vida visual total 1,65 s.
+- El escenario muestra exactamente las unidades autorizadas por la niebla:
+  el controlador busca un modelo existente y no crea enemigos invisibles.
+  Una orden rechazada, cancelada o sin G11 disponible **nunca** reproduce
+  efectos ni genera daño.
+- El Estudio 3D contiene botones para demostrar movimiento y salva en
+  cada uno de los cuatro biomas, sin alterar el estado de la partida.
+  El modelo hero V23 y sus efectos físicos complejos permanecen separados.
+- Los otros G11, tanques, P06, infanterías y terrenos no se alteran.
+  El efecto se reproduce sobre el modelo lógico existente, con el
+  LOD8/LOD10 y pinturas V28 preservados.
+
+Validación: `tests/test_g11_battle_actions_v29.gd` comprueba
+movimiento, 12 fogonazos escalonados, dos lotes de efectos, restauración,
+aislamiento de vecinos y ausencia de mutaciones de HP, economía,
+munición o combustible en cuatro biomas. El script
+`test_g11_battle_actions_v29_capture.gd` produce doce capturas
+verdaderas de Godot: movimiento, primer disparo y humo intermedio
+para cada bioma. La calidad visual y el desempeño Android real
+requieren inspección adicional a partir de esas capturas y del dispositivo.
+
+**Nota:** la acción real y el daño siguen siendo responsabilidad exclusiva
+del motor de turnos; V29 no aplica órdenes ni modifica guardados.

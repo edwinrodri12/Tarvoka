@@ -71,6 +71,8 @@ on:
       - 'scripts/ui/G11RocketFaceReadabilityV25.gd'
       - 'scripts/ui/G11TacticalPaintReadabilityV27.gd'
       - 'scripts/ui/G11CameraIdentityV28.gd'
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
       - 'tests/test_g11_live_battle_context_v25_capture.gd'
@@ -80,6 +82,8 @@ on:
       - 'tests/test_g11_tactical_paint_v27.gd'
       - 'tests/test_g11_camera_identity_v28.gd'
       - 'tests/test_g11_camera_identity_v28_capture.gd'
+      - 'tests/test_g11_battle_actions_v29.gd'
+      - 'tests/test_g11_battle_actions_v29_capture.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
       - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scenes/G11AndroidStressLab.tscn'
@@ -329,6 +333,20 @@ jobs:
             echo 'G11 V28 camera hysteresis, original paint safety or battle state failed'; exit 1
           fi
           grep -F 'PASS G11 V28:' /tmp/g11_v28.log
+      - name: Verify V29 confirmed battle G11 movement and 12 sequential rocket flashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 170s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_battle_actions_v29.gd 2>&1 | tee /tmp/g11_v29.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v29.log; then
+            echo 'G11 V29 real battle movement/salvo or state-integrity regression'; exit 1
+          fi
+          grep -F 'PASS G11 V29:' /tmp/g11_v29.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
@@ -718,6 +736,28 @@ jobs:
         with:
           name: tarvoka-g11-v28-four-biomes-three-real-zooms
           path: /tmp/g11-v28-production-camera/*.png
+          retention-days: 14
+      - name: Render 12 actual V29 movement and rocket salvo frames in four biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v29-battle-actions
+          timeout --signal=TERM --kill-after=5s 170s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V29_CAPTURE_DIR=/tmp/g11-v29-battle-actions \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_battle_actions_v29_capture.gd 2>&1 | tee /tmp/g11_v29_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v29_capture.log; then
+            echo 'G11 V29 actual battle image generation failed'; exit 1
+          fi
+          grep -F 'PASS G11 V29 CAPTURE:' /tmp/g11_v29_capture.log
+          test "$(find /tmp/g11-v29-battle-actions -name '*.png' | wc -l)" -eq 12
+      - name: Upload 12 G11 V29 native movement and rocket salvo images
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v29-live-battle-four-biomes-movement-and-rocket-salvo
+          path: /tmp/g11-v29-battle-actions/*.png
           retention-days: 14
       - name: Upload 16 real G11 V25 battle context Godot captures
         if: success()

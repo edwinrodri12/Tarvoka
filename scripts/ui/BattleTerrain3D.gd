@@ -15,6 +15,7 @@ const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
+const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
@@ -641,9 +642,16 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             if child is Node3D and bool(child.get_meta(
                     G11Tactical.FLAG,false)):
                 g11_driver.register(child as Node3D)
+        # Visual post-confirmation animation runs on the SAME visible model.
+        # No extra units, BattleSession calls or changes to fog filtering.
+        var g11_actions: Node=G11ActionsV29.new()
+        g11_actions.name="G11V29_AccionesBatalla"
+        scene.add_child(g11_actions)
+        counters["g11_v29_visual_actions"]=true
         counters["g11_camera_lod"]=true
     else:
         counters["g11_camera_lod"]=false
+        counters["g11_v29_visual_actions"]=false
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.

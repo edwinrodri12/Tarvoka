@@ -14,6 +14,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
+const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 
@@ -584,6 +585,26 @@ func tap_battle_cell(cell: Vector2i) -> bool:
 func _confirm_3d_order() -> void:
     if _live_board == null or _order_quote.is_empty():
         return
+    # Capture a read-only VISUAL hint from the previously rendered state.
+    # All legal checks, damage, fuel and the real turn happen in Orders.confirm.
+    var visual: Dictionary={}
+    var order: Dictionary=_order_quote.get("order",{})
+    var command_id: String=str(order.get("unit_id",""))
+    if str(order.get("kind","")) in ["move","attack"]:
+        for item in _state_snapshot.get("units",[]):
+            if item is Dictionary and str(item.get("id",""))==command_id and (
+                    str(item.get("role",""))=="mlrs") and (
+                    int(item.get("faction",-1))==_viewing_side) and (
+                    int(item.get("hp",0))>0):
+                visual={
+                    "unit_id":command_id,
+                    "kind":str(order.get("kind","")),
+                    "before":item.get("pos",Vector2i.ZERO),
+                    "from_world":Terrain.world_at(item["pos"])+Vector3(
+                        0,Terrain.height_at(_cells,item["pos"])+0.43,0),
+                    "target":order.get("cell",Vector2i.ZERO),
+                    "faction":_viewing_side}
+                break
     var committed: bool = Orders.confirm(_live_board,_order_quote)
     if not committed:
         # A rejected confirmation cannot leak a queued order into the 2D HUD.
@@ -594,6 +615,28 @@ func _confirm_3d_order() -> void:
         return
     if committed:
         _order_note.text = str(_live_board.get("message"))
+        # Playback is AFTER the authoritative engine commit and scene rebuild.
+        # Failed orders and defeated/hidden units never animate.
+        if not visual.is_empty() and _scene!=null:
+            var follow: Dictionary=_current_state()
+            for item in follow.get("units",[]):
+                if not item is Dictionary or str(item.get("id",""))!=str(
+                        visual["unit_id"]) or int(item.get("hp",0))<=0:
+                    continue
+                if int(item.get("faction",-1))!=int(visual["faction"]):
+                    break
+                if str(visual["kind"])=="move" and (
+                        item.get("pos")!=visual["target"]):
+                    break
+                var actions:=_scene.find_child(
+                    "G11V29_AccionesBatalla",true,false) as G11ActionsV29
+                if actions!=null:
+                    var origin: Vector2i=visual["before"]
+                    var target: Vector2i=visual["target"]
+                    var start_at: Vector3=visual["from_world"]
+                    actions.play(str(visual["unit_id"]),str(visual["kind"]),
+                        start_at,target-origin)
+                break
     else:
         _order_note.text = "Orden no ejecutada: el estado cambió o dejó de ser válida."
 

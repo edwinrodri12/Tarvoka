@@ -61,6 +61,7 @@ on:
       - "scripts/ui/G11RocketFaceReadabilityV25.gd"
       - "scripts/ui/G11TacticalPaintReadabilityV27.gd"
       - "scripts/ui/G11CameraIdentityV28.gd"
+      - "scripts/ui/G11BattleActionsV29.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/BastionDamage3D.gd"
       - "scripts/ui/UnitModels3D.gd"
@@ -155,7 +156,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -275,13 +276,14 @@ jobs:
           test -s scripts/ui/G11RocketFaceReadabilityV25.gd
           test -s scripts/ui/G11TacticalPaintReadabilityV27.gd
           test -s scripts/ui/G11CameraIdentityV28.gd
+          test -s scripts/ui/G11BattleActionsV29.gd
           test -s scripts/ui/BattleTerrain3D.gd
           test -s scripts/ui/TerrainVisualMapBridge3D.gd
           test -s scripts/ui/WinterBattleBiome.gd
           grep -q 'G11_Lanzador_V1_EstudioReal' scripts/ui/BastionStudioAdapter.gd
           grep -q 'BastionP06_V25_CarcasasCerradas' scripts/ui/BastionStudioAdapter.gd
           # Do not allow concurrent APC releases to downgrade G11 selector.
-          grep -q 'G11 Lanzador · V28 · contraste y zoom de batalla' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G11 Lanzador · V29 · movimiento y salva en batalla' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: valle con unidades' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: nieve con unidades' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: acercar batalla' scripts/ui/BastionStudioAdapter.gd
