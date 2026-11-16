@@ -152,7 +152,7 @@ func _run() -> void:
         await _frames(8)
         assert(int(studio.model_root.get_meta("visual_level",-1))==level)
         assert(studio.model_root.has_node(V3.STAGE_NAME))
-    assert(studio.model_root.has_node(V4.STAGE_NAME))
+        assert(studio.model_root.has_node(V4.STAGE_NAME))
         await _capture(studio,"level_%d" % level)
     for i in range(1,4):
         studio.infantry_camera_picker.select(i)
