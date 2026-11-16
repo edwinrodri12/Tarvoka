@@ -96,8 +96,8 @@ func _initialize() -> void:
     # These are distinct from valid JSON values with an invalid root type.
     var malformed_syntax: Array[String] = [
         "{",
-        "{\\\"version\\\":1,",
-        "{\\\"version\\\":1} trailing"
+        "{\"version\":1,",
+        "{\"version\":1} trailing"
     ]
     for payload in malformed_syntax:
         assert(Codec.decode(payload).is_empty(), "Malformed JSON syntax unexpectedly restored")
