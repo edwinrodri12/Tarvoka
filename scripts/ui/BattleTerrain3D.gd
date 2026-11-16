@@ -553,22 +553,27 @@ static func _make_units(parent: Node3D,state: Dictionary,
             continue
         var role: String = str(unit.get("role","line"))
         var model: Node3D = null
+        # Upgrade only the inspected piece to its authored studio-grade rig.
+        # One expensive model at a time; the mobile battle keeps bounded LOD
+        # for everyone else, especially on 24x18 and 40x30 maps.
+        var full_inspection: bool = str(unit["id"]) == selected_id and (
+            Rules.map_size(state.get("terrain",[])) == Vector2i(10,8))
         if role=="apc":
             # Every visible P06 keeps its authentic 6x6 silhouette even
             # beyond the eight high-detail slots. Six tires are two GPU
             # batches and do not expand into hundreds of individual meshes.
-            model = Models.build("apc",faction,false,8)
+            model = Models.build("apc",faction,full_inspection,14 if full_inspection else 8)
             if model!=null:
                 apc_lod+=1
         elif role=="mlrs":
             # V25: the actual 3D battle camera must use the corrected V24
             # rounded tracks rather than a legacy G11 LOD6 box silhouette.
             # One logical unit, no hero art and never a gameplay mutation.
-            model = Models.build("mlrs",faction,false,8)
+            model = Models.build("mlrs",faction,full_inspection,13 if full_inspection else 8)
             if model!=null and bool(model.get_meta(G11Tactical.FLAG,false)):
                 g11_lod+=1
         elif detailed < MAX_DETAILED_UNITS and Models.supports(role):
-            model = Models.build(role,faction,false,6)
+            model = Models.build(role,faction,full_inspection,13 if full_inspection else 6)
             if model != null:
                 detailed += 1
         if model == null:
