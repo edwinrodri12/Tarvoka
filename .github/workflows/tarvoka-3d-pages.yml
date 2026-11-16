@@ -189,6 +189,15 @@ jobs:
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
+          # G13 is actively evolving. A fixed V1/V4/V8 file list leaves
+          # newest sculpt/rig modules (such as G13SilhouetteV10.gd) missing
+          # after UnitModels3D.gd from main references them. Overlay every
+          # versioned G13 native script from the exact same main snapshot.
+          for g13_source in hq-android-v15/scripts/ui/G13*.gd; do
+            test -s "$g13_source"
+            cp "$g13_source" scripts/ui/
+          done
+          test -s scripts/ui/G13SilhouetteV10.gd
           test -s hq-android-v15/tests/test_bastion_studio_web_ui.gd
           cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
           test -s hq-android-v15/tests/test_g13_studio_web_v1.gd
