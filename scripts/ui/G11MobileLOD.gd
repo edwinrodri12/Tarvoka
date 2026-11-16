@@ -15,6 +15,7 @@ const TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const PodV25 = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const PaintV27 = preload("res://scripts/ui/G11TacticalPaintReadabilityV27.gd")
 const RearV30 = preload("res://scripts/ui/G11RearUndercarriageV30.gd")
+const GearV32 = preload("res://scripts/ui/G11RunningGearV32.gd")
 static var _materials: Dictionary = {}
 
 static func recommended_level(distance: float, visible_units: int,
@@ -181,9 +182,14 @@ static func pose(model: Node3D, kind: String, progress: float,
             pod.rotation_degrees.x = -25.0-12.0*t
         "move":
             pod.rotation_degrees.x = -25.0+sin(t*TAU*2.0)*0.5
+            if not GearV32.pose_mobile(model,t,target_heading,
+                    float(model.get_meta(GearV32.SLOPE,0.0))):
+                return false
         "idle":
             rotator.rotation_degrees = Vector3.ZERO
             pod.rotation_degrees = Vector3(-25,0,0)
+            if model.has_meta(GearV32.REST_ANGLE):
+                GearV32.restore_mobile(model)
         _:
             return false
     return true
