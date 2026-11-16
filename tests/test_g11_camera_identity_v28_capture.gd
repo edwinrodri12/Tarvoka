@@ -74,7 +74,7 @@ func _run() -> void:
             if driver!=null and hero!=null:
                 for zoom in [
                     {"name":"far","size":34.0,"level":8},
-                    {"name":"middle","size":20.0,"level":8},
+                    {"name":"middle","size":15.5,"level":8},
                     {"name":"near","size":9.0,"level":10}
                 ]:
                     camera.size=float(zoom["size"])
