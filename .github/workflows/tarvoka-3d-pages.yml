@@ -739,6 +739,22 @@ jobs:
             echo "Bastion Web UI regression"; exit 1
           fi
           grep -F 'PASS BASTION V25 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
+          # Capture UI first: if later G13 checks fail, landscape artifacts
+          # still exist for layout review. Test root starts at 960x540 and
+          # resizes to 1280x720 within this full-size virtual display.
+          # Catch hidden OptionButtons and duplicate/overlapping menu panels
+          # in the actual exported Godot scene, at Android-landscape width.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_unified_studio_navigation.gd \
+            2>&1 | tee /tmp/unified-menu-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/unified-menu-smoke.log; then
+            echo "Unified Studio navigation regression"; exit 1
+          fi
+          grep -F 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
+          test -s build/qa/studio-960x540.png
+          test -s build/qa/studio-1280x720.png
           # The new G13 must actually be selectable in the SAME native
           # combined Studio, with its radar and twin gun mechanisms moving.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
@@ -750,19 +766,6 @@ jobs:
             echo "G13 visual 3D Studio selection regression"; exit 1
           fi
           grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-studio-smoke.log
-          # Catch hidden OptionButtons and duplicate/overlapping menu panels
-          # in the actual exported Godot scene, at Android-landscape width.
-          xvfb-run -a -s '-screen 0 960x540x24' env LIBGL_ALWAYS_SOFTWARE=1 \
-            /tmp/Godot_v4.3-stable_linux.x86_64 \
-            --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_unified_studio_navigation.gd \
-            2>&1 | tee /tmp/unified-menu-smoke.log
-          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/unified-menu-smoke.log; then
-            echo "Unified Studio navigation regression"; exit 1
-          fi
-          grep -F 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
-          test -s build/qa/studio-960x540.png
-          test -s build/qa/studio-1280x720.png
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
