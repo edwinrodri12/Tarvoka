@@ -21,7 +21,8 @@ const PIN_RADIUS := 0.010
 const LOWER_PIN_LENGTH := 0.048
 const LOWER_PIN_RADIUS := 0.011
 const SIDE_PARTS := ["G11_Faldon_","G11V2_ProteccionLateral_",
-    "G11V2_BandaFaccion_","G11V2_BisagraFaldon_"]
+    "G11V2_BandaFaccion_","G11V2_BisagraFaldon_",
+    "G11V18_PernosGuardabarros_","G11V12_GuardaLodoTrasera_"]
 const VIS_META := "tarvoka_g11_v22_original_visibility"
 static var _ear: ArrayMesh
 static var _upper_pin: CylinderMesh
@@ -187,5 +188,33 @@ static func set_inspection(model: Node3D,side: int) -> bool:
             var was_visible: bool = bool(panel.get_meta(VIS_META,true))
             panel.visible = was_visible and not (
                 side != 0 and actual_side == side)
+        for seam in range(3):
+            var seam_part := _part(root,
+                "G11V2_JuntaCostado_%d_%d" % [actual_side,seam])
+            if seam_part != null:
+                if not seam_part.has_meta(VIS_META):
+                    seam_part.set_meta(VIS_META,seam_part.visible)
+                seam_part.visible = bool(seam_part.get_meta(VIS_META,true)) and (
+                    side==0 or actual_side!=side)
+
+    # V3 batched side bolts are in a 28-instance MultiMesh, not children
+    # of the shields. Only 0..15 belong to the lower flank panels.
+    # Preserve rear and roof hardware 16..27. Restore all original
+    # transforms rather than removing actual art or adding fake rivets.
+    var batch := _part(root,"G11V3_TornillosMantenimientoLote") as MultiMeshInstance3D
+    if batch != null and batch.multimesh != null and (
+            batch.multimesh.instance_count >= 28):
+        for i in range(16):
+            var key: String = "tarvoka_g11_v22_original_v3_bolt_%d" % i
+            if not batch.has_meta(key):
+                batch.set_meta(key,batch.multimesh.get_instance_transform(i))
+            var restored: Transform3D = batch.get_meta(key)
+            var bolt_side: int = -1 if i < 8 else 1
+            if side!=0 and bolt_side==side:
+                var suppressed: Transform3D = restored
+                suppressed.basis = Basis().scaled(Vector3.ZERO)
+                batch.multimesh.set_instance_transform(i,suppressed)
+            else:
+                batch.multimesh.set_instance_transform(i,restored)
     model.set_meta(CUTAWAY,side)
     return true
