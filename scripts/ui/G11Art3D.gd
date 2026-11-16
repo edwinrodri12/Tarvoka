@@ -28,6 +28,7 @@ const WeatherV17 = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
 const TracksV18 = preload("res://scripts/ui/G11TrackAssemblyV18.gd")
 const TreadsV19 = preload("res://scripts/ui/G11TrackFinishV19.gd")
 const WheelV20 = preload("res://scripts/ui/G11WheelSuspensionV20.gd")
+const ShockV21 = preload("res://scripts/ui/G11ShockMountFinishV21.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -317,6 +318,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 V19 beveled tread and tapered guard detail failed; retaining V18 sculpture")
     elif not WheelV20.apply(model):
         push_warning("G11 V20 integrated roadwheels and springs failed; retaining V19 sculpture")
+    elif not ShockV21.apply(model):
+        push_warning("G11 V21 spring seats/shock mounting failed; retaining V20 sculpt")
     return true
 
 static func stage(model: Node3D) -> int:
