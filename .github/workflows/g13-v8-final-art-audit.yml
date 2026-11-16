@@ -1,4 +1,4 @@
-name: TARVOKA G13 V10 silhouette 3D art QA
+name: TARVOKA G13 V11 finished cab and turret 3D QA
 
 on:
   push:
@@ -8,6 +8,13 @@ on:
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/G13InspectionStudio.gd'
       - 'scenes/G13InspectionStudio.tscn'
+      - 'tests/test_g13*.gd'
+      - '.github/workflows/g13-v8-final-art-audit.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ui/G13*.gd'
+      - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_g13*.gd'
       - '.github/workflows/g13-v8-final-art-audit.yml'
   workflow_dispatch:
@@ -60,6 +67,7 @@ jobs:
             tests/test_g13_wheel_finish_v7.gd
             tests/test_g13_surface_v8.gd
             tests/test_g13_silhouette_v10.gd
+            tests/test_g13_body_finish_v11.gd
             tests/test_g13_inspection_studio.gd
           )
           for script in "${scripts[@]}"; do
@@ -80,25 +88,25 @@ jobs:
             }
             echo "::endgroup::"
           done
-      - name: Capture G13 V10 18-frame final silhouette comparison gallery
+      - name: Capture G13 V11 18-frame sculpture and firing-angle gallery
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/g13-v10-gallery
+          mkdir -p /tmp/g13-v11-gallery
           timeout --signal=TERM --kill-after=5s 180s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 G13_V10_CAPTURE_DIR=/tmp/g13-v10-gallery \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V11_CAPTURE_DIR=/tmp/g13-v11-gallery \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy \
-            --path . --script res://tests/test_g13_v10_silhouette_capture.gd 2>&1 | tee /tmp/g13-capture.log
+            --path . --script res://tests/test_g13_v11_finish_capture.gd 2>&1 | tee /tmp/g13-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-capture.log; then exit 1; fi
-          grep -F 'PASS G13 V10 CAPTURE:' /tmp/g13-capture.log
-          test "$(find /tmp/g13-v10-gallery -name '*.png' | wc -l)" -eq 18
+          grep -F 'PASS G13 V11 CAPTURE:' /tmp/g13-capture.log
+          test "$(find /tmp/g13-v11-gallery -name '*.png' | wc -l)" -eq 18
       - name: Upload actual 3D inspection frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: g13-v10-faceted-silhouette-18-actual-godot-frames
-          path: /tmp/g13-v10-gallery/*.png
+          name: g13-v11-finished-cab-turret-18-actual-godot-frames
+          path: /tmp/g13-v11-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
