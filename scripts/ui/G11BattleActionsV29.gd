@@ -8,6 +8,7 @@ class_name TarvokaG11BattleActionsV29
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const Face = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
+const TrailsV30 = preload("res://scripts/ui/G11RocketTrailsV30.gd")
 const FLAG := "tarvoka_g11_v29_live_battle_action"
 const MOVE_TIME: float=0.92
 const ATTACK_TIME: float=1.65
@@ -105,6 +106,9 @@ func play(unit_id: String,kind: String,from_position: Vector3,
         _smoke=pod.find_child(SMOKE_NAME,false,false) as MultiMeshInstance3D
         if _smoke==null:
             _smoke=_new_batch(pod,SMOKE_NAME,true)
+        if not TrailsV30.ensure(pod):
+            stop()
+            return false
     _model.set_meta(FLAG,kind)
     set_process(true)
     advance(0.0)
@@ -139,7 +143,9 @@ func _update_salvo(elapsed: float) -> void:
     if relative<0.0:
         _flash.visible=false
         _smoke.visible=false
+        TrailsV30.update(_flash.get_parent() as Node3D,tubes,relative)
         return
+    TrailsV30.update(_flash.get_parent() as Node3D,tubes,relative)
     var index: int=clampi(floori(relative/SHOT_STEP),0,SHOT_COUNT-1)
     var age: float=relative-float(index)*SHOT_STEP
     _flash.visible=index<SHOT_COUNT and age<FLASH_DURATION and (
@@ -175,6 +181,9 @@ func stop() -> void:
         _flash.visible=false
     if is_instance_valid(_smoke):
         _smoke.visible=false
+    if active():
+        var pod:=_model.find_child(Mobile.POD,true,false) as Node3D
+        TrailsV30.hide(pod)
     _model=null
     _elapsed=0.0
     _kind=""
