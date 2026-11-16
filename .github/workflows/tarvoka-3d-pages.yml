@@ -7,7 +7,9 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/AttackHelicopterV1.gd"
+      - "scripts/ui/AttackHelicopterCabinV2.gd"
       - "tests/test_attack_helicopter_v1.gd"
+      - "tests/test_attack_helicopter_v2.gd"
       - "tests/test_bastion_studio_web_ui.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
@@ -150,7 +152,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd AttackHelicopterV1.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd; do
+          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -221,6 +223,7 @@ jobs:
           test -s scripts/ui/BastionDamage3D.gd
           test -s scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/AttackHelicopterV1.gd
+          test -s scripts/ui/AttackHelicopterCabinV2.gd
           test -s scripts/ui/G11Art3D.gd
           test -s scripts/ui/G11VisualRig3D.gd
           test -s scripts/ui/G11SequentialSalvoV8.gd
