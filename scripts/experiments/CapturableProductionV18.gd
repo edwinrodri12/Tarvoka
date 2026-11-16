@@ -252,6 +252,45 @@ static func purchase(world: Dictionary, location: Vector2i,
     return {"valid":true,"world":result,"unit_id":str(action["unit_id"]),
         "cost":int(action["cost"]),"role":role,"site_kind":str(site["kind"])}
 
+# JSON.parse_string represents numeric hold fields as floating-point values.
+# Normalize them to the same INT types used by live turn transitions.
+# Validate keys against the regenerated immutable geometry to prevent
+# fabricated capture holds from appearing in user-provided snapshots.
+static func _restore_holds(raw_holds: Dictionary,
+        sites: Array, for_producer: bool) -> Dictionary:
+    if raw_holds.size() > sites.size():
+        return {}
+    var result: Dictionary = {}
+    for key in raw_holds:
+        if not key is String or not raw_holds[key] is Dictionary:
+            return {}
+        var raw: Dictionary = raw_holds[key]
+        var unit_id: Variant = raw.get("unit_id",null)
+        var side: Variant = raw.get("side",null)
+        var field: String = "points" if for_producer else "turns"
+        var steps: Variant = raw.get(field,null)
+        if not unit_id is String or unit_id.is_empty() or \
+                not side is float and not side is int or \
+                not steps is float and not steps is int:
+            return {}
+        if float(side) not in [0.0,1.0] or float(steps) != 1.0:
+            return {}
+        var allowed := false
+        for site in sites:
+            var producer: bool = str(site.get("kind","")) != "city"
+            if producer != for_producer:
+                continue
+            var cell: Vector2i = site.get("capture_pos",site["pos"]) \
+                    if for_producer else site["pos"]
+            if str(key) == "%d:%d" % [cell.x,cell.y]:
+                allowed = true
+                break
+        if not allowed:
+            return {}
+        result[str(key)] = {"unit_id":str(unit_id),
+            "side":int(side),field:1}
+    return result
+
 # v18 saves are separate JSON and do not alter SaveCodec.VERSION=1.
 # Store only changing site owners/cooldowns and capture holds. Positions,
 # kinds and dock land access regenerate from the deterministic terrain.
@@ -308,8 +347,15 @@ static func decode(raw: String) -> Dictionary:
             if tick < -1.0 or tick > float(state["economy"]["turn"]) or tick != floorf(tick):
                 return {}
             layout["sites"][i]["produced_turn"] = int(tick)
+    var producer_holds: Dictionary = _restore_holds(
+        parsed["producer_holds"],layout["sites"],true)
+    var city_holds: Dictionary = _restore_holds(
+        parsed["city_holds"],layout["sites"],false)
+    if parsed["producer_holds"].size() != producer_holds.size() or \
+            parsed["city_holds"].size() != city_holds.size():
+        return {}
     var world: Dictionary = {"valid":true,"state":state,"layout":layout,
-        "producer_holds":parsed["producer_holds"],"city_holds":parsed["city_holds"],
+        "producer_holds":producer_holds,"city_holds":city_holds,
         "captured_bases":int(parsed.get("captured_bases",-1)),
         "captured_cities":int(parsed.get("captured_cities",-1)),
         "purchase_count":int(parsed.get("purchase_count",-1))}
