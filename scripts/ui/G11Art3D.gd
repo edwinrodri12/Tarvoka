@@ -31,6 +31,7 @@ const WheelV20 = preload("res://scripts/ui/G11WheelSuspensionV20.gd")
 const ShockV21 = preload("res://scripts/ui/G11ShockMountFinishV21.gd")
 const JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
 const JointsV23 = preload("res://scripts/ui/G11JointFinishV23.gd")
+const RearV30 = preload("res://scripts/ui/G11RearUndercarriageV30.gd")
 
 static func _mat(color: Color, metal: float = 0.16, emissive: bool = false) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -326,6 +327,8 @@ static func build(model: Node3D, paint: Color) -> bool:
         push_warning("G11 V22 mechanical suspension pins failed; retaining V21 sculpt")
     elif not JointsV23.apply(model):
         push_warning("G11 V23 chamfered hinge and retaining collars failed; retaining V22 sculpt")
+    elif not RearV30.apply_hero(model):
+        push_warning("G11 V30 rear stabilizer/underbelly clearance refinement failed")
     return true
 
 static func stage(model: Node3D) -> int:
