@@ -133,8 +133,10 @@ func _audit(level: int,faction: int,damage: int) -> void:
             var detail: Node3D=model.find_child(
                 "Detalles_"+tower,true,false) as Node3D
             assert(tower_node!=null and detail!=null)
-            assert(is_equal_approx(
-                tower_node.position.z,V5.TOWER_BACK_SHIFT_Z))
+            var expected_tower_z: float=(
+                V5.TOWER_BACK_SHIFT_Z if damage<=2 else
+                V5.BEFORE_TOWER_Z+V5.TOWER_BACK_SHIFT_Z)
+            assert(is_equal_approx(tower_node.position.z,expected_tower_z))
             assert(is_equal_approx(
                 detail.position.z,V5.TOWER_BACK_SHIFT_Z))
             if damage<=1:
