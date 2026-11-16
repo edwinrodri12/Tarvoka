@@ -69,20 +69,27 @@ func _initialize() -> void:
     var unknown_tile: Dictionary = baseline.duplicate(true)
     unknown_tile["terrain"][3][4] = "unknown_untrusted_tile"
     cases.append(unknown_tile)
+    # A map must reject malformed cells and oversized rows, not just bad row counts.
+    var null_tile: Dictionary = baseline.duplicate(true)
+    null_tile["terrain"][2][3] = null
+    cases.append(null_tile)
+    var extra_column: Dictionary = baseline.duplicate(true)
+    extra_column["terrain"][1].append("plain")
+    cases.append(extra_column)
     var duplicate_unit: Dictionary = baseline.duplicate(true)
     duplicate_unit["units"].append(duplicate_unit["units"][0].duplicate(true))
     cases.append(duplicate_unit)
 
+    var original_before: Dictionary = original.duplicate(true)
     for i in range(cases.size()):
         var result: Dictionary = Codec.decode(JSON.stringify(cases[i]))
         assert(result.is_empty(), "Structural corruption case %d unexpectedly restored" % i)
-        assert(original["units"][0]["hp"] == 10)
-        assert(original["units"][0]["pos"] == Vector2i(1,2))
+        assert(original == original_before, "Corrupt decode mutated active session")
     # Root JSON values can parse successfully while still being invalid battle objects.
     var invalid_roots: Array[String] = ["[]", "null", "true", "42", "\"orphan\""]
     for payload in invalid_roots:
         assert(Codec.decode(payload).is_empty(), "Non-object JSON root unexpectedly restored")
-        assert(original["units"][0]["hp"] == 10)
+        assert(original == original_before, "Invalid root mutated active session")
     assert(Codec.decode(encoded) == original)
     print("PASS save structural corruption: %d malformed snapshots rejected" % (cases.size() + invalid_roots.size()))
     quit(0)
