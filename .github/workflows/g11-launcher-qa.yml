@@ -68,6 +68,7 @@ on:
       - 'scripts/ui/G11TacticalReadabilityV24.gd'
       - 'scripts/ui/G11BattleLODControllerV25.gd'
       - 'scripts/ui/G11BattleContextV25.gd'
+      - 'scripts/ui/G11RocketFaceReadabilityV25.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
       - 'tests/test_g11_live_battle_context_v25_capture.gd'
