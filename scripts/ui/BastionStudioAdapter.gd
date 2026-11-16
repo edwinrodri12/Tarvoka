@@ -23,6 +23,7 @@ const P06FlankV19 = preload("res://scripts/ui/APCUnifiedFlankV19.gd")
 const P06MicroV20 = preload("res://scripts/ui/APCMicrodetailV20.gd")
 const P06MaterialV21 = preload("res://scripts/ui/APCMaterialFinishV21.gd")
 const P06WeatherV22 = preload("res://scripts/ui/APCWeatherFinishV22.gd")
+const P06TireV23 = preload("res://scripts/ui/APCTireFinishV23.gd")
 const P06Audio = preload("res://scripts/ui/APCWeaponAudioV8.gd")
 const P06Tactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
@@ -69,7 +70,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V18 orugas reconstruidas")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
-        role_picker.set_item_text(idx,"Bastión P06 · V22 luz y clima PBR · 6×6")
+        role_picker.set_item_text(idx,"Bastión P06 · V23 neumáticos completos · 6×6")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -77,11 +78,11 @@ func _ready() -> void:
 func _install_p06_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
     p06_controls = VBoxContainer.new()
-    p06_controls.name = "BastionP06_V22_LuzYClimaPBR"
+    p06_controls.name = "BastionP06_V23_NeumaticosCompletos"
     p06_controls.add_theme_constant_override("separation",8)
     column.add_child(p06_controls)
     var heading: Label = _title(p06_controls,
-        "BASTIÓN P06 · V22 · LUZ Y CLIMA SOBRE PBR",14)
+        "BASTIÓN P06 · V23 · NEUMÁTICOS Y CLIMA",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(p06_controls,"Movimiento 6×6",func(): _play("move"),
         "Torreta",func(): _play("turn_turret"))
@@ -123,6 +124,10 @@ func _install_p06_controls() -> void:
         "V22: luz de día",func(): _set_p06_light_v22(0))
     _add_paired(p06_controls,"V22: atardecer",func(): _set_p06_light_v22(1),
         "V22: noche",func(): _set_p06_light_v22(2))
+    _add_paired(p06_controls,"V23: dibujo de neumáticos",_inspect_p06_tread_v23,
+        "V23: flanco y talón",_inspect_p06_sidewall_v23)
+    _add_paired(p06_controls,"V23: ruedas lado opuesto",_inspect_p06_opposite_v23,
+        "V23: nieve en neumáticos",_inspect_p06_snow_v23)
     _add_paired(p06_controls,"Vista inferior completa",_inspect_p06_underside,
         "Acercamiento a transmisión",_inspect_p06_transfer)
     _add_paired(p06_controls,"Vista 3/4 trasera",func(): _view_p06_angle(145.0),
@@ -131,14 +136,14 @@ func _install_p06_controls() -> void:
         _toggle_p06_ramp)
     _add_paired(p06_controls,"Destrucción",func(): _set_damage(4),
         "Reparar completamente",func(): _set_damage(0))
-    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V22",
+    p06_version_button = _button(p06_controls,"Comparar acabado V3 / V23",
         _toggle_p06_version)
     _add_paired(p06_controls,
         "Prueba 8 vehículos",func(): _show_p06_fleet(8),
         "Prueba 32 vehículos",func(): _show_p06_fleet(32))
     _add_paired(p06_controls,
         "Prueba 64 vehículos",func(): _show_p06_fleet(64),
-        "Volver al Bastión V22",_hide_p06_fleet)
+        "Volver al Bastión V23",_hide_p06_fleet)
     _add_paired(p06_controls,
         "LOD cerca",func(): _set_p06_fleet_quality(0),
         "LOD medio",func(): _set_p06_fleet_quality(1))
@@ -149,9 +154,9 @@ func _install_p06_controls() -> void:
         "Flota en marcha",func(): _animate_p06_fleet("move_turn"),
         "Flota disparando",func(): _animate_p06_fleet("attack"))
     p06_hint = _title(p06_controls,
-        "V22: lluvia con reflejos y pintura húmeda, nieve con escarcha mate y "
-        + "tres iluminaciones reales: día, atardecer y noche. "
-        + "Se conserva la pintura V21 y la respuesta a cinco daños.",12)
+        "V23: seis neumáticos completos con 160 tacos continuos por rueda, "
+        + "dos flancos reforzados, hombros tallados y nieve/agua real en "
+        + "la banda. Conserva rines, dirección, suspensión y cinco daños.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
@@ -368,7 +373,7 @@ func _sync_p06_controls() -> void:
         damage_picker.select(_stage_p06())
         if p06_version_button != null:
             p06_version_button.text = ("Ver acabado anterior V3"
-                if _p06_show_v5 else "Volver al acabado completo V22")
+                if _p06_show_v5 else "Volver al acabado completo V23")
         if p06_ramp_button != null:
             p06_ramp_button.text = ("Cerrar rampa de tropas"
                 if model_root != null and model_root.get_meta(
@@ -425,6 +430,7 @@ func _display_role(role: String) -> void:
             P06MicroV20.FLAG,false)) and bool(model_root.get_meta(
             P06MaterialV21.FLAG,false)) and bool(model_root.get_meta(
             P06WeatherV22.FLAG,false)) and bool(model_root.get_meta(
+            P06TireV23.FLAG,false)) and bool(model_root.get_meta(
             P06Audio.FLAG,false))
         if _p06_quality_verified:
             P06Details.set_enabled(model_root,_p06_show_v5)
@@ -446,8 +452,10 @@ func _display_role(role: String) -> void:
             P06MaterialV21.set_stage(model_root,0)
             P06WeatherV22.set_stage(model_root,0)
             P06WeatherV22.set_weather(model_root,_p06_weather_v22)
+            P06TireV23.set_stage(model_root,0)
+            P06TireV23.set_weather(model_root,_p06_weather_v22)
         else:
-            push_error("TARVOKA P06 V22 climate materials were not built; do not label it final")
+            push_error("TARVOKA P06 V23 complete tire geometry was not built; do not label it final")
         _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
@@ -542,6 +550,7 @@ func _set_damage(stage: int) -> void:
         P06MicroV20.set_stage(model_root,stage)
         P06MaterialV21.set_stage(model_root,stage)
         P06WeatherV22.set_stage(model_root,stage)
+        P06TireV23.set_stage(model_root,stage)
         damage_picker.select(_stage_p06())
         _update_details()
 
@@ -567,6 +576,7 @@ func _toggle_p06_version() -> void:
     P06MicroV20.set_enabled(model_root,_p06_show_v5)
     P06MaterialV21.set_enabled(model_root,_p06_show_v5)
     P06WeatherV22.set_enabled(model_root,_p06_show_v5)
+    P06TireV23.set_enabled(model_root,_p06_show_v5)
     _sync_p06_controls()
     _update_details()
 
@@ -740,6 +750,7 @@ func _set_p06_weather_v22(mode: String) -> void:
     _p06_weather_v22=mode
     if model_root!=null:
         P06WeatherV22.set_weather(model_root,mode)
+        P06TireV23.set_weather(model_root,mode)
     _apply_p06_lighting_v22()
     _update_details()
 
@@ -813,6 +824,35 @@ func _inspect_p06_wheels() -> void:
     _view_p06_angle(90.0)
     # Keep all three axles in view; no misleading 2D model rendering.
     _zoom=1.43
+    _update_camera()
+
+func _inspect_p06_tread_v23() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(96.0)
+    _zoom=2.08
+    _update_camera()
+
+func _inspect_p06_sidewall_v23() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(81.0)
+    _zoom=2.16
+    _update_camera()
+
+func _inspect_p06_opposite_v23() -> void:
+    if _role!="apc":
+        return
+    _view_p06_angle(-94.0)
+    _zoom=1.85
+    _update_camera()
+
+func _inspect_p06_snow_v23() -> void:
+    if _role!="apc":
+        return
+    _set_p06_weather_v22("snow")
+    _view_p06_angle(106.0)
+    _zoom=1.94
     _update_camera()
 
 func _inspect_p06_suspension() -> void:
@@ -1022,10 +1062,10 @@ func _update_details() -> void:
     var mesh_count: int = P06Models.inspect_meshes(model_root)
     var true_v5: bool = bool(model_root.get_meta(P06Details.FLAG,false))
     detail_label.text = "Bastión P06 · %d mallas 3D · 6 ruedas · %s" % [
-        mesh_count,"V22 completo" if true_v5 and _p06_show_v5 else
+        mesh_count,"V23 completo" if true_v5 and _p06_show_v5 else
         "V3 de comparación"]
     var faction_name: String = str(Factions.FACTIONS[_faction]["name"])
     status_label.text = "%s · %s · %s" % [
         faction_name,P06Stages[_stage_p06()],
-        "acabado V22 cargado" if _p06_quality_verified else
+        "acabado V23 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
