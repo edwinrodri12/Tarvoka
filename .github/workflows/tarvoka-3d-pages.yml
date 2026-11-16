@@ -1160,7 +1160,10 @@ jobs:
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
-          grep -q 'TANQUE G09 V32' build/web/index.html
+          # The G09 V32 is now selected natively inside the main Godot
+          # catalogue; no standalone-tank link is required on the homepage.
+          grep -q 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
+          grep -q 'TankTrackAlignmentV31.apply' scripts/ui/UnitModels3D.gd
           grep -q 'VOLVER AL ESTUDIO' build/web/tanque/index.html
           grep -q 'BATALLA 3D' build/web/tanque/index.html
           grep -q 'BATALLA G09 V32' build/web/index.html
