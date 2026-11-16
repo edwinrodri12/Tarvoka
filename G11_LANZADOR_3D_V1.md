@@ -1,5 +1,7 @@
 # TARVOKA — G11 Lanzador, escultura 3D V1
 
+> **CERRADO COMO DISEÑO 3D APROBADO (V33, 16-nov-2026).** Este archivo conserva las etapas históricas y sus pendientes anteriores. El estado vigente, componentes protegidos y las únicas validaciones de dispositivo aún pendientes se definen en [G11_FINAL_ART_APPROVAL_V33.md](G11_FINAL_ART_APPROVAL_V33.md). No tratar pendientes históricos de V1–V32 como si siguieran abiertos para modelado artístico.
+
 **Estado (15-nov-2026):** mallas nativas Godot 4.3 integradas en `scripts/ui/UnitModels3D.gd`, con animaciones y controles del Estudio 3D. No modifica el equilibrio, las reglas ni las estadísticas de las partidas.
 
 ## Identidad del modelo
