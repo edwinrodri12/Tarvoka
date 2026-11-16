@@ -248,8 +248,9 @@ func _audit(level: int,faction: int,damage: int) -> void:
     if level==3 and damage<4:
         assert(is_equal_approx(float(tower8.get_meta(
             "n3_rear_shift_m",-1)),0.50))
-        var wing_back: float=float(V2._modules(level)[1]["z"])+
-            float(V2._modules(level)[1]["d"])*0.5
+        var wing_back: float=(
+            float(V2._modules(level)[1]["z"])+
+            float(V2._modules(level)[1]["d"])*0.5)
         # V1 tower roof and V1 tower platform must be fully BEHIND both
         # wings: no overlap with the N3 wall/roof bounding footprints.
         for tag in ["TorreOesteNivel3","TorreEsteNivel3"]:
@@ -266,15 +267,17 @@ func _audit(level: int,faction: int,damage: int) -> void:
                 var platform: MeshInstance3D=old_group.find_child(
                     "PlataformaElevada",true,false) as MeshInstance3D
                 assert(platform!=null)
-                var plat_front: float=platform.position.z+old_group.position.z-
-                    (platform.mesh as BoxMesh).size.z*0.5
+                var plat_front: float=(
+                    platform.position.z+old_group.position.z-
+                    (platform.mesh as BoxMesh).size.z*0.5)
                 assert(plat_front>wing_back+0.24)
                 if damage<=1:
                     var roof: MeshInstance3D=old_group.find_child(
                         "CubiertaTorre",true,false) as MeshInstance3D
                     assert(roof!=null)
-                    var roof_front: float=roof.position.z+old_group.position.z-
-                        (roof.mesh as BoxMesh).size.z*0.5
+                    var roof_front: float=(
+                        roof.position.z+old_group.position.z-
+                        (roof.mesh as BoxMesh).size.z*0.5)
                     assert(roof_front>wing_back+0.15)
                     assert(roof_front>2.51+0.50)
             else:
