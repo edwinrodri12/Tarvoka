@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/experiments/FactionPowerBalanceV17.gd"
       - "tests/test_faction_power_stack_v17.gd"
+      - "tests/test_antiarmor_terrain_breakpoints_v17.gd"
       - ".github/workflows/faction-power-stack-v17.yml"
   workflow_dispatch:
 
@@ -32,6 +33,16 @@ jobs:
             2>&1 | tee /tmp/faction-stack-v17.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/faction-stack-v17.log; then exit 1; fi
           grep -Fq 'PASS faction power stack audit v17:' /tmp/faction-stack-v17.log
+      - name: Validate antiblindaje across nine armored targets and terrain
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 60s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_antiarmor_terrain_breakpoints_v17.gd \
+            2>&1 | tee /tmp/antiarmor-terrain-v17.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/antiarmor-terrain-v17.log; then exit 1; fi
+          grep -Fq 'PASS antiarmor terrain breakpoints v17:' /tmp/antiarmor-terrain-v17.log
       - name: Check original 32-role battlefield baseline
         shell: bash
         run: |
@@ -59,6 +70,7 @@ jobs:
           name: tarvoka-balance-commanders-v17
           path: |
             /tmp/faction-stack-v17.log
+            /tmp/antiarmor-terrain-v17.log
             /tmp/combat-base-v07.log
             /tmp/unit-levels-v14.log
           retention-days: 30
