@@ -57,6 +57,19 @@ func _run()->void:
                 0)[Mesh.ARRAY_VERTEX]
             check(vertices.size()>=100,
                 "cab has real multi-ring faceted bevel geometry")
+            # Godot 4 front faces are clockwise: explicit outward normal
+            # opposes the vertex cross-product, avoiding missing panels.
+            var normals: PackedVector3Array=cab_shell.mesh.surface_get_arrays(
+                0)[Mesh.ARRAY_NORMAL]
+            check(normals.size()==vertices.size(),
+                "every polygon has an explicit outward normal")
+            if normals.size()==vertices.size():
+                for tri in range(0,vertices.size(),3):
+                    var signed_normal: Vector3=(vertices[tri+1]-
+                        vertices[tri]).cross(vertices[tri+2]-
+                        vertices[tri]).normalized()
+                    check(signed_normal.dot(normals[tri])< -0.98,
+                        "clockwise exterior face stays visible under Godot culling")
             var top_x: float=0.0
             var mid_x: float=0.0
             for v in vertices:
