@@ -14,6 +14,7 @@ func _initialize() -> void:
     for size in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:
         _camp_turns_and_saves(size)
     _capture_card()
+    _shore_restriction()
     print("PASS fixed site orders v19: 3 map sizes, 2 specialist camps, real credits/turns, HUD purchase cards, two-turn capture, strict v19 saves and old SaveCodec unchanged")
     quit(0)
 
@@ -166,3 +167,33 @@ static func _capture_card() -> void:
     # Income and structures cannot be produced from an invented site.
     assert(not Orders.purchase(session,Vector2i(-1,-1),"apc").get("valid",false))
     assert(Economy.valid(session["world"]["state"]["economy"],session["world"]["state"]["terrain"]))
+
+static func _shore_restriction() -> void:
+    var size := Vector2i(24,18)
+    for map_id in [0,1,2,3]:
+        var terrain: Array = Scenarios.terrain(map_id,size)
+        var layout: Dictionary = Sites.layout(terrain)
+        var dock: Dictionary = {}
+        for site in layout["sites"]:
+            if str(site["kind"]) == "shipyard":
+                dock = site
+                break
+        if dock.is_empty():
+            continue
+        var land: Vector2i = dock["capture_pos"]
+        var foe: Vector2i = _free(terrain,layout["sites"],[land])
+        var army: Array = [
+            Roles.make_unit("COAST",0,land,"scout"),
+            Roles.make_unit("FOE",1,foe,"line")
+        ]
+        var session: Dictionary = Orders.start(map_id,size,0,army)
+        assert(session.get("valid",false))
+        var view: Dictionary = Orders.site_card(session,land)
+        assert(view["kind"] == "shipyard" and view["capture_position"] == land)
+        assert(not Orders.camp_choices(session,"COAST")[1]["available"])
+        var unchanged: String = Orders.encode(session)
+        assert(not Orders.build_camp(session,"COAST","recon").get("valid",false))
+        assert(Orders.encode(session) == unchanged)
+        print("SITE_ORDERS shore_capture=%s prevents_camp_overlap=true" % str(land))
+        return
+    assert(false) # At least one scenario must expose neutral maritime access.
