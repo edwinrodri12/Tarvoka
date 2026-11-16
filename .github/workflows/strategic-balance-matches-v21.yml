@@ -51,3 +51,41 @@ jobs:
             /tmp/strategy-v21-smoke.log
           retention-days: 30
           if-no-files-found: ignore
+
+  strategy_pairs:
+    needs: strategy_smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [small_open, medium_open, medium_forest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare three strategy pairs with 12 mirrored real matches per scenario
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 360s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_strategic_balance_pairs_v21.gd \
+            -- ${{ matrix.scenario }} \
+            2>&1 | tee /tmp/strategy-v21-pairs.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/strategy-v21-pairs.log; then exit 1; fi
+          grep -Fq 'PASS strategic mirrored pairs v21:' /tmp/strategy-v21-pairs.log
+      - name: Preserve per-scenario strategy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v21-pairs-${{ matrix.scenario }}
+          path: /tmp/strategy-v21-pairs.log
+          retention-days: 30
+          if-no-files-found: ignore
