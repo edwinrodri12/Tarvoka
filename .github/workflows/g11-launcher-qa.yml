@@ -74,6 +74,7 @@ on:
       - 'scripts/ui/G11BattleActionsV29.gd'
       - 'scripts/ui/G11RearUndercarriageV30.gd'
       - 'scripts/ui/G11RocketTrailsV30.gd'
+      - 'scripts/ui/G11RocketFlightV31.gd'
       - 'scripts/ui/Battle3DMapView.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
@@ -88,6 +89,8 @@ on:
       - 'tests/test_g11_battle_actions_v29_capture.gd'
       - 'tests/test_g11_rear_rocket_v30.gd'
       - 'tests/test_g11_rear_rocket_v30_capture.gd'
+      - 'tests/test_g11_rocket_flight_v31.gd'
+      - 'tests/test_g11_rocket_flight_v31_capture.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
       - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scenes/G11AndroidStressLab.tscn'
@@ -365,6 +368,20 @@ jobs:
             echo 'V30 rear stabilizer-to-track collision or short-rocket regression'; exit 1
           fi
           grep -F 'PASS G11 V30:' /tmp/g11_v30.log
+      - name: Verify V31 finned rockets, staged smoke and restored 22mm rack recoil
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 205s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rocket_flight_v31.gd 2>&1 | tee /tmp/g11_v31.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v31.log; then
+            echo 'V31 authentic missile shape, smoke progression, 22mm recoil or combat safety failed'; exit 1
+          fi
+          grep -F 'PASS G11 V31:' /tmp/g11_v31.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
@@ -798,6 +815,28 @@ jobs:
         with:
           name: tarvoka-g11-v30-hero-mobile-rear-underside-and-rocket-trails
           path: /tmp/g11-v30-rear-rocket/*.png
+          retention-days: 14
+      - name: Capture V31 shaped rockets and fading smoke at three launch stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v31-real-launch
+          timeout --signal=TERM --kill-after=5s 205s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V31_CAPTURE_DIR=/tmp/g11-v31-real-launch \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rocket_flight_v31_capture.gd 2>&1 | tee /tmp/g11_v31_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v31_capture.log; then
+            echo 'V31 Godot actual flight pictures failed'; exit 1
+          fi
+          grep -F 'PASS G11 V31 CAPTURE:' /tmp/g11_v31_capture.log
+          test "$(find /tmp/g11-v31-real-launch -name '*.png' | wc -l)" -eq 12
+      - name: Upload V31 G11 finned rockets and evolving smoke screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v31-twelve-3d-finned-rocket-launch-frames
+          path: /tmp/g11-v31-real-launch/*.png
           retention-days: 14
       - name: Upload 16 real G11 V25 battle context Godot captures
         if: success()

@@ -588,3 +588,31 @@ holguras geométricas y los cuatro biomas. La prueba de capturas genera
 12 vistas inferiores-traseras del hero/LOD8/LOD10 y cuatro salvas con
 el mapa real. La integración se hace por `G11Art3D.gd`,
 `G11MobileLOD.gd` y `G11BattleActionsV29.gd`, no en las estadísticas.
+
+
+## V31 · cohetes esculpidos, humo gradual y retroceso discreto
+
+Tras estabilizar las dos placas traseras eliminadas en V30, el objetivo
+prioritario pasa a la **identificación visual de la salva de doce cohetes**.
+En la V30, el proyectil era una esfera emisiva: difícil de reconocer
+como un cohete a la distancia normal de las partidas.
+
+- `G11RocketFlightV31.gd` crea un único `ArrayMesh` con un cuerpo
+  cilíndrico longitudinal, punta afinada, cola cerrada y cuatro aletas
+  traseras. No aparece una malla individual por disparo: los cinco
+  proyectiles simultáneos usan el `MultiMesh` original de V30.
+- El segundo lote existente (cinco instancias) ahora usa humo semitransparente
+  que **se ensancha, se desplaza y pierde opacidad** durante 0,39 segundos
+  por cohete. La niebla táctica y la visión del jugador no se modifican.
+- El módulo original recibe un máximo de **2,2 cm** de retroceso puramente
+  visual por disparo y vuelve a su posición anterior al acabar la salva.
+  El casco, la casilla, las ruedas, los tanques vecinos, los datos de
+  combustible y el daño permanecen exactamente iguales.
+- El calendario de doce bocas V29, sus fogonazos existentes y los cambios
+  de geometría V30 se conservan. Cero nuevos nodos de efectos 3D y dos
+  llamadas de dibujo como máximo para cabeza y estela, igual que V30.
+- El Estudio 3D permite comparar la nueva salva en cuatro biomas. Los
+  tests `test_g11_rocket_flight_v31.gd` y
+  `test_g11_rocket_flight_v31_capture.gd` prueban el mismo lanzador de
+  batalla de Godot, sin alterar el motor de órdenes, y generan doce
+  capturas originales (primer disparo, fase intermedia, fase final).

@@ -100,7 +100,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V30 · chasis corregido y cohetes 3D")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V31 · cohetes esculpidos y estela progresiva")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V8 silueta táctica de facción")
@@ -342,7 +342,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · V30 · TRASERA SIN INTERFERENCIAS",14)
+        "G11 LANZADOR · V31 · SALVA DE COHETES REALISTA",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -413,14 +413,14 @@ func _install_g11_controls() -> void:
     _button(g11_controls,"V28: zoom intermedio de batalla",_g11_battle_mid_zoom_v28)
     _add_paired(g11_controls,
         "V29: mover G11 en batalla",func(): _g11_battle_action_v29("move"),
-        "V29: salva de 12 cohetes",func(): _g11_battle_action_v29("attack"))
+        "V31: salva con cohetes y humo",func(): _g11_battle_action_v29("attack"))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V30: debajo de la parte trasera, estabilizadores y chasis ahora "
-        + "tienen piezas biseladas sin invadir las orugas. Revisa ambas "
-        + "vistas bajas. En batalla, la salva agrega trayectorias cortas "
-        + "reales con sólo dos lotes de instancias; no revela enemigos "
-        + "ni cambia ataques, daño, munición o estadísticas.",12)
+        "V31: prueba cohetes con nariz cónica, cuatro aletas y estelas "
+        + "de humo que se expanden y desaparecen. El módulo tiene un "
+        + "retroceso visual mínimo por disparo. Revisa también las "
+        + "dos placas traseras eliminadas en V30 y los cuatro biomas. "
+        + "Sin cambiar la física de las órdenes, daño ni municiones.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -497,9 +497,9 @@ func _g11_battle_action_v29(kind: String) -> void:
     if not actions.play("G11-H",kind,origin,Vector2i(2,-1)):
         status_label.text="G11 V29 · no se pudo reproducir la acción"
         return
-    status_label.text=("G11 V29 · demostración de movimiento sin órdenes"
+    status_label.text=("G11 V31 · movimiento visual sin órdenes"
         if kind=="move" else
-        "G11 V29 · salva visual de 12 bocas sin aplicar daño")
+        "G11 V31 · 12 cohetes 3D, humo gradual y retroceso sin daño")
 
 func _g11_close_context_v25() -> void:
     if _role!="mlrs":
