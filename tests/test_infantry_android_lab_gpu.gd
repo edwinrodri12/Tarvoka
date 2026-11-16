@@ -85,10 +85,31 @@ func _run() -> void:
     await _frames(5)
     assert(lab._models.size()==4)
     await _capture("n2_damaged_4")
+    # Synthetic arithmetic checks; these are not claims about device FPS.
+    var sample_near: Dictionary={
+        "level":3,"count":4,"faction":1,"damage":0,
+        "platform":"Linux","android_hardware_tested":false,"lod":"near",
+        "fps_mean":50.0,"draw_calls_mean":300.0,"frame_p95_ms":24.0,
+        "mesh_stats":{"visible_meshes":1760,"hidden_meshes":0}}
+    var sample_far: Dictionary=sample_near.duplicate(true)
+    sample_far["lod"]="far"
+    sample_far["fps_mean"]=55.0
+    sample_far["mesh_stats"]={"visible_meshes":1688,"hidden_meshes":72}
+    var paired: Dictionary=lab.compare_ab(sample_near,sample_far)
+    assert(float(paired.get("fps_delta_percent",0.0))==10.0)
+    assert(int(paired.get("hidden_meshes",0))==72)
+    assert(not bool(paired.get("android_hardware_tested",true)))
+    sample_far["damage"]=1
+    assert(lab.compare_ab(sample_near,sample_far).is_empty())
+    lab.begin_ab_compare()
+    await _frames(3)
+    assert(lab._ab_active and lab._ab_phase==0 and not lab._far_lod)
+    lab.set_scenario(1,1,0,0,false)
+    assert(not lab._ab_active)
     var report_payload=JSON.parse_string(lab._report_json())
     assert(report_payload is Dictionary)
     assert(not bool(report_payload.get("hardware_android_tested",false)))
-    print("PASS INFANTRY ANDROID LAB: real V1-V5 meshes, LOD visibility scales 1/4/9, level 1-3, five damage states preserved, six original OpenGL captures, separate from production gameplay")
+    print("PASS INFANTRY ANDROID LAB: real V1-V5 meshes, LOD visibility scales 1/4/9, level 1-3, five damage states preserved, six original OpenGL captures, paired A/B comparison validated, separate from production gameplay")
     lab.queue_free()
     await _frames(3)
     quit(0)
