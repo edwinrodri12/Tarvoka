@@ -535,3 +535,43 @@ requieren inspección adicional a partir de esas capturas y del dispositivo.
 
 **Nota:** la acción real y el daño siguen siendo responsabilidad exclusiva
 del motor de turnos; V29 no aplica órdenes ni modifica guardados.
+
+
+## V30 · corrección de pieza rectangular bajo la trasera y estelas de cohetes
+
+**Revisión geométrica localizada:** se encontró interferencia en los dos
+antiguos `G11_ZapataEstabilizador_±1`: los cubos originales tenían centros
+X ±0,56 m y anchura 0,38 m, por lo que sus bordes exteriores llegaban
+a ±0,75 m. La pared interior de las orugas es ±(0,79−0,142)=±0,648 m.
+La interferencia transversal era por tanto de **10,2 cm por lado**. La
+protección inferior rectangular heredada `G11_ProteccionInferior`
+tenía apenas 3 mm de holgura y el chasis móvil medía 1,45 m de ancho,
+invadiendo también la banda interior de las orugas tácticas.
+
+`G11RearUndercarriageV30.gd` repara **las mismas piezas**, sin duplicados:
+- Zapatas traseras octogonales, biseladas y estrechadas a un máximo de
+  0,27 m, reubicadas en X ±0,385 m; los soportes se centran en ±0,405 m.
+- Protección inferior octogonal, de medio ancho máximo 0,580 m; queda
+  al menos 0,068 m libre hasta el borde interior de las orugas hero.
+- Chasis de batalla (`ChasisLanzacohetes`) deja de ser un cubo completo:
+  se sustituye por un perfil de ocho lados con el extremo trasero afinado,
+  de medio ancho máximo 0,620 m y al menos 0,025 m de separación interna.
+- La posición de las ruedas, piñones, zapatas, suspensión, pinturas,
+  edificios, daños y las ocho facciones no cambian.
+- Se sustituye la geometría de cinco instancias existentes en hero y una
+  instancia existente en móvil LOD8/LOD10; **cero nodos adicionales**.
+
+**Siguiente prioridad artística:** `G11RocketTrailsV30.gd` conecta
+trayectorias cortas de cohetes con los doce fogonazos escalonados de V29.
+Solo permanecen activos hasta cinco cuerpos y cinco estelas en dos
+`MultiMesh` reutilizables. Los cohetes salen de los tubos ya aprobados,
+describen una trayectoria local ascendente y desaparecen; **no son
+proyectiles de combate**, no buscan ni revelan unidades y no afectan
+HP, munición, impacto o visibilidad.
+
+**Validación:** `tests/test_g11_rear_rocket_v30.gd` revisa los ocho
+colores de facción en el modelo hero y los 16 modelos tácticos, las
+holguras geométricas y los cuatro biomas. La prueba de capturas genera
+12 vistas inferiores-traseras del hero/LOD8/LOD10 y cuatro salvas con
+el mapa real. La integración se hace por `G11Art3D.gd`,
+`G11MobileLOD.gd` y `G11BattleActionsV29.gd`, no en las estadísticas.
