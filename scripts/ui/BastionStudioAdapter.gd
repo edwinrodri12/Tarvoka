@@ -260,9 +260,11 @@ func _install_unified_studio_navigation() -> void:
     studio_advanced_content=VBoxContainer.new()
     studio_advanced_content.add_theme_constant_override("separation",7)
     studio_advanced_group.add_child(studio_advanced_content)
-    # Unit-specific groups remain in their original parent to preserve
-    # responsive reflow and per-unit updates; their visibility is gated
-    # by the active tab in _sync_p06_controls.
+    # All specialized unit inspectors now live under the SAME Details tab.
+    # This eliminates controls stranded below buildings or base camera tools.
+    for section in [p06_controls,g11_controls,g13_controls,heli_controls]:
+        if section!=null:
+            section.reparent(studio_advanced_content)
 
     # Original inspector actions remain connected but are available only
     # under Advanced, avoiding duplicate Move/Attack/Camera toolbars.
@@ -587,19 +589,24 @@ func _heli_refresh_mobile_layout(view_size: Vector2) -> void:
     # clipped buttons and forced sidebar width must never leak to Bastion,
     # G11, tanks, buildings or naval/air-base inspect modes.
     _heli_limit_sidebar_width(compact if active else false)
-    heli_mobile_bar.visible=active and compact
-    heli_controls.visible=active and (not compact or _heli_mobile_expanded)
+    # This compact toolbar predated the unified tabs. Keep its actions
+    # wired for compatibility, but never show a second control surface.
+    heli_mobile_bar.visible=false
+    heli_controls.visible=active and studio_active_tab==2 and studio_advanced_expanded
     if _heli_mobile_expand_button!=null:
         _heli_mobile_expand_button.text=(
             "Ocultar inspecciones técnicas" if _heli_mobile_expanded else
             "Mostrar inspecciones técnicas")
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
-    if compact:
-        column.move_child(heli_controls,
-            column.get_children().find(heli_mobile_bar)+1)
-    else:
-        column.move_child(heli_controls,
-            maxi(0,column.get_children().find(detail_label)))
+    # In the unified studio, helicopter controls are children of Details,
+    # not the original column. Do not reparent them during viewport resize.
+    if heli_controls.get_parent()==column:
+        if compact:
+            column.move_child(heli_controls,
+                column.get_children().find(heli_mobile_bar)+1)
+        else:
+            column.move_child(heli_controls,
+                maxi(0,column.get_children().find(detail_label)))
     if active:
         _heli_reflow_frame(view_size)
 
