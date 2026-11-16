@@ -46,7 +46,7 @@ func _resize_map() -> void:
         return
     var dims: Vector2i = Rules.map_size(world["state"]["terrain"])
     custom_minimum_size = Vector2(dims.x*cell_pixels,dims.y*cell_pixels)
-    minimum_size_changed()
+    update_minimum_size()
 
 func pixel_to_cell(pixel: Vector2) -> Vector2i:
     if cell_pixels <= 0 or world.is_empty():
