@@ -32,6 +32,7 @@ const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Weather = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
 const G11Atmos = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
+const G11JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -69,7 +70,7 @@ func _ready() -> void:
     _install_p06_lighting_v22()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V21 anclajes y muelles")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V22 bisagras y cortes 3D")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -178,7 +179,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · TERMINACIONES DE SUSPENSIÓN V21",14)
+        "G11 LANZADOR · HORQUILLAS DE SUSPENSIÓN V22",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -224,13 +225,34 @@ func _install_g11_controls() -> void:
         "V21: anclajes lado B",func(): _g11_mount_inspect(270.0,false))
     _add_paired(g11_controls,"V21: suspensión inferior A",func(): _g11_mount_inspect(90.0,true),
         "V21: suspensión inferior B",func(): _g11_mount_inspect(270.0,true))
+    _add_paired(g11_controls,"V22: interior lado A",func(): _g11_cutaway(1),
+        "V22: interior lado B",func(): _g11_cutaway(-1))
+    _add_paired(g11_controls,"V22: restaurar blindaje",func(): _g11_cutaway(0),
+        "V22: anclajes con marcha",func(): _g11_play("move"))
     _title(g11_controls,
-        "V21: alineados los doce anclajes con las ruedas V18; 24 asientos "
-        + "de muelle, retenes y tornillos reales. Revisa desde abajo y "
-        + "activa marcha: ninguna pieza de oruga V19 se ha duplicado.",12)
+        "V22: horquillas y pasadores articulados en 24 extremos, sin "
+        + "girar con las ruedas. Usa interior A/B para ocultar temporalmente "
+        + "los protectores; restaurar blindaje repone todas las piezas.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _g11_cutaway(side: int) -> void:
+    if _role != "mlrs" or model_root == null:
+        return
+    if not G11JointsV22.set_inspection(model_root,side):
+        return
+    if side == 0:
+        _g11_view(90.0)
+        _zoom = 1.48
+        _update_camera()
+    else:
+        _g11_mount_inspect(90.0 if side > 0 else 270.0,true)
+        if camera != null:
+            camera.position.y = 0.34
+            camera.look_at(Vector3(0,0.37,0),Vector3.UP)
+    status_label.text = ("G11 V22 · blindaje completo" if side == 0
+        else "G11 V22 · interior real visible, lado %s" % ("A" if side > 0 else "B"))
 
 func _g11_mount_inspect(yaw: float, low: bool) -> void:
     if _role != "mlrs" or model_root == null:
@@ -247,6 +269,7 @@ func _g11_mount_inspect(yaw: float, low: bool) -> void:
 func _g11_track_closeup(yaw: float) -> void:
     if _role != "mlrs" or model_root == null:
         return
+    G11JointsV22.set_inspection(model_root,0)
     _g11_stop()
     _yaw = yaw
     _zoom = 1.94
@@ -263,6 +286,7 @@ func _g11_set_wear(enabled: bool) -> void:
 func _g11_view(yaw: float) -> void:
     if _role != "mlrs" or model_root == null:
         return
+    G11JointsV22.set_inspection(model_root,0)
     _g11_stop()
     _yaw = yaw
     model_root.rotation_degrees.y = yaw
@@ -1125,7 +1149,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_shock_mount_finish_v21",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_suspension_joints_v22",false)):
+            detail_label.text = detail_label.text.replace("salva V8","articulaciones reales V22")
+        elif built and bool(model_root.get_meta("tarvoka_g11_shock_mount_finish_v21",false)):
             detail_label.text = detail_label.text.replace("salva V8","anclajes y muelles V21")
         elif built and bool(model_root.get_meta("tarvoka_g11_wheel_suspension_v20",false)):
             detail_label.text = detail_label.text.replace("salva V8","llantas y suspensión V20")

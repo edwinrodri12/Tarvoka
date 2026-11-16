@@ -12,6 +12,7 @@ const ExhaustV9 = preload("res://scripts/ui/G11ExhaustV9.gd")
 const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const TracksFactionV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
 const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
+const JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -48,6 +49,8 @@ static func _reset(model: Node3D) -> void:
                 wheel.rotation_degrees = Vector3.ZERO
                 wheel.position.y = 0.265
     MechanicsV5.update_running_gear(model,0.0)
+    if bool(model.get_meta(JointsV22.FLAG,false)):
+        JointsV22.update_pose(model)
     TracksFactionV13.update_tracks(model,0.0)
     SalvoV8.reset(model)
     ExhaustV9.reset(model)
@@ -93,6 +96,8 @@ static func pose(model: Node3D, kind: String, progress: float,
             # Both tread belts scroll physically around the idlers.
             FinishV2.pose_tracks(model,t)
             MechanicsV5.update_running_gear(model,t)
+            if bool(model.get_meta(JointsV22.FLAG,false)):
+                JointsV22.update_pose(model)
             TracksFactionV13.update_tracks(model,t)
             _node(model,"G11_EfectoPolvoMarcha").visible = t > 0.02 and t < 0.95
         "attack", "fire":
