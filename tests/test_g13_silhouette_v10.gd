@@ -36,6 +36,12 @@ func _run()->void:
             check(cab_shell.mesh is ArrayMesh and
                 turret_shell.mesh is ArrayMesh,
                 "faceted outer silhouettes are actual polygonal meshes")
+            var cab_mat:=cab_shell.material_override as StandardMaterial3D
+            var turret_mat:=turret_shell.material_override as StandardMaterial3D
+            check(cab_mat!=null and turret_mat!=null and
+                cab_mat.cull_mode==BaseMaterial3D.CULL_DISABLED and
+                turret_mat.cull_mode==BaseMaterial3D.CULL_DISABLED,
+                "sealed exterior remains visible from oblique cameras")
             check(cab_shell.get_parent()==cab.get_parent() and
                 turret_shell.get_parent()==turret.get_parent(),
                 "shells follow the original vehicle/cannon hierarchy")
