@@ -122,6 +122,18 @@ static func _capture(model: Dictionary) -> void:
     assert(int(_lookup(second["layout"],target)["owner"]) == 0)
     assert(int(second["total_producers"]) == int(model["producers"]))
     assert(second["layout"]["sites"].size() == model["sites"].size())
+    # A different army may later RECAPTURE the same fixed base, without
+    # building another installation or inheriting temporary production.
+    var rival: Dictionary = Roles.make_unit("RECAP",1,target,"assault")
+    var recapture1: Dictionary = Sites.capture_end_turn(second["layout"],second["holds"],[rival],1)
+    assert(recapture1.get("valid",false) and int(recapture1["completed"]) == 0)
+    var rival_pause: Dictionary = Sites.capture_end_turn(recapture1["layout"],recapture1["holds"],[rival],0)
+    assert(rival_pause.get("valid",false))
+    var recapture2: Dictionary = Sites.capture_end_turn(rival_pause["layout"],rival_pause["holds"],[rival],1)
+    assert(recapture2.get("valid",false) and int(recapture2["completed"]) == 1)
+    assert(int(_lookup(recapture2["layout"],target)["owner"]) == 1)
+    assert(int(recapture2["total_producers"]) == int(model["producer_cap"]))
+    assert(recapture2["layout"]["sites"].size() == model["sites"].size())
     # Abandoning the site on the capturer's next OWN phase resets hold.
     var pending: Dictionary = Sites.capture_end_turn(model,{},[soldier],0)
     var abandoned: Dictionary = Sites.capture_end_turn(pending["layout"],pending["holds"],[],0)
