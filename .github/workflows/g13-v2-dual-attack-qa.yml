@@ -1,0 +1,72 @@
+name: TARVOKA G13 V2 ground and air cannon animation QA
+
+on:
+  push:
+    branches: [main, feat/g13-v2-ground-air-attack-visuals]
+    paths:
+      - 'scripts/ui/G13DualDomainVisualV2.gd'
+      - 'scripts/ui/G13MobileAirDefenseV1.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g13_dual_domain_v2.gd'
+      - 'tests/test_g13_dual_domain_v2_capture.gd'
+      - '.github/workflows/g13-v2-dual-attack-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/G13DualDomainVisualV2.gd'
+      - 'scripts/ui/G13MobileAirDefenseV1.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g13_dual_domain_v2.gd'
+      - 'tests/test_g13_dual_domain_v2_capture.gd'
+  workflow_dispatch:
+
+jobs:
+  dual-domain-visuals:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify distinct land and sky weapon elevation and radar behaviors
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 200s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_dual_domain_v2.gd 2>&1 | tee /tmp/g13_v2.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error' /tmp/g13_v2.log; then
+            echo 'G13 V2 two attack modes or original model regression'; exit 1
+          fi
+          grep -F 'PASS G13 V2:' /tmp/g13_v2.log
+      - name: Render 8 native ground and air aim/fire screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v2-actual
+          timeout --signal=TERM --kill-after=5s 200s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V2_CAPTURE_DIR=/tmp/g13-v2-actual \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_dual_domain_v2_capture.gd 2>&1 | tee /tmp/g13_v2_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error' /tmp/g13_v2_capture.log; then
+            echo 'G13 V2 3D land/air capture failed'; exit 1
+          fi
+          grep -F 'PASS G13 V2 CAPTURE:' /tmp/g13_v2_capture.log
+          test "$(find /tmp/g13-v2-actual -name '*.png' | wc -l)" -eq 8
+      - name: Upload 8 actual G13 ground and air attack frames
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g13-v2-two-firing-modes-eight-real-godot-frames
+          path: /tmp/g13-v2-actual/*.png
+          retention-days: 14
