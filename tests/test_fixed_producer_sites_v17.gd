@@ -21,6 +21,7 @@ func _initialize() -> void:
             _check(model,terrain)
             _capture(model)
             if int(model["shipyards"]) == 2:
+                _naval_capture(model,terrain)
                 naval_maps += 1
             cases += 1
             print("STRATEGIC_MAP_CASE size=%s map=%d cities=%d start_cities_each=%d neutral_cities=%d initial_bases_each=%d neutral_bases=%d producer_cap=%d naval_pair=%s initial_city_income=%d sites=%d exceeds_old_cap=%s" % [
@@ -75,6 +76,14 @@ static func _check(model: Dictionary, terrain: Array) -> void:
             if str(site["kind"]) == "shipyard":
                 naval += 1
                 assert(str(terrain[pos.y][pos.x]) == "water")
+                assert(site.has("capture_pos"))
+                var access: Vector2i = site["capture_pos"]
+                assert(Rules.inside(access,terrain))
+                assert(Rules.movement_cost(str(terrain[access.y][access.x])) >= 0)
+                assert(abs(access.x-pos.x)+abs(access.y-pos.y) == 1)
+                assert(not site_ids.has(access))
+                var mirrored_access: Vector2i = Vector2i(dims.x-1-access.x,access.y)
+                assert(sibling.get("capture_pos",Vector2i(-1,-1)) == mirrored_access)
             else:
                 assert(Rules.movement_cost(str(terrain[pos.y][pos.x])) >= 0)
     assert(cities[0] == expected_cities-2*own_city)
@@ -143,3 +152,29 @@ static func _capture(model: Dictionary) -> void:
     assert(not_capturing.get("valid",false))
     assert(int(not_capturing["completed"]) == 0)
     assert(not_capturing["holds"].is_empty())
+
+
+static func _naval_capture(model: Dictionary, terrain: Array) -> void:
+    var dock: Dictionary = {}
+    for site in model["sites"]:
+        if str(site["kind"]) == "shipyard" and site["pos"].x < int(Rules.map_size(terrain).x/2):
+            dock = site
+            break
+    assert(not dock.is_empty())
+    var access: Vector2i = dock["capture_pos"]
+    assert(str(terrain[dock["pos"].y][dock["pos"].x]) == "water")
+    assert(Rules.movement_cost(str(terrain[access.y][access.x])) >= 0)
+    var infantry: Dictionary = Roles.make_unit("COAST",0,access,"scout")
+    var first: Dictionary = Sites.capture_end_turn(model,{},[infantry],0)
+    assert(first.get("valid",false) and int(first["completed"]) == 0)
+    var between: Dictionary = Sites.capture_end_turn(first["layout"],first["holds"],[infantry],1)
+    assert(between.get("valid",false))
+    var second: Dictionary = Sites.capture_end_turn(between["layout"],between["holds"],[infantry],0)
+    assert(second.get("valid",false))
+    assert(int(second["completed"]) == 1)
+    assert(int(_lookup(second["layout"],dock["pos"])["owner"]) == 0)
+    assert(int(second["total_producers"]) == int(model["producers"]))
+    assert(second["layout"]["sites"].size() == model["sites"].size())
+    print("NAVAL_SHORE_CAPTURE yard=%s land_access=%s works_without_soldier_in_water=true" % [
+        str(dock["pos"]),str(access)
+    ])
