@@ -5,6 +5,7 @@ class_name TarvokaG13MobileAirDefenseV1
 # This is a 3D ART PROTOTYPE only; no anti-air attacks, SAM unlocks,
 # target acquisition, ammunition, range or new BattleSession unit IDs.
 const FLAG := "tarvoka_g13_mobile_aa_visual_v1"
+const DualV2 = preload("res://scripts/ui/G13DualDomainVisualV2.gd")
 const BODY := "G13_Casco4x4"
 const TURRET := "G13_TorretaAzimut"
 const GUNS := "G13_ElevacionCanones"
@@ -193,6 +194,8 @@ static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
     root.set_meta("tarvoka_g13_v1_wheel_clearance_m",INNER_CLEARANCE)
     root.set_meta("tarvoka_g13_v1_approved_family","G13")
     root.set_meta("tarvoka_g13_v1_high_detail",high_detail)
+    if not DualV2.install(root):
+        return false
     restore(root)
     return wheels!=null
 
@@ -212,12 +215,14 @@ static func restore(root: Node3D)->void:
     if radar!=null:
         radar.rotation_degrees=Vector3.ZERO
     _wheels_pose(root,0.0)
+    DualV2.clear(root)
     root.set_meta("tarvoka_g13_v1_pose","idle")
 
 static func pose(root: Node3D,kind: String,t: float,
         heading: Vector2i=Vector2i(0,-1))->bool:
     if not has_model(root) or kind not in [
-            "idle","move","scan","aim","attack"]:
+            "idle","move","scan","aim","attack",
+            DualV2.GROUND,DualV2.AIR]:
         return false
     var p: float=clampf(t,0.0,1.0)
     restore(root)
@@ -236,5 +241,8 @@ static func pose(root: Node3D,kind: String,t: float,
             turret.rotation_degrees.y=-38.0+76.0*p
             pitch.rotation_degrees.x=9.0+30.0*p
             radar.rotation_degrees.y=35.0*p
+        DualV2.GROUND,DualV2.AIR:
+            if not DualV2.pose(root,kind,p):
+                return false
     root.set_meta("tarvoka_g13_v1_pose",kind)
     return true
