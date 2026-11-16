@@ -124,6 +124,9 @@ func _run() -> void:
     print("V20_VIEWPORT_CAP: actual=",viewer.preview.size,
         " holder=",viewer.holder.size,
         " shrink=",viewer.holder.stretch_shrink)
+    # A generated viewport can be technically valid while Camera3D points
+    # into the sky instead of at the actual battle. Catch this permanently.
+    assert(viewer.camera.position.distance_to(viewer._look_at)>1.0)
     if viewer.preview.size.x>1280 or viewer.preview.size.y>800:
         push_error("V20 unsafe GPU texture size on Android")
         quit(1)
@@ -133,6 +136,17 @@ func _run() -> void:
             ProjectSettings.globalize_path("res://artifacts"))
         var img: Image = viewer.preview.get_texture().get_image()
         assert(img!=null and not img.is_empty())
+        var visible_colors: Dictionary = {}
+        var stride_x: int = maxi(1,int(img.get_width()/20))
+        var stride_y: int = maxi(1,int(img.get_height()/12))
+        for sy in range(0,img.get_height(),stride_y):
+            for sx in range(0,img.get_width(),stride_x):
+                var pixel: Color = img.get_pixel(sx,sy)
+                var palette_key: String = "%d_%d_%d" % [
+                    roundi(pixel.r*16.0),roundi(pixel.g*16.0),roundi(pixel.b*16.0)]
+                visible_colors[palette_key] = true
+        assert(visible_colors.size()>=12) # The actual map, not a flat sky.
+        print("V20_REAL_SCENE_COLORS: ",visible_colors.size())
         assert(img.save_png(
             "res://artifacts/tarvoka_biomes_v20_delta_in_battle.png")==OK)
     viewer.close_view()
