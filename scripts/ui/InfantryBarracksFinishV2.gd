@@ -218,47 +218,55 @@ static func _tower(stage: Node3D,label: String,x: float,z: float,
 
 static func _training(stage: Node3D,level: int,damage: int) -> void:
     var field: Node3D=Base._group(stage,"InstruccionTacticaV2")
+    var advanced: bool=level==3
+    var center_x: float=-7.04 if advanced else -6.0
+    var center_z: float=-0.67 if advanced else -3.55
     if damage>=3:
         for i in range(2):
             _part(field,"RuinaPistaInstruccion_%d" % i,
-                Vector3(-6.56+float(i)*0.67,0.20,-3.8),
-                Vector3(0.55,0.22,0.28),RUBBLE)
+                Vector3(center_x-0.35+float(i)*0.67,0.20,
+                    -2.1 if advanced else -3.8),
+                Vector3(0.45,0.22,0.28),RUBBLE)
         return
-    # Lane markings consistent across all tiers.
+    # N3 marked lane uses the genuine corridor OUTSIDE the west wing,
+    # not the N1/N2 practice field which would intersect its walls.
     for side in [-1,1]:
         _part(field,"BandaLateralPista_%d" % side,
-            Vector3(-6.0+float(side)*1.23,0.091,-3.55),
-            Vector3(0.075,0.014,4.01),YELLOW,0.1)
+            Vector3(center_x+float(side)*(0.65 if advanced else 1.23),
+                0.091,center_z),
+            Vector3(0.075,0.014,6.13 if advanced else 4.01),
+            YELLOW,0.1)
     var obstacle_count: int=2 if level==1 else 4 if level==2 else 6
     for i in range(obstacle_count):
-        var z: float=-5.11+float(i)*0.7
-        var x: float=-6.60+float(i%2)*1.22
-        # Wooden-looking top guard on each V1 low training barrier.
+        var z: float=-3.42+float(i)*0.93 if advanced else             -5.11+float(i)*0.7
+        var x: float=-7.29+float(i%2)*0.49 if advanced else             -6.60+float(i%2)*1.22
         if damage<=1:
             _part(field,"BarandillaObstaculo_%d" % i,
                 Vector3(x,0.56,z),
-                Vector3(0.72,0.11,0.30),FABRIC)
+                Vector3(0.41 if advanced else 0.72,0.11,0.29),
+                FABRIC)
     if level>=2:
-        # A more advanced obstacle group differentiates N2 from N1.
         for i in range(2):
-            var z: float=-4.25+float(i)*1.40
+            var z: float=-2.86+float(i)*1.39 if advanced else                 -4.25+float(i)*1.40
             for side in [-1,1]:
                 _part(field,"PilarSalto_%d_%d" % [i,side],
-                    Vector3(-6.03+float(side)*0.72,0.43,z),
-                    Vector3(0.12,0.83,0.12),ROUGH if damage==2 else IRON)
+                    Vector3(center_x+float(side)*(0.44 if advanced else 0.72),
+                        0.43,z),
+                    Vector3(0.11,0.83,0.12),
+                    ROUGH if damage==2 else IRON)
             _part(field,"ListonSalto_%d" % i,
-                Vector3(-6.03,0.83,z),
-                Vector3(1.62,0.09,0.16),
+                Vector3(center_x,0.83,z),
+                Vector3(1.03 if advanced else 1.62,0.09,0.15),
                 ROUGH if damage==2 else GALVANIZED,0.42)
-    if level==3 and damage<=1:
-        # Distinct urban cover course—not a new producing installation.
+    if advanced and damage<=1:
+        # Two low infantry cover targets + the instructor's platform.
         for i in range(2):
             _part(field,"CoberturaPracticaN3_%d" % i,
-                Vector3(-7.0+float(i)*1.63,0.66,-0.66),
-                Vector3(0.67,1.25,0.28),Base.CONCRETE)
+                Vector3(-7.39+float(i)*0.69,0.66,0.81),
+                Vector3(0.36,1.25,0.28),Base.CONCRETE)
         _part(field,"TarimaInstruccionSuperiorN3",
-            Vector3(-6.07,0.20,-0.50),
-            Vector3(2.36,0.18,0.38),Base.STEEL,0.33)
+            Vector3(center_x,0.20,2.32),
+            Vector3(1.28,0.18,0.34),Base.STEEL,0.33)
 
 static func _rubble(stage: Node3D,damage: int) -> void:
     if damage<2:
