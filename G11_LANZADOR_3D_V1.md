@@ -319,3 +319,18 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - El PR #425 y la posterior revalidación específica V19 terminaron con **pruebas G11 correctas**; la publicación final Pages se comprueba por separado. Los benchmarks intensivos Android siguen pospuestos hasta que se cierre el arte.
 
 **Pendiente de aprobación:** evaluar las formas de las llantas y amortiguadores durante marcha, no declarar el G11 comercialmente acabado todavía.
+
+
+## V20 — ruedas completas y muelles helicoidales articulados (15-nov-2026)
+
+**Aprobada en Godot 4.3 y fusionada en `main` mediante [PR #431](https://github.com/edwinrodri12/Tarvoka/pull/431)**, conservando el Bastión P06 V23, la Base Naval V13 y las orugas G11 V19. La versión es geometría nativa, no una ilustración externa.
+
+- Nuevo `scripts/ui/G11WheelSuspensionV20.gd`, instalado al final de `G11Art3D.gd` después de V19. Sustituye los **doce** recursos visuales `G11V5_LlantaEsculpida` de la malla V5 existente, no añade una segunda rueda.
+- La nueva `ArrayMesh` de rueda contiene **tres superficies PBR diferenciadas**: caucho cerrado con dos hombros biselados, aro metálico con ocho nervaduras/radios tridimensionales y ranuras abiertas, y una cavidad oscura retrasada tras los radios. Cara posterior cerrada. Radio máximo sigue 0.165 m; frente 0.102 m, dorso −0.078 m en coordenadas locales de rueda. Respetamos la separación lateral de la banda V18.
+- Se reducen y encajan las **12 tapas de buje existentes**; los **72 pernos** que ya existían se reubican por radio y profundidad dentro de las llantas sin duplicarlos. Los doce soportes cuadrados originales de suspensión se sustituyen por volúmenes biselados.
+- Doce muelles de acero `G11V20_MuelleHelicoidal_...` construidos mediante triángulos verdaderos y ocho vueltas; cada resorte se instala como **hijo del amortiguador V5 que ya se mueve**, y lo sigue tanto durante marcha como en restauración. No introduce un segundo damper; las dos secciones telescópicas existentes siguen articulándose.
+- Prueba `tests/test_g11_wheel_suspension_v20.gd`: verifica las ocho facciones, materiales, radios de rueda, separación caucho/buje/pernos, número y anclaje de muelles, sincronía de marcha y reposo, doce tubos y daño/reparación.
+- Capturas `tests/test_g11_wheel_suspension_v20_capture.gd`: **16 renderizaciones reales de Godot** con seis órbitas laterales, cuatro macros de rueda, dos cámaras de amortiguadores, dos fases de marcha y dos colores de facción; artefacto `tarvoka-g11-v20-16-native-godot-roadwheel-suspension`.
+- Selector del **TARVOKA Estudio 3D: «G11 Lanzador · V20 ruedas y suspensión 3D»**, con cuatro vistas nuevas para ruedas de ambos lados, muelles y bujes; conserva las vistas V18/V19 y efectos V17. El flujo Pages incluye el recurso V20 con protecciones para G11 y P06.
+- QA completo del G11 V20 aprobado. **Seguimiento pendiente:** evaluar tamaño/visibilidad del muelle desde cámaras móviles y decidir si perfeccionar tornillería y óptica nocturna. No se alteraron estadísticas, costos, HP, combustible, movimiento táctico ni economía; optimización Android continúa pospuesta.
+
