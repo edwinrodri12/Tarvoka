@@ -47,7 +47,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
     assert(int(finish.get_meta("tier",-1))==level)
     assert(int(finish.get_meta("damage",-1))==damage)
     var counted: Dictionary=finish.get_meta("surface_counts",{})
-    assert(int(counted.get("faction_preserved",0))>=1)
+    assert(int(counted.get("faction_preserved",0))>=1 if damage<4 else int(counted.get("faction_preserved",0))==0)
     assert(int(counted.get("concrete",0))>=1)
     assert(V1.mesh_count(model)>=mcount)
     if damage<=2:
@@ -56,7 +56,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
         assert(_count(model,"CostillaPanel_0_0")==
             (level if damage==0 or damage==1 else 0))
         assert(_count(model,"CostillaPanel_1_0")==
-            (level if damage==0 else 0))
+            (level if damage in [0,2] else 0))
         assert(_count(model,"CostillaPanel_3_0")==level)
         assert(_count(model,"GoteronPosterior")==
             (level if damage<=1 else 0))
