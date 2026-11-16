@@ -312,7 +312,7 @@ func _g11_battle_zoom_v25(near: bool) -> void:
 func _g11_battle_mid_zoom_v28() -> void:
     if _role!="mlrs" or _g11_context_v25==null:
         return
-    _zoom=1.35
+    _zoom=1.80
     _update_camera()
     var driver := _g11_context_v25.find_child(
         "G11V25_LOD_Camara",true,false) as G11LODDriverV25
