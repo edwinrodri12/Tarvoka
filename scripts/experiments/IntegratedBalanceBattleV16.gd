@@ -306,6 +306,16 @@ static func city_action(battle: Dictionary) -> Dictionary:
         if int(ally.get("faction",-1)) != side or not Economy.can_capture(ally) or not Turns.can_move(ally,side):
             continue
         var origin: Vector2i = ally["pos"]
+        # Capture takes TWO of this soldier's own phases. A city-seeking
+        # heuristic must not move the garrison to another nearby city
+        # before its unfinished hold completes.
+        var holding_this_city := false
+        for site in battle["cities"]["sites"]:
+            if str(site.get("kind","")) == "city" and site["pos"] == origin                     and int(site.get("owner",-1)) != side:
+                holding_this_city = true
+                break
+        if holding_this_city:
+            continue
         var others: Array[Vector2i] = occupied.duplicate()
         others.erase(origin)
         var reachable: Dictionary = Rules.reachable(origin,int(ally["move_points"]),
