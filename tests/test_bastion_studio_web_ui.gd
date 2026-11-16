@@ -70,6 +70,22 @@ func _run() -> void:
             "V22 real PBR weather finishes are attached to the Bastion model")
         _check(bool(model.get_meta("tarvoka_apc_complete_tires_v23",false)),
             "V23 all six tires have genuine tread and sculpted sidewalls")
+        _check(bool(model.get_meta("tarvoka_apc_rubber_arch_v24",false)),
+            "V24 six sculpted shoulder transitions and static guard seals loaded")
+        _check(bool(model.get_meta("tarvoka_apc_closed_tires_v25",false)),
+            "V25 X-axis closed tire and dark brake backing installed on every wheel")
+        var closed: MeshInstance3D=model.find_child(
+            "P06V25_GomaToricaCerrada",true,false) as MeshInstance3D
+        var v25_old: MeshInstance3D=model.find_child(
+            "NeumaticoTodoTerreno",true,false) as MeshInstance3D
+        _check(closed!=null and closed.mesh is ArrayMesh and
+            v25_old!=null and not v25_old.visible,
+            "V25 correct tire carcass visible while defective Y-axis one hidden")
+        _check(model.find_child("P06V24_HombrosEnlazados",true,false)
+            is MeshInstance3D and
+            model.find_child("P06V24_UnionContinuaGuardabarros",true,false)
+            is MeshInstance3D,
+            "real V24 tire shoulder and stationary arch mesh in live web scene")
         var first_wheel: Node3D=model.find_child(
             "RuedaMotorizadaP06_1_0",true,false) as Node3D
         var first_tread: MeshInstance3D=first_wheel.find_child(
@@ -211,6 +227,10 @@ func _run() -> void:
         "V22 rain/snow finish follows five reversible visual damage stages")
     _check(int(model.get_meta("tarvoka_apc_v23_stage",-1))==3,
         "V23 front tire cut follows progressive cosmetic damage")
+    _check(int(model.get_meta("tarvoka_apc_v24_stage",-1))==3,
+        "V24 rubber arch lip follows actual fractured-fender state")
+    _check(int(model.get_meta("tarvoka_apc_v25_stage",-1))==3,
+        "V25 real closed rubber volume persists through critical damage")
     var snapped_shaft: Node3D=model.find_child(
         "P06V15_CardanQuebrado",true,false) as Node3D
     _check(snapped_shaft!=null and snapped_shaft.visible,
@@ -329,6 +349,12 @@ func _run() -> void:
     _check(model!=null and not model.get_meta(
         "tarvoka_apc_v23_visible",true),
         "V3 comparison hides new dense tires, exposes legacy tread")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v24_visible",true),
+        "V3 comparison also hides V24 floating-prone arch seal geometry")
+    _check(model!=null and not model.get_meta(
+        "tarvoka_apc_v25_visible",true),
+        "V3 comparison hides modern closed casing and restores old body")
     studio.call("_toggle_p06_version")
     _check(model != null and model.get_meta(
         "tarvoka_apc_v6_visible",false),"V6 comparison restores finish")
@@ -374,6 +400,12 @@ func _run() -> void:
     _check(model!=null and model.get_meta(
         "tarvoka_apc_v23_visible",false),
         "V23 complete tire geometry returns after comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v24_visible",false),
+        "V24 final rubber details return from historical comparison")
+    _check(model!=null and model.get_meta(
+        "tarvoka_apc_v25_visible",false),
+        "V25 new watertight tire body returns after historical comparison")
     studio.call("_inspect_p06_front_joint")
     _check(absf(float(studio.get("_yaw"))-47.0)<0.001,
         "V16 front seam inspection orbits real 3D model")
@@ -480,6 +512,32 @@ func _run() -> void:
         model.find_child("P06V23_NieveSobreHombros",true,false).visible,
         "V23 snow preset actually deposits physical 3D snow on tire")
     studio.call("_set_p06_weather_v22","clear")
+    studio.call("_inspect_p06_shoulders_v24")
+    _check(absf(float(studio.get("_yaw"))-102.0)<0.01,
+        "V24 inspect real tire-to-shoulder geometry")
+    studio.call("_inspect_p06_sidegrooves_v24")
+    _check(absf(float(studio.get("_yaw"))+84.0)<0.01,
+        "V24 reverse-sidewall closeup control")
+    studio.call("_inspect_p06_arch_lips_v24")
+    _check(absf(float(studio.get("_yaw"))-91.0)<0.01,
+        "V24 fixed guard seal can be viewed close")
+    studio.call("_inspect_p06_wet_lips_v24")
+    _check(str(model.get_meta("tarvoka_apc_v24_weather",""))=="rain" and
+        model.find_child("P06V24_RastroHumedadEnArcos",true,false).visible,
+        "V24 rain reveals real wet weather detail on fixed arch")
+    studio.call("_set_p06_weather_v22","clear")
+    studio.call("_inspect_p06_sealed_v25")
+    _check(absf(float(studio.get("_yaw"))-89.0)<0.01,
+        "V25 wheel sidewall inspect preset")
+    studio.call("_inspect_p06_inside_v25")
+    _check(absf(float(studio.get("_yaw"))+89.0)<0.01,
+        "V25 opposite-side tire casing and brake view")
+    studio.call("_inspect_p06_six_v25")
+    _check(absf(float(studio.get("_yaw"))-98.0)<0.01,
+        "V25 whole 6x6 vehicle checks all tyres at once")
+    studio.call("_inspect_p06_gap_v25")
+    _check(absf(float(studio.get("_yaw"))-122.0)<0.01,
+        "V25 close-up visual gap verification")
     studio.call("_inspect_p06_underside")
     _check(absf(float(model.rotation_degrees.x)-165.0)<0.001,
         "native chassis actually rotates to expose underside")
@@ -615,5 +673,5 @@ func _run() -> void:
     if failures > 0:
         quit(1)
         return
-    print("PASS BASTION V23 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
+    print("PASS BASTION V25 LIVE WEB STUDIO: V-shaped protected belly, three differentials, animated Cardan shafts, underside camera, staged damage and repaired 6x6")
     quit(0)
