@@ -6,6 +6,7 @@ class_name TarvokaG13MobileAirDefenseV1
 # target acquisition, ammunition, range or new BattleSession unit IDs.
 const FLAG := "tarvoka_g13_mobile_aa_visual_v1"
 const V4 = preload("res://scripts/ui/G13GroundAirFinishV4.gd")
+const WheelV7 = preload("res://scripts/ui/G13WheelFinishV7.gd")
 const BODY := "G13_Casco4x4"
 const TURRET := "G13_TorretaAzimut"
 const GUNS := "G13_ElevacionCanones"
@@ -91,14 +92,16 @@ static func _wheels_pose(root: Node3D,progress: float)->bool:
     var n: int=0
     for side in [-1,1]:
         for axle in [-1,1]:
-            var basis: Basis=Basis(Vector3.FORWARD,PI*0.5)*Basis(Vector3.UP,spin)
+            var basis: Basis=Basis(Vector3.RIGHT,spin)*Basis(Vector3.FORWARD,PI*0.5)
             var pos:=Vector3(float(side)*WHEEL_X,
                 WHEEL_Y,float(axle)*WHEEL_Z)
             wheels.multimesh.set_instance_transform(n,Transform3D(basis,pos))
             if hubs!=null and hubs.multimesh!=null:
                 hubs.multimesh.set_instance_transform(n,Transform3D(
-                    basis,pos+Vector3(float(side)*0.125,0,0)))
+                    basis,pos+Vector3(float(side)*0.175,0,0)))
             n+=1
+    if bool(root.get_meta(WheelV7.FLAG,false)):
+        WheelV7.pose(root,spin)
     return true
 
 static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
@@ -150,6 +153,8 @@ static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
     var wheels:=_wheel_batch(base,WHEELS,WHEEL_RADIUS,0.24,rubber)
     if high_detail:
         _wheel_batch(base,HUBS,0.132,0.042,alloy)
+        if not WheelV7.install(root):
+            return false
     _wheels_pose(root,0.0)
     var turret:=Node3D.new()
     turret.name=TURRET
