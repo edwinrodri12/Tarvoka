@@ -418,6 +418,9 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.83,
         22.0,90.0)
     _yaw = PI*0.25
+    # Essential: the new state replaces look_at/zoom. Without this update,
+    # Camera3D stays at (0,0,0) and the Android viewport shows ONLY sky.
+    _refresh_camera()
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
