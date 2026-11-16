@@ -39,14 +39,28 @@ func _run() -> void:
             continue
         var hero_count: int=Models.inspect_meshes(hero)
         var belly:=_find(hero,"G11_ProteccionInferior")
+        var square_ramp:=_find(hero,"G11_RampaPosteriorCerrada")
         var octagonal_hull:=_find(hero,"G11V2_CascoOctogonalCerrado")
-        _check(belly==null,
-            "square underbody geometry actually REMOVED, not recolored or tapered")
+        _check(belly==null and square_ramp==null,
+            "BOTH overlapping rear square meshes physically removed from scene")
         _check(octagonal_hull!=null and octagonal_hull.mesh is ArrayMesh,
-            "approved closed V2 octagonal hull keeps undercarriage covered")
+            "approved closed V2 octagonal hull keeps rear and undercarriage sealed")
         _check(bool(hero.get_meta(
-            "tarvoka_g11_v30_redundant_underbody_removed",false)),
-            "V30 removal is explicitly recorded on actual hero node")
+            "tarvoka_g11_v30_redundant_underbody_removed",false)) and
+            bool(hero.get_meta(
+            "tarvoka_g11_v30_redundant_rear_square_removed",false)),
+            "V30 both original rear-square removals explicitly recorded")
+        for side in [-1,1]:
+            var pad:=_find(hero,"G11V2_PernoPorton_%d" % side)
+            var clamp:=_find(hero,"G11V12_CierrePorton_%d" % side)
+            var keyhole:=_find(hero,"G11V12_BocallavePorton_%d" % side)
+            _check(pad!=null and clamp!=null and keyhole!=null,
+                "rear service fasteners retained on sealed octagonal armor")
+            if pad!=null and clamp!=null and keyhole!=null:
+                _check(absf(pad.position.z-1.414)<0.001 and
+                    absf(clamp.position.z-1.426)<0.001 and
+                    absf(keyhole.position.z-1.440)<0.001,
+                    "all six rear door fixtures reattached flush, not left floating")
         for side in [-1,1]:
             var foot:=_find(hero,"G11_ZapataEstabilizador_%d" % side)
             var support:=_find(hero,"G11_Estabilizador_%d" % side)
