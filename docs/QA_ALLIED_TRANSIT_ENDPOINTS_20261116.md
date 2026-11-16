@@ -22,3 +22,9 @@ Commit: `2dac21e9583cfd60bc553040e36b2f7467430fd0`. Godot 4.3 **NO EJECUTADO** f
 Se añadió una prueba con un aliado al este y un enemigo al sur del origen. Con presupuesto 1, la casilla diagonal sureste no es alcanzable; con presupuesto 2 se alcanza exactamente con coste 2 atravesando al aliado, pero su casilla no puede seleccionarse como destino. También se comprueba la inmutabilidad de las listas de ocupación. Commit de código: `be78f8bf`.
 
 Evidencia anterior: workflow *Allied transit endpoint regression*, run [43945909381](https://github.com/edwinrodri12/Tarvoka/actions/runs/43945909381), SUCCESS sobre `d2b6a63a` (no cubre la extensión). La nueva regresión queda **NO EJECUTADA** hasta confirmar un run del commit nuevo. Android físico: **NO EJECUTADO EN DISPOSITIVO**. No fusionar sin comprobar CI y regresiones completas.
+
+## Motorized road transit regression (2026-11-16)
+
+On a 10×8 plain map, road tiles (1,0) and (2,0) form a two-tile corridor, with an ally on (1,0) and an enemy at (0,1). A motorized ground unit starting (0,0) with movement budget 1 must reach (2,0) at displayed cost 1 (two half-point road entries), but cannot finish on the allied (1,0). A non-motorized ground unit with the same budget cannot reach (2,0). The test also asserts terrain and occupancy inputs remain unchanged. This verifies an existing road-mobility rule without altering production movement or balance.
+
+Code commit: `cfe23b6a831523eb97338705a1afcdac5ad4f2fd`. Godot 4.3 CI for this commit: **NO EJECUTADO / pending verification**; Android: **NO EJECUTADO EN DISPOSITIVO**. Run `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`, then full movement/AI/save/victory suites before integration. No merge authorized by this documentation.
