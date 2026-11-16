@@ -21,3 +21,6 @@ Next autonomous task: inspect Godot logs, fix any failing malformed case without
 
 ## Ampliación 2026-11-15 — 23 casos
 Se añaden `null` en una celda del terreno y una columna extra en una fila, además de comprobar que **cada** rechazo mantiene idéntico el estado de batalla previo (`duplicate(true)`). El workflow exige `PASS save structural corruption: 23 malformed snapshots rejected`. Esta ampliación está registrada en la rama de PR #416; **Godot 4.3 y Android físico: NO EJECUTADO** para estos commits hasta obtener una ejecución nueva. No modifica el codec ni reglas de producción.
+
+## Regresión de recuperación tras cada rechazo (2026-11-15)
+Después de **cada** uno de los 23 intentos de decodificación corrupta, la prueba decodifica de nuevo el snapshot original válido y exige igualdad exacta con el estado previo. Esto detecta contaminación del decodificador que un único round-trip final podría ocultar. No cambia reglas ni SaveCodec; Godot 4.3 en el nuevo SHA: **NO EJECUTADO** hasta CI. Android físico: **NO EJECUTADO EN DISPOSITIVO**.
