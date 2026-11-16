@@ -70,6 +70,7 @@ on:
       - 'scripts/ui/G11BattleContextV25.gd'
       - 'scripts/ui/G11RocketFaceReadabilityV25.gd'
       - 'scripts/ui/G11TacticalPaintReadabilityV27.gd'
+      - 'scripts/ui/G11CameraIdentityV28.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
       - 'tests/test_g11_live_battle_context_v25_capture.gd'
@@ -77,6 +78,8 @@ on:
       - 'tests/test_g11_tactical_readability_v24_capture.gd'
       - 'tests/test_g11_mobile_lod.gd'
       - 'tests/test_g11_tactical_paint_v27.gd'
+      - 'tests/test_g11_camera_identity_v28.gd'
+      - 'tests/test_g11_camera_identity_v28_capture.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
       - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scenes/G11AndroidStressLab.tscn'
@@ -312,6 +315,20 @@ jobs:
             echo 'G11 V27 enamel geometry, faceted paint or existing-model safety failed'; exit 1
           fi
           grep -F 'PASS G11 V27:' /tmp/g11_v27.log
+      - name: Verify V28 zoom-driven faction finish in actual four-biome 3D combat
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 185s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_camera_identity_v28.gd 2>&1 | tee /tmp/g11_v28.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v28.log; then
+            echo 'G11 V28 camera hysteresis, original paint safety or battle state failed'; exit 1
+          fi
+          grep -F 'PASS G11 V28:' /tmp/g11_v28.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
@@ -679,6 +696,29 @@ jobs:
           fi
           grep -F 'PASS G11 V25 CAPTURE:' /tmp/g11_v25_capture.log
           test "$(find /tmp/g11-v25-real-battle -name '*.png' | wc -l)" -eq 16
+      - name: Render 24 actual G11 V28 camera-contrast battle frames in four biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v28-production-camera
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V28_CAPTURE_DIR=/tmp/g11-v28-production-camera \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_camera_identity_v28_capture.gd 2>&1 | tee /tmp/g11_v28_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v28_capture.log; then
+            echo 'G11 V28 real Godot zoom screenshots failed'; exit 1
+          fi
+          grep -F 'PASS G11 V28 CAPTURE:' /tmp/g11_v28_capture.log
+          test "$(find /tmp/g11-v28-production-camera -name '*.png' | wc -l)" -eq 24
+      - name: Upload 24 native G11 V28 camera zoom battle screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v28-four-biomes-three-real-zooms
+          path: /tmp/g11-v28-production-camera/*.png
+          retention-days: 14
       - name: Upload 16 real G11 V25 battle context Godot captures
         if: success()
         uses: actions/upload-artifact@v4

@@ -6,6 +6,7 @@ class_name TarvokaG11BattleLODControllerV25
 # Sampling at 4Hz mirrors the existing P06 controller, avoids visual churn
 # through hysteresis, and NEVER touches game state / fog / attack properties.
 const Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
+const IdentityV28 = preload("res://scripts/ui/G11CameraIdentityV28.gd")
 const INTERVAL: float=0.25
 const NEAR_ON_PIXELS: float=86.0
 const FAR_OFF_PIXELS: float=64.0
@@ -17,6 +18,7 @@ func register(model: Node3D) -> void:
     if model!=null and bool(model.get_meta(Tactical.FLAG,false)) and (
             not units.has(model)):
         units.append(model)
+        IdentityV28.bind(model,Tactical.active_level(model))
 
 func pixel_height(model: Node3D,camera: Camera3D,
         viewport_height: float) -> float:
@@ -49,8 +51,12 @@ func update_now(camera: Camera3D,viewport_height: float) -> int:
         var current: int=Tactical.active_level(model)
         var needed: int=preferred_level(
             pixel_height(model,camera,viewport_height),current)
-        if needed!=current and Tactical.set_level(model,needed):
-            changed+=1
+        if needed!=current:
+            if Tactical.set_level(model,needed):
+                changed+=1
+                IdentityV28.set_detail(model,needed)
+        else:
+            IdentityV28.set_detail(model,current)
     return changed
 
 func _process(delta: float) -> void:
