@@ -553,19 +553,26 @@ interior de las orugas tácticas.
 `G11RearUndercarriageV30.gd` repara **las mismas piezas**, sin duplicados:
 - Zapatas traseras octogonales, biseladas y estrechadas a un máximo de
   0,27 m, reubicadas en X ±0,385 m; los soportes se centran en ±0,405 m.
+- Tras comparar 30 imágenes con piezas aisladas se identificó un segundo
+  cuadro redundante visible: `G11_RampaPosteriorCerrada`, que continuaba
+  cubriendo la cara trasera justo entre las orugas. Se elimina **también**,
+  no se oculta con materiales ni se sustituye por otro rectángulo.
 - La vieja `G11_ProteccionInferior` se **suprime del árbol de escena**,
   evitando el rectángulo colgante y el duplicado de geometría bajo la
   trasera. Se conserva `G11V2_CascoOctogonalCerrado` y su suelo sellado.
-  Tras quitar la placa, los soportes dejan al menos 0,128 m de
+  Los seis cierres originales del portón se vuelven a fijar a z≈1,4 m
+  sobre la cara octogonal real, sin dejar tornillos flotantes.
+  Los soportes dejan al menos 0,128 m de
   separación interna respecto de las orugas hero.
 - Chasis de batalla (`ChasisLanzacohetes`) deja de ser un cubo completo:
   se sustituye por un perfil de ocho lados con el extremo trasero afinado,
   de medio ancho máximo 0,620 m y al menos 0,025 m de separación interna.
 - La posición de las ruedas, piñones, zapatas, suspensión, pinturas,
   edificios, daños y las ocho facciones no cambian.
-- Se elimina un nodo redundante y se reajustan cuatro instancias existentes
-  en hero; se sustituye una geometría en móvil LOD8/LOD10. **Cero nodos
-  nuevos y una placa cuadrada realmente retirada**.
+- Se eliminan **dos** placas redundantes y se reajustan cuatro
+  estabilizadores y seis cierres de portón existentes en hero.
+  Se sustituye una geometría en móvil LOD8/LOD10.
+  **Cero nodos nuevos y las dos placas cuadradas realmente retiradas**.
 
 **Siguiente prioridad artística:** `G11RocketTrailsV30.gd` conecta
 trayectorias cortas de cohetes con los doce fogonazos escalonados de V29.
