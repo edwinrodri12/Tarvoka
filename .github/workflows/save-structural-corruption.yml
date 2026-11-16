@@ -26,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_structural_corruption.gd 2>&1 | tee /tmp/save-structural.log
-          if grep -E 'SCRIPT ERROR:|Assertion failed' /tmp/save-structural.log; then
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-structural.log | grep -v -F 'ERROR: Parse JSON failed.'; then
             exit 1
           fi
           grep -F 'PASS save structural corruption: 26 malformed snapshots rejected' /tmp/save-structural.log
