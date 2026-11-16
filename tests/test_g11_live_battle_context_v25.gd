@@ -231,5 +231,5 @@ func _run() -> void:
         push_error("G11 V25 contextual battle FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G11 V25/V26: 4 real biomes, camera LOD8/LOD10 and 8 visual faction palettes, authoritative two-team battles and models unchanged")
+    print("PASS G11 V25: 4 real biomes and camera LOD8/LOD10; V26 verifies 8 gallery faction palettes without modifying actual two-team state")
     quit(0)
