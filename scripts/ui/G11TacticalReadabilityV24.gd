@@ -189,4 +189,84 @@ static func apply(model: Node3D, near: bool) -> bool:
     model.set_meta("tarvoka_g11_v24_replaced_track_meshes",2)
     model.set_meta("tarvoka_g11_v24_wheels_inset",12 if near else 0)
     model.set_meta("tarvoka_g11_v24_repositioned_original_guards",2)
+    model.set_meta(ACTIVE_LOD,LOD_NEAR if near else LOD_FAR)
+    model.set_meta("tarvoka_g11_v25_near_wheels_visible",near)
+    return true
+
+
+# V25 live battle uses the same V24 surfaces at either projected pixel size.
+# A distant G11 starts with NO road-wheel batch; when the camera zooms closer,
+# the first near transition lazily creates exactly one original-style
+# MultiMesh, then reuses it forever. No duplicate track boxes or unit models.
+const ACTIVE_LOD := "tarvoka_g11_v25_active_lod"
+const ROADWHEEL_BATCH := "G11Mobile_Lote12Ruedas"
+static var _live_wheel_mesh: CylinderMesh
+
+static func _wheel_batch(model: Node3D) -> MultiMeshInstance3D:
+    var existing := model.find_child(
+        ROADWHEEL_BATCH,true,false) as MultiMeshInstance3D
+    if existing!=null:
+        return existing
+    if _live_wheel_mesh==null:
+        _live_wheel_mesh=CylinderMesh.new()
+        _live_wheel_mesh.top_radius=TACTICAL_WHEEL_RADIUS
+        _live_wheel_mesh.bottom_radius=TACTICAL_WHEEL_RADIUS
+        _live_wheel_mesh.height=TACTICAL_WHEEL_WIDTH
+        _live_wheel_mesh.radial_segments=10
+        var mat := StandardMaterial3D.new()
+        mat.albedo_color=Color("#a5afad")
+        mat.metallic=0.59
+        mat.roughness=0.45
+        _live_wheel_mesh.material=mat
+    var batch := MultiMesh.new()
+    batch.transform_format=MultiMesh.TRANSFORM_3D
+    batch.mesh=_live_wheel_mesh
+    batch.instance_count=12
+    var basis := Basis(Vector3.FORWARD,PI*0.5)
+    var k: int=0
+    for side in [-1,1]:
+        for axle in range(6):
+            batch.set_instance_transform(k,Transform3D(basis,Vector3(
+                float(side)*TACTICAL_WHEEL_X,TACTICAL_WHEEL_Y,
+                WHEEL_FIRST_Z+float(axle)*WHEEL_PITCH)))
+            k+=1
+    var instance := MultiMeshInstance3D.new()
+    instance.name=ROADWHEEL_BATCH
+    instance.multimesh=batch
+    model.add_child(instance)
+    return instance
+
+static func active_level(model: Node3D) -> int:
+    if model==null or not bool(model.get_meta(FLAG,false)):
+        return 0
+    return int(model.get_meta(ACTIVE_LOD,
+        LOD_NEAR if bool(model.get_meta(
+            "tarvoka_g11_v24_actual_near_hollow_belt",false)) else LOD_FAR))
+
+static func set_level(model: Node3D,level: int) -> bool:
+    if model==null or not bool(model.get_meta(FLAG,false)) or (
+            level!=LOD_FAR and level!=LOD_NEAR):
+        return false
+    if active_level(model)==level:
+        return true
+    var target_near: bool=level==LOD_NEAR
+    var wheels: MultiMeshInstance3D=null
+    if target_near:
+        wheels=_wheel_batch(model)
+        if wheels==null or wheels.multimesh==null or (
+                wheels.multimesh.instance_count!=12):
+            return false
+    else:
+        wheels=model.find_child(
+            ROADWHEEL_BATCH,true,false) as MultiMeshInstance3D
+    for side in [-1,1]:
+        var track := _part(model,
+            "G11Mobile_Oruga_%d" % side) as MeshInstance3D
+        if track==null:
+            return false
+        track.mesh=_mesh(target_near)
+    if wheels!=null:
+        wheels.visible=target_near
+    model.set_meta(ACTIVE_LOD,level)
+    model.set_meta("tarvoka_g11_v25_near_wheels_visible",target_near)
     return true
