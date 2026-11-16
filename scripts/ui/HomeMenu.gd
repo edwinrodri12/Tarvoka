@@ -8,6 +8,7 @@ signal arsenal_requested
 signal settings_requested
 signal saves_requested
 signal credits_requested
+signal territorial_lab_requested
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
@@ -130,6 +131,7 @@ func _ready() -> void:
     _navigation.add_child(section)
     _menu_option("Modo historia","Campaña de La Red de Meridian","01",func(): story_requested.emit(),true,true)
     _menu_option("Escaramuza","Batallas y mapas personalizados","02",func(): skirmish_requested.emit())
+    _menu_option("Conquistas · prueba","Ciudades, bases fijas y campamentos","09",func(): territorial_lab_requested.emit())
     _menu_option("Online","Multijugador en línea · próximamente","03",Callable(),false)
     _menu_option("Arsenal","Unidades y modelos de TARVOKA","04",func(): arsenal_requested.emit())
     _menu_option("Partidas guardadas","Reanudar o cargar una batalla","05",func(): saves_requested.emit())
