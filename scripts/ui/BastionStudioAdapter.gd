@@ -38,6 +38,7 @@ const G11TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
+const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -81,7 +82,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V28 · contraste y zoom de batalla")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V29 · movimiento y salva en batalla")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -190,7 +191,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · V28 · ZOOM Y CONTRASTE TÁCTICO",14)
+        "G11 LANZADOR · V29 · MOVIMIENTO Y SALVA REAL",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -256,13 +257,16 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"V25: acercar batalla",func(): _g11_battle_zoom_v25(true),
         "V25: alejar batalla",func(): _g11_battle_zoom_v25(false))
     _button(g11_controls,"V28: zoom intermedio de batalla",_g11_battle_mid_zoom_v28)
+    _add_paired(g11_controls,
+        "V29: mover G11 en batalla",func(): _g11_battle_action_v29("move"),
+        "V29: salva de 12 cohetes",func(): _g11_battle_action_v29("attack"))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V28: al alejar la cámara, las cuatro placas existentes de facción "
-        + "ganan un contraste suave y reversible; en primer plano recuperan "
-        + "su acabado normal. Compara zoom lejano, intermedio y cercano en "
-        + "los cuatro biomas con cualquiera de las ocho facciones. "
-        + "Sin nuevos modelos, marcadores, estadísticas ni revelación de niebla.",12)
+        "V29: abre uno de los cuatro biomas y prueba movimiento y salva "
+        + "en el mismo G11 táctico. El Estudio hace una simulación visual "
+        + "sin daño; en una partida real solo se anima una orden confirmada. "
+        + "Doce cohetes escalonados, destello y humo limitados; "
+        + "los valores de combate y los diseños aprobados no cambian.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -319,6 +323,29 @@ func _g11_battle_mid_zoom_v28() -> void:
     if driver!=null and camera!=null:
         driver.update_now(camera,float(preview.size.y))
     status_label.text="G11 V28 · zoom intermedio: acabado adaptado a cámara"
+
+func _g11_battle_action_v29(kind: String) -> void:
+    if _role!="mlrs" or _g11_context_v25==null or (
+            kind not in ["move","attack"]):
+        if _role=="mlrs":
+            status_label.text="G11 V29 · abre primero un bioma para probar la animación"
+        return
+    var actions:=_g11_context_v25.find_child(
+        "G11V29_AccionesBatalla",true,false) as G11ActionsV29
+    var model:=_g11_context_v25.find_child(
+        "Unidad3D_G11-H",true,false) as Node3D
+    if actions==null or model==null:
+        status_label.text="G11 V29 · escena 3D sin lanzador disponible"
+        return
+    var origin: Vector3=model.position
+    if kind=="move":
+        origin+=Vector3(0,0,-2.4)
+    if not actions.play("G11-H",kind,origin,Vector2i(2,-1)):
+        status_label.text="G11 V29 · no se pudo reproducir la acción"
+        return
+    status_label.text=("G11 V29 · demostración de movimiento sin órdenes"
+        if kind=="move" else
+        "G11 V29 · salva visual de 12 bocas sin aplicar daño")
 
 func _g11_close_context_v25() -> void:
     if _role!="mlrs":
