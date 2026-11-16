@@ -301,3 +301,21 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - Sin cambios en HP, potencia, costo, movimiento táctico, combustible, munición, poderes ni economía del videojuego.
 
 **Estado:** la geometría está integrada y pasó comprobaciones nativas. Revisar las nuevas 16 capturas y los cuatro acercamientos en el visor web antes de considerar esta apariencia definitiva. El G11 continúa en refinamiento; rendimiento Android se evaluará después.
+
+
+## V19 — terminación real de las 92 zapatas, chevrons y guardabarros (15-nov-2026)
+
+**Implementado en `main` mediante [PR #429](https://github.com/edwinrodri12/Tarvoka/pull/429)**. Esta es la versión reconciliada con las actualizaciones simultáneas de **Bastión P06 V23** y **Base Naval V11**. Las ramas alternativas #425 y #428 se cerraron sin fusionarlas para prevenir regresiones.
+
+**Revisión visual y mejoras reales**
+
+- Se inspeccionaron las **16 capturas V18 auténticas** del ensamblaje anterior. El espaciado de los engranajes había mejorado, pero las zapatas seguían siendo bloques rectangulares y los guardabarros tenían extremos rígidos.
+- Nuevo `scripts/ui/G11TrackFinishV19.gd`. **Reemplaza**, sin apilar, el `BoxMesh` de las 46 zapatas por lado por un **ArrayMesh de dos superficies PBR**. Primera superficie: placa metálica compacta de perfil octagonal longitudinal, con biseles reales. Segunda superficie: **cuatro grousers/chevrons extruidos por zapata**, con brillo y rugosidad diferenciados; 92×4=368 relieves. El mismo recurso se comparte en los dos `MultiMeshInstance3D`; no son 92 nodos nuevos ni 92 copias de la banda.
+- **Reemplaza** las mallas de las dos `G11_Faldon_` originales por un perfil metálico taperado, conservando posiciones y los ocho pernos V18; las puntas delantera y posterior dejan de ser cajas rectangulares.
+- Zapata: ancho máximo 0.274 m, longitud tangencial 0.132 m, relieves elevados 0.009 m. La holgura mínima calculada entre el relieve superior y el guardabarros es 0.0265 m. Los eslabones continúan siguiendo las dos curvas V18 sin volver a interceptar los engranajes.
+- El test `tests/test_g11_track_finish_v19.gd` pasa en Godot 4.3 y recorre ocho facciones, cinco fases de marcha por lado, 46 eslabones por banda y los cuatro relieves de cada uno. Un test de ejes separadores en sección YZ comprueba que **ni siquiera al girar sobre los piñones se superpongan los perfiles 3D de zapatas vecinas**: separación superior a 18 mm, y medida teórica mínima de ~30 mm. Confirma además color V13, daños, reparación, hidráulicos, doce tubos y ausencia de piezas duplicadas.
+- `tests/test_g11_track_finish_v19_capture.gd` produce **16 imágenes renderizadas directamente en Godot**: 8 perspectivas horizontales 360° cada 45°, 4 macros de los dos engranajes y dos lados, 2 instantes de marcha y 2 vistas bajas de holgura.
+- En `BastionStudioAdapter.gd`: selector **«G11 Lanzador · V19 zapatas y guardabarros 3D»**, vistas ¾ y aproximaciones complementarias; los botones de V18 y el control limpio/desgaste V17 siguen disponibles. GitHub Pages copia el script V19 y conserva la interfaz P06 V23 y los demás modelos.
+- El PR #425 y la posterior revalidación específica V19 terminaron con **pruebas G11 correctas**; la publicación final Pages se comprueba por separado. Los benchmarks intensivos Android siguen pospuestos hasta que se cierre el arte.
+
+**Pendiente de aprobación:** evaluar las formas de las llantas y amortiguadores durante marcha, no declarar el G11 comercialmente acabado todavía.
