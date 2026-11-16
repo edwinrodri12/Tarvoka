@@ -28,5 +28,21 @@ func _initialize() -> void:
         assert(Codec.encode(restored) == first, "Decode-encode must be stable")
         restored["units"][0]["hp"] = 1
         assert(state == before, "Decoded data must not alias active state")
+    # Invalid inputs must fail closed without mutating the caller's state.
+    var invalid: Dictionary = state.duplicate(true)
+    invalid["units"][0]["hp"] = -1
+    var invalid_before: Dictionary = invalid.duplicate(true)
+    assert(Codec.encode(invalid).is_empty(), "Negative HP must not be serialized")
+    assert(invalid == invalid_before, "Rejected encoding must not mutate its input")
+    assert(state == before, "Invalid sibling snapshot must not affect active battle")
+    assert(Codec.encode(state) == first, "Valid encoding must recover after rejection")
+    # Independent decoded snapshots must never alias one another.
+    var snapshot_a: Dictionary = Codec.decode(first)
+    var snapshot_b: Dictionary = Codec.decode(first)
+    assert(not snapshot_a.is_empty() and not snapshot_b.is_empty(), "Both snapshots must decode")
+    snapshot_a["units"][0]["hp"] = 2
+    snapshot_a["terrain"][0][0] = "forest"
+    assert(snapshot_b == before, "Separate decoded snapshots must not share nested data")
+    assert(state == before, "Decoded mutations must not leak into active battle")
     print("PASS save encode determinism: 20 iterations, no mutation or aliasing")
     quit(0)
