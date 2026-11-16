@@ -1,0 +1,74 @@
+name: TARVOKA G11 V29 native battle action visibility QA
+
+on:
+  push:
+    branches: [main, feat/g11-v29-live-battle-movement-salvo]
+    paths:
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'scripts/ui/G11MobileLOD.gd'
+      - 'scripts/ui/G11BattleContextV25.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_g11_battle_actions_v29.gd'
+      - 'tests/test_g11_battle_actions_v29_capture.gd'
+      - '.github/workflows/g11-v29-battle-actions-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'scripts/ui/G11BattleContextV25.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_g11_battle_actions_v29.gd'
+      - 'tests/test_g11_battle_actions_v29_capture.gd'
+  workflow_dispatch:
+
+jobs:
+  native-battle-action-review:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify real G11 movement, salvo and absence of duplicate game actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_battle_actions_v29.gd 2>&1 | tee /tmp/g11_v29_action.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v29_action.log; then
+            echo 'V29 native animation/game-state regression'; exit 1
+          fi
+          grep -F 'PASS G11 V29:' /tmp/g11_v29_action.log
+      - name: Render 12 native battle frames for four biomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v29-quick-review
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V29_CAPTURE_DIR=/tmp/g11-v29-quick-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_battle_actions_v29_capture.gd 2>&1 | tee /tmp/g11_v29_images.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v29_images.log; then
+            echo 'V29 native movement and salvo screenshots failed'; exit 1
+          fi
+          grep -F 'PASS G11 V29 CAPTURE:' /tmp/g11_v29_images.log
+          test "$(find /tmp/g11-v29-quick-review -name '*.png' | wc -l)" -eq 12
+      - name: Upload true Godot V29 action gallery
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v29-tactical-camera-action-12-screens
+          path: /tmp/g11-v29-quick-review/*.png
+          retention-days: 14
