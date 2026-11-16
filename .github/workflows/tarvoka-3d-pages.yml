@@ -228,31 +228,31 @@ jobs:
           assert 'const G13DetailV2 = preload(' in previous
           replace_once('"fighter","destroyer"]', '"fighter","destroyer","aa_mobile"]')
           replace_once('const VisualStyle = preload(',
-              'const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")\\n'
-              'const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")\\n'
+              'const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")\n'
+              'const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")\n'
               'const VisualStyle = preload(')
-          replace_once('"destroyer":5.10', '"destroyer":5.10,\\n    "aa_mobile":3.85')
-          replace_once('        "destroyer":\\n            _destroyer(model)',
-              '        "destroyer":\\n            _destroyer(model)\\n'
-              '        "aa_mobile":\\n'
+          replace_once('"destroyer":5.10', '"destroyer":5.10,\n    "aa_mobile":3.85')
+          replace_once('        "destroyer":\n            _destroyer(model)',
+              '        "destroyer":\n            _destroyer(model)\n'
+              '        "aa_mobile":\n'
               '            if not G13AA.build(model,faction_paint_color(faction),'
-              ' finish_enabled and art_level>=13):\\n'
-              '                return null\\n'
-              '            if finish_enabled and art_level>=13:\\n'
+              ' finish_enabled and art_level>=13):\n'
+              '                return null\n'
+              '            if finish_enabled and art_level>=13:\n'
               '                G13DetailV2.apply(model,faction_paint_color(faction))')
-          replace_once('    else:\\n        model.scale = Vector3.ONE * 0.83',
-              '    elif role=="aa_mobile":\\n'
-              '        model.scale=Vector3.ONE*0.83\\n'
-              '        model.position.y=0.0\\n'
-              '    else:\\n        model.scale = Vector3.ONE * 0.83')
+          replace_once('    else:\n        model.scale = Vector3.ONE * 0.83',
+              '    elif role=="aa_mobile":\n'
+              '        model.scale=Vector3.ONE*0.83\n'
+              '        model.position.y=0.0\n'
+              '    else:\n        model.scale = Vector3.ONE * 0.83')
           # Preserve the G13 animation interface along with the model.
-          source_pose='        "attack_heli":\\n            return AttackHelicopterV1.pose(model,kind,progress,target_heading)'
+          source_pose='        "attack_heli":\n            return AttackHelicopterV1.pose(model,kind,progress,target_heading)'
           replace_once(source_pose,source_pose+
-              '\\n        "aa_mobile":\\n'
+              '\n        "aa_mobile":\n'
               '            return G13AA.pose(model,kind,progress,target_heading)')
-          source_restore='        "attack_heli":\\n            AttackHelicopterV1.restore(model)'
+          source_restore='        "attack_heli":\n            AttackHelicopterV1.restore(model)'
           replace_once(source_restore,source_restore+
-              '\\n        "aa_mobile":\\n            G13AA.restore(model)')
+              '\n        "aa_mobile":\n            G13AA.restore(model)')
           p.write_text(current)
           assert 'TankTrackAlignmentV31.apply(model)' in current
           assert 'G13DetailV2.apply(model' in current
