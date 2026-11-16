@@ -53,10 +53,23 @@ La prueba analítica examina 9 objetivos blindados × 3 bonos × 3 tamaños de d
 
 El archivo `tests/test_specialization_opportunity_cost_v11.gd` ejecuta ocho suites por grupos: dos bandos con tres situaciones de compra/reparación cada uno, y dos cuadrículas de 72 y 162 escenarios. La ejecución deberá comprobar costes de producción reales, límites por fábrica y turno, compra+reparación simultáneas, escasez de dinero, ahorro de un tanque herido y que el estado original no se altera. También valida guardados y rechazos.
 
-Workflow: `.github/workflows/role-specialization-v08.yml`, cuarta etapa de Godot 4.3. No se puede afirmar PASS de esta etapa hasta confirmar la ejecución y los registros de salida.
+**Godot 4.3 SUCCESS y PASS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43787651014. Se ejecutaron las cuatro etapas del workflow `.github/workflows/role-specialization-v08.yml`, incluida la prueba nueva de ocho suites de costo de oportunidad, con la versión de script registrada en ese commit. La refactorización posterior del `preload` del arsenal no alteró fórmulas ni decisiones de los ensayos.
+
+Resultados del laboratorio: **72 cotizaciones de reparación**, de las cuales **8 requieren una inversión inicial superior al costo de reemplazar el vehículo** si aún no se posee Ingeniero; **162 hipótesis de antiblindaje**, ambas facciones con casos de compra, reparación, restricciones presupuestarias y competencia por un turno de fábrica. Los ataques y reparaciones son ejecutados sobre el estado real por `BattleSession` o por la envoltura optativa; el análisis de tecnología global es hipotético, no un mecanismo activo de compra.
 
 **Sin cambios en:** BattleSession, Combat, UrbanEconomy, BasicAI, producción del APK, SaveCodec, facciones ni niveles de edificios. Las nuevas clases son herramientas de análisis en scripts/experiments.
 
 ## Próxima decisión de diseño
 
 Si las baterías pasan, el siguiente trabajo debería medir un enfrentamiento de varias fases en el que la IA tenga que elegir entre fabricar, reparar, reabastecer y capturar bajo presupuesto fijo. Después se pueden estudiar mejoras globales comprables desde la planta blindada y los niveles de edificios I–III, sin sustituir el coste de producción por habilidades gratuitas o aplicar el buff a unidades ajenas a la tecnología.
+
+
+## Hallazgos decisivos de sensibilidad y política candidata
+
+La ejecución contrastada de las 32 clases × 4 coberturas (128 configuraciones de objetivo, 64 con ataque válido del Rompedor) registró **36 escenarios antivehículo**. La bonificación **+2** reduce el número teórico de ataques necesarios para eliminar la unidad en **30** de esos escenarios. **+3** reduce el número en **33**, pero además convierte **2** ataques antes no letales en bajas directas de un solo golpe. Son observaciones de *posiciones/HP constantes*; no incluyen cambios de reacción o IA multiturmo.
+
+**Elección de investigación, no aprobación de balance:** estudiar +2 como primera candidata de contrajuego antiblindaje y mantener +3 como límite de potencia a someter a más pruebas. No activar aún ninguna: un Rompedor de 300 créditos con +3 podría destruir de un solo golpe plataformas con 0 defensa y poca vida en ciertas coberturas. El cambio tampoco arregla que un Rompedor pueda morir de un golpe de un tanque completo en campo abierto.
+
+En reparación, el paquete ligero **60/2 = 30 créditos por HP** es más eficiente por HP que el de campo **100/3 ≈ 33,33**, siempre que aprovechen toda su curación. Pero el de campo puede superar un umbral de supervivencia puntual. No considerar la diferencia de precio como única variable: importa el Ingeniero ya desplegado, el turno que no dispara, la casilla, las municiones y la existencia de la fábrica.
+
+**Decisión:** mantener el experimento en PR borrador y comparar en la siguiente fase IA de varias rondas y compras de tecnologías de edificio nivel II/III antes de definir precio definitivo o integrarlo.
