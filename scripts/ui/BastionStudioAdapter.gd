@@ -33,6 +33,7 @@ const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Weather = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
 const G11Atmos = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const G11JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
+const G11JointsV23 = preload("res://scripts/ui/G11JointFinishV23.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -62,15 +63,18 @@ var _g11_animation: String = ""
 var _g11_time: float = 0.0
 var _g11_playback_speed: float = 1.0
 var _g11_fx_clock: float = 0.0
+var _g11_light_v23: int = 0
+var _g11_lamps_v23: Array[OmniLight3D] = []
 
 func _ready() -> void:
     super._ready()
     _install_p06_controls()
     _install_g11_controls()
     _install_p06_lighting_v22()
+    _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V22 bisagras y cortes 3D")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V23 pasadores PBR y luz")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -179,7 +183,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · HORQUILLAS DE SUSPENSIÓN V22",14)
+        "G11 LANZADOR · PASADORES PBR Y LUZ V23",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -229,13 +233,86 @@ func _install_g11_controls() -> void:
         "V22: interior lado B",func(): _g11_cutaway(-1))
     _add_paired(g11_controls,"V22: restaurar blindaje",func(): _g11_cutaway(0),
         "V22: anclajes con marcha",func(): _g11_play("move"))
+    _add_paired(g11_controls,"V23: luz de día",func(): _set_g11_light_v23(0),
+        "V23: atardecer",func(): _set_g11_light_v23(1))
+    _add_paired(g11_controls,"V23: noche técnica",func(): _set_g11_light_v23(2),
+        "V23: inspección pasador A",func(): _g11_joint_macro_v23(1))
+    _add_paired(g11_controls,"V23: inspección pasador B",func(): _g11_joint_macro_v23(-1),
+        "V23: restablecer luz",func(): _set_g11_light_v23(0))
     _title(g11_controls,
-        "V22: horquillas y pasadores articulados en 24 extremos, sin "
-        + "girar con las ruedas. Usa interior A/B para ocultar temporalmente "
-        + "los protectores; restaurar blindaje repone todas las piezas.",12)
+        "V23: 24 pasadores biselados, 48 retenes PBR y 3 modos de luz "
+        + "para revisar el acero de ambos lados. Inspección A/B oculta "
+        + "solo los protectores; los engranes V18 siguen intactos.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _install_g11_lighting_v23() -> void:
+    if preview==null or not _g11_lamps_v23.is_empty():
+        return
+    for side in [-1,1]:
+        var lamp := OmniLight3D.new()
+        lamp.name = "G11V23_LuzInspeccion_%d" % side
+        lamp.position = Vector3(float(side)*1.72,0.75,0.20)
+        lamp.omni_range = 4.6
+        lamp.light_color = Color("#b5d5e6")
+        lamp.light_energy = 0.90
+        lamp.shadow_enabled = false
+        lamp.visible = false
+        preview.add_child(lamp)
+        _g11_lamps_v23.append(lamp)
+
+func _set_g11_light_v23(preset: int) -> void:
+    if _role != "mlrs" or model_root == null:
+        return
+    _g11_light_v23 = clampi(preset,0,2)
+    _apply_g11_light_v23()
+    status_label.text = [
+        "G11 V23 · luz diurna",
+        "G11 V23 · inspección al atardecer",
+        "G11 V23 · inspección nocturna con luces laterales"
+    ][_g11_light_v23]
+
+func _apply_g11_light_v23() -> void:
+    if _role != "mlrs" or hq_key_light==null or hq_fill_light==null:
+        return
+    var i: int = clampi(_g11_light_v23,0,2)
+    var colors: Array[Color] = [
+        Color("#fff1db"),Color("#efb87d"),Color("#accce8")]
+    var ambient: Array[Color] = [
+        Color("#cedce7"),Color("#c4acaa"),Color("#9bb6d2")]
+    var energies: Array[float] = [1.54,0.88,0.28]
+    hq_key_light.rotation_degrees = Vector3(
+        [-51.0,-27.0,-14.0][i],-33.0,0)
+    hq_key_light.light_color = colors[i]
+    hq_key_light.light_energy = energies[i]
+    hq_key_light.shadow_enabled = true
+    hq_fill_light.light_color = ambient[i]
+    hq_fill_light.light_energy = [0.72,0.48,0.29][i]
+    if hq_environment!=null and hq_environment.environment!=null:
+        var env: Environment = hq_environment.environment
+        env.background_color = [
+            Color("#283b46"),Color("#413340"),Color("#101a2a")][i]
+        env.ambient_light_color = ambient[i]
+        env.ambient_light_energy = [0.78,0.59,0.47][i]
+    for lamp in hq_night_lamps:
+        lamp.visible = false
+    for lamp in _g11_lamps_v23:
+        lamp.visible = i>0
+        lamp.light_color = (Color("#ffce9e") if i==1
+            else Color("#a9d4f5"))
+        lamp.light_energy = (0.42 if i==1 else 1.05)
+
+func _g11_joint_macro_v23(side: int) -> void:
+    if _role!="mlrs" or model_root==null:
+        return
+    _set_g11_light_v23(2)
+    _g11_cutaway(side)
+    _zoom=2.72
+    _update_camera()
+    if camera!=null:
+        camera.position.y=0.36
+        camera.look_at(Vector3(0,0.34,0),Vector3.UP)
 
 func _g11_cutaway(side: int) -> void:
     if _role != "mlrs" or model_root == null:
@@ -531,12 +608,16 @@ func _display_role(role: String) -> void:
             model_root.rotation_degrees.y = _yaw
             _update_camera()
         _g11_animation = ""
+    for lamp in _g11_lamps_v23:
+        lamp.visible = false
     if role=="apc":
         _apply_p06_lighting_v22()
     else:
         if _p06_night_fill_v22!=null:
             _p06_night_fill_v22.visible=false
         _apply_hq_lighting(_hq_light_preset)
+        if role=="mlrs":
+            _apply_g11_light_v23()
     _sync_p06_controls()
     _update_details()
 
@@ -1149,7 +1230,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_suspension_joints_v22",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_joint_finish_v23",false)):
+            detail_label.text = detail_label.text.replace("salva V8","pasadores y retenes PBR V23")
+        elif built and bool(model_root.get_meta("tarvoka_g11_suspension_joints_v22",false)):
             detail_label.text = detail_label.text.replace("salva V8","articulaciones reales V22")
         elif built and bool(model_root.get_meta("tarvoka_g11_shock_mount_finish_v21",false)):
             detail_label.text = detail_label.text.replace("salva V8","anclajes y muelles V21")
