@@ -28,6 +28,7 @@ const GUARD_HEIGHT: float = 0.100
 const PAINT_X: float = 0.950
 static var _hollow: ArrayMesh
 static var _sealed: ArrayMesh
+static var _track_pbr: StandardMaterial3D
 
 static func _position(x: float, p: Vector2) -> Vector3:
     # Profile is (y,z), extruded to actual native 3D chassis X.
@@ -105,6 +106,16 @@ static func _mesh(near: bool) -> ArrayMesh:
         _sealed=_make_track(false)
     return _sealed
 
+static func _rubber() -> StandardMaterial3D:
+    if _track_pbr==null:
+        _track_pbr=StandardMaterial3D.new()
+        _track_pbr.albedo_color=Color("#242b2e")
+        _track_pbr.metallic=0.03
+        _track_pbr.roughness=0.93
+        # Both faces of the physical hollow track are visible at 3/4 angles.
+        _track_pbr.cull_mode=BaseMaterial3D.CULL_DISABLED
+    return _track_pbr
+
 static func _part(root: Node3D,name: String) -> Node3D:
     return root.find_child(name,true,false) as Node3D
 
@@ -145,6 +156,7 @@ static func apply(model: Node3D, near: bool) -> bool:
             "G11Mobile_Oruga_%d" % side) as MeshInstance3D
         # Actual replacement of a solid box; never add an overlaid band.
         track.mesh=track_mesh
+        track.material_override=_rubber()
         track.position=Vector3(sign*TRACK_CENTER_X,0,0)
         var guard := _part(model,
             "G11Mobile_Faldon_%d" % side) as MeshInstance3D
