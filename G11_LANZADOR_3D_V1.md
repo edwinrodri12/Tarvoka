@@ -545,21 +545,27 @@ X ±0,56 m y anchura 0,38 m, por lo que sus bordes exteriores llegaban
 a ±0,75 m. La pared interior de las orugas es ±(0,79−0,142)=±0,648 m.
 La interferencia transversal era por tanto de **10,2 cm por lado**. La
 protección inferior rectangular heredada `G11_ProteccionInferior`
-tenía apenas 3 mm de holgura y el chasis móvil medía 1,45 m de ancho,
-invadiendo también la banda interior de las orugas tácticas.
+tenía apenas 3 mm de holgura: esa pieza **se elimina por completo**
+porque el casco octogonal cerrado de V2 ya forma un piso estanco.
+El chasis móvil medía 1,45 m de ancho y también invadía la banda
+interior de las orugas tácticas.
 
 `G11RearUndercarriageV30.gd` repara **las mismas piezas**, sin duplicados:
 - Zapatas traseras octogonales, biseladas y estrechadas a un máximo de
   0,27 m, reubicadas en X ±0,385 m; los soportes se centran en ±0,405 m.
-- Protección inferior octogonal, de medio ancho máximo 0,580 m; queda
-  al menos 0,068 m libre hasta el borde interior de las orugas hero.
+- La vieja `G11_ProteccionInferior` se **suprime del árbol de escena**,
+  evitando el rectángulo colgante y el duplicado de geometría bajo la
+  trasera. Se conserva `G11V2_CascoOctogonalCerrado` y su suelo sellado.
+  Tras quitar la placa, los soportes dejan al menos 0,128 m de
+  separación interna respecto de las orugas hero.
 - Chasis de batalla (`ChasisLanzacohetes`) deja de ser un cubo completo:
   se sustituye por un perfil de ocho lados con el extremo trasero afinado,
   de medio ancho máximo 0,620 m y al menos 0,025 m de separación interna.
 - La posición de las ruedas, piñones, zapatas, suspensión, pinturas,
   edificios, daños y las ocho facciones no cambian.
-- Se sustituye la geometría de cinco instancias existentes en hero y una
-  instancia existente en móvil LOD8/LOD10; **cero nodos adicionales**.
+- Se elimina un nodo redundante y se reajustan cuatro instancias existentes
+  en hero; se sustituye una geometría en móvil LOD8/LOD10. **Cero nodos
+  nuevos y una placa cuadrada realmente retirada**.
 
 **Siguiente prioridad artística:** `G11RocketTrailsV30.gd` conecta
 trayectorias cortas de cohetes con los doce fogonazos escalonados de V29.
