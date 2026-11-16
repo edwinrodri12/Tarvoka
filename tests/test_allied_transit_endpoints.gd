@@ -60,5 +60,24 @@ func _initialize() -> void:
     assert(not two_steps.has(Vector2i(1, 0)), "Allied tile stays invalid as a destination")
     assert(diagonal_allies == [Vector2i(1, 0)] and diagonal_blockers == [Vector2i(0, 1)],
         "Diagonal test must preserve occupancy inputs")
+    # Motorized ground units receive the existing half-point road discount,
+    # even when the first road tile is occupied by an ally.
+    var road_terrain: Array = terrain.duplicate(true)
+    road_terrain[0][1] = "road"
+    road_terrain[0][2] = "road"
+    var road_allies: Array[Vector2i] = [Vector2i(1, 0)]
+    var road_enemies: Array[Vector2i] = [Vector2i(0, 1)]
+    var road_snapshot: Array = road_terrain.duplicate(true)
+    var vehicle: Dictionary = rules.reachable(
+        Vector2i(0, 0), 1, road_terrain, road_enemies, "ground", true, road_allies
+    )
+    assert(not vehicle.has(Vector2i(1, 0)), "Motorized ally remains an invalid endpoint")
+    assert(vehicle.get(Vector2i(2, 0), -1) == 1, "Two road entries must cost one motorized movement point")
+    var foot: Dictionary = rules.reachable(
+        Vector2i(0, 0), 1, road_terrain, road_enemies, "ground", false, road_allies
+    )
+    assert(not foot.has(Vector2i(2, 0)), "Foot movement must not inherit the motorized road discount")
+    assert(road_terrain == road_snapshot and road_allies == [Vector2i(1, 0)]
+        and road_enemies == [Vector2i(0, 1)], "Road routing must preserve all inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
