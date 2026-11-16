@@ -1,0 +1,91 @@
+name: TARVOKA G13 V8 final 3D art audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/G13*.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/G13InspectionStudio.gd'
+      - 'scenes/G13InspectionStudio.tscn'
+      - 'tests/test_g13*.gd'
+      - '.github/workflows/g13-v8-final-art-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  g13-final-audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and headless display
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Import native art and scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 160s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g13-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error|Import failed' /tmp/g13-import.log; then exit 1; fi
+      - name: Run all eight G13 model and studio regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts=(
+            tests/test_g11_final_lock_g13_v1.gd
+            tests/test_g13_detail_v2.gd
+            tests/test_g13_animation_v3.gd
+            tests/test_g13_ground_air_finish_v4.gd
+            tests/test_g13_geometry_v5.gd
+            tests/test_g13_undercarriage_v6.gd
+            tests/test_g13_wheel_finish_v7.gd
+            tests/test_g13_surface_v8.gd
+            tests/test_g13_inspection_studio.gd
+          )
+          for script in "${scripts[@]}"; do
+            echo "::group::$script"
+            test -f "$script"
+            logfile="/tmp/$(basename "$script").log"
+            timeout --signal=TERM --kill-after=5s 100s \
+              xvfb-run -a -s '-screen 0 1280x720x24' \
+              env LIBGL_ALWAYS_SOFTWARE=1 \
+              /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --rendering-method gl_compatibility --audio-driver Dummy \
+              --path . --script "res://$script" 2>&1 | tee "$logfile"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' "$logfile"; then
+              echo "FAIL $script"; exit 1
+            fi
+            grep -E 'PASS G13|PASS G11 LOCK' "$logfile" >/dev/null || {
+              echo "Missing explicit PASS marker: $script"; exit 1;
+            }
+            echo "::endgroup::"
+          done
+      - name: Capture eight faction geometry screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-final-gallery
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V1_CAPTURE_DIR=/tmp/g13-final-gallery \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_native_v1_capture.gd 2>&1 | tee /tmp/g13-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-capture.log; then exit 1; fi
+          grep -F 'PASS G13 V1 CAPTURE:' /tmp/g13-capture.log
+          test "$(find /tmp/g13-final-gallery -name '*.png' | wc -l)" -eq 16
+      - name: Upload actual 3D inspection frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v8-art-audit-actual-godot-frames
+          path: /tmp/g13-final-gallery/*.png
+          if-no-files-found: ignore
+          retention-days: 14
