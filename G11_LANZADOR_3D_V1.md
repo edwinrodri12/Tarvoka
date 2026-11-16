@@ -350,3 +350,18 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - `tests/test_g11_shock_mount_finish_v21_capture.gd`: 16 capturas propias del motor Godot: seis perfiles a altura de banda, cuatro primeros planos de los asientos, dos vistas bajas de suspensión, dos instantes de marcha y dos colores de facción.
 - **Alcance:** solo escultura, fijación, acabados y opciones de inspección 3D. HP, defensa, ataque, combustible, recursos, tiempo de turnos, movimiento y facciones permanecen intactos. No se ha iniciado benchmark Android.
 
+
+
+## V23 — biseles de pasador y contraste bajo iluminación diurna/nocturna (15-nov-2026)
+
+**Implementación real en Godot 4.3 fusionada en [PR #439](https://github.com/edwinrodri12/Tarvoka/pull/439)**, commit `ca21bbaebb546e9fdbd3672e5fa9b32af88ebf60`. QA G11 V23, galería y compatibilidad P06 V25 aprobadas antes de fusión.
+
+- **24 ejes existentes reemplazados**, no apilados: `G11JointFinishV23.gd` sustituye cada `CylinderMesh` V22 por un `ArrayMesh` sellado con hombros mecanizados. Los antiguos cuerpos de horquilla siguen intactos, con acabado PBR forjado; el pasador metálico distingue acero pulido (metallic=0.91 y roughness=0.27) de carcasa (0.70 / 0.49).
+- **48 retenes metálicos reales y huecos**, uno en cada cara de los 24 pasadores, con recurso 3D instanciado común, material separado y 24 segmentos por circunferencia. Su límite lateral estricto es `0.790+0.115+0.0257+0.0018/2=0.9316m` frente a la cara exterior `0.932m` de la banda: sin salientes ni superposiciones a través del caucho.
+- Se conservan todas las animaciones del movimiento y la altura de suspensión, la estructura V22, las 92 zapatas V19, las doce ruedas V20 y las ocho pinturas; las reglas de batalla, el costo y el armamento no cambian.
+- TARVOKA Estudio 3D: selector **«G11 Lanzador · V23 pasadores PBR y luz»**. Controles reales de **día**, **atardecer** y **noche técnica** con dos luces laterales colocadas en la escena, visibles solo durante la inspección G11. Botones adicionales de primer plano **«V23: inspección pasador A/B»**; el despiece reversible V22 sigue funcionando. La luz del Bastión P06 V25 se restaura al cambiar de vehículo.
+- `tests/test_g11_joint_finish_v23.gd` valida ocho facciones, geometría de los 24 ejes, 48 anillos, materiales PBR y holgura, daño, reparación, disparo y cinco fases de desplazamiento. Se corrigieron las suposiciones antiguas del test V22 para que verifique la horquilla final con nuevo eje y retenes sin perder sus garantías.
+- `tests/test_g11_joint_finish_v23_capture.gd`: 16 capturas **renderizadas directamente por Godot** (día, atardecer, noche, ángulos extremos, macro de la suspensión, dos poses de marcha y colores de facción). Artefacto de Actions: `tarvoka-g11-v23-16-native-godot-hinge-light-comparison`, run `43795094293`. Sin imágenes conceptuales.
+- GitHub Pages incluye y comprueba el módulo `G11JointFinishV23.gd`, la selección V23 y controles de iluminación; no elimina módulos de otros edificios, unidades o del Bastión.
+
+**Próxima prioridad:** evaluación final de la legibilidad de los pasadores a escalas menores; las mediciones físicas del rendimiento Android se reservarán para la etapa de optimización tras terminar el diseño.
