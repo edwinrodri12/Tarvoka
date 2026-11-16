@@ -85,7 +85,15 @@ static func _replace_outer(core: MeshInstance3D,label: String,
     shell.mesh=_beveled_mesh(extent,bevel,roof_taper,front_slope)
     shell.position=core.position
     shell.rotation=core.rotation
-    shell.material_override=core.material_override
+    # Two-sided shell material avoids gaps at oblique camera angles in
+    # Godot 4 Compatibility renderer while preserving the original core PBR.
+    # Only two tiny hero-only meshes use double-sided rendering.
+    var shell_mat:=core.material_override.duplicate() as StandardMaterial3D
+    if shell_mat!=null:
+        shell_mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+        shell.material_override=shell_mat
+    else:
+        shell.material_override=core.material_override
     core.get_parent().add_child(shell)
     return shell
 
