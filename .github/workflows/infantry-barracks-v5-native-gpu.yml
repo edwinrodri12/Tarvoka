@@ -63,7 +63,7 @@ jobs:
             echo "Infantry Barracks GDScript failed real Godot import" >&2
             exit 1
           fi
-      - name: Native GPU validate 120 entrance and yard variants and capture 18 Studio scenes
+      - name: Native GPU validate 120 entrance and yard variants and capture 20 Studio scenes
         shell: bash
         run: |
           set -euo pipefail
@@ -78,13 +78,13 @@ jobs:
             exit 1
           fi
           grep -q 'PASS INFANTRY BARRACKS V5:' /tmp/infantry-gpu.log
-          for name in level_1 level_2 level_3 front_access training_side rooftop rear_view compare_v2 compare_v3 v4_rear_details compare_v3_without_v4 compare_v4_no_v5 compare_v5_access damage_1 damage_2 damage_3 damage_4 faction_6; do
+          for name in level_1 level_2 level_3 front_access training_side rooftop rear_view compare_v2 compare_v3 v4_rear_details compare_v3_without_v4 compare_v4_no_v5 compare_v5_access tactical_zoom_lod close_zoom_lod damage_1 damage_2 damage_3 damage_4 faction_6; do
             test -s "artifacts/tarvoka_infantry_v5_${name}.png"
           done
       - name: Archive original native Godot renders for review
         uses: actions/upload-artifact@v4
         with:
-          name: TARVOKA-Infantry-Barracks-V5-18-Godot-Captures
+          name: TARVOKA-Infantry-Barracks-V5-20-Godot-Captures
           retention-days: 30
           if-no-files-found: error
           path: artifacts/tarvoka_infantry_v5_*.png
