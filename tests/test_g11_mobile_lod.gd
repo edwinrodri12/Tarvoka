@@ -69,7 +69,7 @@ func _run() -> void:
             _check(Models.pose_model("mlrs",model,"move",0.4),
                 "mobile rig supports movement")
             Models.restore_model_pose("mlrs",model)
-            _check(_find(model,Mobile.POD).rotation_degrees.x == 25.0,
+            _check(_find(model,Mobile.POD).rotation_degrees.x == -25.0,
                 "restore launch angle")
             model.queue_free()
             await process_frame
