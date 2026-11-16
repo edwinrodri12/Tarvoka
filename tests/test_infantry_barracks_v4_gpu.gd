@@ -92,7 +92,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
         assert(_count_prefix(model,"FachadaLateralAbierta_")==2)
         assert(_count_prefix(model,"HuecoVentanaPosterior_")>=level)
         assert(_count_prefix(model,"HuecoVentanaLateral_")>=2)
-        assert(_count_prefix(model,"SenalizacionEntrenamientoV4")==1)
+        assert(_count_prefix(model,"SenalizacionEntrenamientoV4")==(1 if damage<=1 else 0))
         for module in V2._modules(level):
             var tag: String=str(module["tag"])
             var original: MeshInstance3D=model.find_child(
