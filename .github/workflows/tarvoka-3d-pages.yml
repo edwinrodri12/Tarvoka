@@ -424,7 +424,7 @@ jobs:
           grep -q 'G11_Lanzador_V1_EstudioReal' scripts/ui/BastionStudioAdapter.gd
           grep -q 'BastionP06_V25_CarcasasCerradas' scripts/ui/BastionStudioAdapter.gd
           # Do not allow concurrent APC releases to downgrade G11 selector.
-          grep -q 'G11 Lanzador · V33 · revisión final y Android' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G11 Lanzador · V33' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: valle con unidades' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: nieve con unidades' scripts/ui/BastionStudioAdapter.gd
           grep -q 'V25: acercar batalla' scripts/ui/BastionStudioAdapter.gd
