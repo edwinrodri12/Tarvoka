@@ -49,13 +49,13 @@ func _run()->void:
                 turret_shell.position.is_equal_approx(turret.position),
                 "shells use original approved attachment transforms")
             check((cab.mesh as BoxMesh).size.x>
-                Finish.CAB_ENVELOPE.x*0.88 and
-                (cab.mesh as BoxMesh).size.x<Finish.CAB_ENVELOPE.x*0.94,
-                "cab retains solid armored mass behind faceted skin")
+                Finish.CAB_ENVELOPE.x*0.96 and
+                (cab.mesh as BoxMesh).size.x<Finish.CAB_ENVELOPE.x,
+                "cab keeps V1 solid silhouette beneath faceted skin")
             check((turret.mesh as BoxMesh).size.x>
-                Finish.TURRET_ENVELOPE.x*0.88 and
-                (turret.mesh as BoxMesh).size.x<Finish.TURRET_ENVELOPE.x*0.94,
-                "turret retains sealed core below chamfers")
+                Finish.TURRET_ENVELOPE.x*0.96 and
+                (turret.mesh as BoxMesh).size.x<Finish.TURRET_ENVELOPE.x,
+                "turret keeps V1 sealed mass below chamfers")
             check(cab_shell.mesh.get_aabb().size.x>
                 Finish.CAB_ENVELOPE.x*0.95 and
                 turret_shell.mesh.get_aabb().size.x>
