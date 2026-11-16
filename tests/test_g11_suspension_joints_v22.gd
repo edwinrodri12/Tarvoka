@@ -131,7 +131,7 @@ func _run() -> void:
         if bolts!=null and bolts.multimesh!=null:
             for i in range(16):
                 var tr: Transform3D = bolts.multimesh.get_instance_transform(i)
-                _check((tr.basis.determinant()==0.0) == (i>=8),
+                _check((tr.basis.x.length()<0.0001) == (i>=8),
                     "only hidden right-side original flank rivets disappear")
             _check(bolts.multimesh.get_instance_transform(16)==original_rear,
                 "rear service fasteners never disappear in cutaway")
@@ -145,7 +145,7 @@ func _run() -> void:
         if bolts!=null and bolts.multimesh!=null:
             for i in range(16):
                 var tr: Transform3D = bolts.multimesh.get_instance_transform(i)
-                _check((tr.basis.determinant()==0.0) == (i<8),
+                _check((tr.basis.x.length()<0.0001) == (i<8),
                     "only left-side fasteners disappear when left guard is hidden")
         _check(Joints.set_inspection(model,0),"put original armor back")
         if bolts!=null and bolts.multimesh!=null:
