@@ -182,6 +182,16 @@ func _install_unified_studio_navigation() -> void:
         column.move_child(category_picker,1)
     column.move_child(role_picker,2)
     column.move_child(faction_picker,3)
+    role_picker.clip_text=true
+    role_picker.custom_minimum_size.x=0
+    if building_picker!=null:
+        building_picker.clip_text=true
+    # Compact, predictable sidebar width in Android landscape as well as PC.
+    var frame: BoxContainer=model_holder.get_parent() as BoxContainer
+    if frame!=null and frame.get_child_count()>1:
+        var sidebar: Control=frame.get_child(1) as Control
+        if sidebar!=null:
+            sidebar.custom_minimum_size.x=306.0
 
     studio_quick_panel=VBoxContainer.new()
     studio_quick_panel.name="Estudio3D_MenuUnificado"
@@ -191,10 +201,11 @@ func _install_unified_studio_navigation() -> void:
     var tabs:=HBoxContainer.new()
     tabs.add_theme_constant_override("separation",5)
     studio_quick_panel.add_child(tabs)
-    studio_tab_animations=_button(tabs,"Animaciones",func(): _studio_select_tab(0))
+    studio_tab_animations=_button(tabs,"Animar",func(): _studio_select_tab(0))
     studio_tab_camera=_button(tabs,"Cámara",func(): _studio_select_tab(1))
-    studio_tab_technical=_button(tabs,"Avanzado",func(): _studio_select_tab(2))
+    studio_tab_technical=_button(tabs,"Detalles",func(): _studio_select_tab(2))
     for button in [studio_tab_animations,studio_tab_camera,studio_tab_technical]:
+        button.custom_minimum_size.x=0
         button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
         button.clip_text=true
 
