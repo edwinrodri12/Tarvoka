@@ -6,6 +6,7 @@ on:
       - "scripts/experiments/RoleSpecializationV08.gd"
       - "tests/test_role_specialization_v08.gd"
       - "tests/test_specialization_sensitivity_v09.gd"
+      - "tests/test_specialization_tactical_v10.gd"
       - ".github/workflows/role-specialization-v08.yml"
   workflow_dispatch:
 
@@ -47,6 +48,18 @@ jobs:
             echo 'Specialization sensitivity matrix failed'; exit 1
           fi
           grep -Fq 'PASS specialization sensitivity v09:' /tmp/tarvoka-specialization-sensitivity-v09.log
+      - name: Verify engineer rescue and partial-tank counterplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 520s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_specialization_tactical_v10.gd \
+            2>&1 | tee /tmp/tarvoka-specialization-tactical-v10.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-specialization-tactical-v10.log; then
+            echo 'Specialization tactical battle failed'; exit 1
+          fi
+          grep -Fq 'PASS specialization tactical v10:' /tmp/tarvoka-specialization-tactical-v10.log
       - name: Archive combat and recovery evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,5 +68,6 @@ jobs:
           path: |
             /tmp/tarvoka-role-specialization-v08.log
             /tmp/tarvoka-specialization-sensitivity-v09.log
+            /tmp/tarvoka-specialization-tactical-v10.log
           retention-days: 30
           if-no-files-found: ignore
