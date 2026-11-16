@@ -10,4 +10,4 @@ Command: `godot --headless --path . --script res://tests/test_allied_transit_end
 
 Expected marker: `PASS: allied transit and endpoint isolation`.
 
-Status: source committed; Godot 4.3 **NO EJECUTADO** on this commit, Android physical **NO EJECUTADO EN DISPOSITIVO**. This standalone test is not yet wired into the repository's existing CI suite. Before merging, add a CI invocation, run the new test and full tactical regression suite, and verify no overlapping PR has introduced equivalent coverage.
+Status: source committed; Godot 4.3 **NO EJECUTADO** on this commit, Android physical **NO EJECUTADO EN DISPOSITIVO**. The standalone test is now wired to `.github/workflows/allied-transit-endpoints.yml` on this PR branch, with official Godot 4.3, 90-second timeout, strict unexpected-error detection, and exactly one PASS marker. **CI result remains NO EJECUTADO / pending verification**; wiring is not proof of a passing test. Before merging, inspect the new Actions run, run the full tactical regression suite, and verify no overlapping PR has equivalent coverage.
