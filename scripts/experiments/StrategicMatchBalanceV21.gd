@@ -393,6 +393,11 @@ static func play_half_turn(battle: Dictionary, policy: String) -> Dictionary:
         current["stats"]["contact_turns"][side] += 1
     if int(current["stats"]["orders"][side]) == initial_orders:
         current["stats"]["idle_turns"][side] += 1
+    # A lethal Session.attack can decide the match DURING this phase. Do not
+    # call Session.end_turn after victory; its authoritative API rejects it.
+    if int(current["session"]["world"]["state"].get("winner",-1)) in [0,1]:
+        current["stats"]["turns"][side] += 1
+        return {"valid":true,"battle":current}
     var before: Array = current["session"]["world"]["layout"]["sites"].duplicate(true)
     var next_side: int = 1-side
     var cash_next: int = int(current["session"]["world"]["state"]["economy"]["credits"][next_side])
