@@ -600,6 +600,8 @@ func _confirm_3d_order() -> void:
                     "unit_id":command_id,
                     "kind":str(order.get("kind","")),
                     "before":item.get("pos",Vector2i.ZERO),
+                    "from_world":Terrain.world_at(item["pos"])+Vector3(
+                        0,Terrain.height_at(_cells,item["pos"])+0.43,0),
                     "target":order.get("cell",Vector2i.ZERO),
                     "faction":_viewing_side}
                 break
@@ -631,8 +633,7 @@ func _confirm_3d_order() -> void:
                 if actions!=null:
                     var origin: Vector2i=visual["before"]
                     var target: Vector2i=visual["target"]
-                    var start_at: Vector3=Terrain.world_at(origin)+Vector3(
-                        0,Terrain.height_at(_cells,origin)+0.43,0)
+                    var start_at: Vector3=visual["from_world"]
                     actions.play(str(visual["unit_id"]),str(visual["kind"]),
                         start_at,target-origin)
                 break
