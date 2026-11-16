@@ -57,6 +57,18 @@ func _run() -> void:
         studio.call("_studio_select_tab", 0)
         _check(animation.visible and not camera.visible and not advanced.visible,
             "returning to animations restores compact view")
+    var expert_content: VBoxContainer = studio.get("studio_advanced_content") as VBoxContainer
+    _check(expert_content != null, "technical group exists")
+    if expert_content != null:
+        for property_name in ["p06_controls","g11_controls","g13_controls","heli_controls"]:
+            var section: Control = studio.get(property_name) as Control
+            _check(section != null and expert_content.is_ancestor_of(section),
+                property_name + " lives inside one advanced inspector")
+        studio.call("_studio_select_tab",2)
+        studio.call("_studio_toggle_advanced")
+        _check(expert_content.visible, "technical inspectors can be expanded")
+        studio.call("_studio_select_tab",0)
+        _check(not advanced.visible, "technical controls do not cover model in Animar")
     var history: VBoxContainer = studio.get("studio_versions_content") as VBoxContainer
     if history != null and role != null:
         _check(not history.is_ancestor_of(role), "model dropdown is not hidden in history")
