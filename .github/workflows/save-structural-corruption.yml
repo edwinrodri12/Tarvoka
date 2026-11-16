@@ -29,4 +29,4 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/save-structural.log; then
             exit 1
           fi
-          grep -F 'PASS save structural corruption: 23 malformed snapshots rejected' /tmp/save-structural.log
+          grep -F 'PASS save structural corruption: 26 malformed snapshots rejected' /tmp/save-structural.log
