@@ -118,6 +118,14 @@ var studio_advanced_group: VBoxContainer
 var studio_advanced_content: VBoxContainer
 var studio_advanced_button: Button
 var studio_advanced_expanded: bool = false
+var studio_selector_panel: VBoxContainer
+var studio_animation_panel: VBoxContainer
+var studio_camera_panel: VBoxContainer
+var studio_tab_animations: Button
+var studio_tab_camera: Button
+var studio_tab_technical: Button
+var studio_active_tab: int = 0
+var studio_legacy_controls: VBoxContainer
 
 
 func _ready() -> void:
@@ -157,75 +165,138 @@ func _install_unified_studio_navigation() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
     if column==null:
         return
+    # One real selector: move existing connected controls, never create
+    # parallel selectors that can disagree about the active native model.
+    studio_selector_panel=VBoxContainer.new()
+    studio_selector_panel.name="Estudio3D_SelectorPrincipal"
+    studio_selector_panel.add_theme_constant_override("separation",7)
+    column.add_child(studio_selector_panel)
+    column.move_child(studio_selector_panel,0)
+    studio_quick_title=_title(studio_selector_panel,"TARVOKA · ESTUDIO 3D",18)
+    studio_quick_title.add_theme_color_override("font_color",Color("#E7BE70"))
+    studio_overview_label=_title(studio_selector_panel,"Selecciona un modelo para inspeccionar.",12)
+    studio_overview_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    if category_picker!=null:
+        category_picker.reparent(studio_selector_panel)
+    role_picker.reparent(studio_selector_panel)
+    if building_picker!=null:
+        building_picker.reparent(studio_selector_panel)
+    faction_picker.reparent(studio_selector_panel)
+
     studio_quick_panel=VBoxContainer.new()
     studio_quick_panel.name="Estudio3D_MenuUnificado"
     studio_quick_panel.add_theme_constant_override("separation",7)
     column.add_child(studio_quick_panel)
-    column.move_child(studio_quick_panel,0)
-    studio_quick_title=_title(studio_quick_panel,"ESTUDIO 3D · INSPECCIÓN",16)
-    studio_quick_title.add_theme_color_override("font_color",Color("#E7BE70"))
-    studio_overview_label=_title(studio_quick_panel,
-        "Selecciona una unidad o edificio. Las acciones rápidas usan el modelo real.",12)
-    _add_paired(studio_quick_panel,"Unidades",func(): _studio_jump_category(0),
-        "Edificios",func(): _studio_jump_category(1))
-    _add_paired(studio_quick_panel,"Movimiento",func(): _studio_quick_action("move"),
-        "Ataque",func(): _studio_quick_action("attack"))
-    _add_paired(studio_quick_panel,"Impacto",func(): _studio_quick_action("hit"),
-        "Detener",func(): _studio_quick_stop())
-    _add_paired(studio_quick_panel,"Girar ↶",func(): _rotate(-45.0),
-        "Girar ↷",func(): _rotate(45.0))
-    _add_paired(studio_quick_panel,"Alejar",func(): _change_zoom(-1),
-        "Acercar",func(): _change_zoom(1))
-    _add_paired(studio_quick_panel,"Vista inicial",_reset_camera,
-        "Detalles",_studio_jump_details)
+    column.move_child(studio_quick_panel,1)
+    var tabs:=HBoxContainer.new()
+    tabs.add_theme_constant_override("separation",5)
+    studio_quick_panel.add_child(tabs)
+    studio_tab_animations=_button(tabs,"Animaciones",func(): _studio_select_tab(0))
+    studio_tab_camera=_button(tabs,"Cámara",func(): _studio_select_tab(1))
+    studio_tab_technical=_button(tabs,"Avanzado",func(): _studio_select_tab(2))
+    for button in [studio_tab_animations,studio_tab_camera,studio_tab_technical]:
+        button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+        button.clip_text=true
 
-    # The base tank inspector has 20 historical revision toggles placed
-    # ABOVE the actual model selector. Hide that history by default without
-    # deleting the comparison tools or altering their signal connections.
+    studio_animation_panel=VBoxContainer.new()
+    studio_animation_panel.add_theme_constant_override("separation",6)
+    studio_quick_panel.add_child(studio_animation_panel)
+    _add_paired(studio_animation_panel,"Mover",func(): _studio_quick_action("move"),
+        "Atacar",func(): _studio_quick_action("attack"))
+    _add_paired(studio_animation_panel,"Impacto",func(): _studio_quick_action("hit"),
+        "Detener",_studio_quick_stop)
+    studio_camera_panel=VBoxContainer.new()
+    studio_camera_panel.add_theme_constant_override("separation",6)
+    studio_quick_panel.add_child(studio_camera_panel)
+    _add_paired(studio_camera_panel,"↶ 45°",func(): _rotate(-45.0),
+        "45° ↷",func(): _rotate(45.0))
+    _add_paired(studio_camera_panel,"Alejar",func(): _change_zoom(-1),
+        "Acercar",func(): _change_zoom(1))
+    _button(studio_camera_panel,"Restablecer cámara",_reset_camera)
+
+    # Revision comparisons are kept for QA but not shown on the front page.
     studio_versions_fold=VBoxContainer.new()
     studio_versions_fold.name="G09_HistorialComparaciones"
     studio_versions_fold.add_theme_constant_override("separation",5)
     column.add_child(studio_versions_fold)
-    column.move_child(studio_versions_fold,
-        column.get_children().find(role_picker))
     studio_versions_button=_button(studio_versions_fold,
-        "Mostrar versiones anteriores del tanque",_studio_toggle_versions)
+        "Historial de versiones G09",_studio_toggle_versions)
     studio_versions_content=VBoxContainer.new()
     studio_versions_content.name="G09_ComparacionAvanzada"
-    studio_versions_content.add_theme_constant_override("separation",6)
     studio_versions_fold.add_child(studio_versions_content)
-    var legacy_controls: Array[Control]=[]
-    for node in column.get_children():
-        if node==studio_versions_fold:
-            break
-        if node is Button and node!=studio_quick_panel:
-            legacy_controls.append(node as Control)
-    for control in legacy_controls:
-        control.reparent(studio_versions_content)
     studio_versions_content.visible=false
+    for item in column.get_children():
+        if item is Button and item!=studio_quick_panel:
+            (item as Control).reparent(studio_versions_content)
 
-    # Keep role-specific expert inspections, fleet tests and technical
-    # diagnostics available without flooding the main action interface.
     studio_advanced_group=VBoxContainer.new()
     studio_advanced_group.name="Estudio3D_DetallesPorUnidad"
+    studio_advanced_group.add_theme_constant_override("separation",7)
     column.add_child(studio_advanced_group)
-    column.move_child(studio_advanced_group,
-        column.get_children().find(detail_label))
     studio_advanced_button=_button(studio_advanced_group,
-        "Mostrar inspecciones técnicas",_studio_toggle_advanced)
+        "Inspecciones y pruebas del modelo",_studio_toggle_advanced)
     studio_advanced_content=VBoxContainer.new()
-    studio_advanced_content.add_theme_constant_override("separation",8)
+    studio_advanced_content.add_theme_constant_override("separation",7)
     studio_advanced_group.add_child(studio_advanced_content)
-    for group in [p06_controls,g11_controls,g13_controls]:
+    for group in [p06_controls,g11_controls,g13_controls,heli_controls]:
         if group!=null:
             group.reparent(studio_advanced_content)
-    studio_advanced_content.visible=false
+
+    # Original inspector actions remain connected but are available only
+    # under Advanced, avoiding duplicate Move/Attack/Camera toolbars.
+    studio_legacy_controls=VBoxContainer.new()
+    studio_legacy_controls.name="ControlesOriginalesDeInspeccion"
+    studio_legacy_controls.add_theme_constant_override("separation",6)
+    studio_advanced_content.add_child(studio_legacy_controls)
+    var moving: bool=false
+    var legacy_to_move: Array[Control]=[]
+    for item in column.get_children():
+        if item is Label:
+            var heading: String=str((item as Label).text)
+            if heading in ["ROTAR Y ACERCAR","ANIMACION REAL",
+                    "V30 · DOS TIPOS DE IMPACTO","CONDICION DEL TANQUE"]:
+                moving=true
+            elif heading in ["FACCION","MODELO"]:
+                moving=false
+        if moving and item is Control and item!=detail_label and item!=status_label:
+            legacy_to_move.append(item)
+    for item in legacy_to_move:
+        item.reparent(studio_legacy_controls)
+    # Hide repeated introductory text; retain version/status diagnostics.
+    for item in column.get_children():
+        if item is Label:
+            var label_text: String=str((item as Label).text)
+            if label_text=="MODELO" or label_text=="FACCION" or label_text.begins_with(
+                    "Visor 3D del motor Godot:") or label_text.begins_with(
+                    "El mismo modelo de Godot") or label_text=="TARVOKA · ESTUDIO 3D":
+                (item as Label).visible=false
+
+    # Put the original advanced building tools below the compact navigation.
+    # They remain fully functional; the selector itself is now at the top.
+    column.move_child(studio_versions_fold,2)
+    column.move_child(studio_advanced_group,3)
+    studio_advanced_expanded=false
+    _studio_select_tab(0)
+
+func _studio_select_tab(index: int) -> void:
+    studio_active_tab=clampi(index,0,2)
+    if studio_animation_panel!=null:
+        studio_animation_panel.visible=studio_active_tab==0
+    if studio_camera_panel!=null:
+        studio_camera_panel.visible=studio_active_tab==1
+    if studio_advanced_group!=null:
+        studio_advanced_group.visible=studio_active_tab==2
+    for entry in [[studio_tab_animations,0],[studio_tab_camera,1],
+            [studio_tab_technical,2]]:
+        var button: Button=entry[0] as Button
+        if button!=null:
+            button.disabled=int(entry[1])==studio_active_tab
 
 func _studio_toggle_advanced() -> void:
     studio_advanced_expanded=not studio_advanced_expanded
     studio_advanced_content.visible=studio_advanced_expanded
-    studio_advanced_button.text=("Ocultar inspecciones técnicas"
-        if studio_advanced_expanded else "Mostrar inspecciones técnicas")
+    studio_advanced_button.text=("Ocultar inspecciones" if studio_advanced_expanded
+        else "Inspecciones y pruebas del modelo")
 
 func _studio_toggle_versions() -> void:
     studio_versions_expanded=not studio_versions_expanded
@@ -242,7 +313,9 @@ func _studio_jump_category(index: int) -> void:
 func _studio_jump_details() -> void:
     if detail_label==null:
         return
-    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    var column: VBoxContainer=studio_quick_panel.get_parent() as VBoxContainer
+    if column==null:
+        return
     var scroll: ScrollContainer=column.get_parent() as ScrollContainer
     if scroll!=null:
         scroll.ensure_control_visible(detail_label)
@@ -274,18 +347,32 @@ func _studio_quick_stop() -> void:
 func _refresh_unified_studio_navigation() -> void:
     if studio_overview_label==null:
         return
-    var is_building: bool=category_picker!=null and category_picker.selected==1
-    var category: String="EDIFICIO" if is_building else "UNIDAD"
-    var version: String=" · G09 V32 final" if _role=="tank" else ""
-    studio_overview_label.text=(category+" · "+str(_role).to_upper()+version+
-        " · gira, acerca o inicia una animación. Las revisiones antiguas"
-        +" permanecen en el apartado de comparaciones.")
+    var building: bool=category_picker!=null and category_picker.selected==1
+    var label: String=""
+    if building:
+        label="EDIFICIO · "+str(_role).replace("_"," ").to_upper()
+    else:
+        match _role:
+            "tank": label="G09 · Tanque · V32 final"
+            "apc": label="P06 · Bastión · V25"
+            "mlrs": label="G11 · Lanzador · V33"
+            "attack_heli": label="A01 · Helicóptero · V10"
+            "aa_mobile": label="G13 · Antiaéreo · diseño en progreso"
+            _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
+    studio_overview_label.text=label
+    if building_picker!=null:
+        building_picker.visible=building
+    role_picker.visible=not building
     if studio_versions_fold!=null:
-        studio_versions_fold.visible=not is_building and _role=="tank"
+        studio_versions_fold.visible=studio_active_tab==2 and not building and _role=="tank"
     if studio_advanced_group!=null:
-        studio_advanced_group.visible=not is_building and _role in [
-            "apc","mlrs","aa_mobile"]
-
+        studio_advanced_group.visible=studio_active_tab==2
+    if studio_advanced_content!=null:
+        studio_advanced_content.visible=studio_advanced_expanded
+    # The original per-unit controls are in their own panel.
+    # Their internal visibility still comes from the existing unit logic.
+    if studio_animation_panel!=null:
+        studio_animation_panel.visible=not building and studio_active_tab==0
 
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
