@@ -1,0 +1,44 @@
+name: TARVOKA capture route safety 48-half-turn mirrored audit
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/CaptureRouteAIV04.gd"
+      - "tests/test_capture_route_long_v04.gd"
+      - ".github/workflows/capture-route-long-v04.yml"
+  workflow_dispatch:
+
+jobs:
+  matched_safe_approach:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Measure route detours, interrupted captures and winners across 32 games
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 980s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_route_long_v04.gd \
+            2>&1 | tee /tmp/tarvoka-capture-route-long-v04.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-capture-route-long-v04.log; then
+            echo 'Capture route long audit failed'; exit 1
+          fi
+          grep -Fq 'PASS capture route long v04:' /tmp/tarvoka-capture-route-long-v04.log
+      - name: Archive results and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-capture-route-long-v04
+          path: /tmp/tarvoka-capture-route-long-v04.log
+          retention-days: 30
+          if-no-files-found: ignore

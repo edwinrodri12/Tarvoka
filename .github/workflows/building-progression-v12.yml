@@ -1,0 +1,59 @@
+name: TARVOKA military building progression and technology opportunity v1.2
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/BuildingProgressionV12.gd"
+      - "tests/test_building_progression_v12.gd"
+      - "tests/test_building_tier_matrix_v13.gd"
+      - ".github/workflows/building-progression-v12.yml"
+  workflow_dispatch:
+
+jobs:
+  military_buildings:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate two-sided I/II/III access, turn costs and purchased powers
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_building_progression_v12.gd \
+            2>&1 | tee /tmp/tarvoka-building-progression-v12.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-building-progression-v12.log; then
+            echo 'Experimental tier audit failed'; exit 1
+          fi
+          grep -Fq 'PASS building progression v12:' /tmp/tarvoka-building-progression-v12.log
+      - name: Verify all six building categories and mirrored level III access
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_building_tier_matrix_v13.gd \
+            2>&1 | tee /tmp/tarvoka-building-tier-matrix-v13.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-building-tier-matrix-v13.log; then
+            echo 'Building tier matrix audit failed'; exit 1
+          fi
+          grep -Fq 'PASS building tier matrix v13:' /tmp/tarvoka-building-tier-matrix-v13.log
+      - name: Preserve concrete purchase/upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-building-progression-v12
+          path: |
+            /tmp/tarvoka-building-progression-v12.log
+            /tmp/tarvoka-building-tier-matrix-v13.log
+          retention-days: 30
+          if-no-files-found: ignore

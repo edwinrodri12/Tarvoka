@@ -1,0 +1,44 @@
+name: TARVOKA experimental capture purchase economy audit v0.7
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_capture_economy_causal_v05.gd"
+      - ".github/workflows/capture-economy-diagnostic-v05.yml"
+      - "scripts/experiments/CaptureRouteAIV04.gd"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run evidence-backed audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 900s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_economy_causal_v05.gd \
+            2>&1 | tee /tmp/capture-economy-diagnostic-v05.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/capture-economy-diagnostic-v05.log; then
+            echo 'TARVOKA experimental audit failed'; exit 1
+          fi
+          grep -Fq 'PASS capture economy causal v05:' /tmp/capture-economy-diagnostic-v05.log
+      - name: Preserve test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-economy-diagnostic-v05
+          path: /tmp/capture-economy-diagnostic-v05.log
+          retention-days: 30
+          if-no-files-found: ignore

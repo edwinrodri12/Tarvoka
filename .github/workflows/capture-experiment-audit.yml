@@ -1,0 +1,45 @@
+name: TARVOKA experimental city capture and infantry support audit
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/CaptureExperimentV01.gd"
+      - "tests/test_capture_experiment_v01.gd"
+      - "docs/CAPTURE_EXPERIMENT_AUDIT_20261115.md"
+      - ".github/workflows/capture-experiment-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  test_capture_experiment:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Test progressive capture, economy, teamwork and real AI comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 480s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_experiment_v01.gd \
+            2>&1 | tee /tmp/tarvoka-capture-experiment.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-capture-experiment.log; then
+            echo 'Capture system experiment failed'; exit 1
+          fi
+          grep -Fq 'PASS capture phase01:' /tmp/tarvoka-capture-experiment.log
+      - name: Preserve match-by-match results and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-capture-experiment-audit
+          path: /tmp/tarvoka-capture-experiment.log
+          retention-days: 30
+          if-no-files-found: ignore

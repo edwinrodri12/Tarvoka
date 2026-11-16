@@ -1,0 +1,47 @@
+name: TARVOKA capture-defense 48-half-turn matched A/B
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/CaptureExperimentV01.gd"
+      - "scripts/experiments/CaptureThreatsV02.gd"
+      - "scripts/experiments/CaptureAwareAIV01.gd"
+      - "scripts/experiments/CaptureDefensiveAIV02.gd"
+      - "tests/test_capture_defense_long_v02.gd"
+      - ".github/workflows/capture-defense-long-v02.yml"
+  workflow_dispatch:
+
+jobs:
+  long_siege_defense:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run 32 matched longer matches and compare defensive siege metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 980s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_capture_defense_long_v02.gd \
+            2>&1 | tee /tmp/tarvoka-capture-defense-long-v02.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-capture-defense-long-v02.log; then
+            echo 'Defensive capture long audit failed'; exit 1
+          fi
+          grep -Fq 'PASS capture defense long v02:' /tmp/tarvoka-capture-defense-long-v02.log
+      - name: Archive verified stats and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-capture-defense-long-v02
+          path: /tmp/tarvoka-capture-defense-long-v02.log
+          retention-days: 30
+          if-no-files-found: ignore

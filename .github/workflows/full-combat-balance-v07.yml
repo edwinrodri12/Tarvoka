@@ -1,0 +1,48 @@
+name: TARVOKA full 32-role combat and prospective upgrade audit v0.9
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_full_combat_balance_v07.gd"
+      - ".github/workflows/full-combat-balance-v07.yml"
+      - "scripts/core/Combat.gd"
+      - "scripts/core/BattleActions.gd"
+      - "scripts/core/ModernArsenal.gd"
+      - "scripts/core/UnitRoles.gd"
+      - "scripts/core/CombatDoctrine.gd"
+  workflow_dispatch:
+
+jobs:
+  combat_balance_catalogue:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit combat catalogue and hypothetical upgrades
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_full_combat_balance_v07.gd \
+            2>&1 | tee /tmp/tarvoka-full-combat-balance-v07.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-full-combat-balance-v07.log; then
+            echo 'Full combat balance audit failed'; exit 1
+          fi
+          grep -Fq 'PASS full combat balance v07:' /tmp/tarvoka-full-combat-balance-v07.log
+      - name: Preserve matrix and individual unit profiles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-full-combat-balance-v07
+          path: /tmp/tarvoka-full-combat-balance-v07.log
+          retention-days: 30
+          if-no-files-found: ignore
