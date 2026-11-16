@@ -15,6 +15,7 @@ const SIDE_LENGTH: float = 1.88
 const SIDE_HEIGHT: float = 0.088
 const SIDE_DEPTH: float = 0.015
 const SIDE_CENTER_Z: float = 0.05
+const SIDE_CENTER_Y: float = 0.660
 const ROOF_WIDTH: float = 0.68
 const ROOF_LENGTH: float = 0.36
 const ROOF_DEPTH: float = 0.028
@@ -54,7 +55,7 @@ static func apply(model: Node3D) -> bool:
         # Existing original guard is 10cm high. The enlarged 8.8cm
         # enamel stays within its top and bottom, not over the rubber.
         if SIDE_HEIGHT>guard_box.size.y-2.0*CLEARANCE or (
-                absf(paint.position.y-guard.position.y)+SIDE_HEIGHT*0.5 >
+                absf(SIDE_CENTER_Y-guard.position.y)+SIDE_HEIGHT*0.5 >
                 guard_box.size.y*0.5-CLEARANCE) or (
                 absf(SIDE_CENTER_Z-guard.position.z)+SIDE_LENGTH*0.5 >
                 guard_box.size.z*0.5-CLEARANCE):
@@ -74,6 +75,7 @@ static func apply(model: Node3D) -> bool:
     for stripe in stripes:
         var band := stripe.mesh as BoxMesh
         band.size=Vector3(SIDE_DEPTH,SIDE_HEIGHT,SIDE_LENGTH)
+        stripe.position.y=SIDE_CENTER_Y
         stripe.position.z=SIDE_CENTER_Z
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_g11_v27_no_new_meshes",true)
