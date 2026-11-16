@@ -695,6 +695,7 @@ jobs:
             echo 'G11 V25 true combat-map screenshots failed'; exit 1
           fi
           grep -F 'PASS G11 V25 CAPTURE:' /tmp/g11_v25_capture.log
+          test "$(find /tmp/g11-v25-real-battle -name '*.png' | wc -l)" -eq 16
       - name: Render 24 actual G11 V28 camera-contrast battle frames in four biomes
         shell: bash
         run: |
@@ -718,7 +719,6 @@ jobs:
           name: tarvoka-g11-v28-four-biomes-three-real-zooms
           path: /tmp/g11-v28-production-camera/*.png
           retention-days: 14
-          test "$(find /tmp/g11-v25-real-battle -name '*.png' | wc -l)" -eq 16
       - name: Upload 16 real G11 V25 battle context Godot captures
         if: success()
         uses: actions/upload-artifact@v4
