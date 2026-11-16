@@ -32,3 +32,18 @@ En `Edificios 3D → Cuartel de Infantería V2`:
 
 ## Próxima inspección
 Revisar encuadre y legibilidad de escalones/puertas, si los peldaños de torres están alineados, salientes de las alas en L y U, y coherencia en estado de daño. Corregir hallazgos concretos antes de avanzar hacia texturas y animaciones.
+
+
+## Hallazgo y corrección posterior a QA original
+Las capturas auténticas V2 permitieron observar que la cámara de la pista mostraba mayoritariamente el acceso y torre del ala oeste, y no el entrenamiento. La causa no era solo la cámara: el campo N1/N2 se reutilizaba en nivel 3, **intersectando la planta del ala oeste del edificio en U**.
+
+Corregido físicamente en V2 sin tocar las tres siluetas:
+- N1 y N2 mantienen campo de entrenamiento frontal.
+- N3 dispone de un corredor lateral estrecho dedicado al entrenamiento: centro X=-7.04, ancho 1.53 m, centro Z=-0.67, longitud 6.36 m.
+- Su borde este está a X=-6.275, mientras la planta oeste empieza aproximadamente en X=-6.12: **>15 cm de separación**.
+- El corredor termina en Z=2.51 antes de la torre (arranca en Z≈2.84): **>30 cm de separación**.
+- Se recolocan pistas, barricadas, travesaños, postes, muros y plataformas V1/V2 con la nueva geometría.
+- La cámara de entrenamiento selecciona su blanco según el nivel: N1/N2 encuadran pista frontal, N3 encuadra corredor lateral.
+- El test V2 comprueba ahora explícitamente estas separaciones geométricas para todas las variantes N3 no destruidas.
+
+**QA posterior:** ver workflow de V2 en commit final antes de afirmar el resultado. Las pruebas originales V2 (antes del ajuste de distribución) habían aprobado 120 variantes y 13 capturas, pero el hallazgo visual demuestra por qué el QA geométrico adicional es necesario.
