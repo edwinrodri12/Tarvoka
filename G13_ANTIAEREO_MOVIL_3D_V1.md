@@ -37,3 +37,45 @@ Estos son **conceptos de evolución**, no niveles ni habilidades ya aprobadas o 
 1. Revisar en el visor 3D las ocho facciones y vistas desde arriba, abajo, frontal, costados y trasera; localizar solapes o huecos reales.
 2. Refinar geometría de cabina, torreta, radar, cañones y ruedas sin elevar innecesariamente el coste Android.
 3. Cuando la escultura sea reconocible y esté aprobada, preparar LOD8/LOD10 y sprites con rango visible para el motor; **no activarlo en partidas** hasta validar el sistema antiaéreo y las cinco clases existentes.
+
+
+## V2 — dos animaciones de ataque aprobadas como dirección artística
+
+**Decisión de diseño (16 nov 2026):** el G13 usará sus dos cañones
+automáticos contra **tierra y aire**. Debe seguir siendo especialmente
+útil contra drones y helicópteros y contra infantería o vehículos ligeros
+en tierra, pero no reemplazar a un tanque pesado ni un sistema SAM
+de largo alcance.
+
+`scripts/ui/G13DualDomainVisualV2.gd` agrega **dos presentaciones
+visuales distintas en el mismo vehículo**, sin implementar las mecánicas:
+
+- **Ataque terrestre:** elevación de cañones **4–10°**, torreta
+  con giro controlado, radar orientado al frente y **tres pulsos**
+  alternados de boca/retroceso para representar fuego de corto alcance.
+- **Ataque aéreo:** elevación **42–63°**, torreta orientándose hacia
+  el cielo, radar con barrido diferenciado y **cinco pulsos**
+  alternados para representar seguimiento de aeronaves.
+- Los mismos dos tubos existentes se desplazan **hasta 2,6 cm**
+  visualmente al disparar y recuperan exactamente sus coordenadas
+  al finalizar; los destellos son dos instancias de **un único MultiMesh**
+  compartido, no dos efectos por disparo.
+- El Estudio 3D tiene dos botones con una reproducción completa
+  de 1,6 segundos que vuelve a reposo, permitiendo revisar la
+  diferencia de altura y cadencia. Se conservan ocho facciones y
+  las variantes detallada/simplificada.
+- **Sin balística ni proyectiles jugables:** las pruebas no permiten
+  ataques que no estén registrados en el motor. No se añade
+  `aa_mobile` a las clases tácticas disponibles, ni se modifica
+  HP, munición, daños, rangos, visión, combustible o IA.
+
+**Parámetros propuestos para futura validación de balance:** alcance
+terrestre 1–2 casillas, antiaéreo 1–3, una sola elección de ataque por
+turno, daño elevado contra infantería y drones, intermedio contra
+ligeros y bajo contra blindaje pesado y cazas rápidos. Todavía
+**no son reglas programadas ni valores numéricos de daño aprobados**.
+
+La siguiente revisión artística se centrará en la forma de los
+cañones, integración del sensor, disipación de calor y silueta
+legible a escala Android; después habrá que probar las reglas
+antiaéreas contra las clases aéreas reales.
