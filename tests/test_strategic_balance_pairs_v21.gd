@@ -40,7 +40,7 @@ static func _append(sum: Dictionary, side: Dictionary,
     sum["live_units"] += int(side["live_units"])
     sum["cash_at_end"] += int(side["cash"])
     for role in side["purchases_by_role"]:
-        sum["roles"][role] = int(sum["roles"].get(role,0))+
+        sum["roles"][role] = int(sum["roles"].get(role,0))+ \
             int(side["purchases_by_role"][role])
 
 func _initialize() -> void:
@@ -67,7 +67,7 @@ func _initialize() -> void:
                 var battle: Dictionary = Lab.duel(int(input["map"]),
                     input["size"],first,policies,halfturn_limit)
                 assert(bool(battle.get("valid",false)))
-                assert(int(battle["halfturns"]) >= 1 and
+                assert(int(battle["halfturns"]) >= 1 and \
                     int(battle["halfturns"]) <= halfturn_limit)
                 assert(bool(battle["decided"]) != bool(battle["censored"]))
                 assert(battle["winner"] in [-1,0,1])
@@ -89,7 +89,7 @@ func _initialize() -> void:
                     var side_data: Dictionary = battle["sides"][str(side)]
                     assert(str(side_data["policy"]) == str(policies[side]))
                     assert(int(side_data["turns"]) >= 1)
-                    assert(int(side_data["cash"]) == Economy.MODERN_START_CREDITS+
+                    assert(int(side_data["cash"]) == Economy.MODERN_START_CREDITS+ \
                         int(side_data["income"])-int(side_data["spent"]))
                     assert(int(side_data["cash"]) >= 0)
                     assert(int(side_data["cities"]) >= 0)
