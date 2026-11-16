@@ -400,3 +400,26 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - **Sin alterar gameplay:** recursos, producción, poderes, munición, combustible, victoria, captura, daño, turnos, mapas guardados y número de jugadores no se cambian. El proyecto 3D sigue siendo una vista de solo lectura del estado autoritativo.
 
 **Próximo control de arte:** analizar las 16 capturas de batalla en condiciones de visibilidad real, ajustar solamente si los colores y la silueta del G11 dejan de distinguirse en bosques o nieve. Estrés Android cuantitativo queda separado de esta fase artística.
+
+
+## V26 · ocho colores de facción en el contexto 3D real
+
+La escena de comparación V25 conservaba correctamente los equipos jugables 0 y 1,
+pero ignoraba el selector visual de las ocho facciones: el G11 siempre aparecía
+azul frente al rojo. V26 repara esa discrepancia sin cambiar ninguna regla:
+el G11 protagonista aplica **solo a sus cuatro placas de esmalte existentes**
+la paleta oficial de la facción escogida y el rival muestra la siguiente
+paleta aprobada en orden circular. La autoría de los equipos, los datos de
+`BattleSession`, la posición, la niebla, el daño y las órdenes siguen
+inalterados. Un material exclusivo por G11 impide que los recursos de
+material compartidos coloreen otros vehículos o el modelo hero V23.
+
+El mismo escenario de batalla, los cuatro biomas, las doce bocas huecas V25,
+las orugas redondeadas V24 y el controlador LOD8/LOD10 siguen operando. Las
+pruebas reales de Godot recorren ahora las ocho facciones, comprueban las
+cuatro placas originales de cada lanzador y verifican que la propiedad
+`faction` de los equipos 0 y 1 nunca se modifique.
+
+**Límite:** es una comparación de acabados artísticos en el Estudio 3D;
+no implementa batallas multijugador de ocho ejércitos ni modifica el selector
+de facción de las partidas jugables.
