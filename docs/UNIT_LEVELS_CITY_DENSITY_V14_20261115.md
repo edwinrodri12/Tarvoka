@@ -97,3 +97,14 @@ Las tecnologías de edificios y los poderes de facciones deben mantenerse indepe
 ## Veredicto actual
 
 Esta fase es **análisis e implementación experimental** de candidatos con tests reproducibles, no implementación del juego. Se conservan intactos `scripts/core`, el APK Android, el guardado oficial, IA activa y las ocho facciones balance 0.1. El resultado de ambas baterías y métricas de daño deben tomarse de los logs de la ejecución de GitHub Actions, no declararse aprobadas antes de su PASS.
+
+
+## Resultados verificados de Godot 4.3 (ejecución base)
+
+**Simulaciones de nivel individual + distribución territorial:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43795761535 — SUCCESS, dos jobs. El análisis de 32 clases y 1.024 pares dirigidos observó **432 ataques legales**, de los cuales **125 aumentan daño con la versión Élite** y **23 se convierten en bajas de primer impacto** que la versión Recluta no conseguía. El ensayo tiene **29 líneas de XP candidatas** y **3 consumibles sin progresión XP**. Los bonos son propuestos, no estadísticas reales, y el defensor aún estaba en nivel básico en esta primera matriz. El test complementario `test_unit_veterancy_defense_v15.gd` estudia por separado resistencia y contraataques de defensores Élite en tres coberturas; requiere su propio SUCCESS para completar evaluación ofensiva/defensiva.
+
+**Ciudad y renta:** se aprobaron **32 disposiciones** (4 terrenos × 2 tamaños × 4 densidades). Las variantes 8/12/16 mantienen 1.000/996/992 ingresos máximos por turno de todo el mapa y 250/249/248 por facción inicial, frente a 1.000 y 250 del esquema de cuatro ciudades. Ninguna de esas variantes cabe hoy en el validador `MAX_SITES=16` con todas las instalaciones militares incluidas. Esta ejecución **no demuestra tasas de victoria** con más ciudades porque el motor oficial rechazaría esos estados.
+
+**A/B de inversión con compras y turnos verdaderos:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43796030916 — SUCCESS. En **cinco turnos propios** por variante y ambos bandos, construir **5 APC cuesta 1.500 y deja 2.000 créditos**, frente a subir la planta de blindados hasta III, producir **1 tanque y 1 Rompedor y comprar tecnología antiblindaje**, que cuesta **3.200 y deja 300**. Las dos recibieron 1.000 créditos en cinco turnos. Se confirmó que los nuevos vehículos deben desocupar la fábrica para volver a producir. No hay combate ni victorias: es una comparación de costos y retrasos, no un A/B de eficacia militar completa.
+
+**Precaución:** el +1 ataque de una unidad veterana podría ser muy poderoso si se combina con una tecnología III o una ventaja permanente del comandante. El ensayo de defensor Élite y futuras simulaciones con rangos mezclados deberán determinar qué 23 nuevas eliminaciones rápidas resultan aceptables y cuáles perjudican contrajuegos.
