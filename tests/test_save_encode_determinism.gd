@@ -48,6 +48,16 @@ func _initialize() -> void:
     assert(invalid == invalid_before, "Rejected encoding must not mutate its input")
     assert(state == before, "Invalid sibling snapshot must not affect active battle")
     assert(Codec.encode(state) == first, "Valid encoding must recover after rejection")
+    # Repeated failed encodes must not poison subsequent valid operations.
+    for rejection in range(10):
+        var rejected: Dictionary = state.duplicate(true)
+        rejected["units"][0]["hp"] = -1 - rejection
+        var rejected_before: Dictionary = rejected.duplicate(true)
+        assert(Codec.encode(rejected).is_empty(), "Invalid HP must fail closed on every attempt")
+        assert(rejected == rejected_before, "Failed encode must preserve rejected input")
+        assert(Codec.encode(state) == first, "Valid encoding must recover after each failed encode")
+        assert(Codec.decode(first) == before, "Valid decoding must recover after each failed encode")
+    assert(state == before, "Repeated rejection must not mutate active battle")
     # Independent decoded snapshots must never alias one another.
     var snapshot_a: Dictionary = Codec.decode(first)
     var snapshot_b: Dictionary = Codec.decode(first)
