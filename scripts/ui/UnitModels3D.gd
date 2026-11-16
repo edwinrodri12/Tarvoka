@@ -22,6 +22,7 @@ const G13SilhouetteV10 = preload("res://scripts/ui/G13SilhouetteV10.gd")
 const G13CabRearV11 = preload("res://scripts/ui/G13CabRearFinishV11.gd")
 const G13BodyFinishV11 = preload("res://scripts/ui/G13BodyFinishV11.gd")
 const G13MechanicalV12 = preload("res://scripts/ui/G13MechanicalFinishV12.gd")
+const G13SurfaceV13 = preload("res://scripts/ui/G13SurfaceFinishV13.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 const AttackHelicopterRotorV3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
@@ -947,6 +948,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V11 body finish failed to apply")
                 if not G13MechanicalV12.install(model):
                     push_warning("G13 V12 mechanics failed to apply")
+                if not G13SurfaceV13.apply(model):
+                    push_warning("G13 V13 exterior finish failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
