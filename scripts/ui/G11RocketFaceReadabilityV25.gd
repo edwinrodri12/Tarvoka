@@ -62,11 +62,11 @@ static func _mouth() -> ArrayMesh:
     # black interior. Same single GPU surface for all twelve openings.
     _ring(st,back,TUBE_OUTER_RADIUS,front,TUBE_OUTER_RADIUS,
         Color("#4b5a58"))
-    _ring(st,front,TUBE_OUTER_RADIUS,front,LIP_RADIUS,
+    _ring(st,front,TUBE_OUTER_RADIUS,front+0.002,LIP_RADIUS,
         Color("#9cadab"))
-    _ring(st,front,LIP_RADIUS,front,TUBE_INNER_RADIUS,
+    _ring(st,front+0.002,LIP_RADIUS,front+0.004,TUBE_INNER_RADIUS,
         Color("#7c8c89"))
-    _ring(st,front,TUBE_INNER_RADIUS,front-0.054,TUBE_INNER_RADIUS,
+    _ring(st,front+0.004,TUBE_INNER_RADIUS,front-0.054,TUBE_INNER_RADIUS,
         Color("#172224"))
     _ring(st,front-0.054,TUBE_INNER_RADIUS,front-0.057,0.0,
         Color("#0b171a"))
