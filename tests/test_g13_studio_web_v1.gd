@@ -44,8 +44,14 @@ func _run()->void:
     var controls:=studio.get("g13_controls") as VBoxContainer
     _check(model!=null and G13.has_model(model),
         "G13 native full 3D model loads in actual showroom")
-    _check(controls!=null and controls.visible,
-        "dedicated radar, cannons and four-wheel controls exposed")
+    # The redesigned studio intentionally puts technical controls behind
+    # the Details tab, not scattered in the default animation viewport.
+    studio.call("_studio_select_tab",2)
+    await process_frame
+    _check(controls!=null and controls.is_visible_in_tree(),
+        "G13 radar, cannons and wheels are accessible in Details tab")
+    studio.call("_studio_select_tab",0)
+    await process_frame
     if model!=null:
         _check(bool(model.get_meta("tarvoka_g13_v1_high_detail",false)),
             "Studio selects real hero-quality G13 mesh rather than a proxy")
