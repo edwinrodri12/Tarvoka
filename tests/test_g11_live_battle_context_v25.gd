@@ -59,13 +59,13 @@ func _run() -> void:
             await process_frame
             continue
         _check(scene.get_meta("board_size")==Context.DIMENSIONS,
-            "genuine 12x10 battle terrain dimensions")
+            "genuine 10x8 supported battle terrain dimensions")
         _check(scene.get_meta("visual_biome")==biome,
             "actual terrain biome matches preview request")
         var stats: Dictionary=scene.get_meta("render_stats")
         _check(int(stats.get("land",0))+int(stats.get("water",0))
-            +int(stats.get("unknown",0))==120,
-            "all 120 cells use actual terrain mesh")
+            +int(stats.get("unknown",0))==80,
+            "all 80 cells use actual terrain mesh")
         _check(int(stats["units"].get("visible",0))==9,
             "two G11 surrounded by seven native game units")
         _check(int(stats["units"].get("g11_lod",0))==2
