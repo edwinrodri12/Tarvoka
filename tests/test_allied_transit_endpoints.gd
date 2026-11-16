@@ -33,5 +33,18 @@ func _initialize() -> void:
         Vector2i(0, 0), 3, terrain, blocked_ally, "ground", false, allies
     )
     assert(sealed.size() == 1 and sealed.has(Vector2i(0, 0)), "Blocked wins over transit")
+    # A longer friendly column is traversable, but none of its cells can be selected.
+    var corridor_allies: Array[Vector2i] = [Vector2i(1, 0), Vector2i(2, 0)]
+    var corridor_blocked: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)]
+    var corridor: Dictionary = rules.reachable(
+        Vector2i(0, 0), 3, terrain, corridor_blocked, "ground", false, corridor_allies
+    )
+    assert(not corridor.has(Vector2i(1, 0)) and not corridor.has(Vector2i(2, 0)), "No friendly tile may be an endpoint")
+    assert(corridor.get(Vector2i(3, 0), -1) == 3, "Must traverse two allies to reach a free endpoint")
+    var short_budget: Dictionary = rules.reachable(
+        Vector2i(0, 0), 2, terrain, corridor_blocked, "ground", false, corridor_allies
+    )
+    assert(not short_budget.has(Vector2i(3, 0)), "Allied transit must not bypass movement budget")
+    assert(corridor_allies == [Vector2i(1, 0), Vector2i(2, 0)], "Corridor allies must remain immutable")
     print("PASS: allied transit and endpoint isolation")
     quit()
