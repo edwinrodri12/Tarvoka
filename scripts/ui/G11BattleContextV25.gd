@@ -9,6 +9,8 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const IdentityV28 = preload("res://scripts/ui/G11CameraIdentityV28.gd")
+const Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const DIMENSIONS := Vector2i(10,8)
 const G11_HOME := Vector2i(5,5)
 const G11_RIVAL := Vector2i(8,3)
@@ -86,11 +88,17 @@ static func _paint_gallery_g11(battle: Node3D,unit_id: String,
         parts.append(part)
     # Preserve authentic metal, roughness and wear. Never mutate the
     # resource shared with other battle models or the approved V23 hero.
-    var enamel := (parts[0].material_override as StandardMaterial3D).duplicate(
-        true) as StandardMaterial3D
+    var paint_source: StandardMaterial3D=IdentityV28.base_material(g11)
+    if paint_source==null:
+        paint_source=parts[0].material_override as StandardMaterial3D
+    var enamel := paint_source.duplicate(true) as StandardMaterial3D
     enamel.albedo_color=Models.faction_paint_color(selected_faction)
     for part in parts:
         part.material_override=enamel
+    # V28 must rebind to the newly chosen paint AFTER V26 recolors.
+    # Otherwise the camera could restore the previous owner's material.
+    if not IdentityV28.bind(g11,Tactical.active_level(g11)):
+        return false
     g11.set_meta(PALETTE_FLAG,selected_faction)
     g11.set_meta("art_palette_only",true)
     return true
