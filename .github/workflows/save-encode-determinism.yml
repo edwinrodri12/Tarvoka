@@ -19,9 +19,9 @@ jobs:
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
       - name: Run deterministic encoding regression
         run: |
-          set -o pipefail
+          set -euo pipefail
           timeout 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_encode_determinism.gd 2>&1 | tee /tmp/save-determinism.log
-          # Require exactly one complete success marker, not a partial substring.
+          # With errexit + pipefail, a failed or timed-out Godot process cannot be masked by tee.\n          # Require exactly one complete success marker, not a partial substring.
           test "$(grep -Fxc 'PASS save encode determinism: 20 iterations, no mutation or aliasing' /tmp/save-determinism.log)" -eq 1
           # Godot may log script/assertion errors without a nonzero process exit.
           if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-determinism.log; then
