@@ -18,6 +18,7 @@ const NavalMooringV10 = preload("res://scripts/ui/NavalMooringAlignmentV10.gd")
 const NavalContactV11 = preload("res://scripts/ui/NavalContactFinishV11.gd")
 const NavalFinalV12 = preload("res://scripts/ui/NavalFinalContactV12.gd")
 const NavalAuditV13 = preload("res://scripts/ui/NavalInspectionV13.gd")
+const InfantryBarracksV1 = preload("res://scripts/ui/InfantryBarracks3DV1.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -62,6 +63,11 @@ var hq_impact_status: Label
 var building_controls: VBoxContainer
 var airbase_controls: VBoxContainer
 var naval_controls: VBoxContainer
+var infantry_controls: VBoxContainer
+var infantry_level_picker: OptionButton
+var infantry_damage_picker: OptionButton
+var infantry_camera_picker: OptionButton
+var _infantry_camera_view: int=0
 var naval_detail_v2_toggle: CheckButton
 var naval_detail_v3_toggle: CheckButton
 var naval_detail_v4_toggle: CheckButton
@@ -172,6 +178,7 @@ func _ready() -> void:
     _add_building_mode()
     _setup_architecture_stage()
     _add_naval_controls()
+    _add_infantry_controls()
 
 func _setup_architecture_stage() -> void:
     # Only the laboratory gets a ground plane and true shadows. The actual
@@ -220,7 +227,7 @@ func _setup_architecture_stage() -> void:
 func _apply_hq_lighting(index: int) -> void:
     if hq_key_light == null or hq_environment == null:
         return
-    var active: bool = _role in ["headquarters","airbase","naval_base"]
+    var active: bool = _role in ["headquarters","airbase","naval_base","infantry_barracks"]
     _hq_light_preset = clampi(index,0,2)
     var preset: int = _hq_light_preset if active else 0
     # Three reproducible lighting rigs, same camera and exact 3D material.
@@ -414,6 +421,7 @@ func _add_building_mode() -> void:
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
     building_picker.add_item("Base Naval · V13 · inspección real de amarres")
+    building_picker.add_item("Cuartel de Infantería · V1 · tres arquitecturas")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -1306,6 +1314,103 @@ func _display_naval_base() -> void:
     _apply_hq_lighting(2 if show_night else _naval_saved_light_preset)
     _update_details()
 
+func _add_infantry_controls() -> void:
+    infantry_controls=VBoxContainer.new()
+    infantry_controls.name="OpcionesCuartelInfanteriaV1"
+    infantry_controls.add_theme_constant_override("separation",8)
+    building_controls.add_child(infantry_controls)
+    _title(infantry_controls,"CUARTEL DE INFANTERÍA V1 · TRES SILUETAS",14)
+    _title(infantry_controls,"NIVEL · CADA MEJORA RECONSTRUYE LA ARQUITECTURA",12)
+    infantry_level_picker=OptionButton.new()
+    infantry_level_picker.name="NivelArquitecturaInfanteriaV1"
+    infantry_level_picker.custom_minimum_size.y=49
+    for label in ["N1 · barraca compacta de 1 planta",
+            "N2 · barraca en L de 2 plantas y torre",
+            "N3 · complejo en U de 3 plantas y dos torres"]:
+        infantry_level_picker.add_item(label)
+    infantry_level_picker.select(0)
+    infantry_level_picker.item_selected.connect(_change_infantry_setting)
+    infantry_controls.add_child(infantry_level_picker)
+    _title(infantry_controls,"DAÑO ESTRUCTURAL (VISUAL)",12)
+    infantry_damage_picker=OptionButton.new()
+    infantry_damage_picker.name="DanioCuartelInfanteriaV1"
+    infantry_damage_picker.custom_minimum_size.y=49
+    for label in InfantryBarracksV1.DAMAGE_STAGES:
+        infantry_damage_picker.add_item(str(label))
+    infantry_damage_picker.select(0)
+    infantry_damage_picker.item_selected.connect(_change_infantry_setting)
+    infantry_controls.add_child(infantry_damage_picker)
+    _title(infantry_controls,"CÁMARA DE INSPECCIÓN",12)
+    infantry_camera_picker=OptionButton.new()
+    infantry_camera_picker.name="CamaraCuartelInfanteriaV1"
+    infantry_camera_picker.custom_minimum_size.y=49
+    for label in ["Conjunto completo","Entrada y patio de formación",
+            "Pista lateral de entrenamiento","Cubiertas y evolución arquitectónica"]:
+        infantry_camera_picker.add_item(label)
+    infantry_camera_picker.select(0)
+    infantry_camera_picker.item_selected.connect(_change_infantry_camera)
+    infantry_controls.add_child(infantry_camera_picker)
+    _title(infantry_controls,
+        "Geometría nativa Godot 4.3, no ilustración. No cambia capturas ni producción.",11)
+    infantry_controls.visible=false
+
+func _change_infantry_setting(_index: int) -> void:
+    if _role=="infantry_barracks":
+        _display_infantry_barracks()
+
+func _change_infantry_camera(index: int) -> void:
+    _infantry_camera_view=clampi(index,0,3)
+    if _role=="infantry_barracks":
+        _apply_infantry_camera()
+
+func _apply_infantry_camera() -> void:
+    if _role!="infantry_barracks" or camera==null:
+        return
+    var points: Array[Vector3]=[
+        Vector3(0,2.5,0),Vector3(0,1.25,-3.4),
+        Vector3(-5.55,1.0,-3.1),Vector3(0,1.5,0)]
+    var offsets: Array[Vector3]=[
+        Vector3(-17.1,11.6,-17.7),
+        Vector3(-8.2,5.2,-11.3),
+        Vector3(-7.8,6.0,-8.7),
+        Vector3(-0.02,28.0,-0.02)]
+    var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
+    var focus: Vector3=rotate*points[_infantry_camera_view]
+    camera.position=rotate*(points[_infantry_camera_view]+offsets[_infantry_camera_view])
+    camera.look_at(focus,Vector3.UP)
+    _update_camera()
+
+func _display_infantry_barracks() -> void:
+    if preview==null:
+        return
+    var first: bool=_role!="infantry_barracks"
+    _stop_animation()
+    if model_root!=null:
+        preview.remove_child(model_root)
+        model_root.queue_free()
+    _role="infantry_barracks"
+    var level: int=infantry_level_picker.selected+1
+    var damage: int=infantry_damage_picker.selected
+    model_root=InfantryBarracksV1.build(level,_faction,damage)
+    if model_root==null:
+        push_error("Cuartel Infantería V1: nivel, facción o daño inválido")
+        return
+    preview.add_child(model_root)
+    if hq_climate_stage!=null:
+        hq_climate_stage.visible=false
+    if hq_map_lod_toggle!=null:
+        hq_map_lod_toggle.visible=false
+    faction_picker.visible=true
+    if first:
+        _yaw=29.0
+        _zoom=1.0
+        _infantry_camera_view=0
+        infantry_camera_picker.select(0)
+    model_root.rotation_degrees.y=_yaw
+    _apply_infantry_camera()
+    _apply_hq_lighting(0)
+    _update_details()
+
 func _change_selected_building(index: int) -> void:
     if index < 0 or index >= building_picker.item_count:
         return
@@ -1317,10 +1422,13 @@ func _change_selected_building(index: int) -> void:
     airbase_controls.visible = index == 1
     if naval_controls!=null:
         naval_controls.visible=index==2
+    if infantry_controls!=null:
+        infantry_controls.visible=index==3
     match index:
         0: _display_headquarters()
         1: _display_airbase()
         2: _display_naval_base()
+        3: _display_infantry_barracks()
 
 func _airbase_gate_rig() -> TarvokaAirbaseDoorRigV2:
     if _role != "airbase" or model_root == null:
@@ -1868,6 +1976,7 @@ func _switch_category(index: int) -> void:
             0: _display_headquarters()
             1: _display_airbase()
             2: _display_naval_base()
+            3: _display_infantry_barracks()
     else:
         camera.position = Vector3(5.3,4.2,6.3)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
@@ -2061,6 +2170,8 @@ func _refresh_building_faction(_index: int) -> void:
         _display_airbase()
     elif _role == "naval_base":
         _display_naval_base()
+    elif _role == "infantry_barracks":
+        _display_infantry_barracks()
 
 func _display_headquarters() -> void:
     if preview == null:
@@ -2192,6 +2303,13 @@ func _display_headquarters() -> void:
     _update_details()
 
 func _reset_camera() -> void:
+    if _role=="infantry_barracks":
+        _yaw=29.0
+        _zoom=1.0
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _apply_infantry_camera()
+        return
     if _role == "naval_base":
         _yaw=26.0
         _zoom=1.0
@@ -2226,6 +2344,13 @@ func _reset_camera() -> void:
     super._reset_camera()
 
 func _update_camera() -> void:
+    if _role=="infantry_barracks":
+        if camera!=null:
+            camera.size=(13.8 if _infantry_camera_view==1 else
+                15.2 if _infantry_camera_view==2 else
+                19.5 if _infantry_camera_view==3 else
+                20.5)/maxf(0.35,_zoom)
+        return
     if _role=="naval_base":
         if camera!=null:
             camera.size=(8.0 if _naval_camera_view==7 else
@@ -2274,6 +2399,17 @@ func _update_camera() -> void:
     super._update_camera()
 
 func _update_details() -> void:
+    if _role=="infantry_barracks" and model_root!=null:
+        var level: int=int(model_root.get_meta("visual_level",1))
+        detail_label.text="Cuartel de Infantería V1 · Nivel %d · %d mallas 3D" % [
+            level,InfantryBarracksV1.mesh_count(model_root)]
+        var tier_name: String=["1 planta · barraca compacta",
+            "2 plantas · ala en L + torre",
+            "3 plantas · cuartel en U + 2 torres"][level-1]
+        status_label.text="%s · %s · %s" % [
+            str(VisualStyle.FACTIONS[_faction]["name"]),tier_name,
+            str(InfantryBarracksV1.DAMAGE_STAGES[int(model_root.get_meta("visual_damage_stage",0))])]
+        return
     if _role=="naval_base" and model_root!=null:
         var naval_version: String="V1"
         for spec in [
