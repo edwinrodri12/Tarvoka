@@ -110,7 +110,8 @@ static func _repair_packs(side: int) -> void:
     assert(origin == previous)
     # A unit can move AND repair on its turn (but not attack afterward).
     var moved: Dictionary = origin.duplicate(true)
-    _get(moved,"E")["moved"] = true
+    var moving_engineer: Dictionary = _get(moved,"E")
+    moving_engineer["moved"] = true
     var after_moving: Dictionary = Lab.field_repair(moved,"E","T","small")
     assert(after_moving.get("valid",false))
     print("ROLE_REPAIR side=%d small=2hp/60cr field=3hp/100cr no_double_use=true" % side)
@@ -126,22 +127,28 @@ static func _illegal_repair(side: int) -> void:
     scarce["economy"]["credits"][side] = 50
     assert(not Lab.field_repair(scarce,"E","T","small").get("valid",false))
     var full: Dictionary = base.duplicate(true)
-    _get(full,"T")["hp"] = 14
+    var full_target: Dictionary = _get(full,"T")
+    full_target["hp"] = 14
     assert(not Lab.field_repair(full,"E","T","small").get("valid",false))
     var zero: Dictionary = base.duplicate(true)
-    _get(zero,"T")["hp"] = 0
+    var dead_target: Dictionary = _get(zero,"T")
+    dead_target["hp"] = 0
     assert(not Lab.field_repair(zero,"E","T","small").get("valid",false))
     var distant: Dictionary = base.duplicate(true)
-    _get(distant,"T")["pos"] = Vector2i(5,3)
+    var distant_target: Dictionary = _get(distant,"T")
+    distant_target["pos"] = Vector2i(5,3)
     assert(not Lab.field_repair(distant,"E","T","small").get("valid",false))
     var no_action: Dictionary = base.duplicate(true)
-    _get(no_action,"E")["acted"] = true
+    var used_engineer: Dictionary = _get(no_action,"E")
+    used_engineer["acted"] = true
     assert(not Lab.field_repair(no_action,"E","T","small").get("valid",false))
     var airborne: Dictionary = base.duplicate(true)
-    _get(airborne,"T")["role"] = "attack_heli"
+    var aircraft_target: Dictionary = _get(airborne,"T")
+    aircraft_target["role"] = "attack_heli"
     assert(not Lab.field_repair(airborne,"E","T","small").get("valid",false))
     var infantry: Dictionary = base.duplicate(true)
-    _get(infantry,"T")["role"] = "line"
+    var infantry_target: Dictionary = _get(infantry,"T")
+    infantry_target["role"] = "line"
     assert(not Lab.field_repair(infantry,"E","T","small").get("valid",false))
     assert(base == untouched)
 
