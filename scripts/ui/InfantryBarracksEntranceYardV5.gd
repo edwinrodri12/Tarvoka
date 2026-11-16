@@ -137,4 +137,27 @@ static func set_detail_lod(model: Node3D,near_view: bool) -> int:
                     break
     stage.set_meta("lod_near",near_view)
     stage.set_meta("lod_fine_meshes",affected)
+    stage.set_meta("lod_hidden_meshes",0 if near_view else affected)
     return affected
+
+static func lod_stats(model: Node3D) -> Dictionary:
+    if model==null:
+        return {}
+    var stage: Node3D=model.get_node_or_null(STAGE_NAME) as Node3D
+    if stage==null:
+        return {}
+    var total: int=0
+    var visible_count: int=0
+    var queue: Array[Node]=[stage]
+    while not queue.is_empty():
+        var current: Node=queue.pop_back()
+        for child in current.get_children():
+            queue.append(child)
+            if child is MeshInstance3D:
+                total+=1
+                if (child as MeshInstance3D).visible:
+                    visible_count+=1
+    return {"total_meshes":total,"visible_meshes":visible_count,
+        "hidden_meshes":total-visible_count,
+        "fine_meshes":int(stage.get_meta("lod_fine_meshes",0)),
+        "near":bool(stage.get_meta("lod_near",true))}
