@@ -19,6 +19,7 @@ const NavalContactV11 = preload("res://scripts/ui/NavalContactFinishV11.gd")
 const NavalFinalV12 = preload("res://scripts/ui/NavalFinalContactV12.gd")
 const NavalAuditV13 = preload("res://scripts/ui/NavalInspectionV13.gd")
 const InfantryBarracksV1 = preload("res://scripts/ui/InfantryBarracks3DV1.gd")
+const InfantryBarracksV2 = preload("res://scripts/ui/InfantryBarracksFinishV2.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -64,6 +65,7 @@ var building_controls: VBoxContainer
 var airbase_controls: VBoxContainer
 var naval_controls: VBoxContainer
 var infantry_controls: VBoxContainer
+var infantry_detail_v2_toggle: CheckButton
 var infantry_level_picker: OptionButton
 var infantry_damage_picker: OptionButton
 var infantry_camera_picker: OptionButton
@@ -421,7 +423,7 @@ func _add_building_mode() -> void:
     building_picker.add_item("Cuartel General")
     building_picker.add_item("Base Aérea · V16 · revisión final 360°")
     building_picker.add_item("Base Naval · V13 · inspección real de amarres")
-    building_picker.add_item("Cuartel de Infantería · V1 · tres arquitecturas")
+    building_picker.add_item("Cuartel de Infantería · V2 · accesos y entrenamiento")
     building_picker.item_selected.connect(_change_selected_building)
     building_controls.add_child(building_picker)
     _title(building_controls,"V17 · CLIMA Y TERRENO DEL CUARTEL",13)
@@ -1319,7 +1321,13 @@ func _add_infantry_controls() -> void:
     infantry_controls.name="OpcionesCuartelInfanteriaV1"
     infantry_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(infantry_controls)
-    _title(infantry_controls,"CUARTEL DE INFANTERÍA V1 · TRES SILUETAS",14)
+    _title(infantry_controls,"CUARTEL DE INFANTERÍA V2 · TRES SILUETAS",14)
+    infantry_detail_v2_toggle=CheckButton.new()
+    infantry_detail_v2_toggle.name="AccesosFachadasTorresYEntrenamientoV2"
+    infantry_detail_v2_toggle.text="V2 · accesos, cristales y torres (comparar V1)"
+    infantry_detail_v2_toggle.button_pressed=true
+    infantry_detail_v2_toggle.toggled.connect(_toggle_infantry_detail_v2)
+    infantry_controls.add_child(infantry_detail_v2_toggle)
     _title(infantry_controls,"NIVEL · CADA MEJORA RECONSTRUYE LA ARQUITECTURA",12)
     infantry_level_picker=OptionButton.new()
     infantry_level_picker.name="NivelArquitecturaInfanteriaV1"
@@ -1354,6 +1362,10 @@ func _add_infantry_controls() -> void:
         "Geometría nativa Godot 4.3, no ilustración. No cambia capturas ni producción.",11)
     infantry_controls.visible=false
 
+func _toggle_infantry_detail_v2(_enabled: bool) -> void:
+    if _role=="infantry_barracks":
+        _display_infantry_barracks()
+
 func _change_infantry_setting(_index: int) -> void:
     if _role=="infantry_barracks":
         _display_infantry_barracks()
@@ -1368,12 +1380,21 @@ func _apply_infantry_camera() -> void:
         return
     var points: Array[Vector3]=[
         Vector3(0,2.5,0),Vector3(0,1.25,-3.4),
-        Vector3(-5.55,1.0,-3.1),Vector3(0,1.5,0)]
+        Vector3(-6.05,0.48,-3.45),Vector3(0,1.5,0)]
     var offsets: Array[Vector3]=[
         Vector3(-17.1,11.6,-17.7),
         Vector3(-8.2,5.2,-11.3),
-        Vector3(-7.8,6.0,-8.7),
+        Vector3(-2.65,4.15,-4.30),
         Vector3(-0.02,28.0,-0.02)]
+    if _infantry_camera_view==2:
+        # N3's full-length track is now alongside the WEST wing; N1/N2
+        # retain their short front-side obstacle course.
+        if infantry_level_picker.selected==2:
+            points[2]=Vector3(-7.04,0.43,-0.67)
+            offsets[2]=Vector3(-3.20,7.10,-4.70)
+        else:
+            points[2]=Vector3(-6.00,0.45,-3.47)
+            offsets[2]=Vector3(-3.10,5.70,-4.15)
     var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
     var focus: Vector3=rotate*points[_infantry_camera_view]
     camera.position=rotate*(points[_infantry_camera_view]+offsets[_infantry_camera_view])
@@ -1395,6 +1416,10 @@ func _display_infantry_barracks() -> void:
     if model_root==null:
         push_error("Cuartel Infantería V1: nivel, facción o daño inválido")
         return
+    if infantry_detail_v2_toggle.button_pressed:
+        var finish_ok: bool=InfantryBarracksV2.apply(model_root,level,_faction,damage)
+        if not finish_ok:
+            push_error("Cuartel de Infantería V2: acabado no aplicado")
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2347,7 +2372,7 @@ func _update_camera() -> void:
     if _role=="infantry_barracks":
         if camera!=null:
             camera.size=(13.8 if _infantry_camera_view==1 else
-                15.2 if _infantry_camera_view==2 else
+                9.8 if _infantry_camera_view==2 else
                 19.5 if _infantry_camera_view==3 else
                 20.5)/maxf(0.35,_zoom)
         return
@@ -2401,7 +2426,8 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="infantry_barracks" and model_root!=null:
         var level: int=int(model_root.get_meta("visual_level",1))
-        detail_label.text="Cuartel de Infantería V1 · Nivel %d · %d mallas 3D" % [
+        detail_label.text="Cuartel de Infantería %s · Nivel %d · %d mallas 3D" % [
+            "V2" if model_root.has_node(InfantryBarracksV2.STAGE_NAME) else "V1",
             level,InfantryBarracksV1.mesh_count(model_root)]
         var tier_name: String=["1 planta · barraca compacta",
             "2 plantas · ala en L + torre",

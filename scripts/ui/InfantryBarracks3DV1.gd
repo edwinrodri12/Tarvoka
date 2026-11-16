@@ -196,30 +196,43 @@ static func _building(parent: Node3D,label: String,cx: float,cz: float,
 
 static func _training(root: Node3D,level: int,damage: int) -> void:
     var zone:=_group(root,"CampoEntrenamientoInfanteria")
-    _box(zone,"SueloPista",Vector3(-6.0,0.054,-3.47),
-        Vector3(2.68,0.06,4.33),TRAINING)
-    for i in range(2 if level==1 else 4 if level==2 else 6):
-        var z: float=-5.1+float(i)*0.70
+    # N3 correction: V1 used x=-6, where the larger west wing occupies
+    # part of the obstacle course. The expanded garrison instead has
+    # a narrow clear training corridor WEST of its two-storey wing.
+    # Wing west face x=-6.085. New field east edge x=-6.275.
+    # West tower starts z=2.84; the lane ends at z=2.51.
+    var advanced: bool=level==3
+    var center_x: float=-7.04 if advanced else -6.0
+    var center_z: float=-0.67 if advanced else -3.47
+    _box(zone,"SueloPista",
+        Vector3(center_x,0.054,center_z),
+        Vector3(1.53 if advanced else 2.68,0.06,
+            6.36 if advanced else 4.33),TRAINING)
+    var obstacles: int=2 if level==1 else 4 if level==2 else 6
+    for i in range(obstacles):
+        var z: float=-3.42+float(i)*0.93 if advanced else -5.1+float(i)*0.70
+        var x: float=(-7.29+float(i%2)*0.49) if advanced else             (-6.60+float(i%2)*1.22)
         _box(zone,"BarricadaDePractica_%d" % i,
-            Vector3(-6.60+float(i%2)*1.22,0.27,z),
-            Vector3(0.72,0.51,0.28),
+            Vector3(x,0.27,z),
+            Vector3(0.41 if advanced else 0.72,0.51,0.26),
             RUST if damage>=3 else STEEL)
     if level>=2 and damage<=2:
         for i in range(3):
             _cylinder(zone,"PosteEjercicio_%d" % i,
-                Vector3(-7.02+float(i)*0.91,1.25,-1.72),
+                Vector3(-7.55+float(i)*0.49 if advanced else                     -7.02+float(i)*0.91,
+                    1.25,1.86 if advanced else -1.72),
                 0.07,2.50,DARK)
         _box(zone,"BarraSuperiorEjercicio",
-            Vector3(-6.11,2.53,-1.72),
-            Vector3(2.04,0.11,0.15),STEEL,0.42)
-    if level==3 and damage<=1:
+            Vector3(center_x,2.53,1.86 if advanced else -1.72),
+            Vector3(1.15 if advanced else 2.04,0.11,0.15),STEEL,0.42)
+    if advanced and damage<=1:
         for i in range(3):
             _box(zone,"MuroEscalada_%d" % i,
-                Vector3(-6.78+float(i)*0.77,0.73,-2.78),
-                Vector3(0.54,1.46,0.35),PALE)
+                Vector3(-7.49+float(i)*0.45,0.73,0.62),
+                Vector3(0.33,1.46,0.27),PALE)
         _box(zone,"TroncoEquilibrio",
-            Vector3(-6.02,0.51,-0.84),
-            Vector3(2.18,0.18,0.29),DARK,0.40)
+            Vector3(center_x,0.51,2.28),
+            Vector3(1.23,0.18,0.29),DARK,0.40)
 
 static func _tower(root: Node3D,label: String,x: float,z: float,
         height: float,damage: int,accent: Color) -> void:
