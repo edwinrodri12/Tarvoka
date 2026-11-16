@@ -79,8 +79,8 @@ static func _mobile_hull() -> ArrayMesh:
 
 static func hero_clearance() -> float:
     return HERO_TRACK_X-HERO_TRACK_HALF_X-maxf(
-        FOOT_X+FOOT_MAX_HALF_X,
-        SUPPORT_X+SUPPORT_HALF_X,HERO_BELLY_HALF_X)
+        maxf(FOOT_X+FOOT_MAX_HALF_X,
+            SUPPORT_X+SUPPORT_HALF_X),HERO_BELLY_HALF_X)
 
 static func mobile_clearance() -> float:
     return MOBILE_TRACK_X-MOBILE_TRACK_HALF_X-MOBILE_HULL_HALF_X
