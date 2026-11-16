@@ -91,8 +91,8 @@ func _run() -> void:
     for side in [-1,1]:
         for axle in [1,4]:
             var z: float = -0.875+float(axle)*0.35
-            camera.position = Vector3(float(side)*1.70,0.93,z-0.30)
-            camera.look_at(Vector3(float(side)*0.73,0.58,z+0.04),
+            camera.position = Vector3(float(side)*1.78,0.48,z-0.32)
+            camera.look_at(Vector3(float(side)*0.73,0.47,z+0.04),
                 Vector3.UP)
             camera.fov = 30.0
             await _capture(view,folder,
