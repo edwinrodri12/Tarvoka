@@ -45,7 +45,7 @@ static func _setup(side: int, target_role: String) -> Dictionary:
     assert(state.has("economy"))
     return state
 
-static func _get(state: Dictionary, identifier: String) -> Dictionary:
+static func _lookup(state: Dictionary, identifier: String) -> Dictionary:
     for unit in state["units"]:
         if str(unit.get("id","")) == identifier:
             return unit
@@ -64,10 +64,10 @@ static func _armor_options(side: int) -> void:
     assert(int(base["temporary_bonus"]) == 0)
     assert(int(plus2["temporary_bonus"]) == 2)
     assert(int(plus3["temporary_bonus"]) == 3)
-    assert(int(_get(plus3["state"],"P")["attack"]) == 4)
-    assert(int(_get(plus3["state"],"T")["hp"]) == 9)
-    assert(int(_get(plus2["state"],"P")["ammo"]) == int(_get(state,"P")["ammo"])-1)
-    assert(bool(_get(plus3["state"],"P")["acted"]))
+    assert(int(_lookup(plus3["state"],"P")["attack"]) == 4)
+    assert(int(_lookup(plus3["state"],"T")["hp"]) == 9)
+    assert(int(_lookup(plus2["state"],"P")["ammo"]) == int(_lookup(state,"P")["ammo"])-1)
+    assert(bool(_lookup(plus3["state"],"P")["acted"]))
     assert(state == before)
     assert(Save.decode(Save.encode(plus2["state"])) == plus2["state"])
     assert(not Lab.attack_antiarmor(state,"P","T",4).get("valid",false))
@@ -83,7 +83,7 @@ static func _repair_start(side: int) -> Dictionary:
     var foe: Dictionary = _unit("line","FOE",1-side,Vector2i(7,6))
     var state: Dictionary = Session.start([engineer,tank,foe],
         _board(),side,false,false,true,true)
-    assert(int(_get(state,"T")["hp"]) == 8)
+    assert(int(_lookup(state,"T")["hp"]) == 8)
     return state
 
 static func _repair_packs(side: int) -> void:
@@ -96,9 +96,9 @@ static func _repair_packs(side: int) -> void:
         var expected_cost: int = 60 if pack == "small" else 100
         assert(int(order["hp_restored"]) == expected_hp)
         assert(int(order["cost"]) == expected_cost)
-        assert(int(_get(order["state"],"T")["hp"]) == 8+expected_hp)
-        assert(bool(_get(order["state"],"E")["acted"]))
-        assert(int(_get(order["state"],"E")["attack"]) == 2)
+        assert(int(_lookup(order["state"],"T")["hp"]) == 8+expected_hp)
+        assert(bool(_lookup(order["state"],"E")["acted"]))
+        assert(int(_lookup(order["state"],"E")["attack"]) == 2)
         assert(int(order["state"]["economy"]["credits"][side]) ==
             int(origin["economy"]["credits"][side])-expected_cost)
         assert(int(order["state"]["economy"]["credits"][1-side]) ==
@@ -110,7 +110,7 @@ static func _repair_packs(side: int) -> void:
     assert(origin == previous)
     # A unit can move AND repair on its turn (but not attack afterward).
     var moved: Dictionary = origin.duplicate(true)
-    var moving_engineer: Dictionary = _get(moved,"E")
+    var moving_engineer: Dictionary = _lookup(moved,"E")
     moving_engineer["moved"] = true
     var after_moving: Dictionary = Lab.field_repair(moved,"E","T","small")
     assert(after_moving.get("valid",false))
@@ -127,27 +127,27 @@ static func _illegal_repair(side: int) -> void:
     scarce["economy"]["credits"][side] = 50
     assert(not Lab.field_repair(scarce,"E","T","small").get("valid",false))
     var full: Dictionary = base.duplicate(true)
-    var full_target: Dictionary = _get(full,"T")
+    var full_target: Dictionary = _lookup(full,"T")
     full_target["hp"] = 14
     assert(not Lab.field_repair(full,"E","T","small").get("valid",false))
     var zero: Dictionary = base.duplicate(true)
-    var dead_target: Dictionary = _get(zero,"T")
+    var dead_target: Dictionary = _lookup(zero,"T")
     dead_target["hp"] = 0
     assert(not Lab.field_repair(zero,"E","T","small").get("valid",false))
     var distant: Dictionary = base.duplicate(true)
-    var distant_target: Dictionary = _get(distant,"T")
+    var distant_target: Dictionary = _lookup(distant,"T")
     distant_target["pos"] = Vector2i(5,3)
     assert(not Lab.field_repair(distant,"E","T","small").get("valid",false))
     var no_action: Dictionary = base.duplicate(true)
-    var used_engineer: Dictionary = _get(no_action,"E")
+    var used_engineer: Dictionary = _lookup(no_action,"E")
     used_engineer["acted"] = true
     assert(not Lab.field_repair(no_action,"E","T","small").get("valid",false))
     var airborne: Dictionary = base.duplicate(true)
-    var aircraft_target: Dictionary = _get(airborne,"T")
+    var aircraft_target: Dictionary = _lookup(airborne,"T")
     aircraft_target["role"] = "attack_heli"
     assert(not Lab.field_repair(airborne,"E","T","small").get("valid",false))
     var infantry: Dictionary = base.duplicate(true)
-    var infantry_target: Dictionary = _get(infantry,"T")
+    var infantry_target: Dictionary = _lookup(infantry,"T")
     infantry_target["role"] = "line"
     assert(not Lab.field_repair(infantry,"E","T","small").get("valid",false))
     assert(base == untouched)
