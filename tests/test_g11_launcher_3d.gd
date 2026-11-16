@@ -153,8 +153,8 @@ func _run() -> void:
                 _check(wheel != null and wheel.mesh is ArrayMesh,
                     "actual sculpted annular roadwheel side %d axle %d" % [side,axle])
                 if wheel != null and wheel.mesh is ArrayMesh:
-                    _check(wheel.mesh.get_surface_count() == 2,
-                        "rubber tire profile and recessed metal rim are distinct")
+                    _check(wheel.mesh.get_surface_count() == 3,
+                        "V20 wheel has separate PBR rubber, open steel web and recessed backing")
                 var bolts: MultiMeshInstance3D = _find(model,
                     "G11V5_PernosRueda_%d_%d" % [side,axle]) as MultiMeshInstance3D
                 _check(bolts != null and bolts.multimesh != null,
