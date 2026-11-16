@@ -131,9 +131,14 @@ static func _update_capture(battle: Dictionary, old_active_side: int) -> void:
                 soldier = u
                 break
         if soldier.is_empty() or int(city.get("owner",-1)) == old_active_side:
+            # The opposing side's HALF-TURN must not reset a capturer's
+            # pending 2-OWN-phase occupation merely by passing its turn.
+            # A defender re-occupying a contested town does interrupt it.
             if holding.has(key):
-                holding.erase(key)
-                battle["metrics"]["capture_interruptions"] += 1
+                var pending: Dictionary = holding[key]
+                if int(pending.get("side",-1)) == old_active_side or                         (not soldier.is_empty() and int(city.get("owner",-1)) == old_active_side):
+                    holding.erase(key)
+                    battle["metrics"]["capture_interruptions"] += 1
             continue
         var progress: Dictionary = holding.get(key,{})
         var old_points: int = 0
