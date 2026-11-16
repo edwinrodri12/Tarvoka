@@ -7,6 +7,7 @@ extends SceneTree
 const Context = preload("res://scripts/ui/G11BattleContextV25.gd")
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
+const Pod = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const Driver = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 var errors: int=0
@@ -84,6 +85,33 @@ func _run() -> void:
                 "production G11 uses fixed tactical V24 tracks in scene")
             if g11==null:
                 continue
+            _check(bool(g11.get_meta(Pod.FLAG,false)),
+                "V25 4x3 actual tactical launch-mouth art integrated")
+            _check(int(g11.get_meta(
+                "tarvoka_g11_v25_actual_hollow_rocket_mouths",0))==12,
+                "all twelve rocket apertures are physically hollow")
+            var mouths := _find(g11,
+                "G11Mobile_Lote12Tubos") as MultiMeshInstance3D
+            _check(mouths!=null and mouths.multimesh!=null and (
+                mouths.multimesh.instance_count==12),
+                "twelve openings reuse ONE existing native MultiMesh")
+            if mouths!=null and mouths.multimesh!=null:
+                _check(mouths.multimesh.mesh is ArrayMesh,
+                    "former solid rocket caps replaced with actual ring mesh")
+                _check(mouths.multimesh.mesh.get_surface_count()==1,
+                    "single vertex-color surface avoids extra draw batches")
+                for i in range(12):
+                    _check(absf(mouths.multimesh.get_instance_transform(
+                        i).origin.z-Pod.MOUTH_Z)<0.001,
+                        "actual launch mouths face the standard gameplay camera")
+            var original_patch := _find(g11,
+                "G11Mobile_MarcaModulo") as MeshInstance3D
+            _check(original_patch!=null and original_patch.mesh is BoxMesh
+                and original_patch.material_override!=null,
+                "original 8-faction metal paint stays present")
+            if original_patch!=null and original_patch.mesh is BoxMesh:
+                _check(absf((original_patch.mesh as BoxMesh).size.z-0.22)<0.001,
+                    "top paint no longer hides the rocket-pod tactical silhouette")
             _check(Tactical.active_level(g11)==Tactical.LOD_FAR,
                 "battle starts with economical far G11")
             _check(_find(g11,"G11Mobile_Lote12Ruedas")==null,
