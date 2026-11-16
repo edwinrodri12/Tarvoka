@@ -51,9 +51,21 @@ static func _side_face(stage: Node3D,module: Dictionary,
             continue
         for bay in range(bays.size()):
             var z: float=bays[bay]
+            # Four genuine independent metal rails form a recessed 3D
+            # window frame; no opaque square panel covers the glass.
+            _part(root,"SombraRecesoLateralV7_%d_%d" % [floor,bay],
+                Vector3(outer_x+float(side)*0.151,win_y,z),
+                Vector3(0.036,0.87,0.87),DARK,0.05)
             _part(root,"MarcoLateralV7_%d_%d" % [floor,bay],
-                Vector3(front_x,win_y,z),
-                Vector3(0.105,1.00,0.99),FRAME,0.38)
+                Vector3(front_x,win_y+0.453,z),
+                Vector3(0.105,0.092,0.99),FRAME,0.38)
+            _part(root,"TravesanoInferiorMarcoV7_%d_%d" % [floor,bay],
+                Vector3(front_x,win_y-0.453,z),
+                Vector3(0.105,0.092,0.99),FRAME,0.38)
+            for edge in [-1,1]:
+                _part(root,"JambaMarcoLateralV7_%d_%d_%d" % [floor,bay,edge],
+                    Vector3(front_x,win_y,z+float(edge)*0.45),
+                    Vector3(0.105,0.91,0.092),FRAME,0.39)
             _part(root,"CristalLateralV7_%d_%d" % [floor,bay],
                 Vector3(glass_x,win_y,z),
                 Vector3(0.036,0.79,0.79),
