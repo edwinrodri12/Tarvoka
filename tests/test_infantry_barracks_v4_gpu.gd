@@ -67,6 +67,24 @@ func _audit(level: int,faction: int,damage: int) -> void:
     else:
         assert(_count(rear,"PanelRegistroTecnico")==level)
         assert(_count(rear,"BajantePosterior")==level)
+        var expected_rear_windows: int=0
+        for module in V2._modules(level):
+            if float(module["w"])<4.0:
+                continue
+            var floors: int=int(module["floors"])
+            var h: float=float(module["h"])
+            for floor in range(floors):
+                if 1.45+float(floor)*2.22+0.44<h-0.27:
+                    expected_rear_windows+=2
+        var actual_rear_windows: int=0
+        for module in V2._modules(level):
+            for floor in range(int(module["floors"])):
+                for side in [-1,1]:
+                    actual_rear_windows+=_count(rear,
+                        "CristalVentanaPosterior_%d_%d" % [floor,side])
+        assert(actual_rear_windows==expected_rear_windows)
+        assert(_count(rear,"CristalVentanaLateral_0_0")==1 if level==3 else
+            _count(rear,"CristalVentanaLateral_0_0")==0)
     if damage<=2:
         var expected_roofs: int=(
             4 if damage==0 else 3 if damage==1 else 2)
