@@ -24,6 +24,7 @@ func _run() -> void:
     if studio == null:
         quit(1)
         return
+    root.size = Vector2i(960,540)
     root.add_child(studio)
     await process_frame
     var role: OptionButton = studio.get("role_picker") as OptionButton
@@ -93,6 +94,21 @@ func _run() -> void:
     studio.call("_display_role", "apc")
     await process_frame
     _check(str(studio.get("_role")) == "apc", "switches back to Bastion cleanly")
+    # Capture the actual native GUI + 3D viewport for publication QA.
+    # This is a genuine Godot screenshot, not a concept illustration.
+    studio.call("_studio_select_tab",0)
+    studio.call("_display_role","apc")
+    await process_frame
+    await RenderingServer.frame_post_draw
+    var screenshot_dir: String=ProjectSettings.globalize_path("res://build/qa")
+    DirAccess.make_dir_recursive_absolute(screenshot_dir)
+    var screenshot: Image=root.get_texture().get_image()
+    if screenshot!=null and screenshot.get_width()>0:
+        var image_path: String=screenshot_dir.path_join("studio-960x540.png")
+        _check(screenshot.save_png(image_path)==OK,
+            "960x540 native studio screenshot was saved")
+    else:
+        _check(false,"960x540 native screenshot could not be captured")
     studio.queue_free()
     await process_frame
     if failures > 0:
