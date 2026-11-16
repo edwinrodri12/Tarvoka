@@ -32,7 +32,7 @@ static func apply(root: Node3D, enamel: Color) -> bool:
     var dark:=Color("#20292e")
     var alloy:=Color("#aab2ae")
     var paint:=enamel.darkened(0.08)
-    # All fenders terminate above the tyre crown (0.64m); never cap wheels.
+    # Turret cheek panels now extend past the V1 housing (half-width 0.485),\n    # and their insignia extend past the cheek exterior (0.60).\n    # Previous cheeks/insignia were buried inside the turret housing.\n    # All fenders terminate above the tyre crown (0.64m); never cap wheels.
     # Fenders and front/rear lamps retain physical clearance on both sides.
     for side in [-1,1]:
         var s: float=float(side)
@@ -50,9 +50,9 @@ static func apply(root: Node3D, enamel: Color) -> bool:
         _box(hull,"G13_V2_ExhaustGuard_%d" % side,
             Vector3(s*0.47,1.18,0.88),Vector3(0.22,0.055,0.32),dark)
         _box(turret,"G13_V2_TurretCheek_%d" % side,
-            Vector3(s*0.38,0.31,0.0),Vector3(0.16,0.23,0.48),armor)
+            Vector3(s*0.52,0.31,0.0),Vector3(0.16,0.23,0.48),armor)
         _box(turret,"G13_V2_TurretInsignia_%d" % side,
-            Vector3(s*0.47,0.33,0.10),Vector3(0.02,0.10,0.23),paint)
+            Vector3(s*0.613,0.33,0.10),Vector3(0.022,0.10,0.23),paint)
         _box(guns,"G13_V2_BarrelHeatShield_%d" % side,
             Vector3(s*0.23,0.06,-0.48),Vector3(0.15,0.10,0.38),alloy)
     _box(hull,"G13_V2_RearTowEye",Vector3(0,0.49,1.33),
