@@ -202,7 +202,7 @@ static func _plant(battle: Dictionary, side: int) -> Vector2i:
 static func _unblock_plant(battle: Dictionary, cell: Vector2i, side: int) -> Dictionary:
     var occupant: Dictionary = {}
     for unit in battle["state"]["units"]:
-        if int(unit.get("hp",0)) > 0 and unit.get("pos") == cell and Domains.layer(unit) == "ground":
+        if int(unit.get("hp",0)) > 0 and unit.get("pos") == cell and Domains.layer(unit) == "surface":
             occupant = unit
             break
     if occupant.is_empty() or int(occupant.get("faction",-1)) != side or not Turns.can_move(occupant,side):
@@ -213,7 +213,7 @@ static func _unblock_plant(battle: Dictionary, cell: Vector2i, side: int) -> Dic
     # comparable access to the same authoritative factory cadence.
     var blocked: Array[Vector2i] = []
     for other in battle["state"]["units"]:
-        if int(other.get("hp",0)) > 0 and Domains.layer(other) == "ground" and other["pos"] != cell:
+        if int(other.get("hp",0)) > 0 and Domains.layer(other) == "surface" and other["pos"] != cell:
             blocked.append(other["pos"])
     var options: Dictionary = Rules.reachable(cell,int(occupant["move_points"]),
         battle["state"]["terrain"],blocked)
@@ -254,6 +254,10 @@ static func _apply_economy(battle: Dictionary, order: Dictionary) -> Dictionary:
             updated["metrics"]["research"] += 1
         _:
             updated["metrics"]["production"] += 1
+            if str(order.get("role","")) == "apc":
+                updated["metrics"]["purchases_mass"] += 1
+            else:
+                updated["metrics"]["purchases_advanced"] += 1
     return {"valid":true,"battle":updated,"action":str(order.get("action",""))}
 
 static func producer_action(battle: Dictionary, policy: String) -> Dictionary:
@@ -322,7 +326,7 @@ static func city_action(battle: Dictionary) -> Dictionary:
     var score := -99999
     var occupied: Array[Vector2i] = []
     for unit in state["units"]:
-        if int(unit.get("hp",0)) > 0 and Domains.layer(unit) == "ground":
+        if int(unit.get("hp",0)) > 0 and Domains.layer(unit) == "surface":
             occupied.append(unit["pos"])
     for ally in state["units"]:
         if int(ally.get("faction",-1)) != side or not Economy.can_capture(ally) or not Turns.can_move(ally,side):
