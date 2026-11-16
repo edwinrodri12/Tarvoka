@@ -287,8 +287,9 @@ static func _restore_holds(raw_holds: Dictionary,
                 break
         if not allowed:
             return {}
-        result[str(key)] = {"unit_id":str(unit_id),
-            "side":int(side),field:1}
+        var normalized: Dictionary = {"unit_id":str(unit_id),"side":int(side)}
+        normalized[field] = 1
+        result[str(key)] = normalized
     return result
 
 # v18 saves are separate JSON and do not alter SaveCodec.VERSION=1.
