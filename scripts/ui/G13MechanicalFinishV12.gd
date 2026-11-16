@@ -180,12 +180,12 @@ static func install(root: Node3D) -> bool:
             Vector3(s * 0.385, -0.078, -0.350), 0.025, reinforced)
         # The old barrel nodes move by 2.5 cm during V4 recoil. Attaching
         # sleeves to those same barrel nodes makes them recoil correctly.
-        _cylinder(barrels[side + 1], SLEEVE % side,
+        _cylinder(barrels[0 if side == -1 else 1], SLEEVE % side,
             Vector3(0, 0, 0.325), 0.084, 0.270, reinforced,
             Vector3(90, 0, 0))
         # Replace the V1 sealed muzzle CAPS rather than overlaying extra
         # cylinders. V4 still animates the original G13_RealMuzzle pivots.
-        mouths[side + 1].mesh = _open_muzzle()
+        mouths[0 if side == -1 else 1].mesh = _open_muzzle()
         mouths[side + 1].material_override = dark
     root.set_meta(FLAG, true)
     root.set_meta("tarvoka_g13_v12_visual_only", true)
