@@ -277,6 +277,10 @@ jobs:
           grep -q 'var _v31_preview := false' scripts/ui/UnitArtStudioWeb.gd
           grep -q 'TankTrackAlignmentV31.apply' scripts/ui/UnitModels3D.gd
           grep -q 'Tanque G09 · V32 FINAL' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'Estudio3D_MenuUnificado' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G09_HistorialComparaciones' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'Estudio3D_DetallesPorUnidad' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'func _studio_quick_action' scripts/ui/BastionStudioAdapter.gd
           # Avoid Godot importing a second project with duplicate class_name.
           rm -rf g09-unified-source
       - name: Download Godot 4.3 and Web export templates
