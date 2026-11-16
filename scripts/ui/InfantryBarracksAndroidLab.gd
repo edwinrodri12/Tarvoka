@@ -30,6 +30,11 @@ var _draw_call_sum: float=0.0
 var _frame_ms: Array[float]=[]
 var _reports: Array[Dictionary]=[]
 var _last_result: Dictionary={}
+var _ab_active: bool=false
+var _ab_phase: int=0
+var _ab_config: Dictionary={}
+var _ab_near: Dictionary={}
+var _ab_comparisons: Array[Dictionary]=[]
 
 func _ready() -> void:
     _setup_world()
@@ -102,6 +107,7 @@ func _setup_buttons() -> void:
     _button(row2,"LOD lejano",func(): set_scenario(_level,_count,_faction,_damage,true))
     _button(row2,"Facción +",func(): set_scenario(_level,_count,(_faction+1)%8,_damage,_far_lod))
     _button(row2,"Daño +",func(): set_scenario(_level,_count,_faction,(_damage+1)%5,_far_lod))
+    _button(row2,"Comparar A/B",begin_ab_compare)
     _button(row2,"Copiar datos",copy_report)
     _button(row2,"Guardar",save_report)
     _status=Label.new()
@@ -109,6 +115,8 @@ func _setup_buttons() -> void:
     column.add_child(_status)
 
 func set_scenario(level: int,count: int,faction: int,damage: int,far_lod: bool) -> void:
+    # Any explicit scenario selection cancels a paired benchmark.
+    _ab_active=false
     _level=clampi(level,1,3)
     _count=1 if count<=1 else 4 if count<=4 else 9
     _faction=clampi(faction,0,7)
@@ -150,6 +158,60 @@ func set_scenario(level: int,count: int,faction: int,damage: int,far_lod: bool) 
     _title.text="TARVOKA · INFANTERÍA 3D · N%d · %d edificios · LOD %s" % [
         _level,_models.size(),"LEJANO" if _far_lod else "CERCANO"]
     _status.text="Preparando medición real. Rotar entre LOD cercano y lejano para comparar."
+
+func begin_ab_compare() -> void:
+    if _root==null:
+        return
+    _ab_config={"level":_level,"count":_count,
+        "faction":_faction,"damage":_damage}
+    _ab_near={}
+    _ab_phase=0
+    # First measure intact near geometry; then repeat the exact same
+    # camera, faction, population and damage with only V5 LOD changed.
+    set_scenario(_level,_count,_faction,_damage,false)
+    _ab_active=true
+    _status.text="A/B · 1 de 2: detalle cercano, calentamiento y 180 fotogramas"
+
+func _ab_measure_far() -> void:
+    if not _ab_active or _ab_phase!=1:
+        return
+    var cfg: Dictionary=_ab_config
+    set_scenario(int(cfg["level"]),int(cfg["count"]),
+        int(cfg["faction"]),int(cfg["damage"]),true)
+    _ab_phase=1
+    _ab_active=true
+    _status.text="A/B · 2 de 2: detalle lejano, calentamiento y 180 fotogramas"
+
+static func compare_ab(near: Dictionary,far: Dictionary) -> Dictionary:
+    if near.is_empty() or far.is_empty():
+        return {}
+    for key in ["level","count","faction","damage","platform"]:
+        if near.get(key)!=far.get(key):
+            return {}
+    if near.get("lod")!="near" or far.get("lod")!="far":
+        return {}
+    var near_fps: float=float(near.get("fps_mean",0.0))
+    var far_fps: float=float(far.get("fps_mean",0.0))
+    if near_fps<=0.0 or far_fps<=0.0:
+        return {}
+    var near_stats: Dictionary=near.get("mesh_stats",{})
+    var far_stats: Dictionary=far.get("mesh_stats",{})
+    return {
+        "platform":near["platform"],
+        "android_hardware_tested":bool(near.get("android_hardware_tested",false)) and bool(far.get("android_hardware_tested",false)),
+        "level":near["level"],"count":near["count"],
+        "faction":near["faction"],"damage":near["damage"],
+        "near_fps":near_fps,"far_fps":far_fps,
+        "fps_delta_percent":snappedf((far_fps-near_fps)*100.0/near_fps,0.1),
+        "near_draw_calls":near.get("draw_calls_mean"),
+        "far_draw_calls":far.get("draw_calls_mean"),
+        "near_p95_ms":near.get("frame_p95_ms"),
+        "far_p95_ms":far.get("frame_p95_ms"),
+        "hidden_meshes":int(far_stats.get("hidden_meshes",0)),
+        "near_visible_meshes":int(near_stats.get("visible_meshes",0)),
+        "far_visible_meshes":int(far_stats.get("visible_meshes",0)),
+        "timestamp_utc":Time.get_datetime_string_from_system(true)
+    }
 
 func model_mesh_stats() -> Dictionary:
     var visible_meshes: int=0
@@ -209,12 +271,29 @@ func _finish_measurement() -> void:
         float(result["fps_mean"]),float(result["draw_calls_mean"]),
         float(result["frame_p95_ms"])]
     save_report()
+    if _ab_active:
+        if _ab_phase==0:
+            _ab_near=result.duplicate(true)
+            _ab_phase=1
+            call_deferred("_ab_measure_far")
+        else:
+            var comparison: Dictionary=compare_ab(_ab_near,result)
+            _ab_active=false
+            if not comparison.is_empty():
+                _ab_comparisons.append(comparison)
+                _status.text="A/B · %.1f → %.1f FPS (%+.1f%%), %d mallas ocultas. Copiar datos" % [
+                    float(comparison["near_fps"]),float(comparison["far_fps"]),
+                    float(comparison["fps_delta_percent"]),int(comparison["hidden_meshes"])]
+            else:
+                _status.text="A/B no comparable: revisa los parámetros y datos"
+            save_report()
 
 func _report_json() -> String:
     return JSON.stringify({
         "kind":"TARVOKA Infantry Barracks V5 Android benchmark",
         "notice":"Only reports with android_hardware_tested=true verify mobile device performance.",
-        "reports":_reports
+        "reports":_reports,
+        "paired_ab_comparisons":_ab_comparisons
     },"\t")
 
 func copy_report() -> void:
