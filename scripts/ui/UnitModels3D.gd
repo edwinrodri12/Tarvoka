@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -14,6 +14,7 @@ const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
+const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 const AttackHelicopterRotorV3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
@@ -65,7 +66,8 @@ const TANK_BARREL_PIVOT := "ElevacionCanon"
 # the inspection viewer. Each value leaves enough room for hull/rotors.
 const PREVIEW_FRAME := {
     "line":3.05,"scout":3.05,"apc":3.55,"tank":3.75,
-    "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10
+    "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
+    "aa_mobile":3.85
 }
 
 static func preview_frame_height(role: String) -> float:
@@ -917,12 +919,24 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             _fighter(model)
         "destroyer":
             _destroyer(model)
+        "aa_mobile":
+            # G13 V1 is an ART preview role only. It is deliberately NOT
+            # registered as a playable BattleSession unit yet.
+            if not G13AA.build(model,faction_paint_color(faction),
+                    finish_enabled and art_level>=13):
+                return null
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
     elif role in ["attack_heli","fighter","destroyer"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
+    elif role=="aa_mobile":
+        # Grounded four-wheel AA chassis: its 0.33m wheel centers must NOT
+        # inherit the -0.27m offset used by old tracked 3D proxies.
+        # The 0.31m radii now sit above the terrain with 0.017m margin.
+        model.scale=Vector3.ONE*0.83
+        model.position.y=0.0
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
@@ -1088,6 +1102,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "aa_mobile":
+            return G13AA.pose(model,kind,progress,target_heading)
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
@@ -1108,6 +1124,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "aa_mobile":
+            G13AA.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:

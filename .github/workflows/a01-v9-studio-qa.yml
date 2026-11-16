@@ -37,11 +37,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             test -s "a01-head/scripts/ui/${item}"
             cp "a01-head/scripts/ui/${item}" "scripts/ui/${item}"
           done
           cp a01-head/tests/test_attack_helicopter_v9_studio.gd tests/test_attack_helicopter_v9_studio.gd
+          cp a01-head/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -F 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           grep -F 'A01V9_AccesoHorizontalAndroid' scripts/ui/BastionStudioAdapter.gd
@@ -83,6 +84,22 @@ jobs:
           fi
           grep -F 'PASS A01 V9 WEB MOBILE:' /tmp/a01-v9-studio.log
           test "$(find /tmp/a01-v9-mobile -maxdepth 1 -name '*.png' | wc -l)" -eq 4
+      - name: Verify G13 V1 appears and articulates in the same mobile Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --resolution 960x540 --path . \
+            --script res://tests/test_g13_studio_web_v1.gd \
+            2>&1 | tee /tmp/g13-v1-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error' /tmp/g13-v1-studio.log; then
+            echo 'G13 V1 mobile Studio selector/native model failed'; exit 1
+          fi
+          grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-v1-studio.log
       - name: Archive four authentic 960x540 and 540x960 Studio screenshots
         if: always()
         uses: actions/upload-artifact@v4
