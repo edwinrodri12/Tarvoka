@@ -17,6 +17,7 @@ const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const ApprovedSites = preload("res://scripts/ui/ApprovedBattleAssets3D.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -486,6 +487,20 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             color = Color("#6099db")
         elif owner == 1:
             color = Color("#dc6c65")
+        # Genuine native Godot architecture from the approved 3D sources.
+        # This is VISUAL ONLY: the economy, map ownership and fog rules above
+        # remain the single authority. Unknown owners cannot show a crest.
+        var architecture: Node3D = ApprovedSites.build(
+            str(site["kind"]),state,cell,owner,Rules.map_size(state["terrain"]))
+        if architecture != null:
+            architecture.name = "Instalacion3D_%s_%d_%d" % [
+                str(site["kind"]),cell.x,cell.y]
+            architecture.position = world_at(cell)+Vector3(0,height_at(cells,cell),0)
+            architecture.set_meta("owner_public",owner)
+            architecture.set_meta("kind",site["kind"])
+            parent.add_child(architecture)
+            drawn += 1
+            continue
         var mesh: PrimitiveMesh
         if site["kind"] == "relay":
             var tower := CylinderMesh.new()
