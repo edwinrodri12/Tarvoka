@@ -931,6 +931,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     elif role in ["attack_heli","fighter","destroyer"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
+    elif role=="aa_mobile":
+        # Grounded four-wheel AA chassis: its 0.33m wheel centers must NOT
+        # inherit the -0.27m offset used by old tracked 3D proxies.
+        # The 0.31m radii now sit above the terrain with 0.017m margin.
+        model.scale=Vector3.ONE*0.83
+        model.position.y=0.0
     else:
         model.scale = Vector3.ONE * 0.83
         model.position.y = -0.27
