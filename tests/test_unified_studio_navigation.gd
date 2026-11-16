@@ -66,8 +66,11 @@ func _run() -> void:
             _check(section != null and expert_content.is_ancestor_of(section),
                 property_name + " lives inside one advanced inspector")
         studio.call("_studio_select_tab",2)
+        _check(expert_content.visible, "Details opens the technical inspector immediately")
         studio.call("_studio_toggle_advanced")
-        _check(expert_content.visible, "technical inspectors can be expanded")
+        _check(not expert_content.visible, "technical inspector can be collapsed")
+        studio.call("_studio_toggle_advanced")
+        _check(expert_content.visible, "technical inspector can be expanded again")
         studio.call("_studio_select_tab",0)
         _check(not advanced.visible, "technical controls do not cover model in Animar")
     var history: VBoxContainer = studio.get("studio_versions_content") as VBoxContainer
@@ -130,6 +133,25 @@ func _run() -> void:
     studio.call("_display_role", "apc")
     await process_frame
     _check(str(studio.get("_role")) == "apc", "switches back to Bastion cleanly")
+    # G13 has TWO different genuine visual firing poses: ground and air.
+    # The old quick "Atacar" button incorrectly triggered only radar scan.
+    studio.call("_display_role", "aa_mobile")
+    await process_frame
+    var g13: Node3D=studio.get("model_root") as Node3D
+    _check(g13!=null and str(studio.get("_role"))=="aa_mobile",
+        "G13 remains accessible in the same native engine")
+    if g13!=null:
+        studio.call("_studio_quick_action","attack_ground")
+        _check(str(g13.get_meta("tarvoka_g13_v1_pose",""))=="attack_ground",
+            "G13 terrestrial firing shortcut triggers cannon recoil")
+        studio.call("_studio_quick_action","attack")
+        _check(str(g13.get_meta("tarvoka_g13_v1_pose",""))=="attack_air",
+            "G13 aerial firing shortcut triggers elevated autocannons")
+        var ground_button: Button=studio.get("studio_g13_ground_button") as Button
+        _check(ground_button!=null and ground_button.visible,
+            "specialized G13 ground attack button appears in the animation tab")
+    studio.call("_display_role","apc")
+    await process_frame
     # Capture the actual native GUI + 3D viewport for publication QA.
     # This is a genuine Godot screenshot, not a concept illustration.
     studio.call("_studio_select_tab",0)
