@@ -5,6 +5,7 @@ class_name TarvokaG13MobileAirDefenseV1
 # This is a 3D ART PROTOTYPE only; no anti-air attacks, SAM unlocks,
 # target acquisition, ammunition, range or new BattleSession unit IDs.
 const FLAG := "tarvoka_g13_mobile_aa_visual_v1"
+const V4 = preload("res://scripts/ui/G13GroundAirFinishV4.gd")
 const BODY := "G13_Casco4x4"
 const TURRET := "G13_TorretaAzimut"
 const GUNS := "G13_ElevacionCanones"
@@ -213,6 +214,8 @@ static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
     root.set_meta("tarvoka_g13_v1_wheel_clearance_m",INNER_CLEARANCE)
     root.set_meta("tarvoka_g13_v1_approved_family","G13")
     root.set_meta("tarvoka_g13_v1_high_detail",high_detail)
+    if not V4.install(root):
+        return false
     restore(root)
     return wheels!=null
 
@@ -243,6 +246,7 @@ static func restore(root: Node3D)->void:
         if smoke!=null:
             smoke.visible=false
             smoke.scale=Vector3.ONE
+    V4.reset(root)
     root.set_meta("tarvoka_g13_v1_pose","idle")
 
 # Visual-only cinematic firing poses. No damage, target selection, or ammo.
@@ -284,7 +288,12 @@ static func pose(root: Node3D,kind: String,t: float,
             if firing:
                 # Short staggered bursts: each muzzle flashes only during
                 # selected phases. An early muzzle flash differs from smoke.
-                var phase: int=int(floor(p*12.0))
+                var cadence: int=12
+                if kind=="attack_air":
+                    cadence=V4.AIR_SHOTS
+                elif kind=="attack_ground":
+                    cadence=V4.GROUND_SHOTS
+                var phase: int=int(floor(p*float(cadence)))
                 var pulse: bool=phase%3!=2 and p>0.08 and p<0.94
                 for side in [-1,1]:
                     var flash:=root.find_child(
@@ -300,6 +309,9 @@ static func pose(root: Node3D,kind: String,t: float,
                             (phase+side+12)%3!=0)
                         smoke.scale=Vector3.ONE*(0.85+0.4*p)
                 pitch.rotation_degrees.x+=1.2*sin(p*TAU*12.0)
+    if kind in ["attack_ground","attack_air"]:
+        if not V4.pose(root,kind,p):
+            return false
     root.set_meta("tarvoka_g13_v1_pose",kind)
     root.set_meta("tarvoka_g13_v1_demo_domain",
         "air" if air else ("ground" if ground else "none"))
