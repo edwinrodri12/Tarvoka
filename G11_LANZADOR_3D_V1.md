@@ -334,3 +334,19 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - Selector del **TARVOKA Estudio 3D: «G11 Lanzador · V20 ruedas y suspensión 3D»**, con cuatro vistas nuevas para ruedas de ambos lados, muelles y bujes; conserva las vistas V18/V19 y efectos V17. El flujo Pages incluye el recurso V20 con protecciones para G11 y P06.
 - QA completo del G11 V20 aprobado. **Seguimiento pendiente:** evaluar tamaño/visibilidad del muelle desde cámaras móviles y decidir si perfeccionar tornillería y óptica nocturna. No se alteraron estadísticas, costos, HP, combustible, movimiento táctico ni economía; optimización Android continúa pospuesta.
 
+
+
+## V21 — alineación exacta de anclajes, asientos de muelle y retenes (15-nov-2026)
+
+**Trabajo de arte nativo Godot 4.3 propuesto en [PR #434](https://github.com/edwinrodri12/Tarvoka/pull/434)**, sin alterar el balance ni añadir amortiguadores redundantes. La integración definitiva está sujeta al QA V21 y publicación de Pages.
+
+**Defecto real detectado:** los doce soportes originales `G11V5_SoporteSuspension_` conservaban sus centros longitudinales anteriores (`z=-1.19 + eje×0.47`). Después de V18, las doce ruedas se ubican en `z=-0.875 + eje×0.35`; por tanto, hasta **0.315 m de desalineación** entre soporte y extremo superior del amortiguador en los ejes extremos. El V21 **reutiliza y recoloca los mismos doce soportes originales** a `pivot.position.z+0.115`, X=±0.730 m, Y=0.715 m, igual al cálculo del `G11MechanicsV5.update_running_gear`.
+
+- `scripts/ui/G11ShockMountFinishV21.gd`: 24 asientos anulares de acero extruido, dos por muelle real V20, todos hijos de su amortiguador animado. Diámetro exterior 0.140 m, grosor 0.014 m, situados longitudinalmente en ±0.418 de su espacio local. El contacto con el extremo de la espira está controlado, sin apilar muelles nuevos.
+- 12 retenes geométricos volumétricos (exterior 0.072 m) colocados como hijos de los doce vástagos telescópicos ya existentes; se mueven con el pistón y ayudan a resolver visualmente las uniones.
+- 24 pernos de acero repartidos en dos por soporte mediante doce `MultiMeshInstance3D` pequeños; siguen los soportes ya presentes, no crean una segunda estructura portante. Refuerzo de rugosidad y metalicidad PBR de los muelles V20 ya existentes.
+- El módulo se aplica al final de `G11Art3D.gd`, después de V20. La interfaz compartida `BastionStudioAdapter.gd` muestra selector **«G11 Lanzador · V21 anclajes y muelles»** y añade cuatro vistas cercanas —anclajes lado A/B, suspensión inferior A/B— manteniendo todas las inspecciones previas. La publicación Pages incluye `G11ShockMountFinishV21.gd` sin reemplazar fuentes de los otros modelos.
+- `tests/test_g11_shock_mount_finish_v21.gd`: ocho colores de facción, alineación exacta de doce soportes y doce amortiguadores, dos anillos por espira, retenes, 24 pernos, jerarquía de los nodos animados, posiciones de marcha/reposo, daños, reparación y doce tubos.
+- `tests/test_g11_shock_mount_finish_v21_capture.gd`: 16 capturas propias del motor Godot: seis perfiles a altura de banda, cuatro primeros planos de los asientos, dos vistas bajas de suspensión, dos instantes de marcha y dos colores de facción.
+- **Alcance:** solo escultura, fijación, acabados y opciones de inspección 3D. HP, defensa, ataque, combustible, recursos, tiempo de turnos, movimiento y facciones permanecen intactos. No se ha iniciado benchmark Android.
+
