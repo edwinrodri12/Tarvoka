@@ -1,0 +1,73 @@
+name: TARVOKA G11 V31 shaped rockets and smoke native QA
+
+on:
+  push:
+    branches: [main, feat/g11-v31-sculpted-rockets-smoke-recoil]
+    paths:
+      - 'scripts/ui/G11RocketFlightV31.gd'
+      - 'scripts/ui/G11RocketTrailsV30.gd'
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g11_rocket_flight_v31.gd'
+      - 'tests/test_g11_rocket_flight_v31_capture.gd'
+      - '.github/workflows/g11-v31-rockets-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/G11RocketFlightV31.gd'
+      - 'scripts/ui/G11RocketTrailsV30.gd'
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'tests/test_g11_rocket_flight_v31.gd'
+      - 'tests/test_g11_rocket_flight_v31_capture.gd'
+  workflow_dispatch:
+
+jobs:
+  g11-v31-real-launch:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate finned 3D rocket shape, staged smoke, recoil and battle isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rocket_flight_v31.gd 2>&1 | tee /tmp/g11_v31.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v31.log; then
+            echo 'V31 visual rocket, smoke, recoil or battle state regression'; exit 1
+          fi
+          grep -F 'PASS G11 V31:' /tmp/g11_v31.log
+      - name: Render twelve actual four-biome battle launch screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v31-sculpted-salvo
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V31_CAPTURE_DIR=/tmp/g11-v31-sculpted-salvo \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rocket_flight_v31_capture.gd 2>&1 | tee /tmp/g11_v31_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v31_capture.log; then
+            echo 'V31 native rocket launch capture regression'; exit 1
+          fi
+          grep -F 'PASS G11 V31 CAPTURE:' /tmp/g11_v31_capture.log
+          test "$(find /tmp/g11-v31-sculpted-salvo -name '*.png' | wc -l)" -eq 12
+      - name: Upload genuine G11 V31 Godot 4.3 smoke and rocket renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v31-finned-rockets-staged-smoke-four-biomes
+          path: /tmp/g11-v31-sculpted-salvo/*.png
+          retention-days: 14
