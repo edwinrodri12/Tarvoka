@@ -7,6 +7,7 @@ class_name TarvokaInfantryBarracksRoofCommandV6
 # the N3 west-side obstacle corridor, or the three approved floor plans.
 const Base=preload("res://scripts/ui/InfantryBarracks3DV1.gd")
 const V2=preload("res://scripts/ui/InfantryBarracksFinishV2.gd")
+const V3=preload("res://scripts/ui/InfantryBarracksMaterialsV3.gd")
 const V5=preload("res://scripts/ui/InfantryBarracksEntranceYardV5.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="InfanteriaV6CubiertasEIdentidadMilitar"
@@ -157,6 +158,40 @@ static func _command_antenna(stage: Node3D,module: Dictionary,
             Vector3(x+float(side)*0.40,h+1.54,z),
             Vector3(0.16,0.36,0.085),GLASS,0.16)
 
+static func _finish_surfaces(stage: Node3D,accent: Color) -> void:
+    # V6 must match the original V3 PBR visual language. All procedural
+    # steel and roof parts receive native texture roughness/mipmaps, while
+    # the exact faction paint stays clear and never shifts hue.
+    var textured: int=0
+    var colored: int=0
+    var pending: Array[Node]=[stage]
+    while not pending.is_empty():
+        var node: Node=pending.pop_back()
+        for child in node.get_children():
+            pending.append(child)
+            if not child is MeshInstance3D:
+                continue
+            var piece: MeshInstance3D=child as MeshInstance3D
+            var material: StandardMaterial3D=piece.material_override as StandardMaterial3D
+            if material==null:
+                continue
+            if material.albedo_color.is_equal_approx(accent):
+                colored+=1
+                continue
+            var name: String=str(piece.name).to_lower()
+            var kind: String="steel"
+            if name.contains("panelradio"):
+                kind="glass"
+            elif name.contains("perfiltechodanado"):
+                kind="rubble"
+            elif name.contains("cubierta") or name.contains("tapa") or
+                    name.contains("remate") or name.contains("borde"):
+                kind="roof"
+            piece.material_override=V3._finish_material(material,kind)
+            textured+=1
+    stage.set_meta("pbr_v3_textured_meshes",textured)
+    stage.set_meta("faction_paint_untouched",colored)
+
 static func apply(model: Node3D,level: int,faction: int,damage: int) -> bool:
     if model==null or not Base.valid_spec(level,faction,damage):
         return false
@@ -177,6 +212,8 @@ static func apply(model: Node3D,level: int,faction: int,damage: int) -> bool:
             _front(stage,module,level,damage,accent)
         if level==3 and damage==0:
             _command_antenna(stage,V2._modules(level)[0],damage,accent)
+    if damage<4:
+        _finish_surfaces(stage,Style.faction_color(faction))
     stage.set_meta("visual_only",true)
     stage.set_meta("no_gameplay_changes",true)
     stage.set_meta("roof_identity_version",6)
