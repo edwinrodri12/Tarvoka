@@ -190,7 +190,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · CONTEXTO DE BATALLA V25",14)
+        "G11 LANZADOR · V26 · OCHO FACCIONES EN BATALLA",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -257,9 +257,10 @@ func _install_g11_controls() -> void:
         "V25: alejar batalla",func(): _g11_battle_zoom_v25(false))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V25: visualiza el mapa táctico REAL con G11, tanques, P06 e "
-        + "infantería en cuatro biomas. Acerca o aleja: las orugas "
-        + "cambian LOD automáticamente, sin modificar combate ni guardados.",12)
+        "V26: selecciona una de las ocho facciones arriba y abre un bioma: "
+        + "el G11 y su rival mostrarán sus colores reales. Solo cambia la "
+        + "pintura de los modelos; ejércitos, estadísticas y guardados siguen intactos. "
+        + "Acerca o aleja para inspeccionar las orugas V24 y las doce bocas V25.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -292,7 +293,7 @@ func _g11_battle_context_v25(biome: String) -> void:
     _zoom=0.85
     _yaw=55.0
     _update_camera()
-    status_label.text="G11 V25 · mapa de batalla con unidades reales · "+biome
+    status_label.text="G11 V26 · color de facción "+str(_faction+1)+"/8 · unidades reales · "+biome
 
 func _g11_battle_zoom_v25(near: bool) -> void:
     if _role!="mlrs" or _g11_context_v25==null:
