@@ -1,0 +1,43 @@
+name: TARVOKA v21 territorial strategy mirrored full-match audit
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/StrategicMatchBalanceV21.gd"
+      - "tests/test_strategic_balance_smoke_v21.gd"
+      - "tests/test_strategic_balance_pairs_v21.gd"
+      - ".github/workflows/strategic-balance-matches-v21.yml"
+  workflow_dispatch:
+
+jobs:
+  strategy_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate real fixed-site tactical strategy orders and income
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_strategic_balance_smoke_v21.gd \
+            2>&1 | tee /tmp/strategy-v21-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/strategy-v21-smoke.log; then exit 1; fi
+          grep -Fq 'PASS strategy balance smoke v21:' /tmp/strategy-v21-smoke.log
+      - name: Preserve all strategic audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v21-strategy-audit
+          path: /tmp/strategy-v21-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
