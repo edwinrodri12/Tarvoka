@@ -176,6 +176,26 @@ static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
         _cylinder(pitch,"G13_RealMuzzle_%d" % side,
             Vector3(x,-0.015,-1.220),0.071,0.085,dark,
             Vector3(90,0,0),12)
+    # Reusable 3D muzzle effects; generated once, never during pose updates.
+    # Both barrels fire in alternating pulses rather than one giant flash.
+    for side in [-1,1]:
+        var flash:=Node3D.new()
+        flash.name="G13_MuzzleFlash_%d" % side
+        flash.position=Vector3(float(side)*0.23,-0.015,-1.29)
+        flash.visible=false
+        pitch.add_child(flash)
+        var glow:=_mat(Color(1.0,0.69,0.22,0.92),0.0,0.40)
+        _cylinder(flash,"G13_FlashCone_%d" % side,
+            Vector3(0,0,-0.10),0.105,0.22,glow,
+            Vector3(90,0,0),8)
+        var smoke:=Node3D.new()
+        smoke.name="G13_MuzzleSmoke_%d" % side
+        smoke.position=Vector3(float(side)*0.23,0,-1.36)
+        smoke.visible=false
+        pitch.add_child(smoke)
+        _box(smoke,"G13_SmokeVolume_%d" % side,
+            Vector3.ZERO,Vector3(0.16,0.13,0.23),
+            _mat(Color(0.56,0.58,0.59,0.40),0.0,1.0))
     _box(turret,"G13_OpticDirector",Vector3(0.40,0.35,-0.32),
         Vector3(0.18,0.20,0.14),optic)
     var radar:=Node3D.new()
@@ -212,12 +232,26 @@ static func restore(root: Node3D)->void:
     if radar!=null:
         radar.rotation_degrees=Vector3.ZERO
     _wheels_pose(root,0.0)
+    for side in [-1,1]:
+        var flash:=root.find_child("G13_MuzzleFlash_%d" % side,
+            true,false) as Node3D
+        var smoke:=root.find_child("G13_MuzzleSmoke_%d" % side,
+            true,false) as Node3D
+        if flash!=null:
+            flash.visible=false
+            flash.scale=Vector3.ONE
+        if smoke!=null:
+            smoke.visible=false
+            smoke.scale=Vector3.ONE
     root.set_meta("tarvoka_g13_v1_pose","idle")
 
+# Visual-only cinematic firing poses. No damage, target selection, or ammo.
+# Legacy aim/attack remain valid and default to anti-air behavior.
 static func pose(root: Node3D,kind: String,t: float,
         heading: Vector2i=Vector2i(0,-1))->bool:
     if not has_model(root) or kind not in [
-            "idle","move","scan","aim","attack"]:
+            "idle","move","scan","aim","attack",
+            "aim_air","attack_air","aim_ground","attack_ground"]:
         return false
     var p: float=clampf(t,0.0,1.0)
     restore(root)
@@ -226,15 +260,44 @@ static func pose(root: Node3D,kind: String,t: float,
     var radar:=root.find_child(RADAR,true,false) as Node3D
     if turret==null or pitch==null or radar==null:
         return false
+    var yaw: float=0.0
+    if heading!=Vector2i.ZERO:
+        yaw=rad_to_deg(atan2(float(heading.x),-float(heading.y)))
+    var air: bool=kind in ["aim","attack","aim_air","attack_air"]
+    var ground: bool=kind in ["aim_ground","attack_ground"]
+    var firing: bool=kind in ["attack","attack_air","attack_ground"]
     match kind:
         "move":
             _wheels_pose(root,p)
             radar.rotation_degrees.y=15.0*sin(p*TAU)
         "scan":
             radar.rotation_degrees.y=-70.0+140.0*p
-        "aim","attack":
-            turret.rotation_degrees.y=-38.0+76.0*p
-            pitch.rotation_degrees.x=9.0+30.0*p
-            radar.rotation_degrees.y=35.0*p
+        "aim","attack","aim_air","attack_air","aim_ground","attack_ground":
+            # AA tracks a high aircraft; ground fire stays near horizontal.
+            # The heading controls horizontal bearing without rotating radar.
+            turret.rotation_degrees.y=yaw
+            pitch.rotation_degrees.x=42.0 if air else 7.0
+            radar.rotation_degrees.y=18.0*sin(p*PI)
+            if firing:
+                # Short staggered bursts: each muzzle flashes only during
+                # selected phases. An early muzzle flash differs from smoke.
+                var phase: int=int(floor(p*12.0))
+                var pulse: bool=phase%3!=2 and p>0.08 and p<0.94
+                for side in [-1,1]:
+                    var flash:=root.find_child(
+                        "G13_MuzzleFlash_%d" % side,true,false) as Node3D
+                    var smoke:=root.find_child(
+                        "G13_MuzzleSmoke_%d" % side,true,false) as Node3D
+                    var active: bool=pulse and (phase%2==0)==(side==-1)
+                    if flash!=null:
+                        flash.visible=active
+                        flash.scale=Vector3.ONE*(0.83+0.17*sin(p*TAU*12.0))
+                    if smoke!=null:
+                        smoke.visible=p>0.18 and p<0.96 and (
+                            (phase+side+12)%3!=0)
+                        smoke.scale=Vector3.ONE*(0.85+0.4*p)
+                pitch.rotation_degrees.x+=1.2*sin(p*TAU*12.0)
     root.set_meta("tarvoka_g13_v1_pose",kind)
+    root.set_meta("tarvoka_g13_v1_demo_domain",
+        "air" if air else ("ground" if ground else "none"))
     return true
