@@ -73,7 +73,7 @@ static func _armor_options(side: int) -> void:
     assert(not Lab.attack_antiarmor(state,"P","T",4).get("valid",false))
     assert(not Lab.attack_antiarmor(plus2["state"],"P","T",2).get("valid",false))
     print("ROLE_ARMOR side=%d tank_hp=14 armor=2 base=%d plus2=%d plus3=%d no_persistent_attack=true" % [
-        side,int(base["damage"]),int(base["damage"]),int(plus2["damage"]),int(plus3["damage"])
+        side,int(base["damage"]),int(plus2["damage"]),int(plus3["damage"])
     ])
 
 static func _repair_start(side: int) -> Dictionary:
