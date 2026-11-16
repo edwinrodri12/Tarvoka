@@ -114,6 +114,10 @@ var studio_versions_button: Button
 var studio_versions_content: VBoxContainer
 var studio_versions_expanded: bool = false
 var studio_overview_label: Label
+var studio_advanced_group: VBoxContainer
+var studio_advanced_content: VBoxContainer
+var studio_advanced_button: Button
+var studio_advanced_expanded: bool = false
 
 
 func _ready() -> void:
@@ -200,6 +204,29 @@ func _install_unified_studio_navigation() -> void:
         control.reparent(studio_versions_content)
     studio_versions_content.visible=false
 
+    # Keep role-specific expert inspections, fleet tests and technical
+    # diagnostics available without flooding the main action interface.
+    studio_advanced_group=VBoxContainer.new()
+    studio_advanced_group.name="Estudio3D_DetallesPorUnidad"
+    column.add_child(studio_advanced_group)
+    column.move_child(studio_advanced_group,
+        column.get_children().find(detail_label))
+    studio_advanced_button=_button(studio_advanced_group,
+        "Mostrar inspecciones técnicas",_studio_toggle_advanced)
+    studio_advanced_content=VBoxContainer.new()
+    studio_advanced_content.add_theme_constant_override("separation",8)
+    studio_advanced_group.add_child(studio_advanced_content)
+    for group in [p06_controls,g11_controls,g13_controls]:
+        if group!=null:
+            group.reparent(studio_advanced_content)
+    studio_advanced_content.visible=false
+
+func _studio_toggle_advanced() -> void:
+    studio_advanced_expanded=not studio_advanced_expanded
+    studio_advanced_content.visible=studio_advanced_expanded
+    studio_advanced_button.text=("Ocultar inspecciones técnicas"
+        if studio_advanced_expanded else "Mostrar inspecciones técnicas")
+
 func _studio_toggle_versions() -> void:
     studio_versions_expanded=not studio_versions_expanded
     studio_versions_content.visible=studio_versions_expanded
@@ -255,6 +282,10 @@ func _refresh_unified_studio_navigation() -> void:
         +" permanecen en el apartado de comparaciones.")
     if studio_versions_fold!=null:
         studio_versions_fold.visible=not is_building and _role=="tank"
+    if studio_advanced_group!=null:
+        studio_advanced_group.visible=not is_building and _role in [
+            "apc","mlrs","aa_mobile"]
+
 
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
