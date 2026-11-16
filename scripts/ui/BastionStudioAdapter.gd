@@ -66,7 +66,7 @@ func _ready() -> void:
     _install_p06_lighting_v22()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V18 orugas reconstruidas")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V19 zapatas y guardabarros 3D")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V22 luz y clima PBR · 6×6")
@@ -163,7 +163,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ORUGAS CORREGIDAS V18",14)
+        "G11 LANZADOR · TERMINACIONES DE ORUGA V19",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -197,10 +197,14 @@ func _install_g11_controls() -> void:
         "V18: oruga derecha",func(): _g11_track_closeup(270.0))
     _add_paired(g11_controls,"V18: engranaje trasero",func(): _g11_track_closeup(115.0),
         "V18: tensor delantero",func(): _g11_track_closeup(65.0))
+    _add_paired(g11_controls,"V19: 3/4 izquierdo",func(): _g11_track_closeup(125.0),
+        "V19: 3/4 derecho",func(): _g11_track_closeup(235.0))
+    _add_paired(g11_controls,"V19: zapatas delanteras",func(): _g11_track_closeup(55.0),
+        "V19: zapatas posteriores",func(): _g11_track_closeup(305.0))
     _title(g11_controls,
-        "V18: orugas reconstruidas con seis ruedas espaciadas, tensores y "
-        + "zapatas sin piezas duplicadas. Prueba marcha y observa ambos "
-        + "perfiles; la pintura V17 y los 12 tubos siguen intactos.",12)
+        "V19: 92 zapatas 3D biseladas, 368 relieves antideslizantes y dos "
+        + "guardabarros con extremos inclinados. Inspecciona desde ambos "
+        + "costados y activa marcha. V18 sin piezas duplicadas intacta.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -978,7 +982,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_track_clearance_v18",false)):
+        if built and bool(model_root.get_meta("tarvoka_g11_track_finish_v19",false)):
+            detail_label.text = detail_label.text.replace("salva V8","acabado real de orugas V19")
+        elif built and bool(model_root.get_meta("tarvoka_g11_track_clearance_v18",false)):
             detail_label.text = detail_label.text.replace("salva V8","orugas integradas V18")
         elif built and bool(model_root.get_meta("tarvoka_g11_surface_weather_v17",false)):
             detail_label.text = detail_label.text.replace("salva V8","acabados y pintura V17")
