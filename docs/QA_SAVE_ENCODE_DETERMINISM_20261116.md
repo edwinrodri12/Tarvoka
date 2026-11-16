@@ -19,3 +19,6 @@ Status: **NO EJECUTADO** until Godot 4.3 workflow completes. Android physical: *
 
 ## Regresión adicional — 2026-11-16
 Diez intentos consecutivos de serializar HP negativo (−1 a −10), cada uno seguido de codificación y decodificación válidas. Se exige rechazo sin mutación de entrada y conservación íntegra de la batalla activa. Commit de prueba `45d05bd8`. **Godot 4.3 en este commit: NO EJECUTADO; Android físico: NO EJECUTADO EN DISPOSITIVO.** La prueba no cambia el formato de guardado ni el motor.
+
+## Aislamiento de serializaciones hermanas — 2026-11-16
+Tras recuperar dos copias independientes, la prueba modifica HP y terreno de la primera, la serializa y exige: JSON distinto del original, roundtrip fiel de la copia modificada, JSON original intacto para la segunda copia y para la batalla activa. Código commit `38a20a7c`. Godot 4.3 del nuevo commit: **NO EJECUTADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**. Mantener PR #448 DRAFT hasta CI y regresiones pertinentes; no altera SaveCodec ni partidas comerciales.
