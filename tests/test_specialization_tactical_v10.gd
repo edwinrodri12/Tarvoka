@@ -82,7 +82,8 @@ static func _finish_wounded_armor_without_one_shot_full_tank(side: int) -> void:
         Roles.make_unit("PIER",side,Vector2i(2,3),"piercer"),
         Roles.make_unit("TANK",1-side,Vector2i(3,3),"tank")
     ],_terrain(),side,false,false,true,true)
-    _find(wounded["units"],"TANK")["hp"] = 5
+    var wounded_target: Dictionary = _find(wounded["units"],"TANK")
+    wounded_target["hp"] = 5
     var no_bonus: Dictionary = Lab.attack_antiarmor(wounded,"PIER","TANK",0)
     var plus2: Dictionary = Lab.attack_antiarmor(wounded,"PIER","TANK",2)
     var plus3: Dictionary = Lab.attack_antiarmor(wounded,"PIER","TANK",3)
