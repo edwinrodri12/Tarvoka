@@ -1386,6 +1386,15 @@ func _apply_infantry_camera() -> void:
         Vector3(-8.2,5.2,-11.3),
         Vector3(-2.65,4.15,-4.30),
         Vector3(-0.02,28.0,-0.02)]
+    if _infantry_camera_view==2:
+        # N3's full-length track is now alongside the WEST wing; N1/N2
+        # retain their short front-side obstacle course.
+        if infantry_level_picker.selected==2:
+            points[2]=Vector3(-7.04,0.43,-0.67)
+            offsets[2]=Vector3(-3.20,7.10,-4.70)
+        else:
+            points[2]=Vector3(-6.00,0.45,-3.47)
+            offsets[2]=Vector3(-3.10,5.70,-4.15)
     var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
     var focus: Vector3=rotate*points[_infantry_camera_view]
     camera.position=rotate*(points[_infantry_camera_view]+offsets[_infantry_camera_view])
