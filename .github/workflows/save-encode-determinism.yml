@@ -24,8 +24,10 @@ jobs:
           # With errexit + pipefail, a failed or timed-out Godot process cannot be masked by tee.
           # Require exactly one complete success marker, not a partial substring.
           test "$(grep -Fxc 'PASS save encode determinism: 20 iterations, no mutation or aliasing' /tmp/save-determinism.log)" -eq 1
-          # Godot may log script/assertion errors without a nonzero process exit.
-          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-determinism.log; then
+          # Two intentionally malformed JSON inputs produce exactly two parser diagnostics.
+          # Treat only those known diagnostics as expected, never arbitrary Godot errors.
+          test "$(grep -Fc 'ERROR: Parse JSON failed.' /tmp/save-determinism.log)" -eq 2
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-determinism.log | grep -vF 'ERROR: Parse JSON failed.'; then
             echo 'Unexpected Godot error in save determinism regression' >&2
             exit 1
           fi
