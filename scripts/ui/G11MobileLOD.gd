@@ -13,6 +13,7 @@ const FAR_LEVEL := 8
 const NEAR_LEVEL := 10
 const TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const PodV25 = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
+const PaintV27 = preload("res://scripts/ui/G11TacticalPaintReadabilityV27.gd")
 static var _materials: Dictionary = {}
 
 static func recommended_level(distance: float, visible_units: int,
@@ -154,6 +155,8 @@ static func build(model: Node3D, faction_color: Color,
         push_warning("G11 V24 tactical track visual refinement could not be applied")
     elif not PodV25.apply(model):
         push_warning("G11 V25 recognizable 12-mouth tactical pod failed; retaining V24 tubes")
+    elif not PaintV27.apply(model):
+        push_warning("G11 V27 faction enamel could not fit original tactical guard geometry")
     return true
 
 static func has_model(model: Node3D) -> bool:

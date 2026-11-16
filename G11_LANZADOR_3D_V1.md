@@ -423,3 +423,32 @@ cuatro placas originales de cada lanzador y verifican que la propiedad
 **Límite:** es una comparación de acabados artísticos en el Estudio 3D;
 no implementa batallas multijugador de ocho ejércitos ni modifica el selector
 de facción de las partidas jugables.
+
+
+## V27 · identificación de facción sin geometría adicional
+
+La revisión posterior a V26 mostró que las franjas laterales en LOD8/LOD10
+medían solo 74 cm de longitud y 7,5 cm de altura sobre el faldón del G11,
+mientras la insignia superior medía 34 cm de ancho. El vehículo podía
+confundirse entre unidades contiguas cuando se veía a distancia de juego.
+
+`G11TacticalPaintReadabilityV27.gd` ensancha **las piezas originales**:
+- En ambos laterales: longitud 188 cm × altura 8,8 cm, centradas en el
+  guardabarros de 10 cm de alto, conservando el espesor anterior de 1,5 cm.
+  La banda está empotrada 2,5 mm en el metal y termina dentro de los bordes.
+- En el techo: insignia existente de **68 × 36 cm**, integrada con el techo
+  original; no toca parabrisas, cubierta del módulo ni bocas de cohetes.
+- El panel superior del lanzador sigue idéntico a V25, evitando que tape
+  las doce bocas huecas. Las orugas y las doce ruedas de V24 tampoco cambian.
+
+La misma geometría funciona en LOD8 y LOD10; no se añaden nodos, superficies,
+mallas, materiales ni draw calls. Se mantienen los ocho colores V26 y la
+escultura detallada hero V23 completamente separada. No se cambia ningún dato
+de daño, defensa, ataque, movimiento, recursos, combustible, municiones,
+niebla, turnos, IA, captura o partidas guardadas.
+
+QA: `tests/test_g11_tactical_paint_v27.gd` verifica las ocho facciones
+× dos LODs, tolerancias físicas de ambas bandas y techo, controles de
+animación, conteo de geometría, bocas, orugas e integridad del modelo hero.
+Las 16 capturas existentes V25 se siguen generando con la nueva pintura
+táctica, para comparar visibilidad real en cuatro biomas.
