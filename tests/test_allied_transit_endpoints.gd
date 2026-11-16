@@ -79,5 +79,23 @@ func _initialize() -> void:
     assert(not foot.has(Vector2i(2, 0)), "Foot movement must not inherit the motorized road discount")
     assert(road_terrain == road_snapshot and road_allies == [Vector2i(1, 0)]
         and road_enemies == [Vector2i(0, 1)], "Road routing must preserve all inputs")
+    # Allied mountain transit retains the terrain cost and forbids occupied endpoints.
+    var mountain_map: Array = terrain.duplicate(true)
+    mountain_map[0][1] = "mountain"
+    var mountain_allies: Array[Vector2i] = [Vector2i(1, 0)]
+    var mountain_enemies: Array[Vector2i] = [Vector2i(0, 1)]
+    var mountain_before: Array = mountain_map.duplicate(true)
+    var mountain_short: Dictionary = rules.reachable(
+        Vector2i(0, 0), 3, mountain_map, mountain_enemies, "ground", false, mountain_allies
+    )
+    assert(not mountain_short.has(Vector2i(1, 0)), "Mountain ally cannot be a destination")
+    assert(not mountain_short.has(Vector2i(2, 0)), "Mountain plus plain exceeds three movement points")
+    var mountain_full: Dictionary = rules.reachable(
+        Vector2i(0, 0), 4, mountain_map, mountain_enemies, "ground", false, mountain_allies
+    )
+    assert(mountain_full.get(Vector2i(2, 0), -1) == 4, "Mountain transit must cost three plus one")
+    assert(not mountain_full.has(Vector2i(1, 0)), "Mountain ally remains an invalid destination")
+    assert(mountain_map == mountain_before and mountain_allies == [Vector2i(1, 0)]
+        and mountain_enemies == [Vector2i(0, 1)], "Mountain routing must preserve inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
