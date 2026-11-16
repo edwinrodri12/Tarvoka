@@ -127,6 +127,9 @@ var studio_tab_camera: Button
 var studio_tab_technical: Button
 var studio_active_tab: int = 0
 var studio_legacy_controls: VBoxContainer
+var studio_attack_button: Button
+var studio_impact_button: Button
+var studio_g13_ground_button: Button
 
 
 func _ready() -> void:
@@ -213,10 +216,27 @@ func _install_unified_studio_navigation() -> void:
     studio_animation_panel=VBoxContainer.new()
     studio_animation_panel.add_theme_constant_override("separation",6)
     studio_quick_panel.add_child(studio_animation_panel)
-    _add_paired(studio_animation_panel,"Mover",func(): _studio_quick_action("move"),
-        "Atacar",func(): _studio_quick_action("attack"))
-    _add_paired(studio_animation_panel,"Impacto",func(): _studio_quick_action("hit"),
-        "Detener",_studio_quick_stop)
+    var action_row:=HBoxContainer.new()
+    action_row.add_theme_constant_override("separation",6)
+    studio_animation_panel.add_child(action_row)
+    var move_button: Button=_button(action_row,"Mover",func(): _studio_quick_action("move"))
+    studio_attack_button=_button(action_row,"Atacar",func(): _studio_quick_action("attack"))
+    for control in [move_button,studio_attack_button]:
+        control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+        control.custom_minimum_size.x=0
+        control.clip_text=true
+    var damage_row:=HBoxContainer.new()
+    damage_row.add_theme_constant_override("separation",6)
+    studio_animation_panel.add_child(damage_row)
+    studio_impact_button=_button(damage_row,"Impacto",func(): _studio_quick_action("hit"))
+    var stop_button: Button=_button(damage_row,"Detener",_studio_quick_stop)
+    for control in [studio_impact_button,stop_button]:
+        control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+        control.custom_minimum_size.x=0
+        control.clip_text=true
+    studio_g13_ground_button=_button(studio_animation_panel,
+        "G13 · Disparo terrestre",func(): _studio_quick_action("attack_ground"))
+    studio_g13_ground_button.visible=false
     studio_camera_panel=VBoxContainer.new()
     studio_camera_panel.add_theme_constant_override("separation",6)
     studio_quick_panel.add_child(studio_camera_panel)
@@ -315,6 +335,12 @@ func _studio_select_tab(index: int) -> void:
         studio_camera_panel.visible=studio_active_tab==1
     if studio_advanced_group!=null:
         studio_advanced_group.visible=studio_active_tab==2
+    # Open the selected tools directly: the previous extra expansion step
+    # made the Details tab appear empty on first use.
+    if studio_active_tab==2:
+        studio_advanced_expanded=true
+        if studio_advanced_button!=null:
+            studio_advanced_button.text="Ocultar inspecciones"
     _refresh_unified_studio_navigation()
     for entry in [[studio_tab_animations,0],[studio_tab_camera,1],
             [studio_tab_technical,2]]:
@@ -362,8 +388,11 @@ func _studio_quick_action(kind: String) -> void:
         "apc":
             _play("hit_bullet" if kind=="hit" else kind)
         "aa_mobile":
-            _g13_demo_v1("scan" if kind=="attack" else
-                "move" if kind=="move" else "idle",0.65)
+            var visual_kind: String=(
+                "attack_ground" if kind=="attack_ground" else
+                "attack_air" if kind=="attack" else
+                "move" if kind=="move" else "idle")
+            _g13_demo_v1(visual_kind,0.65)
         _:
             _play("damaged" if kind=="hit" else kind)
 
@@ -413,6 +442,12 @@ func _refresh_unified_studio_navigation() -> void:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
+    if studio_attack_button!=null:
+        studio_attack_button.text="Disparo aéreo" if _role=="aa_mobile" else "Atacar"
+    if studio_impact_button!=null:
+        studio_impact_button.text="Restaurar" if _role=="aa_mobile" else "Impacto"
+    if studio_g13_ground_button!=null:
+        studio_g13_ground_button.visible=not building and _role=="aa_mobile" and studio_active_tab==0
 
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -889,6 +924,8 @@ func _g13_demo_v1(kind: String,progress: float) -> void:
         "radar en barrido" if kind=="scan" else
         "torreta y cañones orientados" if kind=="aim" else
         "ruedas 4×4 en movimiento" if kind=="move" else
+        "disparo aéreo · demostración visual" if kind=="attack_air" else
+        "disparo terrestre · demostración visual" if kind=="attack_ground" else
         "pose original restaurada"
     )+" · solo demostración 3D"
 
