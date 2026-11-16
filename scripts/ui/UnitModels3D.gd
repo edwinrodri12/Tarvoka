@@ -14,6 +14,7 @@ const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
+const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -902,7 +903,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 if not G11Mobile.build(model,faction_paint_color(faction),art_level):
                     _mlrs(model)
         "attack_heli":
-            _helicopter(model)
+            if not (finish_enabled and art_level >= 13):
+                _helicopter(model)
         "fighter":
             _fighter(model)
         "destroyer":
@@ -919,6 +921,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     # G11 shares the launcher role with the tactical atlas without altering stats.
     if role == "mlrs" and finish_enabled and art_level >= 13:
         G11Art.build(model,faction_paint_color(faction))
+    if role == "attack_heli" and finish_enabled and art_level >= 13:
+        AttackHelicopterV1.build(model,faction_paint_color(faction))
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
@@ -1003,6 +1007,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             if G11Mobile.has_model(model):
                 return G11Mobile.pose(model,kind,progress,target_heading)
             return G11Rig.pose(model,kind,progress,target_heading)
+        "attack_heli":
+            return AttackHelicopterV1.pose(model,kind,progress,target_heading)
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
@@ -1021,6 +1027,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Mobile.restore(model)
             else:
                 G11Rig.restore(model)
+        "attack_heli":
+            AttackHelicopterV1.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
