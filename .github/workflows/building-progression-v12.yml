@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/experiments/BuildingProgressionV12.gd"
       - "tests/test_building_progression_v12.gd"
+      - "tests/test_building_tier_matrix_v13.gd"
       - ".github/workflows/building-progression-v12.yml"
   workflow_dispatch:
 
@@ -34,11 +35,25 @@ jobs:
             echo 'Experimental tier audit failed'; exit 1
           fi
           grep -Fq 'PASS building progression v12:' /tmp/tarvoka-building-progression-v12.log
+      - name: Verify all six building categories and mirrored level III access
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_building_tier_matrix_v13.gd \
+            2>&1 | tee /tmp/tarvoka-building-tier-matrix-v13.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-building-tier-matrix-v13.log; then
+            echo 'Building tier matrix audit failed'; exit 1
+          fi
+          grep -Fq 'PASS building tier matrix v13:' /tmp/tarvoka-building-tier-matrix-v13.log
       - name: Preserve concrete purchase/upgrade evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-building-progression-v12
-          path: /tmp/tarvoka-building-progression-v12.log
+          path: |
+            /tmp/tarvoka-building-progression-v12.log
+            /tmp/tarvoka-building-tier-matrix-v13.log
           retention-days: 30
           if-no-files-found: ignore
