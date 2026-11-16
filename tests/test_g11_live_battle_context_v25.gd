@@ -71,7 +71,7 @@ func _run() -> void:
         _check(int(stats["units"].get("g11_lod",0))==2
             and bool(stats.get("g11_camera_lod",false)),
             "the game renders both G11 V24 bodies with new V25 camera driver")
-        var driver := _find(scene,"G11V25_LOD_Camara") as Driver
+        var driver := scene.find_child("G11V25_LOD_Camara",true,false) as Driver
         _check(driver!=null and driver.units.size()==2,
             "exactly one visual LOD driver tracking two actual G11 units")
         for required in ["G11-H","G11-E","Tank-H","APC-H",
