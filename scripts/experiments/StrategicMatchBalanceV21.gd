@@ -109,8 +109,8 @@ static func _count_active(state: Dictionary, side: int) -> int:
 static func _owned(session: Dictionary, side: int, kind: String) -> int:
     var total := 0
     for s in session["world"]["layout"]["sites"]:
-        if int(s["owner"]) == side and (kind == "any" or
-                (kind == "city" and str(s["kind"]) == "city") or
+        if int(s["owner"]) == side and (kind == "any" or \
+                (kind == "city" and str(s["kind"]) == "city") or \
                 (kind == "base" and str(s["kind"]) != "city")):
             total += 1
     return total
@@ -139,11 +139,11 @@ static func _attack(battle: Dictionary, side: int, policy: String) -> Dictionary
     var best := {}
     var top := -999999
     for ally in state["units"]:
-        if int(ally.get("faction",-1)) != side or not Turns.can_act(ally,side) or
+        if int(ally.get("faction",-1)) != side or not Turns.can_act(ally,side) or \
                 not Logistics.can_fire(ally) or int(ally.get("attack",0)) <= 0:
             continue
         for foe in state["units"]:
-            if int(foe.get("faction",-1)) == side or int(foe.get("hp",0)) <= 0 or
+            if int(foe.get("faction",-1)) == side or int(foe.get("hp",0)) <= 0 or \
                     not Turns.in_attack_range(ally,foe):
                 continue
             var impact: Dictionary = Battle.preview_exchange(
@@ -180,7 +180,7 @@ static func _occupied(state: Dictionary, ally: Dictionary) -> Dictionary:
     var blocked: Array[Vector2i] = []
     var transit: Array[Vector2i] = []
     for other in state["units"]:
-        if int(other.get("hp",0)) <= 0 or str(other.get("id","")) == str(ally["id"]) or
+        if int(other.get("hp",0)) <= 0 or str(other.get("id","")) == str(ally["id"]) or \
                 Domains.layer(other) != Domains.layer(ally):
             continue
         if int(other.get("faction",-1)) == int(ally["faction"]):
@@ -193,7 +193,7 @@ static func _holding_site(session: Dictionary, ally: Dictionary, side: int) -> b
     if not Economy.can_capture(ally):
         return false
     for s in session["world"]["layout"]["sites"]:
-        if int(s["owner"]) != side and
+        if int(s["owner"]) != side and \
                 s.get("capture_pos",s["pos"]) == ally["pos"]:
             return true
     return false
@@ -254,7 +254,7 @@ static func _move(battle: Dictionary, side: int, policy: String) -> Dictionary:
                 if str(objective["kind"]) == "enemy":
                     var proxy: Dictionary = ally.duplicate(true)
                     proxy["pos"] = endpoint
-                    if Turns.in_attack_range(proxy,objective["foe"]) and
+                    if Turns.in_attack_range(proxy,objective["foe"]) and \
                             not bool(ally.get("acted",false)):
                         range_factor = 110
                 elif endpoint == at:
@@ -269,8 +269,8 @@ static func _move(battle: Dictionary, side: int, policy: String) -> Dictionary:
                     value += 45
                 # Keep artillery from pushing adjacent to a foe merely to
                 # increase distance; a valid firing lane is preferable.
-                if str(objective["kind"]) == "enemy" and
-                        not Turns.in_attack_range(ally,objective["foe"]) and
+                if str(objective["kind"]) == "enemy" and \
+                        not Turns.in_attack_range(ally,objective["foe"]) and \
                         range_factor == 0 and int(ally["attack_min_range"]) > 1:
                     value -= 8
                 if value > best_score:
@@ -319,7 +319,7 @@ static func _purchase(battle: Dictionary, side: int, policy: String) -> Dictiona
         if int(unit.get("hp",0)) > 0 and Domains.layer(unit) == "surface":
             occupied[unit["pos"]] = true
     for site in session["world"]["layout"]["sites"]:
-        if str(site["kind"]) == "city" or int(site["owner"]) != side or
+        if str(site["kind"]) == "city" or int(site["owner"]) != side or \
                 int(site.get("produced_turn",-1)) == int(state["economy"]["turn"]):
             continue
         for role in _wishlist(policy,str(site["kind"])):
@@ -446,7 +446,7 @@ static func snapshot(battle: Dictionary, policies: Array, first: int) -> Diction
 
 static func duel(map_id: int, size: Vector2i, first: int,
         policies: Array, halfturn_limit: int = 40) -> Dictionary:
-    if policies.size() != 2 or str(policies[0]) not in STRATEGIES or
+    if policies.size() != 2 or str(policies[0]) not in STRATEGIES or \
             str(policies[1]) not in STRATEGIES or halfturn_limit < 2:
         return {"valid":false}
     var current: Dictionary = start(map_id,size,first)
