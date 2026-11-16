@@ -9,6 +9,7 @@ const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const Pod = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const Driver = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
+const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 var errors: int=0
 
@@ -171,9 +172,64 @@ func _run() -> void:
         context.queue_free()
         await process_frame
     _check(compass.size()==4,"all 4 real playable battle biomes checked")
+    # V26 gallery regression: every approved palette is visible on the
+    # native tactical G11, while the real match remains 0 vs 1.
+    # In particular the eight material copies must never color each other.
+    var first_palette_material: StandardMaterial3D=null
+    for palette_index in range(8):
+        var gallery: Node3D=Context.build_scene(palette_index,Biomes.TEMPERATE)
+        _check(gallery!=null,
+            "V26 eight-faction artistic battle comparison builds")
+        if gallery==null:
+            continue
+        world.add_child(gallery)
+        await process_frame
+        _check(bool(gallery.get_meta("palette_preview_only",false)),
+            "V26 palette only marks visual preview, not battle state")
+        _check(int(gallery.get_meta("gallery_faction",-1))==palette_index,
+            "V26 selected official faction stored in scene metadata")
+        var original_state: Dictionary=gallery.get_meta("original_state",{})
+        var original_units: Array=original_state.get("units",[])
+        _check(original_units.size()==9 and
+            int(original_units[0].get("faction",-1))==0 and
+            int(original_units[1].get("faction",-1))==1,
+            "V26 team ownership and active match never repainted")
+        for entry in [
+            {"unit":"G11-H","faction":palette_index},
+            {"unit":"G11-E","faction":(palette_index+1)%8}
+        ]:
+            var g11: Node3D=_find(gallery,"Unidad3D_"+str(entry["unit"]))
+            _check(g11!=null,"V26 original G11 remains in live 3D map")
+            if g11==null:
+                continue
+            var selected_paint: int=int(entry["faction"])
+            _check(int(g11.get_meta(Context.PALETTE_FLAG,-1))==selected_paint,
+                "V26 visual faction metadata matches expected color")
+            _check(int(g11.get_meta("faction",-1))==(
+                0 if str(entry["unit"])=="G11-H" else 1),
+                "V26 tactical original team metadata preserved")
+            for part_name in Context.PAINT_PARTS:
+                var piece := _find(g11,str(part_name)) as MeshInstance3D
+                _check(piece!=null,"V26 original paint mesh is not duplicated")
+                if piece==null:
+                    continue
+                var paint := piece.material_override as StandardMaterial3D
+                _check(paint!=null and paint.albedo_color.is_equal_approx(
+                    Models.faction_paint_color(selected_paint)),
+                    "V26 selected faction tint visible on all four original panels")
+            if palette_index==0 and str(entry["unit"])=="G11-H":
+                var badge := _find(g11,"G11Mobile_InsigniaFrontal") as MeshInstance3D
+                first_palette_material=badge.material_override as StandardMaterial3D
+        if first_palette_material!=null:
+            _check(first_palette_material.albedo_color.is_equal_approx(
+                Models.faction_paint_color(0)),
+                "V26 color changes never mutate shared or previous materials")
+        world.remove_child(gallery)
+        gallery.queue_free()
+        await process_frame
     if errors>0:
         push_error("G11 V25 contextual battle FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G11 V25: production 3D terrain, 4 real biomes, 2 faction G11s and 7 other native units, dynamic actual camera LOD8/LOD10, no duplicate wheels, read-only battles")
+    print("PASS G11 V25/V26: 4 real biomes, camera LOD8/LOD10 and 8 visual faction palettes, authoritative two-team battles and models unchanged")
     quit(0)
