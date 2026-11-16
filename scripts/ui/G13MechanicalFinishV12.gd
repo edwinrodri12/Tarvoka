@@ -62,12 +62,15 @@ static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
     st.set_normal(normal)
     st.add_vertex(b)
 
-static func _circle(radius: float, angle: float, z: float) -> Vector3:
-    return Vector3(cos(angle) * radius, sin(angle) * radius, z)
+static func _circle(radius: float, angle: float, y: float) -> Vector3:
+    # Cannon muzzle pivot is already rotated 90 degrees about X, so local
+    # Y is its forward/rear axis; XZ defines the circular radial plane.
+    return Vector3(cos(angle) * radius, y, sin(angle) * radius)
 
 static func _open_muzzle() -> ArrayMesh:
-    # A proper open annular muzzle, with an actual 0.048 m inner bore
-    # and 0.090 m depth. No solid disk obstructs its frontal silhouette.
+    # A proper open annular muzzle with a 0.048 m inner bore and 0.096 m
+    # axial depth. Local Y is aligned to the existing rotated muzzle pivot:
+    # the open front faces -Z in world space, toward the muzzle flash.
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var segments: int = 20
@@ -181,8 +184,8 @@ static func install(root: Node3D) -> bool:
         # The old barrel nodes move by 2.5 cm during V4 recoil. Attaching
         # sleeves to those same barrel nodes makes them recoil correctly.
         _cylinder(barrels[0 if side == -1 else 1], SLEEVE % side,
-            Vector3(0, 0, 0.325), 0.084, 0.270, reinforced,
-            Vector3(90, 0, 0))
+            Vector3(0, 0.325, 0), 0.084, 0.270, reinforced,
+            Vector3.ZERO)
         # Replace the V1 sealed muzzle CAPS rather than overlaying extra
         # cylinders. V4 still animates the original G13_RealMuzzle pivots.
         mouths[0 if side == -1 else 1].mesh = _open_muzzle()
