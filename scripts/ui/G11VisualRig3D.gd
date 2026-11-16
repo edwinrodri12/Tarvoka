@@ -13,6 +13,7 @@ const CooldownV10 = preload("res://scripts/ui/G11CooldownV10.gd")
 const TracksFactionV13 = preload("res://scripts/ui/G11TracksFactionV13.gd")
 const DetailV14 = preload("res://scripts/ui/G11MechanicalDetailV14.gd")
 const JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
+const GearV32 = preload("res://scripts/ui/G11RunningGearV32.gd")
 const REST := "tarvoka_g11_rest_position"
 const REST_YAW := "tarvoka_g11_rest_yaw"
 const MOVE_DURATION := 0.62
@@ -52,6 +53,7 @@ static func _reset(model: Node3D) -> void:
     if bool(model.get_meta(JointsV22.FLAG,false)):
         JointsV22.update_pose(model)
     TracksFactionV13.update_tracks(model,0.0)
+    model.remove_meta(GearV32.FLAG)
     SalvoV8.reset(model)
     ExhaustV9.reset(model)
     CooldownV10.reset(model)
@@ -99,6 +101,10 @@ static func pose(model: Node3D, kind: String, progress: float,
             if bool(model.get_meta(JointsV22.FLAG,false)):
                 JointsV22.update_pose(model)
             TracksFactionV13.update_tracks(model,t)
+            # V32 follows the original animated links, pivots and springs.
+            # It changes their pose, not their approved V23 geometry.
+            GearV32.pose_hero(model,t,target_heading,
+                float(model.get_meta(GearV32.SLOPE,0.0)))
             _node(model,"G11_EfectoPolvoMarcha").visible = t > 0.02 and t < 0.95
         "attack", "fire":
             if destroyed:

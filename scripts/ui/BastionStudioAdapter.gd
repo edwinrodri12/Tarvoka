@@ -110,7 +110,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V31 · cohetes esculpidos y estela progresiva")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V32 · orugas y suspensión en movimiento")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V8 silueta táctica de facción")
@@ -483,10 +483,13 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · V31 · SALVA DE COHETES REALISTA",14)
+        "G11 LANZADOR · V32 · ORUGAS Y SUSPENSIÓN",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
+    _add_paired(g11_controls,"V32: oruga izquierda en giro",
+        func(): _g11_hero_turn_v32(-1),
+        "V32: oruga derecha en giro",func(): _g11_hero_turn_v32(1))
     _add_paired(g11_controls,"Salva lenta x0.35",func(): _g11_play("attack",0.35),
         "Salva normal",func(): _g11_play("attack",1.0))
     _add_paired(g11_controls,"Ver enfriamiento",func(): _g11_play("cooldown",0.50),
@@ -555,13 +558,17 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,
         "V29: mover G11 en batalla",func(): _g11_battle_action_v29("move"),
         "V31: salva con cohetes y humo",func(): _g11_battle_action_v29("attack"))
+    _add_paired(g11_controls,"V32: giro táctico",
+        func(): _g11_battle_gear_v32("turn"),
+        "V32: desnivel y suspensión",
+        func(): _g11_battle_gear_v32("slope"))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V31: prueba cohetes con nariz cónica, cuatro aletas y estelas "
-        + "de humo que se expanden y desaparecen. El módulo tiene un "
-        + "retroceso visual mínimo por disparo. Revisa también las "
-        + "dos placas traseras eliminadas en V30 y los cuatro biomas. "
-        + "Sin cambiar la física de las órdenes, daño ni municiones.",12)
+        "V32: compara las doce ruedas, los dos trenes de oruga y los "
+        + "amortiguadores en avance, giro y desnivel. LOD8 conserva "
+        + "su oruga cerrada; LOD10 anima las doce ruedas existentes. "
+        + "El tren detallado conserva las 92 zapatas animadas, sin "
+        + "piezas adicionales ni cambios en movimientos o combates.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -618,6 +625,36 @@ func _g11_battle_mid_zoom_v28() -> void:
     if driver!=null and camera!=null:
         driver.update_now(camera,float(preview.size.y))
     status_label.text="G11 V28 · zoom intermedio: acabado adaptado a cámara"
+
+func _g11_hero_turn_v32(direction: int) -> void:
+    if not _g11_require_hero_v24() or not G11Rig.has_rig(model_root):
+        return
+    _g11_animation=""
+    G11Rig.pose(model_root,"move",0.47,Vector2i(
+        -1 if direction<0 else 1,-1))
+    status_label.text=("G11 V32 · giro: orugas a velocidades diferentes")
+
+func _g11_battle_gear_v32(kind: String) -> void:
+    if _role!="mlrs" or _g11_context_v25==null or (
+            kind not in ["turn","slope"]):
+        if _role=="mlrs":
+            status_label.text="G11 V32 · abre un bioma para revisar el tren de rodaje"
+        return
+    var controller:=_g11_context_v25.find_child(
+        "G11V29_AccionesBatalla",true,false) as G11ActionsV29
+    var model:=_g11_context_v25.find_child(
+        "Unidad3D_G11-H",true,false) as Node3D
+    if controller==null or model==null:
+        return
+    var source: Vector3=model.position+(
+        Vector3(-1.8,0.0,-1.4) if kind=="turn" else
+        Vector3(1.8,0.24,-1.5))
+    var heading: Vector2i=(
+        Vector2i(1,-1) if kind=="turn" else Vector2i(-1,-1))
+    if controller.play("G11-H","move",source,heading):
+        status_label.text=("G11 V32 · giro diferencial de orugas" if
+            kind=="turn" else
+            "G11 V32 · inclinación y ruedas en terreno desigual")
 
 func _g11_battle_action_v29(kind: String) -> void:
     if _role!="mlrs" or _g11_context_v25==null or (
