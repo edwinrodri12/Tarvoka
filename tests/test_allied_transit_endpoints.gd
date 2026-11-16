@@ -46,5 +46,19 @@ func _initialize() -> void:
     )
     assert(not short_budget.has(Vector2i(3, 0)), "Allied transit must not bypass movement budget")
     assert(corridor_allies == [Vector2i(1, 0), Vector2i(2, 0)], "Corridor allies must remain immutable")
+    # A friendly occupant cannot create a diagonal shortcut: movement remains orthogonal.
+    var diagonal_allies: Array[Vector2i] = [Vector2i(1, 0)]
+    var diagonal_blockers: Array[Vector2i] = [Vector2i(0, 1)]
+    var one_step: Dictionary = rules.reachable(
+        Vector2i(0, 0), 1, terrain, diagonal_blockers, "ground", false, diagonal_allies
+    )
+    assert(not one_step.has(Vector2i(1, 1)), "Allied transit must not grant diagonal movement")
+    var two_steps: Dictionary = rules.reachable(
+        Vector2i(0, 0), 2, terrain, diagonal_blockers, "ground", false, diagonal_allies
+    )
+    assert(two_steps.get(Vector2i(1, 1), -1) == 2, "Transit must charge both orthogonal steps")
+    assert(not two_steps.has(Vector2i(1, 0)), "Allied tile stays invalid as a destination")
+    assert(diagonal_allies == [Vector2i(1, 0)] and diagonal_blockers == [Vector2i(0, 1)],
+        "Diagonal test must preserve occupancy inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
