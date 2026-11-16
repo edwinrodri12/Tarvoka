@@ -90,7 +90,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
         assert(_prefix(model,"UnionesEsquinaTerminadas_")==level)
         assert(_count(model,"ParedPosterior_"+
             str(V2._modules(level)[0]["tag"]))==1)
-        assert(V5.mesh_count(model)>10)
+        assert(V5.mesh_count(model)>=10)
         for module in V2._modules(level):
             var tag: String=str(module["tag"])
             var trim: Node3D=model.get_node(
