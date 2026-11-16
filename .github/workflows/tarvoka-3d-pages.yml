@@ -249,21 +249,20 @@ jobs:
               '    else:\n        model.scale = Vector3.ONE * 0.83')
           # The V32 branch predates the shared pose_model API. Add only
           # the preview role callbacks that the G13 inspection controls need.
-          insert='''static func pose_model(role: String, model: Node3D, kind: String,
-                  progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
-              if role=="aa_mobile":
-                  return G13AA.pose(model,kind,progress,target_heading)
-              if role=="tank":
-                  return TankRig.pose(model,kind,progress,target_heading)
-              return false
-
-          static func restore_model_pose(role: String, model: Node3D) -> void:
-              if role=="aa_mobile":
-                  G13AA.restore(model)
-              elif role=="tank":
-                  TankRig.restore(model)
-
-          '''
+          insert = (
+              'static func pose_model(role: String, model: Node3D, kind: String,\n'
+              '        progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:\n'
+              '    if role=="aa_mobile":\n'
+              '        return G13AA.pose(model,kind,progress,target_heading)\n'
+              '    if role=="tank":\n'
+              '        return TankRig.pose(model,kind,progress,target_heading)\n'
+              '    return false\n\n'
+              'static func restore_model_pose(role: String, model: Node3D) -> void:\n'
+              '    if role=="aa_mobile":\n'
+              '        G13AA.restore(model)\n'
+              '    elif role=="tank":\n'
+              '        TankRig.restore(model)\n\n'
+          )
           replace_once('static func inspect_meshes(model: Node) -> int:',
               insert+'static func inspect_meshes(model: Node) -> int:')
           p.write_text(current)
