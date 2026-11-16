@@ -182,6 +182,9 @@ func _audit(level: int,faction: int,damage: int) -> void:
     else:
         assert(_count(side7,"CristalLateralV7_0_0")==2)
         assert(_count(side7,"CristalLateralV7_0_1")==2)
+        assert(_count(side7,"JambaMarcoLateralV7_0_0_-1")==2)
+        assert(_count(side7,"JambaMarcoLateralV7_0_0_1")==2)
+        assert(_count(side7,"SombraRecesoLateralV7_0_0")==2)
         assert(_count(side7,"CristalLateralV7_1_0")==
             (0 if level==1 else 1 if level==2 else 2))
         var expected_towers: int=0 if level==1 else 1 if level==2 else 2
@@ -295,7 +298,7 @@ func _run() -> void:
     assert(studio.infantry_roof_v6_toggle.button_pressed)
     assert(studio.infantry_side_v7_toggle.button_pressed)
     assert(studio.model_root.has_node(V7.STAGE_NAME))
-    assert(studio.infantry_camera_picker.item_count==5)
+    assert(studio.infantry_camera_picker.item_count==6)
     for level in range(1,4):
         studio.infantry_level_picker.select(level-1)
         studio._change_infantry_setting(level-1)
@@ -320,8 +323,8 @@ func _run() -> void:
         await _capture(studio,["","front_access",
             "training_side","rooftop"][i])
     await _capture(studio,"v6_roof_closeup")
-    studio.infantry_camera_picker.select(4)
-    studio._change_infantry_camera(4)
+    studio.infantry_camera_picker.select(5)
+    studio._change_infantry_camera(5)
     studio._zoom=1.25
     studio._update_camera()
     await _capture(studio,"v7_tower_cabins")
