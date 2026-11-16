@@ -235,7 +235,7 @@ static func _concrete_piers(model: Node3D,layer: Node3D,
                 Vector3(f.x,0.31,float(side)*4.294),
                 Vector3(0.40,0.33,0.06),
                 GASKET if damage<=1 else RUBBER_WORN,0.04)
-            retainer:=model.find_child(
+            var retainer:=model.find_child(
                 "RetenedorCubiertaEspigon_%s_%d" % [side,i],
                 true,false) as Node3D
             if retainer==null:
