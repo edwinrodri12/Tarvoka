@@ -1,0 +1,83 @@
+name: TARVOKA Repair Workshop V1 Native Godot Visual QA
+
+on:
+  push:
+    branches:
+      - feat/repair-workshop-3d-v1-20261115
+    paths:
+      - "scripts/ui/RepairWorkshop3DV1.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_repair_workshop_v1_gpu.gd"
+      - ".github/workflows/repair-workshop-v1-native-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/RepairWorkshop3DV1.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_repair_workshop_v1_gpu.gd"
+      - ".github/workflows/repair-workshop-v1-native-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  godot-visual-qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the exact approved HQ PNG assets for Studio import
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-android
+          persist-credentials: false
+      - name: Supply only the nine original HQ PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf source-android
+          test "$(find assets/buildings/hq_v15 -name '*.png' | wc -l)" -eq 9
+      - name: Install and import Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 130s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/workshop-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/workshop-import.log; then
+            echo "Godot workshop import validation failed" >&2
+            exit 1
+          fi
+      - name: Native Godot GPU geometry and interactive Studio QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 165s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_repair_workshop_v1_gpu.gd 2>&1 | tee /tmp/workshop-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/workshop-gpu.log; then
+            echo "Repair Workshop V1 native acceptance failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS WORKSHOP V1:' /tmp/workshop-gpu.log
+          for image in overview service_bays rear roof level_2 level_3 damage_1 damage_2 damage_3 damage_4 faction_6; do
+            test -s "artifacts/tarvoka_workshop_v1_${image}.png"
+          done
+      - name: Archive 11 real Godot screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Repair-Workshop-V1-11-Godot-Captures
+          retention-days: 30
+          if-no-files-found: error
+          path: artifacts/tarvoka_workshop_v1_*.png
