@@ -309,6 +309,23 @@ func _install_unified_studio_navigation() -> void:
             legacy_to_move.append(item)
     for item in legacy_to_move:
         item.reparent(studio_legacy_controls)
+    # Model metadata and faction emblems are optional inspection tools,
+    # not permanent chrome below the main animation bar.
+    if revision_label!=null:
+        revision_label.reparent(studio_advanced_content)
+    if detail_label!=null:
+        detail_label.reparent(studio_advanced_content)
+    if status_label!=null:
+        status_label.reparent(studio_quick_panel)
+    for item in column.get_children():
+        if item is Label and str((item as Label).text)==(
+                "VISTAS POR FACCIÓN · 8 ESCUDOS OFICIALES"):
+            (item as Label).reparent(studio_advanced_content)
+            break
+    if faction_view_label!=null:
+        faction_view_label.reparent(studio_advanced_content)
+    if faction_view_grid!=null:
+        faction_view_grid.reparent(studio_advanced_content)
     # Hide repeated introductory text; retain version/status diagnostics.
     for item in column.get_children():
         if item is Label:
@@ -420,6 +437,15 @@ func _refresh_unified_studio_navigation() -> void:
             "aa_mobile": label="G13 · Antiaéreo · diseño en progreso"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    if column!=null:
+        for node in column.get_children():
+            if node is Label:
+                var name_text: String=str((node as Label).text)
+                if name_text=="MODELO" or name_text=="FACCION" or (
+                        name_text.begins_with("Visor 3D del motor Godot:")) or (
+                        name_text.begins_with("El mismo modelo de Godot")):
+                    (node as Label).visible=false
     if building_picker!=null:
         building_picker.visible=building
     role_picker.visible=not building
@@ -590,13 +616,15 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
-        (node as Button).clip_text=compact
+        # All roles, not only the helicopter, must keep long revision and
+        # G13/APC names from forcing a 470px sidebar in Android landscape.
+        (node as Button).clip_text=true
     # The base Studio's long introduction occupied 130px of a 540px screen.
     # Quick instructions are already repeated in the A01 toolbar.
     for node in column.get_children():
         if node is Label and str((node as Label).text).begins_with(
                 "Visor 3D del motor Godot:"):
-            (node as Label).visible=not compact
+            (node as Label).visible=false
     if model_holder==null:
         return
     var frame: BoxContainer=model_holder.get_parent() as BoxContainer
