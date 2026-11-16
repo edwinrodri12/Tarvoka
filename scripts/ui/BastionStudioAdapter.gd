@@ -251,6 +251,9 @@ func _install_unified_studio_navigation() -> void:
     var moving: bool=false
     var legacy_to_move: Array[Control]=[]
     for item in column.get_children():
+        # Never sweep the category/building tools or model-specific panels.
+        if item==detail_label:
+            break
         if item is Label:
             var heading: String=str((item as Label).text)
             if heading in ["ROTAR Y ACERCAR","ANIMACION REAL",
@@ -258,7 +261,7 @@ func _install_unified_studio_navigation() -> void:
                 moving=true
             elif heading in ["FACCION","MODELO"]:
                 moving=false
-        if moving and item is Control and item!=detail_label and item!=status_label:
+        if moving and item is Control:
             legacy_to_move.append(item)
     for item in legacy_to_move:
         item.reparent(studio_legacy_controls)
