@@ -212,7 +212,7 @@ static func set_inspection(model: Node3D,side: int) -> bool:
             var bolt_side: int = -1 if i < 8 else 1
             if side!=0 and bolt_side==side:
                 var suppressed: Transform3D = restored
-                suppressed.basis = Basis().scaled(Vector3.ZERO)
+                suppressed.basis = Basis().scaled(Vector3.ONE*0.00001)
                 batch.multimesh.set_instance_transform(i,suppressed)
             else:
                 batch.multimesh.set_instance_transform(i,restored)
