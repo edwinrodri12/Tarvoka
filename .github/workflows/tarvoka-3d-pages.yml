@@ -226,7 +226,8 @@ jobs:
               current=current.replace(old,new,1)
           assert 'const G13AA = preload(' in previous
           assert 'const G13DetailV2 = preload(' in previous
-          replace_once('"fighter","destroyer"]', '"fighter","destroyer","aa_mobile"]')
+          replace_once('const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer"]',
+              'const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile"]')
           replace_once('const VisualStyle = preload(',
               'const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")\n'
               'const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")\n'
@@ -245,14 +246,25 @@ jobs:
               '        model.scale=Vector3.ONE*0.83\n'
               '        model.position.y=0.0\n'
               '    else:\n        model.scale = Vector3.ONE * 0.83')
-          # Preserve the G13 animation interface along with the model.
-          source_pose='        "attack_heli":\n            return AttackHelicopterV1.pose(model,kind,progress,target_heading)'
-          replace_once(source_pose,source_pose+
-              '\n        "aa_mobile":\n'
-              '            return G13AA.pose(model,kind,progress,target_heading)')
-          source_restore='        "attack_heli":\n            AttackHelicopterV1.restore(model)'
-          replace_once(source_restore,source_restore+
-              '\n        "aa_mobile":\n            G13AA.restore(model)')
+          # The V32 branch predates the shared pose_model API. Add only
+          # the preview role callbacks that the G13 inspection controls need.
+          insert='''static func pose_model(role: String, model: Node3D, kind: String,
+                  progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
+              if role=="aa_mobile":
+                  return G13AA.pose(model,kind,progress,target_heading)
+              if role=="tank":
+                  return TankRig.pose(model,kind,progress,target_heading)
+              return false
+
+          static func restore_model_pose(role: String, model: Node3D) -> void:
+              if role=="aa_mobile":
+                  G13AA.restore(model)
+              elif role=="tank":
+                  TankRig.restore(model)
+
+          '''
+          replace_once('static func inspect_meshes(model: Node) -> int:',
+              insert+'static func inspect_meshes(model: Node) -> int:')
           p.write_text(current)
           assert 'TankTrackAlignmentV31.apply(model)' in current
           assert 'G13DetailV2.apply(model' in current
