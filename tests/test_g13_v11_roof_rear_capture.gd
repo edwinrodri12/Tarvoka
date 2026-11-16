@@ -9,6 +9,7 @@ const Surface=preload("res://scripts/ui/G13SurfaceFinishV8.gd")
 const Wheels=preload("res://scripts/ui/G13WheelFinishV7.gd")
 const Silhouette=preload("res://scripts/ui/G13SilhouetteV10.gd")
 const CabRear=preload("res://scripts/ui/G13CabRearFinishV11.gd")
+const BodyFinish=preload("res://scripts/ui/G13BodyFinishV11.gd")
 const TOTAL:=18
 var saved:=0
 var failed:=0
@@ -95,7 +96,8 @@ func _run()->void:
         check(bool(unit.get_meta(Surface.FLAG,false)) and
             bool(unit.get_meta(Wheels.FLAG,false)) and
             bool(unit.get_meta(Silhouette.FLAG,false)) and
-            bool(unit.get_meta(CabRear.FLAG,false)),
+            bool(unit.get_meta(CabRear.FLAG,false)) and
+            bool(unit.get_meta(BodyFinish.FLAG,false)),
             "faction %d includes real V7 wheels, V8 materials, V10 shell and V11 roof/rear panels" % faction)
         colors[str(unit.get_meta("tarvoka_g13_surface_v8_faction_paint",""))]=true
         viewport.add_child(unit)
