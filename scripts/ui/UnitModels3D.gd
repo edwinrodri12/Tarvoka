@@ -14,6 +14,14 @@ const BastionRig = preload("res://scripts/ui/BastionVisualRig3D.gd")
 const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
+const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
+const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
+const AttackHelicopterRotorV3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
+const AttackHelicopterEnginesV4 = preload("res://scripts/ui/AttackHelicopterEnginesV4.gd")
+const AttackHelicopterLandingV5 = preload("res://scripts/ui/AttackHelicopterLandingV5.gd")
+const AttackHelicopterLandingFinishV6 = preload("res://scripts/ui/AttackHelicopterLandingFinishV6.gd")
+const AttackHelicopterReadabilityV7 = preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
+const AttackHelicopterSilhouetteV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -902,7 +910,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 if not G11Mobile.build(model,faction_paint_color(faction),art_level):
                     _mlrs(model)
         "attack_heli":
-            _helicopter(model)
+            if not (finish_enabled and art_level >= 13):
+                _helicopter(model)
         "fighter":
             _fighter(model)
         "destroyer":
@@ -919,6 +928,78 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     # G11 shares the launcher role with the tactical atlas without altering stats.
     if role == "mlrs" and finish_enabled and art_level >= 13:
         G11Art.build(model,faction_paint_color(faction))
+    if role == "attack_heli" and finish_enabled and art_level >= 13:
+        if AttackHelicopterV1.build(model,faction_paint_color(faction)):
+            if AttackHelicopterCabinV2.apply(model,faction_paint_color(faction)):
+                if AttackHelicopterRotorV3.apply(model,faction_paint_color(faction)):
+                    if AttackHelicopterEnginesV4.apply(model,faction_paint_color(faction)):
+                        if AttackHelicopterLandingV5.apply(model,faction_paint_color(faction)):
+                            if AttackHelicopterLandingFinishV6.apply(model,faction_paint_color(faction)):
+                                if AttackHelicopterReadabilityV7.apply(model,faction_paint_color(faction)):
+                                    AttackHelicopterSilhouetteV8.apply(model,faction_paint_color(faction))
+    # Studio-quality P06 is the actual sculpted V5 source, never the
+    # simplified P06 procedural prototype shown in the previous web release.
+    # Battle map LOD (art_level <= 10) stays lightweight by default.
+    if role == "apc" and finish_enabled and art_level >= 13:
+        var enamel: Color = faction_paint_color(faction)
+        if APCArtV1.apply(model,enamel):
+            if APCArmorV2.apply(model,enamel):
+                if APCFinishV3.apply(model,enamel):
+                    if APCDetailV5.apply(model,enamel):
+                        if art_level >= 14:
+                            if APCFinishV6.apply(model,enamel):
+                                if APCMachineGunV7.prepare(model):
+                                    APCWeaponAudioV8.prepare(model)
+                                if APCDamageV7.prepare(model):
+                                    if APCRearDesignV10.apply(model,enamel):
+                                        if APCExteriorV11.apply(model,enamel):
+                                            if APCTurretV12.apply(model,enamel):
+                                                if APCSurfaceV13.apply(model,enamel):
+                                                    if APCWheelV14.apply(model,enamel):
+                                                        if APCUndercarriageV15.apply(model,enamel):
+                                                            if APCJointFinishV16.apply(model,enamel):
+                                                                if APCContourV17.apply(model,enamel):
+                                                                    if APCWheelwellV18.apply(model,enamel):
+                                                                        if APCUnifiedFlankV19.apply(model,enamel):
+                                                                            if APCMicrodetailV20.apply(model,enamel):
+                                                                                if APCMaterialFinishV21.apply(model,enamel):
+                                                                                    if APCWeatherFinishV22.apply(model):
+                                                                                        if APCTireFinishV23.apply(model):
+                                                                                            if APCRubberArchV24.apply(model):
+                                                                                                APCClosedTiresV25.apply(model)
+    if role == "tank":
+        # Physical finish is authored on the neutral geometry BEFORE PBR and
+        # strictly independent of the fourteen faction-color mesh panels.
+        if finish_enabled:
+            TankFinish.apply(model)
+            TankProduction.apply(model)
+            # Shape overhaul: truly sealed armored hull and turret from all
+            # angles, not accessory detail layered over the first blockout.
+            TankSilhouette.apply(model)
+            TankArt.apply(model)
+            if art_level >= 7:
+                TankHero.apply(model)
+                if art_level >= 9:
+                    TankProductionV9.apply(model)
+                    if art_level >= 10:
+                        TankArmorV10.apply(model)
+        apply_faction_palette(model,faction)
+        TankSurface.apply_finish(model)
+        if finish_enabled and art_level >= 7:
+            # Reapply the authored high-resolution military UV armor coat after
+            # the generic five-family PBR pass; battle/Android/Web share it.
+            TankHero.apply_final_materials(model)
+            if art_level >= 9:
+                TankProductionV9.restore_materials(model)
+                if art_level >= 10:
+                    TankArmorV10.finish_materials(model)
+        TankDamage.prepare(model)
+    elif role == "apc":
+        apply_faction_palette(model,faction)
+        # Sculpted V5 owns its physical damage rig. Only the fallback P06
+        # prototype uses the original procedural 5-stage damage subsystem.
+        if not model.get_meta("tarvoka_apc_finish_v3",false) and not APCTacticalV8.has_model(model):
+            BastionDamage.prepare(model)
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
@@ -1003,6 +1084,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             if G11Mobile.has_model(model):
                 return G11Mobile.pose(model,kind,progress,target_heading)
             return G11Rig.pose(model,kind,progress,target_heading)
+        "attack_heli":
+            return AttackHelicopterV1.pose(model,kind,progress,target_heading)
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
@@ -1021,6 +1104,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Mobile.restore(model)
             else:
                 G11Rig.restore(model)
+        "attack_heli":
+            AttackHelicopterV1.restore(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
