@@ -3,8 +3,7 @@ class_name TarvokaHeadquartersEmblems3D
 
 # The eight already-approved shields, cropped from original project atlases.
 # Never invents a different faction insignia; uses shared materials and mesh.
-const FIRST = preload("res://assets/factions/official_first_four_atlas.webp")
-const LAST = preload("res://assets/factions/official_last_four_atlas.webp")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
 static var _textures: Dictionary = {}
 static var _materials: Dictionary = {}
 static var _shield_mesh: ArrayMesh
@@ -14,15 +13,15 @@ static func emblem_texture(faction: int) -> Texture2D:
         return null
     if _textures.has(faction):
         return _textures[faction]
-    var atlas: Texture2D = FIRST if faction < 4 else LAST
-    var source: Image = atlas.get_image()
+    # Shared official atlas loader works before Godot's editor import as
+    # well as on a packaged Android device; avoid direct WEBP preloads.
+    var approved: Texture2D = Style.emblem_texture(faction)
+    if approved == null:
+        return null
+    var source: Image = approved.get_image()
     if source == null or source.is_empty():
         return null
-    var rectangle := Rect2i((faction % 4)*160,0,160,160)
-    if source.get_width() < rectangle.end.x or source.get_height() < rectangle.end.y:
-        return null
-    var cut: Image = source.get_region(rectangle)
-    var tex: ImageTexture = ImageTexture.create_from_image(cut)
+    var tex: ImageTexture = ImageTexture.create_from_image(source)
     _textures[faction] = tex
     return tex
 
