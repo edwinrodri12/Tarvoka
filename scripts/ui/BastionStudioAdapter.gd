@@ -237,9 +237,19 @@ func _install_unified_studio_navigation() -> void:
     studio_versions_content.name="G09_ComparacionAvanzada"
     studio_versions_fold.add_child(studio_versions_content)
     studio_versions_content.visible=false
+    # OptionButton extends Button in Godot. NEVER move selectors to this
+    # hidden comparison panel: doing so breaks selection and role_picker's
+    # parent, which the other studio modules depend on.
     for item in column.get_children():
-        if item is Button and item!=studio_quick_panel:
-            (item as Control).reparent(studio_versions_content)
+        if item is Button and not item is OptionButton:
+            var caption: String=(item as Button).text
+            if caption.begins_with("V") or caption.begins_with("NUEVO") or (
+                    caption.begins_with("COMPARAR")) or caption.begins_with(
+                    "MODO ARCILLA"):
+                (item as Control).reparent(studio_versions_content)
+    assert(role_picker.get_parent()==column)
+    assert(category_picker.get_parent()==column)
+    assert(faction_picker.get_parent()==column)
 
     studio_advanced_group=VBoxContainer.new()
     studio_advanced_group.name="Estudio3D_DetallesPorUnidad"
