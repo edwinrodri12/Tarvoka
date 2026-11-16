@@ -2,8 +2,10 @@ extends RefCounted
 class_name TarvokaG11RearUndercarriageV30
 
 # V30: correct the square rear-underbody clipping reported in the G11.
-# Both hero and Android LODs reuse their ORIGINAL mesh instances.
-# No extra nodes, no team color, track, wheel or battle rules changes.
+# The legacy underbody slab is redundant because the approved V2 octagonal
+# armored hull is already closed. Physically DELETE the slab; never leave an
+# overlapping replacement plate. Refit original stabilizer feet and mobile
+# hull instead. No team colors, wheel meshes or gameplay rules change.
 const FLAG := "tarvoka_g11_v30_rear_track_clearance"
 const HERO_TRACK_X := 0.79
 const HERO_TRACK_HALF_X := 0.142
@@ -15,7 +17,6 @@ const FOOT_MAX_HALF_X := 0.135
 const FOOT_Z := 1.52
 const SUPPORT_X := 0.405
 const SUPPORT_HALF_X := 0.070
-const HERO_BELLY_HALF_X := 0.580
 const MOBILE_HULL_HALF_X := 0.620
 
 static func _tri(st: SurfaceTool,a: Vector3,b: Vector3,c: Vector3) -> void:
@@ -62,13 +63,6 @@ static func _hero_foot() -> ArrayMesh:
         _octagon(0.135,0.132,0.027,-0.050),
         _octagon(0.115,0.118,0.024,0.050))
 
-static func _belly() -> ArrayMesh:
-    # Local frame of G11_ProteccionInferior, centered at z=-0.10.
-    # Tapered at the back instead of a large under-track rectangular slab.
-    return _wedge(
-        _octagon(0.550,1.345,0.085,-0.110),
-        _octagon(HERO_BELLY_HALF_X,1.365,0.080,0.110))
-
 static func _mobile_hull() -> ArrayMesh:
     # Local frame of ChasisLanzacohetes (y=.68, z=.02).
     # Taper and narrow the former 1.45m-wide rectangular slab;
@@ -79,8 +73,7 @@ static func _mobile_hull() -> ArrayMesh:
 
 static func hero_clearance() -> float:
     return HERO_TRACK_X-HERO_TRACK_HALF_X-maxf(
-        maxf(FOOT_X+FOOT_MAX_HALF_X,
-            SUPPORT_X+SUPPORT_HALF_X),HERO_BELLY_HALF_X)
+        FOOT_X+FOOT_MAX_HALF_X,SUPPORT_X+SUPPORT_HALF_X)
 
 static func mobile_clearance() -> float:
     return MOBILE_TRACK_X-MOBILE_TRACK_HALF_X-MOBILE_HULL_HALF_X
@@ -91,6 +84,11 @@ static func apply_hero(model: Node3D) -> bool:
         return false
     var belly:=_part(model,"G11_ProteccionInferior")
     if belly==null or not belly.mesh is BoxMesh:
+        return false
+    # The later V2 sculpt already contains a sealed octagonal central hull.
+    # Removing the old lower slab must not create a hole.
+    var closed_hull:=_part(model,"G11V2_CascoOctogonalCerrado")
+    if closed_hull==null or not closed_hull.mesh is ArrayMesh:
         return false
     var supports: Array[MeshInstance3D]=[]
     var feet: Array[MeshInstance3D]=[]
@@ -104,8 +102,11 @@ static func apply_hero(model: Node3D) -> bool:
         feet.append(foot)
     if hero_clearance()<MIN_CLEARANCE:
         return false
-    # Atomic after verifying all four braces and the original underbody.
-    belly.mesh=_belly()
+    # Atomic after verifying both braces, both feet and the sealed shell.
+    # Remove the actual redundant rectangular UNDERBODY, rather than
+    # replacing it with a slightly smaller overlapping polygon.
+    belly.get_parent().remove_child(belly)
+    belly.free()
     for i in range(2):
         var side: float=-1.0 if i==0 else 1.0
         var support:=supports[i]
@@ -119,7 +120,8 @@ static func apply_hero(model: Node3D) -> bool:
         feet[i].rotation_degrees=Vector3.ZERO
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_g11_v30_rear_clearance_m",hero_clearance())
-    model.set_meta("tarvoka_g11_v30_replaced_original_parts",5)
+    model.set_meta("tarvoka_g11_v30_replaced_original_parts",4)
+    model.set_meta("tarvoka_g11_v30_redundant_underbody_removed",true)
     return true
 
 static func apply_mobile(model: Node3D) -> bool:
