@@ -36,6 +36,8 @@ const G11JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
 const G11JointsV23 = preload("res://scripts/ui/G11JointFinishV23.gd")
 const G11TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
+const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
+const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -68,6 +70,8 @@ var _g11_fx_clock: float = 0.0
 var _g11_light_v23: int = 0
 var _g11_lamps_v23: Array[OmniLight3D] = []
 var _g11_preview_lod_v24: int = 13
+var _g11_context_v25: Node3D = null
+var _g11_context_biome_v25: String = ""
 
 func _ready() -> void:
     super._ready()
@@ -77,7 +81,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V24 legibilidad táctica")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V25 batalla real y biomas")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -186,7 +190,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · ESCALA REAL DE PARTIDA V24",14)
+        "G11 LANZADOR · CONTEXTO DE BATALLA V25",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -245,13 +249,68 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"V24: escala juego cercana",func(): _g11_preview_v24(10),
         "V24: escala juego lejana",func(): _g11_preview_v24(8))
     _button(g11_controls,"V24: volver a escultura 3D",func(): _g11_preview_v24(13))
+    _add_paired(g11_controls,"V25: valle con unidades",func(): _g11_battle_context_v25("temperate"),
+        "V25: nieve con unidades",func(): _g11_battle_context_v25("winter"))
+    _add_paired(g11_controls,"V25: cañón rocoso",func(): _g11_battle_context_v25("canyon"),
+        "V25: delta costero",func(): _g11_battle_context_v25("coastal"))
+    _add_paired(g11_controls,"V25: acercar batalla",func(): _g11_battle_zoom_v25(true),
+        "V25: alejar batalla",func(): _g11_battle_zoom_v25(false))
+    _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V24: compara la unidad REAL que aparece en combate (LOD 10/8). "
-        + "Orugas redondeadas y ruedas encajadas sin duplicaciones, con "
-        + "blindaje y 12 tubos intactos. Volver restaura V23 completo.",12)
+        "V25: visualiza el mapa táctico REAL con G11, tanques, P06 e "
+        + "infantería en cuatro biomas. Acerca o aleja: las orugas "
+        + "cambian LOD automáticamente, sin modificar combate ni guardados.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _g11_clear_battle_context_v25() -> void:
+    if _g11_context_v25!=null and is_instance_valid(_g11_context_v25):
+        if _g11_context_v25.get_parent()!=null:
+            _g11_context_v25.get_parent().remove_child(_g11_context_v25)
+        _g11_context_v25.queue_free()
+    _g11_context_v25=null
+    _g11_context_biome_v25=""
+    if model_root!=null and is_instance_valid(model_root):
+        model_root.visible=true
+
+func _g11_battle_context_v25(biome: String) -> void:
+    if _role!="mlrs" or not biome in [
+            "temperate","winter","canyon","coastal"]:
+        return
+    _g11_animation=""
+    _g11_clear_battle_context_v25()
+    var context: Node3D=G11ContextV25.build_scene(_faction,biome)
+    if context==null:
+        status_label.text="G11 V25 · no se pudo cargar el mapa de batalla"
+        return
+    _g11_context_v25=context
+    _g11_context_biome_v25=biome
+    if model_root!=null:
+        model_root.visible=false
+    preview.add_child(context)
+    _zoom=0.85
+    _yaw=55.0
+    _update_camera()
+    status_label.text="G11 V25 · mapa de batalla con unidades reales · "+biome
+
+func _g11_battle_zoom_v25(near: bool) -> void:
+    if _role!="mlrs" or _g11_context_v25==null:
+        return
+    _zoom=2.35 if near else 0.85
+    _update_camera()
+    var driver := _g11_context_v25.find_child(
+        "G11V25_LOD_Camara",true,false) as G11LODDriverV25
+    if driver!=null and camera!=null:
+        driver.update_now(camera,float(preview.size.y))
+    status_label.text=("G11 V25 · batalla cercana, orugas con ruedas"
+        if near else "G11 V25 · mapa alejado, silueta optimizada")
+
+func _g11_close_context_v25() -> void:
+    if _role!="mlrs":
+        return
+    _g11_clear_battle_context_v25()
+    _g11_preview_v24(13)
 
 func _g11_preview_v24(level: int) -> void:
     if _role!="mlrs" or (level!=8 and level!=10 and level!=13):
@@ -270,6 +329,8 @@ func _g11_preview_v24(level: int) -> void:
 func _g11_require_hero_v24() -> bool:
     if _role!="mlrs":
         return false
+    if _g11_context_v25!=null:
+        _g11_clear_battle_context_v25()
     if _g11_preview_lod_v24!=13:
         _g11_preview_lod_v24=13
         _display_role("mlrs")
@@ -510,6 +571,14 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if _role=="mlrs" and _g11_context_v25!=null and camera!=null:
+        var center := Vector3(0,0.8,0)
+        var facing: Vector3=(camera.position-center).normalized()
+        if facing.length()<0.1:
+            facing=Vector3(0.65,0.65,0.4).normalized()
+        camera.position=center+facing*43.0
+        camera.look_at(center,Vector3.UP)
+        camera.size=28.0/maxf(0.60,_zoom)
     if _role=="apc" and _p06_fleet!=null and camera!=null:
         # Orthographic view needs size rather than moving the camera closer.
         var full: float=13.4 if _p06_fleet_count<=8 else (
@@ -561,6 +630,8 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    if _g11_context_v25!=null:
+        _g11_clear_battle_context_v25()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
