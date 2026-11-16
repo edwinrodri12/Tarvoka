@@ -6,6 +6,7 @@ extends SceneTree
 # the helicopter or changing any original tank/APC/launcher controls.
 const V8=preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const V10=preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
+const V11=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 var failures: int=0
 var images: int=0
 
@@ -63,8 +64,8 @@ func _run() -> void:
     var advanced: VBoxContainer=studio.get("heli_controls") as VBoxContainer
     var model_holder: SubViewportContainer=studio.get("model_holder") as SubViewportContainer
     var camera: Camera3D=studio.get("camera") as Camera3D
-    _check(model!=null and V8.has_model(model) and V10.has_model(model),
-        "actual full V10 helicopter is loaded, not low-poly proxy")
+    _check(model!=null and V8.has_model(model) and V10.has_model(model) and V11.has_model(model),
+        "actual full V11 helicopter is loaded, not low-poly proxy")
     if model==null or quick==null or advanced==null or model_holder==null:
         _check(false,"required UI nodes must exist before interactive mobile tests")
         studio.queue_free()
@@ -131,6 +132,21 @@ func _run() -> void:
     studio.call("_heli_toggle_v10")
     _check(bool(model.get_meta(V10.ENABLED,false)),
         "V10 PBR returns without duplicating model or losing faction colors")
+    var tail_root: Node3D=model.find_child(V11.ROOT,true,false) as Node3D
+    _check(tail_root!=null and tail_root.visible,
+        "V11 real gearbox and shaft visible in the same Godot Studio")
+    studio.call("_heli_toggle_v11")
+    _check(tail_root!=null and not tail_root.visible
+        and not bool(model.get_meta(V11.ENABLED,true)),
+        "V11 toggle truly hides physical tail + launcher geometry")
+    studio.call("_heli_toggle_v11")
+    _check(tail_root!=null and tail_root.visible
+        and bool(model.get_meta(V11.ENABLED,false)),
+        "V11 compare restores all original tail and launcher nodes")
+    studio.call("_heli_inspect_focus",153.0,20.0,2.48,
+        Vector3(0.15,1.39,2.60))
+    _check(studio.get("_heli_focus_local")==Vector3(0.15,1.39,2.60),
+        "V11 tail macro camera focuses on the real gearbox")
     var rim: DirectionalLight3D=studio.get("_heli_v10_rim_light")
     _check(rim!=null and rim.visible and not rim.shadow_enabled,
         "dedicated cool fill light affects only A01 without extra WebGL shadows")
@@ -174,10 +190,14 @@ func _run() -> void:
     _check(rim!=null and not rim.visible,
         "V10 extra light disabled when viewing Bastion or any other category")
     var shared_picker: OptionButton=studio.get("role_picker") as OptionButton
-    _check(shared_picker!=null and
-        shared_picker.get_item_text(5).contains("V10")
-        and not shared_picker.clip_text,
-        "Bastion restores full original model labels and un-clipped selectors")
+    var has_v11_label: bool=false
+    if shared_picker!=null:
+        for idx in range(shared_picker.item_count):
+            if shared_picker.get_item_text(idx).contains("Helicóptero A01") and (
+                    shared_picker.get_item_text(idx).contains("V11")):
+                has_v11_label=true
+    _check(shared_picker!=null and has_v11_label and shared_picker.clip_text,
+        "unified model selector includes A01 V11 with Android-safe clipping")
     _check(studio.get("model_root")!=null,
         "old Bastion inspector still loads after A01")
     studio.queue_free()
