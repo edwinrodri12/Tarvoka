@@ -1,4 +1,4 @@
-name: TARVOKA G13 V11 finished cab and turret 3D QA
+name: TARVOKA G13 V11 cab roof rear and turret native QA
 
 on:
   push:
@@ -68,6 +68,7 @@ jobs:
             tests/test_g13_surface_v8.gd
             tests/test_g13_silhouette_v10.gd
             tests/test_g13_body_finish_v11.gd
+            tests/test_g13_cab_rear_v11.gd
             tests/test_g13_inspection_studio.gd
           )
           for script in "${scripts[@]}"; do
@@ -88,7 +89,7 @@ jobs:
             }
             echo "::endgroup::"
           done
-      - name: Capture G13 V11 18-frame sculpture and firing-angle gallery
+      - name: Capture G13 V11 18-frame full roof/rear/body sculpture gallery
         shell: bash
         run: |
           set -euo pipefail
@@ -98,7 +99,7 @@ jobs:
             env LIBGL_ALWAYS_SOFTWARE=1 G13_V11_CAPTURE_DIR=/tmp/g13-v11-gallery \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy \
-            --path . --script res://tests/test_g13_v11_finish_capture.gd 2>&1 | tee /tmp/g13-capture.log
+            --path . --script res://tests/test_g13_v11_roof_rear_capture.gd 2>&1 | tee /tmp/g13-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-capture.log; then exit 1; fi
           grep -F 'PASS G13 V11 CAPTURE:' /tmp/g13-capture.log
           test "$(find /tmp/g13-v11-gallery -name '*.png' | wc -l)" -eq 18
@@ -106,7 +107,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: g13-v11-finished-cab-turret-18-actual-godot-frames
+          name: g13-v11-closed-roof-rear-18-native-godot-frames
           path: /tmp/g13-v11-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
