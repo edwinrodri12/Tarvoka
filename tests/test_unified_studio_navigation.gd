@@ -64,6 +64,23 @@ func _run() -> void:
         _check(not history.is_ancestor_of(faction), "faction dropdown is not hidden in history")
     var frame: Control = studio.get("model_holder") as Control
     _check(frame != null and frame.is_visible_in_tree(), "native 3D viewport remains visible")
+    # Exercise the actual shared Godot model switch. If the legacy tank
+    # renders instead of the final approved G09, the V31 marker is absent.
+    studio.call("_display_role", "tank")
+    await process_frame
+    var tank: Node3D = studio.get("model_root") as Node3D
+    _check(tank != null and str(studio.get("_role")) == "tank",
+        "tank selected through unified scene")
+    if tank != null:
+        _check(bool(tank.get_meta("tarvoka_mbt_tracks_inboard_v31",false)),
+            "native unified G09 has approved V31 geometry (V32 rig)")
+    if role != null and category != null and faction != null:
+        _check(role.get_parent() == category.get_parent() and
+            role.get_parent() == faction.get_parent() and role.is_visible_in_tree(),
+            "model selector remains in visible main panel after tank selection")
+    studio.call("_display_role", "apc")
+    await process_frame
+    _check(str(studio.get("_role")) == "apc", "switches back to Bastion cleanly")
     studio.queue_free()
     await process_frame
     if failures > 0:
