@@ -82,6 +82,7 @@ on:
       - "scripts/ui/UnitModels3D.gd"
       - "tests/test_g11_final_lock_g13_v1.gd"
       - "tests/test_g13_native_v1_capture.gd"
+      - "tests/test_g13_studio_web_v1.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -180,6 +181,8 @@ jobs:
           done
           test -s hq-android-v15/tests/test_bastion_studio_web_ui.gd
           cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
+          test -s hq-android-v15/tests/test_g13_studio_web_v1.gd
+          cp hq-android-v15/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
           test -s scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
@@ -621,6 +624,17 @@ jobs:
             echo "Bastion Web UI regression"; exit 1
           fi
           grep -F 'PASS BASTION V25 LIVE WEB STUDIO:' /tmp/bastion-studio-smoke.log
+          # The new G13 must actually be selectable in the SAME native
+          # combined Studio, with its radar and twin gun mechanisms moving.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_studio_web_v1.gd \
+            2>&1 | tee /tmp/g13-studio-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/g13-studio-smoke.log; then
+            echo "G13 visual 3D Studio selection regression"; exit 1
+          fi
+          grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-studio-smoke.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
