@@ -1,0 +1,44 @@
+name: TARVOKA experimental antiarmor and field engineer repair v1.0
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/RoleSpecializationV08.gd"
+      - "tests/test_role_specialization_v08.gd"
+      - ".github/workflows/role-specialization-v08.yml"
+  workflow_dispatch:
+
+jobs:
+  role_specializations:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Test real-turn antiarmor strike and engineer repair experiments
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 520s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_role_specialization_v08.gd \
+            2>&1 | tee /tmp/tarvoka-role-specialization-v08.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-role-specialization-v08.log; then
+            echo 'Experimental role specialization failed'; exit 1
+          fi
+          grep -Fq 'PASS role specialization v08:' /tmp/tarvoka-role-specialization-v08.log
+      - name: Archive combat and recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-role-specialization-v08
+          path: /tmp/tarvoka-role-specialization-v08.log
+          retention-days: 30
+          if-no-files-found: ignore
