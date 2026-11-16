@@ -37,3 +37,37 @@ Estos son **conceptos de evolución**, no niveles ni habilidades ya aprobadas o 
 1. Revisar en el visor 3D las ocho facciones y vistas desde arriba, abajo, frontal, costados y trasera; localizar solapes o huecos reales.
 2. Refinar geometría de cabina, torreta, radar, cañones y ruedas sin elevar innecesariamente el coste Android.
 3. Cuando la escultura sea reconocible y esté aprobada, preparar LOD8/LOD10 y sprites con rango visible para el motor; **no activarlo en partidas** hasta validar el sistema antiaéreo y las cinco clases existentes.
+
+
+## V4 — refinamiento del disparo a tierra y aire
+
+La versión principal de TARVOKA ya contaba con las poses **V3**
+`aim_ground`, `attack_ground`, `aim_air` y `attack_air`.
+V4 **conserva esas poses y los acabados del G13 Detail V2** y
+mejora visualmente el disparo sin crear un sistema duplicado.
+
+- **Terrestre:** cañones casi horizontales (~7°), ráfaga de
+  diez fases por demostración y radar estabilizado al frente,
+  contra infantería y vehículos ligeros.
+- **Aéreo:** cañones elevados (~42°), ráfaga de dieciséis fases,
+  seguimiento visible de radar; la meta visual son drones,
+  helicópteros y aeronaves.
+- Se reutilizan ambos destellos, humos, cañones, bocas y sus
+  nodos V3. `G13GroundAirFinishV4.gd` mejora el material
+  emisivo de los destellos, la transparencia del humo y añade
+  hasta 2,5 cm de retroceso reversible en cada cañón activo;
+  **cero mallas, bocas o efectos duplicados**.
+- El mismo Estudio 3D incorpora los controles
+  «V4 · Ataque terrestre» y «V4 · Ataque antiaéreo»,
+  cada uno con una demostración animada de 1,6 segundos y
+  reposo automático. Cambiar de unidad cancela la animación.
+- Pruebas Godot 4.3: ocho facciones, modelo ligero y detallado,
+  materiales, correcciones de la V2, poses de V3, integridad
+  del G11 definitivo y ocho capturas reales de ambos tipos
+  de disparo.
+
+**Pendiente de jugabilidad:** G13 continúa siendo un prototipo
+visual en el Estudio. No se activa en `BattleSession` ni se
+modifican alcance, daño, visibilidad, munición, economía o IA.
+Los rangos terrestres 1–2 y aéreos 1–3 casillas son una propuesta
+para cuando se implemente y se pruebe el combate antiaéreo.
