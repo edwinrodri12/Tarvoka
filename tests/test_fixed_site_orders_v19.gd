@@ -100,7 +100,7 @@ static func _camp_turns_and_saves(size: Vector2i) -> void:
     data["camps"].append(data["camps"][0].duplicate(true))
     assert(Orders.decode(JSON.stringify(data)).is_empty())
     data = JSON.parse_string(raw)
-    data["world"] = "broken old game"
+    data["world"] = "{}"
     assert(Orders.decode(JSON.stringify(data)).is_empty())
     assert(Orders.decode(Save.encode(session["world"]["state"])).is_empty())
     # Turns and money remain authoritative and camps survive untouched.
