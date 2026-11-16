@@ -78,7 +78,10 @@ static func _replace_outer(core: MeshInstance3D,label: String,
     if original==null:
         return null
     var inner:=BoxMesh.new()
-    inner.size=Vector3(extent.x*0.73,extent.y*0.69,extent.z*0.73)
+    # Keep almost the full sealed cabin mass behind the chamfered skin.
+    # V10.0 shrank this to 73% and exposed an unsightly roof-side void.
+    # These dimensions remain within the faceted upper envelope.
+    inner.size=Vector3(extent.x*0.90,extent.y*0.84,extent.z*0.86)
     core.mesh=inner
     var shell:=MeshInstance3D.new()
     shell.name=label
