@@ -98,6 +98,14 @@ static func _capture_then_produce(size: Vector2i,map_id: int,site: Dictionary) -
     var restored: Dictionary = Lab.decode(first_snapshot)
     assert(restored.get("valid",false))
     assert(restored["producer_holds"] == world["producer_holds"])
+    if restored["layout"]["sites"] != world["layout"]["sites"]:
+        for index in range(world["layout"]["sites"].size()):
+            if restored["layout"]["sites"][index] != world["layout"]["sites"][index]:
+                print("SAVETEST_LAYOUT_DIFF kind=%s expected=%s actual=%s" % [
+                    str(site["kind"]),str(world["layout"]["sites"][index]),
+                    str(restored["layout"]["sites"][index])
+                ])
+                break
     assert(restored["layout"]["sites"] == world["layout"]["sites"])
     world = restored
     var second: Dictionary = Lab.end_turn(world)
