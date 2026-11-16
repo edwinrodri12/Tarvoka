@@ -13,7 +13,7 @@ const RETAINER_X := 0.0257
 const RETAINER_OUTER := 0.0165
 const RETAINER_INNER := 0.0120
 const RETAINER_THICKNESS := 0.0018
-const PIN_HALF_LENGTH := 0.028
+const PIN_HALF_LENGTH := 0.0265
 const PIN_SHOULDER_RADIUS := 0.014
 const TRACK_OUTER_BOUND_X := 0.932
 const MOVING_HINGE_ROOT_X := 0.790
@@ -55,15 +55,15 @@ static func _axle() -> ArrayMesh:
         return _pin_mesh
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
-    # A single sealed, machined axle; integral shoulders extend 4 mm past
+    # A single sealed, machined axle; integral shoulders extend 1.5 mm past
     # the fork ears but remain inside the existing V18 track sidewall.
     var steps: Array[Vector2] = [
         Vector2(-PIN_HALF_LENGTH,0.0),
         Vector2(-PIN_HALF_LENGTH,0.010),
-        Vector2(-0.026,PIN_SHOULDER_RADIUS),
-        Vector2(-0.023,0.010),
-        Vector2(0.023,0.010),
-        Vector2(0.026,PIN_SHOULDER_RADIUS),
+        Vector2(-0.025,PIN_SHOULDER_RADIUS),
+        Vector2(-0.022,0.010),
+        Vector2(0.022,0.010),
+        Vector2(0.025,PIN_SHOULDER_RADIUS),
         Vector2(PIN_HALF_LENGTH,0.010),
         Vector2(PIN_HALF_LENGTH,0.0)
     ]
@@ -95,7 +95,7 @@ static func apply(model: Node3D) -> bool:
         return false
     # Preserve true clearance in X even on the right outer track wall.
     if MOVING_HINGE_ROOT_X+LOWER_OFFSET_X+PIN_HALF_LENGTH >= (
-            TRACK_OUTER_BOUND_X+0.002):
+            TRACK_OUTER_BOUND_X):
         return false
     if MOVING_HINGE_ROOT_X+LOWER_OFFSET_X+RETAINER_X+(
             RETAINER_THICKNESS*0.5) >= TRACK_OUTER_BOUND_X:
