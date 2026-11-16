@@ -97,6 +97,7 @@ var _heli_mobile_expanded: bool=false
 var _heli_frame_reflows: int=0
 var g11_controls: VBoxContainer
 var g13_controls: VBoxContainer
+var _g13_v4_tween: Tween
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
 var _g11_playback_speed: float = 1.0
@@ -689,11 +690,11 @@ func _install_p06_controls() -> void:
 func _install_g13_controls() -> void:
     var column:=role_picker.get_parent() as VBoxContainer
     g13_controls=VBoxContainer.new()
-    g13_controls.name="G13_AntiaereoMovil_V1_EstudioReal"
+    g13_controls.name="G13_AntiaereoMovil_V4_DosTiposDeAtaque"
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 ANTIAÉREO MÓVIL · PRIMER MODELO 3D",14)
+        "G13 ANTIAÉREO MÓVIL · ATAQUES TIERRA/AIRE V4",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -703,17 +704,50 @@ func _install_g13_controls() -> void:
         func(): _g13_demo_v1("move",0.46),
         "Restaurar posición",
         func(): _g13_demo_v1("idle",1.0))
+    _add_paired(g13_controls,"V4 · Ataque terrestre",
+        func(): _g13_attack_v4("attack_ground"),
+        "V4 · Ataque antiaéreo",
+        func(): _g13_attack_v4("attack_air"))
     _title(g13_controls,
-        "Primer bloque de diseño: casco blindado compacto 4×4, "
-        + "dos cañones de defensa aérea, radar y ocho pinturas de facción. "
-        + "Solo sirve para inspeccionar el 3D; no crea una nueva "
-        + "unidad jugable ni habilita todavía ataques a aeronaves.",12)
+        "V4: el mismo G13 dispara a tierra con cañones bajos y "
+        + "ráfagas más espaciadas, o al aire con elevación alta, "
+        + "radar de seguimiento y cadencia más rápida. Destellos, "
+        + "humo transparente y retroceso mínimo de los dos cañones. "
+        + "Es una simulación visual: aún no ejecuta daño en batalla.",12)
     g13_controls.visible=false
+
+func _g13_attack_v4(kind: String) -> void:
+    if _role!="aa_mobile" or model_root==null or (
+            kind not in ["attack_ground","attack_air"]):
+        return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
+    var art: Node3D=model_root
+    P06Models.restore_model_pose("aa_mobile",art)
+    _g13_v4_tween=art.create_tween()
+    _g13_v4_tween.tween_method(
+        Callable(self,"_g13_v4_tick").bind(art,kind),0.0,0.99,1.60)
+    _g13_v4_tween.tween_callback(
+        Callable(self,"_g13_v4_done").bind(art))
+    status_label.text=(
+        "G13 V4 · simulación de ataque terrestre: cañones a baja elevación"
+        if kind=="attack_ground" else
+        "G13 V4 · simulación antiaérea: radar y cañones elevados")
+
+func _g13_v4_tick(progress: float,art: Node3D,kind: String) -> void:
+    if is_instance_valid(art):
+        P06Models.pose_model("aa_mobile",art,kind,progress)
+
+func _g13_v4_done(art: Node3D) -> void:
+    if is_instance_valid(art):
+        P06Models.restore_model_pose("aa_mobile",art)
 
 func _g13_demo_v1(kind: String,progress: float) -> void:
     if _role!="aa_mobile" or model_root==null or (
             not P06Models.supports("aa_mobile")):
         return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
     if kind=="idle":
         P06Models.restore_model_pose("aa_mobile",model_root)
     elif not P06Models.pose_model("aa_mobile",model_root,kind,progress,
@@ -1331,6 +1365,8 @@ func _display_role(role: String) -> void:
         _v31_preview = true
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
