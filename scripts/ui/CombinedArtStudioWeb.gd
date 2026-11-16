@@ -1394,7 +1394,8 @@ func _add_infantry_controls() -> void:
     infantry_camera_picker.custom_minimum_size.y=49
     for label in ["Conjunto completo","Entrada y patio de formación",
             "Pista lateral de entrenamiento","Cubiertas y evolución arquitectónica",
-            "Fachadas laterales y cabinas de vigilancia"]:
+            "Fachadas laterales y cabinas de vigilancia",
+            "Torre de vigilancia · primer plano"]:
         infantry_camera_picker.add_item(label)
     infantry_camera_picker.select(0)
     infantry_camera_picker.item_selected.connect(_change_infantry_camera)
@@ -1447,7 +1448,7 @@ func _change_infantry_setting(_index: int) -> void:
         _display_infantry_barracks()
 
 func _change_infantry_camera(index: int) -> void:
-    _infantry_camera_view=clampi(index,0,4)
+    _infantry_camera_view=clampi(index,0,5)
     if _role=="infantry_barracks":
         _apply_infantry_camera()
 
@@ -1457,13 +1458,15 @@ func _apply_infantry_camera() -> void:
     var points: Array[Vector3]=[
         Vector3(0,2.5,0),Vector3(0,1.25,-3.4),
         Vector3(-6.05,0.48,-3.45),Vector3(0,1.5,0),
-        Vector3(0,2.30,-0.75)]
+        Vector3(0,2.30,-0.75),
+        Vector3(5.67,4.45,-2.77)]
     var offsets: Array[Vector3]=[
         Vector3(-17.1,11.6,-17.7),
         Vector3(-8.2,5.2,-11.3),
         Vector3(-2.65,4.15,-4.30),
         Vector3(-0.02,28.0,-0.02),
-        Vector3(0.25,8.1,-10.3)]
+        Vector3(0.25,8.1,-10.3),
+        Vector3(4.7,3.35,-5.20)]
     if _infantry_camera_view==2:
         # N3's full-length track is now alongside the WEST wing; N1/N2
         # retain their short front-side obstacle course.
@@ -1481,8 +1484,21 @@ func _apply_infantry_camera() -> void:
             points[4]=Vector3(0.50,2.75,0.30)
             offsets[4]=Vector3(8.3,6.3,-8.7)
         else:
-            points[4]=Vector3(0,2.35,-0.52)
-            offsets[4]=Vector3(0.3,8.5,-10.4)
+            # Camera INSIDE the U, facing its west wing's inner windows.
+            # The old straight-on front view hid those side-facing panes.
+            points[4]=Vector3(-3.075,2.44,-1.07)
+            offsets[4]=Vector3(3.58,3.70,-3.35)
+    if _infantry_camera_view==5:
+        if infantry_level_picker.selected==2:
+            points[5]=Vector3(6.47,5.69,3.65)
+            offsets[5]=Vector3(4.85,2.85,-5.35)
+        elif infantry_level_picker.selected==1:
+            points[5]=Vector3(5.67,4.49,-2.77)
+            offsets[5]=Vector3(4.35,2.95,-4.70)
+        else:
+            # N1 has no watchtower; use the equipment and entrance instead.
+            points[5]=Vector3(-1.70,1.58,1.95)
+            offsets[5]=Vector3(4.5,3.10,-4.80)
     var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
     var focus: Vector3=rotate*points[_infantry_camera_view]
     camera.position=rotate*(points[_infantry_camera_view]+offsets[_infantry_camera_view])
@@ -2487,7 +2503,8 @@ func _update_camera() -> void:
             camera.size=(13.8 if _infantry_camera_view==1 else
                 9.8 if _infantry_camera_view==2 else
                 19.5 if _infantry_camera_view==3 else
-                16.4 if _infantry_camera_view==4 else
+                11.3 if _infantry_camera_view==4 else
+                6.9 if _infantry_camera_view==5 else
                 20.5)/maxf(0.35,_zoom)
         if model_root!=null and model_root.has_node(InfantryBarracksV5.STAGE_NAME):
             # Keep architectural silhouette; hide tiny pieces at wide zoom.
