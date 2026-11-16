@@ -103,6 +103,16 @@ func _audit(level: int,faction: int,damage: int) -> void:
         assert(_count(entry,"LineaAcceso_0")==level)
         assert(_count(entry,"LuzEntradaProtegida")==1 if damage<=1 else
             _count(entry,"LuzEntradaProtegida")==0)
+    if damage==0:
+        var fine_near: int=V5.set_detail_lod(model,true)
+        assert(fine_near>0)
+        var first_fine: MeshInstance3D=model.find_child(
+            "LineaAcceso_0",true,false) as MeshInstance3D
+        assert(first_fine!=null and first_fine.visible)
+        assert(V5.set_detail_lod(model,false)==fine_near)
+        assert(not first_fine.visible)
+        assert(V5.set_detail_lod(model,true)==fine_near)
+        assert(first_fine.visible)
     if damage<=2:
         var expected_roofs: int=(
             4 if damage==0 else 3 if damage==1 else 2)
@@ -213,6 +223,19 @@ func _run() -> void:
     studio.model_root.rotation_degrees.y=original_yaw
     studio.infantry_camera_picker.select(1)
     studio._change_infantry_camera(1)
+    studio._zoom=0.55
+    studio._update_camera()
+    await _frames(4)
+    var lod_stage: Node3D=studio.model_root.get_node(V5.STAGE_NAME)
+    assert(not bool(lod_stage.get_meta("lod_near",true)))
+    await _capture(studio,"tactical_zoom_lod")
+    studio._zoom=1.4
+    studio._update_camera()
+    await _frames(4)
+    assert(bool(lod_stage.get_meta("lod_near",false)))
+    await _capture(studio,"close_zoom_lod")
+    studio._zoom=1.0
+    studio._update_camera()
     studio.infantry_yard_v5_toggle.set_pressed_no_signal(false)
     studio._toggle_infantry_yard_v5(false)
     await _frames(6)
@@ -297,5 +320,5 @@ func _run() -> void:
     assert(studio._role=="headquarters")
     studio.queue_free()
     await _frames(3)
-    print("PASS INFANTRY BARRACKS V5: 120 Godot 4.3 variants, 7 native procedural surface classes, faction paint preserved, three masses and five damage stages, reversible V1/V2/V3 and 18 real OpenGL screenshots, previous HQ/Airbase/Naval safe")
+    print("PASS INFANTRY BARRACKS V5: 120 Godot 4.3 variants, 7 native procedural surface classes, faction paint preserved, three masses and five damage stages, reversible V1/V2/V3 and 20 real OpenGL screenshots, previous HQ/Airbase/Naval safe")
     quit(0)
