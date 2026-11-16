@@ -106,6 +106,15 @@ var _g11_lamps_v23: Array[OmniLight3D] = []
 var _g11_preview_lod_v24: int = 13
 var _g11_context_v25: Node3D = null
 var _g11_context_biome_v25: String = ""
+# Shared inspector UI: the actual Godot scene, not a second WebGL viewer.
+var studio_quick_panel: VBoxContainer
+var studio_quick_title: Label
+var studio_versions_fold: VBoxContainer
+var studio_versions_button: Button
+var studio_versions_content: VBoxContainer
+var studio_versions_expanded: bool = false
+var studio_overview_label: Label
+
 
 func _ready() -> void:
     super._ready()
@@ -115,6 +124,7 @@ func _ready() -> void:
     _install_g13_controls()
     _install_heli_controls()
     _install_heli_mobile_bar()
+    _install_unified_studio_navigation()
     get_viewport().size_changed.connect(_heli_on_viewport_resize)
     _install_p06_lighting_v22()
     _install_g11_lighting_v23()
@@ -137,6 +147,114 @@ func _ready() -> void:
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
+    _refresh_unified_studio_navigation()
+
+func _install_unified_studio_navigation() -> void:
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    if column==null:
+        return
+    studio_quick_panel=VBoxContainer.new()
+    studio_quick_panel.name="Estudio3D_MenuUnificado"
+    studio_quick_panel.add_theme_constant_override("separation",7)
+    column.add_child(studio_quick_panel)
+    column.move_child(studio_quick_panel,0)
+    studio_quick_title=_title(studio_quick_panel,"ESTUDIO 3D · INSPECCIÓN",16)
+    studio_quick_title.add_theme_color_override("font_color",Color("#E7BE70"))
+    studio_overview_label=_title(studio_quick_panel,
+        "Selecciona una unidad o edificio. Las acciones rápidas usan el modelo real.",12)
+    _add_paired(studio_quick_panel,"Unidades",func(): _studio_jump_category(0),
+        "Edificios",func(): _studio_jump_category(1))
+    _add_paired(studio_quick_panel,"Movimiento",func(): _studio_quick_action("move"),
+        "Ataque",func(): _studio_quick_action("attack"))
+    _add_paired(studio_quick_panel,"Impacto",func(): _studio_quick_action("hit"),
+        "Detener",func(): _studio_quick_stop())
+    _add_paired(studio_quick_panel,"Girar ↶",func(): _rotate(-45.0),
+        "Girar ↷",func(): _rotate(45.0))
+    _add_paired(studio_quick_panel,"Alejar",func(): _change_zoom(-1),
+        "Acercar",func(): _change_zoom(1))
+    _add_paired(studio_quick_panel,"Vista inicial",_reset_camera,
+        "Detalles",_studio_jump_details)
+
+    # The base tank inspector has 20 historical revision toggles placed
+    # ABOVE the actual model selector. Hide that history by default without
+    # deleting the comparison tools or altering their signal connections.
+    studio_versions_fold=VBoxContainer.new()
+    studio_versions_fold.name="G09_HistorialComparaciones"
+    studio_versions_fold.add_theme_constant_override("separation",5)
+    column.add_child(studio_versions_fold)
+    column.move_child(studio_versions_fold,
+        column.get_children().find(role_picker))
+    studio_versions_button=_button(studio_versions_fold,
+        "Mostrar versiones anteriores del tanque",_studio_toggle_versions)
+    studio_versions_content=VBoxContainer.new()
+    studio_versions_content.name="G09_ComparacionAvanzada"
+    studio_versions_content.add_theme_constant_override("separation",6)
+    studio_versions_fold.add_child(studio_versions_content)
+    var legacy_controls: Array[Control]=[]
+    for node in column.get_children():
+        if node==studio_versions_fold:
+            break
+        if node is Button and node!=studio_quick_panel:
+            legacy_controls.append(node as Control)
+    for control in legacy_controls:
+        control.reparent(studio_versions_content)
+    studio_versions_content.visible=false
+
+func _studio_toggle_versions() -> void:
+    studio_versions_expanded=not studio_versions_expanded
+    studio_versions_content.visible=studio_versions_expanded
+    studio_versions_button.text=("Ocultar versiones anteriores" if studio_versions_expanded
+        else "Mostrar versiones anteriores del tanque")
+
+func _studio_jump_category(index: int) -> void:
+    if category_picker==null:
+        return
+    _switch_category(index)
+    _refresh_unified_studio_navigation()
+
+func _studio_jump_details() -> void:
+    if detail_label==null:
+        return
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    var scroll: ScrollContainer=column.get_parent() as ScrollContainer
+    if scroll!=null:
+        scroll.ensure_control_visible(detail_label)
+
+func _studio_quick_action(kind: String) -> void:
+    if model_root==null or category_picker==null or category_picker.selected!=0:
+        return
+    match _role:
+        "attack_heli":
+            _heli_play("hit_bullet" if kind=="hit" else kind)
+        "mlrs":
+            _g11_play("hit_bullet" if kind=="hit" else kind)
+        "apc":
+            _play("hit_bullet" if kind=="hit" else kind)
+        "aa_mobile":
+            _g13_demo_v1("scan" if kind=="attack" else
+                "move" if kind=="move" else "idle",0.65)
+        _:
+            _play("damaged" if kind=="hit" else kind)
+
+func _studio_quick_stop() -> void:
+    if _role=="attack_heli":
+        _heli_stop()
+    elif _role=="mlrs":
+        _g11_stop()
+    else:
+        _stop_animation()
+
+func _refresh_unified_studio_navigation() -> void:
+    if studio_overview_label==null:
+        return
+    var is_building: bool=category_picker!=null and category_picker.selected==1
+    var category: String="EDIFICIO" if is_building else "UNIDAD"
+    var version: String=" · G09 V32 final" if _role=="tank" else ""
+    studio_overview_label.text=(category+" · "+str(_role).to_upper()+version+
+        " · gira, acerca o inicia una animación. Las revisiones antiguas"
+        +" permanecen en el apartado de comparaciones.")
+    if studio_versions_fold!=null:
+        studio_versions_fold.visible=not is_building and _role=="tank"
 
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1301,6 +1419,7 @@ func _display_role(role: String) -> void:
             _apply_g11_light_v23()
     _sync_p06_controls()
     _update_details()
+    _refresh_unified_studio_navigation()
 
 func _switch_category(index: int) -> void:
     super._switch_category(index)
@@ -1309,6 +1428,7 @@ func _switch_category(index: int) -> void:
     if index == 0 and _role == "tank":
         _display_role("tank")
     _sync_p06_controls()
+    _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
     if _role == "attack_heli":
