@@ -890,6 +890,10 @@ func _g13_attack_v4(kind: String) -> void:
         _g13_v4_tween.kill()
     var art: Node3D=model_root
     P06Models.restore_model_pose("aa_mobile",art)
+    # Apply the first firing pose immediately. Under llvmpipe/WebGL load,
+    # the first Tween tick can arrive late and briefly show the idle 12°
+    # cannon instead of the requested low 7°/high 42° firing elevation.
+    _g13_v4_tick(0.01,art,kind)
     _g13_v4_tween=art.create_tween()
     _g13_v4_tween.tween_method(
         Callable(self,"_g13_v4_tick").bind(art,kind),0.0,0.99,1.60)
