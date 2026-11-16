@@ -37,6 +37,7 @@ const G11JointsV23 = preload("res://scripts/ui/G11JointFinishV23.gd")
 const G11TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const HeliV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
+const HeliV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -62,6 +63,8 @@ var _p06_fleet_update_clock: float = 0.0
 var _p06_fleet_fps_sample: int = -1
 var _p06_fleet_fps_clock: float = 0.0
 var heli_controls: VBoxContainer
+var _heli_v2_enabled: bool=true
+var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_time: float=0.0
 var g11_controls: VBoxContainer
@@ -85,7 +88,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V24 legibilidad táctica")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V1 escultura 3D")
+        role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V2 cabina y fuselaje")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -97,10 +100,10 @@ func _ready() -> void:
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
     heli_controls=VBoxContainer.new()
-    heli_controls.name="A01_HelicopteroAtaque_V1_Studio"
+    heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO DE ATAQUE · A01 · ESCULTURA 3D V1",14)
+    _title(heli_controls,"HELICÓPTERO A01 · V2 · CABINA Y CASCO 3D",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -111,14 +114,37 @@ func _install_heli_controls() -> void:
         "Vista trasera y rotor de cola",func(): _heli_view(180.0))
     _add_paired(heli_controls,"Lateral contrario",func(): _heli_view(270.0),
         "Vista superior",_heli_top_view)
+    _add_paired(heli_controls,"V2: inspeccionar cabina",func(): _heli_inspect(40.0,0.0,1.55),
+        "V2: motores y registros",func(): _heli_inspect(90.0,0.0,1.52))
+    _add_paired(heli_controls,"V2: casco y laterales",func(): _heli_inspect(145.0,0.0,1.30),
+        "V2: marcos superiores",func(): _heli_inspect(30.0,34.0,1.50))
+    _heli_compare_button=_button(heli_controls,"Comparar casco anterior V1",_heli_toggle_v2)
     _button(heli_controls,"Detener y restaurar hélices",_heli_stop)
     _title(heli_controls,
-        "V1: fuselaje facetado cerrado, cabina doble, cuatro palas, "
-        + "rotor de cola, ocho tubos laterales y cañón animado. "
-        + "Todavía es un modelo artístico en desarrollo.",12)
+        "V2: casco cerrado de 12 lados, cabina acristalada con marcos y dos asientos, "
+        + "registros de motor y paneles de acceso. Escultura en desarrollo.",12)
     var index: int=column.get_children().find(detail_label)
     column.move_child(heli_controls,maxi(0,index))
     heli_controls.visible=false
+
+func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
+    if _role!="attack_heli" or model_root==null:
+        return
+    _heli_stop()
+    _yaw=yaw
+    _zoom=zoom_level
+    model_root.rotation_degrees=Vector3(tilt,yaw,0.0)
+    _update_camera()
+
+func _heli_toggle_v2() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV2.has_model(model_root):
+        return
+    _heli_stop()
+    _heli_v2_enabled=not _heli_v2_enabled
+    HeliV2.set_enabled(model_root,_heli_v2_enabled)
+    _update_details()
+    _update_camera()
+    _sync_p06_controls()
 
 func _heli_view(yaw: float) -> void:
     if _role!="attack_heli" or model_root==null:
@@ -593,6 +619,9 @@ func _sync_p06_controls() -> void:
     if _role == "attack_heli" and damage_picker != null:
         damage_picker.visible=false
         faction_picker.visible=true
+        if _heli_compare_button != null:
+            _heli_compare_button.text=("Comparar casco anterior V1" if _heli_v2_enabled
+                else "Volver a cabina y casco V2")
     if p06_controls != null:
         p06_controls.visible = p06 and \
             (category_picker == null or category_picker.selected == 0)
@@ -641,6 +670,7 @@ func _display_role(role: String) -> void:
         model_root.queue_free()
         model_root=P06Models.build("attack_heli",_faction,true,14)
         if model_root != null:
+            HeliV2.set_enabled(model_root,_heli_v2_enabled)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
@@ -1347,10 +1377,13 @@ func _update_details() -> void:
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:
             return
-        detail_label.text="Helicóptero A01 · V1 · %d mallas nativas · rotor y armas 3D" % P06Models.inspect_meshes(model_root)
+        detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D" % [
+            "V2 casco/cabina" if HeliV2.has_model(model_root) and _heli_v2_enabled else "V1 comparación",
+            P06Models.inspect_meshes(model_root)]
         status_label.text="%s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
-            "escultura V1 cargada" if HeliV1.has_model(model_root) else "modelo detallado sin cargar"]
+            "escultura V2 cargada" if HeliV2.has_model(model_root) else (
+                "escultura V1 cargada" if HeliV1.has_model(model_root) else "modelo detallado sin cargar")]
         return
     if _role == "mlrs":
         if model_root == null or detail_label == null or status_label == null:
