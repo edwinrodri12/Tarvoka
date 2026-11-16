@@ -72,12 +72,18 @@ func _run() -> void:
         await process_frame
         quit(1)
         return
-    _check(quick!=null and quick.visible,"Android horizontal quick actions visible")
-    var quick_home: bool=false
-    for control in quick.find_children("*","Button",true,false):
-        if control is Button and (control as Button).text=="Vista general":
-            quick_home=true
-    _check(quick_home,"quick buttons use fully readable short Android labels")
+    var unified: VBoxContainer=studio.get("studio_quick_panel") as VBoxContainer
+    var tab_animations: Button=studio.get("studio_tab_animations") as Button
+    var tab_camera: Button=studio.get("studio_tab_camera") as Button
+    var tab_details: Button=studio.get("studio_tab_technical") as Button
+    _check(quick!=null and not quick.visible and unified!=null and unified.visible,
+        "unified V11 Animar/Cámara/Detalles is the ONLY visible toolbar")
+    _check(tab_animations!=null and tab_camera!=null and tab_details!=null,
+        "unified V11 studio has all three live navigation tabs")
+    var primary_attack: Button=studio.get("studio_attack_button") as Button
+    _check(primary_attack!=null and primary_attack.visible
+        and primary_attack.text=="Atacar",
+        "the real unified Animar tab exposes working attack controls")
     _check(advanced!=null and not advanced.visible,
         "long technical list folded until opened explicitly")
     _check(bool(studio.get("_heli_compact_landscape")),
@@ -85,13 +91,15 @@ func _run() -> void:
     _check(model_holder!=null and model_holder.get_parent() is HBoxContainer,
         "mobile landscape has side-by-side real 3D canvas and scrollable controls")
     var sidebar: Control=model_holder.get_parent().get_child(1) as Control
-    print("A01 V9 REAL MOBILE WIDTH 960px: canvas=%.0fpx sidebar=%.0fpx" % [
+    print("A01 V11 UNIFIED MOBILE WIDTH 960px: canvas=%.0fpx sidebar=%.0fpx" % [
         model_holder.size.x,sidebar.size.x])
     _check(model_holder.size.x>=560.0 and sidebar.size.x<=370.0,
         "more than 58% of Android horizontal screen belongs to the real 3D canvas")
-    if quick!=null and advanced!=null:
-        _check(quick.get_index()<advanced.get_index(),
-            "the buttons needed to inspect A01 appear before technical options")
+    var details_group: VBoxContainer=studio.get("studio_advanced_group") as VBoxContainer
+    if unified!=null and details_group!=null:
+        _check(unified.get_parent()==details_group.get_parent()
+            and unified.get_index()<details_group.get_index(),
+            "one consolidated main toolbar appears before folded technical tools")
     if camera!=null:
         _check(camera.projection==Camera3D.PROJECTION_ORTHOGONAL,
             "existing native Studio projection retained")
@@ -99,11 +107,13 @@ func _run() -> void:
             "real rotor/tail frame fits horizontal visible canvas without giant zoom")
     await _capture("a01_v9_landscape_960x540_compact")
     var original_id: int=model.get_instance_id() if model!=null else -1
-    studio.call("_heli_mobile_toggle_advanced")
-    _check(advanced.visible,"technical views expand without scrolling away")
+    studio.call("_studio_select_tab",2)
+    _check(advanced.visible and details_group!=null and details_group.visible,
+        "Detalles tab expands real A01 technical views without another toolbar")
     await _capture("a01_v9_landscape_extended")
-    studio.call("_heli_mobile_toggle_advanced")
-    _check(not advanced.visible,"technical views collapse without losing model")
+    studio.call("_studio_select_tab",0)
+    _check(not advanced.visible and tab_animations!=null and tab_animations.disabled,
+        "Animar tab hides Detalles without losing model")
     studio.call("_heli_mobile_home")
     _check(absf(float(studio.get("_yaw"))-35.0)<0.01 and
         absf(float(studio.get("_zoom"))-1.0)<0.01,
@@ -165,8 +175,9 @@ func _run() -> void:
     await process_frame
     _check(model_holder.get_parent() is VBoxContainer,
         "Android portrait reflows native 3D stage above sidebar")
-    _check(not quick.visible and advanced.visible,
-        "portrait preserves classic full Studio navigation and hides quick bar")
+    _check(not quick.visible and unified!=null and unified.visible
+        and tab_camera!=null and tab_camera.visible,
+        "portrait preserves unified three-tab Studio without legacy toolbar")
     _check(model.get_instance_id()==original_id,
         "orientation change does not recreate 3D helicopter geometry")
     await _capture("a01_v9_portrait_540x960")
@@ -175,8 +186,9 @@ func _run() -> void:
     await process_frame
     _check(model_holder.get_parent() is HBoxContainer,
         "back to Android landscape restores genuinely horizontal stage")
-    _check(quick.visible and not advanced.visible,
-        "return to landscape restores compact fast controls")
+    _check(not quick.visible and unified!=null and unified.visible
+        and not advanced.visible,
+        "return to landscape restores compact unified controls")
     _check(model.get_instance_id()==original_id,
         "second rotation retains same animated helicopter instance")
     studio.call("_heli_inspect",90.0,-15.0,1.54)
@@ -206,5 +218,5 @@ func _run() -> void:
         push_error("A01 V9: %d real mobile Studio failures" % failures)
         quit(1)
         return
-    print("PASS A01 V9 WEB MOBILE: 960x540 landscape toolbar, foldable details, full camera, V7/V8 toggle, real attack animation, 540x960 portrait rotation, stable V8 instance and Bastion isolation; captures="+str(images))
+    print("PASS A01 V9 WEB MOBILE: V11 unified Animar/Cámara/Detalles, compare V10/V11, 960x540 landscape, 540x960 portrait rotation, real attack animation and Bastion isolation; captures="+str(images))
     quit(0)
