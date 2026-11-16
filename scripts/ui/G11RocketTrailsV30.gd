@@ -1,5 +1,6 @@
 extends RefCounted
 class_name TarvokaG11RocketTrailsV30
+const FlightV31 = preload("res://scripts/ui/G11RocketFlightV31.gd")
 
 # Visual-only short rocket flights, synchronized to V29's already-approved
 # sequential shot clock. Neither a physics bullet nor a combat target.
@@ -14,38 +15,17 @@ const SHOT_STEP := 0.096
 const FLIGHT_TIME := 0.39
 const FLIGHT_SPEED := 5.80
 const START_Z := 0.23
-static var _head_mesh: SphereMesh
-static var _streak_mesh: CylinderMesh
+static var _head_mesh: ArrayMesh
+static var _streak_mesh: SphereMesh
 
-static func _head() -> SphereMesh:
+static func _head() -> ArrayMesh:
     if _head_mesh==null:
-        _head_mesh=SphereMesh.new()
-        _head_mesh.radius=0.069
-        _head_mesh.height=0.20
-        _head_mesh.radial_segments=9
-        _head_mesh.rings=5
-        var mat:=StandardMaterial3D.new()
-        mat.albedo_color=Color("#ffd7a3")
-        mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-        mat.emission_enabled=true
-        mat.emission=Color("#ff9c46")
-        mat.emission_energy_multiplier=0.68
-        _head_mesh.material=mat
+        _head_mesh=FlightV31.rocket_mesh()
     return _head_mesh
 
-static func _streak() -> CylinderMesh:
+static func _streak() -> SphereMesh:
     if _streak_mesh==null:
-        _streak_mesh=CylinderMesh.new()
-        _streak_mesh.top_radius=0.027
-        _streak_mesh.bottom_radius=0.065
-        _streak_mesh.height=1.0
-        _streak_mesh.radial_segments=8
-        var mat:=StandardMaterial3D.new()
-        mat.albedo_color=Color(0.68,0.70,0.66,0.33)
-        mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-        mat.depth_draw_mode=BaseMaterial3D.DEPTH_DRAW_DISABLED
-        mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-        _streak_mesh.material=mat
+        _streak_mesh=FlightV31.smoke_mesh()
     return _streak_mesh
 
 static func _make_batch(pod: Node3D,name: String,
@@ -53,6 +33,9 @@ static func _make_batch(pod: Node3D,name: String,
     var multi:=MultiMesh.new()
     multi.transform_format=MultiMesh.TRANSFORM_3D
     multi.mesh=shape
+    # V31 uses per-instance smoke alpha; geometry and batch count unchanged.
+    if name==TRAILS:
+        multi.use_colors=true
     multi.instance_count=SLOTS
     for i in range(SLOTS):
         multi.set_instance_transform(i,Transform3D(
@@ -78,6 +61,7 @@ static func ensure(pod: Node3D) -> bool:
             trails.multimesh.instance_count!=SLOTS):
         return false
     pod.set_meta(FLAG,true)
+    pod.set_meta(FlightV31.FLAG,true)
     return true
 
 static func hide(pod: Node3D) -> void:
@@ -87,6 +71,7 @@ static func hide(pod: Node3D) -> void:
         var batch:=pod.find_child(label,false,false) as MultiMeshInstance3D
         if batch!=null:
             batch.visible=false
+    pod.set_meta("tarvoka_g11_v30_active_rocket_count",0)
 
 static func update(pod: Node3D,tubes: MultiMeshInstance3D,
         relative: float) -> bool:
@@ -110,6 +95,7 @@ static func update(pod: Node3D,tubes: MultiMeshInstance3D,
                 Vector3.ZERO)
             heads.multimesh.set_instance_transform(slot,empty)
             trails.multimesh.set_instance_transform(slot,empty)
+            trails.multimesh.set_instance_color(slot,Color(0,0,0,0))
             continue
         var muzzle: Vector3=tubes.multimesh.get_instance_transform(
             shot).origin
@@ -117,12 +103,10 @@ static func update(pod: Node3D,tubes: MultiMeshInstance3D,
         var head_position: Vector3=muzzle+Vector3(0,0,travel)
         heads.multimesh.set_instance_transform(slot,
             Transform3D(Basis().scaled(Vector3.ONE),head_position))
-        var length: float=clampf(0.12+age*2.3,0.12,0.79)
-        var travel_basis: Basis=Basis(Vector3.RIGHT,PI*0.5)
-        travel_basis=travel_basis.scaled(Vector3(1.0,length,1.0))
         trails.multimesh.set_instance_transform(slot,
-            Transform3D(travel_basis,head_position-Vector3(
-                0,0,0.10+length*0.48)))
+            FlightV31.smoke_transform(muzzle,travel,age,shot))
+        trails.multimesh.set_instance_color(slot,
+            FlightV31.smoke_color(age))
         visible_count+=1
     heads.visible=visible_count>0
     trails.visible=visible_count>0
