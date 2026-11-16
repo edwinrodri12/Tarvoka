@@ -60,6 +60,11 @@ func _gui_input(event: InputEvent) -> void:
         if cell.x >= 0:
             cell_pressed.emit(cell)
             accept_event()
+    elif event is InputEventScreenTouch and event.pressed:
+        var touch_cell: Vector2i = pixel_to_cell(event.position)
+        if touch_cell.x >= 0:
+            cell_pressed.emit(touch_cell)
+            accept_event()
 
 func _draw() -> void:
     if world.is_empty() or not world.has("state"):
@@ -68,7 +73,7 @@ func _draw() -> void:
     var terrain: Array = state["terrain"]
     var dims: Vector2i = Rules.map_size(terrain)
     var font: Font = ThemeDB.fallback_font
-    var fs: int = maxi(10,mini(17,cell_pixels/2))
+    var fs: int = maxi(10,mini(17,int(cell_pixels/2)))
     for y in range(dims.y):
         for x in range(dims.x):
             var kind: String = str(terrain[y][x])
