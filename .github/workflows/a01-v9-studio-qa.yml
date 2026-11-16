@@ -42,6 +42,7 @@ jobs:
             cp "a01-head/scripts/ui/${item}" "scripts/ui/${item}"
           done
           cp a01-head/tests/test_attack_helicopter_v9_studio.gd tests/test_attack_helicopter_v9_studio.gd
+          cp a01-head/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -F 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           grep -F 'A01V9_AccesoHorizontalAndroid' scripts/ui/BastionStudioAdapter.gd
@@ -83,6 +84,22 @@ jobs:
           fi
           grep -F 'PASS A01 V9 WEB MOBILE:' /tmp/a01-v9-studio.log
           test "$(find /tmp/a01-v9-mobile -maxdepth 1 -name '*.png' | wc -l)" -eq 4
+      - name: Verify G13 V1 appears and articulates in the same mobile Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --resolution 960x540 --path . \
+            --script res://tests/test_g13_studio_web_v1.gd \
+            2>&1 | tee /tmp/g13-v1-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error' /tmp/g13-v1-studio.log; then
+            echo 'G13 V1 mobile Studio selector/native model failed'; exit 1
+          fi
+          grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-v1-studio.log
       - name: Archive four authentic 960x540 and 540x960 Studio screenshots
         if: always()
         uses: actions/upload-artifact@v4
