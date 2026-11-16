@@ -1,0 +1,281 @@
+name: TARVOKA A01 attack helicopter V8 native QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/AttackHelicopterV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v1.gd'
+      - 'tests/test_attack_helicopter_v2.gd'
+      - 'tests/test_attack_helicopter_v3.gd'
+      - 'tests/test_attack_helicopter_v3_capture.gd'
+      - 'scripts/ui/AttackHelicopterRotorV3.gd'
+      - 'scripts/ui/AttackHelicopterEnginesV4.gd'
+      - 'scripts/ui/AttackHelicopterLandingV5.gd'
+      - 'scripts/ui/AttackHelicopterLandingFinishV6.gd'
+      - 'scripts/ui/AttackHelicopterReadabilityV7.gd'
+      - 'scripts/ui/AttackHelicopterSilhouetteV8.gd'
+      - 'tests/test_attack_helicopter_v8.gd'
+      - 'tests/test_attack_helicopter_v8_capture.gd'
+      - 'tests/test_attack_helicopter_v7.gd'
+      - 'tests/test_attack_helicopter_v7_screen.gd'
+      - 'tests/test_attack_helicopter_v7_capture.gd'
+      - 'tests/test_attack_helicopter_v6.gd'
+      - 'tests/test_attack_helicopter_v6_capture.gd'
+      - 'tests/test_attack_helicopter_v5.gd'
+      - 'tests/test_attack_helicopter_v5_capture.gd'
+      - 'tests/test_attack_helicopter_v4.gd'
+      - 'tests/test_attack_helicopter_v4_capture.gd'
+      - 'tests/test_attack_helicopter_v2_capture.gd'
+      - 'scripts/ui/AttackHelicopterCabinV2.gd'
+      - '.github/workflows/a01-helicopter-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/AttackHelicopterV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v1.gd'
+      - 'tests/test_attack_helicopter_v2.gd'
+      - 'tests/test_attack_helicopter_v3.gd'
+      - 'tests/test_attack_helicopter_v3_capture.gd'
+      - 'scripts/ui/AttackHelicopterRotorV3.gd'
+      - 'scripts/ui/AttackHelicopterEnginesV4.gd'
+      - 'scripts/ui/AttackHelicopterLandingV5.gd'
+      - 'scripts/ui/AttackHelicopterLandingFinishV6.gd'
+      - 'scripts/ui/AttackHelicopterReadabilityV7.gd'
+      - 'scripts/ui/AttackHelicopterSilhouetteV8.gd'
+      - 'tests/test_attack_helicopter_v8.gd'
+      - 'tests/test_attack_helicopter_v8_capture.gd'
+      - 'tests/test_attack_helicopter_v7.gd'
+      - 'tests/test_attack_helicopter_v7_screen.gd'
+      - 'tests/test_attack_helicopter_v7_capture.gd'
+      - 'tests/test_attack_helicopter_v6.gd'
+      - 'tests/test_attack_helicopter_v6_capture.gd'
+      - 'tests/test_attack_helicopter_v5.gd'
+      - 'tests/test_attack_helicopter_v5_capture.gd'
+      - 'tests/test_attack_helicopter_v4.gd'
+      - 'tests/test_attack_helicopter_v4_capture.gd'
+      - 'tests/test_attack_helicopter_v2_capture.gd'
+      - 'scripts/ui/AttackHelicopterCabinV2.gd'
+      - '.github/workflows/a01-helicopter-qa.yml'
+  workflow_dispatch:
+
+jobs:
+  a01-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: A01 faction, geometry, animation and old battle model regression
+        run: |
+          set -euo pipefail
+          for suite in test_attack_helicopter_v1 test_attack_helicopter_v2 test_attack_helicopter_v3 test_attack_helicopter_v4 test_attack_helicopter_v5 test_attack_helicopter_v6 test_attack_helicopter_v7 test_attack_helicopter_v7_screen test_attack_helicopter_v8; do
+            timeout --signal=TERM --kill-after=5s 120s \
+              xvfb-run -a -s '-screen 0 1280x720x24' \
+              env LIBGL_ALWAYS_SOFTWARE=1 \
+              /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --rendering-method gl_compatibility --audio-driver Dummy \
+              --path . --script "res://tests/${suite}.gd" 2>&1 | tee "/tmp/${suite}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log"; then
+              echo "A01 native test failed: ${suite}"; exit 1
+            fi
+            grep -F 'PASS A01 ' "/tmp/${suite}.log"
+          done
+      - name: Render real 360-degree V2 studio images in Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v2-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v2-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v2_capture.gd \
+            2>&1 | tee /tmp/a01-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-capture.log; then
+            echo "A01 native rendering failed"; exit 1
+          fi
+          grep -F 'PASS A01 V2 CAPTURE:' /tmp/a01-capture.log
+          test "$(find /tmp/a01-v2-review -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Render physical V3 rotor and wing closeups in native Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v3-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v3-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v3_capture.gd \
+            2>&1 | tee /tmp/a01-v3-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v3-capture.log; then
+            echo "A01 V3 native rendering failed"; exit 1
+          fi
+          grep -F 'PASS A01 V3 CAPTURE:' /tmp/a01-v3-capture.log
+          test "$(find /tmp/a01-v3-review -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Render V4 closeups of engine intake, sculpted armor and outlet
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v4-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v4-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v4_capture.gd \
+            2>&1 | tee /tmp/a01-v4-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v4-capture.log; then
+            echo "A01 V4 native render errors"; exit 1
+          fi
+          grep -F 'PASS A01 V4 CAPTURE:' /tmp/a01-v4-capture.log
+          test "$(find /tmp/a01-v4-review -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Capture true V5 landing skid and engine mounts from eleven angles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v5-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v5-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v5_capture.gd \
+            2>&1 | tee /tmp/a01-v5-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v5-capture.log; then
+            echo "A01 V5 native render errors"; exit 1
+          fi
+          grep -F 'PASS A01 V5 CAPTURE:' /tmp/a01-v5-capture.log
+          test "$(find /tmp/a01-v5-review -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Render actual A01 V6 360 and closeup mechanical views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v6-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v6-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v6_capture.gd \
+            2>&1 | tee /tmp/a01-v6-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v6-capture.log; then
+            echo "A01 V6 native render errors"; exit 1
+          fi
+          grep -F 'PASS A01 V6 CAPTURE:' /tmp/a01-v6-capture.log
+          test "$(find /tmp/a01-v6-review -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Render V7 320p readable hero and same-camera V6 visual control
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v7-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v7-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v7_capture.gd \
+            2>&1 | tee /tmp/a01-v7-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v7-capture.log; then
+            echo "A01 V7 physical render failed"; exit 1
+          fi
+          grep -F 'PASS A01 V7 CAPTURE:' /tmp/a01-v7-capture.log
+          test "$(find /tmp/a01-v7-review -maxdepth 1 -name '*.png' | wc -l)" -eq 15
+      - name: Render real V8 320p silhouette vs same-scene V7 and real hero macros
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v8-review
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v8-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v8_capture.gd \
+            2>&1 | tee /tmp/a01-v8-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/a01-v8-capture.log; then
+            echo "A01 V8 native render errors"; exit 1
+          fi
+          grep -F 'PASS A01 V8 CAPTURE:' /tmp/a01-v8-capture.log
+          test "$(find /tmp/a01-v8-review -maxdepth 1 -name '*.png' | wc -l)" -eq 15
+      - name: Archive A01 V8 true 320p 8-angle and V7 baseline plus physical macros
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v8-320p-review
+          path: |
+            /tmp/a01-v8-review/*.png
+            /tmp/a01-v8-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive real A01 V7 Godot 320p readability, V6 baselines and macros
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v7-320p-review
+          path: |
+            /tmp/a01-v7-review/*.png
+            /tmp/a01-v7-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive authentic Godot A01 V6 landing-gear macro views
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v6-360-review
+          path: |
+            /tmp/a01-v6-review/*.png
+            /tmp/a01-v6-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive real A01 V5 Godot landing and motor 360 inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v5-360-review
+          path: |
+            /tmp/a01-v5-review/*.png
+            /tmp/a01-v5-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive authentic V4 Godot engine and armor 360 review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v4-360-review
+          path: |
+            /tmp/a01-v4-review/*.png
+            /tmp/a01-v4-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive actual V3 Godot rotor and wing 360 review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v3-360-review
+          path: |
+            /tmp/a01-v3-review/*.png
+            /tmp/a01-v3-capture.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive actual Godot A01 V2 inspection renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v2-360-review
+          path: |
+            /tmp/a01-v2-review/*.png
+            /tmp/a01-capture.log
+          if-no-files-found: warn
+          retention-days: 14
