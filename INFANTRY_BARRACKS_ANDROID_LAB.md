@@ -15,9 +15,9 @@ No se crean nuevos edificios jugables ni se modifican producción, capturas, bal
 1. Descargar el artefacto `TARVOKA-Infantry-V5-Android-ARM64-Lab` de la ejecución exitosa del workflow `infantry-barracks-android-lab.yml` (no antes).
 2. Instalar la APK del laboratorio, **sin desinstalar la aplicación TARVOKA**.
 3. Abrir Nivel 3, 9 edificios, sin daño y facción 0.
-4. Probar LOD cercano y LOD lejano sin cambiar ningún otro parámetro. Cada escenario calienta 45 fotogramas y mide 180.
-5. Pulsar `Copiar datos` para obtener el historial JSON de la sesión. Repetir con 4 edificios y con Nivel 1.
-6. Comparar `fps_mean`, `frame_p95_ms`, `draw_calls_mean`, `memory_static_bytes` y `mesh_stats.hidden_meshes`, manteniendo condiciones del teléfono similares (temperatura, brillo, aplicaciones abiertas).
+4. Pulsar `Comparar A/B`. El laboratorio cambia automáticamente entre LOD cercano y lejano, con los mismos edificios, posición de cámara, facción y daño. Cada escenario calienta 45 fotogramas y mide 180.
+5. Pulsar `Copiar datos` para obtener el historial JSON y `paired_ab_comparisons`, con diferencia porcentual de FPS y mallas ocultas. Repetir con 4 edificios y con Nivel 1.
+6. Comparar `fps_mean`, `frame_p95_ms`, `draw_calls_mean`, `memory_static_bytes`, `mesh_stats.hidden_meshes` y `paired_ab_comparisons`, manteniendo condiciones del teléfono similares (temperatura, brillo, aplicaciones abiertas).
 
 ## Interpretación
 `android_hardware_tested=true` solo cuando el proceso se ejecutó en Android real.
