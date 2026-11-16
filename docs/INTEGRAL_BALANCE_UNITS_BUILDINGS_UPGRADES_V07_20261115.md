@@ -62,7 +62,24 @@ Estos dos comportamientos deben probarse juntos, pues la decisión de reducir da
 
 - `tests/test_full_combat_balance_v07.gd`: compara perfiles base y 1.024 enfrentamientos dirigidos y simula por copia los efectos de +1 ATQ/+1 DEF y terreno, sin guardar/modificar atributos reales.
 - Workflow: ` .github/workflows/full-combat-balance-v07.yml` en la rama experimental.
-- El resultado debe marcarse **pendiente** hasta que GitHub Actions haya ejecutado Godot 4.3 con PASS; no se deben inventar resultados, especialmente porcentajes de duelos ganados.
+- **Godot 4.3 SUCCESS, ejecutado:** https://github.com/edwinrodri12/Tarvoka/actions/runs/43778731623. Las 32 fichas se validaron, incluyendo 5 perfiles clásicos y 27 modernos. De los 1.024 pares dirigidos examinados, **432 permiten un ataque** por rango/dominio/munición en este escenario de posiciones; **116** eliminan al objetivo en un primer golpe y **127** generan un contraataque. El ataque con 1 HP conserva exactamente el daño del ataque con vida completa en **432/432** casos con ataque válido. La simulación hipotética de **+1 ATQ cambia daño en 310/432**, y **+1 DEF cambia daño recibido en 332/432**. Los demás pares no significan necesariamente que esas unidades carezcan de utilidad: pueden ser de dominios incompatibles o de apoyo. Los cinco roles sin ataque convencional actual son ew, logistics, uav_recon, transport_heli y landing_ship. **Estas son pruebas estáticas por pareja, no 432 duelos completos con movimientos, IA y producción.** Los 1.024 pares no son 1.024 combates legales; la distinción es esencial.
+
+
+## Esquema de evolución propuesto para probar (no aprobado)
+
+Se mantiene el acuerdo de tres niveles para instalaciones militares y mejoras globales comprables con créditos en el edificio correspondiente. Las asignaciones exactas de desbloqueos y precios siguen abiertas: no elevar las cifras del modelo actual hasta simular su interacción.
+
+| Instalación | Nivel I: función base | Nivel II: progreso a investigar | Nivel III: progreso a investigar |
+|---|---|---|---|
+| Cuartel de Infantería | Guardia y Rastreador | Asaltante, Ingeniero con reparación funcional | Unidades de élite/comando y especializaciones, aún sin perfil canónico |
+| Planta de blindados | Transporte blindado, IFV | Tanque principal y contramedidas antiblindaje | Tecnología avanzada de blindaje y movilidad, sin crear tanques invulnerables |
+| Depósito de artillería | Artillería, antiaéreo móvil | SPG, cohetes y SAM según reglas de alcance | Electrónica/interferencia *solo tras implementar el efecto real* |
+| Centro de drones | Reconocimiento | FPV y consumibles con contramedidas | Tecnologías de detección/ataque compatibles según rol; UCAV se fabrica hoy en base aérea |
+| Base aérea | Helicóptero de ataque, transporte cuando exista carga | Dron de combate, caza | Bombardero y mejor logística aérea |
+| Base naval | Patrullas y lanchas | Escoltas/corbetas y desembarco cuando exista carga | Fragatas, destructores y submarinos con contrajuego |
+| Cuartel General | Mando funcional y condición de objetivo | Resistencia y opciones de mando por definir | Efectos de nivel III por definir, diferenciando daño leve/medio/crítico/destruido |
+
+**Importante:** la tabla es una hipótesis para ensayos, no un desbloqueo aprobado. La Central Energética continúa experimental. Los niveles actúan sobre acceso/capacidades, mientras que las tecnologías que se compran en instalaciones aplican globalmente **solo a unidades compatibles** de la facción. Los comandos y los poderes de las ocho facciones no pueden tener bonificaciones numéricas acumulativas asumidas sin pruebas.
 
 ## Siguiente decisión
 
