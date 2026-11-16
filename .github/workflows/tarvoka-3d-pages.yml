@@ -767,6 +767,15 @@ jobs:
           test -s build/web/index.wasm
           touch build/web/.nojekyll
 
+      - name: Save actual landscape UI screenshot for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-unified-studio-landscape-qa
+          path: build/qa/studio-960x540.png
+          if-no-files-found: warn
+          retention-days: 14
+
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
