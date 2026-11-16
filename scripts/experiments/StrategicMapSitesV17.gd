@@ -51,6 +51,27 @@ static func _nearest(sites: Array, cell: Vector2i) -> int:
         closest = mini(closest,_distance(site["pos"],cell))
     return closest
 
+# A naval dock is built ON water, but infantry CAPTURES it from an
+# adjacent LAND access tile. The access tile itself must not contain any
+# city/base and must also be symmetric for the other player's dock.
+static func _shore_access(sites: Array, terrain: Array,
+        west_dock: Vector2i, east_dock: Vector2i) -> Dictionary:
+    var dims: Vector2i = Rules.map_size(terrain)
+    for direction in [Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN, Vector2i.RIGHT]:
+        var land: Vector2i = west_dock+direction
+        var paired: Vector2i = Vector2i(dims.x-1-land.x,land.y)
+        if not Rules.inside(land,terrain) or not Rules.inside(paired,terrain):
+            continue
+        if land == paired or land == west_dock or paired == east_dock:
+            continue
+        if Rules.movement_cost(str(terrain[land.y][land.x])) < 0 or \
+                Rules.movement_cost(str(terrain[paired.y][paired.x])) < 0:
+            continue
+        if _used(sites,land) or _used(sites,paired):
+            continue
+        return {"west":land,"east":paired}
+    return {}
+
 static func _place_neutral_pair(sites: Array, terrain: Array, kind: String) -> bool:
     var dims: Vector2i = Rules.map_size(terrain)
     var water: bool = kind == "shipyard"
@@ -66,6 +87,8 @@ static func _place_neutral_pair(sites: Array, terrain: Array, kind: String) -> b
             var t1: String = str(terrain[y][right.x])
             if water:
                 if t0 != "water" or t1 != "water":
+                    continue
+                if _shore_access(sites,terrain,left,right).is_empty():
                     continue
             elif Rules.movement_cost(t0) < 0 or Rules.movement_cost(t1) < 0:
                 continue
@@ -83,9 +106,17 @@ static func _place_neutral_pair(sites: Array, terrain: Array, kind: String) -> b
                 best_cell = left
     if best_cell.x < 0:
         return false
-    sites.append({"kind":kind,"pos":best_cell,"owner":-1,"produced_turn":-1})
-    sites.append({"kind":kind,"pos":Vector2i(dims.x-1-best_cell.x,best_cell.y),
-        "owner":-1,"produced_turn":-1})
+    var east: Vector2i = Vector2i(dims.x-1-best_cell.x,best_cell.y)
+    var west_site: Dictionary = {"kind":kind,"pos":best_cell,"owner":-1,"produced_turn":-1}
+    var east_site: Dictionary = {"kind":kind,"pos":east,"owner":-1,"produced_turn":-1}
+    if water:
+        var access: Dictionary = _shore_access(sites,terrain,best_cell,east)
+        if access.is_empty():
+            return false
+        west_site["capture_pos"] = access["west"]
+        east_site["capture_pos"] = access["east"]
+    sites.append(west_site)
+    sites.append(east_site)
     return true
 
 static func _neutralize_excess_home_cities(sites: Array, dims: Vector2i, target: int) -> bool:
@@ -198,7 +229,7 @@ static func capture_end_turn(layout_state: Dictionary, holds: Dictionary,
     for site in next["sites"]:
         if str(site["kind"]) == "city":
             continue
-        var cell: Vector2i = site["pos"]
+        var cell: Vector2i = site.get("capture_pos",site["pos"])
         var key: String = "%d:%d" % [cell.x,cell.y]
         var candidate: Dictionary = {}
         for unit in units:
