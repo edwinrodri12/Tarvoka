@@ -92,6 +92,17 @@ func _initialize() -> void:
         assert(Codec.decode(payload).is_empty(), "Non-object JSON root unexpectedly restored")
         assert(original == original_before, "Invalid root mutated active session")
         assert(Codec.decode(encoded) == original_before, "Valid snapshot failed after invalid root")
+    # Invalid JSON syntax must fail closed, and a later valid load must recover.
+    # These are distinct from valid JSON values with an invalid root type.
+    var malformed_syntax: Array[String] = [
+        "{",
+        "{\\\"version\\\":1,",
+        "{\\\"version\\\":1} trailing"
+    ]
+    for payload in malformed_syntax:
+        assert(Codec.decode(payload).is_empty(), "Malformed JSON syntax unexpectedly restored")
+        assert(original == original_before, "Malformed JSON syntax mutated active session")
+        assert(Codec.decode(encoded) == original_before, "Valid snapshot failed after malformed JSON")
     assert(Codec.decode(encoded) == original)
-    print("PASS save structural corruption: %d malformed snapshots rejected" % (cases.size() + invalid_roots.size()))
+    print("PASS save structural corruption: %d malformed snapshots rejected" % (cases.size() + invalid_roots.size() + malformed_syntax.size()))
     quit(0)
