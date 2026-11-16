@@ -98,13 +98,13 @@ static func smoke_mesh()->SphereMesh:
 
 static func smoke_color(age: float)->Color:
     var t: float=clampf(age/SMOKE_FADE_TIME,0.0,1.0)
-    return Color(0.67,0.70,0.67,0.36*pow(1.0-t,1.4))
+    return Color(0.67,0.70,0.67,0.235*pow(1.0-t,1.4))
 
 static func smoke_transform(muzzle: Vector3,travel: float,
         age: float,shot: int)->Transform3D:
     var t: float=clampf(age/SMOKE_FADE_TIME,0.0,1.0)
-    var length: float=0.60+1.45*t
-    var width: float=0.72+1.15*t
+    var length: float=1.35+1.55*t
+    var width: float=0.56+0.48*t
     var center: Vector3=muzzle+Vector3(
         0.030*sin(float(shot)*2.1)*t,
         0.18*t,
