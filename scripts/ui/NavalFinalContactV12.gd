@@ -78,6 +78,7 @@ static func _east(model: Node3D,stage: Node3D,damage: int,
         accent: Color) -> void:
     var near: Node3D=stage.get_node("AcabadosCercanosV12")
     var far: Node3D=stage.get_node("AcabadosTacticosV12")
+    stage.set_meta("naval_v12_east_assembly_verified",true)
     if damage==4:
         _box(near,"RestoJuntaMaritimaV12",
             Vector3(1.13,0.15,-3.81),
@@ -135,6 +136,7 @@ static func _piers(model: Node3D,stage: Node3D,damage: int,
         accent: Color) -> void:
     var near: Node3D=stage.get_node("AcabadosCercanosV12")
     var far: Node3D=stage.get_node("AcabadosTacticosV12")
+    stage.set_meta("naval_v12_pier_assembly_verified",true)
     if damage==4:
         _box(near,"PlacaSeparadaDeEspigonV12",
             Vector3(-4.62,0.18,-4.33),
