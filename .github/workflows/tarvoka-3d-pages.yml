@@ -189,6 +189,36 @@ jobs:
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           rm -rf hq-android-v15
           test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
+      # Merge the approved tank into the EXISTING single native Godot scene.
+      # This copy occurs AFTER the pinned buildings/APC setup, BEFORE import
+      # and export. Keep the building catalogue and all other unit meshes.
+      - name: Check out approved G09 V32 for unified studio
+        uses: actions/checkout@v4
+        with:
+          ref: feat/g09-v32-studio-final-animation-20261114
+          path: g09-unified-source
+          persist-credentials: false
+      - name: Integrate G09 V32 native model and controls in central engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s g09-unified-source/tests/test_g09_animation_final_v32.gd
+          test -s g09-unified-source/scripts/ui/TankTrackAlignmentV31.gd
+          test -s scripts/ui/CombinedArtStudioWeb.gd
+          test -s scripts/ui/BastionStudioAdapter.gd
+          # Only the tank-specific modules and the compatible base inspector
+          # are exchanged. HQ, naval base, airbase, barracks, APC, G11 and
+          # helicopter modules retain their existing tested implementations.
+          cp g09-unified-source/scripts/ui/Tank*.gd scripts/ui/
+          cp g09-unified-source/scripts/ui/UnitModels3D.gd scripts/ui/UnitModels3D.gd
+          cp g09-unified-source/scripts/ui/UnitArtStudioWeb.gd scripts/ui/UnitArtStudioWeb.gd
+          test -s scripts/ui/TankTrackAlignmentV31.gd
+          test -s scripts/ui/TankHitReactionV30.gd
+          grep -q 'var _v31_preview := false' scripts/ui/UnitArtStudioWeb.gd
+          grep -q 'TankTrackAlignmentV31.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'Tanque G09 · V32 FINAL' scripts/ui/BastionStudioAdapter.gd
+          # Avoid Godot importing a second project with duplicate class_name.
+          rm -rf g09-unified-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
@@ -971,64 +1001,8 @@ jobs:
           add_link(Path('build/web/index.html'),
                    'batalla/', 'BATALLA 3D · MAPAS Y COMBATE',
                    'Abre el mapa 3D interactivo, terreno y ordenes confirmadas')
-          # The approved G09 V32 stays the real native 3D Godot build, but
-          # opens inside the SAME main studio URL and can be closed to return
-          # to the existing buildings/units selector without re-navigation.
-          # Keep the native /tanque/ endpoint for direct links and debugging.
-          def embed_approved_tank_in_main_studio():
-              filepath = Path('build/web/index.html')
-              html = filepath.read_text(encoding='utf-8')
-              assert html.count('</body>') == 1
-              panel = r"""
-          <div id="tarvoka-tank-catalog" style="position:fixed;left:16px;top:76px;z-index:1100;font:700 14px system-ui,Arial,sans-serif">
-            <button id="tarvoka-tank-open" type="button" aria-controls="tarvoka-tank-overlay"
-              aria-expanded="false" style="padding:12px 16px;border:2px solid #e1c275;border-radius:9px;background:#111d2e;color:#ffe5a0;cursor:pointer">
-              TANQUE G09 V32 · VER EN ESTE ESTUDIO
-            </button>
-          </div>
-          <section id="tarvoka-tank-overlay" aria-label="Tanque G09 V32 - modelo 3D aprobado"
-            style="display:none;position:fixed;inset:0;z-index:2000;background:#101823">
-            <header style="position:absolute;left:0;right:0;top:0;min-height:54px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;box-sizing:border-box;background:#111d2e;color:#ffe5a0;font:700 14px system-ui,Arial,sans-serif">
-              <span>TARVOKA ESTUDIO 3D · TANQUE G09 V32 FINAL</span>
-              <button id="tarvoka-tank-back" type="button" style="padding:9px 13px;background:#283b4d;color:#fff;border:1px solid #e1c275;border-radius:7px;cursor:pointer">VOLVER A TODOS LOS MODELOS</button>
-            </header>
-            <iframe id="tarvoka-tank-frame" title="Modelo 3D interactivo del tanque G09 V32"
-              loading="lazy" allow="fullscreen" style="position:absolute;top:54px;left:0;width:100%;height:calc(100% - 54px);border:0;background:#101823"></iframe>
-          </section>
-          <script>
-          (() => {
-            const open = document.getElementById('tarvoka-tank-open');
-            const back = document.getElementById('tarvoka-tank-back');
-            const panel = document.getElementById('tarvoka-tank-overlay');
-            const frame = document.getElementById('tarvoka-tank-frame');
-            const show = () => {
-              if (!frame.getAttribute('src')) frame.setAttribute('src', new URL('tanque/', location.href).href);
-              panel.style.display = 'block';
-              open.setAttribute('aria-expanded', 'true');
-              back.focus();
-            };
-            const hide = () => {
-              panel.style.display = 'none';
-              open.setAttribute('aria-expanded', 'false');
-              open.focus();
-            };
-            // Called both by the catalogue button and the native Godot
-            // unit selector, so no historical tank is mistaken for V32.
-            window.tarvokaOpenApprovedTank = show;
-            open.addEventListener('click', show);
-            back.addEventListener('click', hide);
-            document.addEventListener('keydown', event => {
-              if (event.key === 'Escape' && panel.style.display !== 'none') hide();
-            });
-          })();
-          </script>
-          """
-              # Remove incidental Python indentation from the HTML payload.
-              import textwrap
-              panel = textwrap.dedent(panel)
-              filepath.write_text(html.replace('</body>', panel + '\n</body>'), encoding='utf-8')
-
-          embed_approved_tank_in_main_studio()
+          # G09 V32 now loads natively from the main catalogue and the same
+          # Godot SubViewport as all buildings; /tanque/ stays as archival QA.
           add_link(Path('build/web/batalla/index.html'),
                    '../', 'VOLVER AL ESTUDIO · UNIDADES Y EDIFICIOS',
                    'Volver al Estudio principal con Cuartel General V11')
@@ -1080,8 +1054,6 @@ jobs:
           PY
           grep -q 'BATALLA 3D' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/batalla/index.html
-          grep -q 'tarvoka-tank-overlay' build/web/index.html
-          grep -q 'tanque/' build/web/index.html
           grep -q 'TANQUE G09 V32' build/web/index.html
           grep -q 'VOLVER AL ESTUDIO' build/web/tanque/index.html
           grep -q 'BATALLA 3D' build/web/tanque/index.html
