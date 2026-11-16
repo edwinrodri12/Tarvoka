@@ -11,6 +11,7 @@ const TUBES := 12
 const WHEELS := 12
 const FAR_LEVEL := 8
 const NEAR_LEVEL := 10
+const TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 static var _materials: Dictionary = {}
 
 static func recommended_level(distance: float, visible_units: int,
@@ -146,6 +147,8 @@ static func build(model: Node3D, faction_color: Color,
                     Transform3D(tube_basis,Vector3(x,y,-0.714)))
     model.set_meta(FLAG,detail)
     model.set_meta("tarvoka_g11_mobile_tubes",TUBES)
+    if not TacticalV24.apply(model,close):
+        push_warning("G11 V24 tactical track visual refinement could not be applied")
     return true
 
 static func has_model(model: Node3D) -> bool:
