@@ -88,8 +88,8 @@ func _run() -> void:
         var canvas_width: float = frame.size.x
         var canvas_height: float = frame.size.y
         _check(view_width >= 900.0, "landscape test uses a real 960px window")
-        _check(canvas_width >= 0.50 * view_width,
-            "the 3D canvas receives at least half the landscape width")
+        _check(canvas_width >= 0.60 * view_width,
+            "3D canvas occupies at least 60% of phone landscape width")
         _check(canvas_height >= 400.0,
             "the 3D canvas remains tall enough to inspect the full model")
         print("STUDIO VIEWPORT QA: %s / %s pixels (%.1f%% width)" %
@@ -102,6 +102,21 @@ func _run() -> void:
             "category picker starts inside the visible landscape window")
         _check(viewport_rect.has_point(faction.get_global_rect().position),
             "faction picker starts inside the visible landscape window")
+    # Introductory prose and faction-emblem gallery must not clutter
+    # the permanent model navigation below the three compact tabs.
+    if role != null:
+        var original_column: VBoxContainer=role.get_parent() as VBoxContainer
+        var gallery: Control=studio.get("faction_view_grid") as Control
+        var details: Control=studio.get("studio_advanced_content") as Control
+        if original_column != null:
+            for item in original_column.get_children():
+                if item is Label and str((item as Label).text).begins_with(
+                        "Visor 3D del motor Godot:"):
+                    _check(not item.visible,
+                        "outdated long intro stays hidden below quick actions")
+        if gallery!=null and details!=null:
+            _check(details.is_ancestor_of(gallery),
+                "faction emblems live under Details instead of default sidebar")
     # Switch to buildings and back using the actual category handler.
     studio.call("_studio_jump_category",1)
     await process_frame
