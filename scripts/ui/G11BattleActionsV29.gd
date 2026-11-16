@@ -33,20 +33,20 @@ func _ready() -> void:
 
 static func _new_mesh(smoke: bool) -> SphereMesh:
     var mesh:=SphereMesh.new()
-    mesh.radius=0.17 if smoke else 0.103
-    mesh.height=0.34 if smoke else 0.206
+    mesh.radius=0.28 if smoke else 0.155
+    mesh.height=0.56 if smoke else 0.310
     mesh.radial_segments=10
     mesh.rings=5
     var mat:=StandardMaterial3D.new()
     mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-    mat.albedo_color=Color(0.54,0.59,0.57,0.21) if smoke else Color("#ffe4a1")
+    mat.albedo_color=Color(0.52,0.57,0.55,0.43) if smoke else Color("#ffe4a1")
     if smoke:
         mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
         mat.depth_draw_mode=BaseMaterial3D.DEPTH_DRAW_DISABLED
     else:
         mat.emission_enabled=true
-        mat.emission=Color("#ff9c48")
-        mat.emission_energy_multiplier=0.72
+        mat.emission=Color("#ffb366")
+        mat.emission_energy_multiplier=0.90
     mesh.material=mat
     return mesh
 
@@ -147,9 +147,9 @@ func _update_salvo(elapsed: float) -> void:
     if _flash.visible:
         var mouth: Vector3=tubes.multimesh.get_instance_transform(index).origin
         _flash.multimesh.set_instance_transform(0,Transform3D(
-            Basis().scaled(Vector3.ONE*(0.75+0.25*
+            Basis().scaled(Vector3(1.0,1.0,1.34)*(0.80+0.20*
                 (1.0-age/FLASH_DURATION))),
-            mouth+Vector3(0,0,0.16)))
+            mouth+Vector3(0,0,0.24)))
     var last_shot: int=mini(index,SHOT_COUNT-1)
     _smoke.visible=relative<float(SHOT_COUNT)*SHOT_STEP+0.23
     if _smoke.visible:
@@ -159,11 +159,11 @@ func _update_salvo(elapsed: float) -> void:
             var puff_age: float=maxf(0.0,relative-fired_time)
             var origin: Vector3=tubes.multimesh.get_instance_transform(
                 shot).origin
-            var size: float=0.43+minf(puff_age,0.46)*1.05
+            var size: float=0.84+minf(puff_age,0.46)*0.76
             _smoke.multimesh.set_instance_transform(puff,Transform3D(
                 Basis().scaled(Vector3.ONE*size),
-                origin+Vector3(0.035*float(puff-1),
-                    0.07*puff_age,0.22+0.34*puff_age)))
+                origin+Vector3(0.045*float(puff-1),
+                    0.16*puff_age,0.33+0.58*puff_age)))
 
 func stop() -> void:
     set_process(false)
