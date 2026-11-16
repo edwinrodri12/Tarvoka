@@ -1,4 +1,4 @@
-name: TARVOKA G13 V8 final 3D art audit
+name: TARVOKA G13 V9 final 3D art audit
 
 on:
   push:
@@ -67,25 +67,25 @@ jobs:
             }
             echo "::endgroup::"
           done
-      - name: Capture eight faction geometry screenshots
+      - name: Capture G13 V9 18-frame final visual acceptance gallery
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/g13-final-gallery
+          mkdir -p /tmp/g13-v9-gallery
           timeout --signal=TERM --kill-after=5s 180s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 G13_V1_CAPTURE_DIR=/tmp/g13-final-gallery \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V9_CAPTURE_DIR=/tmp/g13-v9-gallery \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy \
-            --path . --script res://tests/test_g13_native_v1_capture.gd 2>&1 | tee /tmp/g13-capture.log
+            --path . --script res://tests/test_g13_v9_acceptance_capture.gd 2>&1 | tee /tmp/g13-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-capture.log; then exit 1; fi
-          grep -F 'PASS G13 V1 CAPTURE:' /tmp/g13-capture.log
-          test "$(find /tmp/g13-final-gallery -name '*.png' | wc -l)" -eq 16
+          grep -F 'PASS G13 V9 CAPTURE:' /tmp/g13-capture.log
+          test "$(find /tmp/g13-v9-gallery -name '*.png' | wc -l)" -eq 18
       - name: Upload actual 3D inspection frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: g13-v8-art-audit-actual-godot-frames
-          path: /tmp/g13-final-gallery/*.png
+          name: g13-v9-art-audit-18-actual-godot-frames
+          path: /tmp/g13-v9-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
