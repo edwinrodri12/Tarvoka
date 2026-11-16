@@ -77,6 +77,42 @@ func _run() -> void:
         _check(not history.is_ancestor_of(faction), "faction dropdown is not hidden in history")
     var frame: Control = studio.get("model_holder") as Control
     _check(frame != null and frame.is_visible_in_tree(), "native 3D viewport remains visible")
+    # Horizontal 960x540 has enough room for the actual model, rather than
+    # letting long technical controls squeeze the viewport to a thumbnail.
+    await process_frame
+    if frame != null:
+        var view_width: float = float(root.size.x)
+        var canvas_width: float = frame.size.x
+        var canvas_height: float = frame.size.y
+        _check(view_width >= 900.0, "landscape test uses a real 960px window")
+        _check(canvas_width >= 0.50 * view_width,
+            "the 3D canvas receives at least half the landscape width")
+        _check(canvas_height >= 400.0,
+            "the 3D canvas remains tall enough to inspect the full model")
+        print("STUDIO VIEWPORT QA: %s / %s pixels (%.1f%% width)" %
+            [str(int(canvas_width)),str(int(view_width)),100.0*canvas_width/maxf(1.0,view_width)])
+    if role != null and category != null and faction != null:
+        var viewport_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(root.size))
+        _check(viewport_rect.has_point(role.get_global_rect().position),
+            "role picker starts inside the visible landscape window")
+        _check(viewport_rect.has_point(category.get_global_rect().position),
+            "category picker starts inside the visible landscape window")
+        _check(viewport_rect.has_point(faction.get_global_rect().position),
+            "faction picker starts inside the visible landscape window")
+    # Switch to buildings and back using the actual category handler.
+    studio.call("_studio_jump_category",1)
+    await process_frame
+    var building_picker: OptionButton = studio.get("building_picker") as OptionButton
+    _check(category != null and category.selected==1, "buildings mode selected")
+    _check(building_picker != null and building_picker.is_visible_in_tree(),
+        "building picker appears when selecting buildings")
+    _check(role != null and not role.visible,
+        "unit picker is hidden only while in buildings mode")
+    studio.call("_studio_jump_category",0)
+    await process_frame
+    _check(category != null and category.selected==0, "returns to units mode")
+    _check(role != null and role.is_visible_in_tree(),
+        "unit picker returns to visible primary navigation")
     # Exercise the actual shared Godot model switch. If the legacy tank
     # renders instead of the final approved G09, the V31 marker is absent.
     studio.call("_display_role", "tank")
@@ -109,6 +145,19 @@ func _run() -> void:
             "960x540 native studio screenshot was saved")
     else:
         _check(false,"960x540 native screenshot could not be captured")
+    # Compare PC landscape against mobile within the same native Godot scene.
+    root.size=Vector2i(1280,720)
+    await process_frame
+    await process_frame
+    await RenderingServer.frame_post_draw
+    if frame!=null:
+        _check(frame.size.x>=640.0,"desktop scene keeps a generous 3D canvas")
+    var desktop: Image=root.get_texture().get_image()
+    if desktop!=null and desktop.get_width()>0:
+        _check(desktop.save_png(screenshot_dir.path_join("studio-1280x720.png"))==OK,
+            "1280x720 native studio screenshot was saved")
+    else:
+        _check(false,"1280x720 screenshot could not be captured")
     studio.queue_free()
     await process_frame
     if failures > 0:
