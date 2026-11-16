@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 90s \
+          timeout --signal=TERM --kill-after=10s 40s \
             /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --script res://tests/test_fixed_site_battle_ui_v20.gd \
             2>&1 | tee /tmp/tarvoka-territory-screen-v20.log
@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 90s \
+          timeout --signal=TERM --kill-after=10s 40s \
             /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --script res://tests/test_fixed_site_orders_v19.gd \
             2>&1 | tee /tmp/tarvoka-territory-v19-regression.log
