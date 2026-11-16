@@ -6,12 +6,14 @@ on:
       - feat/infantry-barracks-android-device-lab-20261116
     paths:
       - "scripts/ui/InfantryBarracksAndroidLab.gd"
+      - "scripts/ui/InfantryBarracksEntranceYardV5.gd"
       - "scenes/InfantryBarracksAndroidLab.tscn"
       - "tests/test_infantry_android_lab_gpu.gd"
       - ".github/workflows/infantry-barracks-android-lab.yml"
   pull_request:
     paths:
       - "scripts/ui/InfantryBarracksAndroidLab.gd"
+      - "scripts/ui/InfantryBarracksEntranceYardV5.gd"
       - "scenes/InfantryBarracksAndroidLab.tscn"
       - "tests/test_infantry_android_lab_gpu.gd"
       - ".github/workflows/infantry-barracks-android-lab.yml"
