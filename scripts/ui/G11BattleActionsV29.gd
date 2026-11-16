@@ -10,6 +10,7 @@ const Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const Face = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const TrailsV30 = preload("res://scripts/ui/G11RocketTrailsV30.gd")
 const FlightV31 = preload("res://scripts/ui/G11RocketFlightV31.gd")
+const GearV32 = preload("res://scripts/ui/G11RunningGearV32.gd")
 const FLAG := "tarvoka_g11_v29_live_battle_action"
 const MOVE_TIME: float=0.92
 const ATTACK_TIME: float=1.65
@@ -93,6 +94,9 @@ func play(unit_id: String,kind: String,from_position: Vector3,
     _kind=kind
     _elapsed=0.0
     if kind=="move":
+        # Heights are captured from the already authorized start/end tiles.
+        # This is a transient visual hint, never a game-state write.
+        candidate.set_meta(GearV32.SLOPE,_end.y-_start.y)
         candidate.position=_start
     else:
         var pod:=candidate.find_child(Mobile.POD,true,false) as Node3D
@@ -126,7 +130,7 @@ func advance(delta: float) -> void:
     if _kind=="move":
         var eased: float=t*t*(3.0-2.0*t)
         _model.position=_start.lerp(_end,eased)
-        Models.pose_model("mlrs",_model,"move",t)
+        Models.pose_model("mlrs",_model,"move",t,_heading)
     elif _kind=="attack":
         # This rotates/elevates the existing launch rack only. It never
         # calls BattleSession.attack or changes the tactical target.
@@ -192,6 +196,7 @@ func stop() -> void:
             if rack!=null:
                 rack.position=_pod_rest_position
         _model.remove_meta("tarvoka_g11_v31_recoil_m")
+        _model.remove_meta(GearV32.SLOPE)
         _model.remove_meta(FLAG)
     if is_instance_valid(_flash):
         _flash.visible=false
