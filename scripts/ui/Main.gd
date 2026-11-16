@@ -41,6 +41,7 @@ const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const BattleView3D = preload("res://scripts/ui/Battle3DMapView.gd")
+const NATIVE_STUDIO_PATH := "res://scripts/ui/BastionStudioAdapter.gd"
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
 const MoveRiskCard = preload("res://scripts/ui/MoveRiskCard.gd")
@@ -112,6 +113,7 @@ var campaign_button: Button
 var iso_view_button: Button
 var battle_3d_button: Button
 var battle_3d_view: Control
+var native_studio_overlay: Control
 var battery_saver_button: Button
 var battle_minimap: Control
 var minimap_caption: Label
@@ -914,6 +916,7 @@ func _ready() -> void:
     home_menu.story_requested.connect(_open_story_selector)
     home_menu.skirmish_requested.connect(_prepare_skirmish)
     home_menu.arsenal_requested.connect(_open_arsenal_from_home)
+    home_menu.studio_requested.connect(_open_native_3d_studio)
     home_menu.settings_requested.connect(_open_settings_from_home)
     home_menu.saves_requested.connect(_open_saved_matches_from_home)
     home_menu.credits_requested.connect(_open_credits_from_home)
@@ -1123,7 +1126,15 @@ func _build_battle_hud() -> void:
     compact_top_shortcuts = HBoxContainer.new()
     compact_top_shortcuts.mouse_filter = Control.MOUSE_FILTER_IGNORE
     compact_top_shortcuts.add_theme_constant_override("separation",5)
-    battle_hud_commands.add_child(compact_top_shortcuts)
+    # Mobile shortcuts must be siblings of the hidden legacy command stack,
+    # otherwise the "3D" button is never visible in the actual battle.
+    compact_top_shortcuts.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+    compact_top_shortcuts.offset_left = 8
+    compact_top_shortcuts.offset_right = -8
+    compact_top_shortcuts.offset_top = 64
+    compact_top_shortcuts.offset_bottom = 110
+    compact_top_shortcuts.mouse_filter = Control.MOUSE_FILTER_PASS
+    battle_hud_overlay.add_child(compact_top_shortcuts)
 
     var spacer := Control.new()
     spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1488,6 +1499,9 @@ func _set_compact_hud(compact: bool) -> void:
     compact_attention_unit.visible = compact
     compact_threat_button.visible = compact
     compact_top_shortcuts.visible = compact
+    compact_3d.visible = compact
+    if compact:
+        compact_top_shortcuts.move_to_front()
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
     battle_hud_toggle.visible = not compact
@@ -2072,6 +2086,10 @@ func _confirm_new_game() -> void:
     if skirmish_setup != null and skirmish_setup.visible:
         skirmish_setup.hide()
         _set_compact_hud(OS.has_feature("mobile"))
+    # Android now enters its ACTUAL playable 3D map after a confirmed match.
+    # Users can still close the overlay to use the legacy 2D board.
+    if OS.has_feature("mobile") and DisplayServer.get_name() != "headless":
+        call_deferred("_open_battle_3d")
 
 func _selected_map_size() -> Vector2i:
     match map_size_picker.get_selected_id():
@@ -2138,6 +2156,10 @@ func _refresh_production_catalog() -> void:
 # Central navigation is an independent non-destructive overlay. It never
 # changes saved battle rules, campaign ownership, or confirmation semantics.
 func _show_home_menu() -> void:
+    if native_studio_overlay != null:
+        native_studio_overlay.hide()
+    if battle_3d_view != null and battle_3d_view.visible:
+        battle_3d_view.close_view()
     _pending_visual_factions.clear()
     if faction_selector != null:
         faction_selector.hide()
@@ -2171,6 +2193,8 @@ func _load_saved_match(path: String) -> void:
         home_menu.hide()
         if OS.has_feature("mobile"):
             _set_compact_hud(true)
+            if DisplayServer.get_name() != "headless":
+                call_deferred("_open_battle_3d")
     else:
         saved_matches_menu.refresh_slots()
         saved_matches_menu.status_label.text = "No se pudo cargar este guardado. La partida actual se conserva."
@@ -2179,6 +2203,8 @@ func _continue_from_home() -> void:
     home_menu.hide()
     if OS.has_feature("mobile"):
         _set_compact_hud(true)
+        if DisplayServer.get_name() != "headless":
+            call_deferred("_open_battle_3d")
 
 func _prepare_skirmish() -> void:
     _close_results_screen()
@@ -2240,6 +2266,55 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     map_seed_picker.value = int(configuration["seed"])
     _pending_visual_factions = Identity.resolved(configuration.get("factions",{}))
     _new_game() # Same confirmation, permissions and autosave guards.
+
+# The native art studio contains the already-authored HQ, Airbase, Naval Base,
+# Supply Center, P06 Bastion, G11 Launcher and G09 tank. It is a review space,
+# never a new playable building or a replacement for tactical battle rules.
+func _open_native_3d_studio() -> void:
+    if battle_3d_view != null and battle_3d_view.visible:
+        battle_3d_view.close_view()
+    home_menu.hide()
+    if native_studio_overlay == null or not is_instance_valid(native_studio_overlay):
+        native_studio_overlay = Control.new()
+        native_studio_overlay.name = "TARVOKA_Estudio3D_Nativo"
+        native_studio_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+        native_studio_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        add_child(native_studio_overlay)
+        # Load on demand so headless gameplay rules do not compile the
+        # extensive native art studio when no visual inspection is requested.
+        var studio_script: Script = load(NATIVE_STUDIO_PATH) as Script
+        if studio_script == null or not studio_script.can_instantiate():
+            native_studio_overlay.queue_free()
+            native_studio_overlay = null
+            home_menu.show()
+            return
+        var studio: Control = studio_script.new() as Control
+        if studio == null:
+            native_studio_overlay.queue_free()
+            native_studio_overlay = null
+            home_menu.show()
+            return
+        studio.name = "ModelosOriginales3D"
+        native_studio_overlay.add_child(studio)
+        studio.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        var back := Button.new()
+        back.name = "VolverDesdeEstudio3D"
+        back.text = "VOLVER AL MENÚ"
+        back.anchor_left = 1.0
+        back.anchor_right = 1.0
+        back.offset_left = -214.0
+        back.offset_right = -10.0
+        back.offset_top = 9.0
+        back.offset_bottom = 55.0
+        back.pressed.connect(_close_native_3d_studio)
+        native_studio_overlay.add_child(back)
+    native_studio_overlay.show()
+    native_studio_overlay.move_to_front()
+
+func _close_native_3d_studio() -> void:
+    if native_studio_overlay != null:
+        native_studio_overlay.hide()
+    _show_home_menu()
 
 func _open_arsenal_from_home() -> void:
     home_menu.hide()

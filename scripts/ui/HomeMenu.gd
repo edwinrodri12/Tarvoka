@@ -5,6 +5,7 @@ signal continue_requested
 signal story_requested
 signal skirmish_requested
 signal arsenal_requested
+signal studio_requested
 signal settings_requested
 signal saves_requested
 signal credits_requested
@@ -132,6 +133,7 @@ func _ready() -> void:
     _menu_option("Escaramuza","Batallas y mapas personalizados","02",func(): skirmish_requested.emit())
     _menu_option("Online","Multijugador en línea · próximamente","03",Callable(),false)
     _menu_option("Arsenal","Unidades y modelos de TARVOKA","04",func(): arsenal_requested.emit())
+    _menu_option("Estudio 3D","Cuartel, base aérea, base naval, suministros y unidades","09",func(): studio_requested.emit())
     _menu_option("Partidas guardadas","Reanudar o cargar una batalla","05",func(): saves_requested.emit())
     _menu_option("Ajustes","Pantalla, controles y rendimiento","06",func(): settings_requested.emit())
     _menu_option("Créditos","Información del juego y equipo","07",_open_credits)

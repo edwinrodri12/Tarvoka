@@ -107,7 +107,9 @@ static func build_scene(faction: int,biome: String) -> Node3D:
     var state: Dictionary=make_state(faction,biome)
     if state.is_empty():
         return null
-    var battle := Terrain.build(state,"G11-H",0)
+    # Fixed tactical LOD comparison intentionally has no inspected hero unit;
+    # in live battles selecting a unit may upgrade only that model to studio detail.
+    var battle := Terrain.build(state,"",0)
     if battle==null:
         return null
     # The battle remains the same authentic 0-vs-1 match; only the

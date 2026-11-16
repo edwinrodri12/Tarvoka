@@ -18,6 +18,8 @@ const G11Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const ApprovedSites = preload("res://scripts/ui/ApprovedBattleAssets3D.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -192,7 +194,8 @@ static func _shore_color(biome: String) -> Color:
 
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
-        biome: String = Biomes.TEMPERATE) -> Dictionary:
+        biome: String = Biomes.TEMPERATE,
+        weather: String = Weather.CLEAR) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -212,6 +215,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var at: Vector3 = world_at(cell)
         var half: float = CELL*0.5
         var tinted: Color = _tint(tile,biome)
+        if kind != "unknown" and bool(tile.get("details",false)):
+            tinted = Weather.terrain_tint(tinted,weather)
         if kind == "unknown":
             var flat: Vector3 = at+Vector3(0,FOG_LEVEL,0)
             _panel(unknown,flat+Vector3(-half,0,-half),
@@ -234,10 +239,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         # No new geometry or draw calls: only vertex pigments change.
         # Explored but not presently visible tiles stay uniformly dim.
         if bool(tile.get("details",false)):
-            var nw_tint: Color = _cached_corner_tint(cells,cell,corner_cache,biome)
-            var ne_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,0),corner_cache,biome)
-            var se_tint: Color = _cached_corner_tint(cells,cell+Vector2i(1,1),corner_cache,biome)
-            var sw_tint: Color = _cached_corner_tint(cells,cell+Vector2i(0,1),corner_cache,biome)
+            var nw_tint: Color = Weather.terrain_tint(_cached_corner_tint(cells,cell,corner_cache,biome),weather)
+            var ne_tint: Color = Weather.terrain_tint(_cached_corner_tint(cells,cell+Vector2i(1,0),corner_cache,biome),weather)
+            var se_tint: Color = Weather.terrain_tint(_cached_corner_tint(cells,cell+Vector2i(1,1),corner_cache,biome),weather)
+            var sw_tint: Color = Weather.terrain_tint(_cached_corner_tint(cells,cell+Vector2i(0,1),corner_cache,biome),weather)
             _tri_tinted(ground,nw,middle,ne,nw_tint,tinted,ne_tint)
             _tri_tinted(ground,ne,middle,se,ne_tint,tinted,se_tint)
             _tri_tinted(ground,se,middle,sw,se_tint,tinted,sw_tint)
@@ -258,20 +263,20 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         if kind == "road":
             var width := 0.70
             RoadShore._rect(road,at,surface_cell,-width,width,-width,width,
-                _road_color(biome),ROAD_LIFT)
+                Weather.terrain_tint(_road_color(biome),weather),ROAD_LIFT)
             var roads: Dictionary = tile["roads"]
             if bool(roads["north"]):
                 RoadShore._rect(road,at,surface_cell,-width,width,-half,-width,
-                    _road_color(biome),ROAD_LIFT)
+                    Weather.terrain_tint(_road_color(biome),weather),ROAD_LIFT)
             if bool(roads["south"]):
                 RoadShore._rect(road,at,surface_cell,-width,width,width,half,
-                    _road_color(biome),ROAD_LIFT)
+                    Weather.terrain_tint(_road_color(biome),weather),ROAD_LIFT)
             if bool(roads["west"]):
                 RoadShore._rect(road,at,surface_cell,-half,-width,-width,width,
-                    _road_color(biome),ROAD_LIFT)
+                    Weather.terrain_tint(_road_color(biome),weather),ROAD_LIFT)
             if bool(roads["east"]):
                 RoadShore._rect(road,at,surface_cell,width,half,-width,width,
-                    _road_color(biome),ROAD_LIFT)
+                    Weather.terrain_tint(_road_color(biome),weather),ROAD_LIFT)
             roads_count += 1
         else:
             var shore_edges: Dictionary = tile["shore"]
@@ -487,6 +492,20 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             color = Color("#6099db")
         elif owner == 1:
             color = Color("#dc6c65")
+        # Genuine native Godot architecture from the approved 3D sources.
+        # This is VISUAL ONLY: the economy, map ownership and fog rules above
+        # remain the single authority. Unknown owners cannot show a crest.
+        var architecture: Node3D = ApprovedSites.build(
+            str(site["kind"]),state,cell,owner,Rules.map_size(state["terrain"]))
+        if architecture != null:
+            architecture.name = "Instalacion3D_%s_%d_%d" % [
+                str(site["kind"]),cell.x,cell.y]
+            architecture.position = world_at(cell)+Vector3(0,height_at(cells,cell),0)
+            architecture.set_meta("owner_public",owner)
+            architecture.set_meta("kind",site["kind"])
+            parent.add_child(architecture)
+            drawn += 1
+            continue
         var mesh: PrimitiveMesh
         if site["kind"] == "relay":
             var tower := CylinderMesh.new()
@@ -535,22 +554,27 @@ static func _make_units(parent: Node3D,state: Dictionary,
             continue
         var role: String = str(unit.get("role","line"))
         var model: Node3D = null
+        # Upgrade only the inspected piece to its authored studio-grade rig.
+        # One expensive model at a time; the mobile battle keeps bounded LOD
+        # for everyone else, especially on 24x18 and 40x30 maps.
+        var full_inspection: bool = str(unit["id"]) == selected_id and (
+            Rules.map_size(state.get("terrain",[])) == Vector2i(10,8))
         if role=="apc":
             # Every visible P06 keeps its authentic 6x6 silhouette even
             # beyond the eight high-detail slots. Six tires are two GPU
             # batches and do not expand into hundreds of individual meshes.
-            model = Models.build("apc",faction,false,8)
+            model = Models.build("apc",faction,full_inspection,14 if full_inspection else 8)
             if model!=null:
                 apc_lod+=1
         elif role=="mlrs":
             # V25: the actual 3D battle camera must use the corrected V24
             # rounded tracks rather than a legacy G11 LOD6 box silhouette.
             # One logical unit, no hero art and never a gameplay mutation.
-            model = Models.build("mlrs",faction,false,8)
+            model = Models.build("mlrs",faction,full_inspection,13 if full_inspection else 8)
             if model!=null and bool(model.get_meta(G11Tactical.FLAG,false)):
                 g11_lod+=1
         elif detailed < MAX_DETAILED_UNITS and Models.supports(role):
-            model = Models.build(role,faction,false,6)
+            model = Models.build(role,faction,full_inspection,13 if full_inspection else 6)
             if model != null:
                 detailed += 1
         if model == null:
@@ -613,8 +637,9 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     # One palette sample per global grid corner, reused by up to four
     # tiles and across 8x8 sectors. Cache only for this render build.
     var corner_cache: Dictionary = {}
+    var live_weather: String = Weather.from_state(state)
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,biome)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,biome,live_weather)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
     counters["trees"] = _make_cone_trees(scene,cells,biome)
@@ -664,6 +689,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)
     scene.set_meta("visual_biome",biome)
+    scene.set_meta("visual_weather",live_weather)
     scene.set_meta("public_cells",cells)
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)

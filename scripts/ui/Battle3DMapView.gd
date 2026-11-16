@@ -16,6 +16,8 @@ const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const Weather3D = preload("res://scripts/ui/BattleWeather3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 
 var holder: SubViewportContainer
@@ -24,6 +26,7 @@ var camera: Camera3D
 var inspection: Label
 var stats_label: Label
 var _scene: Node3D
+var _weather_layer: Node3D = null
 var _cursor: MeshInstance3D
 var _cells: Dictionary = {}
 var _dims := Vector2i.ZERO
@@ -338,6 +341,8 @@ func _refresh_camera() -> void:
     var direction := Vector3(sin(_yaw),0,cos(_yaw))
     camera.position = _look_at+direction*_camera_size*0.64+Vector3.UP*_camera_size*0.83
     camera.look_at(_look_at,Vector3.UP)
+    if _weather_layer != null:
+        _weather_layer.position = Vector3(_look_at.x,0.0,_look_at.z)
 
 func _zoom_in() -> void:
     _zoom_anchored(1.0/1.28,holder.size*0.5)
@@ -367,11 +372,15 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     if _scene != null:
         _scene.free()
         _scene = null
+    if _weather_layer != null:
+        _weather_layer.free()
+        _weather_layer = null
     var model: Node3D = Terrain.build(state,selected_id,_viewing_side)
     if model == null:
         return false
     _scene = model
     var visual_biome: String = Biomes.from_state(state)
+    var climate: String = Weather.from_state(state)
     var background: Color = Color("#394d5b")
     match visual_biome:
         Biomes.WINTER:
@@ -380,9 +389,23 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
             background = Color("#8d8377")
         Biomes.COASTAL:
             background = Color("#4d7d89")
+    if climate == Weather.RAIN:
+        background = background.darkened(0.33)
+    elif climate == Weather.SNOW:
+        background = background.lerp(Color("#d2e1ed"),0.30)
     for child in preview.get_children():
         if child is WorldEnvironment and child.environment != null:
             child.environment.background_color = background
+            child.environment.ambient_light_energy = 0.29 if climate == Weather.RAIN else 0.41
+        elif child is DirectionalLight3D:
+            child.light_energy = 0.64 if climate == Weather.RAIN else (0.81 if climate == Weather.SNOW else 1.06)
+    if climate != Weather.CLEAR:
+        var effect: Node3D = Weather3D.new()
+        if bool(effect.call("configure",climate)):
+            _weather_layer = effect
+            preview.add_child(_weather_layer)
+        else:
+            effect.free()
     _state_snapshot = state.duplicate(true)
     _selected_hint_unit_id = selected_id
     _ranges_visible = true
@@ -396,6 +419,9 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.83,
         22.0,90.0)
     _yaw = PI*0.25
+    # Essential: the new state replaces look_at/zoom. Without this update,
+    # Camera3D stays at (0,0,0) and the Android viewport shows ONLY sky.
+    _refresh_camera()
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
@@ -405,6 +431,7 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     stats_label.text = ("%d × %d · %d sectores · %d unidades visibles (%d modelos detallados)"
         % [_dims.x,_dims.y,int(statistics["chunks"]),
             int(units["visible"]),int(units["detailed"])])
+    stats_label.text += " · clima %s" % Weather.label(climate)
     stats_label.text += " · bioma %s · %d laderas, %d bosques · %d mallas extra" % [
         Biomes.label_for(visual_biome),
         int(statistics.get("mountain_ridges",0)),
@@ -904,6 +931,9 @@ func close_view() -> void:
     if _scene != null:
         _scene.queue_free()
         _scene = null
+    if _weather_layer != null:
+        _weather_layer.queue_free()
+        _weather_layer = null
     _cursor = null
     _ranges_node = null
     _cells = {}
