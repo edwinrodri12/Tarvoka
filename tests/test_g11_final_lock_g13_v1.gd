@@ -41,6 +41,9 @@ func _run()->void:
             _check(bool(model.get_meta("tarvoka_g13_v1_art_only",false)) and
                 str(model.get_meta("tarvoka_g13_v1_approved_family",""))=="G13",
                 "render-only model does not imply antiair rules in motor")
+            _check(model.position.y+model.scale.y*(
+                G13.WHEEL_Y-G13.WHEEL_RADIUS)>=0.008,
+                "four wheel tread bottoms are above ground, never half-buried")
             _check(model.find_child("G13_LowerMonocoque",true,false)
                 is MeshInstance3D,
                 "original native four-wheel armored hull, not a recolored G11")
