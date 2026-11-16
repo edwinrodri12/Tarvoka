@@ -186,6 +186,8 @@ jobs:
           cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
           test -s hq-android-v15/tests/test_g13_studio_web_v1.gd
           cp hq-android-v15/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
+          test -s hq-android-v15/tests/test_unified_studio_navigation.gd
+          cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
@@ -743,6 +745,17 @@ jobs:
             echo "G13 visual 3D Studio selection regression"; exit 1
           fi
           grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-studio-smoke.log
+          # Catch hidden OptionButtons and duplicate/overlapping menu panels
+          # in the actual exported Godot scene, at Android-landscape width.
+          xvfb-run -a -s '-screen 0 960x540x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_unified_studio_navigation.gd \
+            2>&1 | tee /tmp/unified-menu-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed" /tmp/unified-menu-smoke.log; then
+            echo "Unified Studio navigation regression"; exit 1
+          fi
+          grep -F 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
