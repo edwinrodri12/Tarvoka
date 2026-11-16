@@ -22,6 +22,7 @@ const AttackHelicopterLandingV5 = preload("res://scripts/ui/AttackHelicopterLand
 const AttackHelicopterLandingFinishV6 = preload("res://scripts/ui/AttackHelicopterLandingFinishV6.gd")
 const AttackHelicopterReadabilityV7 = preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
 const AttackHelicopterSilhouetteV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
+const AttackHelicopterFinishV10 = preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -936,7 +937,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                         if AttackHelicopterLandingV5.apply(model,faction_paint_color(faction)):
                             if AttackHelicopterLandingFinishV6.apply(model,faction_paint_color(faction)):
                                 if AttackHelicopterReadabilityV7.apply(model,faction_paint_color(faction)):
-                                    AttackHelicopterSilhouetteV8.apply(model,faction_paint_color(faction))
+                                    if AttackHelicopterSilhouetteV8.apply(model,faction_paint_color(faction)):
+                                        AttackHelicopterFinishV10.apply(model,faction_paint_color(faction))
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.

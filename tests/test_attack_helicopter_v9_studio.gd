@@ -5,6 +5,7 @@ extends SceneTree
 # Simulates Android landscape -> portrait -> landscape without reconstructing
 # the helicopter or changing any original tank/APC/launcher controls.
 const V8=preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
+const V10=preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 var failures: int=0
 var images: int=0
 
@@ -62,8 +63,8 @@ func _run() -> void:
     var advanced: VBoxContainer=studio.get("heli_controls") as VBoxContainer
     var model_holder: SubViewportContainer=studio.get("model_holder") as SubViewportContainer
     var camera: Camera3D=studio.get("camera") as Camera3D
-    _check(model!=null and V8.has_model(model),
-        "actual V8 helicopter, not the cheap proxy, is loaded in web studio")
+    _check(model!=null and V8.has_model(model) and V10.has_model(model),
+        "actual full V10 helicopter is loaded, not low-poly proxy")
     if model==null or quick==null or advanced==null or model_holder==null:
         _check(false,"required UI nodes must exist before interactive mobile tests")
         studio.queue_free()
@@ -112,6 +113,30 @@ func _run() -> void:
     _check(v7!=null and not v7.visible,"quick V7/V8 compare really removes V8 panels")
     studio.call("_heli_toggle_v8")
     _check(v7!=null and v7.visible,"V8 panels restore from quick view")
+    # V10 detail focus moves only the Studio camera, not the real model.
+    studio.call("_heli_inspect_focus",34.0,12.0,2.26,
+        Vector3(0,1.53,-0.76))
+    var focus: Vector3=studio.get("_heli_focus_local")
+    _check(focus.distance_to(Vector3(0,1.53,-0.76))<0.001,
+        "cockpit closeup focuses on the actual V2 canopy center")
+    var studio_camera: Camera3D=studio.get("camera") as Camera3D
+    _check(studio_camera!=null and
+        studio_camera.position.distance_to(Vector3(5.3,4.2,6.3))>0.1,
+        "real camera position shifts for detailed optical view, not only zoom")
+    _check(V10.has_model(model) and bool(model.get_meta(V10.ENABLED,false)),
+        "V10 PBR and glass finish active in live WebGL scene")
+    studio.call("_heli_toggle_v10")
+    _check(not bool(model.get_meta(V10.ENABLED,true)),
+        "V10 comparison returns original V8 PBR resources")
+    studio.call("_heli_toggle_v10")
+    _check(bool(model.get_meta(V10.ENABLED,false)),
+        "V10 PBR returns without duplicating model or losing faction colors")
+    var rim: DirectionalLight3D=studio.get("_heli_v10_rim_light")
+    _check(rim!=null and rim.visible and not rim.shadow_enabled,
+        "dedicated cool fill light affects only A01 without extra WebGL shadows")
+    studio.call("_heli_mobile_home")
+    _check(studio.get("_heli_focus_local")==Vector3.ZERO,
+        "one-tap full helicopter restores unfocused camera")
     studio.call("_heli_play","attack")
     studio.call("_process",0.22)
     _check(str(studio.get("_heli_animation"))=="attack",
@@ -127,7 +152,7 @@ func _run() -> void:
     _check(not quick.visible and advanced.visible,
         "portrait preserves classic full Studio navigation and hides quick bar")
     _check(model.get_instance_id()==original_id,
-        "orientation change does not recreate 700 physical helicopter meshes")
+        "orientation change does not recreate 3D helicopter geometry")
     await _capture("a01_v9_portrait_540x960")
     root.size=Vector2i(960,540)
     studio.call("_heli_on_viewport_resize")
@@ -146,9 +171,11 @@ func _run() -> void:
     await process_frame
     _check(not quick.visible,
         "A01-only quick panel hides for Bastion, retaining other-unit UI")
+    _check(rim!=null and not rim.visible,
+        "V10 extra light disabled when viewing Bastion or any other category")
     var shared_picker: OptionButton=studio.get("role_picker") as OptionButton
     _check(shared_picker!=null and
-        shared_picker.get_item_text(5).contains("silueta táctica de facción")
+        shared_picker.get_item_text(5).contains("V10")
         and not shared_picker.clip_text,
         "Bastion restores full original model labels and un-clipped selectors")
     _check(studio.get("model_root")!=null,
