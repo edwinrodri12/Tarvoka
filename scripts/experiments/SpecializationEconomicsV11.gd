@@ -6,6 +6,7 @@ class_name TarvokaSpecializationEconomicsV11
 # are explicitly supplied by the caller and NEVER charged to a match.
 const Lab = preload("res://scripts/experiments/RoleSpecializationV08.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 
@@ -13,10 +14,7 @@ static func repair_quote(role: String, current_hp: int,
         pack: String, engineer_already_owned: bool) -> Dictionary:
     if role not in Lab.REPAIRABLE_ROLES or not Lab.REPAIR_PACKS.has(pack):
         return {"valid":false}
-    var profile: Dictionary = Roles.PROFILES[role] if Roles.PROFILES.has(role) else {}
-    if profile.is_empty():
-        var Arsenal = preload("res://scripts/core/ModernArsenal.gd")
-        profile = Arsenal.profile(role)
+    var profile: Dictionary = Roles.PROFILES[role] if Roles.PROFILES.has(role) else Arsenal.profile(role)
     var cap: int = int(profile.get("hp",0))
     if current_hp <= 0 or current_hp >= cap:
         return {"valid":false}
