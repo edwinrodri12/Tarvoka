@@ -32,7 +32,10 @@ static func apply(root: Node3D, enamel: Color) -> bool:
     var dark:=Color("#20292e")
     var alloy:=Color("#aab2ae")
     var paint:=enamel.darkened(0.08)
-    # Turret cheek panels now extend past the V1 housing (half-width 0.485),\n    # and their insignia extend past the cheek exterior (0.60).\n    # Previous cheeks/insignia were buried inside the turret housing.\n    # All fenders terminate above the tyre crown (0.64m); never cap wheels.
+    # Turret cheek panels now extend past the V1 housing (half-width 0.485),
+    # and their insignia extend past the cheek exterior (0.60).
+    # Previous cheeks/insignia were buried inside the turret housing.
+    # All fenders terminate above the tyre crown (0.64m); never cap wheels.
     # Fenders and front/rear lamps retain physical clearance on both sides.
     for side in [-1,1]:
         var s: float=float(side)
