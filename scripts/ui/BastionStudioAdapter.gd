@@ -96,6 +96,7 @@ var _heli_compact_landscape: bool=false
 var _heli_mobile_expanded: bool=false
 var _heli_frame_reflows: int=0
 var g11_controls: VBoxContainer
+var g13_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
 var _g11_playback_speed: float = 1.0
@@ -111,6 +112,7 @@ func _ready() -> void:
     _heli_camera_base=camera.position if camera!=null else Vector3(5.3,4.2,6.3)
     _install_p06_controls()
     _install_g11_controls()
+    _install_g13_controls()
     _install_heli_controls()
     _install_heli_mobile_bar()
     get_viewport().size_changed.connect(_heli_on_viewport_resize)
@@ -120,6 +122,9 @@ func _ready() -> void:
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33 · revisión final y Android")
+    var aa_index: int=P06Models.ROLES.find("aa_mobile")
+    if aa_index>=0:
+        role_picker.set_item_text(aa_index,"G13 · Antiaéreo móvil · boceto 3D V1")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V10 cristales y acabados 3D")
@@ -528,6 +533,47 @@ func _install_p06_controls() -> void:
     var index: int = column.get_children().find(detail_label)
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
+
+func _install_g13_controls() -> void:
+    var column:=role_picker.get_parent() as VBoxContainer
+    g13_controls=VBoxContainer.new()
+    g13_controls.name="G13_AntiaereoMovil_V1_EstudioReal"
+    g13_controls.add_theme_constant_override("separation",8)
+    column.add_child(g13_controls)
+    var title: Label=_title(g13_controls,
+        "G13 ANTIAÉREO MÓVIL · PRIMER MODELO 3D",14)
+    title.add_theme_color_override("font_color",Color("#E7BE70"))
+    _add_paired(g13_controls,"Barrido del radar",
+        func(): _g13_demo_v1("scan",0.78),
+        "Orientación de cañones",
+        func(): _g13_demo_v1("aim",0.72))
+    _add_paired(g13_controls,"Rodaje 4×4",
+        func(): _g13_demo_v1("move",0.46),
+        "Restaurar posición",
+        func(): _g13_demo_v1("idle",1.0))
+    _title(g13_controls,
+        "Primer bloque de diseño: casco blindado compacto 4×4, "
+        + "dos cañones de defensa aérea, radar y ocho pinturas de facción. "
+        + "Solo sirve para inspeccionar el 3D; no crea una nueva "
+        + "unidad jugable ni habilita todavía ataques a aeronaves.",12)
+    g13_controls.visible=false
+
+func _g13_demo_v1(kind: String,progress: float) -> void:
+    if _role!="aa_mobile" or model_root==null or (
+            not P06Models.supports("aa_mobile")):
+        return
+    if kind=="idle":
+        P06Models.restore_model_pose("aa_mobile",model_root)
+    elif not P06Models.pose_model("aa_mobile",model_root,kind,progress,
+            Vector2i(1,-1)):
+        status_label.text="G13 V1 · no se pudo aplicar la pose"
+        return
+    status_label.text="G13 V1 · "+(
+        "radar en barrido" if kind=="scan" else
+        "torreta y cañones orientados" if kind=="aim" else
+        "ruedas 4×4 en movimiento" if kind=="move" else
+        "pose original restaurada"
+    )+" · solo demostración 3D"
 
 func _install_g11_controls() -> void:
     var column: VBoxContainer = role_picker.get_parent() as VBoxContainer
@@ -1101,6 +1147,12 @@ func _sync_p06_controls() -> void:
     elif damage_picker != null and _role != "mlrs":
         for i in range(TankDamage.STAGES.size()):
             damage_picker.set_item_text(i,str(TankDamage.STAGES[i]))
+    if g13_controls!=null:
+        g13_controls.visible=_role=="aa_mobile" and (
+            category_picker==null or category_picker.selected==0)
+    if _role=="aa_mobile" and damage_picker!=null:
+        damage_picker.visible=false
+        faction_picker.visible=true
     if g11_controls != null:
         g11_controls.visible = _role == "mlrs" and (
             category_picker == null or category_picker.selected == 0)
@@ -1207,6 +1259,16 @@ func _display_role(role: String) -> void:
         else:
             push_error("TARVOKA P06 V25 sealed tire casings were not built; do not label it final")
         _update_camera()
+    if role=="aa_mobile" and model_root!=null:
+        # Studio only: the new G13 role is a visual-only prototype;
+        # keep complete 3D detailing out of the battle renderer.
+        preview.remove_child(model_root)
+        model_root.queue_free()
+        model_root=P06Models.build("aa_mobile",_faction,true,13)
+        if model_root!=null:
+            preview.add_child(model_root)
+            model_root.rotation_degrees.y=_yaw
+            _update_camera()
     if role == "mlrs" and model_root != null:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
         preview.remove_child(model_root)
