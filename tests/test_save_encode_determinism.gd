@@ -27,7 +27,9 @@ func _initialize() -> void:
         assert(restored == before, "Decoded state must match original")
         assert(Codec.encode(restored) == first, "Decode-encode must be stable")
         restored["units"][0]["hp"] = 1
+        restored["units"][1]["hp"] = 2
         restored["terrain"][0][0] = "forest"
+        restored["terrain"][7][9] = "forest"
         assert(state == before, "Decoded unit/terrain must not alias active state")
         assert(Codec.encode(state) == first, "Mutated decoded copy must not change serialized source")
         assert(Codec.decode(first) == before, "Fresh decode after mutation must recover pristine snapshot")
@@ -63,7 +65,9 @@ func _initialize() -> void:
     var snapshot_b: Dictionary = Codec.decode(first)
     assert(not snapshot_a.is_empty() and not snapshot_b.is_empty(), "Both snapshots must decode")
     snapshot_a["units"][0]["hp"] = 2
+    snapshot_a["units"][1]["hp"] = 3
     snapshot_a["terrain"][0][0] = "forest"
+    snapshot_a["terrain"][7][9] = "forest"
     assert(snapshot_b == before, "Separate decoded snapshots must not share nested data")
     assert(state == before, "Decoded mutations must not leak into active battle")
     # Encoding one modified recovery must not rewrite the other recovery.
