@@ -1,0 +1,82 @@
+extends RefCounted
+class_name TarvokaG11BattleContextV25
+
+# Read-only showcase of the REAL BattleTerrain3D mesh renderer.
+# Biomes and units are authored through the same Session / Scenarios /
+# BattleTerrain3D production code paths. Never touches a saved battle.
+const Session = preload("res://scripts/core/BattleSession.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const DIMENSIONS := Vector2i(12,10)
+const G11_HOME := Vector2i(5,5)
+const G11_RIVAL := Vector2i(8,3)
+const ROLES := ["mlrs","tank","apc","line","scout"]
+const FLAG := "tarvoka_g11_v25_live_battle_context"
+const SEED: int=22435
+
+static func make_state(faction: int,biome: String) -> Dictionary:
+    if faction<0 or faction>=8 or not Biomes.valid(biome):
+        return {}
+    var terrain: Array=Scenarios.seeded_terrain(SEED,DIMENSIONS)
+    if terrain.is_empty():
+        return {}
+    # Guaranteed dry hero staging area, while all other surrounding map
+    # cells remain the REAL procedurally generated mixed terrain.
+    for at in [
+        G11_HOME,G11_RIVAL,Vector2i(3,5),Vector2i(6,4),
+        Vector2i(4,4),Vector2i(2,3),Vector2i(8,6),
+        Vector2i(9,4),Vector2i(7,7)]:
+        terrain[at.y][at.x]="plain"
+    terrain[5][5]="road"
+    terrain[5][4]="road"
+    terrain[5][6]="road"
+    var units: Array=[
+        {"id":"G11-H","role":"mlrs","faction":0,"hp":10,
+            "pos":G11_HOME,"move_points":3,"attack":4,"acted":false},
+        {"id":"G11-E","role":"mlrs","faction":1,"hp":10,
+            "pos":G11_RIVAL,"move_points":3,"attack":4,"acted":false},
+        {"id":"Tank-H","role":"tank","faction":0,"hp":10,
+            "pos":Vector2i(3,5),"move_points":3,"attack":4,"acted":false},
+        {"id":"APC-H","role":"apc","faction":0,"hp":10,
+            "pos":Vector2i(6,4),"move_points":3,"attack":4,"acted":false},
+        {"id":"Inf-H","role":"line","faction":0,"hp":10,
+            "pos":Vector2i(4,4),"move_points":3,"attack":4,"acted":false},
+        {"id":"Scout-H","role":"scout","faction":0,"hp":10,
+            "pos":Vector2i(2,3),"move_points":3,"attack":4,"acted":false},
+        {"id":"Tank-E","role":"tank","faction":1,"hp":10,
+            "pos":Vector2i(8,6),"move_points":3,"attack":4,"acted":false},
+        {"id":"Inf-E","role":"line","faction":1,"hp":10,
+            "pos":Vector2i(9,4),"move_points":3,"attack":4,"acted":false},
+        {"id":"APC-E","role":"apc","faction":1,"hp":10,
+            "pos":Vector2i(7,7),"move_points":3,"attack":4,"acted":false}
+    ]
+    # The real game has two active sides. The requested eight-faction
+    # art comparison is represented in the studio by translating the
+    # approved paint palette of a designated unit after map building;
+    # do not insert fictitious factions into the real BattleSession.
+    var state: Dictionary=Session.start(
+        units,terrain,0,false,true,false,false,false)
+    state[Biomes.FIELD]=biome
+    return state
+
+static func build_scene(faction: int,biome: String) -> Node3D:
+    var state: Dictionary=make_state(faction,biome)
+    if state.is_empty():
+        return null
+    var battle := Terrain.build(state,"G11-H",0)
+    if battle==null:
+        return null
+    var root := Node3D.new()
+    root.name="G11V25_VisorBatallaReal"
+    battle.position=Vector3(
+        -float(DIMENSIONS.x-1)*Terrain.CELL*0.5,
+        0.0,
+        -float(DIMENSIONS.y-1)*Terrain.CELL*0.5)
+    root.add_child(battle)
+    root.set_meta(FLAG,true)
+    root.set_meta("visual_only",true)
+    root.set_meta("battle_biome",biome)
+    root.set_meta("original_state",state.duplicate(true))
+    root.set_meta("unit_count",state["units"].size())
+    return root
