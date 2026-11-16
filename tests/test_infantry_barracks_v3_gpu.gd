@@ -143,13 +143,16 @@ func _run() -> void:
             "training_side","rooftop"][i])
     studio.infantry_camera_picker.select(0)
     studio._change_infantry_camera(0)
-    studio._yaw=fposmod(studio._yaw+180.0,360.0)
-    studio.model_root.rotation_degrees.y=studio._yaw
-    studio._apply_infantry_camera()
+    # Rotate ONLY the 3D model, keep the inspection camera fixed.
+    # Rotating model AND camera together would incorrectly photograph
+    # the identical FRONT elevation rather than the real rear geometry.
+    var original_yaw: float=studio._yaw
+    var camera_before: Vector3=studio.camera.position
+    studio.model_root.rotation_degrees.y=fposmod(original_yaw+180.0,360.0)
+    await _frames(7)
+    assert(studio.camera.position.is_equal_approx(camera_before))
     await _capture(studio,"rear_view")
-    studio._yaw=fposmod(studio._yaw+180.0,360.0)
-    studio.model_root.rotation_degrees.y=studio._yaw
-    studio._apply_infantry_camera()
+    studio.model_root.rotation_degrees.y=original_yaw
     studio.infantry_camera_picker.select(1)
     studio._change_infantry_camera(1)
     studio.infantry_material_v3_toggle.set_pressed_no_signal(false)
