@@ -24,3 +24,15 @@ Seleccionar **Unidades 3D → Helicóptero A01 · V11 → Detalles** y usar las 
 - `.github/workflows/a01-v11-tail-qa.yml`: Godot 4.3, ejecución nativa y capturas conservadas como artefactos de QA.
 
 **Pendiente de aprobación artística:** revisar estas capturas y el modelo giratorio en Android horizontal antes de considerar finalizado el helicóptero A01.
+
+
+## Resultado de validación nativa (16 de noviembre de 2026)
+
+- **A01 V11:** OK. Ocho facciones, animación, geometría real y 16 capturas Godot 4.3. La comparación V11/V10 a 320×180 detectó **323 píxeles de diferencia sobre 230.400 muestras** en cuatro ángulos: el refinamiento es cercano y no modifica el LOD de combate.
+- **Estudio unificado Android:** OK. La prueba real valida las pestañas únicas **Animar / Cámara / Detalles**, selección A01 V11, comparación V10↔V11, render horizontal 960×540, vertical 540×960, regreso a horizontal, animación y aislamiento de Bastión/G13.
+- **Android debug APK:** compilación CI aprobada para la revisión de integración; la geometría V11 sigue siendo exclusiva del Estudio de alta calidad, no del combate.
+- **Dependencia de integración:** la rama principal todavía no incluye CombinedArtStudioWeb.gd. La suite de Estudio ensambla expresamente el visor de la rama feat/infantry-barracks-v1-three-distinct-levels-20261116. No publicar el adaptador sin resolver esa dependencia.
+- La suite global Godot 4 headless rules falla por una referencia independiente al Estudio ausente en main; las suites nativas de V11 y del Estudio integrado son verdes.
+- **Revisión artística:** la silueta es legible desde ocho ángulos a 320×180, pero los collares de lanzadores y las bielas solo se distinguen en vistas cercanas. Es lo esperado para un modelo detallado hero 3D, no una exigencia del LOD táctico. Queda aprobación visual antes de declarar el modelo final.
+
+Pruebas: [V11 geometría y capturas](https://github.com/edwinrodri12/Tarvoka/actions/runs/43979324225), [Estudio unificado Android](https://github.com/edwinrodri12/Tarvoka/actions/runs/43979324171).
