@@ -185,19 +185,50 @@ static func layout(terrain: Array) -> Dictionary:
         "core_site_cap_exceeded":sites.size() > Economy.MAX_SITES,
         "not_a_shipping_economy":true}
 
-# Only capture; no action ever creates additional production sites.
-# This can be invoked by a future two-turn occupation implementation.
-static func capture(layout_state: Dictionary, location: Vector2i, side: int) -> Dictionary:
-    var result: Dictionary = layout_state.duplicate(true)
-    if side not in [0,1] or not bool(result.get("valid",false)):
+# Two own-phase captures, tied to the SAME living infantry on a fixed
+# producer. Intervening enemy phases do not erase occupation. These holds
+# must be saved when/if this model becomes production gameplay.
+static func capture_end_turn(layout_state: Dictionary, holds: Dictionary,
+        units: Array, active_side: int) -> Dictionary:
+    if not bool(layout_state.get("valid",false)) or active_side not in [0,1]:
         return {"valid":false}
-    for site in result["sites"]:
-        if site["pos"] == location and str(site["kind"]) != "city" and \
-                int(site["owner"]) != side:
-            site["owner"] = side
+    var next: Dictionary = layout_state.duplicate(true)
+    var progress: Dictionary = holds.duplicate(true)
+    var completed := 0
+    for site in next["sites"]:
+        if str(site["kind"]) == "city":
+            continue
+        var cell: Vector2i = site["pos"]
+        var key: String = "%d:%d" % [cell.x,cell.y]
+        var candidate: Dictionary = {}
+        for unit in units:
+            if unit is Dictionary and int(unit.get("faction",-1)) == active_side and \
+                    unit.get("pos") == cell and Economy.can_capture(unit):
+                candidate = unit
+                break
+        if candidate.is_empty() or int(site["owner"]) == active_side:
+            if progress.has(key):
+                var pending: Dictionary = progress[key]
+                # Only this original capturer's OWN phase may end its
+                # abandoned hold. Other side's empty turn is irrelevant.
+                if int(pending.get("side",-1)) == active_side or not candidate.is_empty():
+                    progress.erase(key)
+            continue
+        var entry: Dictionary = progress.get(key,{})
+        var before := 0
+        if str(entry.get("unit_id","")) == str(candidate["id"]) and \
+                int(entry.get("side",-1)) == active_side:
+            before = int(entry.get("points",0))
+        if before+1 >= 2:
+            site["owner"] = active_side
             site["produced_turn"] = -1
-            return result
-    return {"valid":false}
+            progress.erase(key)
+            completed += 1
+        else:
+            progress[key] = {"unit_id":str(candidate["id"]),
+                "side":active_side,"points":1}
+    return {"valid":true,"layout":next,"holds":progress,
+        "completed":completed,"total_producers":int(next["producers"])}
 
 static func prohibited_build_producer(kind: String) -> bool:
     return kind in Economy.MODERN_PRODUCERS
