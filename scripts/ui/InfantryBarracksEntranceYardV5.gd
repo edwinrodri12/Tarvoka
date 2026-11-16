@@ -120,6 +120,10 @@ static func set_detail_lod(model: Node3D,near_view: bool) -> int:
     var stage: Node3D=model.get_node_or_null(STAGE_NAME) as Node3D
     if stage==null:
         return 0
+    # The same zoom tier is called frequently during pinch/pan. Skip
+    # repeated full-tree visits when the visibility state did not change.
+    if stage.has_meta("lod_near") and bool(stage.get_meta("lod_near"))==near_view:
+        return int(stage.get_meta("lod_fine_meshes",0))
     var affected: int=0
     var pending: Array[Node]=[stage]
     while not pending.is_empty():

@@ -1,0 +1,152 @@
+name: TARVOKA Infantry Barracks V5 Android device lab
+
+on:
+  push:
+    branches:
+      - feat/infantry-barracks-android-device-lab-20261116
+    paths:
+      - "scripts/ui/InfantryBarracksAndroidLab.gd"
+      - "scripts/ui/InfantryBarracksEntranceYardV5.gd"
+      - "scenes/InfantryBarracksAndroidLab.tscn"
+      - "tests/test_infantry_android_lab_gpu.gd"
+      - ".github/workflows/infantry-barracks-android-lab.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/InfantryBarracksAndroidLab.gd"
+      - "scripts/ui/InfantryBarracksEntranceYardV5.gd"
+      - "scenes/InfantryBarracksAndroidLab.tscn"
+      - "tests/test_infantry_android_lab_gpu.gd"
+      - ".github/workflows/infantry-barracks-android-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  infantry-android-device-lab:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load original HQ sprites used by shared project
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-main-assets
+          persist-credentials: false
+      - name: Restore nine original HQ sprites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            cp "source-main-assets/assets/buildings/hq_v15/hq_$i.png" assets/buildings/hq_v15/
+          done
+          cp "source-main-assets/assets/buildings/hq_v15/hq_neutral.png" assets/buildings/hq_v15/
+          rm -rf source-main-assets
+          test "$(find assets/buildings/hq_v15 -name '*.png' | wc -l)" -eq 9
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android SDK 34
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Install Godot 4.3 and matching Android templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/infantry-godot.zip
+          unzip -q /tmp/infantry-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fL --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/infantry-templates.tpz
+          mkdir -p /tmp/infantry-templates
+          unzip -q /tmp/infantry-templates.tpz -d /tmp/infantry-templates
+          T="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$T"
+          cp /tmp/infantry-templates/templates/android_debug.apk "$T/"
+          cp /tmp/infantry-templates/templates/android_release.apk "$T/"
+          printf '4.3.stable\n' > "$T/version.txt"
+      - name: Import Godot scripts and resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/infantry-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/infantry-import.log; then exit 1; fi
+      - name: GPU check native models and six comparison screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s xvfb-run -a -s "-screen 0 1280x720x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_infantry_android_lab_gpu.gd 2>&1 | tee /tmp/infantry-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/infantry-gpu.log; then exit 1; fi
+          grep -q 'PASS INFANTRY ANDROID LAB:' /tmp/infantry-gpu.log
+          for shot in n3_close_1 n3_far_1 n3_close_9 n3_far_9 n3_destroyed_4 n2_damaged_4; do
+            test -s "artifacts/infantry_android_$shot.png"
+          done
+      - name: Upload GPU model comparison evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Infantry-Android-Lab-Godot-Captures
+          path: artifacts/infantry_android_*.png
+          retention-days: 14
+          if-no-files-found: error
+      - name: Generate required unit atlas for project export
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 90s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --path . --script res://tools/export_unit_atlas.gd
+      - name: Switch export to isolated Android laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/InfantryBarracksAndroidLab.tscn"|' project.godot
+          sed -i 's|package/unique_name="com.edwinrodri12.tarvoka"|package/unique_name="com.edwinrodri12.tarvoka.infantrylab"|' export_presets.cfg
+          sed -i 's|package/name="TARVOKA"|package/name="TARVOKA Infantry Lab"|' export_presets.cfg
+          grep -F 'run/main_scene="res://scenes/InfantryBarracksAndroidLab.tscn"' project.godot
+          grep -F 'package/unique_name="com.edwinrodri12.tarvoka.infantrylab"' export_presets.cfg
+          mkdir -p build
+      - name: Generate disposable Android signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -keystore /tmp/infantry-debug.keystore \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1000 \
+            -storepass android -keypass android \
+            -dname "CN=TARVOKA Infantry Lab,O=TARVOKA,C=US" >/dev/null 2>&1
+      - name: Export independent signed ARM64 Android APK
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/infantry-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          set -euo pipefail
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-debug Android build/TARVOKA-Infantry-Android-Lab.apk
+          test -s build/TARVOKA-Infantry-Android-Lab.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose build/TARVOKA-Infantry-Android-Lab.apk
+          unzip -tq build/TARVOKA-Infantry-Android-Lab.apk
+          unzip -Z1 build/TARVOKA-Infantry-Android-Lab.apk | grep -Eq '^lib/arm64-v8a/[^/]+[.]so$'
+          sha256sum build/TARVOKA-Infantry-Android-Lab.apk
+      - name: Upload installable independent Android test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Infantry-V5-Android-ARM64-Lab
+          path: build/TARVOKA-Infantry-Android-Lab.apk
+          retention-days: 14
+          if-no-files-found: error
+      - name: Remove disposable signing key
+        if: always()
+        run: rm -f /tmp/infantry-debug.keystore
