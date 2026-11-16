@@ -60,6 +60,18 @@ func _run()->void:
         studio.call("_g13_demo_v1","idle",1.0)
         _check(absf(turret.rotation_degrees.y)<0.001,
             "all preview turret motion fully reversible")
+        studio.call("_g13_attack_v4","attack_ground")
+        await create_timer(0.12).timeout
+        var gun:=model.find_child(G13.GUNS,true,false) as Node3D
+        _check(gun!=null and gun.rotation_degrees.x<12.0,
+            "real shared Studio provides animated low-angle ground attack")
+        studio.call("_g13_attack_v4","attack_air")
+        await create_timer(0.12).timeout
+        _check(gun!=null and gun.rotation_degrees.x>35.0,
+            "real shared Studio provides distinct elevated anti-air attack")
+        studio.call("_g13_demo_v1","idle",1.0)
+        _check(gun!=null and absf(gun.rotation_degrees.x-12.0)<0.01,
+            "interrupting either studio firing tween restores neutral pose")
     studio.call("_display_role","mlrs")
     await process_frame
     var g11:=studio.get("model_root") as Node3D
