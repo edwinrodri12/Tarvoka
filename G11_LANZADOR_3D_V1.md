@@ -365,3 +365,22 @@ Este es un refinamiento **artístico**, sin ajustar datos de juego. El modelo si
 - GitHub Pages incluye y comprueba el módulo `G11JointFinishV23.gd`, la selección V23 y controles de iluminación; no elimina módulos de otros edificios, unidades o del Bastión.
 
 **Próxima prioridad:** evaluación final de la legibilidad de los pasadores a escalas menores; las mediciones físicas del rendimiento Android se reservarán para la etapa de optimización tras terminar el diseño.
+
+
+## V24 — legibilidad del G11 a escala real de batalla (15-nov-2026)
+
+**Modelo táctico real en Godot 4.3; propuesta [PR #440](https://github.com/edwinrodri12/Tarvoka/pull/440)**. No confundir con el modelo de exhibición V23; esta revisión conserva las geometrías hero y corrige únicamente LOD8/LOD10 de `G11MobileLOD.gd`.
+
+**Error hallado en la representación utilizada en partida:** LOD10 seguía usando dos `BoxMesh` de caucho macizo, con las ruedas del mismo `MultiMesh` fuera de las caras de la oruga (centros X=±0.959 m y banda exterior ±0.925 m). A distancia media parecía un vehículo con ruedas pegadas al exterior, a pesar de que V18–V23 había corregido la escultura detallada. LOD8 conservaba dos rectángulos rígidos.
+
+- `scripts/ui/G11TacticalReadabilityV24.gd` reemplaza las dos cajas de caucho por **dos superficies 3D reales y compartidas por lado** con puntas semicirculares. LOD10 utiliza trayectoria de bandas con **agujero real en el centro** (sin simularlo con textura) para mostrar las mismas doce ruedas existentes y **ninguna rueda adicional**. LOD8 emplea una cápsula cerrada sin doce ruedas ocultas, preservando reconocimiento visual a mayor distancia.
+- Parámetros LOD10: centros de goma X=±0.790 m, mitad de ancho 0.145 m, cara exterior X=±0.935 m; centros de ruedas X=±0.912 m, ancho físico 0.044 m, cara visible exterior X=±0.934 m: margen lateral nominal de **1 mm dentro del caucho**. Radio de rueda 0.160 m y apertura interior de goma de radio 0.184 m; seis ruedas por lado espaciadas 0.40 m de Z=-1.00 a +1.00 m.
+- El guardabarros de cada lado es **el mismo mesh original** con altura/reposicionamiento corregidos, holgura vertical nominal 0.023 m sobre la banda: no se añade un segundo escudo. Se reajustan las dos mismas bandas de pintura de facción a la cara exterior del metal.
+- Reutilización del mismo `ArrayMesh` para ambas orugas y el mismo `MultiMesh` de 12 ruedas para LOD10; **no aumenta la cantidad de instancias de malla ni draw calls**, según el test de inspección de `Models.inspect_meshes`. Se preserva el lote único de 12 tubos lanzacohetes y la animación de giro.
+- Material de caucho oscuro, rugoso, de doble cara para que la abertura interior sea visible en perspectivas en ¾ sin desaparecer por `backface culling`. El G11 hero V23 sigue sin ninguna mutación.
+- `BastionStudioAdapter.gd` ofrece tres nuevos botones: **«V24: escala juego cercana»**, **«V24: escala juego lejana»** y **«V24: volver a escultura 3D»**. El cambio construye la misma unidad que usa el juego para LOD10/LOD8, no una imagen. Al tocar controles artísticos del hero, restaura de forma segura el modelo completo.
+- `tests/test_g11_tactical_readability_v24.gd` verifica ocho colores × dos LODs, ruedas recesadas y sin salientes, longitudes de malla, envolvente de las bandas, holguras del guardabarros, 12 tubos, 12 ruedas solo en LOD10, animaciones y escultura hero independiente.
+- `tests/test_g11_tactical_readability_v24_capture.gd`: **16 capturas reales de Godot**, una cercana y una lejana para cada una de ocho facciones, usando cámara ortográfica y encuadres comparables a la escala de partida. No son diseños ni fotografías generadas externamente.
+- El G11 V24 no modifica vida, ataques, defensa, poderes, combustible, munición, economía ni reglas. Pruebas de estrés Android completas reservadas para la fase posterior de rendimiento.
+
+**Revisión visual:** las capturas Godot muestran el perfil redondeado de la oruga y ruedas encajadas en LOD10; LOD8 conserva lectura de la silueta y los colores de facción con menor detalle. La validación CI y el despliegue del Estudio se documentarán mediante sus ejecuciones de GitHub.
