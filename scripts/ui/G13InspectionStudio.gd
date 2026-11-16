@@ -110,6 +110,17 @@ func _create_layout()->void:
     stop.text="Detener y restaurar"
     stop.pressed.connect(_stop)
     controls.add_child(stop)
+    _label(controls,"Inspección física 3D",15)
+    for view in [
+        ["Isométrica","iso"],["Frontal","front"],
+        ["Posterior","rear"],["Izquierda","left"],
+        ["Derecha","right"],["Superior","top"],
+        ["Inferior / bajos","under"]
+    ]:
+        var camera_button:=Button.new()
+        camera_button.text=str(view[0])
+        camera_button.pressed.connect(_inspect_view.bind(str(view[1])))
+        controls.add_child(camera_button)
     _label(controls,"Dirección de apuntado",15)
     for direction in [
         ["Frente",Vector2i(0,-1)],["Derecha",Vector2i(1,0)],
@@ -197,3 +208,26 @@ func _process(delta: float)->void:
         Models.restore_model_pose("aa_mobile",model_root)
         _animation="idle"
         _status.text="Animación completada — reposo"
+
+# Camera inspection changes neither faction geometry nor battle rules.
+# Undercarriage camera is intentionally off-axis so look_at() never
+# becomes collinear with Vector3.UP.
+func _inspect_view(view: String)->void:
+    if camera==null:
+        return
+    var views: Dictionary={
+        "iso":Vector3(3.5,2.7,4.5),
+        "front":Vector3(0.0,1.18,-5.0),
+        "rear":Vector3(0.0,1.18,5.0),
+        "left":Vector3(-5.0,1.25,0.0),
+        "right":Vector3(5.0,1.25,0.0),
+        "top":Vector3(0.1,6.0,0.8),
+        "under":Vector3(2.3,-2.1,3.0)
+    }
+    if not views.has(view):
+        return
+    camera.position=views[view]
+    var look_target:=Vector3(0,0.85,0) if view=="under" else Vector3(0,1.08,0)
+    camera.look_at(look_target,Vector3.UP)
+    if _status!=null:
+        _status.text="Inspección: "+view+" | G13 visual"
