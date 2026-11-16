@@ -66,8 +66,9 @@ static func _ear_mesh() -> ArrayMesh:
             var a: Vector2 = profile[0]
             var b: Vector2 = profile[k]
             var c: Vector2 = profile[k+1]
-            _quad(st,Vector3(x,a.x,a.y),Vector3(x,b.x,b.y),
-                Vector3(x,c.x,c.y),Vector3(x,c.x,c.y))
+            st.add_vertex(Vector3(x,a.x,a.y))
+            st.add_vertex(Vector3(x,b.x,b.y))
+            st.add_vertex(Vector3(x,c.x,c.y))
     st.generate_normals()
     st.set_material(_material(Color("#72827e"),0.64,0.59))
     _ear = st.commit()
