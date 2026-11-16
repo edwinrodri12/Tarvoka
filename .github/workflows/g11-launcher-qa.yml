@@ -76,6 +76,8 @@ on:
       - 'scripts/ui/G11RocketTrailsV30.gd'
       - 'scripts/ui/G11RocketFlightV31.gd'
       - 'scripts/ui/G11RunningGearV32.gd'
+      - 'scripts/ui/G11FinalAuditV33.gd'
+      - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scripts/ui/Battle3DMapView.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
@@ -94,6 +96,8 @@ on:
       - 'tests/test_g11_rocket_flight_v31_capture.gd'
       - 'tests/test_g11_running_gear_v32.gd'
       - 'tests/test_g11_running_gear_v32_capture.gd'
+      - 'tests/test_g11_final_audit_v33.gd'
+      - 'tests/test_g11_final_audit_v33_capture.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
       - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scenes/G11AndroidStressLab.tscn'
@@ -399,6 +403,20 @@ jobs:
             echo 'V32 original track/wheel turn motion or clearance failed'; exit 1
           fi
           grep -F 'PASS G11 V32:' /tmp/g11_v32.log
+      - name: Validate V33 final hero finish and true Android tactical LOD performance lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 230s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_final_audit_v33.gd 2>&1 | tee /tmp/g11_v33.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v33.log; then
+            echo 'V33 final G11 appearance and Android LOD validation failed'; exit 1
+          fi
+          grep -F 'PASS G11 V33:' /tmp/g11_v33.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
@@ -876,6 +894,28 @@ jobs:
         with:
           name: tarvoka-g11-v32-twenty-wheel-track-suspension-comparisons
           path: /tmp/g11-v32-gear/*.png
+          retention-days: 14
+      - name: Capture 6 genuine V33 Android tactical stress fleet scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v33-actual-lods
+          timeout --signal=TERM --kill-after=5s 230s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V33_CAPTURE_DIR=/tmp/g11-v33-actual-lods \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_final_audit_v33_capture.gd 2>&1 | tee /tmp/g11_v33_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v33_capture.log; then
+            echo 'V33 Android tactical LOD Godot captures failed'; exit 1
+          fi
+          grep -F 'PASS G11 V33 CAPTURE:' /tmp/g11_v33_capture.log
+          test "$(find /tmp/g11-v33-actual-lods -name '*.png' | wc -l)" -eq 6
+      - name: Upload six V33 true mobile LOD fleet stress snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v33-six-android-tactical-lod-stress-frames
+          path: /tmp/g11-v33-actual-lods/*.png
           retention-days: 14
       - name: Upload 16 real G11 V25 battle context Godot captures
         if: success()

@@ -47,6 +47,7 @@ const HeliV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
+const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -110,7 +111,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V32 · orugas y suspensión en movimiento")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V33 · revisión final y Android")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero de ataque A01 · V8 silueta táctica de facción")
@@ -483,7 +484,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · V32 · ORUGAS Y SUSPENSIÓN",14)
+        "G11 LANZADOR · V33 · REVISIÓN FINAL",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -504,6 +505,7 @@ func _install_g11_controls() -> void:
     _add_paired(g11_controls,"Daño crítico · motor",func(): _set_damage(3),
         "Destrucción · restos",func(): _set_damage(4))
     _button(g11_controls,"Detener animación",_g11_stop)
+    _button(g11_controls,"V33: comprobar acabados y trasera",_g11_final_audit_v33)
     _add_paired(g11_controls,"Vista frontal",func(): _g11_view(0.0),
         "Ver orugas y suspensión",func(): _g11_view(90.0))
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
@@ -564,11 +566,12 @@ func _install_g11_controls() -> void:
         func(): _g11_battle_gear_v32("slope"))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V32: compara las doce ruedas, los dos trenes de oruga y los "
-        + "amortiguadores en avance, giro y desnivel. LOD8 conserva "
-        + "su oruga cerrada; LOD10 anima las doce ruedas existentes. "
-        + "El tren detallado conserva las 92 zapatas animadas, sin "
-        + "piezas adicionales ni cambios en movimientos o combates.",12)
+        "V33: diseño principal congelado tras auditar el casco cerrado, "
+        + "dos placas traseras retiradas, 92 zapatas, 12 ruedas, "
+        + "pintura de facción y materiales de acero, goma y cristal. "
+        + "El laboratorio Android usa por fin los LOD8/LOD10 reales "
+        + "con 8, 32 y 64 unidades; el rendimiento final requiere "
+        + "medición en el teléfono. Sin geometría ni shaders añadidos.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -625,6 +628,16 @@ func _g11_battle_mid_zoom_v28() -> void:
     if driver!=null and camera!=null:
         driver.update_now(camera,float(preview.size.y))
     status_label.text="G11 V28 · zoom intermedio: acabado adaptado a cámara"
+
+func _g11_final_audit_v33() -> void:
+    if not _g11_require_hero_v24():
+        return
+    _g11_stop()
+    var inspection: Dictionary=G11AuditV33.inspect(model_root,13)
+    status_label.text=("G11 V33 · 92 zapatas, 12 ruedas, casco cerrado, "
+        + "dos placas traseras eliminadas; acabado aprobado"
+        if bool(inspection.get("passed",false)) else
+        "G11 V33 · revisión fallida: comprobar geometría y materiales")
 
 func _g11_hero_turn_v32(direction: int) -> void:
     if not _g11_require_hero_v24() or not G11Rig.has_rig(model_root):

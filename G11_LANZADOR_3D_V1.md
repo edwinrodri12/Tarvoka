@@ -659,3 +659,41 @@ hero y doce desplazamientos reales (avance, giro, desnivel) de Godot.
 El sistema solo añade animación de presentación. **No cambia** la
 distancia real recorrida, velocidad de unidad, daño, combustible,
 municiones, terreno, niebla de guerra o partidas guardadas.
+
+## V33 · cierre de acabados y laboratorio de rendimiento Android real
+
+El diseño 3D principal se mantiene **congelado** después de V30, V31 y
+V32. La V33 no añade mallas ni materiales costosos; implanta la
+auditoría `G11FinalAuditV33.gd` que comprueba en Godot 4.3:
+
+- Escultura detallada: ocho facciones, 92 zapatas, doce pivotes,
+  casco octogonal cerrado y ausencia real de
+  `G11_ProteccionInferior` y `G11_RampaPosteriorCerrada`.
+- Batalla LOD8: orugas selladas, chasis afinado V30, doce tubos y
+  **cero ruedas invisibles**.
+- Batalla LOD10: mismo casco, dos orugas huecas, doce ruedas agrupadas
+  en MultiMesh, acero, goma, insignia de facción y cristal diferenciados.
+- Sin cambios en HP, combustible, munición, velocidad, niebla de guerra,
+  impactos, guardados o comportamiento de otros vehículos.
+
+**Corrección de prueba de rendimiento:** el antiguo
+`G11AndroidPerfLab.gd` llamaba
+`Models.build("mlrs",faction,true,detail)`, con `true` que forzaba
+la escultura **hero** incluso cuando el usuario elegía LOD8 o LOD10.
+Por ello no era una prueba fiable de rendimiento del modelo táctico.
+V33 utiliza `Models.build("mlrs",faction,false,detail)`, valida
+una por una las unidades y prueba 8, 32 y 64 G11 tanto en LOD8
+como LOD10. El resultado guarda FPS promedio, duración promedio de
+fotograma, percentil 95 de duración de fotograma, draw calls y memoria.
+
+**No se inventan resultados de un teléfono:** el laboratorio registra
+la plataforma y declara si se ejecutó en Android. Las pruebas de
+GitHub con renderización de software GL verifican la compilación y
+las seis escenas reales, pero **no sustituyen** una sesión física de
+rendimiento y temperatura en Android.
+
+La prueba `test_g11_final_audit_v33.gd` valida ocho esculturas y 16
+tácticos de facción; el script
+`test_g11_final_audit_v33_capture.gd` produce seis fotogramas
+genuinos (8/32/64 unidades en LOD8/LOD10). La prueba previa de
+laboratorio se amplía para rechazar cualquier sustitución hero.

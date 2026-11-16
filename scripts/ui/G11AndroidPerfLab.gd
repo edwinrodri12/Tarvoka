@@ -6,6 +6,7 @@ class_name TarvokaG11AndroidPerfLab
 # until it runs on hardware. No game rules, player data or saves touched.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
+const AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const SAMPLE_FRAMES := 180
 const WARMUP_FRAMES := 45
 const OUTPUT := "user://g11_android_performance.json"
@@ -22,6 +23,9 @@ var _sample_time: float = 0.0
 var _draw_calls: float = 0.0
 var _last_report: Dictionary = {}
 var _history: Array[Dictionary] = []
+var _frame_ms: Array[float] = []
+var _units_validated: int = 0
+var _lod_validated: bool = false
 
 func _ready() -> void:
     _create_environment()
@@ -100,6 +104,9 @@ func set_scenario(unit_count: int, detail: int) -> void:
     _sample_frames = 0
     _sample_time = 0
     _draw_calls = 0
+    _frame_ms.clear()
+    _units_validated = 0
+    _lod_validated = false
     for old in _group.get_children():
         _group.remove_child(old)
         old.queue_free()
@@ -112,7 +119,7 @@ func set_scenario(unit_count: int, detail: int) -> void:
         depth*0.5+22)
     _camera.look_at(Vector3(width*0.5,0.65,depth*0.5))
     for i in range(_units):
-        var unit: Node3D = Models.build("mlrs",i%8,true,_quality)
+        var unit: Node3D = Models.build("mlrs",i%8,false,_quality)
         if unit == null:
             push_error("G11 Android Lab: model not built for index %d" % i)
             continue
@@ -121,8 +128,14 @@ func set_scenario(unit_count: int, detail: int) -> void:
         unit.rotation_degrees.y = float(i%4)*90.0
         _group.add_child(unit)
         _models.append(unit)
+        if AuditV33.verify_tactical_model(unit,_quality):
+            _units_validated+=1
+    _lod_validated=_units_validated==_units
+    if not _lod_validated:
+        push_error("G11 Android Lab: model detail does not match requested true tactical LOD")
     _label.text = "G11 en Android · %d unidades · LOD %d" % [_units,_quality]
-    _message.text = "Preparando medición real en este dispositivo…"
+    _message.text = ("Preparando medición nativa… (LOD de batalla verificado)"
+        if _lod_validated else "Error: alguno de los modelos no coincide con el LOD elegido")
 
 func _process(delta: float) -> void:
     _total_frames += 1
@@ -132,7 +145,9 @@ func _process(delta: float) -> void:
     if _total_frames <= WARMUP_FRAMES or _sample_frames >= SAMPLE_FRAMES:
         return
     _sample_frames += 1
-    _sample_time += maxf(0.000001,delta)
+    var frame_time: float=maxf(0.000001,delta)
+    _sample_time += frame_time
+    _frame_ms.append(frame_time*1000.0)
     _draw_calls += Performance.get_monitor(
         Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
     if _sample_frames % 30 == 0:
@@ -141,17 +156,26 @@ func _process(delta: float) -> void:
     if _sample_frames == SAMPLE_FRAMES:
         var fps: float = float(_sample_frames)/_sample_time
         var draw_avg: float = _draw_calls/float(SAMPLE_FRAMES)
+        var sorted: Array[float]=_frame_ms.duplicate()
+        sorted.sort()
+        var p95_frame_ms: float=sorted[mini(sorted.size()-1,
+            ceili(float(sorted.size())*0.95)-1)]
         _last_report = {
             "device_platform":OS.get_name(),
             "renderer":"Godot 4.3 scene measured on local device",
             "units":_units,
             "lod":_quality,
+            "sample_type":"real mobile/tactical models, NOT hero sculpture",
+            "verified_tactical_models":_units_validated,
+            "lod_validated":_lod_validated,
             "samples":SAMPLE_FRAMES,
             "fps_mean":snappedf(fps,0.1),
             "frame_mean_ms":snappedf(_sample_time*1000.0/float(SAMPLE_FRAMES),0.01),
             "draw_calls_mean":snappedf(draw_avg,0.1),
+            "frame_p95_ms":snappedf(p95_frame_ms,0.01),
             "memory_static_bytes":int(Performance.get_monitor(Performance.MEMORY_STATIC)),
-            "date_utc":Time.get_datetime_string_from_system(true)
+            "date_utc":Time.get_datetime_string_from_system(true),
+            "hardware_tested":OS.get_name()=="Android"
         }
         _history.append(_last_report.duplicate(true))
         _message.text = "%.1f FPS · %.2f ms/fotograma · %.0f draw calls · toca Guardar" % [
@@ -161,7 +185,8 @@ func _process(delta: float) -> void:
 func _report_json() -> String:
     var payload: Dictionary = {
         "platform":OS.get_name(),
-        "kind":"G11 Android physical-device visual benchmark",
+        "kind":"G11 native tactical LOD visual benchmark",
+        "note":"Hardware Android performance is confirmed only when platform is Android; desktop/software GL results are not mobile FPS",
         "tests":_history
     }
     return JSON.stringify(payload,"\t")
