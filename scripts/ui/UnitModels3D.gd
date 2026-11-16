@@ -17,6 +17,7 @@ const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
+const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 const AttackHelicopterRotorV3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
@@ -932,6 +933,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V2 detail failed to apply")
                 if not G13UndercarriageV6.install(model):
                     push_warning("G13 V6 undercarriage failed to apply")
+                if not G13SurfaceV8.apply(model,faction_paint_color(faction)):
+                    push_warning("G13 V8 surface finish failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
