@@ -17,12 +17,15 @@ const TURRET_ORIGINAL_CENTER := Vector3(0,0.22,0)
 
 static func _triangle(st: SurfaceTool,a: Vector3,b: Vector3,c: Vector3)->void:
     var normal: Vector3=(b-a).cross(c-a).normalized()
+    # Godot uses clockwise front faces. Reverse the vertex submission
+    # relative to the cross-product normal so the outside remains visible
+    # with regular back-face culling (side windows must not reveal holes).
     st.set_normal(normal)
     st.add_vertex(a)
     st.set_normal(normal)
-    st.add_vertex(b)
-    st.set_normal(normal)
     st.add_vertex(c)
+    st.set_normal(normal)
+    st.add_vertex(b)
 
 # Eight-sided perimeter: bevels the four formerly square x/z corners.
 # Three rings create a continuous faceted taper along the Y axis.
