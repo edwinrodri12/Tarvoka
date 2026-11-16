@@ -8,16 +8,16 @@ on:
       - 'tests/test_attack_helicopter_v11.gd'
       - 'tests/test_attack_helicopter_v11_capture.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
-      - '.github/workflows/a01-v11-finish-qa.yml'
+      - '.github/workflows/a01-v11-tail-qa.yml'
   push:
     branches: [main]
     paths:
-      - 'scripts/ui/AttackHelicopterFinishV11.gd'
+      - 'scripts/ui/AttackHelicopterTailV11.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v11.gd'
       - 'tests/test_attack_helicopter_v11_capture.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
-      - '.github/workflows/a01-v11-finish-qa.yml'
+      - '.github/workflows/a01-v11-tail-qa.yml'
   workflow_dispatch:
 
 permissions:
