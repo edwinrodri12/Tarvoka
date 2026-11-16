@@ -176,18 +176,18 @@ func _install_unified_studio_navigation() -> void:
     studio_quick_title.add_theme_color_override("font_color",Color("#E7BE70"))
     studio_overview_label=_title(studio_selector_panel,"Selecciona un modelo para inspeccionar.",12)
     studio_overview_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    # Keep the actual role picker parent unchanged. Existing camera,
+    # responsive and animation functions depend on its original VBox.
     if category_picker!=null:
-        category_picker.reparent(studio_selector_panel)
-    role_picker.reparent(studio_selector_panel)
-    if building_picker!=null:
-        building_picker.reparent(studio_selector_panel)
-    faction_picker.reparent(studio_selector_panel)
+        column.move_child(category_picker,1)
+    column.move_child(role_picker,2)
+    column.move_child(faction_picker,3)
 
     studio_quick_panel=VBoxContainer.new()
     studio_quick_panel.name="Estudio3D_MenuUnificado"
     studio_quick_panel.add_theme_constant_override("separation",7)
     column.add_child(studio_quick_panel)
-    column.move_child(studio_quick_panel,1)
+    column.move_child(studio_quick_panel,4)
     var tabs:=HBoxContainer.new()
     tabs.add_theme_constant_override("separation",5)
     studio_quick_panel.add_child(tabs)
@@ -238,9 +238,9 @@ func _install_unified_studio_navigation() -> void:
     studio_advanced_content=VBoxContainer.new()
     studio_advanced_content.add_theme_constant_override("separation",7)
     studio_advanced_group.add_child(studio_advanced_content)
-    for group in [p06_controls,g11_controls,g13_controls,heli_controls]:
-        if group!=null:
-            group.reparent(studio_advanced_content)
+    # Unit-specific groups remain in their original parent to preserve
+    # responsive reflow and per-unit updates; their visibility is gated
+    # by the active tab in _sync_p06_controls.
 
     # Original inspector actions remain connected but are available only
     # under Advanced, avoiding duplicate Move/Attack/Camera toolbars.
@@ -273,8 +273,10 @@ func _install_unified_studio_navigation() -> void:
 
     # Put the original advanced building tools below the compact navigation.
     # They remain fully functional; the selector itself is now at the top.
-    column.move_child(studio_versions_fold,2)
-    column.move_child(studio_advanced_group,3)
+    column.move_child(studio_versions_fold,5)
+    column.move_child(studio_advanced_group,6)
+    if building_controls!=null:
+        column.move_child(building_controls,7)
     studio_advanced_expanded=false
     _studio_select_tab(0)
 
@@ -286,6 +288,7 @@ func _studio_select_tab(index: int) -> void:
         studio_camera_panel.visible=studio_active_tab==1
     if studio_advanced_group!=null:
         studio_advanced_group.visible=studio_active_tab==2
+    _refresh_unified_studio_navigation()
     for entry in [[studio_tab_animations,0],[studio_tab_camera,1],
             [studio_tab_technical,2]]:
         var button: Button=entry[0] as Button
@@ -297,6 +300,7 @@ func _studio_toggle_advanced() -> void:
     studio_advanced_content.visible=studio_advanced_expanded
     studio_advanced_button.text=("Ocultar inspecciones" if studio_advanced_expanded
         else "Inspecciones y pruebas del modelo")
+    _refresh_unified_studio_navigation()
 
 func _studio_toggle_versions() -> void:
     studio_versions_expanded=not studio_versions_expanded
@@ -369,8 +373,17 @@ func _refresh_unified_studio_navigation() -> void:
         studio_advanced_group.visible=studio_active_tab==2
     if studio_advanced_content!=null:
         studio_advanced_content.visible=studio_advanced_expanded
-    # The original per-unit controls are in their own panel.
-    # Their internal visibility still comes from the existing unit logic.
+    var show_unit_details: bool=not building and studio_active_tab==2 and studio_advanced_expanded
+    if p06_controls!=null:
+        p06_controls.visible=show_unit_details and _role=="apc"
+    if g11_controls!=null:
+        g11_controls.visible=show_unit_details and _role=="mlrs"
+    if g13_controls!=null:
+        g13_controls.visible=show_unit_details and _role=="aa_mobile"
+    if heli_controls!=null:
+        heli_controls.visible=show_unit_details and _role=="attack_heli"
+    if studio_legacy_controls!=null:
+        studio_legacy_controls.visible=show_unit_details and _role=="tank"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
 
