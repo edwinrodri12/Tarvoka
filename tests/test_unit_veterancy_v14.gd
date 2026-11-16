@@ -69,7 +69,8 @@ func _initialize() -> void:
             assert(not bool(quote["unsupported"]))
         assert(a == base_copy)
         var attacks0 := 0
-        var attacks3 := 0
+        var improved_hits := 0
+        var new_kills := 0
         for foe_role in roles:
             var zero: Dictionary = Lab.preview(str(role),str(foe_role),0,board)
             var advanced: Dictionary = Lab.preview(str(role),str(foe_role),3 if enabled else 0,board)
@@ -80,19 +81,20 @@ func _initialize() -> void:
             results["valid_preview_0"] += 1
             results["valid_preview_3"] += 1
             attacks0 += 1
-            attacks3 += 1
             results["base_damage_total"] += int(zero["damage"])
             results["elite_damage_total"] += int(advanced["damage"])
             if int(advanced["damage"]) > int(zero["damage"]):
                 results["direct_damage_increases"] += 1
+                improved_hits += 1
             if bool(advanced.get("defeated",false)) and not bool(zero.get("defeated",false)):
                 results["elite_first_hit_kills"] += 1
-        print("UNIT_XP_PLAN role=%s allowed=%s regular=%s veteran=%s elite=%s max=%s legal_target_pairs=%d observed_damage_deltas=%d" % [
+                new_kills += 1
+        print("UNIT_XP_PLAN role=%s allowed=%s regular=%s veteran=%s elite=%s max=%s legal_target_pairs=%d more_damage_targets=%d new_one_hit_kills=%d" % [
             role,str(enabled),
             str(Lab.STEPS.get(role,[])[0] if enabled else {}),
             str(Lab.STEPS.get(role,[])[1] if enabled else {}),
             str(Lab.STEPS.get(role,[])[2] if enabled else {}),
-            str(Lab.totals(str(role),3)),attacks0,attacks3-attacks0
+            str(Lab.totals(str(role),3)),attacks0,improved_hits,new_kills
         ])
         results["roles"] += 1
     assert(int(results["roles"]) == 32)
