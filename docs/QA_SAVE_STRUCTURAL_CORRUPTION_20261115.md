@@ -1,0 +1,35 @@
+# Structural save corruption — QA contract (2026-11-15)
+
+Scope: isolated Godot 4.3 headless regression against SaveCodec v1; no gameplay, faction, economy or visual changes.
+
+Run: `godot --headless --path . --script res://tests/test_save_structural_corruption.gd`
+
+Expected: 18 malformed JSON snapshots (missing top-level keys, wrong collection types, null unit/terrain row, malformed positions, truncated/oversized terrain, unknown terrain tile, duplicate unit ID, non-object JSON roots `[]` and `null`) are rejected without crashing or changing the original in-memory state. A valid snapshot must still round-trip.
+
+CI: `.github/workflows/save-structural-corruption.yml` runs this test on PR changes and on manual dispatch. **Test file committed does not imply PASÓ**; inspect workflow result at the exact head SHA. If a null terrain row triggers an engine exception instead of an empty result, fix Rules.valid_terrain separately before merging.
+
+Regression boundaries: general IA, victory, Android export and real device are NOT EXECUTED by this focused workflow. Keep draft until CI is green. No APK is generated.
+
+Next autonomous task: inspect Godot logs, fix any failing malformed case without weakening the validator, then run existing SaveCodec, IA and victory suites.
+
+2026-11-15 follow-up: original 14-case workflow PASÓ at https://github.com/edwinrodri12/Tarvoka/actions/runs/43761878352; Android export PASÓ at run 43761878353; general rules CI FALLÓ at run 43761878270. The two additional cases (oversized terrain and unknown tile) are NOT YET VERIFIED at their new head SHA. No Android physical test.
+
+2026-11-15 additional root-shape regression: added `[]` and `null` as syntactically valid but semantically invalid top-level JSON payloads. The previous 16-case workflow passed at https://github.com/edwinrodri12/Tarvoka/actions/runs/43767139157; Android export passed at run 43767139151; general Godot rules CI failed at run 43767139173. The expanded 18-case SHA requires its own CI result. Physical Android NOT EXECUTED.
+
+2026-11-15: Expanded root-type rejection from `[]`/`null` to boolean `true`, number `42`, and JSON string `"orphan"` (21 cases total). Prior 18-case head 2a913d2 passed dedicated Godot 4.3 CI run 43772725923 and Android export run 43772725914; general rules run 43772725926 failed independently. New 21-case head remains UNVERIFIED until its own CI completes. Physical Android NOT EXECUTED.
+
+
+## Ampliación 2026-11-15 — 23 casos
+Se añaden `null` en una celda del terreno y una columna extra en una fila, además de comprobar que **cada** rechazo mantiene idéntico el estado de batalla previo (`duplicate(true)`). El workflow exige `PASS save structural corruption: 23 malformed snapshots rejected`. Esta ampliación está registrada en la rama de PR #416; **Godot 4.3 y Android físico: NO EJECUTADO** para estos commits hasta obtener una ejecución nueva. No modifica el codec ni reglas de producción.
+
+## Regresión de recuperación tras cada rechazo (2026-11-15)
+Después de **cada** uno de los 23 intentos de decodificación corrupta, la prueba decodifica de nuevo el snapshot original válido y exige igualdad exacta con el estado previo. Esto detecta contaminación del decodificador que un único round-trip final podría ocultar. No cambia reglas ni SaveCodec; Godot 4.3 en el nuevo SHA: **NO EJECUTADO** hasta CI. Android físico: **NO EJECUTADO EN DISPOSITIVO**.
+
+## Regresión de sintaxis JSON (2026-11-15)
+Tres entradas que ni siquiera son JSON válido (`{`, objeto incompleto y objeto seguido de texto) deben rechazarse sin alterar la sesión y sin impedir cargar inmediatamente el snapshot legítimo. Total: **26 casos** (18 corrupciones estructurales + 5 raíces JSON inválidas como partida + 3 errores sintácticos). CI exige el marcador de 26 casos. **Godot 4.3 en este commit: NO EJECUTADO** hasta confirmar workflow; **Android físico: NO EJECUTADO EN DISPOSITIVO**. No se modifica SaveCodec ni el gameplay. Próxima tarea: verificar CI de este SHA, investigar fallo general y ejecutar regresiones de IA/victoria.
+
+## Diagnóstico CI — 2026-11-16
+Run [43796714386](https://github.com/edwinrodri12/Tarvoka/actions/runs/43796714386) en el head `262246f0` ejecutó Godot 4.3 y mostró `PASS save structural corruption: 26 malformed snapshots rejected`. El job marcó FALLÓ porque el filtro de logs trataba los tres mensajes esperados `ERROR: Parse JSON failed.` de entradas JSON deliberadamente inválidas como fallos de motor. Se ajustó exclusivamente el workflow para permitir **solo** ese diagnóstico conocido; cualquier otro `ERROR:`, `SCRIPT ERROR:` o `Assertion failed` sigue fallando el job. Esto no cambia el juego ni el codec. **Nuevo head pendiente de CI; Android físico NO EJECUTADO EN DISPOSITIVO.**
+
+## Endurecimiento del filtro CI — 2026-11-16
+El workflow ahora exige **exactamente tres** diagnósticos `ERROR: Parse JSON failed.` correspondientes a los tres payloads deliberadamente inválidos, además de un único marcador de 26 casos. Antes se permitía una cantidad ilimitada de errores del parser con el mismo texto, lo que podía ocultar fallos inesperados en la recuperación de un guardado legítimo. Cualquier error adicional o ausencia de los tres diagnósticos provoca fallo. Cambio limitado al workflow; **Godot CI del commit nuevo: NO EJECUTADO hasta obtener resultado; Android físico: NO EJECUTADO EN DISPOSITIVO**.
