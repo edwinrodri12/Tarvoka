@@ -70,6 +70,10 @@ func _run() -> void:
                     false, false) as MeshInstance3D
                 check(sleeve != null and sleeve.get_parent() == barrel,
                     "sleeve follows V4 original recoil rather than a duplicate rig")
+                if sleeve != null:
+                    check(absf(sleeve.position.y - 0.325) < 0.001 and
+                        sleeve.rotation_degrees.is_zero_approx(),
+                        "sleeve uses inherited barrel axis, without double rotation")
             if muzzle != null:
                 check(muzzle.mesh is ArrayMesh,
                     "solid V1 muzzle cylinder replaced by open annular mesh")
@@ -79,10 +83,13 @@ func _run() -> void:
                     check(points.size() >= 480, "real bore front, back and inner wall")
                     var open_hole: bool = true
                     for p in points:
-                        if absf(p.z + 0.050) < 0.001 and (
-                                Vector2(p.x, p.y).length() < 0.047):
+                        if absf(p.y + 0.050) < 0.001 and (
+                                Vector2(p.x, p.z).length() < 0.047):
                             open_hole = false
                     check(open_hole, "the frontal muzzle mouth has no solid center")
+                    var forward: Vector3 = muzzle.basis * Vector3(0, -1, 0)
+                    check(forward.dot(Vector3(0, 0, -1)) > 0.999,
+                        "annular bore opens toward target along original -Z axis")
         var paint := hero.find_child("G13_SideEnamel_1",
             true, false) as MeshInstance3D
         if paint != null:
