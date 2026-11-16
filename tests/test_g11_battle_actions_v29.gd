@@ -91,7 +91,7 @@ func _run() -> void:
                     actions.advance(Actions.SHOT_STEP)
                     _check(flash.visible,
                         "12 native muzzle bursts traverse the 4x3 rack sequentially")
-                _check(not actions.play("G11-E","move",end,Vector2i(0,1)),
+                _check(not actions.play("G11-E","move",rival.position,Vector2i(0,1)),
                     "new order without a source displacement is rejected")
                 _check(Models.inspect_meshes(model)<=before_mesh_count+2,
                     "batched launch has no per-rocket mesh or particle explosion")
