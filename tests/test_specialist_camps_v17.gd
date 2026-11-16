@@ -88,6 +88,27 @@ static func _case(dims: Vector2i, terrain: Array, map: Dictionary) -> void:
     pretend_supply["role"] = "quartermaster"
     assert(not Camp.can_build(terrain,map["sites"],[],[pretend_medic],"F-M","medical",0,999))
     assert(not Camp.can_build(terrain,map["sites"],[],[pretend_supply],"F-Q","supply",0,999))
+    # Reach the map-size cap using multiple legal scout builders,
+    # then verify that even a fully funded fresh scout cannot exceed it.
+    var at_limit: Array = defenses["camps"].duplicate(true)
+    var reserved: Array = [position,next]
+    for i in range(2,Camp.max_per_side(terrain)):
+        var site: Vector2i = _free(terrain,map["sites"],reserved)
+        assert(site.x >= 0)
+        reserved.append(site)
+        var next_scout: Dictionary = Roles.make_unit("SC-%d"%i,0,site,"scout")
+        var placed: Dictionary = Camp.build(terrain,map["sites"],at_limit,
+            [next_scout],str(next_scout["id"]),"recon",0,500)
+        assert(placed.get("valid",false))
+        at_limit = placed["camps"]
+    assert(at_limit.size() == Camp.max_per_side(terrain))
+    var extra: Vector2i = _free(terrain,map["sites"],reserved)
+    assert(extra.x >= 0)
+    var extra_scout: Dictionary = Roles.make_unit("OVER-CAP",0,extra,"scout")
+    assert(not Camp.can_build(terrain,map["sites"],at_limit,
+        [extra_scout],"OVER-CAP","recon",0,500))
+    assert(not Camp.build(terrain,map["sites"],at_limit,
+        [extra_scout],"OVER-CAP","recon",0,500).get("valid",false))
     for kind in Camp.CAMPS:
         assert(not bool(Camp.CAMPS[kind].has("produces_units")))
         assert(str(Camp.CAMPS[kind]["effect"]).length() > 0)
