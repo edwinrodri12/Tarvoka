@@ -92,5 +92,20 @@ func _initialize() -> void:
         assert(state == before, "Encoding a variant must preserve active battle")
         assert(Codec.encode(state) == first, "Variant encoding must preserve original bytes")
     assert(unique_encodings.size() == 10, "All ten legal HP variants must be distinct")
+    # Malformed external JSON must not replace a healthy in-memory battle.
+    # Each rejection is followed by a fresh valid decode to catch poisoned state.
+    var malformed_payloads: Array[String] = [
+        "",
+        "{",
+        "[]",
+        "null",
+        "{}",
+        "{\"version\":999,\"units\":[],\"terrain\":[]}"
+    ]
+    for payload in malformed_payloads:
+        assert(Codec.decode(payload).is_empty(), "Malformed save must be rejected")
+        assert(Codec.decode(first) == before, "Valid save must still recover after bad JSON")
+        assert(state == before, "Rejected save must not change active battle")
+        assert(Codec.encode(state) == first, "Rejected save must preserve original bytes")
     print("PASS save encode determinism: 20 iterations, no mutation or aliasing")
     quit(0)
