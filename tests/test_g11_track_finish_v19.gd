@@ -19,6 +19,42 @@ func _check(ok: bool, message: String) -> void:
 func _part(model: Node3D, name: String) -> Node3D:
     return model.find_child(name,true,false) as Node3D
 
+# Separating-axis test on the real transformed 3D shoe cross-sections.
+# This finds mesh intersections that a center-to-center distance misses.
+func _projected_shoe(pose: Transform3D) -> Array[Vector2]:
+    var corners: Array[Vector2] = []
+    for point in [
+        Vector3(0,-V19.LINK_HALF_Y,-V19.LINK_HALF_Z),
+        Vector3(0,-V19.LINK_HALF_Y,V19.LINK_HALF_Z),
+        Vector3(0,V19.OUTER_HEIGHT,V19.LINK_HALF_Z),
+        Vector3(0,V19.OUTER_HEIGHT,-V19.LINK_HALF_Z)
+    ]:
+        var p: Vector3 = pose*point
+        corners.append(Vector2(p.y,p.z))
+    return corners
+
+func _pad_gap(a: Transform3D, b: Transform3D) -> float:
+    var first: Array[Vector2] = _projected_shoe(a)
+    var second: Array[Vector2] = _projected_shoe(b)
+    var maximal_separation: float = -INF
+    for source in [first,second]:
+        for i in range(4):
+            var edge: Vector2 = source[(i+1)%4]-source[i]
+            var axis := Vector2(edge.y,-edge.x).normalized()
+            var low_a: float = INF
+            var high_a: float = -INF
+            var low_b: float = INF
+            var high_b: float = -INF
+            for p in first:
+                low_a = minf(low_a,p.dot(axis))
+                high_a = maxf(high_a,p.dot(axis))
+            for p in second:
+                low_b = minf(low_b,p.dot(axis))
+                high_b = maxf(high_b,p.dot(axis))
+            maximal_separation = maxf(maximal_separation,
+                maxf(low_b-high_a,low_a-high_b))
+    return maximal_separation
+
 func _initialize() -> void:
     call_deferred("_check_models")
 
@@ -129,11 +165,13 @@ func _check_models() -> void:
                 _check(Models.pose_model("mlrs",model,"move",travel),
                     "genuine G11 wheels/treads share original moving chassis rig")
                 for n in range(V19.LINK_COUNT):
-                    var a: Vector3 = shoes.multimesh.get_instance_transform(n).origin
-                    var b: Vector3 = shoes.multimesh.get_instance_transform(
-                        (n+1)%V19.LINK_COUNT).origin
-                    _check(a.distance_to(b)>0.15,
-                        "all adjacent sculpted shoe centers stay physically separated")
+                    var a: Transform3D = shoes.multimesh.get_instance_transform(n)
+                    var b: Transform3D = shoes.multimesh.get_instance_transform(
+                        (n+1)%V19.LINK_COUNT)
+                    _check(a.origin.distance_to(b.origin)>0.15,
+                        "all 46 native shoe pivots remain physically spaced")
+                    _check(_pad_gap(a,b)>0.018,
+                        "3D rotated neighboring shoe silhouettes stay separated >18mm")
                 var sample := shoes.multimesh.get_instance_transform(0)
                 _check(absf(sample.origin.x-float(side)*Finish.TRACK_CENTER_X)
                     < 0.001,"each pad follows its correctly mirrored track")
