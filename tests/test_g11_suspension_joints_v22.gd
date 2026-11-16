@@ -85,8 +85,8 @@ func _run() -> void:
                 _check(bottom.rotation.length()<0.0001,
                     "stationary lower pin does not inherit spinning-wheel rotation")
                 for end in [top,bottom]:
-                    _check(end.get_child_count()==3,
-                        "two forged ears and one through-pin exactly")
+                    _check(end.get_child_count()==5,
+                        "two forged ears, one replaced steel pin and two V23 retainers")
                     for i in range(2):
                         var ear := end.get_node_or_null(
                             "OrejaForjada_%d" % i) as MeshInstance3D
@@ -97,12 +97,12 @@ func _run() -> void:
                                 "fork ear is physical volume not flat sticker")
                     var pin := end.get_node_or_null(
                         "EjeArticulacion") as MeshInstance3D
-                    _check(pin!=null and pin.mesh is CylinderMesh,
-                        "one rotating-pin-style real cylindrical axle")
-                    if pin!=null and pin.mesh is CylinderMesh:
-                        var shape := pin.mesh as CylinderMesh
-                        _check(shape.radial_segments==12 and shape.height<=0.061,
-                            "compact metal pin has no excessive protrusion")
+                    _check(pin!=null and pin.mesh is ArrayMesh,
+                        "V23 swaps old cylinder for single chamfered axial steel mesh")
+                    if pin!=null and pin.mesh is ArrayMesh:
+                        var bounds: AABB=pin.mesh.get_aabb()
+                        _check(bounds.size.x<=0.054,
+                            "V23 forged pin stays recessed inside calibrated track wall")
             var names: Array[String] = [
                 "G11_Faldon_%d" % side,
                 "G11V2_ProteccionLateral_%d" % side,
