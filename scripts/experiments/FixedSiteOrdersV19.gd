@@ -64,12 +64,25 @@ static func _valid(session: Dictionary) -> bool:
                 return false
     return true
 
+# Coast-access cells are reserved for shipyard capture, even though the
+# underlying camp prototype only knows actual building positions.
+static func _blocks_shore(world: Dictionary, unit_id: String) -> bool:
+    var cell := Vector2i(-1,-1)
+    for unit in world["state"]["units"]:
+        if str(unit.get("id","")) == unit_id and int(unit.get("hp",0)) > 0:
+            cell = unit["pos"]
+            break
+    for site in world["layout"]["sites"]:
+        if str(site.get("kind","")) == "shipyard" and site.get("capture_pos",site["pos"]) == cell:
+            return true
+    return false
+
 static func build_camp(session: Dictionary, unit_id: String, kind: String) -> Dictionary:
     if not _valid(session):
         return {"valid":false}
     var world: Dictionary = session["world"]
     var state: Dictionary = world["state"]
-    if int(state.get("winner",-1)) != -1:
+    if int(state.get("winner",-1)) != -1 or _blocks_shore(world,unit_id):
         return {"valid":false}
     var side: int = int(state["faction"])
     var cash: int = int(state["economy"]["credits"][side])
@@ -179,7 +192,8 @@ static func camp_choices(session: Dictionary, unit_id: String) -> Array:
         var profile: Dictionary = Camps.CAMPS[kind]
         options.append({"kind":kind,"label":str(profile["label"]),
             "builder":str(profile["builder"]),"cost":int(profile["credits"]),
-            "available":Camps.can_build(state["terrain"],world["layout"]["sites"],
+            "available":not _blocks_shore(world,unit_id) and Camps.can_build(
+                state["terrain"],world["layout"]["sites"],
                 session["camps"],state["units"],unit_id,kind,side,money)})
     return options
 
