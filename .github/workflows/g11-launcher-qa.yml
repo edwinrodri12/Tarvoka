@@ -69,12 +69,14 @@ on:
       - 'scripts/ui/G11BattleLODControllerV25.gd'
       - 'scripts/ui/G11BattleContextV25.gd'
       - 'scripts/ui/G11RocketFaceReadabilityV25.gd'
+      - 'scripts/ui/G11TacticalPaintReadabilityV27.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_g11_live_battle_context_v25.gd'
       - 'tests/test_g11_live_battle_context_v25_capture.gd'
       - 'tests/test_g11_tactical_readability_v24.gd'
       - 'tests/test_g11_tactical_readability_v24_capture.gd'
       - 'tests/test_g11_mobile_lod.gd'
+      - 'tests/test_g11_tactical_paint_v27.gd'
       - 'tests/benchmark_g11_mobile_stress.gd'
       - 'scripts/ui/G11AndroidPerfLab.gd'
       - 'scenes/G11AndroidStressLab.tscn'
@@ -296,6 +298,20 @@ jobs:
             echo 'G11 V25 actual BattleTerrain3D / camera LOD regression'; exit 1
           fi
           grep -F 'PASS G11 V25:' /tmp/g11_v25.log
+      - name: Validate G11 V27 original-enamel identity at both genuine Android LODs
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 140s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_tactical_paint_v27.gd 2>&1 | tee /tmp/g11_v27.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v27.log; then
+            echo 'G11 V27 enamel geometry, faceted paint or existing-model safety failed'; exit 1
+          fi
+          grep -F 'PASS G11 V27:' /tmp/g11_v27.log
       - name: Smoke test touch-friendly native Android benchmark scene
         shell: bash
         run: |
