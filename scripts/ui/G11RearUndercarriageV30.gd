@@ -2,10 +2,11 @@ extends RefCounted
 class_name TarvokaG11RearUndercarriageV30
 
 # V30: correct the square rear-underbody clipping reported in the G11.
-# The legacy underbody slab is redundant because the approved V2 octagonal
-# armored hull is already closed. Physically DELETE the slab; never leave an
-# overlapping replacement plate. Refit original stabilizer feet and mobile
-# hull instead. No team colors, wheel meshes or gameplay rules change.
+# Two redundant V1 square slabs were behind/under the rear gear:
+# G11_ProteccionInferior AND G11_RampaPosteriorCerrada. Physically delete
+# BOTH. The approved V2 octagonal hull has a real sealed rear and underside.
+# Refit four original stabilizer meshes and reanchor the rear-door locks
+# to the existing octagonal back surface. No new panels or game stat edits.
 const FLAG := "tarvoka_g11_v30_rear_track_clearance"
 const HERO_TRACK_X := 0.79
 const HERO_TRACK_HALF_X := 0.142
@@ -83,7 +84,9 @@ static func apply_hero(model: Node3D) -> bool:
             not bool(model.get_meta("tarvoka_g11_joint_finish_v23",false))):
         return false
     var belly:=_part(model,"G11_ProteccionInferior")
-    if belly==null or not belly.mesh is BoxMesh:
+    var rear_ramp:=_part(model,"G11_RampaPosteriorCerrada")
+    if belly==null or not belly.mesh is BoxMesh or (
+            rear_ramp==null or not rear_ramp.mesh is BoxMesh):
         return false
     # The later V2 sculpt already contains a sealed octagonal central hull.
     # Removing the old lower slab must not create a hole.
@@ -100,13 +103,34 @@ static func apply_hero(model: Node3D) -> bool:
             return false
         supports.append(support)
         feet.append(foot)
+    var door_clamps: Array[MeshInstance3D]=[]
+    var locks: Array[MeshInstance3D]=[]
+    var pinheads: Array[MeshInstance3D]=[]
+    for side in [-1,1]:
+        var close:=_part(model,"G11V12_CierrePorton_%d" % side)
+        var keyhole:=_part(model,"G11V12_BocallavePorton_%d" % side)
+        var pin:=_part(model,"G11V2_PernoPorton_%d" % side)
+        if close==null or keyhole==null or pin==null:
+            return false
+        door_clamps.append(close)
+        locks.append(keyhole)
+        pinheads.append(pin)
     if hero_clearance()<MIN_CLEARANCE:
         return false
-    # Atomic after verifying both braces, both feet and the sealed shell.
-    # Remove the actual redundant rectangular UNDERBODY, rather than
-    # replacing it with a slightly smaller overlapping polygon.
+    # Atomic once all required original rear nodes were validated.
+    # The square plates used to overlap the rear tracks despite the V2
+    # octagonal chassis already having a closed underside and rear face.
+    # Physically remove both offending MeshInstance3D nodes.
     belly.get_parent().remove_child(belly)
     belly.free()
+    rear_ramp.get_parent().remove_child(rear_ramp)
+    rear_ramp.free()
+    # The old hinges were anchored on the deleted 13cm-thick rear ramp.
+    # Re-seat them on the actual V2 end face at z=1.40, no floating knobs.
+    for i in range(2):
+        pinheads[i].position.z=1.414
+        door_clamps[i].position.z=1.426
+        locks[i].position.z=1.440
     for i in range(2):
         var side: float=-1.0 if i==0 else 1.0
         var support:=supports[i]
@@ -122,6 +146,8 @@ static func apply_hero(model: Node3D) -> bool:
     model.set_meta("tarvoka_g11_v30_rear_clearance_m",hero_clearance())
     model.set_meta("tarvoka_g11_v30_replaced_original_parts",4)
     model.set_meta("tarvoka_g11_v30_redundant_underbody_removed",true)
+    model.set_meta("tarvoka_g11_v30_redundant_rear_square_removed",true)
+    model.set_meta("tarvoka_g11_v30_reanchored_rear_locks",6)
     return true
 
 static func apply_mobile(model: Node3D) -> bool:
