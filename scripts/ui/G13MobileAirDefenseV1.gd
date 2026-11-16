@@ -193,6 +193,7 @@ static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
     root.set_meta("tarvoka_g13_v1_wheel_clearance_m",INNER_CLEARANCE)
     root.set_meta("tarvoka_g13_v1_approved_family","G13")
     root.set_meta("tarvoka_g13_v1_high_detail",high_detail)
+    restore(root)
     return wheels!=null
 
 static func has_model(root: Node3D)->bool:
