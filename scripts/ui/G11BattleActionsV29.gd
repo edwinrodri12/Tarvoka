@@ -9,6 +9,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const Face = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const TrailsV30 = preload("res://scripts/ui/G11RocketTrailsV30.gd")
+const FlightV31 = preload("res://scripts/ui/G11RocketFlightV31.gd")
 const FLAG := "tarvoka_g11_v29_live_battle_action"
 const MOVE_TIME: float=0.92
 const ATTACK_TIME: float=1.65
@@ -24,6 +25,7 @@ var _elapsed: float=0.0
 var _start: Vector3=Vector3.ZERO
 var _end: Vector3=Vector3.ZERO
 var _heading: Vector2i=Vector2i.ZERO
+var _pod_rest_position: Vector3=Vector3.ZERO
 var _flash: MultiMeshInstance3D=null
 var _smoke: MultiMeshInstance3D=null
 static var _flash_mesh: SphereMesh
@@ -109,6 +111,7 @@ func play(unit_id: String,kind: String,from_position: Vector3,
         if not TrailsV30.ensure(pod):
             stop()
             return false
+        _pod_rest_position=pod.position
     _model.set_meta(FLAG,kind)
     set_process(true)
     advance(0.0)
@@ -140,6 +143,14 @@ func _update_salvo(elapsed: float) -> void:
     if tubes==null or tubes.multimesh==null:
         return
     var relative: float=elapsed-FIRST_SHOT
+    # Small mechanical recoil is applied to the EXISTING rack only,
+    # not the vehicle, the battle cell or the actual projectile target.
+    var rack:=_model.find_child(Mobile.POD,true,false) as Node3D
+    if rack!=null:
+        rack.position=_pod_rest_position-Vector3(0,0,
+            FlightV31.recoil(relative,SHOT_STEP,SHOT_COUNT))
+        _model.set_meta("tarvoka_g11_v31_recoil_m",
+            _pod_rest_position.z-rack.position.z)
     if relative<0.0:
         _flash.visible=false
         _smoke.visible=false
@@ -176,6 +187,11 @@ func stop() -> void:
     if active():
         _model.position=_end
         Models.restore_model_pose("mlrs",_model)
+        if _kind=="attack":
+            var rack:=_model.find_child(Mobile.POD,true,false) as Node3D
+            if rack!=null:
+                rack.position=_pod_rest_position
+        _model.remove_meta("tarvoka_g11_v31_recoil_m")
         _model.remove_meta(FLAG)
     if is_instance_valid(_flash):
         _flash.visible=false
