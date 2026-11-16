@@ -34,6 +34,8 @@ const G11Weather = preload("res://scripts/ui/G11SurfaceWeatherV17.gd")
 const G11Atmos = preload("res://scripts/ui/G11DamageAtmosphereV7.gd")
 const G11JointsV22 = preload("res://scripts/ui/G11SuspensionJointsV22.gd")
 const G11JointsV23 = preload("res://scripts/ui/G11JointFinishV23.gd")
+const G11TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
+const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -65,6 +67,7 @@ var _g11_playback_speed: float = 1.0
 var _g11_fx_clock: float = 0.0
 var _g11_light_v23: int = 0
 var _g11_lamps_v23: Array[OmniLight3D] = []
+var _g11_preview_lod_v24: int = 13
 
 func _ready() -> void:
     super._ready()
@@ -74,7 +77,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V23 pasadores PBR y luz")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V24 legibilidad táctica")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -183,7 +186,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · PASADORES PBR Y LUZ V23",14)
+        "G11 LANZADOR · ESCALA REAL DE PARTIDA V24",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -239,13 +242,38 @@ func _install_g11_controls() -> void:
         "V23: inspección pasador A",func(): _g11_joint_macro_v23(1))
     _add_paired(g11_controls,"V23: inspección pasador B",func(): _g11_joint_macro_v23(-1),
         "V23: restablecer luz",func(): _set_g11_light_v23(0))
+    _add_paired(g11_controls,"V24: escala juego cercana",func(): _g11_preview_v24(10),
+        "V24: escala juego lejana",func(): _g11_preview_v24(8))
+    _button(g11_controls,"V24: volver a escultura 3D",func(): _g11_preview_v24(13))
     _title(g11_controls,
-        "V23: 24 pasadores biselados, 48 retenes PBR y 3 modos de luz "
-        + "para revisar el acero de ambos lados. Inspección A/B oculta "
-        + "solo los protectores; los engranes V18 siguen intactos.",12)
+        "V24: compara la unidad REAL que aparece en combate (LOD 10/8). "
+        + "Orugas redondeadas y ruedas encajadas sin duplicaciones, con "
+        + "blindaje y 12 tubos intactos. Volver restaura V23 completo.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
+
+func _g11_preview_v24(level: int) -> void:
+    if _role!="mlrs" or (level!=8 and level!=10 and level!=13):
+        return
+    _g11_animation=""
+    _g11_preview_lod_v24=level
+    _display_role("mlrs")
+    _zoom=0.86 if level==10 else (0.59 if level==8 else 1.34)
+    _yaw=65.0
+    if model_root!=null:
+        model_root.rotation_degrees.y=_yaw
+    _update_camera()
+    status_label.text=("G11 · escultura V23 restaurada" if level==13
+        else "G11 V24 · LOD %d real de batalla, no proxy del Estudio" % level)
+
+func _g11_require_hero_v24() -> bool:
+    if _role!="mlrs":
+        return false
+    if _g11_preview_lod_v24!=13:
+        _g11_preview_lod_v24=13
+        _display_role("mlrs")
+    return model_root!=null and G11Art.has_model(model_root)
 
 func _install_g11_lighting_v23() -> void:
     if preview==null or not _g11_lamps_v23.is_empty():
@@ -315,7 +343,7 @@ func _g11_joint_macro_v23(side: int) -> void:
         camera.look_at(Vector3(0,0.34,0),Vector3.UP)
 
 func _g11_cutaway(side: int) -> void:
-    if _role != "mlrs" or model_root == null:
+    if not _g11_require_hero_v24():
         return
     if not G11JointsV22.set_inspection(model_root,side):
         return
@@ -332,7 +360,7 @@ func _g11_cutaway(side: int) -> void:
         else "G11 V22 · interior real visible, lado %s" % ("A" if side > 0 else "B"))
 
 func _g11_mount_inspect(yaw: float, low: bool) -> void:
-    if _role != "mlrs" or model_root == null:
+    if not _g11_require_hero_v24():
         return
     _g11_stop()
     _yaw = yaw
@@ -344,7 +372,7 @@ func _g11_mount_inspect(yaw: float, low: bool) -> void:
         camera.look_at(Vector3(0,0.48,0),Vector3.UP)
 
 func _g11_track_closeup(yaw: float) -> void:
-    if _role != "mlrs" or model_root == null:
+    if not _g11_require_hero_v24():
         return
     G11JointsV22.set_inspection(model_root,0)
     _g11_stop()
@@ -354,14 +382,14 @@ func _g11_track_closeup(yaw: float) -> void:
     _update_camera()
 
 func _g11_set_wear(enabled: bool) -> void:
-    if _role != "mlrs" or model_root == null:
+    if not _g11_require_hero_v24():
         return
     if G11Weather.set_wear(model_root,enabled):
         status_label.text = ("G11 V17 · desgaste operativo" if enabled
             else "G11 V17 · pintura limpia")
 
 func _g11_view(yaw: float) -> void:
-    if _role != "mlrs" or model_root == null:
+    if not _g11_require_hero_v24():
         return
     G11JointsV22.set_inspection(model_root,0)
     _g11_stop()
@@ -370,7 +398,7 @@ func _g11_view(yaw: float) -> void:
     _update_camera()
 
 func _g11_play(kind: String, speed: float = 1.0) -> void:
-    if _role != "mlrs" or not G11Rig.has_rig(model_root):
+    if not _g11_require_hero_v24() or not G11Rig.has_rig(model_root):
         return
     if G11Art.stage(model_root) >= 4 and kind in ["move","attack"]:
         status_label.text = "Lanzador destruido · reparar para operar"
@@ -533,6 +561,8 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    if role!="mlrs":
+        _g11_preview_lod_v24=13
     if _p06_fleet!=null:
         _hide_p06_fleet()
     super._display_role(role)
@@ -602,7 +632,7 @@ func _display_role(role: String) -> void:
         # Studio only: override the low-poly proxy with the complete V1 sculpt.
         preview.remove_child(model_root)
         model_root.queue_free()
-        model_root = P06Models.build("mlrs",_faction,true,13)
+        model_root = P06Models.build("mlrs",_faction,true,_g11_preview_lod_v24)
         if model_root != null:
             preview.add_child(model_root)
             model_root.rotation_degrees.y = _yaw
@@ -1230,7 +1260,9 @@ func _update_details() -> void:
                 "acabado V2" if built and bool(model_root.get_meta(
                     "tarvoka_g11_finish_v2",false)) else (
                     "escultura V1" if built else "LOD provisional")))))))]
-        if built and bool(model_root.get_meta("tarvoka_g11_joint_finish_v23",false)):
+        if model_root!=null and G11Mobile.has_model(model_root):
+            detail_label.text="G11 V24 · representación táctica LOD %d · 12 tubos · dos orugas" % _g11_preview_lod_v24
+        elif built and bool(model_root.get_meta("tarvoka_g11_joint_finish_v23",false)):
             detail_label.text = detail_label.text.replace("salva V8","pasadores y retenes PBR V23")
         elif built and bool(model_root.get_meta("tarvoka_g11_suspension_joints_v22",false)):
             detail_label.text = detail_label.text.replace("salva V8","articulaciones reales V22")
