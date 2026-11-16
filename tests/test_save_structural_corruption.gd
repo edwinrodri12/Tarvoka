@@ -85,11 +85,13 @@ func _initialize() -> void:
         var result: Dictionary = Codec.decode(JSON.stringify(cases[i]))
         assert(result.is_empty(), "Structural corruption case %d unexpectedly restored" % i)
         assert(original == original_before, "Corrupt decode mutated active session")
+        assert(Codec.decode(encoded) == original_before, "Valid snapshot failed after corrupt decode %d" % i)
     # Root JSON values can parse successfully while still being invalid battle objects.
     var invalid_roots: Array[String] = ["[]", "null", "true", "42", "\"orphan\""]
     for payload in invalid_roots:
         assert(Codec.decode(payload).is_empty(), "Non-object JSON root unexpectedly restored")
         assert(original == original_before, "Invalid root mutated active session")
+        assert(Codec.decode(encoded) == original_before, "Valid snapshot failed after invalid root")
     assert(Codec.decode(encoded) == original)
     print("PASS save structural corruption: %d malformed snapshots rejected" % (cases.size() + invalid_roots.size()))
     quit(0)
