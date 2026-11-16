@@ -207,7 +207,29 @@ static func _unblock_plant(battle: Dictionary, cell: Vector2i, side: int) -> Dic
             break
     if occupant.is_empty() or int(occupant.get("faction",-1)) != side or not Turns.can_move(occupant,side):
         return {"valid":false,"battle":battle}
-    var destination: Vector2i = cell+Vector2i(1 if side == 0 else -1,0)
+    # Fixed adjacent destination caused an artificial production bottleneck:
+    # the second APC blocked the first one's parking tile forever. Examine
+    # LEGAL reachable empty cells instead, so mass and tech policies have
+    # comparable access to the same authoritative factory cadence.
+    var blocked: Array[Vector2i] = []
+    for other in battle["state"]["units"]:
+        if int(other.get("hp",0)) > 0 and Domains.layer(other) == "ground" and other["pos"] != cell:
+            blocked.append(other["pos"])
+    var options: Dictionary = Rules.reachable(cell,int(occupant["move_points"]),
+        battle["state"]["terrain"],blocked)
+    var destination: Vector2i = Vector2i(-1,-1)
+    var best_score := -999999
+    var direction: int = 1 if side == 0 else -1
+    for endpoint in options:
+        if endpoint == cell or endpoint in blocked:
+            continue
+        var forward: int = (endpoint.x-cell.x)*direction
+        var value: int = forward*10-absi(endpoint.y-cell.y)
+        if value > best_score:
+            destination = endpoint
+            best_score = value
+    if destination.x < 0:
+        return {"valid":false,"battle":battle}
     var action: Dictionary = Session.move(battle["state"],str(occupant["id"]),destination)
     if not bool(action.get("valid",false)):
         return {"valid":false,"battle":battle}
