@@ -60,7 +60,17 @@ func _create_layout()->void:
     var light:=DirectionalLight3D.new()
     light.rotation_degrees=Vector3(-52,-30,0)
     light.light_energy=1.7
+    light.shadow_enabled=false
     _scene_root.add_child(light)
+    # Cool fill light reveals tire sidewalls and dark undercarriage without
+    # adding mobile shadow maps or changing actual faction PBR materials.
+    var fill:=DirectionalLight3D.new()
+    fill.name="G13_V8_InspectionFill"
+    fill.rotation_degrees=Vector3(-30,135,0)
+    fill.light_color=Color("#b9d2e6")
+    fill.light_energy=0.48
+    fill.shadow_enabled=false
+    _scene_root.add_child(fill)
     var world:=WorldEnvironment.new()
     var environment:=Environment.new()
     environment.background_mode=Environment.BG_COLOR
