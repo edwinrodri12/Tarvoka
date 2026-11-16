@@ -48,7 +48,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
     assert(int(finish.get_meta("damage",-1))==damage)
     var counted: Dictionary=finish.get_meta("surface_counts",{})
     assert(int(counted.get("faction_preserved",0))>=1 if damage<4 else int(counted.get("faction_preserved",0))==0)
-    assert(int(counted.get("concrete",0))>=1)
+    assert(int(counted.get("concrete",0))>=1 if damage<4 else int(counted.get("rubble",0))>=1)
     assert(V1.mesh_count(model)>=mcount)
     if damage<=2:
         var expected_roofs: int=(
