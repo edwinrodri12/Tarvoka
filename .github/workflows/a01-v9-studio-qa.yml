@@ -39,16 +39,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The unified Studio exists on the parent branch until it is
-          # published. Overlay every current model script from this PR.
-          # A stale hand-curated copy list omitted G13 and A01 V11 preloads,
-          # causing false import failures unrelated to the 3D geometry.
-          cp -a a01-head/scripts/ui/. scripts/ui/
+          # The actual combined Studio lives in this parent branch, while
+          # current A01/G13/infantry scripts come from the proposed PR.
+          # Replace ALL project scripts coherently, keeping the inherited
+          # parent-only CombinedArtStudioWeb.gd. Do not mix old core/test
+          # APIs with new UnitModels3D.gd as the old CI workflow did.
+          cp -a a01-head/scripts/. scripts/
+          cp -a a01-head/scenes/. scenes/
+          rm -rf tests
+          mkdir -p tests
+          cp a01-head/tests/test_attack_helicopter_v9_studio.gd tests/
+          cp a01-head/tests/test_g13_studio_web_v1.gd tests/
           test -s scripts/ui/CombinedArtStudioWeb.gd
           test -s scripts/ui/AttackHelicopterTailV11.gd
           test -s scripts/ui/G13BodyFinishV11.gd
-          cp a01-head/tests/test_attack_helicopter_v9_studio.gd tests/test_attack_helicopter_v9_studio.gd
-          cp a01-head/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -F 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           grep -F 'A01V9_AccesoHorizontalAndroid' scripts/ui/BastionStudioAdapter.gd
