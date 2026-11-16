@@ -4,6 +4,7 @@ extends SceneTree
 # scene shell. Ensures the user sees G13 in the picker and its controls work.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
+const Dual=preload("res://scripts/ui/G13DualDomainVisualV2.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -60,6 +61,20 @@ func _run()->void:
         studio.call("_g13_demo_v1","idle",1.0)
         _check(absf(turret.rotation_degrees.y)<0.001,
             "all preview turret motion fully reversible")
+        studio.call("_g13_attack_v2",Dual.GROUND)
+        await create_timer(0.12).timeout
+        var gun:=model.find_child(G13.GUNS,true,false) as Node3D
+        _check(gun!=null and gun.rotation_degrees.x<=Dual.GROUND_MAX_DEG,
+            "real shared Studio offers animated low-angle ground fire")
+        studio.call("_g13_attack_v2",Dual.AIR)
+        await create_timer(0.12).timeout
+        _check(gun!=null and gun.rotation_degrees.x>=Dual.AIR_MIN_DEG,
+            "real shared Studio offers distinct high-angle anti-air fire")
+        _check(str(model.get_meta(Dual.MODE,""))=="air",
+            "air firing was selected on the existing G13, not another vehicle")
+        studio.call("_g13_demo_v1","idle",1.0)
+        _check(gun!=null and absf(gun.rotation_degrees.x-12.0)<0.01,
+            "switching back to idle cancels previous fire tween safely")
     studio.call("_display_role","mlrs")
     await process_frame
     var g11:=studio.get("model_root") as Node3D
