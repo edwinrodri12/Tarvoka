@@ -85,6 +85,10 @@ func _run() -> void:
                 "production G11 uses fixed tactical V24 tracks in scene")
             if g11==null:
                 continue
+            var rocket_pod := _find(g11,"CestaLanzacohetesElevada")
+            _check(rocket_pod!=null and
+                rocket_pod.rotation_degrees.x<-20.0,
+                "real 4x3 mouth face aims upward toward raised combat camera")
             _check(bool(g11.get_meta(Pod.FLAG,false)),
                 "V25 4x3 actual tactical launch-mouth art integrated")
             _check(int(g11.get_meta(
