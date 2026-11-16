@@ -227,12 +227,12 @@ func _g11_mount_inspect(yaw: float, low: bool) -> void:
         return
     _g11_stop()
     _yaw = yaw
-    _zoom = 2.22 if low else 2.05
+    _zoom = 2.35 if low else 2.05
     model_root.rotation_degrees.y = yaw
     _update_camera()
     if low and camera != null:
-        camera.position.y = 0.73
-        camera.look_at(Vector3(0,0.55,0),Vector3.UP)
+        camera.position.y = 0.45
+        camera.look_at(Vector3(0,0.48,0),Vector3.UP)
 
 func _g11_track_closeup(yaw: float) -> void:
     if _role != "mlrs" or model_root == null:
