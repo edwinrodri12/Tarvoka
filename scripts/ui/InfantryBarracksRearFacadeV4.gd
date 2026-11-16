@@ -66,6 +66,47 @@ static func _rear_module(stage: Node3D,module: Dictionary,
         _piece(rear,"RanuraRegistroTecnico_%d" % rail,
             Vector3(hatch_x-0.09,1.48+float(rail)*0.095,surface+0.117),
             Vector3(0.37,0.035,0.035),STEEL,0.36)
+    # Actual architectural windows along the large blind rear walls.
+    # Low and middle floors remain well below the existing V3 high vents.
+    # Keep the service hatch center clear and do not close damage openings.
+    for floor in range(floors):
+        var window_y: float=1.45+float(floor)*2.22
+        if window_y+0.44>=h-0.27:
+            continue
+        for side in [-1,1]:
+            var wx: float=x+float(side)*w*0.275
+            var wid: float=minf(0.86,w*0.20)
+            _piece(rear,"MarcoVentanaPosterior_%d_%d" % [floor,side],
+                Vector3(wx,window_y,surface+0.045),
+                Vector3(wid+0.14,0.92,0.085),FRAME,0.41)
+            _piece(rear,"CristalVentanaPosterior_%d_%d" % [floor,side],
+                Vector3(wx,window_y,surface+0.105),
+                Vector3(wid,0.74,0.035),
+                SHADOW if damage==2 else Color("#406d7a"),0.16)
+            _piece(rear,"AlfeizarVentanaPosterior_%d_%d" % [floor,side],
+                Vector3(wx,window_y-0.48,surface+0.092),
+                Vector3(wid+0.20,0.085,0.18),STEEL,0.38)
+    # Only the EAST outer wing receives the side detail. West is kept clear
+    # for the fixed N3 obstacle lane, and no element reaches a tower envelope.
+    if level==3 and tag=="AlaEsteDosPisosN3" and damage<=2:
+        var outer:=Base._group(stage,"FachadaExteriorAlaEsteV4")
+        var outer_x: float=x+w*0.5+0.16
+        var center_z: float=float(module["z"])
+        for floor in range(2):
+            var side_y: float=1.42+float(floor)*2.18
+            for bay in range(2):
+                var side_z: float=center_z-1.34+float(bay)*1.63
+                _piece(outer,"MarcoVentanaLateral_%d_%d" % [floor,bay],
+                    Vector3(outer_x,side_y,side_z),
+                    Vector3(0.10,0.94,0.83),FRAME,0.38)
+                _piece(outer,"CristalVentanaLateral_%d_%d" % [floor,bay],
+                    Vector3(outer_x+0.072,side_y,side_z),
+                    Vector3(0.032,0.72,0.68),
+                    SHADOW if damage==2 else Color("#406d7a"),0.16)
+        for floor in range(1,2):
+            _piece(outer,"ForjadoLateralEste",
+                Vector3(outer_x,2.25,center_z-0.20),
+                Vector3(0.10,0.11,3.45),STEEL,0.32)
     # Rain drain is outside corners and kept slim; no contact with N3 track.
     _piece(rear,"BajantePosterior",
         Vector3(x-w*0.5+0.37,h*0.5,surface+0.13),
