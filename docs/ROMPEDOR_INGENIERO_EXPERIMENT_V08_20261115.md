@@ -60,6 +60,17 @@ Workflow de Godot 4.3: `.github/workflows/role-specialization-v08.yml`.
 
 El criterio de éxito técnico es que ambas pruebas muestren PASS sin excepciones. **Solo después** evaluaremos estadísticas de victorias y escenarios de uso. Ninguna de las pruebas confirma todavía equilibrio en partidas con edificios evolucionados, poderes de facciones o ocho jugadores.
 
+
+## Ampliación táctica de pruebas: v0.9/v1.0
+
+Además de las verificaciones directas, se añadieron dos ensayos para no confundir una estadística más alta con una mejora realmente útil:
+
+- `tests/test_specialization_sensitivity_v09.gd`: compara **32 objetivos × 4 posiciones/coberturas** (llanura, bosque, montaña, ciudad) frente al Rompedor, con bonificaciones experimentales **0, +2 y +3**. Registra las reducciones del número teórico de impactos necesarios para destruir una unidad a vida completa, sin considerar movimientos futuros ni fingir un duelo de partida completa. Las bonificaciones solo deben alterar los nueve perfiles de vehículos terrestres designados, nunca infantería, unidades aéreas o navales.
+- `tests/test_specialization_tactical_v10.gd`: reproduce combates usando `BattleSession` y ataques reales de ambos bandos. Un tanque aliado con 5 HP muere ante el disparo de otro tanque (6 de daño efectivo en llano). Si un Ingeniero vecino lo repara antes de terminar su turno, **una reparación de 2 HP le permite sobrevivir con 1 HP**, y la de 3 HP con 2 HP. En otra situación, un Rompedor de 300 créditos puede rematar a un tanque enemigo con 5 HP usando +3 ATQ; ni +2 ni su ataque actual lo rematan de un golpe. Estos son resultados **esperados por la fórmula** y serán confirmados solo cuando GitHub Actions marque PASS.
+- `.github/workflows/role-specialization-v08.yml` ejecuta las tres suites en Godot 4.3, falla ante errores/avisos críticos y archiva registros.
+
+**Límite de la prueba:** los ejemplos con tanques heridos son elegidos deliberadamente para estudiar umbrales de supervivencia y no demuestran que el Ingeniero o Rompedor tengan valor económico o probabilidad de victoria suficiente. La IA actual no sabe ordenar esas habilidades y aún falta una experiencia jugable/HUD adecuada, reglas de reparación de edificios, tecnologías compatibles, poderes de facción y guardado de efectos futuros. Por eso el código permanece exclusivamente en `scripts/experiments`.
+
 ## Recomendación y siguiente etapa
 
 No modificar el precio del Rompedor ni del Ingeniero y no añadir la habilidad al juego principal hasta validar el costo-beneficio y evitar dominios no deseados. Tras la verificación técnica, comparar +2 vs +3 en escenarios con tanque, IFV, MLRS y artillería, y evaluar varias reparaciones a un tanque y un APC frente a producir una unidad nueva. Después conectar estas habilidades con compras de tecnología de nivel II–III por edificio, evitando bonificaciones acumuladas arbitrarias.
