@@ -80,7 +80,9 @@ func _run() -> void:
         return
     viewport.add_child(model)
     _check(Cabin.has_model(model),"actual A01 V11 sculpt loaded")
-    var distance: float=7.2
+    # Frame at tactical camera scale; V11 geometry must remain readable
+    # while the full fuselage and rotor clear the camera edges.
+    var distance: float=5.6
     # Keep exactly the same native 320x180 rendered pixels for the V6 control.
     var v10_reference: Dictionary={}
     for n in range(8):
@@ -118,28 +120,35 @@ func _run() -> void:
                         maxf(absf(a.g-b.g),absf(a.b-b.b)))
                     if difference>0.085:
                         changed_pixels+=1
-    print("A01 V11 VS V8 NATIVE 320p: %d changed out of %d sampled pixels" % [
+    print("A01 V11 VS V10 NATIVE 320p: %d changed out of %d sampled pixels" % [
         changed_pixels,sample_pixels])
     _check(changed_pixels>12,
-        "V11 optical materials visible at 320p beyond subpixels")
+        "V11 tail and launcher geometry visible at 320p beyond subpixels")
     _check(changed_pixels<sample_pixels*0.08,
         "V11 preserves original silhouette and faction enamel")
     _check(Cabin.set_enabled(model,true),"restore V11 before physical detail macros")
     # True closeups at the earlier full-resolution native Godot setting.
     viewport.size=Vector2i(960,720)
-    camera.position=Vector3(1.77,2.43,3.34)
-    camera.look_at(Vector3(0.22,1.38,2.62),Vector3.UP)
+    # Use model-to-world coordinates (the attack helicopter is scaled to
+    # 0.77 and lowered 0.11 in UnitModels3D). Previous V11 closeups aimed
+    # at raw model coordinates, cutting off the gearbox and rotor ring.
+    var gearbox_focus: Vector3=model.to_global(Vector3(0.155,1.380,2.620))
+    camera.position=gearbox_focus+Vector3(2.1,1.18,1.88)
+    camera.look_at(gearbox_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v11_reductora_cola.png"))
-    camera.position=Vector3(1.63,1.99,3.24)
-    camera.look_at(Vector3(0.29,1.38,2.62),Vector3.UP)
+    var rotor_focus: Vector3=model.to_global(Vector3(0.285,1.380,2.620))
+    camera.position=rotor_focus+Vector3(2.25,0.80,1.85)
+    camera.look_at(rotor_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v11_bielas_rotor_cola.png"))
-    camera.position=Vector3(1.80,1.26,-1.96)
-    camera.look_at(Vector3(1.02,0.68,-0.44),Vector3.UP)
+    var pylon_focus: Vector3=model.to_global(Vector3(1.02,0.68,-0.44))
+    camera.position=pylon_focus+Vector3(2.15,1.12,-2.40)
+    camera.look_at(pylon_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v11_pilones_lanzadores.png"))
-    camera.position=Vector3(-2.04,0.98,-1.91)
-    camera.look_at(Vector3(-1.04,0.60,-0.54),Vector3.UP)
+    var rocket_focus: Vector3=model.to_global(Vector3(-1.04,0.60,-0.54))
+    camera.position=rocket_focus+Vector3(-2.08,0.95,-2.20)
+    camera.look_at(rocket_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v11_bocas_cohetes.png"))
-    _check(captures==16,"eight V11 320x180 orbital, four same-scene V8 reference and four full-resolution macro views")
+    _check(captures==16,"eight V11 320x180 orbital, four same-scene V10 reference and four full-resolution macro views")
     if failures>0:
         push_error("A01 V11: failed %d renders" % failures)
         quit(1)
