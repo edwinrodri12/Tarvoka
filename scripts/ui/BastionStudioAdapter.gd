@@ -80,6 +80,14 @@ var _heli_v8_button: Button
 var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_time: float=0.0
+# A01 V9 — mobile landscape: quick actions near the model picker, not below
+# the full technical catalogue. Other units keep their existing controls.
+var heli_mobile_bar: VBoxContainer
+var _heli_mobile_expand_button: Button
+var _heli_mobile_hint: Label
+var _heli_compact_landscape: bool=false
+var _heli_mobile_expanded: bool=false
+var _heli_frame_reflows: int=0
 var g11_controls: VBoxContainer
 var _g11_animation: String = ""
 var _g11_time: float = 0.0
@@ -96,6 +104,8 @@ func _ready() -> void:
     _install_p06_controls()
     _install_g11_controls()
     _install_heli_controls()
+    _install_heli_mobile_bar()
+    get_viewport().size_changed.connect(_heli_on_viewport_resize)
     _install_p06_lighting_v22()
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
@@ -166,6 +176,137 @@ func _install_heli_controls() -> void:
     var index: int=column.get_children().find(detail_label)
     column.move_child(heli_controls,maxi(0,index))
     heli_controls.visible=false
+
+func _heli_is_compact_landscape(view_size: Vector2) -> bool:
+    # Screen coordinates from the real browser viewport, not guessed dpi.
+    return view_size.x>=770.0 and view_size.y<=740.0 and (
+        view_size.x<=1600.0 and view_size.x>=view_size.y*1.30)
+
+func _install_heli_mobile_bar() -> void:
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    heli_mobile_bar=VBoxContainer.new()
+    heli_mobile_bar.name="A01V9_AccesoHorizontalAndroid"
+    heli_mobile_bar.add_theme_constant_override("separation",5)
+    column.add_child(heli_mobile_bar)
+    column.move_child(heli_mobile_bar,column.get_children().find(role_picker)+1)
+    _title(heli_mobile_bar,"A01 · HERRAMIENTAS RÁPIDAS",13)
+    _add_paired(heli_mobile_bar,"Vista general",_heli_mobile_home,
+        "Alas / motores",func(): _heli_inspect(58.0,26.0,1.36))
+    _add_paired(heli_mobile_bar,"Patines y soportes",
+        func(): _heli_inspect(90.0,-15.0,1.54),
+        "Probar disparo",func(): _heli_play("attack"))
+    _add_paired(heli_mobile_bar,"Comparar V7 / V8",_heli_toggle_v8,
+        "Girar 45°",func(): _heli_view(fposmod(_yaw+45.0,360.0)))
+    _heli_mobile_expand_button=_button(heli_mobile_bar,
+        "Mostrar inspecciones técnicas",_heli_mobile_toggle_advanced)
+    _heli_mobile_expand_button.custom_minimum_size.y=44
+    _heli_mobile_hint=_title(heli_mobile_bar,
+        "Arrastra el helicóptero para girarlo. Pellizca para acercar.",11)
+    heli_mobile_bar.visible=false
+
+func _heli_mobile_home() -> void:
+    _heli_inspect(35.0,17.0,1.0)
+
+func _heli_mobile_toggle_advanced() -> void:
+    if _role!="attack_heli":
+        return
+    _heli_mobile_expanded=not _heli_mobile_expanded
+    _heli_refresh_mobile_layout(get_viewport().get_visible_rect().size)
+
+func _heli_reflow_frame(view_size: Vector2) -> void:
+    # The base Studio chooses HBox/VBox only on startup. Rebuild just the
+    # container on orientation change; preserve the EXISTING viewport, camera
+    # and sidebar instances, so the model/animation does not get recreated.
+    if model_holder==null:
+        return
+    var old: BoxContainer=model_holder.get_parent() as BoxContainer
+    if old==null:
+        return
+    var wide: bool=view_size.x>=770.0
+    if (old is HBoxContainer)==wide:
+        return
+    var replacement: BoxContainer=HBoxContainer.new() if wide else VBoxContainer.new()
+    replacement.name="A01V9_ResponsiveFrame"
+    replacement.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    replacement.add_theme_constant_override("separation",8)
+    var owner_node: Node=old.get_parent()
+    var previous_index: int=old.get_index()
+    owner_node.add_child(replacement)
+    owner_node.move_child(replacement,previous_index)
+    for child in old.get_children():
+        child.reparent(replacement,false)
+    old.queue_free()
+    _heli_frame_reflows+=1
+
+func _heli_limit_sidebar_width(compact: bool) -> void:
+    # The legacy full role name (and dozens of hidden buttons) used to force
+    # a 472px sidebar inside a 960px Android viewport. Actual V9 Godot
+    # captures confirmed only 488px remained for the 3D helicopter.
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    if column==null:
+        return
+    var role_index: int=P06Models.ROLES.find("attack_heli")
+    if role_index>=0:
+        role_picker.set_item_text(role_index,
+            "A01 · Helicóptero V8" if compact else
+            "Helicóptero de ataque A01 · V8 silueta táctica de facción")
+    # Godot Button.clip_text participates in minimum-size computation.
+    # Keep buttons touch-friendly (44px high) instead of truncating canvas.
+    for node in column.find_children("*","Button",true,false):
+        (node as Button).clip_text=compact
+    # The base Studio's long introduction occupied 130px of a 540px screen.
+    # Quick instructions are already repeated in the A01 toolbar.
+    for node in column.get_children():
+        if node is Label and str((node as Label).text).begins_with(
+                "Visor 3D del motor Godot:"):
+            (node as Label).visible=not compact
+    if model_holder==null:
+        return
+    var frame: BoxContainer=model_holder.get_parent() as BoxContainer
+    if frame==null or frame.get_child_count()<2:
+        return
+    var sidebar: Control=frame.get_child(1) as Control
+    if sidebar!=null:
+        sidebar.custom_minimum_size.x=318.0 if compact else 306.0
+        sidebar.size_flags_horizontal=Control.SIZE_SHRINK_END
+    var scroll: ScrollContainer=sidebar.get_child(0) as ScrollContainer if (
+        sidebar!=null and sidebar.get_child_count()>0) else null
+    if scroll!=null:
+        scroll.custom_minimum_size.x=318.0 if compact else 0.0
+
+func _heli_refresh_mobile_layout(view_size: Vector2) -> void:
+    if heli_mobile_bar==null or heli_controls==null:
+        return
+    var compact: bool=_heli_is_compact_landscape(view_size)
+    if compact!=_heli_compact_landscape:
+        _heli_compact_landscape=compact
+        _heli_mobile_expanded=false
+    var active: bool=_role=="attack_heli" and (
+        category_picker==null or category_picker.selected==0)
+    # Restore the full shared controls when leaving A01. The compact label,
+    # clipped buttons and forced sidebar width must never leak to Bastion,
+    # G11, tanks, buildings or naval/air-base inspect modes.
+    _heli_limit_sidebar_width(compact if active else false)
+    heli_mobile_bar.visible=active and compact
+    heli_controls.visible=active and (not compact or _heli_mobile_expanded)
+    if _heli_mobile_expand_button!=null:
+        _heli_mobile_expand_button.text=(
+            "Ocultar inspecciones técnicas" if _heli_mobile_expanded else
+            "Mostrar inspecciones técnicas")
+    var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
+    if compact:
+        column.move_child(heli_controls,
+            column.get_children().find(heli_mobile_bar)+1)
+    else:
+        column.move_child(heli_controls,
+            maxi(0,column.get_children().find(detail_label)))
+    if active:
+        _heli_reflow_frame(view_size)
+
+func _heli_on_viewport_resize() -> void:
+    _heli_refresh_mobile_layout(get_viewport().get_visible_rect().size)
+    if _role=="attack_heli" and model_root!=null:
+        _update_camera()
 
 func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     if _role!="attack_heli" or model_root==null:
@@ -791,6 +932,16 @@ func _update_camera() -> void:
         camera.position=center+facing*43.0
         camera.look_at(center,Vector3.UP)
         camera.size=28.0/maxf(0.60,_zoom)
+    if _role=="attack_heli" and model_root!=null and camera!=null:
+        # Fit both the four-metre main rotor and the long tail in the actual
+        # visible 3D canvas, not the 1000x680 default render resolution.
+        # Camera.size in orthographic mode is VERTICAL world-space coverage.
+        var size: Vector2=model_holder.size if model_holder!=null else Vector2(680,480)
+        var aspect: float=maxf(0.75,size.x/maxf(220.0,size.y))
+        var normal: float=P06Models.preview_frame_height("attack_heli")*1.10/maxf(0.65,_zoom)
+        var width_limit: float=6.5/aspect/maxf(0.65,_zoom)
+        camera.size=maxf(normal,width_limit)
+        camera.look_at(Vector3(0,0.98,0.12),Vector3.UP)
     if _role=="apc" and _p06_fleet!=null and camera!=null:
         # Orthographic view needs size rather than moving the camera closer.
         var full: float=13.4 if _p06_fleet_count<=8 else (
@@ -805,8 +956,7 @@ func _studio_p06() -> bool:
 func _sync_p06_controls() -> void:
     var p06: bool = _role == "apc"
     if heli_controls != null:
-        heli_controls.visible=_role == "attack_heli" and (
-            category_picker==null or category_picker.selected==0)
+        _heli_refresh_mobile_layout(get_viewport().get_visible_rect().size)
     if _role == "attack_heli" and damage_picker != null:
         damage_picker.visible=false
         faction_picker.visible=true

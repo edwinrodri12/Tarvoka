@@ -1,0 +1,96 @@
+name: TARVOKA A01 V9 landscape mobile Studio browser QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v9_studio.gd'
+      - '.github/workflows/a01-v9-studio-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v9_studio.gd'
+      - '.github/workflows/a01-v9-studio-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-studio-v9:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 13
+    steps:
+      - name: Checkout exact published 3D Studio parent project with real scene and combined architecture
+        uses: actions/checkout@v4
+        with:
+          ref: feat/infantry-barracks-v1-three-distinct-levels-20261116
+          persist-credentials: false
+      - name: Checkout proposed A01 mobile layout and published mainline 3D components
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: a01-head
+          persist-credentials: false
+      - name: Assemble the exact published Studio inheritance and all current models
+        shell: bash
+        run: |
+          set -euo pipefail
+          for item in UnitModels3D.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+            test -s "a01-head/scripts/ui/${item}"
+            cp "a01-head/scripts/ui/${item}" "scripts/ui/${item}"
+          done
+          cp a01-head/tests/test_attack_helicopter_v9_studio.gd tests/test_attack_helicopter_v9_studio.gd
+          sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
+          grep -F 'A01V9_AccesoHorizontalAndroid' scripts/ui/BastionStudioAdapter.gd
+          grep -F 'AttackHelicopterSilhouetteV8.apply' scripts/ui/UnitModels3D.gd
+      - name: Install actual Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 'https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip' -o /tmp/a01-godot.zip
+          unzip -q /tmp/a01-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import registered Godot 4.3 editor classes and combined Studio resources before running SceneTree QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 150s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/a01-v9-editor-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed|Parse Error' /tmp/a01-v9-editor-import.log; then
+            echo 'Combined Godot Studio editor import failed'; exit 1
+          fi
+          test -d .godot/imported
+      - name: Test live Android screen rotation and capture real Godot 3D Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v9-mobile
+          timeout --signal=TERM --kill-after=5s 190s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_V9_CAPTURE_DIR=/tmp/a01-v9-mobile \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --resolution 960x540 --path . \
+            --script res://tests/test_attack_helicopter_v9_studio.gd \
+            2>&1 | tee /tmp/a01-v9-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error' /tmp/a01-v9-studio.log; then
+            echo 'V9 mobile Studio native Godot test failed'; exit 1
+          fi
+          grep -F 'PASS A01 V9 WEB MOBILE:' /tmp/a01-v9-studio.log
+          test "$(find /tmp/a01-v9-mobile -maxdepth 1 -name '*.png' | wc -l)" -eq 4
+      - name: Archive four authentic 960x540 and 540x960 Studio screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a01-v9-android-landscape-and-portrait-godot
+          path: |
+            /tmp/a01-v9-mobile/*.png
+            /tmp/a01-v9-studio.log
+            /tmp/a01-v9-editor-import.log
+          retention-days: 14
+          if-no-files-found: warn
