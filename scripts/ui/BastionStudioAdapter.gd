@@ -82,7 +82,7 @@ func _ready() -> void:
     _install_g11_lighting_v23()
     var g11_index: int = P06Models.ROLES.find("mlrs")
     if g11_index >= 0:
-        role_picker.set_item_text(g11_index,"G11 Lanzador · V29 · movimiento y salva en batalla")
+        role_picker.set_item_text(g11_index,"G11 Lanzador · V30 · chasis corregido y cohetes 3D")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
@@ -191,7 +191,7 @@ func _install_g11_controls() -> void:
     g11_controls.add_theme_constant_override("separation",8)
     column.add_child(g11_controls)
     var heading: Label = _title(g11_controls,
-        "G11 LANZADOR · V29 · MOVIMIENTO Y SALVA REAL",14)
+        "G11 LANZADOR · V30 · TRASERA SIN INTERFERENCIAS",14)
     heading.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g11_controls,"Orugas en movimiento",func(): _g11_play("move"),
         "Salva de cohetes",func(): _g11_play("attack"))
@@ -213,6 +213,9 @@ func _install_g11_controls() -> void:
         "Ver orugas y suspensión",func(): _g11_view(90.0))
     _add_paired(g11_controls,"Vista posterior",func(): _g11_view(180.0),
         "Lateral opuesto",func(): _g11_view(270.0))
+    _add_paired(g11_controls,
+        "V30: revisar debajo de la trasera",func(): _g11_rear_under_v30(false),
+        "V30: trasera inferior 3/4",func(): _g11_rear_under_v30(true))
     _add_paired(g11_controls,"V15: trasera en 3/4",func(): _g11_view(145.0),
         "V15: blindaje opuesto",func(): _g11_view(215.0))
     _add_paired(g11_controls,"V16: frente en 3/4",func(): _g11_view(38.0),
@@ -262,11 +265,11 @@ func _install_g11_controls() -> void:
         "V29: salva de 12 cohetes",func(): _g11_battle_action_v29("attack"))
     _button(g11_controls,"V25: cerrar mapa de prueba",_g11_close_context_v25)
     _title(g11_controls,
-        "V29: abre uno de los cuatro biomas y prueba movimiento y salva "
-        + "en el mismo G11 táctico. El Estudio hace una simulación visual "
-        + "sin daño; en una partida real solo se anima una orden confirmada. "
-        + "Doce cohetes escalonados, destello y humo limitados; "
-        + "los valores de combate y los diseños aprobados no cambian.",12)
+        "V30: debajo de la parte trasera, estabilizadores y chasis ahora "
+        + "tienen piezas biseladas sin invadir las orugas. Revisa ambas "
+        + "vistas bajas. En batalla, la salva agrega trayectorias cortas "
+        + "reales con sólo dos lotes de instancias; no revela enemigos "
+        + "ni cambia ataques, daño, munición o estadísticas.",12)
     var index: int = column.get_children().find(detail_label)
     column.move_child(g11_controls,maxi(0,index))
     g11_controls.visible = false
@@ -472,6 +475,23 @@ func _g11_mount_inspect(yaw: float, low: bool) -> void:
     if low and camera != null:
         camera.position.y = 0.45
         camera.look_at(Vector3(0,0.48,0),Vector3.UP)
+
+func _g11_rear_under_v30(three_quarter: bool) -> void:
+    if not _g11_require_hero_v24():
+        return
+    G11JointsV22.set_inspection(model_root,0)
+    _g11_stop()
+    _yaw=0.0
+    model_root.rotation_degrees.y=0.0
+    _zoom=2.28
+    _update_camera()
+    if camera!=null:
+        camera.position=(
+            Vector3(2.35,0.10,2.88) if three_quarter else
+            Vector3(0.88,0.06,3.55))
+        camera.look_at(Vector3(0,0.42,0.82),Vector3.UP)
+    status_label.text=("G11 V30 · trasera inferior en tres cuartos" if
+        three_quarter else "G11 V30 · vista bajo la trasera y orugas")
 
 func _g11_track_closeup(yaw: float) -> void:
     if not _g11_require_hero_v24():

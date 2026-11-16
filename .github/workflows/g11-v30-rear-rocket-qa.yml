@@ -1,0 +1,75 @@
+name: TARVOKA G11 V30 rear underside and rocket QA
+
+on:
+  push:
+    branches: [main, feat/g11-v30-rear-track-clearance-and-rocket-trails]
+    paths:
+      - 'scripts/ui/G11Art3D.gd'
+      - 'scripts/ui/G11MobileLOD.gd'
+      - 'scripts/ui/G11RearUndercarriageV30.gd'
+      - 'scripts/ui/G11RocketTrailsV30.gd'
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g11_rear_rocket_v30.gd'
+      - 'tests/test_g11_rear_rocket_v30_capture.gd'
+      - '.github/workflows/g11-v30-rear-rocket-qa.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/G11RearUndercarriageV30.gd'
+      - 'scripts/ui/G11RocketTrailsV30.gd'
+      - 'scripts/ui/G11BattleActionsV29.gd'
+      - 'tests/test_g11_rear_rocket_v30.gd'
+      - 'tests/test_g11_rear_rocket_v30_capture.gd'
+  workflow_dispatch:
+
+jobs:
+  g11-v30-native-rear-and-rockets:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install verified Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate rear track clearance and short rocket trajectories
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 230s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rear_rocket_v30.gd 2>&1 | tee /tmp/g11_v30_rear.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v30_rear.log; then
+            echo 'Rear underside V30 geometry or salvo integration failed'; exit 1
+          fi
+          grep -F 'PASS G11 V30:' /tmp/g11_v30_rear.log
+      - name: Render true low rear and rocket flight screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v30-geometry
+          timeout --signal=TERM --kill-after=5s 230s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_V30_CAPTURE_DIR=/tmp/g11-v30-geometry \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_rear_rocket_v30_capture.gd 2>&1 | tee /tmp/g11_v30_eyes.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v30_eyes.log; then
+            echo 'Rear G11 native render/capture failed'; exit 1
+          fi
+          grep -F 'PASS G11 V30 CAPTURE:' /tmp/g11_v30_eyes.log
+          test "$(find /tmp/g11-v30-geometry -name '*.png' | wc -l)" -eq 16
+      - name: Upload 16 actual Godot low rear and 3D rocket shots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v30-16-rear-underside-and-rocket-shots
+          path: /tmp/g11-v30-geometry/*.png
+          retention-days: 14
