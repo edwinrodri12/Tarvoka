@@ -24,6 +24,9 @@ on:
       - 'scripts/ui/G11FrontFrameV16.gd'
       - 'scripts/ui/G11SurfaceWeatherV17.gd'
       - 'scripts/ui/G11TrackAssemblyV18.gd'
+      - 'scripts/ui/G11TrackFinishV19.gd'
+      - 'tests/test_g11_track_finish_v19.gd'
+      - 'tests/test_g11_track_finish_v19_capture.gd'
       - 'tests/test_g11_track_clearance_v18.gd'
       - 'tests/test_g11_track_clearance_v18_capture.gd'
       - 'tests/test_g11_surface_weather_v17.gd'
@@ -160,6 +163,20 @@ jobs:
             echo 'G11 V18 track alignment or overlap regression'; exit 1
           fi
           grep -F 'PASS G11 V18:' /tmp/g11_v18.log
+      - name: Verify V19 92 beveled track pads, 368 real chevrons and two tapered fenders
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_track_finish_v19.gd 2>&1 | tee /tmp/g11_v19.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v19.log; then
+            echo 'G11 V19 track bevel/chevron geometry or guard clearance failed'; exit 1
+          fi
+          grep -F 'PASS G11 V19:' /tmp/g11_v19.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
@@ -386,6 +403,29 @@ jobs:
         with:
           name: tarvoka-g11-v18-16-track-clearance-real-godot
           path: /tmp/g11-v18-review/*.png
+          retention-days: 14
+      - name: Render 16 real V19 Godot azimuth/gear/running-shoe inspections
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v19-360
+          timeout --signal=TERM --kill-after=5s 155s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v19-360 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_track_finish_v19_capture.gd 2>&1 | tee /tmp/g11_v19_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v19_capture.log; then
+            echo 'G11 V19 true 360 visual gallery failed'; exit 1
+          fi
+          grep -F 'PASS G11 V19 CAPTURE:' /tmp/g11_v19_capture.log
+          test "$(find /tmp/g11-v19-360 -name '*.png' | wc -l)" -eq 16
+      - name: Upload G11 V19 16 real Godot 360 track gallery
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v19-16-native-godot-360-track-review
+          path: /tmp/g11-v19-360/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
