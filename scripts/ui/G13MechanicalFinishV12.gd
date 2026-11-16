@@ -114,7 +114,7 @@ static func _bolt_batch(hull: Node3D, material: Material) -> MultiMeshInstance3D
     for side in [-1, 1]:
         for z in [-1.055, -0.835, -0.615, -0.395]:
             batch.set_instance_transform(n, Transform3D(Basis.IDENTITY,
-                Vector3(float(side) * 0.57, 1.443, float(z))))
+                Vector3(float(side) * 0.57, 1.421, float(z))))
             n += 1
     var out := MultiMeshInstance3D.new()
     out.name = FASTENERS
