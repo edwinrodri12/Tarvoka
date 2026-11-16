@@ -116,7 +116,25 @@ func _run() -> void:
         var guard_right := _part(root_chassis,"G11_Faldon_1")
         var left_before: bool = guard_left.visible
         var right_before: bool = guard_right.visible
+        var bolts := _part(root_chassis,
+            "G11V3_TornillosMantenimientoLote") as MultiMeshInstance3D
+        _check(bolts!=null and bolts.multimesh!=null,
+            "original V3 batched armor fasteners retained")
+        var original_side_bolts: Array[Transform3D] = []
+        var original_rear: Transform3D = Transform3D.IDENTITY
+        if bolts!=null and bolts.multimesh!=null:
+            for i in range(16):
+                original_side_bolts.append(
+                    bolts.multimesh.get_instance_transform(i))
+            original_rear = bolts.multimesh.get_instance_transform(16)
         _check(Joints.set_inspection(model,1),"show inside right-hand track")
+        if bolts!=null and bolts.multimesh!=null:
+            for i in range(16):
+                var tr: Transform3D = bolts.multimesh.get_instance_transform(i)
+                _check((tr.basis.determinant()==0.0) == (i>=8),
+                    "only hidden right-side original flank rivets disappear")
+            _check(bolts.multimesh.get_instance_transform(16)==original_rear,
+                "rear service fasteners never disappear in cutaway")
         _check(guard_left.visible==left_before
             and not guard_right.visible,
             "inspection hides only right armor, never opposite side")
@@ -124,7 +142,17 @@ func _run() -> void:
         _check(guard_right.visible==right_before
             and not guard_left.visible,
             "inspection restores opposite side and hides left")
+        if bolts!=null and bolts.multimesh!=null:
+            for i in range(16):
+                var tr: Transform3D = bolts.multimesh.get_instance_transform(i)
+                _check((tr.basis.determinant()==0.0) == (i<8),
+                    "only left-side fasteners disappear when left guard is hidden")
         _check(Joints.set_inspection(model,0),"put original armor back")
+        if bolts!=null and bolts.multimesh!=null:
+            for i in range(16):
+                _check(bolts.multimesh.get_instance_transform(i)==
+                    original_side_bolts[i],
+                    "original V3 rivet transforms fully restored with armor")
         _check(guard_left.visible==left_before
             and guard_right.visible==right_before,
             "cutaway restores ALL original armor pieces and factory paint")
