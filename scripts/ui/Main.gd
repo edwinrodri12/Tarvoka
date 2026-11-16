@@ -1126,7 +1126,15 @@ func _build_battle_hud() -> void:
     compact_top_shortcuts = HBoxContainer.new()
     compact_top_shortcuts.mouse_filter = Control.MOUSE_FILTER_IGNORE
     compact_top_shortcuts.add_theme_constant_override("separation",5)
-    battle_hud_commands.add_child(compact_top_shortcuts)
+    # Mobile shortcuts must be siblings of the hidden legacy command stack,
+    # otherwise the "3D" button is never visible in the actual battle.
+    compact_top_shortcuts.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+    compact_top_shortcuts.offset_left = 8
+    compact_top_shortcuts.offset_right = -8
+    compact_top_shortcuts.offset_top = 64
+    compact_top_shortcuts.offset_bottom = 110
+    compact_top_shortcuts.mouse_filter = Control.MOUSE_FILTER_PASS
+    battle_hud_overlay.add_child(compact_top_shortcuts)
 
     var spacer := Control.new()
     spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1491,6 +1499,9 @@ func _set_compact_hud(compact: bool) -> void:
     compact_attention_unit.visible = compact
     compact_threat_button.visible = compact
     compact_top_shortcuts.visible = compact
+    compact_3d.visible = compact
+    if compact:
+        compact_top_shortcuts.move_to_front()
     expanded_header.visible = not compact
     expanded_actions.visible = not compact
     battle_hud_toggle.visible = not compact
