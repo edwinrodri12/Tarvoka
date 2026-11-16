@@ -26,6 +26,9 @@ on:
       - 'scripts/ui/G11TrackAssemblyV18.gd'
       - 'scripts/ui/G11TrackFinishV19.gd'
       - 'scripts/ui/G11WheelSuspensionV20.gd'
+      - 'scripts/ui/G11ShockMountFinishV21.gd'
+      - 'tests/test_g11_shock_mount_finish_v21.gd'
+      - 'tests/test_g11_shock_mount_finish_v21_capture.gd'
       - 'tests/test_g11_wheel_suspension_v20.gd'
       - 'tests/test_g11_wheel_suspension_v20_capture.gd'
       - 'tests/test_g11_track_finish_v19.gd'
@@ -194,6 +197,20 @@ jobs:
             echo 'G11 V20 real wheel/damper assembly regression'; exit 1
           fi
           grep -F 'PASS G11 V20:' /tmp/g11_v20.log
+      - name: Validate G11 V21 aligned mounts and physical spring/piston seals
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_shock_mount_finish_v21.gd 2>&1 | tee /tmp/g11_v21.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v21.log; then
+            echo 'G11 V21 original suspension mount alignment failure'; exit 1
+          fi
+          grep -F 'PASS G11 V21:' /tmp/g11_v21.log
       - name: Assert G11 two-tier mobile LOD and faction animation
         shell: bash
         run: |
@@ -466,6 +483,29 @@ jobs:
         with:
           name: tarvoka-g11-v20-16-native-godot-roadwheel-suspension
           path: /tmp/g11-v20-inspection/*.png
+          retention-days: 14
+      - name: Render 16 real low-angle G11 V21 Godot suspension closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g11-v21-mounts
+          timeout --signal=TERM --kill-after=5s 155s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G11_CAPTURE_DIR=/tmp/g11-v21-mounts \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g11_shock_mount_finish_v21_capture.gd 2>&1 | tee /tmp/g11_v21_capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g11_v21_capture.log; then
+            echo 'G11 V21 real low-angle suspension capture failure'; exit 1
+          fi
+          grep -F 'PASS G11 V21 CAPTURE:' /tmp/g11_v21_capture.log
+          test "$(find /tmp/g11-v21-mounts -name '*.png' | wc -l)" -eq 16
+      - name: Upload G11 V21 original Godot low-angle shock gallery
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g11-v21-16-real-suspension-mount-views
+          path: /tmp/g11-v21-mounts/*.png
           retention-days: 14
       # Heavy mobile/GL measurements are intentionally deferred until art is approved.
       # They remain available through manual workflow_dispatch, not sculpt commits.
