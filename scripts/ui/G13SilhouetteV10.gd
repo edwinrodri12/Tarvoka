@@ -78,10 +78,11 @@ static func _replace_outer(core: MeshInstance3D,label: String,
     if original==null:
         return null
     var inner:=BoxMesh.new()
-    # Keep almost the full sealed cabin mass behind the chamfered skin.
-    # V10.0 shrank this to 73% and exposed an unsightly roof-side void.
-    # These dimensions remain within the faceted upper envelope.
-    inner.size=Vector3(extent.x*0.90,extent.y*0.84,extent.z*0.86)
+    # Preserve the solid V1 silhouette and its sealed roof/cabin contact.
+    # Earlier overly small cores exposed a visibly hollow shoulder even
+    # though all mesh topology tests passed. The faceted shell becomes a
+    # low-poly exterior treatment rather than replacing structural volume.
+    inner.size=Vector3(extent.x*0.975,extent.y*0.98,extent.z*0.98)
     core.mesh=inner
     var shell:=MeshInstance3D.new()
     shell.name=label
