@@ -1,0 +1,76 @@
+name: TARVOKA individual unit levels and distributed city income v1.4
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/UnitVeterancyV14.gd"
+      - "scripts/experiments/CityDensityV14.gd"
+      - "tests/test_unit_veterancy_v14.gd"
+      - "tests/test_city_density_v14.gd"
+      - ".github/workflows/unit-veterancy-city-density-v14.yml"
+  workflow_dispatch:
+
+jobs:
+  individual_levels:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify individual unit trajectories and 1024 directed matchups
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_unit_veterancy_v14.gd \
+            2>&1 | tee /tmp/tarvoka-unit-veterancy-v14.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-unit-veterancy-v14.log; then exit 1; fi
+          grep -Fq 'PASS unit veterancy v14:' /tmp/tarvoka-unit-veterancy-v14.log
+      - name: Preserve unit-level role data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-unit-veterancy-v14
+          path: /tmp/tarvoka-unit-veterancy-v14.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  city_income_layout:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify balanced city density and honest old engine incompatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_city_density_v14.gd \
+            2>&1 | tee /tmp/tarvoka-city-density-v14.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-city-density-v14.log; then exit 1; fi
+          grep -Fq 'PASS city density v14:' /tmp/tarvoka-city-density-v14.log
+      - name: Preserve city layout and per-city income data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-city-density-v14
+          path: /tmp/tarvoka-city-density-v14.log
+          retention-days: 30
+          if-no-files-found: ignore
