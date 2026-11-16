@@ -186,7 +186,7 @@ static func install(root: Node3D) -> bool:
         # Replace the V1 sealed muzzle CAPS rather than overlaying extra
         # cylinders. V4 still animates the original G13_RealMuzzle pivots.
         mouths[0 if side == -1 else 1].mesh = _open_muzzle()
-        mouths[side + 1].material_override = dark
+        mouths[0 if side == -1 else 1].material_override = dark
     root.set_meta(FLAG, true)
     root.set_meta("tarvoka_g13_v12_visual_only", true)
     return true
