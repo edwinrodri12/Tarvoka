@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/experiments/RoleSpecializationV08.gd"
       - "tests/test_role_specialization_v08.gd"
+      - "tests/test_specialization_sensitivity_v09.gd"
       - ".github/workflows/role-specialization-v08.yml"
   workflow_dispatch:
 
@@ -34,11 +35,25 @@ jobs:
             echo 'Experimental role specialization failed'; exit 1
           fi
           grep -Fq 'PASS role specialization v08:' /tmp/tarvoka-role-specialization-v08.log
+      - name: Measure antiarmor counters on four terrains and repair cost per HP
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 520s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_specialization_sensitivity_v09.gd \
+            2>&1 | tee /tmp/tarvoka-specialization-sensitivity-v09.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-specialization-sensitivity-v09.log; then
+            echo 'Specialization sensitivity matrix failed'; exit 1
+          fi
+          grep -Fq 'PASS specialization sensitivity v09:' /tmp/tarvoka-specialization-sensitivity-v09.log
       - name: Archive combat and recovery evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-role-specialization-v08
-          path: /tmp/tarvoka-role-specialization-v08.log
+          path: |
+            /tmp/tarvoka-role-specialization-v08.log
+            /tmp/tarvoka-specialization-sensitivity-v09.log
           retention-days: 30
           if-no-files-found: ignore
