@@ -27,7 +27,10 @@ func _initialize() -> void:
         assert(restored == before, "Decoded state must match original")
         assert(Codec.encode(restored) == first, "Decode-encode must be stable")
         restored["units"][0]["hp"] = 1
-        assert(state == before, "Decoded data must not alias active state")
+        restored["terrain"][0][0] = "forest"
+        assert(state == before, "Decoded unit/terrain must not alias active state")
+        assert(Codec.encode(state) == first, "Mutated decoded copy must not change serialized source")
+        assert(Codec.decode(first) == before, "Fresh decode after mutation must recover pristine snapshot")
     # Invalid inputs must fail closed without mutating the caller's state.
     var invalid: Dictionary = state.duplicate(true)
     invalid["units"][0]["hp"] = -1
