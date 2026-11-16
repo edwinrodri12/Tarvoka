@@ -28,6 +28,18 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      # Main contains G13's native meshes, but the published multi-building
+      # Studio is assembled from separate release branches. Do NOT change its
+      # adapter or substitute a fake superclass in the repository.
+      - name: Scope CI import to native G13 models without published-only studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g13-ci-external-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g13-ci-external-studio/
+            echo 'Published multi-building studio adapter excluded from this isolated G13 audit only'
+          fi
       - name: Import native art and scenes
         shell: bash
         run: |
