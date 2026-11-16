@@ -131,6 +131,9 @@ func _ready() -> void:
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25 neumáticos sellados y completos · 6×6")
+    var tank_index: int = P06Models.ROLES.find("tank")
+    if tank_index >= 0:
+        role_picker.set_item_text(tank_index,"Tanque G09 · V32 FINAL · modelo 3D aprobado")
     # The project home link now opens the model under review rather than
     # showing the old default G09 first and confusing Android users.
     _display_role("apc")
@@ -1170,11 +1173,13 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
-    # The central 3D studio's historical tank graph is not the approved
-    # G09 V32. Route tank selections to the actual V32 WebGL build published
-    # at /tanque/ instead of silently displaying the obsolete proxy.
-    if role == "tank" and OS.has_feature("web"):
-        JavaScriptBridge.eval("window.tarvokaOpenApprovedTank && window.tarvokaOpenApprovedTank();", true)
+    # All eight units and the buildings share the SAME viewport and camera.
+    # For the native G09 V32, V25 materials + V30 damage + V31 inboard
+    # geometry activate the final V32 animation rig in TankVisualRig3D.gd.
+    if role == "tank":
+        _v25_preview = true
+        _v30_preview = true
+        _v31_preview = true
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
     if role!="mlrs":
@@ -1299,10 +1304,10 @@ func _display_role(role: String) -> void:
 
 func _switch_category(index: int) -> void:
     super._switch_category(index)
-    # The parent calls super._display_role("tank") directly on category
-    # changes; intercept that path too, without affecting other models.
-    if index == 0 and OS.has_feature("web") and _role == "tank":
-        JavaScriptBridge.eval("window.tarvokaOpenApprovedTank && window.tarvokaOpenApprovedTank();", true)
+    # The parent directly chooses tank when switching to Units. Rebuild
+    # the native approved art after the parent's legacy category transition.
+    if index == 0 and _role == "tank":
+        _display_role("tank")
     _sync_p06_controls()
 
 func _on_faction(index: int) -> void:
