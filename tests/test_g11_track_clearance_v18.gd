@@ -92,22 +92,23 @@ func _run() -> void:
             if shoes != null and shoes.multimesh != null:
                 _check(shoes.multimesh.instance_count == 46,
                     "shoe count actually rebuilt, not stacked 40+46")
-                var shoe_box := shoes.multimesh.mesh as BoxMesh
-                _check(shoe_box != null,
-                    "46 shoes use the same correctly sized link mesh")
-                if shoe_box != null:
-                    _check(shoe_box.size.z+0.02 < shoe_pitch,
-                        "link bodies have positive gap along the continuous belt")
-                    _check(shoe_box.size.x < 0.285,
-                        "link steel cannot poke out of rubber sidewalls")
+                var link_mesh: Mesh = shoes.multimesh.mesh
+                _check(link_mesh != null,
+                    "46 shoes use the same instanced native physical link mesh")
+                if link_mesh != null:
+                    var pad_dims: Vector3 = link_mesh.get_aabb().size
+                    _check(pad_dims.z+0.02 < shoe_pitch,
+                        "all beveled link bodies have clear pitch on belt")
+                    _check(pad_dims.x < 0.285,
+                        "link steel cannot protrude from rubber sidewalls")
             var skirt := _part(unit,
                 "G11_Faldon_%d" % side) as MeshInstance3D
-            _check(skirt != null and skirt.mesh is BoxMesh,
-                "one correctly fitted upper mudguard, not an overlapping slab")
-            if skirt != null and skirt.mesh is BoxMesh:
-                var mesh := skirt.mesh as BoxMesh
-                _check(skirt.position.y-mesh.size.y*0.5 > 0.750,
-                    "fender clears rubber crown and shoe height")
+            _check(skirt != null and skirt.mesh != null,
+                "one correctly fitted profiled steel guard per belt")
+            if skirt != null and skirt.mesh != null:
+                var guard_bounds: AABB = skirt.mesh.get_aabb()
+                _check(skirt.position.y+guard_bounds.position.y > 0.750,
+                    "tapered fender clears rubber crown and raised cleats")
                 _check(skirt.position.x*sign > 0.85,
                     "fender lies exterior to V2 armor side")
             for panel in range(3):
