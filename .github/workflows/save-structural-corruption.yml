@@ -26,7 +26,14 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_structural_corruption.gd 2>&1 | tee /tmp/save-structural.log
+          # Exactly three deliberately malformed JSON strings are exercised.
+          # A fourth parse error means an unexpected decode failed.
+          parse_errors=$(grep -F -c 'ERROR: Parse JSON failed.' /tmp/save-structural.log || true)
+          if [ "$parse_errors" -ne 3 ]; then
+            echo "Expected exactly 3 malformed-JSON parser diagnostics; got $parse_errors"
+            exit 1
+          fi
           if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-structural.log | grep -v -F 'ERROR: Parse JSON failed.'; then
             exit 1
           fi
-          grep -F 'PASS save structural corruption: 26 malformed snapshots rejected' /tmp/save-structural.log
+          test "$(grep -F -c 'PASS save structural corruption: 26 malformed snapshots rejected' /tmp/save-structural.log)" -eq 1
