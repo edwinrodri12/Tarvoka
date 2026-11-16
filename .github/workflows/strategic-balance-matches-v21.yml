@@ -23,6 +23,14 @@ jobs:
             https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Syntax check standalone planner for detailed error location
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --check-only --script res://scripts/experiments/StrategicMatchBalanceV21.gd \
+            2>&1 | tee /tmp/strategy-v21-parse.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:' /tmp/strategy-v21-parse.log; then exit 1; fi
       - name: Validate real fixed-site tactical strategy orders and income
         shell: bash
         run: |
@@ -38,6 +46,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-v21-strategy-audit
-          path: /tmp/strategy-v21-smoke.log
+          path: |
+            /tmp/strategy-v21-parse.log
+            /tmp/strategy-v21-smoke.log
           retention-days: 30
           if-no-files-found: ignore
