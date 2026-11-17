@@ -13,7 +13,7 @@ const CHEEKS := "G13_V31_PitchArmoredCheeks"
 const BEARINGS := "G13_V31_StationaryTrunnionCollars"
 const COLLAR_RADIUS := 0.145
 const COLLAR_DEPTH := 0.078
-const TRIANGLE_COUNT := 70
+const TRIANGLE_COUNT := 48
 # Convex side profile expressed as (vertical Y, fore/aft Z). The cheek
 # extends in FRONT of the fixed axle rather than covering the hinge.
 const PROFILE: Array[Vector2] = [
