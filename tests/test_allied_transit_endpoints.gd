@@ -257,5 +257,28 @@ func _initialize() -> void:
             assert(enemies_ordered == order_snapshot and allies_ordered == allies_snapshot,
                 "Reachability must not reorder occupancy lists")
     assert(large_map == large_snapshot, "Permutation checks must not mutate terrain")
+    # Maximum supported 40x30 map: verify edge transit and exact budget.
+    # A two-ally corridor along the last row must not wrap past the border.
+    var max_map: Array = []
+    for y in range(30):
+        var max_row: Array = []
+        for x in range(40):
+            max_row.append("plain")
+        max_map.append(max_row)
+    var max_snapshot: Array = max_map.duplicate(true)
+    var max_allies: Array[Vector2i] = [Vector2i(38, 29), Vector2i(39, 29)]
+    var max_enemies: Array[Vector2i] = [Vector2i(37, 28)]
+    var max_paths: Dictionary = rules.reachable(
+        Vector2i(37, 29), 3, max_map, max_enemies, "ground", false, max_allies
+    )
+    assert(not max_paths.has(Vector2i(38, 29)) and not max_paths.has(Vector2i(39, 29)),
+        "Maximum-map friendly cells must never become endpoints")
+    assert(not max_paths.has(Vector2i(40, 29)) and not max_paths.has(Vector2i(39, 30)),
+        "Maximum-map allied corridor must not wrap beyond board bounds")
+    assert(max_paths.get(Vector2i(38, 28), -1) == 2,
+        "Maximum-map allied transit must reach an empty northern tile at cost two")
+    assert(max_map == max_snapshot and max_allies == [Vector2i(38, 29), Vector2i(39, 29)]
+        and max_enemies == [Vector2i(37, 28)],
+        "Maximum-map routing must preserve caller-owned inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
