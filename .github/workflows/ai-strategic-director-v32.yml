@@ -5,6 +5,11 @@ on:
     paths:
       - "scripts/core/StrategicDirectorV32.gd"
       - "scripts/core/BasicAI.gd"
+      - "scripts/core/SaveCodec.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/SkirmishSetup.gd"
+      - "scripts/ui/Main.gd"
+      - "tests/test_ai_game_ui_profile_v32.gd"
       - "tests/test_ai_strategy_levels_v32.gd"
       - ".github/workflows/ai-strategic-director-v32.yml"
   workflow_dispatch:
@@ -36,6 +41,35 @@ jobs:
         with:
           name: tarvoka-v32-director
           path: /tmp/v32-director.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  ui_save_profile:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot 4.3 headless
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Confirm visible selectors and actual save/turn persistence
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 300s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_game_ui_profile_v32.gd \
+            2>&1 | tee /tmp/v32-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v32-ui.log; then exit 1; fi
+          grep -Fq 'PASS AI preflight v32:' /tmp/v32-ui.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v32-ui-profile
+          path: /tmp/v32-ui.log
           retention-days: 30
           if-no-files-found: ignore
 
