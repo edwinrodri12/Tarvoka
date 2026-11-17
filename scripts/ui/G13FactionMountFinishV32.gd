@@ -88,9 +88,9 @@ static func _mechanical_bolts() -> Dictionary:
         var s: float = float(side)
         fixed.append(Transform3D(axis, Vector3(s * 0.553, 0.337, -0.253)))
         fixed.append(Transform3D(axis, Vector3(s * 0.553, 0.232, -0.151)))
-        moving.append(Transform3D(axis, Vector3(s * 0.533, 0.065, -0.303)))
-        moving.append(Transform3D(axis, Vector3(s * 0.533, -0.039, -0.418)))
-        moving.append(Transform3D(axis, Vector3(s * 0.533, 0.058, -0.490)))
+        moving.append(Transform3D(axis, Vector3(s * 0.519, 0.065, -0.303)))
+        moving.append(Transform3D(axis, Vector3(s * 0.519, -0.039, -0.418)))
+        moving.append(Transform3D(axis, Vector3(s * 0.519, 0.058, -0.490)))
     return {"fixed": fixed, "moving": moving}
 
 static func apply(root: Node3D) -> bool:
