@@ -238,8 +238,8 @@ func _run()->void:
         "real gun cylinder envelopes never hit rotating mast")
     require(worst_dish>0.0,
         "real gun cylinder envelopes never strike radar disc")
-    require(max_foot_deviation<0.022,
-        "foot stays planted within 22mm during full visual transition")
+    require(max_foot_deviation<0.002,
+        "radar hinge foot stays pinned within 2mm at every yaw")
 
     for mode in ["attack_ground","attack_air"]:
         for heading in [Vector2i(0,1),Vector2i(1,1),
