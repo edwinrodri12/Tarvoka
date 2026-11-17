@@ -104,6 +104,12 @@ func _run()->void:
             "native tactical finish installed")
         check(int(model.get_meta("tarvoka_g13_v25_added_draw_nodes",-1))==0,
             "no new per-unit draw objects")
+        var paint:=model.find_child("G13_SideEnamel_1",
+            true,false) as MeshInstance3D
+        var paint_material:=paint.material_override as StandardMaterial3D
+        check(paint_material!=null and paint_material.albedo_color.is_equal_approx(
+            Models.faction_paint_color(faction).darkened(0.10)),
+            "official faction color remains EXACT across tactical LODs")
         var original_count:int=count_draws(model)
         counts.append(original_count)
         var pitch:=model.find_child(G13.GUNS,true,false) as Node3D
