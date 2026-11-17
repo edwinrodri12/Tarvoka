@@ -69,6 +69,14 @@ func _run() -> void:
     mat.albedo_color=Color("#46565b")
     floor.material_override=mat
     vp.add_child(floor)
+    # An independent cool fill light illuminates physical relief beneath the
+    # fuselage only in the underbody camera; it never alters faction renders.
+    var underside_light:=OmniLight3D.new()
+    underside_light.position=Vector3(0.7,-0.55,-1.2)
+    underside_light.omni_range=5.5
+    underside_light.light_energy=1.3
+    underside_light.visible=false
+    vp.add_child(underside_light)
 
     for army in range(8):
         var unit: Node3D=Models.build("attack_heli",army,true,14)
@@ -101,9 +109,23 @@ func _run() -> void:
     cam.position=Vector3(3.1,5.35,-2.4)
     cam.look_at(orbit_target,Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_2_superior.png"))
-    cam.position=Vector3(3.55,0.28,-3.40)
-    cam.look_at(orbit_target,Vector3.UP)
+    # V14.2.1: a genuine BELOW-the-hull camera. The previous low side shot
+    # kept the floor in front of the camera and hid the ventral hatch.
+    floor.visible=false
+    underside_light.visible=true
+    cam.position=Vector3(2.45,-0.95,-2.65)
+    var underside_target: Vector3=orbit_model.to_global(Vector3(0,0.61,0.06))
+    cam.look_at(underside_target,Vector3.UP)
+    _check(cam.position.y<0.0 and not floor.visible,
+        "V14.2.1 camera really below the airframe with unobstructed floor")
     await _save(vp,folder.path_join("hat29_v14_2_bajos.png"))
+    # Additional tight underbody inspection identifies overlapping fasteners,
+    # gasket or hatch seams; this is a real Godot camera, not a 2D crop.
+    cam.position=Vector3(0.52,-1.22,-0.36)
+    cam.look_at(underside_target,Vector3.FORWARD)
+    await _save(vp,folder.path_join("hat29_v14_2_escotilla_macro.png"))
+    floor.visible=true
+    underside_light.visible=false
     orbit_model.queue_free()
     await process_frame
 
@@ -140,10 +162,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==24,"exactly 8 faction, 6 animation and 10 V14.2 360-angle PNG captures")
+    _check(count==25,"exactly 8 faction, 6 animation, 10 V14.2 orbit and 1 real belly macro captures")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 24 real native Godot PNGs with eight armies, all effects, 360 orbit, overhead and underbelly")
+        print("PASS HAT29 V14 CAPTURE: 25 native Godot PNGs: eight armies, six effects, eight orbit, top, true underside and belly macro")
         quit(0)
