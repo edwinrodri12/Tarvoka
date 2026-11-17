@@ -213,15 +213,17 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
     fire.scale=Vector3.ONE*(0.94+0.12*sin(TAU*t*3.0))
     if kind=="destroy":
-        for piece in wreck.get_children():
-            if piece is MeshInstance3D and piece.has_meta("a01_v13_rest"):
+        for child in wreck.get_children():
+            var piece: MeshInstance3D=child as MeshInstance3D
+            if piece!=null and piece.has_meta("a01_v13_rest"):
                 var rest: Vector3=piece.get_meta("a01_v13_rest") as Vector3
                 var angle: Vector3=piece.get_meta("a01_v13_rot") as Vector3
                 piece.position=rest+Vector3(rest.x*0.38*t,-0.14*t*t,rest.z*0.23*t)
                 piece.rotation_degrees=angle+Vector3(32*t,49*t,23*t)
     else:
-        for piece in wreck.get_children():
-            if piece is MeshInstance3D and piece.has_meta("a01_v13_rest"):
+        for child in wreck.get_children():
+            var piece: MeshInstance3D=child as MeshInstance3D
+            if piece!=null and piece.has_meta("a01_v13_rest"):
                 piece.position=piece.get_meta("a01_v13_rest") as Vector3
                 piece.rotation_degrees=piece.get_meta("a01_v13_rot") as Vector3
 
