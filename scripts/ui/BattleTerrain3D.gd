@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
@@ -466,7 +467,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     var economy: Dictionary = state.get("economy",{})
     for site in economy.get("sites",[]):
         sites.append({"kind":str(site["kind"]),"pos":site["pos"],
-            "owner":int(site.get("owner",-1))})
+            "owner":int(site.get("owner",-1)),
+            "visual_level":int(site.get("visual_level",1)),
+            "visual_damage_stage":int(site.get("visual_damage_stage",0))})
     var control: Dictionary = state.get("control",{})
     for objective in control.get("nodes",[]):
         sites.append({"kind":"relay","pos":objective["pos"],
@@ -482,6 +485,21 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var visible: bool = bool(known.get("visible",false))
         # Ownership cannot leak through fog; unknown allegiance is neutral.
         var owner: int = int(site["owner"]) if visible else -1
+        # The approved Infantry Barracks V11 replaces the generic cube
+        # for the pre-existing factory site in actual playable 3D battles.
+        # FOW still hides unexplored cells and unknown ownership.
+        if str(site["kind"])=="factory":
+            var barracks: Node3D=InfantryBarracks.build_site(state,site,owner)
+            if barracks!=null:
+                barracks.name="Instalacion3D_factory_%d_%d" % [cell.x,cell.y]
+                barracks.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                barracks.set_meta("owner_public",owner)
+                barracks.set_meta("kind","factory")
+                barracks.set_meta("battle_cell",cell)
+                parent.add_child(barracks)
+                drawn+=1
+                continue
         var color: Color = Color("#a9ada5")
         if owner == 0:
             color = Color("#6099db")

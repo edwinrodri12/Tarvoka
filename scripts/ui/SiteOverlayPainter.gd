@@ -60,10 +60,68 @@ static func selected_caption(marker: Dictionary) -> String:
         return "Instalación"
     return caption
 
+# Compact tactical 2D projection of the *same* approved V11 barracks.
+# A legible roof/front/tower silhouette, not a second invented building.
+# Read-only graphics: the site's economy and hit testing are unchanged.
+static func _draw_barracks_classic(canvas: CanvasItem,
+        marker: Dictionary,at: Vector2,tile: float,
+        tint: Color) -> void:
+    if str(marker.get("kind",""))!="factory" or tile<23.0:
+        return
+    var tier: int=clampi(int(marker.get("visual_level",1)),1,3)
+    var left: float=at.x+tile*0.275
+    var top: float=at.y+tile*0.41
+    var width: float=tile*0.43
+    var height: float=tile*(0.19+0.055*float(tier-1))
+    canvas.draw_rect(Rect2(Vector2(left,top),Vector2(width,height)),
+        Color("#52666E"),true)
+    canvas.draw_rect(Rect2(Vector2(left-tile*0.018,top-tile*0.048),
+        Vector2(width+tile*0.036,tile*0.083)),Color("#2B414A"),true)
+    canvas.draw_rect(Rect2(Vector2(left+width*0.15,top+height*0.34),
+        Vector2(width*0.19,height*0.47)),Color("#273B45"))
+    canvas.draw_rect(Rect2(Vector2(left+width*0.48,top+height*0.30),
+        Vector2(width*0.31,height*0.19)),Color("#84A6B0"))
+    canvas.draw_rect(Rect2(Vector2(left,top+height*0.75),
+        Vector2(width,tile*0.027)),tint)
+    if tier>=2 and tile>=35.0:
+        canvas.draw_rect(Rect2(Vector2(left+width*0.84,top-tile*0.11),
+            Vector2(tile*0.095,tile*0.11)),Color("#253842"))
+    if tier==3 and tile>=42.0:
+        canvas.draw_rect(Rect2(Vector2(left+width*0.04,top-tile*0.14),
+            Vector2(tile*0.078,tile*0.14)),Color("#253842"))
+
+static func _draw_barracks_iso(canvas: CanvasItem,
+        marker: Dictionary,center: Vector2,hw: float,
+        tint: Color) -> void:
+    if str(marker.get("kind",""))!="factory" or hw<14.0:
+        return
+    var tier: int=clampi(int(marker.get("visual_level",1)),1,3)
+    var c: Vector2=center+Vector2(0,-hw*0.10)
+    var w: float=hw*0.31
+    var h: float=hw*(0.16+0.045*float(tier-1))
+    var roof:=PackedVector2Array([
+        c+Vector2(-w,-h*0.8),c+Vector2(0,-h*1.38),
+        c+Vector2(w,-h*0.8),c+Vector2(0,-h*0.22)])
+    var wall_left:=PackedVector2Array([
+        c+Vector2(-w,-h*0.8),c+Vector2(0,-h*0.22),
+        c+Vector2(0,h*0.88),c+Vector2(-w,h*0.30)])
+    var wall_right:=PackedVector2Array([
+        c+Vector2(0,-h*0.22),c+Vector2(w,-h*0.8),
+        c+Vector2(w,h*0.30),c+Vector2(0,h*0.88)])
+    canvas.draw_colored_polygon(wall_left,Color("#6B858A"))
+    canvas.draw_colored_polygon(wall_right,Color("#3E575E"))
+    canvas.draw_colored_polygon(roof,Color("#243B42"))
+    canvas.draw_line(c+Vector2(-w,h*0.32),c+Vector2(0,h*0.90),
+        tint,maxf(1.0,hw*0.065))
+    if tier>=2 and hw>=20.0:
+        canvas.draw_rect(Rect2(c+Vector2(w*0.60,-h*1.48),
+            Vector2(hw*0.065,h*0.71)),Color("#263A43"))
+
 static func draw_classic(canvas: CanvasItem, marker: Dictionary, top_left: Vector2, tile: float, selected: bool, state: Dictionary = {}) -> void:
     if tile < 16.0:
         return
     var tint: Color = owner_tint(int(marker.get("owner",-2)),state)
+    _draw_barracks_classic(canvas,marker,top_left,tile,tint)
     # Small owner flag is always in a consistent corner; separate from
     # player unit's ammo badges and from the symbol at tile center.
     var flag := Rect2(top_left+Vector2(tile*0.07,tile*0.07),
@@ -93,6 +151,7 @@ static func draw_iso(canvas: CanvasItem, marker: Dictionary, center: Vector2, hw
     if hw < 9.0:
         return
     var tint: Color = owner_tint(int(marker.get("owner",-2)),state)
+    _draw_barracks_iso(canvas,marker,center,hw,tint)
     var anchor: Vector2 = center+Vector2(-hw*0.32,-hw*0.23)
     var flag_len: float = clampf(hw*0.30,4.0,16.0)
     canvas.draw_line(anchor,anchor+Vector2(flag_len,0),Color("#08131D"),maxf(3.0,hw*0.12))
