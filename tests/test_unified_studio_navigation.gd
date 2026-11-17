@@ -162,9 +162,15 @@ func _run() -> void:
         studio.call("_studio_quick_action","attack")
         _check(str(g13.get_meta("tarvoka_g13_v1_pose",""))=="attack_air",
             "G13 aerial firing shortcut triggers elevated autocannons")
-        var ground_button: Button=studio.get("studio_g13_ground_button") as Button
-        _check(ground_button!=null and ground_button.visible,
-            "specialized G13 ground attack button appears in the animation tab")
+        var inventory: VBoxContainer=studio.get("studio_animation_inventory") as VBoxContainer
+        var ground_button: Button=null
+        if inventory!=null:
+            for child in inventory.find_children("*","Button",true,false):
+                if (child as Button).text=="Ráfaga terrestre":
+                    ground_button=child as Button
+                    break
+        _check(ground_button!=null and ground_button.is_visible_in_tree(),
+            "G13 terrestrial attack appears in its complete Animar inventory")
     studio.call("_display_role","apc")
     await process_frame
     # Capture the actual native GUI + 3D viewport for publication QA.
