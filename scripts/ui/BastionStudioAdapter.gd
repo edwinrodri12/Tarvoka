@@ -1123,7 +1123,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V22 · CANDIDATO ARTÍSTICO · 2 CAÑONES",14)
+        "G13 V23 · FAROS 3D · 2 CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1137,6 +1137,10 @@ func _install_g13_controls() -> void:
         func(): _g13_attack_v4("attack_ground"),
         "V4 · Ataque antiaéreo",
         func(): _g13_attack_v4("attack_air"))
+    _add_paired(g13_controls,"V23 · Mostrar faros nuevos",
+        func(): _g13_v23_show_lights(false),
+        "V23 · Comparar con V22",
+        func(): _g13_v23_show_lights(true))
     _add_paired(g13_controls,"V17 · Medir FPS en Android",
         func(): _g13_start_android_test(),
         "V17 · Ver política LOD",
@@ -1148,6 +1152,19 @@ func _install_g13_controls() -> void:
         + "humo transparente y retroceso mínimo de los dos cañones. "
         + "Es una simulación visual: aún no ejecuta daño en batalla.",12)
     g13_controls.visible=false
+
+func _g13_v23_show_lights(show_v22:bool) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    var finished:bool=preload(
+        "res://scripts/ui/G13FrontLightingV23.gd").compare_v22(
+            model_root,show_v22)
+    status_label.text=(
+        ("G13 V22: faros originales para comparar a igual cámara."
+        if show_v22 else
+        "G13 V23: biseles 3D y lentes ópticas encastradas.")
+        if finished else
+        "G13 V23: selecciona la vista de detalle LOD13 para comparar.")
 
 func _g13_lod_status() -> void:
     if _role!="aa_mobile":

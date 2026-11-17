@@ -79,6 +79,7 @@ jobs:
             tests/test_g13_turret_armor_v20.gd
             tests/test_g13_side_armor_v21.gd
             tests/test_g13_360_underbody_v22.gd
+            tests/test_g13_front_lighting_v23.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
