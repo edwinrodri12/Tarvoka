@@ -93,13 +93,12 @@ static func _windows(stage: Node3D,model: Node3D,
         var side: int=int(lateral.get_meta("side_direction",0))
         if side==0:
             continue
-        # Godot may add @2 to the second side of a one-floor barrack:
-        # both V7 sides share the same module name. Resolve by exact
-        # module prefix rather than comparing auto-renamed node names.
+        # N1 has two siblings with the same desired name. Godot can rename
+        # the second as @Node3D@N: the stable V7 metadata, not name, resolves it.
+        var stable_tag: String=str(lateral.get_meta("module_tag",""))
         var module: Dictionary={}
         for candidate in V2._modules(level):
-            var expected_name: String="FachadaLateralV7_"+str(candidate["tag"])
-            if str(lateral.name).begins_with(expected_name):
+            if str(candidate["tag"])==stable_tag:
                 module=candidate
                 break
         if module.is_empty():
