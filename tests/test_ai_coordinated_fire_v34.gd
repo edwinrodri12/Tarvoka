@@ -30,13 +30,13 @@ static func _unit(id: String, faction: int, pos: Vector2i,
         unit["hp"] = hp
     return unit
 
-static func _two_shots() -> Dictionary:
+static func _two_shots(fog: bool = false) -> Dictionary:
     return Session.start([
         _unit("A",0,Vector2i(3,3),"line"),
         _unit("B",0,Vector2i(5,3),"line"),
         _unit("X",1,Vector2i(4,3),"line"),
         _unit("Y",1,Vector2i(8,7),"line")
-    ],_plain(),0,false,false,true,true)
+    ],_plain(),0,fog,false,true,true)
 
 static func _three_shots() -> Dictionary:
     return Session.start([
@@ -147,8 +147,7 @@ static func _capture_protection() -> void:
         guard_score,arty_score,no_guard])
 
 static func _fairness() -> void:
-    var full: Dictionary = _two_shots()
-    full["fog"] = true
+    var full: Dictionary = _two_shots(true)
     # Use the game's actual visibility wrapper; distant enemy Y is hidden.
     assert(not Visibility.is_unit_visible(full,0,"Y"))
     var other: Dictionary = full.duplicate(true)
