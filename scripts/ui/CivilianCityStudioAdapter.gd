@@ -5,6 +5,7 @@ class_name TarvokaCivilianCityStudioAdapter
 # This additive subclass only adds the civilian income-city category.
 const CivilianCity=preload("res://scripts/ui/CivilianCity3DV1.gd")
 const CityV2=preload("res://scripts/ui/CivilianCityFacadeV2.gd")
+const CityV3=preload("res://scripts/ui/CivilianCityPublicSpaceV3.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 var city_controls: VBoxContainer
 var city_level_picker: OptionButton
@@ -12,6 +13,7 @@ var city_faction_picker: OptionButton
 var city_damage_picker: OptionButton
 var city_caption: Label
 var city_v2_toggle: CheckButton
+var city_v3_toggle: CheckButton
 
 func _ready() -> void:
     super._ready()
@@ -64,11 +66,22 @@ func _ready() -> void:
     city_v2_toggle.button_pressed=true
     city_v2_toggle.toggled.connect(_toggle_city_v2)
     city_controls.add_child(city_v2_toggle)
+    city_v3_toggle=CheckButton.new()
+    city_v3_toggle.name="CiudadCivilPlazaAccesosV3"
+    city_v3_toggle.text="V3 · plaza, accesos y movilidad (comparar V2)"
+    city_v3_toggle.button_pressed=true
+    city_v3_toggle.toggled.connect(_toggle_city_v3)
+    city_controls.add_child(city_v3_toggle)
     # The parent already connected its handler to this SAME picker. Its
     # handler handles 0..3; this one enables category 4 after that cleanup.
     building_picker.item_selected.connect(_on_building_city_selected)
 
 func _toggle_city_v2(_enabled: bool) -> void:
+    city_v3_toggle.disabled=not city_v2_toggle.button_pressed
+    if _role=="civilian_city":
+        _display_civilian_city()
+
+func _toggle_city_v3(_enabled: bool) -> void:
     if _role=="civilian_city":
         _display_civilian_city()
 
@@ -100,6 +113,10 @@ func _display_civilian_city() -> void:
         var applied: bool=CityV2.apply(model_root,level,faction,damage)
         if not applied:
             push_error("Ciudad Civil V2: no se aplicaron las fachadas 3D")
+    if city_v2_toggle.button_pressed and city_v3_toggle.button_pressed:
+        var public_ok: bool=CityV3.apply(model_root,level,faction,damage)
+        if not public_ok:
+            push_error("Ciudad Civil V3: espacio público no se aplicó")
     model_root.name="CiudadCivilVisibleEnEstudio"
     preview.add_child(model_root)
     if hq_ground!=null:
@@ -123,12 +140,13 @@ func _update_details() -> void:
         var damage: int=int(model_root.get_meta("visual_damage_stage",0))
         var faction: int=int(model_root.get_meta("visual_faction",-1))
         detail_label.text="Ciudad Civil %s · %s · %d mallas 3D reales" % [
+            "V3" if model_root.has_node(CityV3.STAGE_NAME) else
             "V2" if model_root.has_node(CityV2.STAGE_NAME) else "V1",
             str(CivilianCity.LABELS[level-1]),
             CivilianCity.count_meshes(model_root)]
         status_label.text="%s · %s · solo apariencia visual" % [
             "Neutral" if faction<0 else str(CityStyle.FACTIONS[faction]["name"]),
             str(CivilianCity.DAMAGE_LABELS[damage])]
-        city_caption.text="Ciudad civil · %s · Ayuntamiento, plaza, calles, fachadas y balcones en 3D. Los niveles y los daños son gráficos, no cambian ingresos ni capturas." % ("acabados V2" if model_root.has_node(CityV2.STAGE_NAME) else "volúmenes V1")
+        city_caption.text="Ciudad civil · %s · Ayuntamiento, plaza, cruces peatonales y accesos municipales 3D. Los niveles y los daños son gráficos: no cambian ingresos ni capturas." % ("espacio público V3" if model_root.has_node(CityV3.STAGE_NAME) else "fachadas V2" if model_root.has_node(CityV2.STAGE_NAME) else "volúmenes V1")
         return
     super._update_details()
