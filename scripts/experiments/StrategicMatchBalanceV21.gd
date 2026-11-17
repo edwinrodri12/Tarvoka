@@ -347,8 +347,13 @@ static func _move(battle: Dictionary, side: int, policy: String,
     updated["stats"]["moves"][side] += 1
     return {"valid":true,"battle":updated,"action":"move"}
 
-static func _wishlist(policy: String, kind: String) -> Array:
+static func _wishlist(policy: String, kind: String,
+        experimental_piercer_factory: bool = false) -> Array:
     if kind == "factory":
+        if experimental_piercer_factory and policy == "pressure":
+            # This is a DIFFERENT AI choice (counter-first), and must be
+            # measured separately from pure production eligibility.
+            return ["piercer","assault","line","engineer"]
         if policy == "expansion":
             return ["line","scout","assault"]
         return ["assault","line","engineer"]
@@ -383,8 +388,10 @@ static func _purchase(battle: Dictionary, side: int, policy: String,
         if str(site["kind"]) == "city" or int(site["owner"]) != side or \
                 int(site.get("produced_turn",-1)) == int(state["economy"]["turn"]):
             continue
-        for role in _wishlist(policy,str(site["kind"])):
-            if Economy.producer_for(str(role),true) != str(site["kind"]):
+        for role in _wishlist(policy,str(site["kind"]),
+                bool(options.get("experimental_piercer_factory",false))):
+            if Economy.producer_for(str(role),true,
+                    bool(options.get("experimental_piercer_factory",false))) != str(site["kind"]):
                 continue
             # Optional v22 LAB restriction: tank/IFV require level II on this
             # exact owned armor plant. The legacy v21 default remains open.
@@ -421,7 +428,9 @@ static func _purchase(battle: Dictionary, side: int, policy: String,
     candidates.sort_custom(func(a: Dictionary,b: Dictionary) -> bool:
         return int(a["score"]) > int(b["score"]))
     for candidate in candidates:
-        var order: Dictionary = Orders.purchase(session,candidate["pos"],str(candidate["role"]))
+        var order: Dictionary = Orders.purchase(session,candidate["pos"],
+            str(candidate["role"]),
+            bool(options.get("experimental_piercer_factory",false)))
         if not bool(order.get("valid",false)):
             continue
         var result: Dictionary = battle.duplicate(true)
