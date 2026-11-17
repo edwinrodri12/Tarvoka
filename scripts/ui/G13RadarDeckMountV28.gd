@@ -99,6 +99,15 @@ static func apply(root:Node3D)->bool:
         var part:=child as MeshInstance3D
         if part.mesh==null:
             return false
+        if part.mesh is CylinderMesh:
+            # The turret ring is genuinely circular: an AABB square would
+            # overestimate its radius by sqrt(2) and reject valid clearance.
+            var ring:=part.mesh as CylinderMesh
+            var ring_radius:float=0.0
+            ring_radius=maxf(ring.bottom_radius,ring.top_radius)
+            armor_radius=maxf(armor_radius,
+                Vector2(part.position.x,part.position.z).length()+ring_radius)
+            continue
         var bounds:AABB=part.mesh.get_aabb()
         for xx in [bounds.position.x,bounds.end.x]:
             for zz in [bounds.position.z,bounds.end.z]:
