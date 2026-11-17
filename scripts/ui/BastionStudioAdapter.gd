@@ -182,7 +182,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V31 · 4×4, radar y cañones blindados")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.2")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -503,7 +503,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "attack_heli":
             return [
-                {"group":"HELICÓPTERO HAT-29 V14 · VUELO Y ARMAMENTO"},
+                {"group":"HELICÓPTERO HAT-29 V14.2 · VUELO Y ARMAMENTO"},
                 {"title":"Vuelo y rotores en marcha","action":"move"},
                 {"title":"Mantener posición / hover","action":"hover"},
                 {"title":"Ráfaga de cañón frontal","action":"attack"},
@@ -764,7 +764,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14 · IMPACTOS Y DESTRUCCIÓN",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.2 · IMPACTOS Y DETALLES",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -824,6 +824,15 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(24.0,-11.0,2.55,Vector3(0,0.90,-1.40)),
         "V12: soporte articulado del cañón",
         func(): _heli_inspect_focus(54.0,-14.0,2.72,Vector3(0.19,0.57,-1.38)))
+    # V14.2: real geometry closeups within the unified Studio.
+    _add_paired(heli_controls,"V14.2: escotilla inferior",
+        func(): _heli_inspect_focus(45.0,-32.0,2.05,Vector3(0,0.60,0.07)),
+        "V14.2: lamas de motor",
+        func(): _heli_inspect_focus(92.0,10.0,2.20,Vector3(0.62,1.61,1.01)))
+    _add_paired(heli_controls,"V14.2: registros de cola",
+        func(): _heli_inspect_focus(130.0,8.0,2.25,Vector3(0.16,1.10,1.97)),
+        "V14.2: posterior completa",
+        func(): _heli_inspect(180.0,-6.0,1.30))
     _heli_v12_button=_button(heli_controls,
         "Comparar morro V11 / V12",_heli_toggle_v12)
     _heli_v11_button=_button(heli_controls,
@@ -910,7 +919,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14")
+        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.2")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
