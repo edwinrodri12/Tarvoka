@@ -92,3 +92,8 @@ Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió ce
 - Commit de prueba `2b9fadcd46ee8cdc7423d3c0c1cfcd138262ec44`: caso espejo del borde inferior derecho, con origen (0,0), aliado (1,0) y enemigo (0,1). Verifica llegada a (2,0) con coste 2, exclusión del aliado como destino, ausencia de coordenadas negativas e inmutabilidad de entradas.
 - Reproducción: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`. Después ejecutar reglas, sesión/victoria, IA y guardado mediante el workflow de la rama.
 - **Godot 4.3: NO EJECUTADO** para este commit; **Android: NO EJECUTADO EN DISPOSITIVO**. No se modifica lógica de producción ni se autoriza merge.
+
+## 2026-11-17 — Carretera motorizada en borde 24×18
+- Código `cca10ec4b500475dd9c8b5542f590705a57fc53b`: corredor en fila 17, aliado en (22,17), destino libre (23,17), enemigo que bloquea el desvío por (21,16). Las dos casillas de carretera cuestan juntas 1 punto para vehículo motorizado; infantería con presupuesto 1 no llega. El aliado no es destino legal; se comprueba inmutabilidad de mapa y ocupación.
+- Reproducir: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; después ejecutar reglas, sesión/victoria, IA y guardado.
+- **Godot 4.3/CI del commit nuevo: NO EJECUTADO/NO CONFIRMADO. Android físico: NO EJECUTADO EN DISPOSITIVO.** No hay cambios de producción, balance ni merge.
