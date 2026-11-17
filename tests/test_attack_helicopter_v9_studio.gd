@@ -196,10 +196,26 @@ func _run() -> void:
     _check(V13.stage(model)==4
         and str(studio.get("_heli_animation"))=="destroy",
         "V13 destruction button starts actual crash and broken rotor")
-    studio.call("_heli_stop")
+    var takeoff_height: float=model.position.y
+    studio.call("_process",V13.DESTROY_DURATION+0.04)
+    var fallen_height: float=model.position.y
+    _check(bool(studio.get("_heli_wreck_frozen"))
+        and str(studio.get("_heli_animation")).is_empty()
+        and fallen_height<takeoff_height-0.38,
+        "V13 crash actually lands and freezes after native 2.35-second fall")
+    var fallen_roll: float=model.rotation_degrees.z
+    studio.call("_heli_view",90.0)
+    _check(absf(model.position.y-fallen_height)<0.001
+        and absf(model.rotation_degrees.z-fallen_roll)<0.001,
+        "changing camera after destruction does not levitate crashed helicopter")
+    studio.call("_heli_inspect",38.0,-14.0,1.8)
+    _check(absf(model.position.y-fallen_height)<0.001
+        and absf(model.rotation_degrees.z-fallen_roll)<0.001,
+        "detail inspection retains final crash roll and ground height")
     studio.call("_heli_repair")
-    _check(V13.stage(model)==0,
-        "V13 repair fully restores original helicopter and animation state")
+    _check(V13.stage(model)==0 and not bool(studio.get("_heli_wreck_frozen"))
+        and model.position.y>fallen_height+0.38,
+        "repair restores flight model and clears frozen V13 wreck")
     var rim: DirectionalLight3D=studio.get("_heli_v10_rim_light")
     _check(rim!=null and rim.visible and not rim.shadow_enabled,
         "dedicated cool fill light affects only A01 without extra WebGL shadows")
