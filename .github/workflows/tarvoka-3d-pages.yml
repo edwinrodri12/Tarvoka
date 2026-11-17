@@ -232,6 +232,30 @@ jobs:
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           rm -rf hq-android-v15
           test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
+      # The main terrain visualizer already imports civilian city V5 types,
+      # but city V5 lives in its separate pending PR. The publisher's pinned
+      # HQ base does not include these script files. Copy just their 3D
+      # compile dependencies into the temporary web export, without merging
+      # the unfinished city feature into game/main or changing its gameplay.
+      - name: Check out pinned city 3D scripts required by terrain import
+        uses: actions/checkout@v4
+        with:
+          ref: 8f0ece79f17ef2d0c2b7d7589e6726bf5a84d344
+          path: city-web-compile-deps
+          persist-credentials: false
+      - name: Supply isolated civilian-city script dependencies to web export
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityBattle3D CivilianCityDistanceLODV6; do
+            test -s "city-web-compile-deps/scripts/ui/$name.gd"
+            if test ! -s "scripts/ui/$name.gd"; then
+              cp "city-web-compile-deps/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+            fi
+          done
+          grep -F 'CivilianCityBattle3D.gd' scripts/ui/BattleTerrain3D.gd
+          grep -F 'CivilianCityDistanceLODV6.gd' scripts/ui/BattleTerrain3D.gd
+          rm -rf city-web-compile-deps
       # Merge the approved tank into the EXISTING single native Godot scene.
       # This copy occurs AFTER the pinned buildings/APC setup, BEFORE import
       # and export. Keep the building catalogue and all other unit meshes.
