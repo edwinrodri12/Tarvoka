@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         level: [10, 12]
-        map: [0, 3]
+        map: [0, 2]
         fog: ["false", "true"]
     env:
       TARVOKA_AB_LEVEL: ${{ matrix.level }}
