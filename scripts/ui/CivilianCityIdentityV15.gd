@@ -256,8 +256,8 @@ static func _municipal_identity(layer: Node3D,level: int,
     if damage<=1:
         # A common municipal landmark built of three very different
         # palettes: villa stone, town brick, metropolitan metal/glass.
-        var tint: Color=LIMESTONE if level==1 else
-            BRICK if level==2 else GRAPHITE
+        var tint: Color=(
+            LIMESTONE if level==1 else BRICK if level==2 else GRAPHITE)
         for face in [-1,1]:
             var zz: float=front if face==-1 else rear
             _box(civic,"RemateInstitucionalNivelV15_%d" % face,
