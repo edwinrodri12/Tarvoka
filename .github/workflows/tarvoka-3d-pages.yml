@@ -394,7 +394,7 @@ jobs:
       - name: Check out V4 civilian city 3D source and shared studio extension
         uses: actions/checkout@v4
         with:
-          ref: eac8ceeb0126e14ce77dd1baeee96842d3926277
+          ref: c52114902eb753ca71673ae9ad9949d781769b8e
           path: city-v4-art-source
           persist-credentials: false
       - name: Add V4 civilian cities to existing single Godot Studio
