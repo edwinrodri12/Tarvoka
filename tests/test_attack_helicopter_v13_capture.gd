@@ -128,15 +128,21 @@ func _run() -> void:
     cam.position=tail_target+Vector3(1.40,0.85,1.35)
     cam.look_at(tail_target,Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_07d_aro_cola_roto.png"))
+    # V13.5 broad-view readability: judge soot, open cabin, side-tear and
+    # exposed alloy from a single typical 3/4 studio game camera.
+    var wide_target: Vector3=model.to_global(Vector3(0.0,1.15,-0.25))
+    cam.position=wide_target+Vector3(3.10,2.02,-2.90)
+    cam.look_at(wide_target,Vector3.UP)
+    await _save(vp,folder.path_join("a01_v13_07e_contraste_vista_general.png"))
     Damage.restore(model)
     _check(Damage.set_stage(model,0),"repair")
     cam.position=Vector3(4.15,3.10,-5.30)
     cam.look_at(model.to_global(Vector3(0,1.18,0.24)),Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_08_reparado.png"))
-    _check(images==17,"seventeen real native damage, two-phase ignition, engine plume/fire, ground-impact dust, broken rotors, crash and repair screenshots")
+    _check(images==18,"eighteen real native damage, two-phase ignition, engine plume/fire, ground-impact dust, broken rotors, crash and repair screenshots")
     if failures>0:
         push_error("A01 V13 CAPTURE: %d failures" % failures)
         quit(1)
         return
-    print("PASS A01 V13 CAPTURE: 17 real Godot renders showing two-stage explosion, ground impact dust, progressive damage, smoke/fire, fractured rotor, crash and repair")
+    print("PASS A01 V13 CAPTURE: 18 real Godot renders showing two-stage explosion, ground impact dust, progressive damage, smoke/fire, fractured rotor, crash and repair")
     quit(0)
