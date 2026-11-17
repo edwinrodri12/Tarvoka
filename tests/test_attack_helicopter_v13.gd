@@ -52,6 +52,8 @@ func _run() -> void:
             "A01_V2_MarcoLong_2_0",true,false) as Node3D
         var crash_finish: Node3D=model.find_child(
             "A01V13_AcabadoMetalRoto",true,false) as Node3D
+        var full_view: Node3D=model.find_child(
+            "A01V13_ContrasteDañoTotal",true,false) as Node3D
         var detonation: Node3D=model.find_child(V13.DETONATION,true,false) as Node3D
         var ground_dust: Node3D=model.find_child(V13.LANDING_DUST,true,false) as Node3D
         _check(detonation!=null and not detonation.visible
@@ -61,8 +63,9 @@ func _run() -> void:
             and original_glass!=null and original_glass.visible
             and original_guard!=null and original_guard.visible
             and intact_canopy_rail!=null and intact_canopy_rail.visible
-            and crash_finish!=null and not wreck_body.visible,
-            "V13.4 leaves original canopy/rail and complete tail guard untouched until wreck")
+            and crash_finish!=null and full_view!=null
+            and not wreck_body.visible,
+            "V13.5 leaves original canopy and total-wreck contrast hidden until destruction")
         _check(rotor!=null and rotor.visible and tail!=null and tail.visible
             and scratches!=null and not scratches.visible
             and burn!=null and not burn.visible
@@ -173,6 +176,24 @@ func _run() -> void:
             and roof_flap!=null and bent_canopy!=null
             and not intact_canopy_rail.visible and crash_finish.visible,
             "V13.4 reveals torn engine, lifted metal and interrupted wreck canopy instead of pristine rails")
+        var cockpit_void: MeshInstance3D=model.find_child(
+            "A01V13_CabinaAbiertaOscuraA",true,false) as MeshInstance3D
+        var ripped_side: MeshInstance3D=model.find_child(
+            "A01V13_RoturaLateralOscura_1_a",true,false) as MeshInstance3D
+        var bright_edge: MeshInstance3D=model.find_child(
+            "A01V13_BordeRasgadoSuperior_1",true,false) as MeshInstance3D
+        var surviving_glass: MeshInstance3D=model.find_child(
+            "A01V13_LaminaCristalAzul_0",true,false) as MeshInstance3D
+        _check(full_view.visible and cockpit_void!=null
+            and cockpit_void.mesh is ArrayMesh and ripped_side!=null
+            and ripped_side.mesh is ArrayMesh and bright_edge!=null
+            and surviving_glass!=null and surviving_glass.mesh is ArrayMesh,
+            "V13.5 damaged hull reads from distance with large 3D dark gaps and exposed edges")
+        var cockpit_mat: StandardMaterial3D=(
+            cockpit_void.material_override as StandardMaterial3D
+            if cockpit_void!=null else null)
+        _check(cockpit_mat!=null and cockpit_mat.albedo_color.r<0.15,
+            "V13.5 open cockpit remains dark against the bright approved faction hull")
         var rest_position: Vector3=model.position
         var rest_rotation: Vector3=model.rotation_degrees
         var detached_origin: Vector3=wreck.global_position
@@ -236,6 +257,7 @@ func _run() -> void:
         _check(V13.set_stage(model,0) and rotor.visible and tail.visible
             and not wreck.visible and not wreck.top_level
             and not wreck_body.visible and original_glass.visible
+            and full_view!=null and not full_view.is_visible_in_tree()
             and intact_canopy_rail.visible and original_guard.visible
             and intact_guard_mark.visible
             and not ground_dust.top_level and not ground_dust.visible
