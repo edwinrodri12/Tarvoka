@@ -5,6 +5,7 @@ extends SceneTree
 const Session=preload("res://scripts/core/BattleSession.gd")
 const Scenarios=preload("res://scripts/core/Scenarios.gd")
 const Roles=preload("res://scripts/core/UnitRoles.gd")
+const Distance=preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -63,7 +64,17 @@ func _run() -> void:
     print("CITY V7 HUD viewport=",viewer.preview.size,
         " presentation=",viewer.holder.size,
         " test_pixels=",mobile_height)
-    assert(driver.update_now(viewer.camera,mobile_height)>0)
+    print("CITY V7 camera ortho=",viewer.camera.projection,
+        " size=",viewer.camera.size,
+        " driver_count=",driver.cities.size())
+    for city in driver.cities:
+        print("CITY V7 BEFORE tier=",city.get_meta("visual_level",-1),
+            " lod=",city.get_meta("city_lod",-1),
+            " pixels=",Distance.pixel_height(
+                city,viewer.camera,mobile_height),
+            " scale=",city.global_transform.basis.y.length())
+    var changed: int=driver.update_now(viewer.camera,mobile_height)
+    print("CITY V7 changed=",changed)
     probe.refresh_once()
     var near: Dictionary=probe.snapshot()
     print("CITY V7 near snapshot=",JSON.stringify(near))
