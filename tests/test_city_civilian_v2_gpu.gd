@@ -90,7 +90,7 @@ func _run() -> void:
                     assert(node.find_child("FrontonTriangularV2_Ayuntamiento",true,false)!=null)
                     if level==1:
                         assert(node.find_child("TejaInclinadaV2_-1",true,false)!=null)
-                        assert(node.find_child("BalconesV2_ResidencialSur_1",true,false)!=null)
+                        assert(node.find_child("BalconesV2_ResidencialSur_1",true,false)==null)
                     elif level==2:
                         assert(node.find_child("MarquesinaComercioV2",true,false)!=null)
                         assert(node.find_child("BarandillaFrenteV2_1",true,false)!=null)
