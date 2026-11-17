@@ -26,6 +26,7 @@ const G13SurfaceV13 = preload("res://scripts/ui/G13SurfaceFinishV13.gd")
 const G13SensorsV14 = preload("res://scripts/ui/G13SensorSculptV14.gd")
 const G13TurretV15 = preload("res://scripts/ui/G13TurretFinishV15.gd")
 const G13BatchesV16 = preload("res://scripts/ui/G13StaticBatchV16.gd")
+const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
 const AttackHelicopterRotorV3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
@@ -80,6 +81,12 @@ const PREVIEW_FRAME := {
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
     "aa_mobile":3.85
 }
+
+# G13 art-only LOD selection. Public to studio/stress harnesses, not combat.
+static func recommend_g13_art_level(camera_distance:float,visible_g13_count:int,
+        is_android:bool,inspection:bool=false,previous_art_level:int=8)->int:
+    return G13LODPolicyV17.choose(camera_distance,visible_g13_count,
+        is_android,inspection,previous_art_level)
 
 static func preview_frame_height(role: String) -> float:
     return float(PREVIEW_FRAME.get(role,4.50))
