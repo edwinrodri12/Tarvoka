@@ -18,6 +18,7 @@ const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
 const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
+const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const CreditsHomeScreen = preload("res://scripts/ui/CreditsHomeScreen.gd")
@@ -102,6 +103,8 @@ var sidebar_dossier: Control
 var compact_dossier: Control
 var sidebar_site_actions: Control
 var compact_site_actions: Control
+var building_info_panel: Control
+var _dismissed_building_cell := Vector2i(-1,-1)
 var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
@@ -310,6 +313,7 @@ func _ready() -> void:
     board.autosave_enabled = true
     board.resume_autosave()
     _build_battle_hud()
+    _install_building_info_panel()
 
     sidebar = PanelContainer.new()
     sidebar.size_flags_horizontal = Control.SIZE_FILL
@@ -1473,6 +1477,42 @@ func _build_battle_hud() -> void:
     expanded_header.show()
     expanded_actions.show()
 
+# A site tap now opens a real Android/desktop building card above the map.
+# The legacy compact info widgets are hidden by ImmersiveBattleHud on mobile;
+# this card is a sibling of that HUD, so its button remains touchable.
+func _install_building_info_panel() -> void:
+    building_info_panel = BuildingInfoCard.new()
+    building_info_panel.name = "MenuInformacionDeEdificio"
+    battle_hud_overlay.add_child(building_info_panel)
+    building_info_panel.z_index = 16
+    building_info_panel.production_requested.connect(_open_site_production)
+    building_info_panel.close_requested.connect(_close_building_info)
+    building_info_panel.hide()
+    _layout_building_info()
+
+func _layout_building_info() -> void:
+    if building_info_panel == null or board_holder == null:
+        return
+    # Keep the top turn ribbon and bottom command rail readable, even at
+    # Android's 882x411 landscape resolution. A small card does not replace
+    # or cover the whole tactical board.
+    var board_width: float = maxf(300.0, board_holder.size.x)
+    var board_height: float = maxf(250.0, board_holder.size.y)
+    var width: float = clampf(board_width * 0.43, 278.0, 344.0)
+    var bottom: float = 76.0 if battle_hud_compact else 84.0
+    var height: float = minf(238.0,maxf(155.0,board_height - bottom - 64.0))
+    building_info_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    building_info_panel.offset_left = -width - 8.0
+    building_info_panel.offset_right = -8.0
+    building_info_panel.offset_top = -bottom - height
+    building_info_panel.offset_bottom = -bottom
+
+func _close_building_info() -> void:
+    if building_info_panel == null:
+        return
+    _dismissed_building_cell = building_info_panel.site_pos
+    building_info_panel.hide()
+
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
     sidebar.visible = not compact
@@ -1529,6 +1569,7 @@ func layout_for_size(view_size: Vector2) -> void:
         board_holder.custom_minimum_size = Vector2(255, 0)
     if immersive_battle_hud != null:
         immersive_battle_hud.reflow_for_size(view_size)
+    _layout_building_info()
 
 func _on_viewport_resized() -> void:
     # Camera offsets from the previous orientation can place the entire
@@ -1660,6 +1701,22 @@ func _process(_delta: float) -> void:
             site_info = SiteInteraction.describe(board.state,site_cell,viewer)
         sidebar_site_actions.bind_site(site_info)
         compact_site_actions.bind_site(site_info)
+        # The new building card is the actual visible Android entry point.
+        # It uses the fog-filtered site description and never purchases on tap.
+        if building_info_panel != null:
+            var site_visible: bool = bool(site_info.get("valid",false)) and (
+                board.selected_id.is_empty() and board.inspected_enemy_id.is_empty())
+            var site_cell: Vector2i = site_info.get("pos",Vector2i(-1,-1))
+            if not site_visible:
+                building_info_panel.hide()
+                _dismissed_building_cell = Vector2i(-1,-1)
+            elif site_cell != _dismissed_building_cell:
+                var can_open_catalog: bool = bool(site_info.get("production",false)) and (
+                    int(board.state.get("winner",-1)) == -1) and (
+                    not board.ai_enabled or int(board.state.get("faction",-1)) == 0)
+                building_info_panel.bind_site(site_info,can_open_catalog)
+            else:
+                building_info_panel.hide()
         # A context action receives taps; all unrelated map regions continue
         # forwarding touch/pinch to the tactical board.
         compact_info_panel.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
@@ -2438,6 +2495,9 @@ func _open_site_production(site_pos: Vector2i) -> void:
     board.inspected_cell = site_pos
     board.focus_view_cell(site_pos)
     board.queue_redraw()
+    if building_info_panel != null:
+        _dismissed_building_cell = site_pos
+        building_info_panel.hide()
     command_menu.open_for(board,"Produccion")
     _reveal_screen(command_menu)
 
