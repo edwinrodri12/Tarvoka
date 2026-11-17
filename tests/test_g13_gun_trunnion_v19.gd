@@ -60,11 +60,11 @@ func _run()->void:
                 cap.mesh is CylinderMesh,
                 "hollow machined annulus, closed sculpted cheek and cylindrical spindle")
             check(fixed.position.is_equal_approx(
-                Vector3(float(side)*0.456,0.28,-0.215)),
+                Vector3(float(side)*0.482,0.28,-0.215)),
                 "fixed annulus concentric with original trunnion joint center")
             check(cap.position.is_equal_approx(
-                Vector3(float(side)*0.476,0.0,0.0)),
-                "spindle cap positioned coaxial on original pitch joint")
+                Vector3(float(side)*0.529,0.0,0.0)),
+                "spindle cap protrudes from V19 bearing while staying coaxial")
             if fixed.mesh is ArrayMesh:
                 var vertices:PackedVector3Array=(
                     fixed.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
@@ -79,6 +79,17 @@ func _run()->void:
                     "bearing is a genuinely open ring (0.100 inner, 0.137 outer)")
                 check(vertices.size()==V19.SEGMENTS*24,
                     "physical outer/inner/front/back rings sealed by 160 triangles")
+                var min_x_ring:float=INF
+                var max_x_ring:float=-INF
+                for vertex in vertices:
+                    min_x_ring=minf(min_x_ring,vertex.x)
+                    max_x_ring=maxf(max_x_ring,vertex.x)
+                check(absf(min_x_ring+0.0435)<0.001 and
+                    absf(max_x_ring-0.0435)<0.001,
+                    "0.087m deep open bearing projects past the armored turret shell")
+                check(0.482-0.0435>0.437 and
+                    0.482-0.0435<0.441,
+                    "bearing attaches close to original 0.045m-wide fixed trunnion")
             if cheek.mesh is ArrayMesh:
                 var verts:PackedVector3Array=(
                     cheek.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
@@ -89,7 +100,7 @@ func _run()->void:
                 for vertex in verts:
                     min_x=minf(min_x,absf(vertex.x))
                     max_x=maxf(max_x,absf(vertex.x))
-                check(min_x<=0.302 and max_x>=0.417,
+                check(min_x<=0.302 and max_x>=0.484,
                     "receiver cheek physically bridges hull to pivot follower")
             if cap.mesh is CylinderMesh:
                 var cyl:=cap.mesh as CylinderMesh
