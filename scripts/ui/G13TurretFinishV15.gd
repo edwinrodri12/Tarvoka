@@ -155,10 +155,13 @@ static func apply(root: Node3D)->bool:
     var faction := original_paint.duplicate() as StandardMaterial3D
     faction.metallic = 0.30
     faction.roughness = 0.56
-    # Static frustum closes the empty gap between chassis top and turret,
-    # slightly overlaps the hull and ends inside the rotating V1 ring.
-    _frustum(hull,PEDESTAL,Vector3(0,1.124,0.35),
-        0.408,0.470,0.592,armor)
+    # V15 visual audit: previous 0.592 m tower looked like an exposed
+    # pedestal instead of a hull-integrated armored mount. The revised
+    # 0.340 m tapered skirt embeds its bottom into the existing deck
+    # (top ~1.12 m) and ends under the original V1 rotating ring at 1.42 m.
+    # It occupies the SAME hull pivot without changing azimuth behaviour.
+    _frustum(hull,PEDESTAL,Vector3(0,1.250,0.35),
+        0.408,0.535,0.340,armor)
     _frustum(hull,LOWER_SEAL,Vector3(0,1.409,0.35),
         0.454,0.454,0.056,gasket)
     # Rotating annulus follows approved turret azimuth, not gun pitch.
