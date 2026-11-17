@@ -1,0 +1,33 @@
+name: Save encoding determinism
+on:
+  push:
+    branches: [main]
+    paths: ['tests/test_save_encode_determinism.gd', '.github/workflows/save-encode-determinism.yml']
+  pull_request:
+    paths: ['tests/test_save_encode_determinism.gd', '.github/workflows/save-encode-determinism.yml']
+  workflow_dispatch:
+jobs:
+  save-determinism:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run deterministic encoding regression
+        run: |
+          set -euo pipefail
+          timeout 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_save_encode_determinism.gd 2>&1 | tee /tmp/save-determinism.log
+          # With errexit + pipefail, a failed or timed-out Godot process cannot be masked by tee.
+          # Require exactly one complete success marker, not a partial substring.
+          test "$(grep -Fxc 'PASS save encode determinism: 20 iterations, no mutation or aliasing' /tmp/save-determinism.log)" -eq 1
+          # Two intentionally malformed JSON inputs produce exactly two parser diagnostics.
+          # Treat only those known diagnostics as expected, never arbitrary Godot errors.
+          test "$(grep -Fc 'ERROR: Parse JSON failed.' /tmp/save-determinism.log)" -eq 2
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/save-determinism.log | grep -vF 'ERROR: Parse JSON failed.'; then
+            echo 'Unexpected Godot error in save determinism regression' >&2
+            exit 1
+          fi
