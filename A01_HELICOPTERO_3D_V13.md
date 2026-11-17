@@ -50,3 +50,12 @@ Se reubicó esta entrega en la nueva [PR #522](https://github.com/edwinrodri12/T
 - **Android debug APK**: [compilación de integración aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44138296832), sin publicación automática de V13.
 
 La URL pública del Estudio sigue siendo https://edwinrodri12.github.io/Tarvoka/, pero puede mostrar código anterior mientras la PR está en borrador. La aprobación de CI **no equivale** a fusión ni publicación.
+
+## A01 V13.1 — Acabado artístico del motor: humo suave y llamas de malla
+
+Se mejoró el efecto visual del daño sin cambiar reglas de juego ni la geometría base aprobada:
+
+- **Humo:** ocho planos `QuadMesh` posicionados en espacio 3D con transparencia radial irregular generada programáticamente en una textura compartida de 64 × 64 píxeles. El humo ahora tiene bordes difusos, deriva lateral y hacia arriba y se desvanece al completar cada ciclo; no proyecta sombras artificiales.
+- **Fuego:** seis lenguas 3D fabricadas con `SurfaceTool`, con secciones cónicas curvas, color por vértice (amarillo, naranja, rojo) y emisión moderada. Cada lengua tiene oscilación propia.
+- **Rendimiento:** el humo pasa de mallas volumétricas repetidas a ocho quads ligeros; una sola textura compartida por modelo. Los efectos siguen cargándose exclusivamente en el nivel de arte del visor, no en el LOD táctico móvil ≤10.
+- **Validación:** la prueba nativa de Godot V13 [44142050983](https://github.com/edwinrodri12/Tarvoka/actions/runs/44142050983) confirmó las ocho facciones, humo suave con `ImageTexture` y billboards 3D, seis lenguas cónicas y compatibilidad con los cinco niveles de daño. Se generaron 13 capturas originales para revisar el acabado. La PR #522 continúa en borrador; estas mejoras todavía no están confirmadas en la versión pública.
