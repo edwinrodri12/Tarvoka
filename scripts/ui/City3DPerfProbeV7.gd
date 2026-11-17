@@ -59,7 +59,7 @@ func toggle_recording() -> void:
 
 func _city_stats() -> Dictionary:
     var output: Dictionary={"cities":0,"lod0":0,"lod1":0,"lod2":0,
-        "meshes":0,"changes":0}
+        "meshes":0,"changes":0,"peak_step_ms":0.0}
     if scene_root==null or not is_instance_valid(scene_root):
         return output
     var driver: Node=scene_root.get_node_or_null(
@@ -67,6 +67,7 @@ func _city_stats() -> Dictionary:
     if driver==null:
         return output
     output["changes"]=int(driver.get("transitions"))
+    output["peak_step_ms"]=float(driver.get("peak_step_ms"))
     var entries: Array=driver.get("cities")
     for city in entries:
         if not is_instance_valid(city):
@@ -107,6 +108,7 @@ func snapshot() -> Dictionary:
         "city_lod2":city["lod2"],"city_meshes":city["meshes"],
         "city_peak_meshes":_peak_meshes,
         "city_lod_changes":city["changes"],
+        "lod_peak_step_ms":city["peak_step_ms"],
         "device":OS.get_name(),
     }
 
@@ -133,8 +135,8 @@ func refresh_once() -> void:
                 roundi(fps),mean,low]
             +"Ciudades %d · LOD cercano/medio/lejos %d/%d/%d\n" % [
                 stats["cities"],stats["lod0"],stats["lod1"],stats["lod2"]]
-            +"Mallas %d · cambios LOD %d · muestras %d" % [
-                stats["meshes"],stats["changes"],count])
+            +"Mallas %d · LOD cambios %d · pico %.1f ms" % [
+                stats["meshes"],stats["changes"],stats["peak_step_ms"]])
 
 func _process(delta: float) -> void:
     if not visible:
