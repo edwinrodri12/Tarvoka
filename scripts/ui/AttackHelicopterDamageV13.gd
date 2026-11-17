@@ -188,11 +188,11 @@ static func _fx_vertex(st: SurfaceTool,pos: Vector3,color: Color) -> void:
     st.add_vertex(pos)
 
 static func _fx_sculpt(is_fire: bool,seed: float) -> ArrayMesh:
-    var heights: Array[float]=[0.0,0.035,0.12,0.20,0.30,0.40] if is_fire else [
+    var heights: Array=[0.0,0.035,0.12,0.20,0.30,0.40] if is_fire else [
         0.0,0.09,0.20,0.34,0.49,0.63]
-    var radii: Array[float]=[0.054,0.088,0.081,0.061,0.039,0.003] if is_fire else [
+    var radii: Array=[0.054,0.088,0.081,0.061,0.039,0.003] if is_fire else [
         0.035,0.095,0.15,0.19,0.145,0.009]
-    var colors: Array[Color]=[
+    var colors: Array=[
         Color(1.0,0.92,0.43,0.80),
         Color(1.0,0.73,0.22,0.96),
         Color(1.0,0.39,0.10,0.93),
@@ -386,7 +386,7 @@ static func animate_ambient(model: Node3D,seconds: float) -> bool:
         var vapor: StandardMaterial3D=puff.material_override as StandardMaterial3D
         if vapor!=null:
             # Every wisp fades in and out of its loop without popping.
-            vapor.albedo_color.a=0.18+0.82*sin(PI*phase)
+            vapor.albedo_color=Color(1.0,1.0,1.0,0.18+0.82*sin(PI*phase))
     for i in range(fire.get_child_count()):
         var flame: MeshInstance3D=fire.get_child(i) as MeshInstance3D
         if flame==null or not flame.has_meta("a01_v13_fx_rest"):
