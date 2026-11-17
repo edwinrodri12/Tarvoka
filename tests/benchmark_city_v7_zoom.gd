@@ -166,6 +166,7 @@ func _run_case(spec: Dictionary) -> Dictionary:
         "lod_transitions":int(driver.transitions),
         "phases":passes
     }
+    print("CITY V7 MESA RESULT "+JSON.stringify(result))
     viewport.remove_child(battlefield)
     battlefield.free()
     battlefield=null
