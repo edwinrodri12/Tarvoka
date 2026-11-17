@@ -19,6 +19,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Opening = preload("res://scripts/core/OpeningBalance.gd")
 
 const STRATEGIES := ["expansion","pressure","armor"]
 const MAX_ARMY_PER_SIDE := 12
@@ -60,7 +61,8 @@ static func _open_cell(terrain: Array, sites: Array, used: Dictionary,
                 picked = pos
     return picked
 
-static func start(map_id: int, size: Vector2i, first: int) -> Dictionary:
+static func start(map_id: int, size: Vector2i, first: int,
+        options: Dictionary = {}) -> Dictionary:
     if first not in [0,1]:
         return {}
     var terrain: Array = Scenarios.terrain(map_id,size)
@@ -85,6 +87,13 @@ static func start(map_id: int, size: Vector2i, first: int) -> Dictionary:
     var session: Dictionary = Orders.start(map_id,size,first,army)
     if not bool(session.get("valid",false)):
         return {}
+    # v25-only toggled opening cap. Existing callers run unchanged unless
+    # they explicitly opt in to the already implemented core Opening rule.
+    if bool(options.get("opening_cap",false)):
+        session["world"]["state"]["opening"] = Opening.create(
+            session["world"]["state"]["units"],first)
+        if not Opening.valid(session["world"]["state"]["opening"]):
+            return {}
     var original: Dictionary = session.duplicate(true)
     return {"valid":true,"session":session,"original":original,
         "stats":{"turns":[0,0],"orders":[0,0],"moves":[0,0],
@@ -134,6 +143,18 @@ static func _record_captures(stats: Dictionary, before: Array,
         var category: String = "captures_city" if str(present["kind"]) == "city" else "captures_base"
         stats[category][new_owner] += 1
 
+static func _side_relative_x(side: int, width: int, x: int) -> int:
+    return x if side == 0 else width-1-x
+
+# Positional tie-break: insensitive to the order in which BFS discovers
+# UP/RIGHT/DOWN/LEFT. The same mirrored proposal gets the same key from
+# the viewpoint of each side. Used ONLY when canonical_ties is enabled.
+static func _candidate_key(role: String, side: int, width: int,
+        origin: Vector2i, target: Vector2i) -> String:
+    return "%s|%04d|%04d|%04d|%04d" % [
+        role,_side_relative_x(side,width,origin.x),origin.y,
+        _side_relative_x(side,width,target.x),target.y]
+
 static func _attack(battle: Dictionary, side: int, policy: String,
         options: Dictionary = {}) -> Dictionary:
     var session: Dictionary = battle["session"]
@@ -163,10 +184,14 @@ static func _attack(battle: Dictionary, side: int, policy: String,
                 value -= 35
             if policy == "pressure":
                 value += 15
-            if value > top:
+            var key: String = _candidate_key(str(ally["role"]),side,
+                Rules.map_size(state["terrain"]).x,ally["pos"],foe["pos"])
+            if value > top or (bool(options.get("canonical_ties",false)) and \
+                    value == top and \
+                    (best.is_empty() or key < str(best.get("tie","~")))):
                 top = value
                 best = {"attacker":str(ally["id"]),"target":str(foe["id"]),
-                    "old_hp":int(foe["hp"]),"eligible_tech":eligible}
+                    "old_hp":int(foe["hp"]),"eligible_tech":eligible,"tie":key}
     if best.is_empty():
         return {"valid":false}
     var hit: Dictionary = {}
@@ -254,7 +279,8 @@ static func _objectives(session: Dictionary, ally: Dictionary,
                 "foe":foe})
     return items
 
-static func _move(battle: Dictionary, side: int, policy: String) -> Dictionary:
+static func _move(battle: Dictionary, side: int, policy: String,
+        options: Dictionary = {}) -> Dictionary:
     var session: Dictionary = battle["session"]
     var state: Dictionary = session["world"]["state"]
     var best: Dictionary = {}
@@ -303,9 +329,13 @@ static func _move(battle: Dictionary, side: int, policy: String) -> Dictionary:
                         not Turns.in_attack_range(ally,objective["foe"]) and \
                         range_factor == 0 and int(ally["attack_min_range"]) > 1:
                     value -= 8
-                if value > best_score:
+                var key: String = _candidate_key(str(ally["role"]),side,
+                    Rules.map_size(state["terrain"]).x,ally["pos"],endpoint)
+                if value > best_score or (bool(options.get("canonical_ties",false)) and \
+                        value == best_score and \
+                        (best.is_empty() or key < str(best.get("tie","~")))):
                     best_score = value
-                    best = {"unit":str(ally["id"]),"cell":endpoint}
+                    best = {"unit":str(ally["id"]),"cell":endpoint,"tie":key}
     if best.is_empty():
         return {"valid":false}
     var moved: Dictionary = Orders.move(session,str(best["unit"]),best["cell"])
@@ -426,7 +456,7 @@ static func play_half_turn(battle: Dictionary, policy: String,
         if bool(hit.get("valid",false)):
             current = hit["battle"]
             continue
-        var moved: Dictionary = _move(current,side,policy)
+        var moved: Dictionary = _move(current,side,policy,options)
         if bool(moved.get("valid",false)):
             current = moved["battle"]
             continue
@@ -492,18 +522,19 @@ static func snapshot(battle: Dictionary, policies: Array, first: int) -> Diction
         "sides":score}
 
 static func duel(map_id: int, size: Vector2i, first: int,
-        policies: Array, halfturn_limit: int = 40) -> Dictionary:
+        policies: Array, halfturn_limit: int = 40,
+        options: Dictionary = {}) -> Dictionary:
     if policies.size() != 2 or str(policies[0]) not in STRATEGIES or \
             str(policies[1]) not in STRATEGIES or halfturn_limit < 2:
         return {"valid":false}
-    var current: Dictionary = start(map_id,size,first)
+    var current: Dictionary = start(map_id,size,first,options)
     if not bool(current.get("valid",false)):
         return {"valid":false,"reason":"startup_failed"}
     for i in range(halfturn_limit):
         if int(current["session"]["world"]["state"].get("winner",-1)) in [0,1]:
             break
         var side: int = int(current["session"]["world"]["state"]["faction"])
-        var result: Dictionary = play_half_turn(current,str(policies[side]))
+        var result: Dictionary = play_half_turn(current,str(policies[side]),options)
         if not bool(result.get("valid",false)):
             return {"valid":false,"reason":"illegal_action_or_turn","halfturn":i}
         current = result["battle"]
