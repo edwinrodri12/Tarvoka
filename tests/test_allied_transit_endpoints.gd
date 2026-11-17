@@ -121,5 +121,23 @@ func _initialize() -> void:
         "Allied occupancy must not override impassable ground terrain")
     assert(water_map == water_before and water_allies == [Vector2i(1, 0)]
         and water_blocked == [Vector2i(0, 1)], "Water routing must preserve inputs")
+    # Zero movement allowance never turns allied occupancy into a free destination.
+    var zero_budget: Dictionary = rules.reachable(
+        Vector2i(0, 0), 0, terrain, enemy_blocked, "ground", false, allies
+    )
+    assert(zero_budget.size() == 1 and zero_budget.get(Vector2i(0, 0), -1) == 0,
+        "Zero budget must preserve only the origin")
+    # Invalid origin and negative allowance must fail closed without mutating inputs.
+    var outside_origin: Dictionary = rules.reachable(
+        Vector2i(-1, 0), 3, terrain, enemy_blocked, "ground", false, allies
+    )
+    var negative_budget: Dictionary = rules.reachable(
+        Vector2i(0, 0), -1, terrain, enemy_blocked, "ground", false, allies
+    )
+    assert(outside_origin.is_empty() and negative_budget.is_empty(),
+        "Invalid movement requests must never yield legal destinations")
+    assert(terrain == before and allies == [Vector2i(1, 0)]
+        and enemy_blocked == [Vector2i(0, 1), Vector2i(2, 0)],
+        "Rejected movement requests must preserve all caller-owned inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
