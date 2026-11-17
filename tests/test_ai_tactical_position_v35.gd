@@ -120,6 +120,42 @@ static func _cover_flank() -> void:
     print("POSITION_COVER_V35 preferred=forest flank=true damage=%d" %
         int(flank["damage"]))
 
+static func _high_ground_for_artillery() -> void:
+    # Two available shots do not defeat this real 9HP tank: the SPG
+    # must move onto a reachable high tile to gain +1 legal attack.
+    var terrain: Array = _plain()
+    terrain[4][2] = "mountain"
+    var s: Dictionary = Session.start([
+        _u("SPG",0,Vector2i(2,3),"spg"),
+        _u("GUARD",0,Vector2i(4,2),"line"),
+        _u("TANK",1,Vector2i(4,3),"tank",9),
+        _u("DISTANT",1,Vector2i(9,7),"line")
+    ],terrain,0,false,false,true,true)
+    var old: Dictionary = Vision.observed_state(s,0)
+    assert(Fire.propose(old,0,2).is_empty())
+    var move: Dictionary = Moves.propose(old,0,2)
+    assert(move.get("valid",false))
+    assert(move["unit_id"] == "SPG")
+    assert(move["destination"] == Vector2i(2,4))
+    assert(move["terrain"] == "mountain")
+    var real: Dictionary = AI.step(s,{
+        "ai_level":10,"ai_style":"siege"})
+    assert(real.get("valid",false))
+    assert(real["action"] == "move")
+    assert(real.get("reason","") == "combined_position")
+    assert(real["destination"] == Vector2i(2,4))
+    var after: Dictionary = Vision.observed_state(real["state"],0)
+    var volley: Dictionary = Fire.propose(after,0,2)
+    assert(volley.get("valid",false) and int(volley["shots"]) == 2)
+    var first: Dictionary = AI.step(real["state"],{
+        "ai_level":10,"ai_style":"siege"})
+    assert(first.get("valid",false) and first["action"] == "attack")
+    var second: Dictionary = AI.step(first["state"],{
+        "ai_level":10,"ai_style":"siege"})
+    assert(second.get("valid",false) and second["action"] == "attack")
+    assert(_hp(second["state"],"TANK") == 0)
+    print("POSITION_HEIGHT_V35 spg_relocated_to_mountain=true combined_two_shots=true tank_9hp_destroyed=true")
+
 static func _hold_capture_and_guard_artillery() -> void:
     var battle: Dictionary = _state()
     var observed: Dictionary = Vision.observed_state(battle,0)
@@ -193,6 +229,7 @@ static func _large_map_budget() -> void:
 func _initialize() -> void:
     _focus_and_move()
     _cover_flank()
+    _high_ground_for_artillery()
     _hold_capture_and_guard_artillery()
     _fog()
     _large_map_budget()
