@@ -46,44 +46,65 @@ static func _ring(z:float,side:int,outer_x:float,
         Vector3(sx*(outer_x-depth),low_y+bevel,z)
     ]
 
+static func _armored_section(z:float,side:int,outer_x:float,
+        low_y:float,high_y:float,depth:float,
+        bevel:float,lower_flare:float)->Array[Vector3]:
+    # Ten-sided contour: a visibly forged, outward-projecting LOW skirt,
+    # transitioning into the unchanged upper painted cheek at y>=.28.
+    # The lower flare is not a launcher pod; it is contiguous armor.
+    var sx:float=float(side)
+    return [
+        Vector3(sx*(outer_x-depth+bevel),low_y,z),
+        Vector3(sx*(outer_x-bevel),low_y,z),
+        Vector3(sx*(outer_x+lower_flare),low_y+bevel,z),
+        Vector3(sx*(outer_x+lower_flare),low_y+0.064,z),
+        Vector3(sx*outer_x,low_y+0.092,z),
+        Vector3(sx*outer_x,high_y-bevel,z),
+        Vector3(sx*(outer_x-bevel),high_y,z),
+        Vector3(sx*(outer_x-depth+bevel),high_y,z),
+        Vector3(sx*(outer_x-depth),high_y-bevel,z),
+        Vector3(sx*(outer_x-depth),low_y+bevel,z)
+    ]
+
 static func _closed_loft(rings:Array)->ArrayMesh:
     var st:=SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     for layer in range(rings.size()-1):
         var front:Array=rings[layer]
         var back:Array=rings[layer+1]
-        for i in range(8):
-            var j:int=(i+1)%8
+        for i in range(front.size()):
+            var j:int=(i+1)%front.size()
             _tri(st,front[i],back[j],front[j])
             _tri(st,front[i],back[i],back[j])
     var first:Array=rings[0]
     var last:Array=rings[rings.size()-1]
-    for i in range(1,7):
+    for i in range(1,first.size()-1):
         _tri(st,first[0],first[i+1],first[i])
         _tri(st,last[0],last[i],last[i+1])
     return st.commit()
 
 static func _side_cheek(side:int)->ArrayMesh:
-    # Five engineered side profiles rather than a rectangular V2 block.
+    # Five 10-sided engineered profiles, with a visible forged LOWER
+    # skirt at x up to 0.662, not a hidden rectangular V2 block.
     # The forward lip narrows to x=.506, making V19's x=.526 gun
     # trunnion visible; the wide middle stays under the original
     # x=.613 faction insignia. The rear tapers into V20 aft armor.
     return _closed_loft([
-        _ring(-0.246,side,0.506,0.228,0.355,0.065,0.016),
-        _ring(-0.111,side,0.568,0.198,0.412,0.124,0.025),
-        _ring(-0.052,side,0.602,0.196,0.422,0.145,0.025),
-        _ring(0.170,side,0.604,0.197,0.422,0.153,0.025),
-        _ring(0.284,side,0.563,0.204,0.368,0.113,0.020)
+        _armored_section(-0.246,side,0.506,0.222,0.355,0.065,0.016,0.005),
+        _armored_section(-0.111,side,0.562,0.183,0.412,0.124,0.025,0.037),
+        _armored_section(-0.052,side,0.603,0.178,0.422,0.145,0.025,0.058),
+        _armored_section(0.170,side,0.604,0.179,0.422,0.153,0.025,0.058),
+        _armored_section(0.284,side,0.565,0.184,0.368,0.113,0.020,0.025)
     ])
 
 static func _lower_weld(side:int)->ArrayMesh:
-    # Real enclosed 3-section inset metal bead follows the low outer
+    # Real enclosed 3-section steel bead follows the visible low outer
     # edge. Unlike decorative floating bars it follows side taper and
     # never crosses the faction insignia at y=.28..38.
     return _closed_loft([
-        _ring(-0.042,side,0.606,0.205,0.218,0.011,0.003),
-        _ring(0.075,side,0.611,0.205,0.218,0.011,0.003),
-        _ring(0.188,side,0.609,0.205,0.219,0.011,0.003)
+        _ring(-0.042,side,0.668,0.237,0.249,0.011,0.003),
+        _ring(0.075,side,0.670,0.238,0.250,0.011,0.003),
+        _ring(0.188,side,0.658,0.238,0.250,0.011,0.003)
     ])
 
 static func apply(root:Node3D)->bool:
