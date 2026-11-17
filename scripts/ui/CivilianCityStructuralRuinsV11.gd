@@ -250,6 +250,16 @@ static func _rear_lintel(root: Node3D,tag: String,
             _part(wall,"PiedraRematePosteriorV11_%s_%d" % [tag,side],
                 Vector3(x+float(side)*w*0.45,0.44,rear+0.09),
                 Vector3(0.18,0.54,0.19),MORTAR)
+        if damage==1:
+            # D1 is cosmetic wear, NOT destruction. A small chipped sill
+            # and a raised mortar fissure are visibly distinct from D0.
+            var hairline:=_part(wall,"FisuraLeveV11_"+tag,
+                Vector3(x-w*0.43,1.58,rear+0.195),
+                Vector3(0.065,0.57,0.045),CLAY)
+            hairline.rotation_degrees.z=-19.0
+            _part(wall,"AlfeizarAstilladoV11_"+tag,
+                Vector3(x+w*0.31,0.26,rear+0.37),
+                Vector3(0.39,0.10,0.29),MORTAR)
 
 static func _civic_rupture(root: Node3D,
         level: int,damage: int,accent: Color) -> void:
@@ -294,6 +304,11 @@ static func _civic_rupture(root: Node3D,
     _part(civic,"FranjaHeraldicaPosteriorV11",
         Vector3(0,2.57,z+0.23),Vector3(1.78,0.15,0.27),
         accent,"steel")
+    if damage==1:
+        var fissure:=_part(civic,"FisuraFrisoCivilV11",
+            Vector3(-1.07,2.29,z+0.247),
+            Vector3(0.055,0.42,0.052),CLAY)
+        fissure.rotation_degrees.z=17.0
 
 static func apply(model: Node3D,level: int,
         faction: int,damage: int) -> bool:
