@@ -311,18 +311,18 @@ jobs:
       - name: Check out QA-tested Infantry Barracks V9 3D art layers
         uses: actions/checkout@v4
         with:
-          ref: b6026561326865d06d97da10a0ca58afe7127d10
+          ref: 28d286f77624837566347ec8b10170c52adca2ef
           path: infantry-v9-approved
           persist-credentials: false
       - name: Integrate Infantry V9 into the SAME native Godot Studio
         shell: bash
         run: |
           set -euo pipefail
-          for name in InfantryBarracks3DV1 InfantryBarracksFinishV2 InfantryBarracksMaterialsV3 InfantryBarracksRearFacadeV4 InfantryBarracksEntranceYardV5 InfantryBarracksRoofCommandV6 InfantryBarracksSideTowersV7 InfantryBarracksTowerFinishV8 InfantryBarracksFinalAccessV9 InfantryBarracksFrontWindowV10; do
+          for name in InfantryBarracks3DV1 InfantryBarracksFinishV2 InfantryBarracksMaterialsV3 InfantryBarracksRearFacadeV4 InfantryBarracksEntranceYardV5 InfantryBarracksRoofCommandV6 InfantryBarracksSideTowersV7 InfantryBarracksTowerFinishV8 InfantryBarracksFinalAccessV9 InfantryBarracksFrontWindowV10 InfantryBarracksWindowShadeV11; do
             test -s "infantry-v9-approved/scripts/ui/$name.gd"
             cp "infantry-v9-approved/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
-          cp infantry-v9-approved/tests/test_infantry_barracks_v10_gpu.gd tests/test_infantry_barracks_v10_gpu.gd
+          cp infantry-v9-approved/tests/test_infantry_barracks_v11_gpu.gd tests/test_infantry_barracks_v11_gpu.gd
           python3 - <<'PY'
           from pathlib import Path
 
@@ -360,13 +360,14 @@ jobs:
               old=transplant(old,updated,start,stop)
 
           former='    building_picker.add_item("Cuartel de Infantería · V5 · uniones y remates 360°")'
-          newer='    building_picker.add_item("Cuartel de Infantería · V10 · ventanas frontales 3D")'
+          newer='    building_picker.add_item("Cuartel de Infantería · V11 · viseras militares 3D")'
           assert old.count(former)==1
           old=old.replace(former,newer)
           for critical in [
-              "InfantryBarracksV10.apply", "InfantryBarracksV9.apply", "InfantryBarracksV8.apply",
+              "InfantryBarracksV11.apply", "InfantryBarracksV10.apply", "InfantryBarracksV9.apply", "InfantryBarracksV8.apply",
               "func _toggle_infantry_access_v9",
               "func _toggle_infantry_front_v10",
+              "func _toggle_infantry_shade_v11",
               "func _display_naval_base", "func _display_airbase",
               "HQSmokeV23.build(damage_stage)",
               "func _change_selected_building("
@@ -378,15 +379,16 @@ jobs:
                        "func _display_headquarters()"]:
               assert (func in original)==(func in old),func
           current.write_text(old,encoding="utf-8")
-          print("PASS UNIFIED INFANTRY V10 OVERLAY: 10 exact mesh modules, one shared Studio, no replaced external model")
+          print("PASS UNIFIED INFANTRY V11 OVERLAY: 11 exact mesh modules, one shared Studio, no replaced external model")
           PY
           rm -rf infantry-v9-approved
           test -s scripts/ui/InfantryBarracksFinalAccessV9.gd
           test -s scripts/ui/InfantryBarracksFrontWindowV10.gd
+          test -s scripts/ui/InfantryBarracksWindowShadeV11.gd
           test -s scripts/ui/BastionStudioAdapter.gd
           test -s scenes/UnitArtStudioWeb.tscn
           grep -F 'InfantryBarracksV10.apply' scripts/ui/CombinedArtStudioWeb.gd
-          grep -F 'Cuartel de Infantería · V10 · ventanas frontales 3D' scripts/ui/CombinedArtStudioWeb.gd
+          grep -F 'Cuartel de Infantería · V11 · viseras militares 3D' scripts/ui/CombinedArtStudioWeb.gd
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
@@ -553,7 +555,7 @@ jobs:
           test -s tests/test_naval_base_v1_gpu.gd
           test -s NAVAL_BASE_V1_ARCHITECTURE.md
           grep -q 'Base Naval · V13 · inspección real de amarres' scripts/ui/CombinedArtStudioWeb.gd
-          grep -q 'Cuartel de Infantería · V10 · ventanas frontales 3D' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Cuartel de Infantería · V11 · viseras militares 3D' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV5.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV4.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV3.apply' scripts/ui/CombinedArtStudioWeb.gd
@@ -867,14 +869,14 @@ jobs:
           timeout 240s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_infantry_barracks_v10_gpu.gd \
-            2>&1 | tee /tmp/infantry-v10-pages-smoke.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/infantry-v10-pages-smoke.log; then
-            echo "Published single Studio Infantry V10 regression"; exit 1
+            --script res://tests/test_infantry_barracks_v11_gpu.gd \
+            2>&1 | tee /tmp/infantry-v11-pages-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/infantry-v11-pages-smoke.log; then
+            echo "Published single Studio Infantry V11 regression"; exit 1
           fi
-          grep -F 'PASS INFANTRY BARRACKS V10:' /tmp/infantry-v10-pages-smoke.log
-          test -s artifacts/tarvoka_infantry_v10_front_close_v10.png
-          test -s artifacts/tarvoka_infantry_v10_compare_v10_front.png
+          grep -F 'PASS INFANTRY BARRACKS V11:' /tmp/infantry-v11-pages-smoke.log
+          test -s artifacts/tarvoka_infantry_v11_front_close_v10.png
+          test -s artifacts/tarvoka_infantry_v11_compare_v11_shade.png
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
