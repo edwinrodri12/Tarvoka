@@ -200,5 +200,5 @@ func _run() -> void:
             "airbase" if target==1 else "headquarters"))
     studio.queue_free()
     await _frames(3)
-    print("PASS INFANTRY BARRACKS V9: 120 native Godot variants, 12 shared-studio comparison captures, three levels, eight factions, five damages, original HQ/Airbase/Naval unchanged")
+    print("PASS INFANTRY BARRACKS V9: 120 native Godot variants, 13 shared-studio comparison captures, three levels, eight factions, five damages, original HQ/Airbase/Naval unchanged")
     quit(0)
