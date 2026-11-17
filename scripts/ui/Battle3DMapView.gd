@@ -20,6 +20,8 @@ const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
+const FullUnitData = preload("res://scripts/ui/UnitDetailData.gd")
+const FullUnitPanel = preload("res://scripts/ui/UnitDetailPanel.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -64,6 +66,7 @@ var immersive_hud: Control
 var _three_d_shortcuts: HBoxContainer
 var _immersive_mode := false
 var building_info_panel
+var unit_detail_panel
 var _dismissed_site_cell := Vector2i(-1,-1)
 
 func _ready() -> void:
@@ -210,6 +213,7 @@ func _ready() -> void:
     immersive_hud.connect("cancel_order_requested",Callable(self,"_cancel_3d_order"))
     immersive_hud.connect("end_turn_requested",Callable(self,"_end_turn_3d"))
     immersive_hud.connect("resupply_requested",Callable(self,"_resupply_3d"))
+    immersive_hud.connect("unit_details_requested",Callable(self,"_open_3d_unit_detail"))
     immersive_hud.connect("zoom_requested",Callable(self,"_zoom_from_hud"))
     immersive_hud.connect("center_requested",Callable(self,"_center_camera_on_own_units"))
     # A fullscreen 3D view needs its own explicit return button.
@@ -253,15 +257,47 @@ func _ready() -> void:
     building_info_panel.production_requested.connect(_request_3d_site_production)
     building_info_panel.close_requested.connect(_close_3d_building_card)
     building_info_panel.hide()
+    unit_detail_panel = FullUnitPanel.new()
+    unit_detail_panel.name = "FichaDetalladaDeUnidad3D"
+    add_child(unit_detail_panel)
+    unit_detail_panel.z_index = 20
+    unit_detail_panel.close_requested.connect(func(): unit_detail_panel.hide())
+    unit_detail_panel.hide()
     resized.connect(_reflow_3d_hud)
     _layout_3d_building_card()
+    _layout_3d_unit_detail()
 
 func _reflow_3d_hud() -> void:
     if immersive_hud != null:
         immersive_hud.call("reflow_for_size",size)
     _layout_3d_building_card()
+    _layout_3d_unit_detail()
     if _immersive_mode:
         call_deferred("_sync_viewport_size")
+
+func _layout_3d_unit_detail() -> void:
+    if unit_detail_panel==null:
+        return
+    var width: float=clampf(size.x*0.45,300.0,420.0)
+    var height: float=maxf(195.0,size.y-151.0)
+    unit_detail_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    unit_detail_panel.offset_left=-width-10.0
+    unit_detail_panel.offset_right=-10.0
+    unit_detail_panel.offset_top=71.0
+    unit_detail_panel.offset_bottom=71.0+height
+
+func _open_3d_unit_detail(unit_id: String) -> void:
+    if _live_board==null or not _order_quote.is_empty() or unit_id.is_empty():
+        return
+    if str(_live_board.get("selected_id"))!=unit_id:
+        return
+    var data: Dictionary=FullUnitData.inspect(_current_state(),unit_id,_viewing_side)
+    if data.is_empty():
+        return
+    if building_info_panel!=null:
+        building_info_panel.hide()
+    unit_detail_panel.bind_dossier(data)
+    _layout_3d_unit_detail()
 
 func _layout_3d_building_card() -> void:
     if building_info_panel == null:
@@ -314,6 +350,8 @@ func _set_immersive_mode(enabled: bool) -> void:
     _immersive_mode = enabled
     if building_info_panel != null and not enabled:
         building_info_panel.hide()
+    if unit_detail_panel != null and not enabled:
+        unit_detail_panel.hide()
     if holder == null:
         return
     _legacy_header.visible = not enabled
@@ -521,6 +559,8 @@ func _update_order_ui() -> void:
     var pending: bool = active and not _order_quote.is_empty()
     if pending and building_info_panel != null:
         building_info_panel.hide() # Combat preview always takes priority.
+    if pending and unit_detail_panel != null:
+        unit_detail_panel.hide()
     _cancel_order_button.visible = pending
     _confirm_order_button.visible = pending
     _move_here_button.hide()
@@ -966,6 +1006,8 @@ func _on_viewport_input(event: InputEvent) -> void:
 
 func close_view() -> void:
     _drop_3d_quote()
+    if unit_detail_panel != null:
+        unit_detail_panel.hide()
     if building_info_panel != null:
         building_info_panel.hide()
     _dismissed_site_cell = Vector2i(-1,-1)
