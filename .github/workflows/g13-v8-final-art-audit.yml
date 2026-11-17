@@ -1,4 +1,4 @@
-name: TARVOKA G13 V22 360-degree model audit and detailed real 3D undercarriage
+name: TARVOKA G13 V22 final 3D art candidate verification and 360-degree Godot QA
 
 on:
   push:
@@ -101,6 +101,39 @@ jobs:
             }
             echo "::endgroup::"
           done
+      - name: Verify G13 V22 final 3D art candidate across eight factions and original controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 115s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_FINAL_ART_REPORT=/tmp/g13-v22-final-readiness.json \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_final_art_candidate_v22.gd 2>&1 | tee /tmp/g13-v22-final-readiness.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v22-final-readiness.log; then exit 1; fi
+          grep -F 'PASS G13 FINAL ART CANDIDATE V22:' /tmp/g13-v22-final-readiness.log
+          test -s /tmp/g13-v22-final-readiness.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/g13-v22-final-readiness.json'))
+          assert x['art_revision']=='V22' and x['factions']==8
+          assert x['pose_invocations']==448 and x['failures']==0
+          assert x['heading_directions']==8 and x['poses_per_heading']==7
+          assert x['decision']=='ART_CANDIDATE_REQUIRES_USER_APPROVAL'
+          assert x['android_lod8_modified'] is False
+          assert x['playable_registered'] is False
+          assert x['checked_meshes']>100
+          print('PASS V22 FINAL ART READINESS JSON:',x['assertions'],'checks and',x['checked_meshes'],'meshes')
+          PY
+      - name: Upload auditable final art readiness checklist
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v22-final-art-readiness-448-pose-eight-factions
+          path: /tmp/g13-v22-final-readiness.json
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Profile G13 V16 visible GPU draw savings and LOD8/13 geometry
         shell: bash
         run: |

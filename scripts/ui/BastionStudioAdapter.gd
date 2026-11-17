@@ -1123,7 +1123,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 ANTIAÉREO MÓVIL · ATAQUES TIERRA/AIRE V4",14)
+        "G13 V22 · CANDIDATO ARTÍSTICO · 2 CAÑONES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
