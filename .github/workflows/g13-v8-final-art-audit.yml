@@ -145,7 +145,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/g13-v17-stress
-          timeout --signal=TERM --kill-after=5s 300s \
+          timeout --signal=TERM --kill-after=5s 150s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
             env LIBGL_ALWAYS_SOFTWARE=1 G13_V17_STRESS_DIR=/tmp/g13-v17-stress \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
