@@ -1,0 +1,76 @@
+name: TARVOKA v31 core AI lethal risk and fair fog
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/BasicAI.gd"
+      - "tests/test_core_ai_lethal_risk_v31.gd"
+      - ".github/workflows/core-ai-lethal-risk-v31.yml"
+  workflow_dispatch:
+
+jobs:
+  ai_threat_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify actual combat, safe retreat, fog and legacy default
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 160s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_core_ai_lethal_risk_v31.gd \
+            2>&1 | tee /tmp/v31-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v31-smoke.log; then exit 1; fi
+          grep -Fq 'PASS core AI v31 threat-aware retreat:' /tmp/v31-smoke.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v31-threat-smoke
+          path: /tmp/v31-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  ai_regressions:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test_ai_retreat.gd
+          - test_ai_decisions.gd
+          - test_ai_fog_sweep.gd
+          - test_ai_self_play.gd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run existing authoritative AI behavior contract
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 270s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/${{ matrix.test }} \
+            2>&1 | tee /tmp/ai-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-regression.log; then exit 1; fi
+          grep -Fq 'PASS' /tmp/ai-regression.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v31-regression-${{ matrix.test }}
+          path: /tmp/ai-regression.log
+          retention-days: 30
+          if-no-files-found: ignore
