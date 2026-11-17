@@ -8,6 +8,7 @@ class_name TarvokaCivilianCityTacticalLOD4
 const V1=preload("res://scripts/ui/CivilianCity3DV1.gd")
 const V2=preload("res://scripts/ui/CivilianCityFacadeV2.gd")
 const V3=preload("res://scripts/ui/CivilianCityPublicSpaceV3.gd")
+const V8=preload("res://scripts/ui/CivilianCityArchitectureV8.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -94,7 +95,16 @@ static func _keep_medium(name: String) -> bool:
         "PavimentoTactilV3_","FranjaSenalV3_",
         "PersianaVillaV2_","PosteBalconV2_",
         "Boquilla","Alfeizar_","CristalEscaparateV2_",
-        "PlacaMonumento","CanalonPluvialV2"]:
+        "PlacaMonumento","CanalonPluvialV2",
+        # V8: close-up window mullions, residential metalwork and individual
+        # rooftop fittings disappear at mid-range but the façades stay.
+        "CristalPosteriorV8_","MontantePosteriorV8_",
+        "TravesanoPosteriorV8_","AlfeizarPosteriorV8_",
+        "CristalCostadoV8_","AlfeizarCostadoV8_",
+        "ContraventanaVillaV8_","MarcoBuhardillaV8_",
+        "BastidorSolarV8_","BarandaEvacuacionV8_",
+        "EscaleraEvacuacionV8_","SoporteDepositoV8_",
+        "ParteluzComercioV8_","DovelaCivicaV8_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -118,7 +128,17 @@ static func _keep_far(name: String) -> bool:
         "CentroRemateVillaV4","MarcoMunicipalCiudadV4",
         "PlacaMunicipalCiudadV4","AletaCoronaMetropoliV4_",
         "LuzCoronaMetropoliV4_","AcentoPlazaTacticaV4_",
-        "SenalPrincipalPlazaV4"]:
+        "SenalPrincipalPlazaV4",
+        # V8 silhouette-only roof and damage parts remain at tactical scale.
+        "BuhardillaVillaV8_","TejadilloBuhardillaV8_",
+        "AleroPuertaVillaV8_","MarquesinaContinuaV8_",
+        "CasetaAccesoAzoteaV8_","CubiertaCasetaV8_",
+        "DepositoAguaV8_","TapaDepositoV8_",
+        "RemateEscalonadoV8_","FranjaRemateMetropolitanoV8_",
+        "RemateTorreCivicaV8",
+        "EntablamentoMunicipalPosteriorV8",
+        "CornisaMunicipalQuebradaV8",
+        "MamposteriaFracturadaV8_","RestosCoronaMetropoliV8"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -182,6 +202,11 @@ static func apply(model: Node3D,level: int,
     stage.set_meta("detail_version",4)
     stage.set_meta("tactical_landmark","municipal-roof-and-plaza")
     stage.set_meta("damage",damage)
+    # V8 is ADDITIVE sculpture. The shared studio and real battlefield both
+    # use this single build path; previous V1-V4 meshes remain unchanged.
+    if not V8.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",8)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
