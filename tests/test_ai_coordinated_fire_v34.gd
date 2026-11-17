@@ -124,6 +124,37 @@ static func _focus_three() -> void:
     assert(_target_hp(last["state"],"X") == 0)
     print("FOCUS_FIRE_V34 three_shots=true junior_cannot_plan=true final_hp=0")
 
+static func _wounded_tank() -> void:
+    # Real antiarmor situation: no one Rompedor can beat even a worn
+    # tank, but three coordinated attacks can finish the 7HP target.
+    # Both factions obey identical damage, cover and reaction rules.
+    var state: Dictionary = Session.start([
+        _unit("P1",0,Vector2i(3,3),"piercer"),
+        _unit("P2",0,Vector2i(4,2),"piercer"),
+        _unit("P3",0,Vector2i(5,3),"piercer"),
+        _unit("TANK",1,Vector2i(4,3),"tank",7),
+        _unit("RESERVE",1,Vector2i(9,7),"line")
+    ],_plain(),0,false,false,true,true)
+    var known: Dictionary = Visibility.observed_state(state,0)
+    var two: Dictionary = Team.propose(known,0,2)
+    assert(two.is_empty())
+    var three: Dictionary = Team.propose(known,0,3)
+    assert(three.get("valid",false))
+    assert(three["target_id"] == "TANK")
+    assert(int(three["shots"]) == 3)
+    var first: Dictionary = AI.step(state,{
+        "ai_level":12,"ai_style":"combined_arms"})
+    assert(first.get("valid",false) and first["action"] == "attack")
+    assert(first.get("reason","") == "coordinated_fire")
+    var follow: Dictionary = AI.step(first["state"],{
+        "ai_level":12,"ai_style":"combined_arms"})
+    assert(follow.get("valid",false))
+    var finish: Dictionary = AI.step(follow["state"],{
+        "ai_level":12,"ai_style":"combined_arms"})
+    assert(finish.get("valid",false))
+    assert(_target_hp(finish["state"],"TANK") == 0)
+    print("FOCUS_ANTITANK_V34 tank_hp=7 3_piercers=true no_single_kill=true no_free_damage=true")
+
 static func _capture_protection() -> void:
     var state: Dictionary = _two_shots()
     var known: Dictionary = Visibility.observed_state(state,0)
@@ -195,6 +226,7 @@ static func _fairness() -> void:
 func _initialize() -> void:
     _focus_two()
     _focus_three()
+    _wounded_tank()
     _capture_protection()
     _avoid_suicide()
     _fairness()
