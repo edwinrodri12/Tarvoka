@@ -14,6 +14,8 @@ const BURN := "A01V13_BlindajeChamuscado"
 const SMOKE := "A01V13_HumoMotor"
 const FIRE := "A01V13_FuegoMotor"
 const WRECK := "A01V13_RotorYEscombrosDesprendidos"
+const DETONATION := "A01V13_DetonacionEnDosFases"
+const LANDING_DUST := "A01V13_PolvoAterrizaje"
 const MAX_STAGE := 4
 const DESTROY_DURATION := 2.35
 const STAGE_LABELS := ["Intacto","Daño leve","Daño moderado","Daño crítico","Destruido"]
@@ -24,7 +26,8 @@ static func _part(parent: Node3D,name: String) -> Node3D:
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false)) and (
         _part(model,ROOT)!=null and _part(model,IMPACT)!=null
-        and _part(model,SMOKE)!=null and _part(model,WRECK)!=null)
+        and _part(model,SMOKE)!=null and _part(model,WRECK)!=null
+        and _part(model,DETONATION)!=null and _part(model,LANDING_DUST)!=null)
 
 static func _group(parent: Node3D,name: String) -> Node3D:
     var n:=Node3D.new()
@@ -314,6 +317,58 @@ static func _particles(body: Node3D) -> void:
         Color("#ffd68c"),Vector3(-0.54,1.18,-0.28),true)
     wave.rotation_degrees.z=90.0
 
+# Separate bullet sparks from staged explosive destruction. Both pulses
+# are native 3D sculpted meshes. The impact shock shell expands independently.
+static func _destruction_blast(body: Node3D) -> void:
+    var blast:=_group(body,DETONATION)
+    var primary:=_group(blast,"A01V13_ExplosionPrimaria")
+    primary.position=Vector3(0.54,1.50,0.74)
+    var core:=_sphere(primary,"A01V13_NucleoIncandescente",
+        Vector3.ZERO,Vector3(0.33,0.33,0.35),Color("#fff0a4"),true)
+    core.set_meta("a01_v13_original_scale",core.scale)
+    for i in range(4):
+        var a: float=TAU*float(i)/4.0
+        var fire:=_mesh(primary,"A01V13_LenguaExplosion_%d" % i,
+            _fx_sculpt(true,1.62+float(i)*1.71),Color.WHITE,
+            Vector3(0.08*cos(a),0.015,0.09*sin(a)))
+        fire.material_override=_fx_material(true)
+        fire.scale=Vector3(2.2,2.0+0.16*float(i%2),2.2)
+        fire.rotation_degrees=Vector3(27.0*sin(a),float(i)*93.0,
+            38.0*cos(a))
+    var secondary:=_group(blast,"A01V13_ExplosionSecundaria")
+    secondary.position=Vector3(-0.44,1.32,0.28)
+    for i in range(3):
+        var tongue:=_mesh(secondary,"A01V13_LenguaSecundaria_%d" % i,
+            _fx_sculpt(true,3.55+float(i)*1.47),Color.WHITE,
+            Vector3(-0.09+0.08*float(i),0.0,0.04*float(i)))
+        tongue.material_override=_fx_material(true)
+        tongue.scale=Vector3(1.65,1.62,1.50)
+        tongue.rotation_degrees=Vector3(-20.0+float(i)*19.0,
+            float(i)*97.0,-17.0+float(i)*20.0)
+    var wave:=TorusMesh.new()
+    wave.inner_radius=0.19
+    wave.outer_radius=0.24
+    wave.rings=8
+    wave.ring_segments=32
+    var ring:=_mesh(blast,"A01V13_AnilloExpansivo",wave,
+        Color(1.0,0.66,0.30,0.58),Vector3(0.52,1.48,0.75),true)
+    ring.rotation_degrees.z=90.0
+    var smolder:=_group(body,LANDING_DUST)
+    var dust_texture: ImageTexture=_smoke_alpha_texture()
+    for i in range(5):
+        var angle: float=TAU*float(i)/5.0
+        var quad:=QuadMesh.new()
+        quad.size=Vector2(0.80,0.54)
+        var dust:=_mesh(smolder,"A01V13_NubePolvo_%d" % i,quad,
+            Color.WHITE,
+            Vector3(0.45*cos(angle),0.16,0.44*sin(angle)))
+        var material:=_smoke_billboard_material(dust_texture)
+        material.albedo_color=Color(0.95,0.79,0.66,0.70)
+        dust.material_override=material
+        dust.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        dust.set_meta("a01_v13_dust_rest",dust.position)
+        dust.set_meta("a01_v13_dust_angle",angle)
+
 static func _wreck(body: Node3D) -> void:
     var debris:=_group(body,WRECK)
     var steel:=Color("#4d565a")
@@ -363,6 +418,7 @@ static func set_stage(model: Node3D,level: int) -> bool:
     var previous: int=stage(model)
     var n: int=clampi(level,0,MAX_STAGE)
     var wreck: Node3D=_part(model,WRECK)
+    var dust: Node3D=_part(model,LANDING_DUST)
     if n==MAX_STAGE and previous<MAX_STAGE:
         # Take a snapshot of the actual world pose BEFORE the helicopter
         # banks and falls. The shards detach from the fuselage's transform
@@ -371,11 +427,15 @@ static func set_stage(model: Node3D,level: int) -> bool:
         var launch_frame: Transform3D=body.global_transform
         wreck.top_level=true
         wreck.global_transform=launch_frame
+        dust.top_level=true
+        dust.global_transform=launch_frame
     elif n<MAX_STAGE and previous==MAX_STAGE:
         # Repair returns the debris node to the original V1 body tree.
         # Repeating destroy/repair never leaves world-space orphan shards.
         wreck.top_level=false
         wreck.transform=Transform3D.IDENTITY
+        dust.top_level=false
+        dust.transform=Transform3D.IDENTITY
     model.set_meta(STAGE,n)
     _part(model,SCRATCH).visible=n>=1
     _part(model,BURN).visible=n>=2
@@ -383,6 +443,8 @@ static func set_stage(model: Node3D,level: int) -> bool:
     _part(model,FIRE).visible=n>=3
     _part(model,WRECK).visible=n>=4
     _part(model,IMPACT).visible=false
+    _part(model,DETONATION).visible=false
+    dust.visible=false
     animate_ambient(model,0.0)
     # Hide the entire original main rotor assembly only in the destroyed
     # state. It is never modified or deleted; stage zero restores it.
@@ -440,13 +502,51 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
     var fire: Node3D=_part(model,FIRE)
     var smoke: Node3D=_part(model,SMOKE)
     var wreck: Node3D=_part(model,WRECK)
+    var blast: Node3D=_part(model,DETONATION)
+    var ground_dust: Node3D=_part(model,LANDING_DUST)
     var n: int=stage(model)
-    burst.visible=kind in ["hit_bullet","hit_explosive","destroy"] and t>=0.16 and t<0.44
+    burst.visible=kind in ["hit_bullet","hit_explosive"] and t>=0.16 and t<0.44
     burst.scale=Vector3.ONE*(0.70+0.40*sin(PI*t))
     var wave: Node3D=_part(model,"A01V13_OndaChoqueLateral")
     if wave!=null:
         var expansion: float=clampf((t-0.16)/0.28,0.0,1.0)
         wave.scale=Vector3.ONE*(0.45+1.85*expansion)
+    # Two visual pulses during explosion and wreckage: brief white-hot
+    # nucleus followed by a delayed offset fire burst.
+    var explosive: bool=kind in ["hit_explosive","destroy"]
+    blast.visible=explosive and t>=0.10 and t<0.65
+    var primary: Node3D=_part(blast,"A01V13_ExplosionPrimaria")
+    var secondary: Node3D=_part(blast,"A01V13_ExplosionSecundaria")
+    var blast_wave: MeshInstance3D=_part(blast,"A01V13_AnilloExpansivo") as MeshInstance3D
+    var main_pulse: float=sin(PI*clampf((t-0.10)/0.39,0.0,1.0))
+    var second_pulse: float=sin(PI*clampf((t-0.24)/0.39,0.0,1.0))
+    primary.visible=explosive and main_pulse>0.01
+    primary.scale=Vector3.ONE*(0.18+1.12*main_pulse)
+    secondary.visible=explosive and second_pulse>0.01
+    secondary.scale=Vector3.ONE*(0.20+0.90*second_pulse)
+    if blast_wave!=null:
+        var shock: float=clampf((t-0.12)/0.43,0.0,1.0)
+        blast_wave.scale=Vector3.ONE*(0.36+3.60*shock)
+        var shock_mat: StandardMaterial3D=blast_wave.material_override as StandardMaterial3D
+        if shock_mat!=null:
+            shock_mat.albedo_color=Color(1.0,0.66,0.30,0.58*(1.0-shock))
+    # Ground dust is world-anchored like the detached blades; it never
+    # follows a crashed helicopter as the user rotates the preview camera.
+    ground_dust.visible=kind=="destroy" and t>=0.68 and t<0.98
+    var dust_phase: float=clampf((t-0.68)/0.30,0.0,1.0)
+    for child in ground_dust.get_children():
+        var puff: MeshInstance3D=child as MeshInstance3D
+        if puff==null or not puff.has_meta("a01_v13_dust_rest"):
+            continue
+        var origin: Vector3=puff.get_meta("a01_v13_dust_rest") as Vector3
+        var angle: float=float(puff.get_meta("a01_v13_dust_angle"))
+        puff.position=origin+Vector3(
+            cos(angle)*0.37*dust_phase,0.20*dust_phase,
+            sin(angle)*0.37*dust_phase)
+        puff.scale=Vector3.ONE*(0.38+1.26*dust_phase)
+        var dust_mat: StandardMaterial3D=puff.material_override as StandardMaterial3D
+        if dust_mat!=null:
+            dust_mat.albedo_color.a=0.70*(1.0-dust_phase)
     smoke.visible=n>=2 or (kind=="destroy" and t>0.20)
     smoke.position.y=0.045*sin(TAU*t) if kind=="destroy" else 0.0
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
@@ -506,6 +606,7 @@ static func apply(model: Node3D,_faction: Color) -> bool:
     _bullets(root_node)
     _burns(root_node)
     _particles(root_node)
+    _destruction_blast(root_node)
     _wreck(root_node)
     model.set_meta(FLAG,true)
     return set_stage(model,0)
