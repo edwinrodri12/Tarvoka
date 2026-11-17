@@ -246,9 +246,15 @@ func _build() -> void:
     supply_button.hide()
 
 func _on_unit_card_input(event: InputEvent) -> void:
-    if not event is InputEventMouseButton:
-        return
-    if not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+    # Android may deliver a direct screen touch instead of an emulated
+    # mouse button. Support both without recognizing drags or releases.
+    if event is InputEventScreenTouch:
+        if not event.pressed:
+            return
+    elif event is InputEventMouseButton:
+        if not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+            return
+    else:
         return
     if board == null or str(board.selected_id).is_empty():
         return
