@@ -1152,7 +1152,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V26 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V27 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1200,12 +1200,19 @@ func _g13_v25_compare(show_v1:bool)->void:
         return
     # The original LOD8 comparison removes BOTH V25 paint/barrel tweaks
     # and V26 faceted shapes while keeping camera, faction and pose fixed.
-    var guns:bool=G13TacticalV25.show_v1_reference(
-        model_root,show_v1)
-    var armor:bool=G13ArmorV26.show_v25_reference(
-        model_root,show_v1)
-    var radar:bool=G13RadarV27.show_v26_reference(
-        model_root,show_v1)
+    var guns:bool=false
+    var armor:bool=false
+    var radar:bool=false
+    if show_v1:
+        # Hide newest sculpt FIRST; V25 then restores true V1 dish .295.
+        radar=G13RadarV27.show_v26_reference(model_root,true)
+        armor=G13ArmorV26.show_v25_reference(model_root,true)
+        guns=G13TacticalV25.show_v1_reference(model_root,true)
+    else:
+        # Restore original-to-latest order so V27 keeps its actual .445 dish.
+        guns=G13TacticalV25.show_v1_reference(model_root,false)
+        armor=G13ArmorV26.show_v25_reference(model_root,false)
+        radar=G13RadarV27.show_v26_reference(model_root,false)
     if guns and armor and radar:
         _g13_v25_show_original=show_v1
         _g13_v26_show_previous=show_v1
@@ -2084,12 +2091,14 @@ func _display_role(role: String) -> void:
         model_root=P06Models.build("aa_mobile",_faction,true,_g13_preview_lod)
         if model_root!=null:
             if _g13_preview_lod==8:
-                if _g13_v25_show_original:
-                    G13TacticalV25.show_v1_reference(model_root,true)
-                if _g13_v26_show_previous:
-                    G13ArmorV26.show_v25_reference(model_root,true)
+                # Compare versions newest-to-oldest. V25 V1 restoration
+                # must win over the V26 previous-radar resource.
                 if _g13_v27_show_previous:
                     G13RadarV27.show_v26_reference(model_root,true)
+                if _g13_v26_show_previous:
+                    G13ArmorV26.show_v25_reference(model_root,true)
+                if _g13_v25_show_original:
+                    G13TacticalV25.show_v1_reference(model_root,true)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
