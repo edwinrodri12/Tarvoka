@@ -19,6 +19,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 
 const STRATEGIES := ["expansion","pressure","armor"]
@@ -372,6 +373,48 @@ static func _wishlist(policy: String, kind: String,
         return ["patrol","missile_boat"]
     return []
 
+# The counter policy inspects ONLY visible enemy troops, public facility
+# ownership, and its own living army. It must not see enemies behind fog.
+# In this experiment, specialist defense must not crowd out infantry able
+# to capture neutral cities, and Rompedores cannot consume all slots.
+static func _adaptive_factory_roles(session: Dictionary, side: int) -> Array:
+    var state: Dictionary = session["world"]["state"]
+    var capturers := 0
+    var own_piercers := 0
+    var alive := 0
+    var visible_armor := 0
+    var hostile_armor_plant := false
+    var neutral_cities := 0
+    for u in state["units"]:
+        if int(u.get("hp",0)) <= 0:
+            continue
+        if int(u.get("faction",-1)) == side:
+            alive += 1
+            if Economy.can_capture(u):
+                capturers += 1
+            if str(u.get("role","")) == "piercer":
+                own_piercers += 1
+        elif str(u.get("role","")) in ["tank","apc","ifv","bulwark"] and \
+                (not Visibility.enabled(state) or \
+                Visibility.is_unit_visible(state,side,str(u["id"]))):
+            visible_armor += 1
+    for site in session["world"]["layout"]["sites"]:
+        if str(site["kind"]) == "city" and int(site["owner"]) == -1:
+            neutral_cities += 1
+        elif str(site["kind"]) == "armor_plant" and \
+                int(site["owner"]) == 1-side:
+            hostile_armor_plant = true
+    # Expand with units that can capture before saturating barracks with
+    # short-range bazookas (which cannot capture in this prototype).
+    if capturers < 3 or (neutral_cities >= 2 and capturers < 4):
+        return ["line","assault","piercer","engineer"]
+    var max_specialists: int = mini(3,maxi(1,int(ceil(float(alive)*0.34))))
+    var desired: int = mini(max_specialists,visible_armor*2+ \
+        (1 if hostile_armor_plant else 0))
+    if own_piercers < desired:
+        return ["piercer","line","assault","engineer"]
+    return ["assault","line","engineer","piercer"]
+
 static func _purchase(battle: Dictionary, side: int, policy: String,
         options: Dictionary = {}) -> Dictionary:
     var session: Dictionary = battle["session"]
@@ -388,8 +431,13 @@ static func _purchase(battle: Dictionary, side: int, policy: String,
         if str(site["kind"]) == "city" or int(site["owner"]) != side or \
                 int(site.get("produced_turn",-1)) == int(state["economy"]["turn"]):
             continue
-        for role in _wishlist(policy,str(site["kind"]),
-                bool(options.get("experimental_piercer_factory",false))):
+        var wishlist: Array = _wishlist(policy,str(site["kind"]),
+                bool(options.get("experimental_piercer_factory",false)))
+        if policy == "pressure" and str(site["kind"]) == "factory" and \
+                bool(options.get("experimental_piercer_factory",false)) and \
+                bool(options.get("adaptive_counter_mix",false)):
+            wishlist = _adaptive_factory_roles(session,side)
+        for role in wishlist:
             if Economy.producer_for(str(role),true,
                     bool(options.get("experimental_piercer_factory",false))) != str(site["kind"]):
                 continue
