@@ -467,10 +467,15 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     var sites: Array = []
     var economy: Dictionary = state.get("economy",{})
     for site in economy.get("sites",[]):
-        sites.append({"kind":str(site["kind"]),"pos":site["pos"],
+        var visual_site: Dictionary={
+            "kind":str(site["kind"]),"pos":site["pos"],
             "owner":int(site.get("owner",-1)),
-            "visual_level":int(site.get("visual_level",1)),
-            "visual_damage_stage":int(site.get("visual_damage_stage",0))})
+            "visual_damage_stage":int(site.get("visual_damage_stage",0))}
+        # Only preserve a VISUALLY EXPLICIT tier. A synthetic default
+        # must not disable deterministic map-size city silhouettes.
+        if site.has("visual_level"):
+            visual_site["visual_level"]=int(site["visual_level"])
+        sites.append(visual_site)
     var control: Dictionary = state.get("control",{})
     for objective in control.get("nodes",[]):
         sites.append({"kind":"relay","pos":objective["pos"],
