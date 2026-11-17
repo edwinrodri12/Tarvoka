@@ -95,8 +95,31 @@ func _run() -> void:
                     and screw.rotation_degrees.is_equal_approx(Vector3.ZERO)
                     and screw.position.y<belly.position.y-0.04,
                     "V14.2.1 underside screw axis points outward, not sideways")
-        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_2_1",
-            "V14.2.1 preserves muted faction treatment and the original rig")
+        # V14.3 material and geometry are distinct from the existing enamel:
+        # brushed alloy on the engines, neoprene on doors/tail, no recoloring.
+        for side in [-1,1]:
+            var heat: MeshInstance3D=model.find_child(
+                "A01V14_3_EscudoTermico_%d" % side,true,false) as MeshInstance3D
+            var seal: MeshInstance3D=model.find_child(
+                "A01V14_3_JuntaPuerta_%d" % side,true,false) as MeshInstance3D
+            var latch: MeshInstance3D=model.find_child(
+                "A01V14_3_CierreCola_%d_1" % side,true,false) as MeshInstance3D
+            var tail_seal: MeshInstance3D=model.find_child(
+                "A01V14_3_SelloRegistroCola_%d" % side,true,false) as MeshInstance3D
+            _check(heat!=null and heat.mesh is BoxMesh
+                and seal!=null and seal.mesh is BoxMesh
+                and latch!=null and latch.mesh is BoxMesh
+                and tail_seal!=null and tail_seal.mesh is BoxMesh,
+                "V14.3 independent 3D metallic engine shields and weather seals")
+            if heat!=null and seal!=null:
+                var hm: StandardMaterial3D=heat.material_override as StandardMaterial3D
+                var sm: StandardMaterial3D=seal.material_override as StandardMaterial3D
+                _check(hm!=null and sm!=null and hm.metallic>0.60
+                    and hm.roughness<0.50 and sm.metallic<0.10
+                    and sm.roughness>0.85,
+                    "V14.3 brushed alloy versus matte rubber physically distinct")
+        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3",
+            "V14.3 retains all eight approved muted-faction finishes")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
