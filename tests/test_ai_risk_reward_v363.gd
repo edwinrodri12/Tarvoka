@@ -27,13 +27,13 @@ static func _unit(id: String,side: int,cell: Vector2i,
         u["hp"] = hp
     return u
 
-static func _city_scenario(hp: int) -> Dictionary:
+static func _city_scenario(hp: int, modern: bool = false) -> Dictionary:
     return Session.start([
         _unit("CAP",0,Vector2i(3,4),"line",hp),
         _unit("HELP",0,Vector2i(1,6),"line"),
         _unit("TANK",1,Vector2i(6,4),"tank"),
         _unit("FOE2",1,Vector2i(9,7),"scout")
-    ],_plain(),0,false,false,true,true)
+    ],_plain(),0,false,false,true,modern)
 
 static func _capture_opportunity_is_real() -> void:
     var original: Dictionary = _city_scenario(6)
@@ -100,6 +100,20 @@ static func _specialist_escapes_without_city() -> void:
     assert(int(proposal["tradeoff"]["objective_cost"]) == 0)
     print("RISK_REWARD_V363 valuable_artillery_rescue_still_available=true")
 
+static func _modern_city_is_more_valuable() -> void:
+    var classic: Dictionary = _city_scenario(6)
+    var modern: Dictionary = _city_scenario(6,true)
+    var a: Dictionary = Risk.evaluate(
+        Visibility.observed_state(classic,0),0,classic["units"][0],
+        Vector2i(0,4),8,0)
+    var b: Dictionary = Risk.evaluate(
+        Visibility.observed_state(modern,0),0,modern["units"][0],
+        Vector2i(0,4),8,0)
+    assert(int(b["objective_cost"]) > int(a["objective_cost"]))
+    assert(int(b["objective_cost"]) == Economy.MODERN_CITY_INCOME*3+220)
+    assert(int(a["objective_cost"]) == Economy.CITY_INCOME*3+220)
+    print("RISK_REWARD_V363 real_modern_city_income_used_without_balance_change=true")
+
 static func _no_private_enemy_telemetry() -> void:
     var state: Dictionary = _city_scenario(2)
     state = Visibility.update_exploration(state)
@@ -119,6 +133,7 @@ static func _no_private_enemy_telemetry() -> void:
 
 func _initialize() -> void:
     _capture_opportunity_is_real()
+    _modern_city_is_more_valuable()
     _wounded_capture_can_escape()
     _specialist_escapes_without_city()
     _no_private_enemy_telemetry()
