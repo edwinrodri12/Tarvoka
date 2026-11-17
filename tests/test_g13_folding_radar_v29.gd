@@ -154,6 +154,10 @@ func _run()->void:
         require(model!=null,"LOD8 built for faction "+str(faction))
         if model==null:
             continue
+        # to_global() on detached Node3D returns an invalid transform.
+        # Attach each model to the live SubViewport BEFORE measuring the
+        # fold hinge's world-space deck contact, then detach after its shot.
+        vp.add_child(model)
         require(bool(model.get_meta(Fold.FLAG,false)) and
             bool(model.get_meta(Deck.FLAG,false)),
             "V28 deck and V29 fold coexist")
@@ -199,7 +203,6 @@ func _run()->void:
             "official faction paint untouched")
         if mat!=null:
             colors[mat.albedo_color.to_html()]=true
-        vp.add_child(model)
         camera(cam,Vector3(3.2,2.9,3.4),
             Vector3(0,1.33,0.52),4.1)
         await screenshot(vp,folder,"faction_%02d_rear_aa" % faction)
