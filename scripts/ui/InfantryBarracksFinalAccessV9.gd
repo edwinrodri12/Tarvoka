@@ -112,7 +112,7 @@ static func _windows(stage: Node3D,model: Node3D,
             if not str(mesh.name).begins_with("CristalLateralV7_"):
                 continue
             var pane: MeshInstance3D=mesh as MeshInstance3D
-            _part(stage,"GoteronSuperiorVentanaV9_"+tag+"_%d" % count,
+            _part(stage,"GoteronSuperiorVentanaV9_"+tag+"_L%d_%d" % [side,count],
                 Vector3(outer+float(side)*0.21,
                     pane.position.y+0.574,pane.position.z),
                 Vector3(0.108,0.062,1.10),
