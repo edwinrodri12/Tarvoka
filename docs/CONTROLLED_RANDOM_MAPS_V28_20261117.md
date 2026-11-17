@@ -53,15 +53,15 @@ En **Nueva partida → Escaramuza aleatoria** agregar *en otra etapa* estas opci
 `scripts/experiments/CertifiedRandomMapsV28.gd`:
 - `audit(terrain, style)` verifica simetría, entradas de terreno, dos pasos separados, coberturas, distribución `Sites.layout`, igualdad de ingresos y propiedad, puntos de captura y ruta ponderada a **todas** las instalaciones.
 - `certify_seed(seed, size, style)` acepta/rechaza una semilla exacta **sin modificarse**.
-- `generate(requested_seed,size,style)` busca hasta 36 candidatas con un RNG local determinista y devuelve `seed` efectivo, mapa y métricas. La semilla solicitada sirve para reproducir la *selección*, no se oculta la seleccionada.
-- `VERSION=1` para registro del contrato experimental; no cambia `Scenarios.seeded_terrain` o `SaveCodec`.
+- `generate(requested_seed,size,style)` busca hasta 36 candidatas con un RNG local determinista, compara hasta **tres candidatas que aprobaron** y selecciona la mejor según una puntuación inicial de rutas, cobertura y accesibilidad; devuelve `seed` efectivo, mapa y métricas. La semilla solicitada sirve para reproducir la *selección*, no se oculta la seleccionada.
+- `VERSION=2` para registro del contrato experimental; no cambia `Scenarios.seeded_terrain` o `SaveCodec`.
 
 `tests/test_certified_random_maps_v28.gd`:
 - rechazo de semillas inválidas, estilos inválidos, terreno asimétrico, cruce único artificial;
 - análisis de 12 semillas por tamaño (36 casos) y selección por estilo con reproducibilidad;
 - costes y edificios, compatibilidad del guardado de un mapa 10×8 existente.
 
-**La prueba CI debe aprobarse antes de afirmar que el filtro funciona.** [PR #521](https://github.com/edwinrodri12/Tarvoka/pull/521).
+****CI Godot 4.3 aprobado:** 36 semillas existentes (12 por tamaño) aceptadas, mapas asimétricos y cruce único artificial rechazados. El siguiente paso es medir qué tanto discriminan los criterios y simular partidas competitivas; un validador verde no prueba un buen balance.** [PR #521](https://github.com/edwinrodri12/Tarvoka/pull/521).
 
 ## Próxima prueba posterior a la certificación
 
