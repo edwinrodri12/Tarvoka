@@ -158,6 +158,11 @@ func bind_site(data: Dictionary, can_open_catalog: bool) -> void:
     var accent: Color = (
         Chrome.GREEN if friendly else
         Chrome.RED if known and owner in [0,1] else Chrome.GOLD)
+    # The same panel changes its accent by actual ownership: green ally,
+    # red adversary, amber neutral/unknown. No invented building levels.
+    add_theme_stylebox_override("panel",
+        Chrome.box_style(Color("#091B2AF4"),accent,12,10))
+    status_label.add_theme_color_override("font_color",accent)
     var emblem_id: int = int(data.get("owner_emblem",-1))
     emblem.texture = Factions.emblem_texture(emblem_id) if known and emblem_id>=0 else null
     emblem.visible = emblem.texture != null
