@@ -2,7 +2,7 @@
 
 **17 de noviembre de 2026 · DRAFT [PR #507](https://github.com/edwinrodri12/Tarvoka/pull/507)**
 
-**Evidencia de 24 partidas en Godot 4.3, CI PASS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/44044428214. Cuatro jobs (tres mapas y prueba base de daño/costes) aprobados. Se añadió una prueba posterior de fuego concentrado; comprobar su CI antes de afirmar que pasó.
+**Evidencia de 24 partidas en Godot 4.3, CI PASS:** https://github.com/edwinrodri12/Tarvoka/actions/runs/44044428214. Cuatro jobs (tres mapas y prueba base de daño/costes) aprobados. Smoke adicional de fuego concentrado aprobado en https://github.com/edwinrodri12/Tarvoka/actions/runs/44045072057.
 
 ## Pregunta
 
@@ -27,7 +27,15 @@
 
 El Rompedor inicia con 8 HP, usa 1 de sus 4 municiones y tras una respuesta del tanque queda con 4 HP en pradera/bosque o 3 HP en montaña. El tanque inicia con 14 HP, 5 municiones y una reacción exitosa le consume una (quedan 4). La defensa de montaña **cancela el beneficio de +2** bajo la fórmula actual.
 
-La prueba aparte de 4 Rompedores concentrados contra un tanque en el mismo turno se incorpora en el smoke ampliado; su resultado debe validarse en su propia ejecución CI antes de extraer conclusiones.
+**Fuego concentrado validado en Godot 4.3:** [smoke ampliado (CI PASS)](https://github.com/edwinrodri12/Tarvoka/actions/runs/44045072057). Cuatro Rompedores rodean un tanque y atacan legalmente en el MISMO turno. El tanque contraataca **una sola vez** y consume exactamente una munición; cada soldado que dispara consume exactamente una suya. El motor aplica también flanqueo, por lo que no debe proyectarse esta secuencia multiplicando el daño del duelo aislado:
+
+| Cobertura | HP tanque tras 4 Rompedores sin tech | HP tanque con tech +2 | Disparos con tech | Contraataques del tanque |
+|---|---:|---:|---:|---:|
+| Pradera | **2** | **0** | **3** | 1 |
+| Bosque | **6** | **0** | **4** | 1 |
+| Montaña | **10** | **6** | **4** | 1 |
+
+Por tanto, **el bonus funciona tácticamente con concentración de fuego y flanqueo**: tres golpes potenciados bastan en pradera y cuatro en bosque; sin tecnología el tanque sobrevive cuatro golpes. En montaña la protección sigue siendo alta, aunque la coordinación mejora el total (HP restante 10 → 6). La suma base de reclutamiento de cuatro Rompedores es **1.200 créditos**, MÁS las mejoras e investigación y varias oportunidades de producción; este ensayo táctico no supone que comprar las cuatro unidades fuera instantáneo ni gratuito.
 
 ## Resultados integrados de estrategia: 24 partidas
 
