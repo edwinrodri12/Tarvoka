@@ -94,6 +94,7 @@ var _heli_focus_local: Vector3=Vector3.ZERO
 var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_damage_stage: int=0
+var _heli_damage_clock: float=0.0
 var _heli_time: float=0.0
 # A01 V9 — mobile landscape: quick actions near the model picker, not below
 # the full technical catalogue. Other units keep their existing controls.
@@ -841,6 +842,7 @@ func _heli_repair() -> void:
         return
     _heli_stop()
     _heli_damage_stage=0
+    _heli_damage_clock=0.0
     HeliV13.set_stage(model_root,0)
     _update_details()
 
@@ -2328,6 +2330,10 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role=="attack_heli" and HeliV13.has_model(model_root):
+        _heli_damage_clock+=maxf(0.0,delta)
+        if _heli_animation.is_empty():
+            HeliV13.animate_ambient(model_root,_heli_damage_clock)
     if _role=="attack_heli" and not _heli_animation.is_empty() and HeliV1.has_model(model_root):
         _heli_time+=maxf(0.0,delta)
         var duration: float=(HeliV13.DESTROY_DURATION if _heli_animation=="destroy" else (
