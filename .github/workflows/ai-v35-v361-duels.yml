@@ -7,6 +7,7 @@ on:
       - "scripts/core/NextTurnThreatV36.gd"
       - "tests/test_ai_v35_v361_full_matches.gd"
       - "tests/test_ai_anticipation_discipline_v361.gd"
+      - "tests/aggregate_ai_v361_matches.py"
       - ".github/workflows/ai-v35-v361-duels.yml"
   workflow_dispatch:
 
@@ -80,3 +81,29 @@ jobs:
           path: /tmp/v361-discipline.log
           retention-days: 30
           if-no-files-found: ignore
+
+  aggregate_results:
+    needs: [matched_duels]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all 8 evidence logs without overwriting them
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ai-ab-*
+          path: .ci-duel-logs
+          merge-multiple: false
+      - name: Validate exactly 32 battles and produce comparable summary
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_v361_matches.py .ci-duel-logs
+          cat reports/ai_v361_ab_summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive inspectable A/B summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-v361-32-battle-summary
+          path: |
+            reports/ai_v361_ab_summary.json
+            reports/ai_v361_ab_summary.md
+          retention-days: 30
