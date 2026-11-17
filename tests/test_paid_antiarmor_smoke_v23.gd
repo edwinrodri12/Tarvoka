@@ -57,6 +57,64 @@ static func _fire(tile: String) -> void:
         int(hit["state"]["units"][1]["ammo"])
     ])
 
+static func _focus_fire(tile: String, researched: bool) -> Dictionary:
+    var terrain: Array = _board(tile)
+    var army: Array = [
+        Roles.make_unit("P0",0,Vector2i(3,3),"piercer"),
+        Roles.make_unit("P1",0,Vector2i(4,2),"piercer"),
+        Roles.make_unit("P2",0,Vector2i(5,3),"piercer"),
+        Roles.make_unit("P3",0,Vector2i(4,4),"piercer"),
+        Roles.make_unit("T",1,Vector2i(4,3),"tank")
+    ]
+    var b: Dictionary = Session.start(army,terrain,0,false,false,true,true)
+    assert(Economy.valid(b["economy"],terrain))
+    var counters := 0
+    var real_shots := 0
+    for id in ["P0","P1","P2","P3"]:
+        if int(b["winner"]) in [0,1]:
+            break
+        var prior_ammo := 0
+        for u in b["units"]:
+            if str(u["id"]) == id:
+                prior_ammo = int(u["ammo"])
+        var shot: Dictionary = V08.attack_antiarmor(b,id,"T",2) if researched else \
+            Session.attack(b,id,"T")
+        assert(shot.get("valid",false))
+        b = shot["state"]
+        real_shots += 1
+        if bool(shot.get("counter_spent",false)):
+            counters += 1
+        for u in b["units"]:
+            if str(u["id"]) == id:
+                assert(int(u["ammo"]) == prior_ammo-1)
+                assert(int(u["attack"]) == 4)
+    var tank_hp := -1
+    for u in b["units"]:
+        if str(u["id"]) == "T":
+            tank_hp = int(u["hp"])
+    assert(tank_hp >= 0 and counters <= 1 and real_shots <= 4)
+    return {"terrain":tile,"boosted":researched,"tank_hp":tank_hp,
+        "shots":real_shots,"counters":counters,"winner":int(b["winner"])}
+
+static func _squad() -> void:
+    for tile in ["plain","forest","mountain"]:
+        var raw: Dictionary = _focus_fire(tile,false)
+        var boosted: Dictionary = _focus_fire(tile,true)
+        assert(int(boosted["tank_hp"]) <= int(raw["tank_hp"]))
+        assert(int(raw["shots"]) == 4)
+        assert(int(boosted["shots"]) == 4)
+        assert(int(boosted["counters"]) == 1)
+        assert(int(raw["counters"]) == 1)
+        if tile == "plain":
+            assert(int(raw["tank_hp"]) == 6)
+            assert(int(boosted["tank_hp"]) == 0 and int(boosted["winner"]) == 0)
+        elif tile == "forest":
+            assert(int(boosted["tank_hp"]) == 2)
+        else:
+            assert(int(boosted["tank_hp"]) == 10)
+        print("FOCUS_FIRE_V23 base=%s boosted=%s" % [str(raw),str(boosted)])
+    print("PASS v23 focus fire: 4 real piercers, one real counterattack per enemy turn, no free ammo")
+
 static func _exclusions() -> void:
     var terrain: Array = _board("plain")
     var shooter: Dictionary = Roles.make_unit("P",0,Vector2i(3,3),"piercer")
@@ -111,6 +169,7 @@ func _initialize() -> void:
     for tile in ["plain","forest","mountain"]:
         _fire(tile)
     _exclusions()
+    _squad()
     _research()
     var control: Dictionary = Tank.duel(0,Vector2i(24,18),0,
         ["pressure","armor"],"level2",8)
