@@ -131,9 +131,24 @@ static func apply(root: Node3D) -> bool:
     root.set_meta(FLAG, true)
     root.set_meta("tarvoka_g13_v31_visual_only", true)
     root.set_meta("tarvoka_g13_v31_new_draw_nodes", 2)
-    root.set_meta("tarvoka_g13_v31_added_triangles", TRIANGLE_COUNT + 48)
+    root.set_meta("tarvoka_g13_v31_added_triangles",
+        TRIANGLE_COUNT + 2 * int(collars_mesh.get_faces().size() / 3))
     root.set_meta("tarvoka_g13_v31_gun_count", 2)
     root.set_meta("tarvoka_g13_v31_missile_count", 0)
     root.set_meta("tarvoka_g13_v31_stationary_parent", TURRET)
     root.set_meta("tarvoka_g13_v31_pitch_parent", PITCH)
+    return true
+
+# Same 3D scene/camera/faction: hide only the two V31 sculpt nodes to
+# inspect the previous V30 hardware without constructing duplicate models.
+static func set_detail_visible(root: Node3D, visible_now: bool) -> bool:
+    if root == null or not bool(root.get_meta(FLAG, false)):
+        return false
+    var fixed := root.find_child(BEARINGS, true, false) as MultiMeshInstance3D
+    var moving := root.find_child(CHEEKS, true, false) as MeshInstance3D
+    if fixed == null or moving == null:
+        return false
+    fixed.visible = visible_now
+    moving.visible = visible_now
+    root.set_meta("tarvoka_g13_v31_comparison_v30", not visible_now)
     return true
