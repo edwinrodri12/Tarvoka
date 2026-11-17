@@ -79,6 +79,16 @@ func _initialize() -> void:
     assert(not foot.has(Vector2i(2, 0)), "Foot movement must not inherit the motorized road discount")
     assert(road_terrain == road_snapshot and road_allies == [Vector2i(1, 0)]
         and road_enemies == [Vector2i(0, 1)], "Road routing must preserve all inputs")
+    # An enemy on a discounted road tile must block even a motorized unit.
+    # A friendly transit designation cannot override enemy occupancy.
+    var contested_road_enemies: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 0)]
+    var contested_road: Dictionary = rules.reachable(
+        Vector2i(0, 0), 2, road_terrain, contested_road_enemies, "ground", true, road_allies
+    )
+    assert(contested_road.size() == 1 and contested_road.has(Vector2i(0, 0)),
+        "Enemy road occupation must override motorized discount and allied transit")
+    assert(contested_road_enemies == [Vector2i(0, 1), Vector2i(1, 0)],
+        "Contested road routing must preserve enemy occupancy")
     # Allied mountain transit retains the terrain cost and forbids occupied endpoints.
     var mountain_map: Array = terrain.duplicate(true)
     mountain_map[0][1] = "mountain"
