@@ -291,7 +291,7 @@ static func animate_ambient(model: Node3D,seconds: float) -> bool:
         var base_size: Vector3=puff.get_meta("a01_v13_fx_scale") as Vector3
         var phase: float=fposmod(clock*0.43+float(i)*0.21,1.0)
         puff.position=base_pos+Vector3(
-            0.055*sin(clock*0.9+float(i)),phase*0.19,
+            0.055*sin(clock*0.9+float(i)),phase*0.40,
             0.045*sin(clock*0.75+float(i)*1.3))
         puff.scale=base_size*(0.88+phase*0.28)
     for i in range(fire.get_child_count()):
