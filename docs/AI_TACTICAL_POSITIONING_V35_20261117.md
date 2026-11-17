@@ -1,9 +1,11 @@
 # TARVOKA — IA v3.5: movimiento para preparar ataques combinados
 
 **17 noviembre 2026 · Implementación experimental, sin cambiar main ni el APK.**
-**Base:** IA v3.4 de fuego coordinado, cuyo CI de la última revisión estaba aún en cola; también depende de v3.3 (9/9 CI PASS) y v3.2 (8/8 CI PASS).
+**Base:** IA v3.4 de fuego coordinado, con **10/10 trabajos CI satisfactorios** ([run 44157032479](https://github.com/edwinrodri12/Tarvoka/actions/runs/44157032479)); también depende de v3.3 (9/9 CI PASS) y v3.2 (8/8 CI PASS). La v3.5 aprobó **11/11 trabajos** en el corte anterior ([run 44161401834](https://github.com/edwinrodri12/Tarvoka/actions/runs/44161401834)); se añadió prueba nueva de altura y debe verificarse una vez más.
 
 ## Problema que soluciona
+
+**Hallazgo de la primera CI v3.5:** escenario a 10×8: el nivel 9 desplazó el Guardia a **(5,3)**, después ejecutó **dos disparos reales** hasta eliminar al enemigo sin alterar créditos. Con bosque en (5,3), el tiro desde el flanco infligió **6 daños** y fue el destino elegido. Prueba de captura, artillería, niebla y 24×18/40×30 también aprobada; el planificador analizó **5 posiciones** en ambos mapas ampliados bajo el escenario controlado. Estas son verificaciones de escenarios, no conclusiones sobre tasa global de victoria. Además se agregó una prueba de **SPG subiendo a montaña para completar un remate combinado sobre un tanque de 9 HP** (CI más reciente pendiente).
 
 Antes de v3.5, la IA `BasicAI` podía atacar sola, buscar una casilla que permitiera un remate individual, hacer ataques combinados si dos o tres tiradores **ya** estaban a alcance y mantener misiones de captura/escolta. Sin embargo, no era capaz de **recolocar un soldado para habilitar un ataque combinado** antes de gastar sus ataques en daños dispersos.
 
