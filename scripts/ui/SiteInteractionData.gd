@@ -84,6 +84,7 @@ static func describe(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
         "valid":true,"pos":cell,"kind":site_kind,
         "title":str(names.get(site_kind,"Instalación")),
         "owner":owner, "owner_known":bool(marker.get("owner_known",false)),
+        "friendly":owner == viewer,
         "detail":detail,"income":int(marker.get("income",0)),
         "status":str(marker.get("status","unknown")),
         "capture_pending":bool(marker.get("capture_pending",false)),
