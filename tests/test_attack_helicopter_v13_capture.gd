@@ -119,12 +119,14 @@ func _run() -> void:
     cam.look_at(model.to_global(Vector3(0,0.58,0.42)),Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_07b_fragmentos_rotor_macro.png"))
     # Close-up of fracture, buckled armour and fixed motor carbonization.
-    cam.position=Vector3(2.65,2.55,-2.85)
-    cam.look_at(model.to_global(Vector3(0.03,1.56,-0.78)),Vector3.UP)
+    var canopy_target: Vector3=model.to_global(Vector3(0.03,1.56,-0.78))
+    cam.position=canopy_target+Vector3(1.45,0.80,-1.65)
+    cam.look_at(canopy_target,Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_07c_cabina_astillada.png"))
     # The full V3 protective hoop is gone; only torn segments should remain.
-    cam.position=Vector3(2.58,2.55,3.48)
-    cam.look_at(model.to_global(Vector3(0.285,1.38,2.62)),Vector3.UP)
+    var tail_target: Vector3=model.to_global(Vector3(0.285,1.38,2.62))
+    cam.position=tail_target+Vector3(1.40,0.85,1.35)
+    cam.look_at(tail_target,Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_07d_aro_cola_roto.png"))
     Damage.restore(model)
     _check(Damage.set_stage(model,0),"repair")
