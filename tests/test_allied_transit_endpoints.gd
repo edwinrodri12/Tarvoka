@@ -207,5 +207,28 @@ func _initialize() -> void:
     assert(large_map == large_snapshot and corner_allies == [Vector2i(1, 0)]
         and corner_enemies == [Vector2i(0, 1)],
         "Mirrored edge transit must preserve caller-owned collections")
+    # Large-map motorized road corridor: discounted travel must still honor
+    # allied endpoint exclusion and enemy blockage at the far boundary.
+    var edge_road_map: Array = large_map.duplicate(true)
+    edge_road_map[17][22] = "road"
+    edge_road_map[17][23] = "road"
+    var edge_road_before: Array = edge_road_map.duplicate(true)
+    var edge_road_allies: Array[Vector2i] = [Vector2i(22, 17)]
+    var edge_road_enemies: Array[Vector2i] = [Vector2i(21, 16)]
+    var edge_vehicle: Dictionary = rules.reachable(
+        Vector2i(21, 17), 1, edge_road_map, edge_road_enemies, "ground", true, edge_road_allies
+    )
+    assert(not edge_vehicle.has(Vector2i(22, 17)),
+        "Large-map road ally must never be a selectable endpoint")
+    assert(edge_vehicle.get(Vector2i(23, 17), -1) == 1,
+        "Large-map vehicle must pay two discounted road entries")
+    var edge_foot: Dictionary = rules.reachable(
+        Vector2i(21, 17), 1, edge_road_map, edge_road_enemies, "ground", false, edge_road_allies
+    )
+    assert(not edge_foot.has(Vector2i(23, 17)),
+        "Large-map foot movement cannot inherit vehicle road discount")
+    assert(edge_road_map == edge_road_before and edge_road_allies == [Vector2i(22, 17)]
+        and edge_road_enemies == [Vector2i(21, 16)],
+        "Large-map road transit must not mutate inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
