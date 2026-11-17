@@ -565,7 +565,7 @@ func _install_heli_controls() -> void:
     _heli_v8_button=_button(heli_controls,"Comparar identidad V7 / V8",_heli_toggle_v8)
     _heli_v7_button=_button(heli_controls,"Comparar legibilidad V6 / V7",_heli_toggle_v7)
     _heli_compare_button=_button(heli_controls,"Comparar casco anterior V1",_heli_toggle_v2)
-    _button(heli_controls,"Detener y restaurar hélices",_heli_stop)
+    _button(heli_controls,"Detener (para reparar: botón V13)",_heli_stop)
     _title(heli_controls,
         "V12: blindaje frontal cerrado, óptica y montura móvil del cañón; "
         + "conserva V10/V11 y animaciones del original. V13 agrega 4 daños y destrucción 3D.",12)
