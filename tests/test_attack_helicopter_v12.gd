@@ -14,6 +14,58 @@ func _check(ok: bool,description: String) -> void:
         failures+=1
         push_error("A01 V12: "+description)
 
+# All coordinates are compared in the MODEL'S original local space.
+# This avoids false positives from scene camera angles or faction transforms.
+func _model_bounds(model: Node3D,part: MeshInstance3D) -> AABB:
+    var to_model: Transform3D=model.global_transform.affine_inverse()*part.global_transform
+    return to_model*part.get_aabb()
+
+func _minimum_box_gap(a: AABB,b: AABB) -> float:
+    var gap_x: float=maxf(0.0,maxf(b.position.x-a.end.x,a.position.x-b.end.x))
+    var gap_y: float=maxf(0.0,maxf(b.position.y-a.end.y,a.position.y-b.end.y))
+    var gap_z: float=maxf(0.0,maxf(b.position.z-a.end.z,a.position.z-b.end.z))
+    return Vector3(gap_x,gap_y,gap_z).length()
+
+func _verify_underbody(model: Node3D,label: String) -> void:
+    # Skid nose rails are at x~+/-0.65, while the gimbal is centered at x=0.
+    # Test COMPLETE transformed mesh bounds (not only arbitrary node origins).
+    for side in [-1,1]:
+        var skid: MeshInstance3D=model.find_child(
+            "A01V5_PatinTubularCurvado_%d" % side,true,false) as MeshInstance3D
+        var upper: MeshInstance3D=model.find_child(
+            "A01V12_PilarCunaSuperior_%d" % side,true,false) as MeshInstance3D
+        var forward: MeshInstance3D=model.find_child(
+            "A01V12_PilarCunaDelantero_%d" % side,true,false) as MeshInstance3D
+        var guide: MeshInstance3D=model.find_child(
+            "A01V12_GuiaMovilCanon_%d" % side,true,false) as MeshInstance3D
+        _check(skid!=null and upper!=null and forward!=null and guide!=null,
+            "underbody native meshes present: side=%d, pose=%s" % [side,label])
+        if skid==null or upper==null or forward==null or guide==null:
+            continue
+        var a: AABB=_model_bounds(model,skid)
+        for piece in [upper,forward,guide]:
+            var gap: float=_minimum_box_gap(a,_model_bounds(model,piece))
+            _check(gap>=0.035,
+                "physical skid-vs-cradle clearance >=0.035 units: %s %d/%s gap=%.4f" %
+                [label,side,piece.name,gap])
+    var skids_left: MeshInstance3D=model.find_child(
+        "A01V5_PatinTubularCurvado_-1",true,false) as MeshInstance3D
+    var skids_right: MeshInstance3D=model.find_child(
+        "A01V5_PatinTubularCurvado_1",true,false) as MeshInstance3D
+    var gimbal: MeshInstance3D=model.find_child(
+        V12.GIMBAL,true,false) as MeshInstance3D
+    var bridge: MeshInstance3D=model.find_child(
+        "A01V12_PuenteTransversalCuna",true,false) as MeshInstance3D
+    if gimbal!=null and bridge!=null:
+        _check(_minimum_box_gap(_model_bounds(model,gimbal),
+                _model_bounds(model,bridge))>=0.020,
+            "fixed bridge clears original animated gimbal: "+label)
+    if gimbal!=null and skids_left!=null and skids_right!=null:
+        for skid in [skids_left,skids_right]:
+            _check(_minimum_box_gap(_model_bounds(model,gimbal),
+                    _model_bounds(model,skid))>=0.12,
+                "both skids stay clear of central cannon during "+label)
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -86,12 +138,14 @@ func _run() -> void:
             "V11 comparison hides only V12 parts, preserving previous model")
         _check(V12.set_enabled(model,true) and nose.visible
             and moving.visible,"V12 comparison restores the exact parts")
+        _verify_underbody(model,"reposo")
         _check(Models.pose_model("attack_heli",model,"attack",0.36),
             "original A01 gun still pitches and fires in attack animation")
         _check(absf(gun.rotation_degrees.x)>0.2 and moving.get_parent()==gun,
             "V12 cannon cover rotates with actual animated gun")
         _check(guide!=null and guide.global_position.distance_to(guide_rest)>0.005,
             "V12.1 guide rail physically follows pitched gun, not static fuselage")
+        _verify_underbody(model,"disparo")
         Models.restore_model_pose("attack_heli",model)
         _check(Models.pose_model("attack_heli",model,"move",0.52),
             "original A01 aerial movement remains intact")
