@@ -63,8 +63,12 @@ func _run() -> void:
     assert(main.board.state == baseline)
     button.button_up.emit()
     assert(main._touch_feedback_tweens.has(button))
-    await create_timer(0.20).timeout
-    assert(button.self_modulate == Color.WHITE)
+    # The visual tween lasts 100ms but software GPU / CI may only
+    # deliver the first idle animation frame after a timer callback.
+    # Allow additional render frames before comparing exact end color.
+    await create_timer(0.35).timeout
+    await process_frame
+    assert(button.self_modulate.is_equal_approx(Color.WHITE))
     assert(main.battle_hud_compact)
     assert(main.board.state == baseline)
 

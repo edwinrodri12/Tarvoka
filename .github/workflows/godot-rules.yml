@@ -146,6 +146,9 @@ jobs:
           set -euo pipefail
           # Rules CI runs CLI scripts without an editor import. PNGs must first
           # be imported just as Android and the dedicated GPU test do.
+          # The unified browser Studio is assembled by Pages, not Android.
+          # Quarantine its orphan adapter ONLY in this ephemeral CI checkout.
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
           timeout --signal=TERM --kill-after=5s 130s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/tarvoka-hq-v15-import.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/tarvoka-hq-v15-import.log; then
             echo 'HQ V15 offline baked sprite import failed'; exit 1

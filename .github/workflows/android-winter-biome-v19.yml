@@ -34,6 +34,11 @@ jobs:
           curl -fsSL --retry 3 "$base/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/tarvoka-godot.zip
           unzip -q /tmp/tarvoka-godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          # Shared 3D Studio scripts are assembled by the Pages publisher.
+          # Do not try to import its unresolved browser-only adapter into
+          # the standalone Android game. This cleanup touches ONLY the
+          # ephemeral Actions checkout (not repository sources).
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
           timeout --signal=TERM --kill-after=5s 110s /tmp/Godot_v4.3-stable_linux.x86_64 \
             --headless --editor --path . --import --quit 2>&1 | tee /tmp/winter-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/winter-import.log; then

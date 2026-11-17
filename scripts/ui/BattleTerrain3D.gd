@@ -12,6 +12,8 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
+const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
+const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
@@ -466,10 +468,15 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     var sites: Array = []
     var economy: Dictionary = state.get("economy",{})
     for site in economy.get("sites",[]):
-        sites.append({"kind":str(site["kind"]),"pos":site["pos"],
+        var visual_site: Dictionary={
+            "kind":str(site["kind"]),"pos":site["pos"],
             "owner":int(site.get("owner",-1)),
-            "visual_level":int(site.get("visual_level",1)),
-            "visual_damage_stage":int(site.get("visual_damage_stage",0))})
+            "visual_damage_stage":int(site.get("visual_damage_stage",0))}
+        # Only preserve a VISUALLY EXPLICIT tier. A synthetic default
+        # must not disable deterministic map-size city silhouettes.
+        if site.has("visual_level"):
+            visual_site["visual_level"]=int(site["visual_level"])
+        sites.append(visual_site)
     var control: Dictionary = state.get("control",{})
     for objective in control.get("nodes",[]):
         sites.append({"kind":"relay","pos":objective["pos"],
@@ -485,6 +492,21 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var visible: bool = bool(known.get("visible",false))
         # Ownership cannot leak through fog; unknown allegiance is neutral.
         var owner: int = int(site["owner"]) if visible else -1
+        # Real civil V4 district, identical to the shared Art Studio.
+        # CELL_MODEL_SCALE confines all geometry to one 2.4 m board tile.
+        # An explored-but-not-visible city must not reveal its new owner.
+        if str(site["kind"])=="city":
+            var city: Node3D=CivilianCity.build_site(state,site,owner,2)
+            if city!=null:
+                city.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
+                city.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                city.set_meta("owner_public",owner)
+                city.set_meta("kind","city")
+                city.set_meta("battle_cell",cell)
+                parent.add_child(city)
+                drawn+=1
+                continue
         # The approved Infantry Barracks V11 replaces the generic cube
         # for the pre-existing factory site in actual playable 3D battles.
         # FOW still hides unexplored cells and unknown ownership.
@@ -639,6 +661,21 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
+    # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
+    # public viewer are registered. Model roots and selection cells persist.
+    var city_lod: Node=CityDistance.new()
+    city_lod.name="CiudadesCivilesV6_LOD_Camara"
+    var city_count: int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta("site_kind",""))=="city":
+            city_lod.register(placed as Node3D)
+            city_count+=1
+    if city_count>0:
+        scene.add_child(city_lod)
+    else:
+        city_lod.free()
+    counters["city_lod_models"]=city_count
+    counters["city_dynamic_lod"]=city_count>0
     # Camera-based LOD runs at 4 Hz AFTER the scene enters the viewport.
     # Headless battle/test scenes without a camera keep their stable V8 mesh.
     if int(counters["units"].get("apc_lod",0))>0:

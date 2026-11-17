@@ -140,7 +140,8 @@ func _run() -> void:
     assert(viewer.preview.render_target_update_mode==SubViewport.UPDATE_DISABLED)
     assert(board.state==original)
     main._set_compact_hud(true)
-    assert(main.compact_3d.is_visible_in_tree())
+    # The legacy compact toolbar is hidden; use the actual immersive HUD.
+    assert(main.immersive_battle_hud.battle_3d_button.is_visible_in_tree())
     main._open_battle_3d()
     assert(viewer.visible)
     viewer.close_view()
