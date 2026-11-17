@@ -172,13 +172,13 @@ static func apply(root: Node3D) -> bool:
     if high_detail and rear_door == null:
         return false
     var y: float = 1.044 if high_detail else 0.759
-    var z: float = 1.311 if high_detail else 1.284
+    var z: float = 1.311 if high_detail else 1.267
     var panel := _panel_mesh()
     var pipe := _exhaust_tube()
     if panel == null or pipe == null or panel.get_surface_count() != 1 or (
             pipe.get_surface_count() != 1):
         return false
-    if panel.get_faces().size() != 44 * 3 or (
+    if panel.get_faces().size() != 28 * 3 or (
             pipe.get_faces().size() != (SEGMENTS * 8 * 3)):
         return false
 
