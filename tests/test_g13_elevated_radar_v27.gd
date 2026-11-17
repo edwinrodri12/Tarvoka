@@ -5,6 +5,7 @@ extends SceneTree
 # This is NOT an Android-device FPS benchmark or a gameplay integration.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
+const DeckV28=preload("res://scripts/ui/G13RadarDeckMountV28.gd")
 const ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const IntakeV24=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
@@ -108,6 +109,8 @@ func _run()->void:
         verify(model!=null,"LOD8 exists for faction "+str(faction))
         if model==null:
             continue
+        verify(DeckV28.show_v27_reference(model,true),
+            "V27 historical test restores native tall cylinder before inspection")
         verify(bool(model.get_meta(RadarV27.FLAG,false)) and
             bool(model.get_meta(ArmorV26.FLAG,false)),
             "V26 polygon armor and V27 real radar coexist")
@@ -195,6 +198,8 @@ func _run()->void:
     if hero==null:
         quit(1)
         return
+    verify(DeckV28.show_v27_reference(hero,true),
+        "historical V26/V27 images must not include later V28 deck foot")
     vp.add_child(hero)
     for level in ["close","medium","far"]:
         var scale:float=({"close":4.6,"medium":8.0,"far":14.0})[level]

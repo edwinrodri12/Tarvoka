@@ -36,6 +36,7 @@ const G13IntakeV24 = preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const G13TacticalV25 = preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26 = preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27 = preload("res://scripts/ui/G13ElevatedRadarV27.gd")
+const G13DeckV28 = preload("res://scripts/ui/G13RadarDeckMountV28.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -999,6 +1000,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V26 faceted LOD8 armor failed to apply")
                 if not G13RadarV27.apply(model):
                     push_warning("G13 V27 tactical search radar sculpture failed to apply")
+                if not G13DeckV28.apply(model):
+                    push_warning("G13 V28 physical radar deck support failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
