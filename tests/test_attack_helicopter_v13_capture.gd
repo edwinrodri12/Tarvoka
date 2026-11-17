@@ -79,6 +79,10 @@ func _run() -> void:
     _check(Damage.set_stage(model,1),"stage 1")
     _check(Damage.pose(model,"hit_bullet",0.34),"bullet impact")
     await _save(vp,folder.path_join("a01_v13_01_bala_chispas.png"))
+    # Inspect physically expanding shock ring, not just the whole helicopter.
+    cam.position=Vector3(-2.60,2.15,-1.72)
+    cam.look_at(model.to_global(Vector3(-0.54,1.18,-0.28)),Vector3.UP)
+    await _save(vp,folder.path_join("a01_v13_01b_onda_impacto_macro.png"))
     Damage.restore(model)
     _check(Damage.set_stage(model,2),"stage 2")
     cam.position=Vector3(4.35,3.22,1.4)
@@ -101,15 +105,20 @@ func _run() -> void:
     await _save(vp,folder.path_join("a01_v13_06_caida_45.png"))
     _check(Damage.pose(model,"destroy",0.94),"final wreck")
     await _save(vp,folder.path_join("a01_v13_07_caida_94.png"))
+    # Macro after the original rotor has disappeared and the irregular,
+    # closed solid fragments have reached the ground.
+    cam.position=Vector3(2.40,2.55,2.65)
+    cam.look_at(model.to_global(Vector3(0,0.58,0.42)),Vector3.UP)
+    await _save(vp,folder.path_join("a01_v13_07b_fragmentos_rotor_macro.png"))
     Damage.restore(model)
     _check(Damage.set_stage(model,0),"repair")
     cam.position=Vector3(4.15,3.10,-5.30)
     cam.look_at(model.to_global(Vector3(0,1.18,0.24)),Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_08_reparado.png"))
-    _check(images==11,"eleven native damage, animated plume/fire, impact, crash and repair screenshots")
+    _check(images==13,"thirteen real native damage, animated plume/fire, impact shock, broken rotors, crash and repair screenshots")
     if failures>0:
         push_error("A01 V13 CAPTURE: %d failures" % failures)
         quit(1)
         return
-    print("PASS A01 V13 CAPTURE: 11 real Godot renders showing progressive damage, animated smoke/fire, bullet, explosion, crash and repair")
+    print("PASS A01 V13 CAPTURE: 13 real Godot renders showing progressive damage, animated smoke/fire, radial shock, fractured rotor, crash and repair")
     quit(0)
