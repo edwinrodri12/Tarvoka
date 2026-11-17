@@ -13,6 +13,8 @@ var failures:int=0
 var captures:int=0
 var differences:Dictionary={}
 var old_triangle_count:int=0
+var min_armor_clearance_before:float=10.0
+var min_armor_clearance_after:float=10.0
 
 func verify(ok:bool,message:String)->void:
     if not ok:
@@ -64,6 +66,41 @@ func pose_cam(camera:Camera3D,where:Vector3,look:Vector3,
     camera.position=where
     camera.size=size
     camera.look_at(look,Vector3.UP)
+
+func armor_clearance_at_heading(root:Node3D,heading:float,
+        foot_radius:float)->float:
+    var turret:=root.find_child(G13.TURRET,true,false) as Node3D
+    var radar:=root.find_child(G13.RADAR,true,false) as Node3D
+    if turret==null or radar==null:
+        return -1000.0
+    # Rotate the actual radar axis into turret-local space. Compare its
+    # radial envelope against the true original ring cylinder and every
+    # static turret armor/optic mesh's 2D AABB, at each yaw angle.
+    var radar_local:Vector3=Basis(
+        Vector3.UP,-deg_to_rad(heading))*(
+            radar.position-turret.position)
+    var smallest:float=100.0
+    for child in turret.get_children():
+        if not child is MeshInstance3D:
+            continue
+        var piece:=child as MeshInstance3D
+        if piece.mesh==null:
+            return -1000.0
+        var relative:Vector3=piece.transform.affine_inverse()*radar_local
+        var gap:float=0.0
+        if piece.mesh is CylinderMesh:
+            var round_mesh:=piece.mesh as CylinderMesh
+            gap=Vector2(relative.x,relative.z).length()-maxf(
+                round_mesh.top_radius,round_mesh.bottom_radius)
+        else:
+            var bounds:AABB=piece.mesh.get_aabb()
+            var dx:float=relative.x-clampf(
+                relative.x,bounds.position.x,bounds.end.x)
+            var dz:float=relative.z-clampf(
+                relative.z,bounds.position.z,bounds.end.z)
+            gap=Vector2(dx,dz).length()
+        smallest=minf(smallest,gap)
+    return smallest-foot_radius
 
 func _initialize()->void:
     call_deferred("_run")
@@ -128,22 +165,42 @@ func _run()->void:
             verify(absf(actual_deck-expected_bottom-
                 Deck.FOOT_DECK_PENETRATION)<0.003,
                 "the former floating base penetrates physical deck by 25mm")
-            verify(Deck.PROFILE[0].y<=0.148 and
+            verify(Deck.PROFILE[0].y<=0.130 and
                 cover.position.z+(
                 cover.mesh as BoxMesh).size.z*0.5>=
-                radar.position.z+Deck.PROFILE[0].y-0.002,
-                "mast foot stays within rear cover, no side overhang")
+                radar.position.z+Deck.PROFILE[0].y-0.002 and
+                is_equal_approx((cover.mesh as BoxMesh).size.z,
+                    Deck.COVER_DEPTH) and
+                is_equal_approx(radar.position.z,Deck.RADAR_DECK_Z),
+                "mast foot remains on the longer original rear deck")
+            var min_sweep:float=100.0
+            for yaw in range(0,360,5):
+                min_sweep=minf(min_sweep,armor_clearance_at_heading(
+                    model,float(yaw),Deck.PROFILE[0].y))
+            min_armor_clearance_after=minf(
+                min_armor_clearance_after,min_sweep)
+            verify(min_sweep>Deck.MIN_TURRET_CLEARANCE,
+                "360-degree original housing and optic never touch mast foot")
         var original_draws:int=geometry_nodes(model)
         verify(not Deck.apply(model),"V28 geometry is idempotent")
         verify(Deck.show_v27_reference(model,true),
-            "older cylindrical mast can be compared without new scene")
+            "older mast and earlier deck coordinates are restorable")
+        verify(is_equal_approx(radar.position.z,0.89) and
+            is_equal_approx((cover.mesh as BoxMesh).size.z,0.67),
+            "V27 comparison genuinely restores old deck and radar location")
+        for yaw in range(0,360,5):
+            min_armor_clearance_before=minf(
+                min_armor_clearance_before,armor_clearance_at_heading(
+                    model,float(yaw),0.107))
         if mast!=null:
             verify(mast.mesh is CylinderMesh and is_equal_approx(
                 (mast.mesh as CylinderMesh).height,0.70),
                 "V27 original height and topology truly restored")
             old_triangle_count=mast.mesh.get_faces().size()/3
         verify(Deck.show_v27_reference(model,false),
-            "V28 solid foot restored by a mesh swap")
+            "V28 solid foot and rear-deck placement restored by mesh swap")
+        verify(is_equal_approx(radar.position.z,Deck.RADAR_DECK_Z),
+            "V28 radar yaw pivot restored to rear-most safe position")
         for mode in ["idle","scan","move","aim_air","attack_air",
                 "aim_ground","attack_ground"]:
             verify(Models.pose_model("aa_mobile",model,mode,0.45),
@@ -172,6 +229,10 @@ func _run()->void:
         view.remove_child(model)
         model.free()
     verify(colors.size()==8,"eight distinct original faction paints")
+    verify(min_armor_clearance_before<0.0,
+        "V27 original mast crossed turret armor clearance envelope")
+    verify(min_armor_clearance_after>Deck.MIN_TURRET_CLEARANCE,
+        "V28 provides a minimum 25mm armor clearance across full yaw")
 
     var sample:=Models.build("aa_mobile",0,true,8)
     verify(sample!=null,"native 360 model")
@@ -244,6 +305,11 @@ func _run()->void:
         "mast_triangles_v27":old_triangle_count,
         "mast_triangles_v28":Deck.TRIANGLES,
         "radar_deck_overlap_m":Deck.FOOT_DECK_PENETRATION,
+        "turret_armor_min_clearance_v27_m":min_armor_clearance_before,
+        "turret_armor_min_clearance_v28_m":min_armor_clearance_after,
+        "turret_sweep_step_degrees":5,
+        "deck_depth_v28_m":Deck.COVER_DEPTH,
+        "radar_rear_offset_z_m":Deck.RADAR_DECK_Z,
         "360_same_camera_differences":differences,
         "two_guns_no_missiles":true,
         "android_device_fps_measured":false,
