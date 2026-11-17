@@ -426,6 +426,33 @@ func _run()->void:
     check(SidesV21.show_legacy_cheeks(hero,false),
         "show true V21 beveled 3D sculpt again")
     await capture(viewport,dest,"g13_v21_v21_sculpted_side_final.png")
+    # The first V21 capture changed only 213 full-resolution pixels:
+    # V2 cheeks were mostly occluded. Require an actually visible
+    # side silhouette change now that the forged lower armor protrudes.
+    var previous:Image=Image.load_from_file(
+        dest.path_join("g13_v21_v20_boxy_side_reference.png"))
+    var improved:Image=Image.load_from_file(
+        dest.path_join("g13_v21_v21_sculpted_side_final.png"))
+    check(previous!=null and improved!=null and
+        previous.get_size()==improved.get_size(),
+        "compare authentic native same-camera 3D frames")
+    if previous!=null and improved!=null and (
+            previous.get_size()==improved.get_size()):
+        var changed_samples:int=0
+        for py in range(0,previous.get_height(),2):
+            for px in range(0,previous.get_width(),2):
+                var old_color:Color=previous.get_pixel(px,py)
+                var new_color:Color=improved.get_pixel(px,py)
+                var color_delta:float=(
+                    absf(old_color.r-new_color.r)+
+                    absf(old_color.g-new_color.g)+
+                    absf(old_color.b-new_color.b))
+                if color_delta>0.09:
+                    changed_samples+=1
+        print("G13 V21 ACTUAL SIDE GEOMETRY CHANGED SAMPLES = ",
+            changed_samples)
+        check(changed_samples>=110,
+            "faceted side armor must actually appear in render, not be buried")
     check(saved==TOTAL,
         "56 real PNG frames: eight factions, 7 directions, guns, joint, radar, day/night, V15 legacy vs V16 instancing")
     if failed>0:
