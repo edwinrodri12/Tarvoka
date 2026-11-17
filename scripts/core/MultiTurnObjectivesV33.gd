@@ -31,16 +31,20 @@ static func _manhattan(a: Vector2i, b: Vector2i) -> int:
     return abs(a.x-b.x)+abs(a.y-b.y)
 
 static func _route_cost(knowledge: Dictionary, unit: Dictionary,
-        target: Vector2i) -> int:
+        target: Vector2i, cache: Dictionary) -> int:
     var terrain: Array = knowledge.get("terrain",[])
     if not Rules.inside(target,terrain):
         return 999999
-    var size: Vector2i = Rules.map_size(terrain)
-    var distances: Dictionary = Rules.reachable(unit["pos"],
-        size.x*size.y*4,terrain,[],Domains.domain(unit),
-        Logistics.road_fast(unit),[],
-        Weather.from_state(knowledge),Weather.traction(unit))
-    return int(distances.get(target,999999))
+    var id: String = str(unit["id"])
+    if not cache.has(id):
+        # One weighted Dijkstra per assigned ally, NOT per city. The
+        # 40x30 Android map could have many contested objectives.
+        var size: Vector2i = Rules.map_size(terrain)
+        cache[id] = Rules.reachable(unit["pos"],
+            size.x*size.y*4,terrain,[],Domains.domain(unit),
+            Logistics.road_fast(unit),[],
+            Weather.from_state(knowledge),Weather.traction(unit))
+    return int(cache[id].get(target,999999))
 
 static func _known_objectives(knowledge: Dictionary, side: int) -> Array:
     var out: Array = []
@@ -128,6 +132,7 @@ static func refresh(knowledge: Dictionary, side: int,
     var own: Array = _alive_allies(knowledge,side)
     var candidates: Array = _known_objectives(knowledge,side)
     var chosen: Dictionary = {}
+    var route_cache: Dictionary = {} # bounded by current friendly units
     var assigned_ids: Dictionary = {}
     var tasks: Array = []
     var capturers: Array = []
@@ -160,7 +165,7 @@ static func refresh(knowledge: Dictionary, side: int,
             var cell: Vector2i = site["pos"]
             if chosen.has(cell):
                 continue
-            var cost: int = _route_cost(knowledge,u,cell)
+            var cost: int = _route_cost(knowledge,u,cell,route_cache)
             if cost >= 999999:
                 continue
             var score: int = (1400 if str(site["kind"]) == "city" else 850) - cost*20
@@ -210,7 +215,7 @@ static func refresh(knowledge: Dictionary, side: int,
         if _target_count(tasks) >= MAX_TARGETS and \
                 not chosen.has(target["pos"]):
             continue
-        var cost: int = _route_cost(knowledge,u,target["pos"])
+        var cost: int = _route_cost(knowledge,u,target["pos"],route_cache)
         if cost >= 999999:
             continue
         tasks.append(_goal(u,task,target))
