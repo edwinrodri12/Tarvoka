@@ -10,12 +10,12 @@ const Under=preload("res://scripts/ui/G13UnderbodyAuditV22.gd")
 const Sides=preload("res://scripts/ui/G13SideArmorV21.gd")
 const Joint=preload("res://scripts/ui/G13GunTrunnionV19.gd")
 
-const DIRECTIONS:Array[Vector2i]=[
+const DIRECTIONS = [
     Vector2i(0,-1),Vector2i(1,-1),Vector2i(1,0),
     Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),
     Vector2i(-1,0),Vector2i(-1,-1)
 ]
-const POSES:Array[String]=[
+const POSES = [
     "idle","move","scan","aim_air",
     "attack_air","aim_ground","attack_ground"
 ]
