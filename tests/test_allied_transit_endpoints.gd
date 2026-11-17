@@ -162,5 +162,19 @@ func _initialize() -> void:
     assert(large_map == large_snapshot and large_allies == [Vector2i(22, 17)]
         and large_blocked == [Vector2i(21, 16)],
         "Large-map transit must preserve input collections")
+    # A legal allied corridor must not allow passing through an enemy at its exit.
+    # This also exercises the bottom-right corner without relying on 10x8 bounds.
+    var edge_enemies: Array[Vector2i] = [Vector2i(23, 17), Vector2i(21, 16)]
+    var edge_sealed: Dictionary = rules.reachable(
+        Vector2i(21, 17), 4, large_map, edge_enemies, "ground", false, large_allies
+    )
+    assert(not edge_sealed.has(Vector2i(22, 17)),
+        "Friendly transit cell remains occupied at the map edge")
+    assert(not edge_sealed.has(Vector2i(23, 17)),
+        "Enemy at last column blocks endpoint despite allied transit")
+    assert(not edge_sealed.has(Vector2i(24, 17)) and not edge_sealed.has(Vector2i(23, 18)),
+        "Enemy blockade must not produce out-of-bounds destinations")
+    assert(edge_enemies == [Vector2i(23, 17), Vector2i(21, 16)] and large_map == large_snapshot,
+        "Edge enemy blockade must not mutate caller inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
