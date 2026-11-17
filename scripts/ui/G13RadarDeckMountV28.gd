@@ -3,7 +3,7 @@ class_name TarvokaG13RadarDeckMountV28
 
 # G13 V28: correct the floating rear radar support in the mobile 3D LOD8.
 # Sculpt the EXISTING mast node into a closed, 12-sided stepped armored foot,
-# joining it to the top of the rear engine deck. No new render nodes, lights,
+# joining it to the top of the rear engine deck. Position the mast aft\n# of the turret armor sweep, using a longer existing engine cover. No lights,
 # missiles, collider, attack stats or gameplay commands. Approved LOD13 stays.
 const FLAG:="tarvoka_g13_v28_radar_deck_mounted"
 const SOURCE:="tarvoka_g13_v28_original_and_deck_meshes"
@@ -11,10 +11,13 @@ const MAST:="G13_RadarMast"
 const COVER:="G13_EngineCover"
 const PIVOT:="G13_RadarAzimut"
 const SEGMENTS:=12
+const RADAR_DECK_Z:=1.135
+const COVER_DEPTH:=1.15
+const MIN_TURRET_CLEARANCE:=0.025
 const TRIANGLES:=96
 const PROFILE:Array[Vector2]=[
-    Vector2(-0.640,0.145),
-    Vector2(-0.520,0.145),
+    Vector2(-0.640,0.125),
+    Vector2(-0.520,0.125),
     Vector2(-0.465,0.108),
     Vector2(0.350,0.086)
 ]
@@ -78,31 +81,74 @@ static func apply(root:Node3D)->bool:
     if not is_equal_approx(current.height,0.70) or (
             not is_equal_approx(current.top_radius,0.086)) or (
             not mast.position.is_equal_approx(Vector3(0,0.375,0))) or (
-            not cover.position.is_equal_approx(Vector3(0,1.03,0.70))):
+            not cover.position.is_equal_approx(Vector3(0,1.03,0.70))) or (
+            not radar.position.is_equal_approx(Vector3(0,1.36,0.89))) or (
+            not is_equal_approx((cover.mesh as BoxMesh).size.z,0.67)):
+        return false
+    # Sweep-independent radius bound for the low-poly turret shell and
+    # its original targeting optic (the two gun barrels are evaluated
+    # separately). At all turret headings, each armor corner lies inside
+    # this circle around the yaw axis.
+    var turret:=root.find_child("G13_TorretaAzimut",true,false) as Node3D
+    if turret==null:
+        return false
+    var armor_radius:float=0.0
+    for child in turret.get_children():
+        if not child is MeshInstance3D:
+            continue
+        var part:=child as MeshInstance3D
+        if part.mesh==null:
+            return false
+        var bounds:AABB=part.mesh.get_aabb()
+        for xx in [bounds.position.x,bounds.end.x]:
+            for zz in [bounds.position.z,bounds.end.z]:
+                var corner:Vector3=part.transform*Vector3(xx,0,zz)
+                armor_radius=maxf(armor_radius,Vector2(corner.x,corner.z).length())
+    var proposed_distance:float=RADAR_DECK_Z-turret.position.z
+    var margin:float=proposed_distance-armor_radius-PROFILE[0].y
+    if margin<MIN_TURRET_CLEARANCE:
+        return false
+    # One shared BoxMesh keeps the foot inside the physical rear deck:
+    # extend its depth, not the number of meshes or render objects.
+    var extended_cover:BoxMesh=(cover.mesh as BoxMesh).duplicate(true)
+    extended_cover.size.z=COVER_DEPTH
+    if cover.position.z+COVER_DEPTH*0.5<RADAR_DECK_Z+PROFILE[0].y:
         return false
 
-    # Radar pivot lies at (0,1.36,0.89) on the same G13 root as the
+    # Radar pivot is offset to the rear (z=1.135), leaving space for the
+    # rotating turret housing. The ground-facing base remains centered over
+    # the extended rear deck. Only existing pivot + existing deck are edited.
+    # Radar pivot lies at (0,1.36,z) on the same G13 root as the
     # 1.03m rear cover, 0.18m thick. The 3D foot penetrates the deck
     # 25mm, avoiding the visible air gap of the V27 cylinder base.
     var cover_top:float=cover.position.y+(
         cover.mesh as BoxMesh).size.y*0.5
     var foot_bottom:float=radar.position.y+mast.position.y+PROFILE[0].x
     if absf((cover_top-foot_bottom)-FOOT_DECK_PENETRATION)>0.003 or (
-            absf(radar.position.z-0.89)>0.001) or (
-            PROFILE[0].y>0.148):
+            PROFILE[0].y>0.130):
         return false
     var sculpt:ArrayMesh=_sculpt()
     if sculpt==null or sculpt.get_surface_count()!=1 or (
             sculpt.get_faces().size()!=TRIANGLES*3):
         return false
-    var original:Mesh=mast.mesh
+    var old_mast:Mesh=mast.mesh
+    var old_cover:Mesh=cover.mesh
+    var old_pivot:Vector3=radar.position
     mast.mesh=sculpt
-    root.set_meta(SOURCE,{"old":original,"new":sculpt})
+    cover.mesh=extended_cover
+    radar.position=Vector3(0,radar.position.y,RADAR_DECK_Z)
+    root.set_meta(SOURCE,{
+        "old":{"mast":old_mast,"cover":old_cover,"radar_pos":old_pivot},
+        "new":{"mast":sculpt,"cover":extended_cover,
+            "radar_pos":radar.position}
+    })
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g13_v28_draw_nodes_added",NEW_MESH_INSTANCES)
     root.set_meta("tarvoka_g13_v28_mast_triangles",TRIANGLES)
     root.set_meta("tarvoka_g13_v28_deck_overlap_m",
         cover_top-foot_bottom)
+    root.set_meta("tarvoka_g13_v28_armor_clearance_m",margin)
+    root.set_meta("tarvoka_g13_v28_deck_depth_m",COVER_DEPTH)
     root.set_meta("tarvoka_g13_v28_art_only",true)
     return true
 
@@ -110,9 +156,18 @@ static func show_v27_reference(root:Node3D,old:bool)->bool:
     if root==null or not bool(root.get_meta(FLAG,false)):
         return false
     var mast:=root.find_child(MAST,true,false) as MeshInstance3D
+    var cover:=root.find_child(COVER,true,false) as MeshInstance3D
+    var radar:=root.find_child(PIVOT,true,false) as Node3D
     var options:Dictionary=root.get_meta(SOURCE,{})
-    if mast==null or not options.has("old") or not options.has("new"):
+    if mast==null or cover==null or radar==null or (
+            not options.has("old") or not options.has("new")):
         return false
-    mast.mesh=options["old"] if old else options["new"]
+    var resources:Dictionary=options["old"] if old else options["new"]
+    if not resources.has("mast") or not resources.has("cover") or (
+            not resources.has("radar_pos")):
+        return false
+    mast.mesh=resources["mast"]
+    cover.mesh=resources["cover"]
+    radar.position=resources["radar_pos"]
     root.set_meta("tarvoka_g13_v28_reference_v27",old)
     return true
