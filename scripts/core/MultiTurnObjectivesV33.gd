@@ -226,8 +226,9 @@ static func valid(objectives: Dictionary, state: Dictionary) -> bool:
         return false
     var units: Dictionary = {}
     for u in state.get("units",[]):
-        if int(u.get("faction",-1)) == int(objectives["side"]) and \
-                int(u.get("hp",0)) > 0:
+        # A previously assigned soldier may die on the human turn;
+        # the save must remain loadable until the AI replans.
+        if int(u.get("faction",-1)) == int(objectives["side"]):
             units[str(u["id"])] = u
     var used: Dictionary = {}
     var distinct: Dictionary = {}
@@ -242,7 +243,7 @@ static func valid(objectives: Dictionary, state: Dictionary) -> bool:
         var id: String = str(g["unit_id"])
         if id.is_empty() or id.length() > 64 or \
                 not units.has(id) or used.has(id) or \
-                not str(g["task"]) in VALID_TASKS or \
+                not (str(g["task"]) in VALID_TASKS) or \
                 str(g["kind"]) not in Economy.MODERN_PRODUCERS + ["city"]:
             return false
         var cell: Vector2i = _cell(g)
