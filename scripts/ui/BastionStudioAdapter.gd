@@ -1704,13 +1704,15 @@ func _display_role(role: String) -> void:
             HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
             HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
             HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
+            preview.add_child(model_root)
+            model_root.rotation_degrees.y=_yaw
+            # World-anchored wreckage MUST spawn after the recolored helicopter
+            # is inside the real viewport, with its final faction/yaw transform.
+            # Otherwise the launch hub and detached debris get stale globals.
             if HeliV13.has_model(model_root):
                 HeliV13.set_stage(model_root,_heli_damage_stage)
                 if _heli_wreck_frozen and _heli_damage_stage>=4:
-                    # A recolored faction inherits the same final wreck pose.
                     HeliV13.pose(model_root,"destroy",1.0)
-            preview.add_child(model_root)
-            model_root.rotation_degrees.y=_yaw
             _update_camera()
         _heli_animation=""
     if role == "apc" and model_root != null:
