@@ -51,6 +51,7 @@ const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
+const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -102,6 +103,7 @@ var g13_controls: VBoxContainer
 var _g13_preview_lod:int=13
 var _g13_v25_show_original:bool=false
 var _g13_v26_show_previous:bool=false
+var _g13_v27_show_previous:bool=false
 var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g11_animation: String = ""
@@ -161,7 +163,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V26 · blindaje táctico 4×4")
+        role_picker.set_item_text(aa_index,"G13 · AA V27 · radar alto, dos cañones")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 · V10")
@@ -1128,7 +1130,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V26 · BLINDAJE ANGULAR · DOS CAÑONES · SIN MISILES",14)
+        "G13 V27 · RADAR 3D ALTO · DOS CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1150,7 +1152,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V26 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V27 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1162,6 +1164,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v26_compare(false),
         "V26 · Comparar blindaje V25",
         func(): _g13_v26_compare(true))
+    _add_paired(g13_controls,"V27 · Mostrar radar alto 3D",
+        func(): _g13_v27_compare(false),
+        "V27 · Comparar radar V26",
+        func(): _g13_v27_compare(true))
     _add_paired(g13_controls,"V17 · Medir FPS en Android",
         func(): _g13_start_android_test(),
         "V17 · Ver política LOD",
@@ -1180,10 +1186,11 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _g13_preview_lod=art_level
     _g13_v25_show_original=false
     _g13_v26_show_previous=false
+    _g13_v27_show_previous=false
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V26 táctico: blindaje biselado 3D, sin nodos extra. "
+            "G13 V27 táctico: antena alta 3D, dos cañones, sin nodos extra. "
             + "Sin medición FPS física de Android."
             if art_level==8 else
             "G13 V24: escultura completa LOD13 restaurada.")
@@ -1193,17 +1200,27 @@ func _g13_v25_compare(show_v1:bool)->void:
         return
     # The original LOD8 comparison removes BOTH V25 paint/barrel tweaks
     # and V26 faceted shapes while keeping camera, faction and pose fixed.
-    var guns:bool=G13TacticalV25.show_v1_reference(
-        model_root,show_v1)
-    var armor:bool=G13ArmorV26.show_v25_reference(
-        model_root,show_v1)
-    if guns and armor:
+    var guns:bool=false
+    var armor:bool=false
+    var radar:bool=false
+    if show_v1:
+        # Hide newest sculpt FIRST; V25 then restores true V1 dish .295.
+        radar=G13RadarV27.show_v26_reference(model_root,true)
+        armor=G13ArmorV26.show_v25_reference(model_root,true)
+        guns=G13TacticalV25.show_v1_reference(model_root,true)
+    else:
+        # Restore original-to-latest order so V27 keeps its actual .445 dish.
+        guns=G13TacticalV25.show_v1_reference(model_root,false)
+        armor=G13ArmorV26.show_v25_reference(model_root,false)
+        radar=G13RadarV27.show_v26_reference(model_root,false)
+    if guns and armor and radar:
         _g13_v25_show_original=show_v1
         _g13_v26_show_previous=show_v1
+        _g13_v27_show_previous=show_v1
         status_label.text=(
             "G13 LOD8 original: mismas ruedas, cámara y poses."
             if show_v1 else
-            "G13 V26 LOD8: blindaje biselado y dos cañones reforzados.")
+            "G13 V27 LOD8: blindaje biselado, dos cañones y radar alto.")
     else:
         status_label.text="Selecciona primero vista táctica LOD8."
 
@@ -1213,15 +1230,36 @@ func _g13_v26_compare(show_v25:bool)->void:
     # Always compare two complete LOD8 stages with original paint,
     # camera, faction, radar and gun pose held constant.
     if G13TacticalV25.show_v1_reference(model_root,false) and (
-            G13ArmorV26.show_v25_reference(model_root,show_v25)):
+            G13ArmorV26.show_v25_reference(model_root,show_v25)) and (
+            G13RadarV27.show_v26_reference(model_root,true)):
         _g13_v25_show_original=false
         _g13_v26_show_previous=show_v25
+        _g13_v27_show_previous=true
         status_label.text=(
             "G13 V25 LOD8: cabina y torreta rectangulares originales."
             if show_v25 else
             "G13 V26 LOD8: 3 piezas de blindaje biselado, sin nuevos nodos.")
     else:
         status_label.text="Selecciona antes el G13 táctico LOD8."
+
+func _g13_v27_compare(show_v26:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    # Physical same-camera comparison of full V26 vs V27, retaining the
+    # unchanged original twin gun rig, faction and all existing poses.
+    var guns:bool=G13TacticalV25.show_v1_reference(model_root,false)
+    var armor:bool=G13ArmorV26.show_v25_reference(model_root,false)
+    var radar:bool=G13RadarV27.show_v26_reference(model_root,show_v26)
+    if guns and armor and radar:
+        _g13_v25_show_original=false
+        _g13_v26_show_previous=false
+        _g13_v27_show_previous=show_v26
+        status_label.text=(
+            "G13 V26: radar original, mismo blindaje y misma cámara."
+            if show_v26 else
+            "G13 V27: radar elevado y plato 3D ancho; 0 nodos adicionales.")
+    else:
+        status_label.text="Selecciona primero el G13 táctico LOD8."
 
 func _g13_v23_show_lights(show_v22:bool) -> void:
     if _role!="aa_mobile" or model_root==null:
@@ -2053,10 +2091,14 @@ func _display_role(role: String) -> void:
         model_root=P06Models.build("aa_mobile",_faction,true,_g13_preview_lod)
         if model_root!=null:
             if _g13_preview_lod==8:
-                if _g13_v25_show_original:
-                    G13TacticalV25.show_v1_reference(model_root,true)
+                # Compare versions newest-to-oldest. V25 V1 restoration
+                # must win over the V26 previous-radar resource.
+                if _g13_v27_show_previous:
+                    G13RadarV27.show_v26_reference(model_root,true)
                 if _g13_v26_show_previous:
                     G13ArmorV26.show_v25_reference(model_root,true)
+                if _g13_v25_show_original:
+                    G13TacticalV25.show_v1_reference(model_root,true)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()

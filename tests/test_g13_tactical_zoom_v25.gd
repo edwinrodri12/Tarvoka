@@ -4,6 +4,7 @@ extends SceneTree
 # Never claim CI software render latency as physical Android FPS.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Finish=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
+const RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const Art24=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const TOTAL:=17
@@ -139,8 +140,14 @@ func _run()->void:
                 false,false) as MeshInstance3D
             check(dish!=null and is_equal_approx(
                 (dish.mesh as CylinderMesh).top_radius,
+                RadarV27.DISH_RADIUS),
+                "current tactical radar is the wider V27 3D sculpture")
+            check(RadarV27.show_v26_reference(model,true),
+                "authentic earlier V25 3D dish and mast may be inspected")
+            check(dish!=null and is_equal_approx(
+                (dish.mesh as CylinderMesh).top_radius,
                 Finish.ENLARGED_RADAR_RADIUS),
-                "original independent radar is visible at battle zoom")
+                "previous independent V25 search radar remains available")
         for action in ["idle","scan","move","aim_air","attack_air",
                 "aim_ground","attack_ground"]:
             check(Models.pose_model("aa_mobile",model,action,0.43),
@@ -158,6 +165,8 @@ func _run()->void:
             "authentic baseline twin barrel recovered")
         check(Finish.show_v1_reference(model,false),
             "return V25 finished geometry")
+        check(RadarV27.show_v26_reference(model,true),
+            "historical V25 faction render excludes later raised V27 radar")
         check(count_draws(model)==original_count,
             "same count before and after 3D material/mesh swap")
         view.add_child(model)
@@ -178,6 +187,8 @@ func _run()->void:
     if subject==null:
         quit(1)
         return
+    check(RadarV27.show_v26_reference(subject,true),
+        "V1/V25 identical camera test uses original physical radar height")
     view.add_child(subject)
     camera.position=Vector3(3.5,3.0,-3.6)
     camera.look_at(Vector3(0,1.10,0),Vector3.UP)

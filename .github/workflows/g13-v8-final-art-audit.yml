@@ -83,6 +83,7 @@ jobs:
             tests/test_g13_armored_intake_v24.gd
             tests/test_g13_tactical_zoom_v25.gd
             tests/test_g13_tactical_armor_v26.gd
+            tests/test_g13_elevated_radar_v27.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
@@ -432,6 +433,40 @@ jobs:
           path: |
             /tmp/g13-v26-native/*.png
             /tmp/g13-v26-native/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Capture G13 V27 19 authentic same-angle tactical radar views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v27-3d
+          timeout --signal=TERM --kill-after=5s 175s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V27_GALLERY=/tmp/g13-v27-3d \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_elevated_radar_v27.gd 2>&1 | tee /tmp/g13-v27-3d.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/g13-v27-3d.log; then exit 1; fi
+          grep -F 'PASS G13 V27 3D SEARCH RADAR:' /tmp/g13-v27-3d.log
+          test "$(find /tmp/g13-v27-3d -name '*.png' | wc -l)" -eq 19
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/g13-v27-3d/g13-v27-visual-report.json'))
+          assert x['native_godot_pngs']==19 and x['factions']==8
+          assert x['new_draw_nodes']==0 and x['extra_triangles']==0
+          assert x['failed_checks']==0 and x['android_fps_measured'] is False
+          assert x['same_camera_comparison']['close']['changed']>40
+          assert x['same_camera_comparison']['far']['changed']>10
+          print('PASS G13 V27 close/medium/far real visible elevated mast')
+          PY
+      - name: Upload G13 V27 19 actual Godot radar comparison frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v27-elevated-3d-radar-19-real-views
+          path: |
+            /tmp/g13-v27-3d/*.png
+            /tmp/g13-v27-3d/*.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
