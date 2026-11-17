@@ -32,7 +32,7 @@ Hasta v3.5, `BasicAI._defensive_retreat` consideraba una amenaza inmediata desde
 
 ## Seguridad y rendimiento de la búsqueda
 
-Se examinan como máximo **5 unidades propias**, **6 enemigos visibles** y **9 destinos legales por unidad**, frente al caso explosivo de valorar cada posible posición de todas las tropas en un mapa 40×30. Se reutilizan posiciones de movimiento enemigas durante la evaluación de cada candidato. Eso impone un límite al espacio de decisiones, pero el coste real de CPU y batería debe medirse en Android.
+Se examinan como máximo **5 unidades propias**, **6 enemigos visibles** y **9 destinos legales por unidad**, frente al caso explosivo de valorar cada posible posición de todas las tropas en un mapa 40×30. Se reutilizan posiciones de movimiento enemigas durante la evaluación de cada candidato. Para **evitar falsas retiradas seguras**, la evaluación futura calcula una segunda envolvente conservadora **sin considerar las casillas actualmente ocupadas por aliados como bloqueos permanentes**: cualquier unidad que se retire podría liberar un paso estrecho. Esto puede sobreestimar peligro, pero evita declarar seguridad apoyándose en un soldado imaginario que ya se movió. El coste real de CPU y batería debe medirse en Android.
 
 Nunca se prueban movimientos especulativos contra el `BattleSession` autoritativo para averiguar si un enemigo oculto ocupa una casilla. Solo se propone un destino y se intenta una vez.
 
@@ -40,7 +40,8 @@ Nunca se prueban movimientos especulativos contra el `BattleSession` autoritativ
 
 `tests/test_ai_next_turn_threat_v36.gd` debe verificar:
 - Artillería SPG de 8 HP que todavía está fuera de alcance, pero podría ser destruida por un tanque de 8 de ataque **tras mover** el próximo turno.
-- Efecto cuantitativo del bosque y la montaña (valores del motor, sin escudos inventados).
+- **Reducción estricta** del daño previsto con la misma casilla expuesta cambiando solo `plain → forest → mountain` (valores del motor, sin escudos inventados).
+- **Puente/corredor de una sola fila:** un defensor se retira del chokepoint; la IA debe reconocer que el tanque puede ocupar el punto liberado y atacar la nueva posición. Un modelo que conserva el defensor como bloqueo falso fracasa esta prueba.
 - Infantería de 10 HP que conserva su ciudad ante ataque previsto de 7; si baja a 6 HP, buscar refugio en lugar de quedarse a morir.
 - Baluarte de 12 HP que sobrevive a un tanque pero quedaría destruido por dos distintos; reconocer este riesgo solo en niveles 11–12.
 - Cambiar posición/HP de enemigo **oculto**, y manipular munición/combustible/flag de actuación **privados** de enemigo visible: el pronóstico no debe alterarse.
@@ -55,5 +56,7 @@ Nunca se prueban movimientos especulativos contra el `BattleSession` autoritativ
 3. **Rendimiento y batería:** mediciones en Android 10×8 / 24×18 / 40×30 con mucha visibilidad; no solo simulaciones cortas.
 4. **Coordinación real de defensa:** extender de una retirada por movimiento a proteger con interceptores/antiaéreo y sostener posiciones sin sacrificar artillería por la primera escaramuza.
 5. **Poderes/evoluciones:** solo después de implementar órdenes legales del motor, probar contraejemplos de tecnologías I/II/III, habilidades y campamentos.
+
+**CI inicial con versión sin prueba de pasillo:** [12/12 trabajos aprobados](https://github.com/edwinrodri12/Tarvoka/actions/runs/44165037625), incluyendo retirada de SPG ante tanque móvil, protección de capturas, suma de dos atacantes, ocultación de munición/combustible y cotas de 24×18/40×30. La mejora de bloqueo dinámico y las dos pruebas más exigentes se han añadido **posteriormente**; necesitan una nueva ejecución verificada antes de calificar la revisión final como aprobada.
 
 La CI v3.6 debe aprobarse antes de anunciar la funcionalidad como validada. PR #552: https://github.com/edwinrodri12/Tarvoka/pull/552.
