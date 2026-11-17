@@ -47,6 +47,7 @@ const HeliV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const HeliV10 = preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 const HeliV11 = preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 const HeliV12 = preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
+const HeliV13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
@@ -159,7 +160,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · Antiaéreo V11")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 · V12")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 · V13")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -493,11 +494,16 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO A01 · V12 · MORRO Y CAÑÓN ARTICULADO",14)
+    _title(heli_controls,"HELICÓPTERO A01 · V13 · IMPACTOS Y DESTRUCCIÓN",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
         "Impacto explosivo",func(): _heli_play("hit_explosive"))
+    _add_paired(heli_controls,"V13: siguiente nivel de daño",_heli_next_damage,
+        "V13: reparar helicóptero",_heli_repair)
+    _add_paired(heli_controls,"V13: animar destrucción",_heli_destroy,
+        "V13: detalle humo e impactos",
+        func(): _heli_inspect_focus(62.0,14.0,2.35,Vector3(0.45,1.55,0.72)))
     _add_paired(heli_controls,"Vista frontal",func(): _heli_view(0.0),
         "Vista 3/4 delantera",func(): _heli_view(40.0))
     _add_paired(heli_controls,"Ver armamento lateral",func(): _heli_view(90.0),
@@ -559,7 +565,7 @@ func _install_heli_controls() -> void:
     _button(heli_controls,"Detener y restaurar hélices",_heli_stop)
     _title(heli_controls,
         "V12: blindaje frontal cerrado, óptica y montura móvil del cañón; "
-        + "conserva V10/V11 y animaciones del original. Solo arte 3D de Estudio.",12)
+        + "conserva V10/V11 y animaciones del original. V13 agrega 4 daños y destrucción 3D.",12)
     var index: int=column.get_children().find(detail_label)
     column.move_child(heli_controls,maxi(0,index))
     heli_controls.visible=false
@@ -634,7 +640,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 · V12")
+        role_picker.set_item_text(role_index,"Helicóptero A01 · V13")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
@@ -821,17 +827,51 @@ func _heli_top_view() -> void:
     _heli_focus_local=Vector3.ZERO
     _update_camera()
 
+func _heli_next_damage() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop()
+    HeliV13.set_stage(model_root,mini(HeliV13.stage(model_root)+1,HeliV13.MAX_STAGE))
+    _update_details()
+
+func _heli_repair() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop()
+    HeliV13.set_stage(model_root,0)
+    _update_details()
+
+func _heli_destroy() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop()
+    HeliV13.set_stage(model_root,4)
+    _heli_play("destroy")
+
 func _heli_play(kind: String) -> void:
     if _role!="attack_heli" or model_root==null or not HeliV1.has_model(model_root):
         return
+    if HeliV13.has_model(model_root):
+        if kind in ["move","attack"] and HeliV13.stage(model_root)>=4:
+            return
+        if kind=="hit_bullet":
+            HeliV13.set_stage(model_root,maxi(1,HeliV13.stage(model_root)))
+        elif kind=="hit_explosive":
+            HeliV13.set_stage(model_root,maxi(2,HeliV13.stage(model_root)))
     _heli_animation=kind
     _heli_time=0.0
-    HeliV1.pose(model_root,kind,0.0)
+    if HeliV13.has_model(model_root):
+        HeliV13.pose(model_root,kind,0.0)
+    else:
+        HeliV1.pose(model_root,kind,0.0)
+    _update_details()
 
 func _heli_stop() -> void:
     _heli_animation=""
     _heli_time=0.0
-    if model_root!=null and HeliV1.has_model(model_root):
+    if model_root!=null and HeliV13.has_model(model_root):
+        HeliV13.restore(model_root)
+    elif model_root!=null and HeliV1.has_model(model_root):
         HeliV1.restore(model_root)
 
 func _install_p06_controls() -> void:
@@ -2282,12 +2322,20 @@ func _process(delta: float) -> void:
     super._process(delta)
     if _role=="attack_heli" and not _heli_animation.is_empty() and HeliV1.has_model(model_root):
         _heli_time+=maxf(0.0,delta)
-        var duration: float=HeliV1.MOVE_DURATION if _heli_animation=="move" else (
-            HeliV1.ATTACK_DURATION if _heli_animation=="attack" else HeliV1.HIT_DURATION)
+        var duration: float=(HeliV13.DESTROY_DURATION if _heli_animation=="destroy" else (
+            HeliV1.MOVE_DURATION if _heli_animation=="move" else (
+            HeliV1.ATTACK_DURATION if _heli_animation=="attack" else HeliV1.HIT_DURATION)))
         var t: float=minf(1.0,_heli_time/maxf(0.01,duration))
-        HeliV1.pose(model_root,_heli_animation,t)
+        if HeliV13.has_model(model_root):
+            HeliV13.pose(model_root,_heli_animation,t)
+        else:
+            HeliV1.pose(model_root,_heli_animation,t)
         if t>=1.0:
-            _heli_stop()
+            if _heli_animation=="destroy":
+                _heli_animation=""
+                _heli_time=0.0
+            else:
+                _heli_stop()
             _update_details()
     if _role == "mlrs" and model_root != null and _g11_animation.is_empty() and G11Art.stage(model_root) >= 2:
         _g11_fx_clock += maxf(0.0,delta)
@@ -2381,10 +2429,13 @@ func _update_details() -> void:
             current_stage="V11 · transmisión y lanzadores"
         if HeliV12.has_model(model_root) and bool(model_root.get_meta(HeliV12.ENABLED,false)):
             current_stage="V12 · morro y cañón articulado"
-        detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D" % [
-            current_stage,P06Models.inspect_meshes(model_root)]
-        status_label.text="%s · escultura %s cargada" % [
-            str(Factions.FACTIONS[_faction]["name"]),current_stage]
+        var damage_text: String=""
+        if HeliV13.has_model(model_root):
+            damage_text=" · daño: %s" % HeliV13.STAGE_LABELS[HeliV13.stage(model_root)]
+        detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D%s" % [
+            current_stage,P06Models.inspect_meshes(model_root),damage_text]
+        status_label.text="%s · escultura %s cargada%s" % [
+            str(Factions.FACTIONS[_faction]["name"]),current_stage,damage_text]
         return
     if _role == "mlrs":
         if model_root == null or detail_label == null or status_label == null:
