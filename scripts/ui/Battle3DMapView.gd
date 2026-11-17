@@ -279,12 +279,12 @@ func _layout_3d_unit_detail() -> void:
     if unit_detail_panel==null:
         return
     var width: float=clampf(size.x*0.45,300.0,420.0)
-    var height: float=maxf(195.0,size.y-151.0)
+    var height: float=clampf(size.y-202.0,175.0,414.0)
     unit_detail_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     unit_detail_panel.offset_left=-width-10.0
     unit_detail_panel.offset_right=-10.0
-    unit_detail_panel.offset_top=71.0
-    unit_detail_panel.offset_bottom=71.0+height
+    unit_detail_panel.offset_top=116.0
+    unit_detail_panel.offset_bottom=116.0+height
 
 func _open_3d_unit_detail(unit_id: String) -> void:
     if _live_board==null or not _order_quote.is_empty() or unit_id.is_empty():
@@ -305,13 +305,13 @@ func _layout_3d_building_card() -> void:
     # In the live 3D HUD the unit card and minimap occupy the right edge.
     # The building inspection stays below the top bar, on the left, and
     # never covers the turn button or right-hand unit information.
-    var width: float = clampf(size.x*0.43,274.0,334.0)
-    var height: float = clampf(size.y-145.0,168.0,238.0)
-    building_info_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    building_info_panel.offset_left = 12.0
-    building_info_panel.offset_right = width+12.0
-    building_info_panel.offset_top = 76.0
-    building_info_panel.offset_bottom = 76.0+height
+    var width: float = clampf(size.x*0.43,285.0,406.0)
+    var height: float = clampf(size.y-202.0,180.0,370.0)
+    building_info_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    building_info_panel.offset_left = -width-10.0
+    building_info_panel.offset_right = -10.0
+    building_info_panel.offset_top = 116.0
+    building_info_panel.offset_bottom = 116.0+height
 
 func _close_3d_building_card() -> void:
     if building_info_panel == null:
