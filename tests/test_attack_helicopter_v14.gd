@@ -146,8 +146,10 @@ func _run() -> void:
             "V14.4 localized glancing lights toggle reversibly")
         var after_hull: MeshInstance3D=model.find_child(
             "A01_V2_Casco12CarasCerrado",true,false) as MeshInstance3D
-        _check((after_hull.material_override as StandardMaterial3D)
-            .albedo_color.is_equal_approx(old_hull_color),
+        var after_coat: StandardMaterial3D=(
+            after_hull.material_override as StandardMaterial3D)
+        _check(after_coat!=null
+            and after_coat.albedo_color.is_equal_approx(old_hull_color),
             "V14.4 lighting never rewrites faction body materials")
 
         var bullets: Node3D=model.find_child(FX.BULLETS,true,false) as Node3D
