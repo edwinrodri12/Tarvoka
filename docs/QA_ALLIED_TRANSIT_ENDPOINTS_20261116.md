@@ -75,3 +75,8 @@ Evidencia de base para `77ecea54`: [tránsito aliado 44015178674](https://github
 Commit `1c67511e`: se sustituyó la búsqueda genérica de `PASS` por la comprobación de **exactamente una línea de cierre esperada por suite** (`test_rules`, `test_battle_session`, `test_basic_ai`, `test_save_codec`). Esto evita falsos positivos cuando un log menciona PASS sin que el test haya alcanzado su final; el código de salida, errores de Godot y timeouts siguen siendo obligatorios. Verificar que cada suite termina con su marcador literal; si cambia su texto, actualizar la tabla `expected` en el workflow y justificarlo. No se alteraron reglas de juego.
 
 Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió cero runs; **CI NUEVO NO CONFIRMADO**, no equivale a PASÓ. **Android físico NO EJECUTADO EN DISPOSITIVO**. PR pendiente de revisión; no fusionar hasta CI verde.
+
+## 2026-11-17 — CI failure reproduced and scoped fix
+- Run [44036734451](https://github.com/edwinrodri12/Tarvoka/actions/runs/44036734451), job 133881300638: **FAILED** because the SaveCodec negative JSON case emits the expected Godot engine diagnostic `ERROR: Parse JSON failed...` despite printing its exact PASS marker. The transit, rules, session/victory, and AI steps all passed in that run.
+- Workflow fix `c60cae0f`: accept exactly one known malformed-JSON diagnostic in `test_save_codec`, continue rejecting all other Godot errors and require the exact suite PASS marker. This changes only CI interpretation, not production code.
+- **New workflow CI: PENDING** until a run of the fix completes. Android device: **NO EJECUTADO EN DISPOSITIVO**. No merge authorized on this evidence alone.
