@@ -16,7 +16,8 @@ const EXPECTED := {
         "g11_battle_move","g11_battle_attack","g11_battle_close","stop"],
     "aa_mobile":["move","g13_scan","g13_aim_legacy","g13_aim_air",
         "g13_aim_ground","g13_attack_air","g13_attack_ground","stop"],
-    "attack_heli":["move","hover","attack","hit_bullet","hit_explosive","stop"]
+    "attack_heli":["move","hover","attack","hit_bullet","hit_explosive",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"]
 }
 var failures: int=0
 
