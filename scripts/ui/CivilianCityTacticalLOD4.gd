@@ -21,6 +21,7 @@ const V17=preload("res://scripts/ui/CivilianCityRearFinishV17.gd")
 const V18=preload("res://scripts/ui/CivilianCitySideJointsV18.gd")
 const V19=preload("res://scripts/ui/CivilianCityUrbanCohesionV19.gd")
 const V20=preload("res://scripts/ui/CivilianCityExteriorFinishV20.gd")
+const V21=preload("res://scripts/ui/CivilianCityArchitecturalDetailV21.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -186,7 +187,13 @@ static func _keep_medium(name: String) -> bool:
         "V20_TejaBorde360Villa_","V20_JuntaMorteroCiudad_",
         "V20_RejillaAzoteaMetro_","V20_CantoneraInferior_",
         "V20_EncuentroCuatroFachadas_","V20_PicadoRevestimiento_",
-        "V20_RemateBordillo_","V20_JuntaMetalPasaje_"]:
+        "V20_RemateBordillo_","V20_JuntaMetalPasaje_",
+        # V21 close-only hardware; reduce glass and fastener drawcalls.
+        "V21_Tirador3DPuerta_","V21_TravesañoMadera_",
+        "V21_MontanteVentana_","V21_ImpostaVentana_",
+        "V21_VidrioOscurecido_","V21_CristalAstillado_",
+        "V21_JuntaMorteroCiudad_","V21_Respiradero_",
+        "V21_BocaBajante_","V21_CanalonArrancado_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -313,7 +320,12 @@ static func _keep_far(name: String) -> bool:
         # material-specific 360-degree wreckage without tiny facade trim.
         "V20_CoronacionPiedraCiudad_","V20_PerfilTapajuntasMetro_",
         "V20_LosaFracturada360_","V20_PerfilDerrumbe360_",
-        "V20_CascoteIdentidadTotal_"]:
+        "V20_CascoteIdentidadTotal_",
+        # V21 skyline finishes and grounded debris survive the far zoom;
+        # doors/glazing/individual fittings remain LOD0/LOD1 only.
+        "V21_CumbreraCeramica_","V21_CubremuroPiedra_",
+        "V21_TejadoHundido_","V21_DintelCaido_",
+        "V21_MarcoCaido_","V21_CristalYTabiquesRotos_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -410,7 +422,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V20.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",20)
+    if not V21.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",21)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
