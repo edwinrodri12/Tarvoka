@@ -1,0 +1,62 @@
+name: TARVOKA Civilian City V1 Three Districts Native 3D GPU QA
+
+on:
+  push:
+    branches:
+      - feat/cities-v1-district-3d-20261117
+    paths:
+      - "scripts/ui/CivilianCity3DV1.gd"
+      - "tests/test_city_civilian_v1_gpu.gd"
+      - ".github/workflows/city-civilian-v1-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/CivilianCity3DV1.gd"
+      - "tests/test_city_civilian_v1_gpu.gd"
+      - ".github/workflows/city-civilian-v1-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-city-art:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Test 135 3D models and capture 12 real native Godot frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          timeout 440s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_city_civilian_v1_gpu.gd \
+            2>&1 | tee /tmp/city-v1-gpu.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v1-gpu.log; then
+            echo "City V1 Godot validation failed"
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA CITY V1: 135' /tmp/city-v1-gpu.log
+          for shot in level_1_overview level_2_overview level_3_overview level_1_street level_2_street level_3_street neutral_city onyx_city damage_1 damage_2 damage_3 damage_4; do
+            test -s "artifacts/tarvoka_city_v1_${shot}.png"
+          done
+      - name: Upload inspectable city preview screenshots and QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-City-V1-12-Real-Godot-3D-Previews
+          path: |
+            artifacts/tarvoka_city_v1_*.png
+            /tmp/city-v1-gpu.log
+          retention-days: 20
+          if-no-files-found: warn
