@@ -22,3 +22,10 @@ Se añade una capa **opt-in de laboratorio**, `_ab_critical_rescue_v362=true` (j
 - Sin pruebas humanas ni rendimiento Android físico. Si 3.6.2 no mejora victorias/capturas o protección útil, no se promociona. El comparador no cambia ningún dato de la APK existente.
 
 Esta rama hereda v3.6 y v3.6.1 **sin activar las nuevas opciones por defecto** y no se debe fusionar hasta validar contra v3.5.
+
+## Corrección del reporte A/B (QA)
+
+El agregador de logs discrimina `AB362_MATCH {` con JSON real de las líneas de comandos que imprime GitHub Actions. Incluye una prueba rápida específica para este patrón y no duplica partidas por `grep` o mensajes de configuración.
+
+El resumen incorpora un **dictamen experimental** separado de la ejecución técnica: paridad de victorias, ciudades y supervivientes iniciales frente a v3.5; menos retiradas que las 70 observadas en v3.6.1; ninguna retirada sospechosa ni abandono no letal. Incluso si los criterios se cumplen, **no se autoriza automáticamente un merge**, porque la muestra es limitada y faltan otros mapas, IA humana y rendimiento en Android.
+

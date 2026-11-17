@@ -15,19 +15,48 @@ METRICS = ("losses", "captures", "retreats", "attacks",
            "decision_us", "decision_calls")
 
 
+def parse_match_line(line: str):
+    """Ignore Actions shell-command echoes; only parse genuine JSON match rows."""
+    marker = line.find(PREFIX + "{")
+    if marker < 0:
+        return None
+    payload = line[marker + len(PREFIX):].strip()
+    value = json.loads(payload)
+    if not isinstance(value, dict) or "v362_side" not in value:
+        raise ValueError("Unexpected AB362_MATCH payload")
+    return value
+
+
+def quality_assessment(totals: dict) -> dict:
+    """Advisory game-quality screening; passing tests never authorizes APK merge."""
+    checks = {
+        "all_32_resolved": totals["finished"] == 32 and totals["censored"] == 0,
+        "at_least_win_parity": totals["v362_wins"] >= totals["v35_wins"],
+        "city_capture_parity": totals["v362_captures"] >= totals["v35_captures"],
+        "initial_survivor_parity": totals["v362_initial_survivors"] >= totals["v35_initial_survivors"],
+        "fewer_retreats_than_v361": totals["v362_retreats"] < 70,
+        "zero_questionable_retreats": totals["v362_questionable_anticipatory"] == 0,
+        "zero_nonlethal_capture_abandons": totals["v362_abandoned_nonlethal_capture"] == 0,
+    }
+    return {
+        "status": "candidate_for_broader_testing" if all(checks.values()) else "needs_tuning",
+        "checks": checks,
+        "merge_approved": False,
+        "note": "Exploratory sample; human playtesting and Android profiling still required."
+    }
+
+
 def main() -> int:
     folder = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".ci-duel-logs")
     games = []
     for path in sorted(folder.rglob("*.log")):
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            marker = line.find(PREFIX)
-            if marker < 0:
-                continue
             try:
-                value = json.loads(line[marker + len(PREFIX):])
-            except json.JSONDecodeError as exc:
-                raise SystemExit(f"Malformed match entry in {path}: {exc}") from exc
-            games.append(value)
+                value = parse_match_line(line)
+            except (ValueError, TypeError) as exc:
+                raise SystemExit(f"Malformed real match entry in {path}: {exc}") from exc
+            if value is not None:
+                games.append(value)
     expected = {(level, map_id, fog, first, side)
                 for level in (10, 12)
                 for map_id in (0, 2)
@@ -52,20 +81,26 @@ def main() -> int:
             totals[f"{side}_{metric}"] = 0
     by_level = defaultdict(lambda: {"games": 0, "v362_wins": 0,
                                     "v35_wins": 0, "censored": 0})
+    by_first_player = defaultdict(lambda: {"games": 0, "v362_wins": 0,
+                                          "v35_wins": 0, "censored": 0})
     for match in games:
         new_side = int(match["v362_side"])
         old_side = 1 - new_side
         level = int(match["level"])
         by_level[level]["games"] += 1
+        first = int(match["first"])
+        by_first_player[first]["games"] += 1
         winner = int(match["winner"])
         if winner in (0, 1):
             totals["finished"] += 1
             key = "v362_wins" if winner == new_side else "v35_wins"
             totals[key] += 1
             by_level[level][key] += 1
+            by_first_player[first][key] += 1
         else:
             totals["censored"] += 1
             by_level[level]["censored"] += 1
+            by_first_player[first]["censored"] += 1
         for metric in METRICS:
             totals["v362_" + metric] += int(match[metric][new_side])
             totals["v35_" + metric] += int(match[metric][old_side])
@@ -74,11 +109,14 @@ def main() -> int:
             match["questionable_anticipatory"])
         totals["v362_abandoned_nonlethal_capture"] += int(
             match["abandoned_nonlethal_capture"])
+    assessment = quality_assessment(totals)
     summary = {"run_type": "Godot real BattleSession 3.5 vs 3.6.2",
                "dataset": {"maps": [0, 2], "levels": [10, 12],
                            "fog": [False, True], "swap_first": True,
                            "swap_version_side": True},
                "totals": totals, "by_level": dict(sorted(by_level.items())),
+               "by_first_player": dict(sorted(by_first_player.items())),
+               "quality_assessment": assessment,
                "previous_v36_experiment": {
                    "wins": 10, "losses": 22, "retreats": 84,
                    "city_captures": 52, "initial_survivors": 84},
@@ -110,6 +148,16 @@ def main() -> int:
     for level, row in sorted(by_level.items()):
         md.append(f"| {level} | {row['games']} | {row['v35_wins']} | "
                   f"{row['v362_wins']} | {row['censored']} |")
+    md.extend(["", "## Influencia de la iniciativa", "",
+        "| Primer bando | Partidas | Victorias v3.5 | Victorias v3.6.2 |",
+        "|---|---:|---:|---:|"])
+    for first, row in sorted(by_first_player.items()):
+        md.append(f"| {first} | {row['games']} | {row['v35_wins']} | {row['v362_wins']} |")
+    md.extend(["", "## Dictamen de calidad experimental", "",
+        f"**{assessment['status']}** — esta evaluación no autoriza integración en APK.",
+        ""])
+    for key, passed in assessment["checks"].items():
+        md.append(f"- {'OK' if passed else 'PENDIENTE'}: {key}")
     md.extend(["",
         f"Retiradas anticipatorias v3.6.2: **{totals['v362_anticipatory']}**.",
         f"Alertas internas: **{totals['v362_questionable_anticipatory']}**. "
@@ -126,7 +174,8 @@ def main() -> int:
     (out_dir / "ai_v362_ab_summary.md").write_text(report, encoding="utf-8")
     print("AB362_ALL " + json.dumps(summary, separators=(",", ":"), ensure_ascii=False))
     print(report)
-    print("PASS AI v362 aggregate: exact 32 unique starts validated")
+    print("QUALITY_GATE " + json.dumps(assessment, separators=(",", ":")))
+    print("PASS AI v362 aggregate: exact 32 unique starts validated; quality is advisory")
     return 0
 
 

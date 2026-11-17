@@ -8,6 +8,7 @@ on:
       - "tests/test_ai_v35_v362_full_matches.gd"
       - "tests/test_ai_anticipation_critical_v362.gd"
       - "tests/aggregate_ai_v362_matches.py"
+      - "tests/test_ai_v362_log_parser.py"
       - ".github/workflows/ai-v35-v362-duels.yml"
   workflow_dispatch:
 
@@ -94,6 +95,10 @@ jobs:
           pattern: ai-ab-*
           path: .ci-duel-logs
           merge-multiple: false
+      - name: Verify log parser ignores GitHub command echoes
+        run: |
+          set -euo pipefail
+          python3 tests/test_ai_v362_log_parser.py
       - name: Validate exactly 32 battles and produce comparable summary
         run: |
           set -euo pipefail
