@@ -71,10 +71,12 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
         applied["defender_id"] = defender_id
     return applied
 
-static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
+static func purchase(state: Dictionary, factory_pos: Vector2i, role: String,
+        experimental_piercer_factory: bool = false) -> Dictionary:
     if not _active(state) or not Opening.can_order(state):
         return {"valid":false, "state":state.duplicate(true)}
-    var order: Dictionary = Economy.purchase(state, factory_pos, role)
+    var order: Dictionary = Economy.purchase(state, factory_pos, role,
+        experimental_piercer_factory)
     if order.get("valid", false):
         Opening.record(order["state"])
         if Visibility.enabled(order["state"]):
