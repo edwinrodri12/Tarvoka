@@ -129,10 +129,8 @@ func _run() -> void:
     _check(Cabin.set_enabled(model,true),"restore V12 before physical detail macros")
     # True closeups at the earlier full-resolution native Godot setting.
     viewport.size=Vector2i(960,720)
-    # Use model-to-world coordinates (the attack helicopter is scaled to
-    # 0.77 and lowered 0.11 in UnitModels3D). Previous V12 closeups aimed
-    # at raw model coordinates, cutting off the gearbox and rotor ring.
-    # Camera probes use actual scaled A01 node-to-global transforms.
+    # Camera probes use true scaled Godot model-to-world transforms,
+    # avoiding cuts around nose/gun geometry.
     var nose_focus: Vector3=model.to_global(Vector3(0,0.94,-1.53))
     camera.position=nose_focus+Vector3(0.28,0.43,-2.85)
     camera.look_at(nose_focus,Vector3.UP)
@@ -141,10 +139,15 @@ func _run() -> void:
     camera.position=cheek_focus+Vector3(2.15,0.65,-1.43)
     camera.look_at(cheek_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v12_blindaje_lateral.png"))
+    # Capture the real moving mount under near-maximum gun pitch.
+    # At t=0.48 the 6-degree cannon tilt is visible but the flash is off.
+    _check(Models.pose_model("attack_heli",model,"attack",0.48),
+        "original gun animation remains active in V12.1 macro")
     var gimbal_focus: Vector3=model.to_global(Vector3(0.215,0.57,-1.33))
     camera.position=gimbal_focus+Vector3(2.0,0.46,-1.78)
     camera.look_at(gimbal_focus,Vector3.UP)
-    await _save(viewport,output.path_join("a01_v12_cardan_canon.png"))
+    await _save(viewport,output.path_join("a01_v12_cardan_canon_inclinado.png"))
+    Models.restore_model_pose("attack_heli",model)
     var muzzle_focus: Vector3=model.to_global(Vector3(0,0.57,-1.79))
     camera.position=muzzle_focus+Vector3(0.38,0.18,-2.25)
     camera.look_at(muzzle_focus,Vector3.UP)
