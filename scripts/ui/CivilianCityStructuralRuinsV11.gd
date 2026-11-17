@@ -329,6 +329,12 @@ static func apply(model: Node3D,level: int,
                 _rear_lintel(stage,tag,x,z,w,d,level,damage,accent)
             else:
                 _rear_lintel(stage,tag,x,z,w,d,level,damage,accent)
+    # The civic center also loses its schematic solid roof at damage 2;
+    # model real parted roof slabs before suppressing the old box.
+    if damage==2:
+        var civic_floors: int=2 if level==1 else 3 if level==2 else 4
+        _injured_roof(stage,"Ayuntamiento",
+            0.0,-3.75,3.35,2.74,civic_floors,level)
     _civic_rupture(stage,level,damage,accent)
     var superseded: int=0
     if damage>=3:
