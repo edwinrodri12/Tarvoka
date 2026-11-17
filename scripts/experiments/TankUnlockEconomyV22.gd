@@ -91,7 +91,8 @@ static func _upgrade(b: Dictionary, side: int) -> Dictionary:
         return {"valid":true,"battle":next}
     return {"valid":false}
 
-static func half_turn(b: Dictionary, policy: String, mode: String) -> Dictionary:
+static func half_turn(b: Dictionary, policy: String, mode: String,
+        options: Dictionary = {}) -> Dictionary:
     if not bool(b.get("valid",false)) or mode not in MODES or \
             policy not in Lab.STRATEGIES:
         return {"valid":false}
@@ -105,11 +106,11 @@ static func half_turn(b: Dictionary, policy: String, mode: String) -> Dictionary
         if bool(upgraded.get("valid",false)):
             current = upgraded["battle"]
             skip = true
-    var opts: Dictionary = {}
+    var opts: Dictionary = options.duplicate(true)
     if mode == "level2":
-        opts = {"gate_armor_level2":true,
-            "armor_levels":_levels_for_side(current,side),
-            "skip_purchase":skip}
+        opts["gate_armor_level2"] = true
+        opts["armor_levels"] = _levels_for_side(current,side)
+        opts["skip_purchase"] = skip or bool(options.get("skip_purchase",false))
     var action: Dictionary = Lab.play_half_turn(current,policy,opts)
     if not bool(action.get("valid",false)):
         return {"valid":false}

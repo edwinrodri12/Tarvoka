@@ -1,0 +1,79 @@
+name: TARVOKA v23 funded antiarmor vs level-II tanks
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/PaidAntiarmorBalanceV23.gd"
+      - "scripts/experiments/TankUnlockEconomyV22.gd"
+      - "scripts/experiments/StrategicMatchBalanceV21.gd"
+      - "tests/test_paid_antiarmor_smoke_v23.gd"
+      - "tests/test_paid_antiarmor_pairs_v23.gd"
+      - ".github/workflows/paid-antiarmor-balance-v23.yml"
+  workflow_dispatch:
+
+jobs:
+  antiarmor_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Check 650+1050+450 research costs, real 3-terrain hits, ammunition and v22 parity
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_paid_antiarmor_smoke_v23.gd \
+            2>&1 | tee /tmp/v23-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v23-smoke.log; then exit 1; fi
+          grep -Fq 'PASS paid antiarmor smoke v23:' /tmp/v23-smoke.log
+      - name: Preserve smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v23-smoke
+          path: /tmp/v23-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  antiarmor_matches:
+    needs: antiarmor_smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [small_open, medium_open, medium_forest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 official headless
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Play mirrored paid-technology matches
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 390s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_paid_antiarmor_pairs_v23.gd \
+            -- ${{ matrix.scenario }} \
+            2>&1 | tee /tmp/v23-pairs.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v23-pairs.log; then exit 1; fi
+          grep -Fq 'PASS paid antiarmor mirrored v23:' /tmp/v23-pairs.log
+      - name: Preserve real-match evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v23-${{ matrix.scenario }}
+          path: /tmp/v23-pairs.log
+          retention-days: 30
+          if-no-files-found: ignore
