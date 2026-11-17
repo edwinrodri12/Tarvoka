@@ -143,9 +143,9 @@ static func apply(root:Node3D)->bool:
             if root.find_child(name,true,false)==null:
                 return false
     var armor:=_material(Color("#69797f"),0.40,0.66)
-    var dark:=_material(Color("#303c42"),0.28,0.79)
+    var lower_armor:=_material(Color("#5e7077"),0.37,0.72)
     var edging:=_material(Color("#576b71"),0.40,0.68)
-    _attach(gun_pivot,GUN_UNDERSHIELD,_undershield(),dark)
+    _attach(gun_pivot,GUN_UNDERSHIELD,_undershield(),lower_armor)
     for side in [-1,1]:
         _attach(turret,TURRET_AFT % side,
             _turret_quarter(side),armor)
