@@ -37,7 +37,7 @@ jobs:
             https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
-      - name: Validate V12 sealed front armour, live gun gimbal and trunnions and mobile compatibility
+      - name: Validate V12 geometry, live gun and eight-faction measured skid-to-cradle clearance
         shell: bash
         run: |
           set -euo pipefail
@@ -52,7 +52,7 @@ jobs:
             echo 'Native V12 QA failed'; exit 1
           fi
           grep -F 'PASS A01 V12:' /tmp/a01-v12-qa.log
-      - name: Capture 8 V12 angles, 4 exact V11 baselines and 4 native nose/cannon closeups
+      - name: Capture 20 actual Godot frames, including four underside/skid and cannon-pitch views
         shell: bash
         run: |
           set -euo pipefail
@@ -65,11 +65,11 @@ jobs:
             --path . --script res://tests/test_attack_helicopter_v12_capture.gd \
             2>&1 | tee /tmp/a01-v12-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v12-capture.log; then
-            echo 'Native V12 16-frame rendering failed'; exit 1
+            echo 'Native V12 20-frame rendering failed'; exit 1
           fi
           grep -F 'PASS A01 V12 CAPTURE:' /tmp/a01-v12-capture.log
-          test "$(find /tmp/a01-v12-review -maxdepth 1 -name '*.png' | wc -l)" -eq 16
-      - name: Archive 16 genuine Godot V12 nose and cannon review frames
+          test "$(find /tmp/a01-v12-review -maxdepth 1 -name '*.png' | wc -l)" -eq 20
+      - name: Archive 20 genuine Godot V12 nose, cannon and underbody review frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
