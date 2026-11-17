@@ -35,8 +35,7 @@ static func _audit_distributed_cities(size: Vector2i, starter: int) -> void:
     assert(int(state["faction"]) == starter)
     assert(int(state["economy"]["credits"][0]) == Economy.MODERN_START_CREDITS)
     assert(int(state["economy"]["credits"][1]) == Economy.MODERN_START_CREDITS)
-    assert(int(session["world"]["layout"]["initial_neutral_cities"]) >= 0 if \
-        session["world"]["layout"].has("initial_neutral_cities") else true)
+    assert(int(session["world"]["layout"]["neutral_cities"]) >= 0)
     var expected := [Economy.MODERN_START_CREDITS,Economy.MODERN_START_CREDITS]
     for phase in range(4):
         var current: int = int(state["faction"])
