@@ -1466,6 +1466,7 @@ func _build_battle_hud() -> void:
     battle_hud_overlay.add_child(immersive_battle_hud)
     immersive_battle_hud.attach_board(board)
     immersive_battle_hud.menu_requested.connect(_open_command_menu)
+    immersive_battle_hud.battle_3d_requested.connect(_open_battle_3d)
     immersive_battle_hud.expand_requested.connect(_toggle_battle_hud)
     immersive_battle_hud.objectives_requested.connect(_open_objectives_radar)
     immersive_battle_hud.cancel_order_requested.connect(_cancel_prepared_order)
