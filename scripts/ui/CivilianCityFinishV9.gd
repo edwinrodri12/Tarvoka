@@ -367,6 +367,56 @@ static func _ruin_finish(root: Node3D,level: int,
             Vector3(0.66,0.37,-2.24),
             Vector3(1.22,0.15,0.35),OXIDE,"oxidized")
 
+# The older V1–V4 and V8 buildings were designed with solid colours.
+# Apply physical surface response IN PLACE without changing their mesh
+# geometry, colours, faction palette, scene names or gameplay metadata.
+# Existing source materials stay untouched: only mesh overrides are swapped.
+static func _refine_existing_materials(model: Node3D) -> int:
+    var finished: int=0
+    var nodes: Array[Node]=[model]
+    while not nodes.is_empty():
+        var current: Node=nodes.pop_back()
+        for child in current.get_children():
+            nodes.append(child)
+        if not current is MeshInstance3D:
+            continue
+        var mesh: MeshInstance3D=current as MeshInstance3D
+        var old: StandardMaterial3D=mesh.material_override as StandardMaterial3D
+        if old==null:
+            continue
+        var part_name: String=str(mesh.name)
+        var finish: String=""
+        if (part_name.begins_with("Cristal")
+                or part_name.begins_with("PanelSolar")
+                or part_name.begins_with("Ventanal")
+                or part_name.begins_with("Vidri")):
+            finish="glass"
+        elif (part_name.begins_with("Teja")
+                or part_name.begins_with("Caballete")
+                or part_name.begins_with("ChimeneaV2")):
+            finish="ceramic"
+        elif (part_name.begins_with("Canalon")
+                or part_name.begins_with("Baranda")
+                or part_name.begins_with("Marquesina")
+                or part_name.begins_with("EscudoCivil")
+                or part_name.begins_with("Antena")
+                or part_name.begins_with("FranjaCivil")):
+            finish="steel"
+        elif (part_name.begins_with("VolumenMamposteria")
+                or part_name.begins_with("MarcoVentana")
+                or part_name.begins_with("Cornisa")
+                or part_name.begins_with("Fronton")
+                or part_name.begins_with("Alfeizar")
+                or part_name.begins_with("Cimiento")
+                or part_name.begins_with("EstructuraArruinada")
+                or part_name.begins_with("EscombrosBase")):
+            finish="stone"
+        if finish.is_empty():
+            continue
+        mesh.material_override=_finish(old.albedo_color,finish)
+        finished+=1
+    return finished
+
 static func apply(model: Node3D,level: int,
         faction: int,damage: int) -> bool:
     if model==null or not V1.valid_spec(level,faction,damage):
@@ -409,6 +459,8 @@ static func apply(model: Node3D,level: int,
                             floors,h,damage,accent)
     _municipal_finish(layer,level,damage,accent)
     _ruin_finish(layer,level,damage)
+    var surface_count: int=_refine_existing_materials(model)
+    layer.set_meta("legacy_materials_refinished",surface_count)
     layer.set_meta("visual_only",true)
     layer.set_meta("no_gameplay_changes",true)
     layer.set_meta("design_stage",9)
