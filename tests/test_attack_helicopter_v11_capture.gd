@@ -78,6 +78,10 @@ func _run() -> void:
     if model==null:
         quit(1)
         return
+    # V11 regression captures must exclude the newer V12 front overlay,
+    # otherwise its V10 baseline comparison is not an exact earlier stage.
+    var V12=load("res://scripts/ui/AttackHelicopterNoseV12.gd")
+    _check(V12.set_enabled(model,false),"isolate the true V11 revision")
     viewport.add_child(model)
     _check(Cabin.has_model(model),"actual A01 V11 sculpt loaded")
     # Frame at tactical camera scale; V11 geometry must remain readable
