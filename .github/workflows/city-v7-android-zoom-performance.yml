@@ -1,0 +1,92 @@
+name: TARVOKA V7 real 3D cities Android zoom/performance QA
+
+on:
+  push:
+    branches:
+      - feat/city-v7-android-zoom-performance-20261117
+    paths:
+      - 'scripts/ui/City3DPerfProbeV7.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_city_v7_perf_hud.gd'
+      - 'tests/benchmark_city_v7_zoom.gd'
+      - '.github/workflows/city-v7-android-zoom-performance.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/City3DPerfProbeV7.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_city_v7_perf_hud.gd'
+      - 'tests/benchmark_city_v7_zoom.gd'
+      - '.github/workflows/city-v7-android-zoom-performance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  city-v7-live-3d-zoom:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3 and import actual 3D battle
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot-city-v7.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot-city-v7.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          # The shared browser-only art studio uses an assembly-only parent
+          # script that is absent from the native Android game checkout.
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
+          timeout 130s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/city-v7-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/city-v7-import.log; then
+            exit 1
+          fi
+      - name: Check the LIVE 3D HUD FPS/LOD button and gameplay immutability
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s xvfb-run -a -s '-screen 0 1280x800x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --quit-after 190 --path . \
+            --script res://tests/test_city_v7_perf_hud.gd \
+            2>&1 | tee /tmp/city-v7-hud.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v7-hud.log; then
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA CITY V7 REAL 3D HUD' /tmp/city-v7-hud.log
+      - name: Measure actual city mesh LOD and Mesa frame timings, capture 3D images
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300s xvfb-run -a -s '-screen 0 1280x800x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --quit-after 440 --path . \
+            --script res://tests/benchmark_city_v7_zoom.gd \
+            2>&1 | tee /tmp/city-v7-benchmark.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v7-benchmark.log; then
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA CITY V7 ZOOM BENCHMARK' /tmp/city-v7-benchmark.log
+          test -s artifacts/tarvoka_city_v7_zoom_mesa.json
+          test -s artifacts/tarvoka_city_v7_far_godot_mesa.png
+          test -s artifacts/tarvoka_city_v7_near_godot_mesa.png
+      - name: Publish inspectable actual-render screenshots and numeric report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Cities-V7-Godot-Mesa-Zoom-QA
+          path: |
+            artifacts/tarvoka_city_v7_*.png
+            artifacts/tarvoka_city_v7_zoom_mesa.json
+            /tmp/city-v7-*.log
+          retention-days: 30
+          if-no-files-found: warn
