@@ -14,9 +14,11 @@ const RECEIVER:="G13_RadarReceiver"
 const TURRET:="G13_TorretaAzimut"
 const REST_Y:=1.360
 const FOOT_SHIFT_Y:=0.265
-const MAX_FOLD_DEG:=58.0
-const FOLD_BEGIN_YAW_DEG:=105.0
-const FULL_FOLD_YAW_DEG:=140.0
+const MAX_FOLD_DEG:=35.0
+const FOLD_BEGIN_YAW_DEG:=40.0
+const FULL_FOLD_YAW_DEG:=80.0
+const MAST_STOWED_SCALE:=0.22
+const DISH_STOWED_LOCAL_PITCH_DEG:=-35.0
 const ROTATING_MODES:=[ "aim","attack","aim_air",
     "attack_air","aim_ground","attack_ground" ]
 const METADATA:="tarvoka_g13_v29_original_pose"
@@ -64,7 +66,9 @@ static func install(root:Node3D)->bool:
         "radar":radar.position,
         "mast":mast.position,
         "dish":dish.position,
-        "receiver":receiver.position
+        "receiver":receiver.position,
+        "mast_scale":mast.scale,
+        "dish_pitch":dish.rotation_degrees.x
     })
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g13_v29_new_draw_nodes",NEW_DRAW_NODES)
@@ -84,6 +88,8 @@ static func reset(root:Node3D)->void:
     (p["mast"] as MeshInstance3D).position=source["mast"]
     (p["dish"] as MeshInstance3D).position=source["dish"]
     (p["receiver"] as MeshInstance3D).position=source["receiver"]
+    (p["mast"] as MeshInstance3D).scale=source["mast_scale"]
+    (p["dish"] as MeshInstance3D).rotation_degrees.x=source["dish_pitch"]
     (p["radar"] as Node3D).rotation_degrees.x=0.0
     root.set_meta("tarvoka_g13_v29_fold_degrees",0.0)
 
@@ -95,21 +101,33 @@ static func set_fold(root:Node3D,fraction:float)->bool:
     if original.is_empty():
         return false
     var blend:float=clampf(fraction,0.0,1.0)
-    var shift:float=FOOT_SHIFT_Y*blend
+    var mast_factor:float=lerpf(1.0,MAST_STOWED_SCALE,blend)
     var radar:=p["radar"] as Node3D
-    radar.position=original["radar"]-Vector3(0,shift,0)
-    (p["mast"] as MeshInstance3D).position=(
-        original["mast"]+Vector3(0,shift,0))
-    (p["dish"] as MeshInstance3D).position=(
-        original["dish"]+Vector3(0,shift,0))
-    (p["receiver"] as MeshInstance3D).position=(
-        original["receiver"]+Vector3(0,shift,0))
+    radar.position=original["radar"]-Vector3(0,FOOT_SHIFT_Y*blend,0)
+    var mast:=p["mast"] as MeshInstance3D
+    mast.position=Vector3(0,lerpf(
+        (original["mast"] as Vector3).y,0.640*MAST_STOWED_SCALE,blend),0)
+    mast.scale=Vector3(1.0,mast_factor,1.0)
+    var dish:=p["dish"] as MeshInstance3D
+    dish.position=Vector3(0,lerpf(
+        (original["dish"] as Vector3).y,
+        (0.780+FOOT_SHIFT_Y)*MAST_STOWED_SCALE,blend),0)
+    dish.rotation_degrees.x=lerpf(
+        float(original["dish_pitch"]),DISH_STOWED_LOCAL_PITCH_DEG,blend)
+    var receiver:=p["receiver"] as MeshInstance3D
+    receiver.position=Vector3(0,lerpf(
+        (original["receiver"] as Vector3).y,
+        (0.790+FOOT_SHIFT_Y)*MAST_STOWED_SCALE,blend),-0.12)
     radar.rotation_degrees.x=MAX_FOLD_DEG*blend
     root.set_meta("tarvoka_g13_v29_fold_degrees",
         radar.rotation_degrees.x)
+    root.set_meta("tarvoka_g13_v29_mast_telescopic_scale",mast_factor)
+    root.set_meta("tarvoka_g13_v29_dish_local_pitch",
+        dish.rotation_degrees.x)
     root.set_meta("tarvoka_g13_v29_mast_base_y_m",
-        radar.position.y+(p["mast"] as MeshInstance3D).position.y
-        -0.640*cos(deg_to_rad(radar.rotation_degrees.x)))
+        radar.position.y+(
+            mast.position.y-0.640*mast_factor)*cos(
+                deg_to_rad(radar.rotation_degrees.x)))
     return true
 
 static func apply_pose(root:Node3D,kind:String)->bool:
