@@ -153,7 +153,7 @@ static func _fixed_nose(body: Node3D,faction: Color) -> void:
         # attached to the V2 belly without intersecting its animated sphere.
         # Minimum x clearance to the existing 0.19m gun housing is 0.076m.
         _rod(root_node,"A01V12_PilarCunaSuperior_%d" % side,
-            Vector3(sign*0.300,0.805,-1.240),
+            Vector3(sign*0.300,0.805,-1.085),
             Vector3(sign*0.300,0.641,-1.355),
             0.018,seam)
         _rod(root_node,"A01V12_PilarCunaDelantero_%d" % side,
@@ -161,14 +161,16 @@ static func _fixed_nose(body: Node3D,faction: Color) -> void:
             Vector3(sign*0.302,0.637,-1.468),
             0.016,paint)
         _rod(root_node,"A01V12_RefuerzoDiagonalCuna_%d" % side,
-            Vector3(sign*0.300,0.805,-1.240),
+            Vector3(sign*0.300,0.805,-1.085),
             Vector3(sign*0.302,0.637,-1.468),
             0.011,steel)
-    # The transverse structure is behind/above the gun elevation envelope,
-    # so the authentic 6-degree V1 firing pitch never clips through it.
+    # Measured V12.1 native QA found the original bridge at z=-1.24 clipped
+    # the 6-degree moving gimbal during fire. The crossbar and both gusset
+    # roots now anchor at z=-1.085, BEHIND the rear gun limit at ~-1.27.
+    # The new load path enters the V2 belly without crossing the gun swing.
     _rod(root_node,"A01V12_PuenteTransversalCuna",
-        Vector3(-0.300,0.805,-1.240),
-        Vector3(0.300,0.805,-1.240),0.020,seam)
+        Vector3(-0.300,0.805,-1.085),
+        Vector3(0.300,0.805,-1.085),0.020,seam)
     _ring(root_node,OPTIC_RING,Vector3(0,0.650,-1.791),
         0.075,0.115,steel)
     _rod(root_node,"A01V12_ProteccionInferiorMorro",
