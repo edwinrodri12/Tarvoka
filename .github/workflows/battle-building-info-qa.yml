@@ -68,7 +68,7 @@ jobs:
         with:
           name: tarvoka-building-menu-qa-logs
           path: |
-             /tmp/test_building_info_menu.log
+            /tmp/test_building_info_menu.log
             /tmp/test_building_info_3d.log
             /tmp/test_unit_detail_panels.log
           if-no-files-found: warn
