@@ -230,5 +230,32 @@ func _initialize() -> void:
     assert(edge_road_map == edge_road_before and edge_road_allies == [Vector2i(22, 17)]
         and edge_road_enemies == [Vector2i(21, 16)],
         "Large-map road transit must not mutate inputs")
+    # Property-style regression: every ordering of the same three blockers
+    # and two allies must yield identical endpoints and costs on a large board.
+    # This guards against order-sensitive pathfinding as unit lists change
+    # during AI turns or after loading a saved battle.
+    var permutation_allies: Array[Vector2i] = [Vector2i(22, 17), Vector2i(22, 16)]
+    var permutation_enemies: Array[Vector2i] = [Vector2i(21, 16), Vector2i(23, 16), Vector2i(20, 17)]
+    var reference_paths: Dictionary = rules.reachable(
+        Vector2i(21, 17), 4, large_map, permutation_enemies, "ground", false, permutation_allies
+    )
+    for reverse_allies in [false, true]:
+        for shift in range(3):
+            var allies_ordered: Array[Vector2i] = permutation_allies.duplicate()
+            if reverse_allies:
+                allies_ordered.reverse()
+            var enemies_ordered: Array[Vector2i] = permutation_enemies.duplicate()
+            for i in range(shift):
+                enemies_ordered.append(enemies_ordered.pop_front())
+            var order_snapshot: Array[Vector2i] = enemies_ordered.duplicate()
+            var allies_snapshot: Array[Vector2i] = allies_ordered.duplicate()
+            var candidate: Dictionary = rules.reachable(
+                Vector2i(21, 17), 4, large_map, enemies_ordered, "ground", false, allies_ordered
+            )
+            assert(candidate == reference_paths,
+                "Reachable costs must be independent of ally and enemy ordering")
+            assert(enemies_ordered == order_snapshot and allies_ordered == allies_snapshot,
+                "Reachability must not reorder occupancy lists")
+    assert(large_map == large_snapshot, "Permutation checks must not mutate terrain")
     print("PASS: allied transit and endpoint isolation")
     quit()
