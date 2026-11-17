@@ -283,6 +283,14 @@ func _run() -> void:
         and recolored_wreck.rotation_degrees.z>55.0
         and recolored_wreck.position.y<0.0,
         "destroyed helicopter remains down and banked after faction switch")
+    var new_fragments: Node3D=recolored_wreck.find_child(
+        V13.WRECK,true,false) as Node3D
+    var blade_on_ground: MeshInstance3D=recolored_wreck.find_child(
+        "A01V13_FragmentoRotor_0",true,false) as MeshInstance3D
+    _check(new_fragments!=null and new_fragments.top_level
+        and blade_on_ground!=null
+        and blade_on_ground.global_position.y<0.23,
+        "switching faction anchors V13 wreck in the live scene at ground height")
     studio.call("_heli_repair")
     _check(V13.stage(recolored_wreck)==0
         and not bool(studio.get("_heli_wreck_frozen")),
