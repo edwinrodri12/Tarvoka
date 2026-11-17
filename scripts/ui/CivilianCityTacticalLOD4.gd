@@ -15,6 +15,7 @@ const V11=preload("res://scripts/ui/CivilianCityStructuralRuinsV11.gd")
 const V12=preload("res://scripts/ui/CivilianCityDamageFinishV12.gd")
 const V13=preload("res://scripts/ui/CivilianCityCohesionV13.gd")
 const V14=preload("res://scripts/ui/CivilianCitySilhouetteV14.gd")
+const V15=preload("res://scripts/ui/CivilianCityIdentityV15.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -146,7 +147,15 @@ static func _keep_medium(name: String) -> bool:
         "JuntaMitraEsquinaV14_","PiezaMitreDesgastadaV14_",
         "RoturaCostado360V14_","BarraArrancadaCostadoV14_",
         "ApoyoCoronaMunicipalV14_","SoporteRelojMunicipalV14",
-        "VigaPisoAisladaV14_"]:
+        "VigaPisoAisladaV14_",
+        # V15: small trim, intact facade bands and individual rebar
+        # disappear at medium distance. Keep massing and tile identity.
+        "CabioGableteV15_","MaderaInclinadaVillaV15_",
+        "PiezaMitreDesgastadaV14_","ZocaloRusticoVillaV15_",
+        "HileraMamposteriaV15_","PilastraEsquinaCiudadV15_",
+        "NervaduraAluminioAltaV15_","CintaVidrioTacticaV15_",
+        "AceroArmaduraMetroV15_","BarraArrancadaCostadoV14_",
+        "RelievePiedraAyuntamientoVillaV15"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -224,7 +233,32 @@ static func _keep_far(name: String) -> bool:
         "MuroMunicipal360V14_",
         "CostadoMunicipalColapsadoV14_",
         "FrisoMunicipalSuelo360V14",
-        "FragmentoRelojEscombroV14"]:
+        "FragmentoRelojEscombroV14",
+        # V15: keep an unmistakable identity for each city size even
+        # if every building is destroyed (D4).
+        "TejaCaballeraV15_","AleroMaderaVillaV15_",
+        "TejaSueltaFracturadaVillaV15_",
+        "VigaVernacularCaidaV15_",
+        "TejaDerruidaVillaV15_",
+        "MuroVillaEntramadoV15_",
+        "BandaParapetoPiedraV15_",
+        "BandaLadrilloRemateV15_",
+        "CornisaDesgajadaCiudadV15_",
+        "PilastraMamposteriaTruncadaV15_",
+        "BloquesMamposteriaCiudadV15_",
+        "CornisaMamposteriaBajaV15_",
+        "CoronaEscalonadaMetroV15_",
+        "LuzFranjaCivicaMetroV15_",
+        "PerfilCoronaMetropoliRotoV15_",
+        "PilarMetropoliAbiertoV15_",
+        "LosaMiradorTorcidaMetroV15_",
+        "VidrioRestosMetroV15_",
+        "RemateInstitucionalNivelV15_",
+        "EscalonCornisaAytoCiudadV15_",
+        "AleroMetalicoAytoMetropoliV15",
+        "MolduraVillaCivicaCaidaV15",
+        "LadrilloCornisaCiudadCaidoV15_",
+        "VigaAceroAytoDestruidaV15"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -309,7 +343,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V14.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",14)
+    if not V15.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",15)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
