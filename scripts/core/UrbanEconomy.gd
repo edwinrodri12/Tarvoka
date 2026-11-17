@@ -121,9 +121,14 @@ static func begin_turn(state: Dictionary) -> Dictionary:
 
 # A legacy factory can still build ALL five original roles. A modern
 # economy divides the 32 classes into domain-specific installations.
-static func producer_for(role: String, modern: bool = false) -> String:
+static func producer_for(role: String, modern: bool = false,
+        experimental_piercer_factory: bool = false) -> String:
     if not modern:
         return "factory" if COSTS.has(role) else ""
+    # Explicit v27-only opt-in: live mode and saved games retain their
+    # previous recruitment rules. No fake facility may bypass purchase.
+    if experimental_piercer_factory and role == "piercer":
+        return "factory"
     if Arsenal.valid(role):
         return Arsenal.site(role)
     match role:
@@ -144,7 +149,8 @@ static func site_at(economy: Dictionary, position: Vector2i) -> Dictionary:
 # Pure eligibility: the displayed UI price must have the SAME legal result
 # as the authoritative state transition. Production consumes one factory
 # phase and spawns the unit on its appropriate surface/air plane.
-static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> bool:
+static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String,
+        experimental_piercer_factory: bool = false) -> bool:
     if not state.has("economy") or not state.has("terrain") or not state.get("units") is Array:
         return false
     var faction: int = int(state.get("faction", -1))
@@ -157,7 +163,8 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
     if int(state["economy"]["credits"][faction]) < cost(role):
         return false
     var modern: bool = bool(state["economy"].get("modern", false))
-    var producer: String = producer_for(role, modern)
+    var producer: String = producer_for(role, modern,
+        experimental_piercer_factory)
     if producer.is_empty():
         return false
     var site: Dictionary = site_at(state["economy"], factory_pos)
@@ -177,9 +184,11 @@ static func can_purchase(state: Dictionary, factory_pos: Vector2i, role: String)
             return false
     return true
 
-static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
+static func purchase(state: Dictionary, factory_pos: Vector2i, role: String,
+        experimental_piercer_factory: bool = false) -> Dictionary:
     var denied := {"valid":false, "state":state.duplicate(true)}
-    if not can_purchase(state, factory_pos, role):
+    if not can_purchase(state, factory_pos, role,
+            experimental_piercer_factory):
         return denied
     var next: Dictionary = state.duplicate(true)
     var side: int = int(next["faction"])
