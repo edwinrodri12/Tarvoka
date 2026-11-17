@@ -1,0 +1,84 @@
+name: TARVOKA v35 tactical positioning and coordinated volleys
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/CoordinatedPositioningV35.gd"
+      - "scripts/core/CoordinatedFireV34.gd"
+      - "scripts/core/BasicAI.gd"
+      - "tests/test_ai_tactical_position_v35.gd"
+      - ".github/workflows/ai-tactical-position-v35.yml"
+  workflow_dispatch:
+
+jobs:
+  tactical_position_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Real move plus planned volleys, terrain/defense/fog and CPU budget
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 450s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_tactical_position_v35.gd \
+            2>&1 | tee /tmp/v35-tactics.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v35-tactics.log; then exit 1; fi
+          grep -Fq 'PASS strategic AI v35 tactical positioning:' /tmp/v35-tactics.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v35-positioning
+          path: /tmp/v35-tactics.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  inherited_ai_regressions:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - test_ai_coordinated_fire_v34.gd
+          - test_ai_multiturn_objectives_v33.gd
+          - test_ai_strategy_levels_v32.gd
+          - test_ai_game_ui_profile_v32.gd
+          - test_ai_decisions.gd
+          - test_ai_retreat.gd
+          - test_ai_fog_sweep.gd
+          - test_ai_self_play.gd
+          - test_economic_ai.gd
+          - test_multidomain_ai.gd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Preserve existing AI rules, fog, economy, UI and saved missions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/${{ matrix.suite }} \
+            2>&1 | tee /tmp/v35-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v35-regression.log; then exit 1; fi
+          grep -Fq 'PASS' /tmp/v35-regression.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v35-${{ matrix.suite }}
+          path: /tmp/v35-regression.log
+          retention-days: 30
+          if-no-files-found: ignore
