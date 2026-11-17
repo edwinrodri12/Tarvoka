@@ -304,5 +304,22 @@ func _initialize() -> void:
     assert(max_map == max_snapshot and max_allies == [Vector2i(38, 29), Vector2i(39, 29)]
         and max_enemies == [Vector2i(37, 28)],
         "Budget sweep must preserve terrain and occupancy inputs")
+    # Duplicate occupancy records can arise when rebuilding lists from saves.
+    # They must not create additional endpoints or change path costs.
+    var duplicate_allies: Array[Vector2i] = [Vector2i(38, 29), Vector2i(39, 29), Vector2i(38, 29)]
+    var duplicate_enemies: Array[Vector2i] = [Vector2i(37, 28), Vector2i(37, 28)]
+    var duplicates_before_allies: Array[Vector2i] = duplicate_allies.duplicate()
+    var duplicates_before_enemies: Array[Vector2i] = duplicate_enemies.duplicate()
+    var canonical_paths: Dictionary = rules.reachable(
+        Vector2i(37, 29), 5, max_map, max_enemies, "ground", false, max_allies
+    )
+    var duplicated_paths: Dictionary = rules.reachable(
+        Vector2i(37, 29), 5, max_map, duplicate_enemies, "ground", false, duplicate_allies
+    )
+    assert(duplicated_paths == canonical_paths,
+        "Duplicate occupancy entries must not alter reachable endpoints or costs")
+    assert(duplicate_allies == duplicates_before_allies
+        and duplicate_enemies == duplicates_before_enemies and max_map == max_snapshot,
+        "Duplicate occupancy input lists and terrain must remain unchanged")
     print("PASS: allied transit and endpoint isolation")
     quit()
