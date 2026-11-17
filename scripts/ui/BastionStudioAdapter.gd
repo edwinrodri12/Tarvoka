@@ -60,6 +60,7 @@ const G13DeckV28=preload("res://scripts/ui/G13RadarDeckMountV28.gd")
 const G13FoldV29=preload("res://scripts/ui/G13FoldingRadarV29.gd")
 const G13GunMountV31=preload("res://scripts/ui/G13GunMountFinishV31.gd")
 const G13FinishV32=preload("res://scripts/ui/G13FactionMountFinishV32.gd")
+const G13ChassisV33=preload("res://scripts/ui/G13ChassisFinishV33.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -180,7 +181,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V32 · 4×4, colores y soportes")
+        role_picker.set_item_text(aa_index,"G13 · AA V33 · arcos 4×4 y color facción")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14")
@@ -723,7 +724,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V32 color de facción"
+            "aa_mobile": label="G13 · Antiaéreo · V33 chasis 4×4"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1291,7 +1292,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V32 · ACENTOS DE FACCIÓN · 2 CAÑONES · SIN MISILES",14)
+        "G13 V33 · BLINDAJE Y GUARDABARROS · 2 CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1313,7 +1314,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V32 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V33 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1337,6 +1338,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V33 · Mostrar pasos de rueda y bisagras",
+        func(): _g13_v33_compare(true),
+        "V33 · Comparar con V32",
+        func(): _g13_v33_compare(false))
     _add_paired(g13_controls,"V32 · Más color de facción",
         func(): _g13_v32_compare(true),
         "V32 · Comparar acabado anterior",
@@ -1372,10 +1377,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V32 LOD8: radar abatible, cañones articulados, pintura y fijaciones. "
+            "G13 V33 LOD8: pasos de rueda curvos, bisagras, uniones y pintura V32. "
             + "FPS físicos Android aún no medidos."
             if art_level==8 else
-            "G13 V32 LOD13: blindaje detallado y nuevos acentos discretos de facción.")
+            "G13 V33 LOD13: escultura de cabina, arcos de rueda y pintura de facción.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
@@ -1468,6 +1473,19 @@ func _g13_v28_compare(show_v27:bool)->void:
             "G13 V28: mástil blindado con base apoyada en cubierta trasera.")
     else:
         status_label.text="Selecciona primero el G13 táctico LOD8."
+
+func _g13_v33_compare(show_v33:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        if status_label!=null:
+            status_label.text="Selecciona primero la unidad antiaérea G13."
+        return
+    var ok:bool=G13ChassisV33.show_finish(model_root,show_v33)
+    if status_label!=null:
+        status_label.text=(
+            ("G13 V33: arcos 4×4, bisagras y unión blindada de cabina visibles."
+            if show_v33 else
+            "G13 V32: la escultura V33 está oculta; color y cañones conservados.")
+            if ok else "G13 V33: selecciona un modelo con acabado V33.")
 
 func _g13_v32_compare(show_v32:bool)->void:
     if _role!="aa_mobile" or model_root==null:
