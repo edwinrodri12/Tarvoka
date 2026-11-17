@@ -40,6 +40,11 @@ func _run() -> void:
         var fire: Node3D=model.find_child(V13.FIRE,true,false) as Node3D
         var burst: Node3D=model.find_child(V13.IMPACT,true,false) as Node3D
         var wreck: Node3D=model.find_child(V13.WRECK,true,false) as Node3D
+        var detonation: Node3D=model.find_child(V13.DETONATION,true,false) as Node3D
+        var ground_dust: Node3D=model.find_child(V13.LANDING_DUST,true,false) as Node3D
+        _check(detonation!=null and not detonation.visible
+            and ground_dust!=null and not ground_dust.visible,
+            "V13.2 explosion and landing dust begin hidden on a pristine A01")
         _check(rotor!=null and rotor.visible and tail!=null and tail.visible
             and scratches!=null and not scratches.visible
             and burn!=null and not burn.visible
@@ -51,6 +56,8 @@ func _run() -> void:
             "stage1 bullet scars appear without engine fire")
         _check(V13.pose(model,"hit_bullet",0.31) and burst.visible,
             "stage1 bullet hit has real emissive spark burst")
+        _check(not detonation.visible and not ground_dust.visible,
+            "bullet impact does not accidentally trigger full detonation")
         var shock: MeshInstance3D=model.find_child(
             "A01V13_OndaChoqueLateral",true,false) as MeshInstance3D
         _check(shock!=null and shock.mesh is TorusMesh
@@ -77,9 +84,29 @@ func _run() -> void:
             and smoke_puff.position.distance_to(smoke_start)>0.07,
             "stage2 smoke plumes rise even without impact playback")
 
-        _check(V13.pose(model,"hit_explosive",0.34) and burst.visible,
-            "stage2 explosive hit retains original shake and 3D flash")
+        _check(V13.pose(model,"hit_explosive",0.18)
+            and detonation.visible,
+            "V13.2 explosion opens with fast primary ignition")
+        var first: Node3D=model.find_child(
+            "A01V13_ExplosionPrimaria",true,false) as Node3D
+        var second: Node3D=model.find_child(
+            "A01V13_ExplosionSecundaria",true,false) as Node3D
+        var pressure: MeshInstance3D=model.find_child(
+            "A01V13_AnilloExpansivo",true,false) as MeshInstance3D
+        _check(first!=null and first.visible and second!=null
+            and not second.visible,
+            "secondary fire pulse follows primary; they do not appear together")
+        var early_ring: Vector3=pressure.scale if pressure!=null else Vector3.ZERO
+        _check(V13.pose(model,"hit_explosive",0.34)
+            and detonation.visible and burst.visible
+            and first.visible and second.visible,
+            "explosive hit adds distinct second 3D ignition over original shake")
+        _check(pressure!=null and pressure.mesh is TorusMesh
+            and pressure.scale.x>early_ring.x,
+            "V13.2 physical shock ring expands between two blast phases")
         V13.restore(model)
+        _check(not detonation.visible and not ground_dust.visible,
+            "transient explosion disappears on idle without erasing scorch")
         _check(V13.set_stage(model,3) and fire.visible and smoke.visible
             and rotor.visible and tail.visible,
             "stage3 critical burning damage before final destruction")
@@ -101,8 +128,8 @@ func _run() -> void:
         V13.restore(model)
         _check(V13.set_stage(model,4) and wreck.visible
             and not rotor.visible and not tail.visible
-            and wreck.top_level,
-            "stage4 ejects debris into independent world-space frame")
+            and wreck.top_level and ground_dust.top_level,
+            "stage4 world-anchors detached debris AND later ground-impact dust")
         var rest_position: Vector3=model.position
         var rest_rotation: Vector3=model.rotation_degrees
         var detached_origin: Vector3=wreck.global_position
@@ -130,10 +157,11 @@ func _run() -> void:
             and wreck.global_position.distance_to(detached_origin)<0.001,
             "broken rotor shards DO NOT fall or bank with helicopter fuselage")
         _check(debris!=null and debris.position.distance_to(rest_debris)>0.05
-            and fire.visible and smoke.visible,
-            "wreckage moves independently and sustained smoke/fire remains")
-        _check(V13.pose(model,"destroy",1.0),
-            "end of destruction pose is a valid original-asset scene")
+            and fire.visible and smoke.visible and ground_dust.visible,
+            "wreckage, ground dust and burning engine overlap in crash interval")
+        _check(V13.pose(model,"destroy",1.0) and not ground_dust.visible
+            and not detonation.visible,
+            "final wreck leaves only sustained engine fire; blast/dust expire")
         _check(debris!=null and debris.global_position.y<0.23,
             "main rotor fragment rests near terrain instead of hovering")
         _check(debris!=null and debris.position.distance_to(rest_debris)<0.001,
@@ -151,9 +179,10 @@ func _run() -> void:
             "restore resets transforms without repairing permanent stage4 wreck")
         _check(V13.set_stage(model,0) and rotor.visible and tail.visible
             and not wreck.visible and not wreck.top_level
-            and not smoke.visible and not scratches.visible
-            and not fire.visible,
-            "repair reattaches hidden wreck root and restores both original rotors")
+            and not ground_dust.top_level and not ground_dust.visible
+            and not detonation.visible and not smoke.visible
+            and not scratches.visible and not fire.visible,
+            "repair reattaches both world-space effects and restores original rotors")
         _check(V13.pose(model,"attack",0.34)
             and V12.has_model(model),
             "approved V12 cannon and original muzzle flash still function")
