@@ -2,12 +2,12 @@ extends RefCounted
 class_name TarvokaG13SideArmorV21
 
 # G13 V21 real 3D sculpt — faceted articulated turret side armor.
-# Replace two original rectangular cheeks IN PLACE (same name, rig,
+# Replace two VISIBLE V11 cheek shells IN PLACE (same name, rig,
 # material and faction insignias) and add two tiny welded lower seams.
 # Preserve the V19 exposed gun trunnions, V20 aft fairings and twin guns.
 # Visual-only; NO missiles, extra weapons, battle stats or Android LOD8.
 const FLAG := "tarvoka_g13_v21_swept_turret_side_armor"
-const CHEEK := "G13_V2_TurretCheek_%d"
+const CHEEK := "G13_V11_TurretCheek_%d"
 const LOWER_SEAM := "G13_V21_LowerCheekWeld_%d"
 const ORIGINAL := "tarvoka_g13_v21_original_box"
 const FACETED := "tarvoka_g13_v21_closed_faceted_mesh"
@@ -85,7 +85,7 @@ static func _closed_loft(rings:Array)->ArrayMesh:
 
 static func _side_cheek(side:int)->ArrayMesh:
     # Five 10-sided engineered profiles, with a visible forged LOWER
-    # skirt at x up to 0.662, not a hidden rectangular V2 block.
+    # skirt at x up to 0.662; never edit the hidden V2 reference block.
     # The forward lip narrows to x=.506, making V19's x=.526 gun
     # trunnion visible; the wide middle stays under the original
     # x=.613 faction insignia. The rear tapers into V20 aft armor.
@@ -117,7 +117,7 @@ static func apply(root:Node3D)->bool:
         true,false) as Node3D
     if turret==null or pitch==null or pitch.get_parent()!=turret:
         return false
-    # Check all four original faction art anchors before mutating either side.
+    # Check V11 *rendered* cheek, V2 paint anchor and V19/V20 artifacts.
     for side in [-1,1]:
         var cheek:=turret.find_child(CHEEK % side,
             false,false) as MeshInstance3D
@@ -129,7 +129,7 @@ static func apply(root:Node3D)->bool:
         var rear:=turret.find_child("G13_V20_TurretAftArmor_%d" % side,
             false,false) as MeshInstance3D
         if cheek==null or mark==null or fixed==null or rear==null or (
-                not cheek.mesh is BoxMesh) or (
+                not cheek.mesh is ArrayMesh) or (
                 not mark.mesh is BoxMesh) or (
                 not fixed.mesh is ArrayMesh) or (
                 not rear.mesh is ArrayMesh):
@@ -137,13 +137,15 @@ static func apply(root:Node3D)->bool:
         if not cheek.position.is_equal_approx(
                 Vector3(float(side)*0.52,0.31,0.0)):
             return false
+        if not cheek.visible or cheek.mesh==null:
+            return false
     var weld:=_material(Color("#41535a"),0.42,0.67)
     for side in [-1,1]:
         var cheek:=turret.find_child(CHEEK % side,
             false,false) as MeshInstance3D
         var original:Mesh=cheek.mesh
         var finished:ArrayMesh=_side_cheek(side)
-        # Original BoxMesh is centered at (+/-0.52,.31,0), but new mesh
+# Original V11 closed ArrayMesh is centered at (+/-0.52,.31,0),
         # is designed in local TURRET coordinates. Shift it by the
         # ORIGINAL cheek center so global sculpt is exact.
         # No old material is duplicated or overwritten.
@@ -152,7 +154,7 @@ static func apply(root:Node3D)->bool:
         moved.mesh=_lower_weld(side)
         moved.material_override=weld
         turret.add_child(moved)
-        # Keep a reversible comparison inside this running studio model.
+        # Store the ORIGINAL V11 visible closed mesh for true V20/V21 QA.
         cheek.set_meta(ORIGINAL,original)
         cheek.set_meta(FACETED,finished)
         cheek.mesh=finished
