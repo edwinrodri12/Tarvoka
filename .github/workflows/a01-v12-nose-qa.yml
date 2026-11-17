@@ -90,7 +90,7 @@ jobs:
             echo 'Native V13 QA failed'; exit 1
           fi
           grep -F 'PASS A01 V13:' /tmp/a01-v13-qa.log
-      - name: Capture V13 17 real Godot ignition, landing dust and wreck frames
+      - name: Capture V13 18 real Godot ignition, landing dust and wreck frames
         shell: bash
         run: |
           set -euo pipefail
@@ -106,12 +106,12 @@ jobs:
             echo 'Native V13 rendering failed'; exit 1
           fi
           grep -F 'PASS A01 V13 CAPTURE:' /tmp/a01-v13-capture.log
-          test "$(find /tmp/a01-v13-review -maxdepth 1 -name '*.png' | wc -l)" -eq 17
-      - name: Archive 17 genuine V13 detonation and crash frames
+          test "$(find /tmp/a01-v13-review -maxdepth 1 -name '*.png' | wc -l)" -eq 18
+      - name: Archive 18 genuine V13 detonation and crash frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v13-real-godot-17-frames
+          name: tarvoka-a01-v13-real-godot-18-frames
           path: |
             /tmp/a01-v13-review/*.png
             /tmp/a01-v13-qa.log
