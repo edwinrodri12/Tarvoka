@@ -14,6 +14,7 @@ const V10=preload("res://scripts/ui/CivilianCityGroundFrontV10.gd")
 const V11=preload("res://scripts/ui/CivilianCityStructuralRuinsV11.gd")
 const V12=preload("res://scripts/ui/CivilianCityDamageFinishV12.gd")
 const V13=preload("res://scripts/ui/CivilianCityCohesionV13.gd")
+const V14=preload("res://scripts/ui/CivilianCitySilhouetteV14.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -140,7 +141,12 @@ static func _keep_medium(name: String) -> bool:
         "JuntaAdoquinConFisuraV13_","AdoquinTejadoLeveV13_",
         "EncuentroEscombroV13_","AnclajeTechoAytoV13_",
         "MamposteriaCivilSueloV13_",
-        "BordilloDesmoronadoV13_"]:
+        "BordilloDesmoronadoV13_",
+        # V14 close-range roof, material and broken-edge details.
+        "JuntaMitraEsquinaV14_","PiezaMitreDesgastadaV14_",
+        "RoturaCostado360V14_","BarraArrancadaCostadoV14_",
+        "ApoyoCoronaMunicipalV14_","SoporteRelojMunicipalV14",
+        "VigaPisoAisladaV14_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -208,7 +214,17 @@ static func _keep_far(name: String) -> bool:
         "PilarTruncadoMunicipalV13_",
         "EscaleraCivicaInterrumpidaV12",
         "UmbralColapsadoV13_",
-        "AleroRetorcidoV13_"]:
+        "AleroRetorcidoV13_",
+        # V14 all-round outline: retain real damage and iconic hall
+        # ruins at tactical zoom; do not keep individual fine joints.
+        "LaminaRotaVoladizoV14_","PerfilCornisaSeparadaV14_",
+        "PieMuroSerradoV14_","DienteMuroCostadoV14_",
+        "PisoAbiertoDienteV14_","CrestaEscombros360V14_",
+        "VigaCoronaMunicipalAbiertaV14_",
+        "MuroMunicipal360V14_",
+        "CostadoMunicipalColapsadoV14_",
+        "FrisoMunicipalSuelo360V14",
+        "FragmentoRelojEscombroV14"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -291,7 +307,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V13.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",13)
+    if not V14.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",14)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
