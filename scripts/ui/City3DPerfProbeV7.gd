@@ -81,6 +81,7 @@ func _city_stats() -> Dictionary:
 
 func snapshot() -> Dictionary:
     var city: Dictionary=_city_stats()
+    var current_fps: float=_samples[-1] if not _samples.is_empty() else 0.0
     var samples: Array[float]=_samples.duplicate()
     samples.sort()
     var average: float=0.0
@@ -98,7 +99,7 @@ func snapshot() -> Dictionary:
     return {
         "source":"Godot Engine FPS on the device running this scene",
         "sample_count":samples.size(),
-        "fps_current":samples[-1] if not samples.is_empty() else 0.0,
+        "fps_current":current_fps,
         "fps_average":snappedf(average,0.1),
         "fps_low_5pct":snappedf(low,0.1),
         "cities":city["cities"],
