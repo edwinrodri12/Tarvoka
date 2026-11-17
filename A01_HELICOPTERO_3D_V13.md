@@ -74,3 +74,15 @@ En el nivel 4 (destruido), y exclusivamente para el visor hero:
 **Rendimiento:** se incorporan mallas sencillas, sin efectos adicionales en la versión de batalla LOD ≤10; no cambia movilidad, daño, alcance, economía, munición ni interfaz.
 
 **Estado de QA:** se ampliaron las aserciones sobre los ocho ejércitos y las capturas de inspección de 15 a **17**, con macros específicas de parabrisas y aro de cola dañados. Las pruebas de esta revisión V13.3 siguen en cola de GitHub Actions; no considerar aprobada esta nueva revisión hasta finalizar la ejecución. Los 15 renders V13.2 anteriores sí fueron aprobados.
+
+## V13.4 — Cabina y motor: deformaciones finales del modelo destruido
+
+Tras revisar las **17 capturas nativas** de la V13.3 ([Godot aprobado](https://github.com/edwinrodri12/Tarvoka/actions/runs/44149125351)), se añadió un segundo pase de detalle para diferenciar mejor el estado totalmente destruido de los daños leves:
+
+- Motor: cavidad oscura, dos tapas levantadas, bordes de metal expuesto y seis cicatrices en el blindaje lateral. Mallas `BoxMesh` y `CylinderMesh` nativas.
+- Cabina: los marcos continuos `A01_V2_Costilla_*`, `A01_V2_MarcoLong_*` y `A01_V2_MarcoOp_*` se ocultan solo en fase 4 y son reemplazados por tramos cortos torcidos con separaciones reales.
+- Reparación: restaura completamente los marcos y cristales intactos, el aro de cola y ambos rotores. Las piezas dañadas se conservan como esculturas independientes ocultas fuera del estado 4.
+- Capturas Godot: se conservan 17 escenas; las macros del parabrisas y de la cola se reposicionan relativas al estado final del fuselaje para permitir juzgar los bordes y materiales sin cambiar la cámara del juego.
+- Rendimiento: cambios exclusivos del modelo de inspección de alta calidad `art_level>=13`; el LOD10 Android de batalla y todos los valores de combate siguen intactos.
+
+**Validación:** [primera ejecución nativa V13.4 aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44151582359) con 17 capturas. Las aserciones añadidas para los nuevos marcos y la revisión con cámara más cercana deben validarse en la última ejecución antes de dar el acabado por cerrado. PR #522 sigue sin fusionarse; visor público no confirmado.
