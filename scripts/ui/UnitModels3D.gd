@@ -34,6 +34,7 @@ const G13UndersideV22 = preload("res://scripts/ui/G13UnderbodyAuditV22.gd")
 const G13FrontV23 = preload("res://scripts/ui/G13FrontLightingV23.gd")
 const G13IntakeV24 = preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const G13TacticalV25 = preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
+const G13ArmorV26 = preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -993,6 +994,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 # meshes, adds no draw objects, never alters V24 hero art.
                 if not G13TacticalV25.apply(model):
                     push_warning("G13 V25 tactical silhouette failed to apply")
+                if not G13ArmorV26.apply(model):
+                    push_warning("G13 V26 faceted LOD8 armor failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
