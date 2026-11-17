@@ -13,6 +13,21 @@ func check(ok: bool,why: String)->void:
 func part(root: Node,name: String)->MeshInstance3D:
     return root.find_child(name,true,false) as MeshInstance3D
 
+# V21 replaces the original BoxMesh in-place with closed faceted
+# ArrayMesh. Check real exterior geometry rather than assuming a cube.
+static func cheek_outer_x(part_mesh:MeshInstance3D,side:int)->float:
+    if part_mesh.mesh is BoxMesh:
+        return absf(part_mesh.position.x)+(
+            part_mesh.mesh as BoxMesh).size.x*0.5
+    if part_mesh.mesh is ArrayMesh:
+        var vertices:PackedVector3Array=(
+            part_mesh.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        var outer:float=0.0
+        for p in vertices:
+            outer=maxf(outer,float(side)*(p.x+part_mesh.position.x))
+        return outer
+    return 0.0
+
 func _initialize()->void:
     call_deferred("_run")
 
@@ -35,13 +50,13 @@ func _run()->void:
             check(cheek!=null and insignia!=null,
                 "turret cheeks and insignias exist both sides")
             if cheek!=null and insignia!=null:
-                var cheek_half: float=(cheek.mesh as BoxMesh).size.x/2.0
-                var insignia_half: float=(insignia.mesh as BoxMesh).size.x/2.0
-                check(absf(cheek.position.x)+cheek_half>half_width+0.05,
-                    "cheek reaches beyond V1 housing instead of buried")
+                var cheek_outer:float=cheek_outer_x(cheek,side)
+                var insignia_half:float=(insignia.mesh as BoxMesh).size.x*0.5
+                check(cheek_outer>half_width+0.05,
+                    "faceted or V2 cheek reaches beyond original housing")
                 check(absf(insignia.position.x)+insignia_half>
-                    absf(cheek.position.x)+cheek_half+0.01,
-                    "faction insignia appears on exterior cheek")
+                    cheek_outer+0.01,
+                    "original faction insignia remains outside sculpted cheek")
                 var material:=insignia.material_override as StandardMaterial3D
                 if material!=null:
                     paints[material.albedo_color.to_html()]=true
