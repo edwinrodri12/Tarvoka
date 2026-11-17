@@ -159,8 +159,8 @@ func _run() -> void:
         "returning to overview restores original elevated Studio camera")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
-    var light: DirectionalLight3D=studio.get("hq_key_light") as DirectionalLight3D
-    var ambient: DirectionalLight3D=studio.get("hq_fill_light") as DirectionalLight3D
+    var light: Light3D=studio.get("hq_key_light") as Light3D
+    var ambient: Light3D=studio.get("hq_fill_light") as Light3D
     var night_lamp: OmniLight3D=studio.get("_heli_night_fill_v143") as OmniLight3D
     var toggle: Button=studio.get("_heli_night_button_v143") as Button
     _check(light!=null and ambient!=null and night_lamp!=null
