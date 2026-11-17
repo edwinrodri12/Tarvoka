@@ -1,0 +1,67 @@
+name: TARVOKA Civilian City V4 Tactical LOD Native GPU QA
+
+on:
+  push:
+    branches:
+      - feat/cities-v4-tactical-lod-3d-20261117
+    paths:
+      - "scripts/ui/CivilianCity3DV1.gd"
+      - "scripts/ui/CivilianCityFacadeV2.gd"
+      - "scripts/ui/CivilianCityPublicSpaceV3.gd"
+      - "scripts/ui/CivilianCityTacticalLOD4.gd"
+      - "tests/test_city_civilian_v4_gpu.gd"
+      - ".github/workflows/city-civilian-v4-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/CivilianCityFacadeV2.gd"
+      - "scripts/ui/CivilianCityPublicSpaceV3.gd"
+      - "scripts/ui/CivilianCityTacticalLOD4.gd"
+      - "tests/test_city_civilian_v4_gpu.gd"
+      - ".github/workflows/city-civilian-v4-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-city-art:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Test 135 city tactical LOD variants and capture 34 real Godot 3D frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          timeout 440s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_city_civilian_v4_gpu.gd \
+            2>&1 | tee /tmp/city-v4-gpu.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v4-gpu.log; then
+            echo "City V4 Godot validation failed"
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA CITY V4: 135' /tmp/city-v4-gpu.log
+          for shot in level_1_overview level_2_overview level_3_overview level_1_street level_2_street level_3_street civic_level_1 civic_level_2 civic_level_3 plaza_level_1 plaza_level_2 plaza_level_3 entry_level_1 entry_level_2 entry_level_3 compare_v1_civic compare_v2_civic compare_v2_plaza compare_v3_plaza neutral_city onyx_city damage_1 damage_2 damage_3 damage_4 tactical_level_1_lod_0 tactical_level_1_lod_1 tactical_level_1_lod_2 tactical_level_2_lod_0 tactical_level_2_lod_1 tactical_level_2_lod_2 tactical_level_3_lod_0 tactical_level_3_lod_1 tactical_level_3_lod_2; do
+            test -s "artifacts/tarvoka_city_v4_${shot}.png"
+          done
+      - name: Upload inspectable city preview screenshots and QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-City-V4-34-Real-Godot-3D-Previews
+          path: |
+            artifacts/tarvoka_city_v4_*.png
+            /tmp/city-v4-gpu.log
+          retention-days: 20
+          if-no-files-found: warn
