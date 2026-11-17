@@ -100,6 +100,10 @@ var _heli_v11_button: Button
 var _heli_v12_enabled: bool=true
 var _heli_v12_button: Button
 var _heli_v10_rim_light: DirectionalLight3D
+var _heli_night_fill_v143: OmniLight3D
+var _heli_night_enabled_v143: bool=false
+var _heli_night_snapshot_v143: Dictionary={}
+var _heli_night_button_v143: Button
 var _heli_camera_base: Vector3=Vector3.ZERO
 var _heli_focus_local: Vector3=Vector3.ZERO
 # True inspection camera beneath the native A01, not a tilted top view.
@@ -772,7 +776,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.2 · IMPACTOS Y DETALLES",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.3 · ACABADO Y LUZ",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -841,6 +845,12 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(130.0,8.0,2.25,Vector3(0.16,1.10,1.97)),
         "V14.2: posterior completa",
         func(): _heli_inspect(180.0,-6.0,1.30))
+    _add_paired(heli_controls,"V14.3: acabado de motores",
+        func(): _heli_inspect_focus(90.0,12.0,2.16,Vector3(0.64,1.61,1.08)),
+        "V14.3: sellos de cola",
+        func(): _heli_inspect_focus(132.0,8.0,2.18,Vector3(0.18,1.10,1.97)))
+    _heli_night_button_v143=_button(heli_controls,
+        "V14.3: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
         "Comparar morro V11 / V12",_heli_toggle_v12)
     _heli_v11_button=_button(heli_controls,
@@ -1005,6 +1015,72 @@ func _install_heli_lighting_v10() -> void:
     _heli_v10_rim_light.shadow_enabled=false
     _heli_v10_rim_light.visible=false
     preview.add_child(_heli_v10_rim_light)
+    # Second independent no-shadow fill, night-only. Battle lights unchanged.
+    _heli_night_fill_v143=OmniLight3D.new()
+    _heli_night_fill_v143.name="A01V143_LuzTacticaDeInspeccionNocturna"
+    _heli_night_fill_v143.position=Vector3(-2.6,2.8,0.65)
+    _heli_night_fill_v143.omni_range=7.0
+    _heli_night_fill_v143.light_color=Color("#a2c4dc")
+    _heli_night_fill_v143.light_energy=0.66
+    _heli_night_fill_v143.shadow_enabled=false
+    _heli_night_fill_v143.visible=false
+    preview.add_child(_heli_night_fill_v143)
+
+# V14.3 night inspection shares the original Studio environment rather than
+# adding a second viewer. Snapshot + restore all changed light/sky properties,
+# so exiting A01 does not recolor Bastion, tank, buildings or the battlefield.
+func _heli_set_night_v143(enabled: bool) -> void:
+    if enabled==_heli_night_enabled_v143:
+        return
+    if hq_key_light==null or hq_fill_light==null or hq_environment==null:
+        return
+    var scene: Environment=hq_environment.environment
+    if scene==null:
+        return
+    if enabled:
+        if _role!="attack_heli" or model_root==null:
+            return
+        _heli_night_snapshot_v143={
+            "key_color":hq_key_light.light_color,
+            "key_energy":hq_key_light.light_energy,
+            "key_rotation":hq_key_light.rotation_degrees,
+            "fill_color":hq_fill_light.light_color,
+            "fill_energy":hq_fill_light.light_energy,
+            "sky":scene.background_color,
+            "ambient_color":scene.ambient_light_color,
+            "ambient_energy":scene.ambient_light_energy
+        }
+        hq_key_light.rotation_degrees=Vector3(-18.0,61.0,0)
+        hq_key_light.light_color=Color("#b6cbe2")
+        hq_key_light.light_energy=0.22
+        hq_fill_light.light_color=Color("#86afce")
+        hq_fill_light.light_energy=0.24
+        scene.background_color=Color("#0c1622")
+        scene.ambient_light_color=Color("#819bb5")
+        scene.ambient_light_energy=0.23
+    else:
+        var day: Dictionary=_heli_night_snapshot_v143
+        if not day.is_empty():
+            hq_key_light.light_color=day["key_color"]
+            hq_key_light.light_energy=day["key_energy"]
+            hq_key_light.rotation_degrees=day["key_rotation"]
+            hq_fill_light.light_color=day["fill_color"]
+            hq_fill_light.light_energy=day["fill_energy"]
+            scene.background_color=day["sky"]
+            scene.ambient_light_color=day["ambient_color"]
+            scene.ambient_light_energy=day["ambient_energy"]
+        _heli_night_snapshot_v143.clear()
+    _heli_night_enabled_v143=enabled
+    if _heli_night_fill_v143!=null:
+        _heli_night_fill_v143.visible=enabled
+    if _heli_night_button_v143!=null:
+        _heli_night_button_v143.text=(
+            "V14.3: volver a iluminación diurna" if enabled
+            else "V14.3: activar noche táctica")
+
+func _heli_toggle_night_v143() -> void:
+    if _role=="attack_heli":
+        _heli_set_night_v143(not _heli_night_enabled_v143)
 
 # Inspection-only camera mode; does not rotate a destroyed helicopter or
 # change its fuselage, gear, flight rig or stage. The floor is hidden only
@@ -2363,6 +2439,9 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    var retain_night_v143: bool=(_heli_night_enabled_v143 and role=="attack_heli")
+    if _heli_night_enabled_v143:
+        _heli_set_night_v143(false)
     # All eight units and the buildings share the SAME viewport and camera.
     # For the native G09 V32, V25 materials + V30 damage + V31 inboard
     # geometry activate the final V32 animation rig in TankVisualRig3D.gd.
@@ -2529,11 +2608,15 @@ func _display_role(role: String) -> void:
         _apply_hq_lighting(_hq_light_preset)
         if role=="mlrs":
             _apply_g11_light_v23()
+    if retain_night_v143 and role=="attack_heli":
+        _heli_set_night_v143(true)
     _sync_p06_controls()
     _update_details()
     _refresh_unified_studio_navigation()
 
 func _switch_category(index: int) -> void:
+    if index!=0 and _heli_night_enabled_v143:
+        _heli_set_night_v143(false)
     super._switch_category(index)
     # The parent directly chooses tank when switching to Units. Rebuild
     # the native approved art after the parent's legacy category transition.
