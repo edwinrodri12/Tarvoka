@@ -61,3 +61,11 @@ Reproduce: `godot --headless --path . --script res://tests/test_allied_transit_e
 - **NO EJECUTADO** en Godot/CI para este commit; la ejecución anterior `44008359620` pasó sobre `89f8a811`, no valida este añadido.
 - CI general anterior `44008359522` **FALLÓ** en el paso de sprites HQ V13; CI Android anterior `44008359534` **PASÓ** como exportación, no prueba física.
 - **NO EJECUTADO EN DISPOSITIVO**. No fusionar hasta confirmar regresiones pertinentes y revisar el fallo general independiente.
+
+## 2026-11-17 — Independencia del CI de jugabilidad
+
+El workflow de esta rama ahora ejecuta también `test_rules.gd`, `test_battle_session.gd`, `test_basic_ai.gd` y `test_save_codec.gd` después de la regresión de tránsito aliado. Cada suite tiene timeout de 90 segundos, falla ante errores Godot y exige un marcador PASS. La cobertura permite comprobar reglas, victoria, IA y serialización incluso si el workflow general se detiene antes de llegar a las pruebas tácticas.
+
+Diagnóstico reproducible del fallo del workflow general en el commit anterior `77ecea54`: ejecución [44015178678](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178678), importación HQ V15 abortada porque `scripts/ui/BastionStudioAdapter.gd` no puede resolver `res://scripts/ui/CombinedArtStudioWeb.gd`. El problema no demuestra un fallo de movimiento. Evitar corregir la rama artística en esta PR de movimiento.
+
+Evidencia de base para `77ecea54`: [tránsito aliado 44015178674](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178674) PASÓ; [exportación Android 44015178689](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178689) PASÓ (solo compilación). **Nuevo workflow extendido: NO EJECUTADO / pendiente de verificar CI**. **Android físico: NO EJECUTADO EN DISPOSITIVO**. Ninguna PR fusionada.
