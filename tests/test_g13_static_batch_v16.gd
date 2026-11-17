@@ -134,14 +134,18 @@ func _run()->void:
         for kind in ["move","scan","attack_air","attack_ground"]:
             check(Models.pose_model("aa_mobile",model,kind,0.43,Vector2i(1,0)),
                 "V16 batching does not alter animation "+kind)
-            check(_visible_draws(model)==rendered,
-                "no added/removed draw objects during "+kind)
-        check(Batches.set_legacy_comparison(model,true),
-            "reference mode works after turret and radar animation")
-        check(_visible_draws(model)==legacy,
-            "original V15 equivalent still displays after animation")
-        check(Batches.set_legacy_comparison(model,false),
-            "reoptimized V16 restores after animation")
+            # V4 firing legitimately shows/hides muzzle flashes and smoke,
+            # so comparing attack draws to an IDLE count was a false error.
+            # Compare the exact same V4 pose in V15 and V16 instead.
+            var optimized_now:int=_visible_draws(model)
+            check(Batches.set_legacy_comparison(model,true),
+                "old V15 meshes can be displayed during "+kind)
+            check(_visible_draws(model)-optimized_now==expected_reduction,
+                "the same animated pose still saves exactly 27 GPU draws")
+            check(Batches.set_legacy_comparison(model,false),
+                "restore V16 instancing after "+kind)
+            check(_visible_draws(model)==optimized_now,
+                "identical animated geometry restored after batch toggle")
         Models.restore_model_pose("aa_mobile",model)
         model.free()
         var light:=Models.build("aa_mobile",faction,true,8)
