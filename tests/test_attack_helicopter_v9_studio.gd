@@ -271,6 +271,22 @@ func _run() -> void:
     studio.call("_heli_repair")
     _check(V13.stage(recolored)==0,
         "repair remains functional after faction color switching")
+    # The recolored wreck must not stand back up between army previews.
+    studio.call("_heli_destroy")
+    studio.call("_process",V13.DESTROY_DURATION+0.04)
+    _check(bool(studio.get("_heli_wreck_frozen")),
+        "wreck is frozen before the destroyed-faction transition")
+    studio.call("_on_faction",2)
+    await process_frame
+    var recolored_wreck: Node3D=studio.get("model_root") as Node3D
+    _check(recolored_wreck!=null and V13.stage(recolored_wreck)==4
+        and recolored_wreck.rotation_degrees.z>55.0
+        and recolored_wreck.position.y<0.0,
+        "destroyed helicopter remains down and banked after faction switch")
+    studio.call("_heli_repair")
+    _check(V13.stage(recolored_wreck)==0
+        and not bool(studio.get("_heli_wreck_frozen")),
+        "repair on another army removes wreck and restores original rotor")
     studio.call("_display_role","apc")
     await process_frame
     _check(not quick.visible,
