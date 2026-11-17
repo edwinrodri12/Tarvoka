@@ -13,6 +13,7 @@ const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 
 var scenario_picker: OptionButton
 var biome_picker: OptionButton
@@ -25,6 +26,8 @@ var economy_picker: OptionButton
 var objective_picker: OptionButton
 var balance_picker: OptionButton
 var first_picker: OptionButton
+var ai_level_picker: OptionButton
+var ai_style_picker: OptionButton
 var seed_picker: SpinBox
 var summary: Label
 var start_button: Button
@@ -283,8 +286,27 @@ func _ready() -> void:
     objective_picker = _picker(content,"Victoria",["Eliminar al rival","Control territorial"])
     balance_picker = _picker(content,"Equilibrio",["Entrenamiento","Dos fuerzas simetricas"])
     first_picker = _picker(content,"Primer turno",["Azul (jugador)","Rojo (rival)"])
-
-    _section(content,"05  /  ORDEN DE DESPLIEGUE")
+    _section(content,"05  /  COMANDANTE RIVAL · IA")
+    var ai_labels: Array = []
+    for i in range(Director.LEVEL_NAMES.size()):
+        ai_labels.append("%02d / 12 · %s" % [i+1,str(Director.LEVEL_NAMES[i])])
+    ai_level_picker = _picker(content,"Dificultad",ai_labels)
+    ai_style_picker = _picker(content,"Estrategia",[
+        "Adaptativa · decide según el enemigo",
+        "Equilibrada · recursos y combate",
+        "Expansión · conquistar ciudades",
+        "Fortaleza · proteger bases",
+        "Ofensiva rápida · ruptura",
+        "Armas combinadas · coordinar",
+        "Reconocimiento · explorar",
+        "Asedio · fuego indirecto",
+        "Superioridad aérea",
+        "Control naval",
+        "Desgaste · economía y logística"
+    ])
+    ai_level_picker.select(4) # Teniente: 5/12; prior AI unchanged if unused
+    ai_style_picker.select(0)
+    _section(content,"06  /  ORDEN DE DESPLIEGUE")
     summary = Label.new()
     summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     summary.add_theme_font_size_override("font_size",16)
@@ -375,6 +397,8 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
 
 func apply_preset(index: int) -> void:
     active_preset = index
+    ai_level_picker.select(4)
+    ai_style_picker.select(0)
     biome_picker.select(0)
     match index:
         0:
@@ -421,6 +445,10 @@ func load_choices(values: Dictionary) -> void:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
+    ai_level_picker.select(clampi(int(values.get("ai_level",5)),1,12)-1)
+    var chosen_style: String = str(values.get("ai_style","adaptive"))
+    ai_style_picker.select(Director.STYLES.find(chosen_style) if
+        Director.valid_style(chosen_style) else 0)
     _preset_label.text = "Configuración personalizada · lista para desplegar."
     _changed(true)
 
@@ -462,6 +490,9 @@ func _changed(manual: bool = false) -> void:
         "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
     if scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID:
         preset_summary += "\nSemilla reproducible: %d" % int(seed_picker.value)
+    preset_summary += "\nIA rival: %s · %s" % [
+        ai_level_picker.get_item_text(ai_level_picker.selected),
+        ai_style_picker.get_item_text(ai_style_picker.selected)]
     var blue: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},0)
     var red: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},1)
     if faction_summary != null:
@@ -504,6 +535,8 @@ func options() -> Dictionary:
         "objective":objective_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(),
         "first":first_picker.get_selected_id(),
+        "ai_level":ai_level_picker.get_selected_id()+1,
+        "ai_style":str(Director.STYLES[ai_style_picker.get_selected_id()]),
         "seed":int(seed_picker.value),
         "factions":selected_factions.duplicate(true)
     }
