@@ -18,7 +18,8 @@ const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
 # Fog decisions use only currently visible units and previously explored terrain.
-static func step(state: Dictionary) -> Dictionary:
+static func step(state: Dictionary,
+        options: Dictionary = {}) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     if not state.has("units") or not state["units"] is Array or not state.has("terrain"):
         return idle
@@ -107,7 +108,8 @@ static func step(state: Dictionary) -> Dictionary:
             spent["action"] = "attack"
             return spent
 
-    var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends, enemies, occupied)
+    var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends,
+        enemies, occupied,options)
     if withdrawal.get("valid", false):
         return withdrawal
 
@@ -550,7 +552,9 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
 # Defensive AI is intentionally limited: only a unit that a *visible*
 # enemy can immediately kill is eligible, and only if it can retreat beyond
 # all visible adjacent attack threats. This never reads hidden enemy data.
-static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends: Array, enemies: Array, occupied: Array[Vector2i]) -> Dictionary:
+static func _defensive_retreat(state: Dictionary, knowledge: Dictionary,
+        friends: Array, enemies: Array, occupied: Array[Vector2i],
+        options: Dictionary = {}) -> Dictionary:
     var idle := {"valid": false}
     var faction: int = int(state.get("faction", -1))
     var fog: bool = Visibility.enabled(state)
@@ -562,7 +566,10 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
         if bool(ally.get("moved", false)):
             continue
         var hp: int = int(ally.get("hp", 0))
-        if hp <= 0 or hp > 3:
+        # Historical heuristic only retreats units at <= 3 HP. Experimental
+        # lethal-risk mode tests ALL HP levels against an OBSERVED legal
+        # incoming strike (without knowing enemy private ammunition).
+        if hp <= 0 or (not bool(options.get("adaptive_lethal_retreat",false)) and hp > 3):
             continue
         var threatened := false
         for enemy in enemies:
