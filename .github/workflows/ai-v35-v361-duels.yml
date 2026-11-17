@@ -6,6 +6,7 @@ on:
       - "scripts/core/BasicAI.gd"
       - "scripts/core/NextTurnThreatV36.gd"
       - "tests/test_ai_v35_v361_full_matches.gd"
+      - "tests/test_ai_anticipation_discipline_v361.gd"
       - ".github/workflows/ai-v35-v361-duels.yml"
   workflow_dispatch:
 
@@ -48,5 +49,34 @@ jobs:
         with:
           name: ai-ab-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
           path: /tmp/v35-v361-duels.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  discipline_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Protect wounded infantry and specialists without forcing frontline retreat
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 450s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_anticipation_discipline_v361.gd \
+            2>&1 | tee /tmp/v361-discipline.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v361-discipline.log; then exit 1; fi
+          grep -Fq 'PASS AI v361 offensive discipline:' /tmp/v361-discipline.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v361-discipline-contract
+          path: /tmp/v361-discipline.log
           retention-days: 30
           if-no-files-found: ignore
