@@ -4,6 +4,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const Lights=preload("res://scripts/ui/G13FrontLightingV23.gd")
+const Intake=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 var failures:=0
 
 func check(ok: bool,what: String)->void:
@@ -67,6 +68,12 @@ func _run()->void:
     studio.call("_show_front_comparison",false)
     check(new_bezel!=null and new_bezel.visible,
         "V23 actual 3D model returns without duplicated nodes")
+    var new_intake:=refreshed.find_child(Intake.PIVOT,true,false) as Node3D
+    check(new_intake!=null and not new_intake.visible,
+        "V23 baseline hides the V24 3D grille for accurate comparison")
+    studio.call("_show_v24_finish")
+    check(new_intake!=null and new_intake.visible,
+        "V24 restores the actual grille, still in the same physical viewport")
     studio.call("_inspect_view","lamp_left")
     check(front_camera.size<1.0,"left lamp physical macro view")
     studio.call("_inspect_view","lamp_right")
