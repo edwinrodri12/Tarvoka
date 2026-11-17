@@ -78,21 +78,30 @@ static func _octagon(x:float,hy:float,half_z:float,
     ]
 
 static func _joint_cheek(side:int)->ArrayMesh:
-    # Two closed beveled metal cheeks join the V18 receiver rear to
-    # the original V12 rotating hub. They are small solid gussets,
-    # NOT independent side pods or launcher containers.
+    # Three *closed* chamfered sections. The broad root is fully seated
+    # in the V18 breech; the two smaller profiles stay UNDER the bearing's
+    # 0.100m bore radius. No intersection with the new fixed ring even
+    # after 42-degree elevation, so the cheek cannot become a missile pod.
     var sx:float=float(side)
-    var a:Array[Vector3]=_octagon(sx*0.301,0.088,0.109,0.076,0.028)
-    var b:Array[Vector3]=_octagon(sx*0.485,0.060,0.080,0.050,0.020)
+    var sections:Array=[
+        _octagon(sx*0.301,0.088,0.109,0.076,0.028),
+        _octagon(sx*0.405,0.040,0.045,0.025,0.016),
+        _octagon(sx*0.485,0.038,0.041,0.025,0.014)
+    ]
     var st:=SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
-    for i in range(8):
-        var j:int=(i+1)%8
-        _tri(st,a[i],b[j],a[j])
-        _tri(st,a[i],b[i],b[j])
+    for layer in range(sections.size()-1):
+        var a:Array=sections[layer]
+        var b:Array=sections[layer+1]
+        for i in range(8):
+            var j:int=(i+1)%8
+            _tri(st,a[i],b[j],a[j])
+            _tri(st,a[i],b[i],b[j])
+    var first:Array=sections[0]
+    var last:Array=sections[sections.size()-1]
     for i in range(1,7):
-        _tri(st,a[0],a[i+1],a[i])
-        _tri(st,b[0],b[i],b[i+1])
+        _tri(st,first[0],first[i+1],first[i])
+        _tri(st,last[0],last[i],last[i+1])
     return st.commit()
 
 static func _mesh(parent:Node3D,name:String,geometry:Mesh,
