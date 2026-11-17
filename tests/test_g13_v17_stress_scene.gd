@@ -154,7 +154,7 @@ func _run()->void:
     # 8 real captures; the 16 hero test is intentionally more demanding
     # than the desktop policy, to expose possible worst-case regressions.
     for level in LEVELS:
-        var quantities:Array[int]=[1,4,8,16] if level==13 else [1,8,16,32]
+        var quantities:Array=[1,4,8,16] if level==13 else [1,8,16,32]
         for n in quantities:
             await _scenario(view,camera,level,n,folder)
     check(cases.size()==8,"eight 1-32 unit stress scenarios completed")
