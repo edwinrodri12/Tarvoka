@@ -94,6 +94,7 @@ var _heli_focus_local: Vector3=Vector3.ZERO
 var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_damage_stage: int=0
+var _heli_wreck_frozen: bool=false
 var _heli_damage_clock: float=0.0
 var _heli_time: float=0.0
 # A01 V9 — mobile landscape: quick actions near the model picker, not below
@@ -769,7 +770,10 @@ func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     _heli_focus_local=Vector3.ZERO
     _yaw=yaw
     _zoom=zoom_level
-    model_root.rotation_degrees=Vector3(tilt,yaw,0.0)
+    # A completed crash stays banked and grounded while inspecting it.
+    # Only the orbit/tilt changes, never the 70-degree wreck roll.
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(tilt,yaw,wreck_roll)
     _update_camera()
 
 func _heli_toggle_v2() -> void:
@@ -816,7 +820,8 @@ func _heli_view(yaw: float) -> void:
         return
     _heli_stop()
     _yaw=yaw
-    model_root.rotation_degrees=Vector3(0,yaw,0)
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(0,yaw,wreck_roll)
     _heli_focus_local=Vector3.ZERO
     _update_camera()
 
@@ -825,7 +830,8 @@ func _heli_top_view() -> void:
         return
     _heli_stop()
     _yaw=38.0
-    model_root.rotation_degrees=Vector3(43.0,_yaw,0.0)
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(43.0,_yaw,wreck_roll)
     _heli_focus_local=Vector3.ZERO
     _update_camera()
 
@@ -834,13 +840,17 @@ func _heli_next_damage() -> void:
         return
     _heli_stop()
     _heli_damage_stage=mini(HeliV13.stage(model_root)+1,HeliV13.MAX_STAGE)
+    if _heli_damage_stage==4 and not _heli_wreck_frozen:
+        _heli_destroy()
+        return
     HeliV13.set_stage(model_root,_heli_damage_stage)
     _update_details()
 
 func _heli_repair() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
         return
-    _heli_stop()
+    _heli_stop(true)
+    _heli_wreck_frozen=false
     _heli_damage_stage=0
     _heli_damage_clock=0.0
     HeliV13.set_stage(model_root,0)
@@ -849,7 +859,8 @@ func _heli_repair() -> void:
 func _heli_destroy() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
         return
-    _heli_stop()
+    _heli_stop(true)
+    _heli_wreck_frozen=false
     _heli_damage_stage=4
     HeliV13.set_stage(model_root,4)
     _heli_play("destroy")
@@ -858,7 +869,7 @@ func _heli_play(kind: String) -> void:
     if _role!="attack_heli" or model_root==null or not HeliV1.has_model(model_root):
         return
     if HeliV13.has_model(model_root):
-        if kind in ["move","attack"] and HeliV13.stage(model_root)>=4:
+        if kind!="destroy" and HeliV13.stage(model_root)>=4:
             return
         if kind=="hit_bullet":
             _heli_damage_stage=maxi(1,HeliV13.stage(model_root))
@@ -874,9 +885,12 @@ func _heli_play(kind: String) -> void:
         HeliV1.pose(model_root,kind,0.0)
     _update_details()
 
-func _heli_stop() -> void:
+func _heli_stop(force_restore: bool=false) -> void:
     _heli_animation=""
     _heli_time=0.0
+    # Ending preview must NOT magically levitate a destroyed helicopter.
+    if _heli_wreck_frozen and not force_restore:
+        return
     if model_root!=null and HeliV13.has_model(model_root):
         HeliV13.restore(model_root)
     elif model_root!=null and HeliV1.has_model(model_root):
@@ -1692,6 +1706,9 @@ func _display_role(role: String) -> void:
             HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
             if HeliV13.has_model(model_root):
                 HeliV13.set_stage(model_root,_heli_damage_stage)
+                if _heli_wreck_frozen and _heli_damage_stage>=4:
+                    # A recolored faction inherits the same final wreck pose.
+                    HeliV13.pose(model_root,"destroy",1.0)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
@@ -2346,6 +2363,7 @@ func _process(delta: float) -> void:
             HeliV1.pose(model_root,_heli_animation,t)
         if t>=1.0:
             if _heli_animation=="destroy":
+                _heli_wreck_frozen=true
                 _heli_animation=""
                 _heli_time=0.0
             else:
