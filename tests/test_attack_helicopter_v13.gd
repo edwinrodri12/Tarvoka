@@ -64,6 +64,14 @@ func _run() -> void:
             "stage2 scorched armor and smoke, no flames")
         var smoke_puff: MeshInstance3D=model.find_child(
             "A01V13_ColumnaHumo_0",true,false) as MeshInstance3D
+        var smoke_mat: StandardMaterial3D=(
+            smoke_puff.material_override as StandardMaterial3D
+            if smoke_puff!=null else null)
+        _check(smoke.get_child_count()==8 and smoke_puff!=null
+            and smoke_puff.mesh is QuadMesh and smoke_mat!=null
+            and smoke_mat.billboard_mode==BaseMaterial3D.BILLBOARD_ENABLED
+            and smoke_mat.albedo_texture is ImageTexture,
+            "V13.1 medium smoke uses eight soft alpha 3D billboards, not rigid balls")
         var smoke_start: Vector3=smoke_puff.position if smoke_puff!=null else Vector3.ZERO
         _check(V13.animate_ambient(model,2.7) and smoke_puff!=null
             and smoke_puff.position.distance_to(smoke_start)>0.07,
@@ -77,6 +85,13 @@ func _run() -> void:
             "stage3 critical burning damage before final destruction")
         var flame: MeshInstance3D=model.find_child(
             "A01V13_LlamaMotor_0",true,false) as MeshInstance3D
+        var flame_mat: StandardMaterial3D=(
+            flame.material_override as StandardMaterial3D if flame!=null else null)
+        _check(fire.get_child_count()==6 and flame!=null
+            and flame.mesh is ArrayMesh and flame_mat!=null
+            and flame_mat.vertex_color_use_as_albedo
+            and flame_mat.emission_enabled,
+            "V13.1 critical fire consists of six tapered solid gradient tongues")
         var flame_start: Vector3=flame.scale if flame!=null else Vector3.ZERO
         _check(V13.animate_ambient(model,0.84) and flame!=null
             and flame.scale.distance_to(flame_start)>0.01,
