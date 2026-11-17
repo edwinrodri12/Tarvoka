@@ -8,6 +8,7 @@ const V8=preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const V10=preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 const V11=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
+const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 var failures: int=0
 var images: int=0
 
@@ -182,6 +183,23 @@ func _run() -> void:
         Vector3(0.19,0.57,-1.38))
     _check(studio.get("_heli_focus_local")==Vector3(0.19,0.57,-1.38),
         "V12 inspect camera focuses precisely on the gun trunnion")
+    _check(V13.has_model(model) and V13.stage(model)==0,
+        "V13 studio loads genuine damage overlay without changing approved A01")
+    studio.call("_heli_play","hit_bullet")
+    _check(V13.stage(model)==1,
+        "new V13 bullet action activates persistent light damage")
+    studio.call("_heli_stop")
+    studio.call("_heli_next_damage")
+    _check(V13.stage(model)==2,
+        "V13 stage control increases to smoke and moderate damage")
+    studio.call("_heli_destroy")
+    _check(V13.stage(model)==4
+        and str(studio.get("_heli_animation"))=="destroy",
+        "V13 destruction button starts actual crash and broken rotor")
+    studio.call("_heli_stop")
+    studio.call("_heli_repair")
+    _check(V13.stage(model)==0,
+        "V13 repair fully restores original helicopter and animation state")
     var rim: DirectionalLight3D=studio.get("_heli_v10_rim_light")
     _check(rim!=null and rim.visible and not rim.shadow_enabled,
         "dedicated cool fill light affects only A01 without extra WebGL shadows")
@@ -227,14 +245,14 @@ func _run() -> void:
     _check(rim!=null and not rim.visible,
         "V10 extra light disabled when viewing Bastion or any other category")
     var shared_picker: OptionButton=studio.get("role_picker") as OptionButton
-    var has_v12_label: bool=false
+    var has_v13_label: bool=false
     if shared_picker!=null:
         for idx in range(shared_picker.item_count):
             if shared_picker.get_item_text(idx).contains("Helicóptero A01") and (
-                    shared_picker.get_item_text(idx).contains("V12")):
-                has_v12_label=true
-    _check(shared_picker!=null and has_v12_label and shared_picker.clip_text,
-        "unified model selector includes A01 V12 with Android-safe clipping")
+                    shared_picker.get_item_text(idx).contains("V13")):
+                has_v13_label=true
+    _check(shared_picker!=null and has_v13_label and shared_picker.clip_text,
+        "unified model selector includes A01 V13 with Android-safe clipping")
     _check(studio.get("model_root")!=null,
         "old Bastion inspector still loads after A01")
     studio.queue_free()
