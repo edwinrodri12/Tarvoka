@@ -307,7 +307,8 @@ static func _wishlist(policy: String, kind: String) -> Array:
         return ["patrol","missile_boat"]
     return []
 
-static func _purchase(battle: Dictionary, side: int, policy: String) -> Dictionary:
+static func _purchase(battle: Dictionary, side: int, policy: String,
+        options: Dictionary = {}) -> Dictionary:
     var session: Dictionary = battle["session"]
     var state: Dictionary = session["world"]["state"]
     if _count_active(state,side) >= MAX_ARMY_PER_SIDE:
@@ -325,6 +326,15 @@ static func _purchase(battle: Dictionary, side: int, policy: String) -> Dictiona
         for role in _wishlist(policy,str(site["kind"])):
             if Economy.producer_for(str(role),true) != str(site["kind"]):
                 continue
+            # Optional v22 LAB restriction: tank/IFV require level II on this
+            # exact owned armor plant. The legacy v21 default remains open.
+            if bool(options.get("gate_armor_level2",false)) and \
+                    str(site["kind"]) == "armor_plant" and str(role) in ["tank","ifv"]:
+                var cell: Vector2i = site["pos"]
+                var key: String = "%d:%d" % [cell.x,cell.y]
+                var levels: Dictionary = options.get("armor_levels",{})
+                if int(levels.get(key,1)) < 2:
+                    continue
             var cost: int = Economy.cost(str(role))
             if cost > money:
                 continue
@@ -365,7 +375,8 @@ static func _purchase(battle: Dictionary, side: int, policy: String) -> Dictiona
         return {"valid":true,"battle":result,"action":"purchase"}
     return {"valid":false}
 
-static func play_half_turn(battle: Dictionary, policy: String) -> Dictionary:
+static func play_half_turn(battle: Dictionary, policy: String,
+        options: Dictionary = {}) -> Dictionary:
     if not bool(battle.get("valid",false)) or policy not in STRATEGIES:
         return {"valid":false}
     var current: Dictionary = battle.duplicate(true)
@@ -374,9 +385,10 @@ static func play_half_turn(battle: Dictionary, policy: String) -> Dictionary:
         return {"valid":false}
     var initial_attacks: int = int(current["stats"]["attacks"][side])
     var initial_orders: int = int(current["stats"]["orders"][side])
-    var taken: Dictionary = _purchase(current,side,policy)
-    if bool(taken.get("valid",false)):
-        current = taken["battle"]
+    if not bool(options.get("skip_purchase",false)):
+        var taken: Dictionary = _purchase(current,side,policy,options)
+        if bool(taken.get("valid",false)):
+            current = taken["battle"]
     for i in range(MAX_ORDERS_PER_HALF_TURN):
         if int(current["session"]["world"]["state"]["winner"]) != -1:
             break
