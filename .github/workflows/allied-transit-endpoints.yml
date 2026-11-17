@@ -1,0 +1,81 @@
+name: Allied transit endpoint regression
+on:
+  pull_request:
+    paths:
+      - 'tests/test_allied_transit_endpoints.gd'
+      - 'tests/test_rules.gd'
+      - 'tests/test_battle_session.gd'
+      - 'tests/test_basic_ai.gd'
+      - 'tests/test_save_codec.gd'
+      - 'scripts/core/Rules.gd'
+      - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/SaveCodec.gd'
+      - 'scripts/core/BattleSession.gd'
+      - '.github/workflows/allied-transit-endpoints.yml'
+  workflow_dispatch:
+
+jobs:
+  allied-transit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Assert allied transit and endpoint isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_allied_transit_endpoints.gd 2>&1 | tee /tmp/allied-transit.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/allied-transit.log; then
+            echo 'Unexpected Godot diagnostic'; exit 1
+          fi
+          test "$(grep -Fc 'PASS: allied transit and endpoint isolation' /tmp/allied-transit.log)" -eq 1
+      - name: Run independent tactical AI save and victory smoke regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A expected=(
+            [test_rules]="PASS: movement rules and terrain integrity"
+            [test_battle_session]="PASS battle session: move, turn ownership, attack, victory, immutability, faction fallback"
+            [test_basic_ai]="PASS basic AI: adjacent attack, win, deterministic move, spent unit, immutability"
+            [test_save_codec]="PASS save codec: roundtrip, immutability, version, invalid JSON, bounds, IDs"
+          )
+          for suite in test_rules test_battle_session test_basic_ai test_save_codec; do
+            echo "::group::${suite}"
+            timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script "res://tests/${suite}.gd" 2>&1 | tee "/tmp/${suite}.log"
+            # SaveCodec deliberately parses malformed JSON in its negative test.
+            # Godot emits one engine ERROR for that expected rejection; reject
+            # every other diagnostic and any missing/duplicated expected error.
+            if [ "${suite}" = "test_save_codec" ]; then
+              expected_error="ERROR: Parse JSON failed. Error at line 0: Expected 'true','false' or 'null', got 'not'."
+              if [ "$(grep -Fxc "${expected_error}" "/tmp/${suite}.log")" -ne 1 ]; then
+                echo "SaveCodec malformed-JSON rejection was missing or duplicated"; exit 1
+              fi
+              if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log" | grep -Fv "${expected_error}"; then
+                echo "Unexpected Godot diagnostic in ${suite}"; exit 1
+              fi
+            elif grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log"; then
+              echo "Unexpected Godot diagnostic in ${suite}"
+              exit 1
+            fi
+            if [ "$(grep -Fxc "${expected[$suite]}" "/tmp/${suite}.log")" -ne 1 ]; then
+              echo "Expected exact suite completion marker missing or duplicated in ${suite}"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
+      - name: Preserve Godot regression logs on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allied-transit-godot-logs
+          path: /tmp/*.log
+          if-no-files-found: warn
+          retention-days: 7
