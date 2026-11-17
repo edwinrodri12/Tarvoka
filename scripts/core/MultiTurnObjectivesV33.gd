@@ -10,6 +10,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 const MAX_CAPTURE_ORDERS := 2
 const MAX_ESCORT_ORDERS := 2
@@ -87,13 +88,30 @@ static func _goal(unit: Dictionary, task: String, site: Dictionary) -> Dictionar
         "kind":str(site["kind"]),"x":cell.x,"y":cell.y}
 
 static func _persisted_capture(previous: Dictionary,
-        unit: Dictionary, sites: Array, chosen: Dictionary) -> Dictionary:
+        unit: Dictionary, knowledge: Dictionary,
+        sites: Array, chosen: Dictionary, side: int) -> Dictionary:
     for g in previous.get("assignments",[]):
         if str(g.get("task","")) != "capture" or \
                 str(g.get("unit_id","")) != str(unit["id"]):
             continue
+        var cell: Vector2i = _cell(g)
+        if chosen.has(cell):
+            continue
         for s in sites:
-            if _same_target(g,s) and not chosen.has(s["pos"]):
+            if _same_target(g,s):
+                return g.duplicate(true)
+        # Previously SEEN objectives remain actionable stale leads when
+        # the fog covers them again. A distant unseen owner is -2: it
+        # cannot reveal that the enemy secretly captured the site.
+        for s in knowledge.get("economy",{}).get("sites",[]):
+            if s.get("pos") != cell or \
+                    str(s.get("kind","")) != str(g["kind"]) or \
+                    int(s.get("owner",-2)) != -2:
+                continue
+            if Rules.inside(cell,knowledge["terrain"]) and \
+                    Rules.movement_cost_for(str(
+                        knowledge["terrain"][cell.y][cell.x]),
+                        Domains.GROUND) >= 0:
                 return g.duplicate(true)
     return {}
 
@@ -122,7 +140,8 @@ static func refresh(knowledge: Dictionary, side: int,
     for u in capturers:
         if tasks.size() >= MAX_CAPTURE_ORDERS:
             break
-        var old: Dictionary = _persisted_capture(previous,u,candidates,chosen)
+        var old: Dictionary = _persisted_capture(previous,u,
+            knowledge,candidates,chosen,side)
         if old.is_empty():
             continue
         tasks.append(old)
@@ -251,6 +270,10 @@ static func valid(objectives: Dictionary, state: Dictionary) -> bool:
             return false
         if str(state["terrain"][cell.y][cell.x]) == "water":
             return false
+        if Visibility.enabled(state) and \
+                not Visibility.explored_cells(state,
+                    int(objectives["side"])).has(cell):
+            return false # A forged goal in unexplored fog is not memory.
         # A goal must correspond to an ACTUAL public objective, even if its
         # owner changed since last turn. Save loading cannot forge targets.
         var site_ok := false
