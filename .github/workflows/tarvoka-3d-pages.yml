@@ -333,7 +333,7 @@ jobs:
               # Match whole declaration lines, not partial names: V1 is
               # a prefix of V10, so string.count('const ...V1') is unsafe.
               import re
-              anchor=re.compile(r'(?m)^'+re.escape(start))
+              anchor=re.compile(r'(?m)^'+re.escape(start)+r'(?![A-Za-z0-9_])')
               dest=list(anchor.finditer(studio))
               src=list(anchor.finditer(source))
               assert len(dest)==1,(start,len(dest))
