@@ -280,5 +280,29 @@ func _initialize() -> void:
     assert(max_map == max_snapshot and max_allies == [Vector2i(38, 29), Vector2i(39, 29)]
         and max_enemies == [Vector2i(37, 28)],
         "Maximum-map routing must preserve caller-owned inputs")
+    # Budget monotonicity on the maximum supported board: increasing movement
+    # must not remove endpoints or alter their minimum costs. This catches
+    # premature pruning in large-board allied-transit searches.
+    var budgets: Array[int] = [1, 2, 3, 4, 5]
+    var previous_paths: Dictionary = {}
+    for budget in budgets:
+        var current_paths: Dictionary = rules.reachable(
+            Vector2i(37, 29), budget, max_map, max_enemies, "ground", false, max_allies
+        )
+        for destination in previous_paths:
+            assert(current_paths.has(destination),
+                "Increasing budget must not remove an existing legal endpoint")
+            assert(current_paths[destination] == previous_paths[destination],
+                "Increasing budget must preserve minimum cost of existing endpoint")
+        assert(not current_paths.has(Vector2i(38, 29))
+            and not current_paths.has(Vector2i(39, 29)),
+            "No budget may legalize occupied allied endpoints")
+        assert(not current_paths.has(Vector2i(40, 29))
+            and not current_paths.has(Vector2i(39, 30)),
+            "No budget may allow off-board endpoints")
+        previous_paths = current_paths
+    assert(max_map == max_snapshot and max_allies == [Vector2i(38, 29), Vector2i(39, 29)]
+        and max_enemies == [Vector2i(37, 28)],
+        "Budget sweep must preserve terrain and occupancy inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
