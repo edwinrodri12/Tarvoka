@@ -24,7 +24,11 @@ static func cheek_outer_x(part_mesh:MeshInstance3D,side:int)->float:
             part_mesh.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
         var outer:float=0.0
         for p in vertices:
-            outer=maxf(outer,float(side)*(p.x+part_mesh.position.x))
+            # New V21 lower armor flares out below the painted stripe.
+            # Preserve V5's original purpose: faction paint must project
+            # beyond the UPPER armor plane at its actual y=.28..38.
+            if p.y>=0.280 and p.y<=0.405:
+                outer=maxf(outer,float(side)*(p.x+part_mesh.position.x))
         return outer
     return 0.0
 
