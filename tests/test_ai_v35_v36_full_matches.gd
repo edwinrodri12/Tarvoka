@@ -204,7 +204,7 @@ static func _assert_board(state: Dictionary) -> void:
         if int(unit["hp"]) <= 0:
             continue
         var pos: Vector2i = unit["pos"]
-        assert(Rules.inside(pos,Rules.map_size(state["terrain"])))
+        assert(Rules.inside(pos,state["terrain"]))
         if str(unit.get("domain","ground")) == "ground":
             assert(not ground.has(pos))
             ground[pos] = true
