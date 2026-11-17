@@ -41,8 +41,8 @@ static func _annular_bearing()->ArrayMesh:
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var outer:float=0.137
     var inner:float=0.100
-    var x0:float=-0.016
-    var x1:float=0.016
+    var x0:float=-0.0435
+    var x1:float=0.0435
     for i in range(SEGMENTS):
         var j:int=(i+1)%SEGMENTS
         var a:=_ring_point(x0,outer,i)
@@ -83,7 +83,7 @@ static func _joint_cheek(side:int)->ArrayMesh:
     # NOT independent side pods or launcher containers.
     var sx:float=float(side)
     var a:Array[Vector3]=_octagon(sx*0.301,0.088,0.109,0.076,0.028)
-    var b:Array[Vector3]=_octagon(sx*0.418,0.060,0.080,0.050,0.020)
+    var b:Array[Vector3]=_octagon(sx*0.485,0.060,0.080,0.050,0.020)
     var st:=SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     for i in range(8):
@@ -149,16 +149,19 @@ static func apply(root:Node3D)->bool:
     for side in [-1,1]:
         var sx:float=float(side)
         # Keep the fixed ring on the original azimuth turret.
+        # The 0.087m deep open bearing overlaps the old 0.045m V12
+        # trunnion by ~0.0m without exposing a floating axle, and
+        # projects outside the armored cheek where it is legible.
         _mesh(turret,FIXED_RING % side,_annular_bearing(),
-            Vector3(sx*0.456,0.280,-0.215),gasket)
-        # Moving cap stays in the hollow bearing, following gun elevation.
+            Vector3(sx*0.482,0.280,-0.215),gasket)
+        # Moving cap stays inside this longer bearing sleeve, following gun elevation.
         var hub:=CylinderMesh.new()
         hub.top_radius=0.080
         hub.bottom_radius=0.080
         hub.height=0.018
         hub.radial_segments=20
         var cap:=_mesh(pitch,MOBILE_HUB % side,hub,
-            Vector3(sx*0.476,0.0,0.0),alloy)
+            Vector3(sx*0.529,0.0,0.0),alloy)
         cap.rotation_degrees=Vector3(0,0,90)
         # Receiver-side reinforcement, contoured to the existing rear body.
         _mesh(pitch,CHEEK % side,_joint_cheek(side),
