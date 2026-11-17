@@ -88,7 +88,7 @@ static func _windows(stage: Node3D,model: Node3D,
     if v7==null:
         return
     for lateral in v7.get_children():
-        if not str(lateral.name).begins_with("FachadaLateralV7_"):
+        if not lateral.has_meta("module_tag"):
             continue
         var side: int=int(lateral.get_meta("side_direction",0))
         if side==0:
