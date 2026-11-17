@@ -93,14 +93,18 @@ static func _windows(stage: Node3D,model: Node3D,
         var side: int=int(lateral.get_meta("side_direction",0))
         if side==0:
             continue
-        var tag: String=str(lateral.name).trim_prefix("FachadaLateralV7_")
+        # Godot may add @2 to the second side of a one-floor barrack:
+        # both V7 sides share the same module name. Resolve by exact
+        # module prefix rather than comparing auto-renamed node names.
         var module: Dictionary={}
         for candidate in V2._modules(level):
-            if str(candidate["tag"])==tag:
+            var expected_name: String="FachadaLateralV7_"+str(candidate["tag"])
+            if str(lateral.name).begins_with(expected_name):
                 module=candidate
                 break
         if module.is_empty():
             continue
+        var tag: String=str(module["tag"])
         var outer: float=float(module["x"])+float(side)*float(module["w"])*0.5
         var count: int=0
         for mesh in lateral.get_children():
