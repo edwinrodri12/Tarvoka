@@ -5,6 +5,7 @@ extends SceneTree
 # camera pose, faction paint, light source, and renderer. No gameplay edits.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Front=preload("res://scripts/ui/G13FrontLightingV23.gd")
+const Intake=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 
 const CAPTURES:=27
@@ -113,6 +114,7 @@ func _run()->void:
                 "twin_autocannon_no_missiles",
             "faction %d preserves weapons and genuine V23" % faction)
         viewport.add_child(unit)
+        Intake.show_v23_reference(unit,true)
         frame_camera(cam,Vector3(0,1.07,-4.2),
             Vector3(0,0.90,-1.0),1.40)
         await picture(viewport,folder,"faction_%02d_front" % faction)
@@ -125,6 +127,9 @@ func _run()->void:
         quit(1)
         return
     viewport.add_child(hero)
+    # This historical V22/V23 test must disable V24 across both images.
+    require(Intake.show_v23_reference(hero,true),
+        "historical V23 reference excludes later sculpt V24")
     for side in [-1,1]:
         var frame:=hero.find_child(Front.RIM % side,true,false) as MeshInstance3D
         var lens:=hero.find_child(Front.LENS % side,true,false) as MeshInstance3D
