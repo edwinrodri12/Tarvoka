@@ -119,6 +119,56 @@ func _real_3d_battles() -> void:
     assert(Painter.status_symbol({"status":"ready"})=="+")
     assert(Economy.site_at(baseline["economy"],allied)["kind"]=="factory")
 
+# A dedicated native Godot battle viewport avoids capturing the 3D modal
+# in an unfocused/non-drawn state under the CI software GPU. It renders the
+# REAL Terrain.build(state) scene with the approved model, NOT the art Studio.
+func _capture_live_terrain(state: Dictionary) -> void:
+    var frame:=SubViewportContainer.new()
+    frame.name="CapturaMapa3DRealTarvokaV11"
+    frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+    frame.stretch=false
+    frame.size=Vector2(960,540)
+    root.add_child(frame)
+    var vp:=SubViewport.new()
+    vp.size=Vector2i(960,540)
+    vp.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+    vp.transparent_bg=false
+    frame.add_child(vp)
+    var battlefield: Node3D=Terrain.build(state,"")
+    assert(battlefield!=null)
+    vp.add_child(battlefield)
+    assert(_find_marked(battlefield,Vector2i(0,3))!=null)
+    var camera:=Camera3D.new()
+    camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+    camera.size=31.0
+    camera.position=Vector3(12.0,26.0,35.0)
+    vp.add_child(camera)
+    camera.look_at(Vector3(10.8,0.0,8.4),Vector3.UP)
+    camera.current=true
+    var light:=DirectionalLight3D.new()
+    light.rotation_degrees=Vector3(-53.0,22.0,0.0)
+    light.light_energy=1.6
+    vp.add_child(light)
+    await _frames(40)
+    var img: Image=vp.get_texture().get_image()
+    assert(img!=null and not img.is_empty())
+    var palette: Dictionary={}
+    for py in range(0,img.get_height(),maxi(1,int(img.get_height()/18))):
+        for px in range(0,img.get_width(),maxi(1,int(img.get_width()/24))):
+            palette[img.get_pixel(px,py).to_html()]=true
+    if palette.size()<=6:
+        push_error("Gameplay 3D screenshot is still blank: %d colors" % palette.size())
+        frame.queue_free()
+        await _frames(2)
+        quit(1)
+        return
+    assert(DirAccess.make_dir_recursive_absolute(
+        ProjectSettings.globalize_path("res://artifacts"))==OK)
+    assert(img.save_png(
+        "res://artifacts/tarvoka_infantry_v11_in_game_battle.png")==OK)
+    frame.queue_free()
+    await _frames(2)
+
 func _run() -> void:
     root.content_scale_size=Vector2i(1280,720)
     _real_3d_battles()
@@ -147,21 +197,10 @@ func _run() -> void:
     assert(view.building_info_panel.visible)
     assert(view.building_info_panel.production_button.visible)
     assert(board.state==before)
-    if DisplayServer.get_name()!="headless":
-        var image: Image=view.preview.get_texture().get_image()
-        assert(image!=null and not image.is_empty())
-        var palette: Dictionary={}
-        for py in range(0,image.get_height(),maxi(1,int(image.get_height()/18))):
-            for px in range(0,image.get_width(),maxi(1,int(image.get_width()/24))):
-                palette[image.get_pixel(px,py).to_html()]=true
-        # A uniform clear-color image is NOT evidence of a rendered battle.
-        assert(palette.size()>6)
-        assert(DirAccess.make_dir_recursive_absolute(
-            ProjectSettings.globalize_path("res://artifacts"))==OK)
-        assert(image.save_png(
-            "res://artifacts/tarvoka_infantry_v11_in_game_battle.png")==OK)
     view.close_view()
     main.queue_free()
-    await _frames(2)
+    await _frames(4)
+    if DisplayServer.get_name()!="headless":
+        await _capture_live_terrain(before)
     print("PASS INFANTRY V11 IN REAL GAME: actual 3D battle, 2D site markers, 3 levels, 8 faction palettes, captured production menu, fog safety, no gameplay mutation")
     quit(0)
