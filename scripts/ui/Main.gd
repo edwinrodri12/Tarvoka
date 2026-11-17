@@ -2573,6 +2573,8 @@ func _open_battle_3d() -> void:
         battle_3d_view.connect("objectives_requested",Callable(self,"_open_objectives_radar"))
         battle_3d_view.connect("end_turn_requested",Callable(self,"_end_turn"))
         battle_3d_view.connect("resupply_requested",Callable(self,"_resupply_unit"))
+        battle_3d_view.connect("site_production_requested",
+            Callable(self,"_open_site_production"))
     if not battle_3d_view.open_from_board(board):
         board.message = "No se pudo abrir el terreno 3D de esta partida."
         board.queue_redraw()
