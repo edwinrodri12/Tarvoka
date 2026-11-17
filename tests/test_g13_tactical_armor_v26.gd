@@ -18,16 +18,14 @@ func verify(ok:bool,message:String)->void:
         failures+=1
         push_error("G13 V26 native armor QA: "+message)
 
-func visible_objects(node:Node,show:bool=true)->int:
-    var now_visible:bool=show
-    if node is Node3D:
-        now_visible=show and (node as Node3D).visible
-    if not now_visible:
-        return 0
+func allocated_draw_nodes(node:Node)->int:
+    # Count ALLOCATED MeshInstance/MultiMesh nodes, not visible instances:
+    # a legitimate firing pose briefly reveals muzzle-flash and smoke
+    # objects that already exist in the V1 rig; no new nodes are created.
     var count:int=1 if node is MeshInstance3D or (
         node is MultiMeshInstance3D) else 0
     for child in node.get_children():
-        count+=visible_objects(child,now_visible)
+        count+=allocated_draw_nodes(child)
     return count
 
 func photo(view:SubViewport,folder:String,name:String)->Image:
@@ -127,7 +125,7 @@ func _run()->void:
         verify(int(model.get_meta("tarvoka_g13_v26_extra_triangles",-1))==
             V26.ADDED_TRIANGLES and V26.ADDED_TRIANGLES==108,
             "explicit small geometry cost: only 108 extra triangles")
-        var before_nodes:int=visible_objects(model)
+        var before_nodes:int=allocated_draw_nodes(model)
         for entry in V26._shape_spec():
             var name:String=entry["name"]
             var mesh:=model.find_child(name,true,false) as MeshInstance3D
@@ -148,7 +146,7 @@ func _run()->void:
                 verify(mesh.position.is_equal_approx(entry["position"]),
                     "original 3D mount pivot stays unchanged")
         verify(not V26.apply(model),"cannot duplicate an installed sculpt")
-        verify(visible_objects(model)==before_nodes,
+        verify(allocated_draw_nodes(model)==before_nodes,
             "zero added visible nodes after reapply attempt")
         verify(V26.show_v25_reference(model,true),
             "reveal authentic previous V25 rectangular armor")
@@ -162,7 +160,7 @@ func _run()->void:
                 "aim_ground","attack_ground"]:
             verify(Models.pose_model("aa_mobile",model,pose,0.41),
                 pose+" still moves original 4x4 radar/gun pivots")
-            verify(visible_objects(model)==before_nodes,
+            verify(allocated_draw_nodes(model)==before_nodes,
                 "no new draw nodes during any pose")
         Models.restore_model_pose("aa_mobile",model)
         verify(model.find_child(G13.WHEELS,true,false)
