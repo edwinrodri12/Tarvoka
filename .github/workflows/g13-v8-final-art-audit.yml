@@ -289,6 +289,42 @@ jobs:
           path: /tmp/g13-v22-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
+      - name: Capture G13 V23 27 true Godot frontal optical and same-camera V22 comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v23-front-review
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V23_VISUAL_DIR=/tmp/g13-v23-front-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_v23_visual_front_audit.gd 2>&1 | tee /tmp/g13-v23-front-review.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v23-front-review.log; then exit 1; fi
+          grep -F 'PASS G13 V23 FRONT VISUAL AUDIT:' /tmp/g13-v23-front-review.log
+          test "$(find /tmp/g13-v23-front-review -name '*.png' | wc -l)" -eq 27
+          test -s /tmp/g13-v23-front-review/g13-v23-front-visual-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/g13-v23-front-review/g13-v23-front-visual-report.json'))
+          assert r['captured']==27 and r['factions']==8
+          assert r['failed_checks']==0 and r['gameplay_modified'] is False
+          assert r['android_lod8_modified'] is False
+          assert len(r['front_view_differences'])==6
+          for angle in ('front','front_low','front_left','front_right'):
+              assert r['front_view_differences'][angle]['changed']>=20,angle
+          print('PASS G13 V23 frontal optics unchanged-camera render QA',r['front_view_differences'])
+          PY
+      - name: Upload G13 V23 native front 27 screenshots and geometric delta report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v23-front-27-godot-3d-views-v22-comparison
+          path: |
+            /tmp/g13-v23-front-review/*.png
+            /tmp/g13-v23-front-review/*.json
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
         shell: bash
         run: |
