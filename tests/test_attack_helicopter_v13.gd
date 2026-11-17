@@ -51,6 +51,11 @@ func _run() -> void:
             "stage1 bullet scars appear without engine fire")
         _check(V13.pose(model,"hit_bullet",0.31) and burst.visible,
             "stage1 bullet hit has real emissive spark burst")
+        var shock: MeshInstance3D=model.find_child(
+            "A01V13_OndaChoqueLateral",true,false) as MeshInstance3D
+        _check(shock!=null and shock.mesh is TorusMesh
+            and shock.scale.x>1.20,
+            "3D radial impact ring visibly expands on hit")
         V13.restore(model)
         _check(not burst.visible and scratches.visible,
             "temporary impact flashes disappear while scars persist")
@@ -87,6 +92,19 @@ func _run() -> void:
         var debris: Node3D=model.find_child(
             "A01V13_FragmentoRotor_0",true,false) as Node3D
         var rest_debris: Vector3=debris.position if debris!=null else Vector3.ZERO
+        var tail_shard: MeshInstance3D=model.find_child(
+            "A01V13_FragmentoRotorCola",true,false) as MeshInstance3D
+        _check(debris is MeshInstance3D and (debris as MeshInstance3D).mesh is ArrayMesh
+            and tail_shard!=null and tail_shard.mesh is ArrayMesh,
+            "main and tail rotor now have actual closed irregular blade shards")
+        _check(debris!=null and debris.has_meta("a01_v13_launch")
+            and (debris.get_meta("a01_v13_launch") as Vector3).y>1.9
+            and tail_shard.has_meta("a01_v13_launch")
+            and (tail_shard.get_meta("a01_v13_launch") as Vector3).z>2.5,
+            "blade launch points match V1 main and tail rotor hubs")
+        _check(V13.pose(model,"destroy",0.03)
+            and debris.position.y>1.80,
+            "new rotor shards begin in the air, not already on the ground")
         _check(V13.pose(model,"destroy",0.75)
             and model.position.y<rest_position.y-0.09
             and absf(model.rotation_degrees.z-rest_rotation.z)>15.0,
@@ -96,6 +114,8 @@ func _run() -> void:
             "wreckage moves independently and sustained smoke/fire remains")
         _check(V13.pose(model,"destroy",1.0),
             "end of destruction pose is a valid original-asset scene")
+        _check(debris!=null and debris.position.distance_to(rest_debris)<0.001,
+            "ballistic rotor fragment settles at pre-authored wreck position")
         V13.restore(model)
         _check(model.position.distance_to(rest_position)<0.001
             and model.rotation_degrees.distance_to(rest_rotation)<0.001
