@@ -8,6 +8,7 @@ signal command_center_requested
 signal objectives_requested
 signal end_turn_requested
 signal resupply_requested
+signal site_production_requested(site_pos: Vector2i)
 
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -17,6 +18,8 @@ const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
+const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
+const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -60,6 +63,8 @@ var _legacy_footer: PanelContainer
 var immersive_hud: Control
 var _three_d_shortcuts: HBoxContainer
 var _immersive_mode := false
+var building_info_panel
+var _dismissed_site_cell := Vector2i(-1,-1)
 
 func _ready() -> void:
     hide()
@@ -239,16 +244,76 @@ func _ready() -> void:
         shortcut.pressed.connect(descriptor[1])
         _three_d_shortcuts.add_child(shortcut)
     _three_d_shortcuts.hide()
+    # A 3D building tap now opens the SAME native contextual card as 2D.
+    # Add after immersive HUD so its purchase link receives touch events.
+    building_info_panel = BuildingInfoCard.new()
+    building_info_panel.name = "FichaDeEdificioEnBatalla3D"
+    add_child(building_info_panel)
+    building_info_panel.z_index = 16
+    building_info_panel.production_requested.connect(_request_3d_site_production)
+    building_info_panel.close_requested.connect(_close_3d_building_card)
+    building_info_panel.hide()
     resized.connect(_reflow_3d_hud)
+    _layout_3d_building_card()
 
 func _reflow_3d_hud() -> void:
     if immersive_hud != null:
         immersive_hud.call("reflow_for_size",size)
+    _layout_3d_building_card()
     if _immersive_mode:
         call_deferred("_sync_viewport_size")
 
+func _layout_3d_building_card() -> void:
+    if building_info_panel == null:
+        return
+    # In the live 3D HUD the unit card and minimap occupy the right edge.
+    # The building inspection stays below the top bar, on the left, and
+    # never covers the turn button or right-hand unit information.
+    var width: float = clampf(size.x*0.43,274.0,334.0)
+    var height: float = clampf(size.y-145.0,168.0,238.0)
+    building_info_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    building_info_panel.offset_left = 12.0
+    building_info_panel.offset_right = width+12.0
+    building_info_panel.offset_top = 76.0
+    building_info_panel.offset_bottom = 76.0+height
+
+func _close_3d_building_card() -> void:
+    if building_info_panel == null:
+        return
+    _dismissed_site_cell = building_info_panel.site_pos
+    building_info_panel.hide()
+
+func _inspect_3d_site(cell: Vector2i) -> void:
+    if building_info_panel == null:
+        return
+    var site: Dictionary = SiteInteraction.describe(_current_state(),cell,_viewing_side)
+    if site.is_empty() or not _order_quote.is_empty():
+        building_info_panel.hide()
+        if site.is_empty():
+            _dismissed_site_cell = Vector2i(-1,-1)
+        return
+    if cell == _dismissed_site_cell:
+        building_info_panel.hide()
+        return
+    var allowed: bool = _live_board != null and Orders.can_control(_live_board) and (
+        _order_quote.is_empty()) and bool(site.get("production",false))
+    building_info_panel.bind_site(site,allowed)
+
+func _request_3d_site_production(site_pos: Vector2i) -> void:
+    if _live_board == null or not _order_quote.is_empty() or (
+            not Orders.can_control(_live_board)):
+        return
+    var view: Dictionary = SiteInteraction.describe(
+        _current_state(),site_pos,_viewing_side)
+    if not bool(view.get("production",false)):
+        return
+    close_view()
+    site_production_requested.emit(site_pos)
+
 func _set_immersive_mode(enabled: bool) -> void:
     _immersive_mode = enabled
+    if building_info_panel != null and not enabled:
+        building_info_panel.hide()
     if holder == null:
         return
     _legacy_header.visible = not enabled
@@ -663,6 +728,7 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     if not _cells.has(cell):
         return false
     _selected_cell = cell
+    _inspect_3d_site(cell)
     var selected_friendly: String = _friendly_unit_at(cell)
     if not selected_friendly.is_empty():
         _selected_hint_unit_id = selected_friendly
@@ -898,6 +964,9 @@ func _on_viewport_input(event: InputEvent) -> void:
 
 func close_view() -> void:
     _drop_3d_quote()
+    if building_info_panel != null:
+        building_info_panel.hide()
+    _dismissed_site_cell = Vector2i(-1,-1)
     _set_immersive_mode(false)
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
