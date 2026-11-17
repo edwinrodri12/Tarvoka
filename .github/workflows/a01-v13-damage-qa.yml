@@ -10,7 +10,8 @@ on:
       - 'scripts/ui/BastionStudioAdapter.gd'
       - '.github/workflows/a01-v13-damage-qa.yml'
   push:
-    branches: [main]
+    # Also test the active art branch if GitHub does not emit a PR synchronize event.
+    branches: [main, 'art/a01-v11-tail-weapon-detail']
     paths:
       - 'scripts/ui/AttackHelicopterDamageV13.gd'
       - 'scripts/ui/UnitModels3D.gd'
