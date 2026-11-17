@@ -26,6 +26,7 @@ const G13SurfaceV13 = preload("res://scripts/ui/G13SurfaceFinishV13.gd")
 const G13SensorsV14 = preload("res://scripts/ui/G13SensorSculptV14.gd")
 const G13TurretV15 = preload("res://scripts/ui/G13TurretFinishV15.gd")
 const G13BatchesV16 = preload("res://scripts/ui/G13StaticBatchV16.gd")
+const G13CannonV18 = preload("res://scripts/ui/G13AutocannonSculptV18.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -966,6 +967,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V15 turret junction finish failed to apply")
                 if not G13BatchesV16.apply(model):
                     push_warning("G13 V16 static GPU batching failed to apply")
+                if not G13CannonV18.apply(model):
+                    push_warning("G13 V18 cannon-only sculpt failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
