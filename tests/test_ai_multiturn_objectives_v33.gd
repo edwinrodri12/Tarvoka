@@ -57,6 +57,25 @@ static func _goal_coverage() -> void:
     assert(support >= 1)
     assert(_plan(s,goals) == goals) # stable with same tactical facts
     assert(s == before)
+    # Execute an actual legally validated support order. Neither the
+    # escort nor the armored defender may block the reserved city tile.
+    var observed: Dictionary = Vision.observed_state(s,0)
+    var friends: Array = []
+    var occupied: Array[Vector2i] = []
+    for u in observed["units"]:
+        occupied.append(u["pos"])
+        if int(u["faction"]) == 0 and not bool(u.get("acted",false)):
+            friends.append(u)
+    var support_move: Dictionary = AI._advance_assigned_support(
+        s,observed,friends,occupied,goals)
+    assert(support_move.get("valid",false))
+    assert(str(support_move["reason"]) == "cover_capture")
+    var mission: Dictionary = Missions.for_unit(goals,
+        str(support_move["unit_id"]))
+    assert(not mission.is_empty())
+    assert(support_move["destination"] != Vector2i(
+        int(mission["x"]),int(mission["y"])))
+    assert(s == before)
     var another: Dictionary = s.duplicate(true)
     # Enemy visible near home city: escort turns into base defender.
     another["units"][4]["pos"] = Vector2i(3,1)
