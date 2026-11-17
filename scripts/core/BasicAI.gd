@@ -217,7 +217,8 @@ static func _decide(state: Dictionary,
         var safe: Dictionary = Threats.propose(
             knowledge,faction,int(plan["level"]),
             bool(options.get("_ab_offensive_discipline_v361",false)),
-            bool(options.get("_ab_critical_rescue_v362",false)))
+            bool(options.get("_ab_critical_rescue_v362",false)),
+            bool(options.get("_ab_risk_reward_v363",false)))
         if bool(safe.get("valid",false)):
             var survive: Dictionary = Session.move(state,
                 str(safe["unit_id"]),safe["destination"])
@@ -230,6 +231,8 @@ static func _decide(state: Dictionary,
                     safe["expected_damage_before"])
                 survive["threat_after"] = int(
                     safe["expected_damage_after"])
+                if safe.has("tradeoff"):
+                    survive["tradeoff"] = safe["tradeoff"]
                 return survive
 
     if not best_hit.is_empty():
