@@ -61,6 +61,19 @@ func _run() -> void:
     picker.item_selected.emit(4)
     assert(studio._role=="civilian_city")
     assert(studio.model_root.has_node(City.STAGE_NAME))
+    if DisplayServer.get_name()!="headless":
+        await _frames(16)
+        var img: Image=studio.preview.get_texture().get_image()
+        assert(img!=null and not img.is_empty())
+        var samples: Dictionary={}
+        for y in range(0,img.get_height(),maxi(1,img.get_height()/14)):
+            for x in range(0,img.get_width(),maxi(1,img.get_width()/20)):
+                samples[img.get_pixel(x,y).to_html()]=true
+        assert(samples.size()>7)
+        assert(DirAccess.make_dir_recursive_absolute(
+            ProjectSettings.globalize_path("res://artifacts"))==OK)
+        assert(img.save_png(
+            "res://artifacts/tarvoka_city_v1_shared_studio.png")==OK)
     studio.queue_free()
     await _frames(2)
     print("PASS TARVOKA CITY V1 SHARED STUDIO: fifth building, tiers, eight factions, neutral, damage, preserved four existing building categories")
