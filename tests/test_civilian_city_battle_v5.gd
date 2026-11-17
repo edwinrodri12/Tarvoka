@@ -1,0 +1,154 @@
+extends SceneTree
+
+# V5: approved civilian-city V1-V4 geometry in the ACTUAL read-only
+# 3D battle map; this is not a replacement preview nor a balance patch.
+const City=preload("res://scripts/ui/CivilianCityBattle3D.gd")
+const V4=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
+const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
+const Session=preload("res://scripts/core/BattleSession.gd")
+const Economy=preload("res://scripts/core/UrbanEconomy.gd")
+const Roles=preload("res://scripts/core/UnitRoles.gd")
+const Scenarios=preload("res://scripts/core/Scenarios.gd")
+const Identity=preload("res://scripts/ui/FactionIdentity.gd")
+const Style=preload("res://scripts/ui/VisualStyle.gd")
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+static func _site(root: Node3D,cell: Vector2i) -> Node3D:
+    return root.find_child("Instalacion3D_city_%d_%d" % [
+        cell.x,cell.y],true,false) as Node3D
+
+static func _max_horizontal_radius(model: Node3D) -> Vector2:
+    # Inspect all eight transformed AABB vertices of every ACTUAL 3D mesh,
+    # including child transforms and native city model scaling.
+    var furthest:=Vector2.ZERO
+    var pending: Array[Dictionary]=[{
+        "node":model,"frame":Transform3D.IDENTITY}]
+    while not pending.is_empty():
+        var visit: Dictionary=pending.pop_back()
+        var current: Node=visit["node"]
+        var frame: Transform3D=visit["frame"]
+        if current is Node3D:
+            frame=frame*(current as Node3D).transform
+        if current is MeshInstance3D:
+            var mesh:=current as MeshInstance3D
+            if mesh.mesh!=null:
+                var bb: AABB=mesh.mesh.get_aabb()
+                for index in range(8):
+                    var corner: Vector3=frame*bb.get_endpoint(index)
+                    furthest.x=maxf(furthest.x,absf(corner.x))
+                    furthest.y=maxf(furthest.y,absf(corner.z))
+        for child in current.get_children():
+            if child is Node3D:
+                pending.append({"node":child,"frame":frame})
+    return furthest
+
+func _run() -> void:
+    var terrain: Array=Scenarios.terrain(0)
+    var state: Dictionary=Session.start(
+        Roles.experimental_armies(),terrain,0,false,false,true)
+    assert(not state.is_empty())
+    var untouched: Dictionary=state.duplicate(true)
+    var original_credits: Array=state["economy"]["credits"].duplicate(true)
+    assert(Economy.income_for(state["economy"],0)==100)
+    assert(Economy.income_for(state["economy"],1)==100)
+    assert(City.build_site(state,{"kind":"factory"},0)==null)
+    assert(City.build(0,0,0)==null)
+    assert(City.build(1,8,0)==null)
+    assert(City.build(1,0,0,3)==null)
+
+    # All four pre-placed cities become REAL approved V4 mesh models.
+    var board: Node3D=Terrain.build(state,"",0)
+    assert(board!=null)
+    for cell in [Vector2i(2,1),Vector2i(7,1),
+                 Vector2i(3,4),Vector2i(6,4)]:
+        var model: Node3D=_site(board,cell)
+        assert(model!=null)
+        assert(model.get_meta("kind")=="city")
+        assert(model.get_meta("battle_cell")==cell)
+        assert(int(model.get_meta("approved_art_version",-1))==4)
+        assert(bool(model.get_meta("game_visual_only",false)))
+        assert(bool(model.get_meta("city_economy_untouched",false)))
+        assert(model.has_node(V4.STAGE_NAME))
+        assert(int(model.get_meta("actual_3d_meshes",0))>15)
+        assert(model.scale.is_equal_approx(Vector3.ONE*City.CELL_MODEL_SCALE))
+        var footprint: Vector2=_max_horizontal_radius(model)
+        assert(footprint.x < Terrain.CELL*0.5)
+        assert(footprint.y < Terrain.CELL*0.5)
+    assert(int(_site(board,Vector2i(2,1)).get_meta("visual_tier",0))==1)
+    assert(int(_site(board,Vector2i(3,4)).get_meta("visual_tier",0))==2)
+    assert(_site(board,Vector2i(2,1)).get_meta("owner_public")==0)
+    assert(_site(board,Vector2i(7,1)).get_meta("owner_public")==1)
+    assert(_site(board,Vector2i(3,4)).get_meta("visual_faction")==-1)
+    assert(int(board.get_meta("render_stats")["sites"])>=6)
+    board.free()
+    assert(state==untouched)
+    assert(state["economy"]["credits"]==original_credits)
+
+    # Optional sculpt tiers 1/2/3 and all 5 visual damage states fit a
+    # single tile without influencing the engine's site ownership.
+    for level in [1,2,3]:
+        for damage in [0,1,2,3,4]:
+            var sculpt: Node3D=City.build(level,-1,damage,2)
+            assert(sculpt!=null)
+            assert(sculpt.has_node(V4.STAGE_NAME))
+            assert(int(sculpt.get_meta("visual_tier",0))==level)
+            assert(int(sculpt.get_meta("visual_damage",-1))==damage)
+            var radius: Vector2=_max_horizontal_radius(sculpt)
+            assert(radius.x<Terrain.CELL*0.5)
+            assert(radius.y<Terrain.CELL*0.5)
+            sculpt.free()
+
+    # Every official eight-faction identity is resolved from PUBLIC owner
+    # only; an unseen ownership update will not leak the real paint color.
+    for faction in range(8):
+        var colored: Dictionary=state.duplicate(true)
+        var ids: Dictionary=Identity.resolved(
+            colored.get(Identity.STATE_FIELD,{}))
+        ids["0"]=str(Style.FACTIONS[faction]["key"])
+        colored[Identity.STATE_FIELD]=ids
+        var city_site: Dictionary=Economy.site_at(
+            colored["economy"],Vector2i(2,1))
+        var painted: Node3D=City.build_site(colored,city_site,0)
+        assert(painted!=null)
+        assert(int(painted.get_meta("visual_faction",-1))==faction)
+        painted.free()
+        var masked: Node3D=City.build_site(colored,city_site,-1)
+        assert(masked!=null)
+        assert(int(masked.get_meta("visual_faction",-2))==-1)
+        assert(int(masked.get_meta("public_owner",-2))==-1)
+        masked.free()
+    assert(state==untouched)
+
+    # An unexplored enemy city is entirely absent; an explored-but-
+    # unobserved enemy city remains geometry with neutral palette.
+    var fog: Dictionary=Session.start([
+        Roles.make_unit("AL",0,Vector2i(1,2),"line"),
+        Roles.make_unit("EN",1,Vector2i(8,5),"line")
+    ],terrain,0,true,false,true)
+    var unseen: Node3D=Terrain.build(fog,"",0)
+    assert(unseen!=null)
+    assert(_site(unseen,Vector2i(7,1))==null)
+    unseen.free()
+    fog["explored"]["0"].append(Vector2i(7,1))
+    var stale: Node3D=Terrain.build(fog,"",0)
+    assert(stale!=null)
+    var neutral: Node3D=_site(stale,Vector2i(7,1))
+    assert(neutral!=null)
+    assert(int(neutral.get_meta("owner_public",-9))==-1)
+    assert(int(neutral.get_meta("visual_faction",-9))==-1)
+    stale.free()
+
+    # An explicitly annotated metropolis remains decorative. The city
+    # is not a factory even if it has an elaborate civic center.
+    var tiered: Dictionary=untouched.duplicate(true)
+    Economy.site_at(tiered["economy"],Vector2i(2,1))["visual_level"]=3
+    var tiered_before: Dictionary=tiered.duplicate(true)
+    var stage: Node3D=Terrain.build(tiered,"",0)
+    assert(int(_site(stage,Vector2i(2,1)).get_meta("visual_tier",0))==3)
+    assert(tiered==tiered_before)
+    assert(not Session.purchase(tiered,Vector2i(2,1),"scout")["valid"])
+    stage.free()
+    print("PASS TARVOKA CITY V5 LIVE BATTLE: real V4 art, tiles, variants, 8 factions, fog, immutable economy")
+    quit(0)
