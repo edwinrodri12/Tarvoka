@@ -83,9 +83,14 @@ func _run() -> void:
     assert(card.visible and card.production_button.visible)
     assert(card.production_button.disabled)
 
-    # Independent no-leak check: unknown sites produce no building card.
-    var hidden: Dictionary = SiteData.describe(original,Vector2i(-1,-1),0)
-    assert(hidden.is_empty())
+    # Enemy installations outside explored fog must never show a card,
+    # ownership, production status or an actionable shop button.
+    board.new_game(0,false,true,false,false,true)
+    var far_site := Vector2i(7,1)
+    assert(SiteData.describe(board.state,far_site,0).is_empty())
+    board.inspected_cell = far_site
+    main._process(0.0)
+    assert(not card.visible)
     card.bind_site({},false)
     assert(not card.visible)
     main.queue_free()
