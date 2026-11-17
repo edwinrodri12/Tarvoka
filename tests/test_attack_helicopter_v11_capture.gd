@@ -4,6 +4,7 @@ extends SceneTree
 # No AI generated art, no imported screenshot and no mobile FPS claims.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Cabin=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
+const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 var captures: int=0
 var failures: int=0
 
@@ -80,7 +81,6 @@ func _run() -> void:
         return
     # V11 regression captures must exclude the newer V12 front overlay,
     # otherwise its V10 baseline comparison is not an exact earlier stage.
-    var V12=load("res://scripts/ui/AttackHelicopterNoseV12.gd")
     _check(V12.set_enabled(model,false),"isolate the true V11 revision")
     viewport.add_child(model)
     _check(Cabin.has_model(model),"actual A01 V11 sculpt loaded")
