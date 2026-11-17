@@ -103,3 +103,9 @@ Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió ce
 Commit `58a4eff1e5e0cce9f3c4a8fc2005e92a45e08a19` adds a 40×30 corner scenario with two allied occupants at (38,29) and (39,29), enemy at (37,28), and origin (37,29). Verify neither ally is a legal endpoint, (38,28) is reachable for cost 2 via the first ally, no coordinate wraps past x=39/y=29, and terrain/occupancy inputs remain unchanged. No production logic changed.
 
 Run: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; expected exactly one `PASS: allied transit and endpoint isolation`. Godot 4.3 CI on this commit: **NO CONFIRMADO**. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Prior successful CI runs do not validate this addition. Before merge, verify this suite and the movement/AI/save/victory regression set.
+
+## 2026-11-17 — Monotonía de presupuesto 40×30
+
+Commit `8512497b71445ed386f870750c0c8d27131049fd`: barrido de presupuestos 1–5 desde (37,29) con aliados en (38,29)/(39,29) y enemigo en (37,28). Cada incremento de presupuesto debe conservar todos los destinos previos y su coste mínimo, excluir siempre casillas aliadas y coordenadas fuera del mapa, y no modificar entradas. Detecta podas prematuras y regresiones de coste en rutas largas. Sin cambios de balance ni reglas de producción.
+
+Reproducir: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; exigir `PASS: allied transit and endpoint isolation` y cero errores inesperados. **Godot 4.3: NO EJECUTADO en este commit; CI: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO.** Ejecutar además IA, guardado, victoria y regresiones generales antes de integrar. No confundir commit con prueba superada.
