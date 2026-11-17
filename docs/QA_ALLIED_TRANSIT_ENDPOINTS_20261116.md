@@ -47,3 +47,10 @@ Code commit: `74243bd69415dc86b55d28d1a0cb73c01a92f071`. Previous PR head `df814
 New regression commit `6e1446b5`: a ground unit starts at (0,0), the allied transit tile (1,0) is water, and (0,1) is enemy-blocked. Even with movement budget 5, only the origin may be reachable: an allied occupant must not turn impassable water into a valid route. Terrain and both occupancy arrays must remain unchanged. This is a regression of existing `Rules.reachable` semantics, not a gameplay rule change.
 
 Reproduce: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`. Expected single marker: `PASS: allied transit and endpoint isolation`. **Godot CI for this new commit: NO EJECUTADO / not yet confirmed. Android physical: NO EJECUTADO EN DISPOSITIVO.** Before merging, inspect current CI and run the full tactical/AI/save/victory suites. No APK generated.
+
+## 2026-11-16 — Solicitudes inválidas y presupuesto cero
+- Regresión añadida: con 0 puntos únicamente el origen es alcanzable, aunque exista un aliado transitable junto a él.
+- Origen fuera del tablero y presupuesto negativo deben devolver un diccionario vacío.
+- Las tres solicitudes deben preservar terreno y listas de ocupación originales.
+- Commit de prueba: `080b3c0418719ba297c026dd52353077fcf0d7b3`.
+- **NO EJECUTADO en Godot 4.3/CI para este commit; NO EJECUTADO EN DISPOSITIVO Android.** No se modifica `Rules.gd`.
