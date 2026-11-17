@@ -18,6 +18,7 @@ const V14=preload("res://scripts/ui/CivilianCitySilhouetteV14.gd")
 const V15=preload("res://scripts/ui/CivilianCityIdentityV15.gd")
 const V16=preload("res://scripts/ui/CivilianCityMaterialJointsV16.gd")
 const V17=preload("res://scripts/ui/CivilianCityRearFinishV17.gd")
+const V18=preload("res://scripts/ui/CivilianCitySideJointsV18.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -168,7 +169,12 @@ static func _keep_medium(name: String) -> bool:
         "TravesanoMetalMetroV16_",
         "RibeteVidrioTacticoMetroV16_",
         "DetalleColorMetroV16_",
-        "DespieceArquitecturaCivilV16_"]:
+        "DespieceArquitecturaCivilV16_",
+        # V17/V18: preserve large roof seams and elevation mass; remove
+        # individual windows, sill trims, drainage pins at tactical zoom.
+        "CristalVentanaTraseraV17_","AlfeizarTraseroV17_",
+        "V18_CristalCostado_","V18_AlfeizarCostado_",
+        "V18_DrenajeUmbral_","V18_FasciaAlero_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -283,7 +289,10 @@ static func _keep_far(name: String) -> bool:
         "TapajuntaCoronaMetroV16_",
         "PerfilRetorcidoMetroV16_",
         "CristalDesprendidoMetroV16_",
-        "CornisaCivicaTransicionV16_"]:
+        "CornisaCivicaTransicionV16_",
+        # V18 essentials survive zoom out without costly micro geometry.
+        "V18_AleroLateral_","V18_EncuentroTejadoFachada_",
+        "V18_RestoCubiertaCaida_","V18_EscombroCostado_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -374,7 +383,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V17.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",17)
+    if not V18.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",18)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
