@@ -14,6 +14,7 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
+const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -30,6 +31,17 @@ static func step(state: Dictionary,
         return idle
     # Decide from the currently observable units; do not inspect hidden targets.
     var knowledge: Dictionary = Visibility.observed_state(state, faction)
+    # No options: original BasicAI remains byte-for-byte behaviorally
+    # compatible. Opt-in player-selected levels use only observed data.
+    var plan: Dictionary = {}
+    var tactical_options: Dictionary = options.duplicate()
+    if options.has("ai_level") or options.has("ai_style"):
+        plan = Director.choose(knowledge,faction,options)
+        if not bool(plan.get("valid",false)):
+            return idle
+        if not tactical_options.has("adaptive_lethal_retreat") and \
+                int(plan["level"]) >= 4:
+            tactical_options["adaptive_lethal_retreat"] = true
     var friends: Array = []
     var enemies: Array = []
     var occupied: Array[Vector2i] = []
@@ -45,7 +57,8 @@ static func step(state: Dictionary,
         else:
             enemies.append(unit)
     if friends.is_empty():
-        var only_recruits: Dictionary = _produce_reinforcements(state, knowledge, enemies)
+        var only_recruits: Dictionary = _produce_reinforcements(state,
+            knowledge,enemies,plan)
         return only_recruits if only_recruits.get("valid",false) else idle
     # Compare equivalent unit roles and side-normalized positions, not the
     # artificial A..F vs U..Z names assigned to mirrored starting rosters.
@@ -109,7 +122,7 @@ static func step(state: Dictionary,
             return spent
 
     var withdrawal: Dictionary = _defensive_retreat(state, knowledge, friends,
-        enemies, occupied,options)
+        enemies, occupied,tactical_options)
     if withdrawal.get("valid", false):
         return withdrawal
 
@@ -193,10 +206,12 @@ static func step(state: Dictionary,
 
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
-    var urban_action: Dictionary = _capture_urban_site(state, knowledge, friends, occupied)
+    var urban_action: Dictionary = _capture_urban_site(state, knowledge,
+        friends, occupied,plan)
     if urban_action.get("valid", false):
         return urban_action
-    var reinforcement: Dictionary = _produce_reinforcements(state, knowledge, enemies)
+    var reinforcement: Dictionary = _produce_reinforcements(state,
+        knowledge,enemies,plan)
     if reinforcement.get("valid", false):
         return reinforcement
 
@@ -319,7 +334,8 @@ static func _ground_occupied(knowledge: Dictionary, cell: Vector2i) -> bool:
 
 # Economic strategy with only side-owned credits, observed enemies and
 # explored urban locations. Decisions are deterministic and bounded.
-static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, enemies: Array) -> Dictionary:
+static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary,
+        enemies: Array, plan: Dictionary = {}) -> Dictionary:
     var idle := {"valid":false}
     if not knowledge.has("economy") or not knowledge.get("economy") is Dictionary:
         return idle
@@ -331,7 +347,8 @@ static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, en
         var role: String = str(unit.get("role",""))
         counts[role] = int(counts.get(role,0)) + 1
     if bool(knowledge["economy"].get("modern", false)):
-        return _produce_modern_reinforcements(state, knowledge, enemies, counts)
+        return _produce_modern_reinforcements(state, knowledge, enemies,
+            counts,plan)
     var priorities: Array[String] = []
     var seen_enemy_artillery := false
     var seen_enemy_armor := false
@@ -374,7 +391,9 @@ static func _produce_reinforcements(state: Dictionary, knowledge: Dictionary, en
 # still checked by the identical budget, terrain, layer and ownership rules
 # used for touchscreen purchases. Only OBSERVED air/naval threats affect
 # counter-unit ordering, never hidden opponents or opponent money.
-static func _produce_modern_reinforcements(state: Dictionary, knowledge: Dictionary, enemies: Array, counts: Dictionary) -> Dictionary:
+static func _produce_modern_reinforcements(state: Dictionary,
+        knowledge: Dictionary, enemies: Array, counts: Dictionary,
+        plan: Dictionary = {}) -> Dictionary:
     var none := {"valid":false}
     var faction: int = int(state.get("faction",-1))
     var observed_air := false
@@ -401,6 +420,10 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
     if observed_armor:
         priorities["armor_plant"] = ["piercer","tank","ifv","bulwark","apc"]
         priorities["drone_center"] = ["fpv","loitering","uav_recon"]
+    if bool(plan.get("valid",false)):
+        # Strategy informs candidate ordering only. Economy and Supply
+        # remain the sole legal budget/ownership/production authorities.
+        priorities = Director.production_priorities(plan,strategy,counts)
     for site in knowledge["economy"]["sites"]:
         if int(site.get("owner",-1)) != faction:
             continue
@@ -426,7 +449,9 @@ static func _produce_modern_reinforcements(state: Dictionary, knowledge: Diction
                 return order
     return none
 
-static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+static func _capture_urban_site(state: Dictionary, knowledge: Dictionary,
+        friends: Array, occupied: Array[Vector2i],
+        plan: Dictionary = {}) -> Dictionary:
     var idle := {"valid":false}
     if not knowledge.has("economy") or not knowledge.get("economy") is Dictionary:
         return idle
@@ -474,6 +499,8 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary, friend
                     continue
                 var score: int = 100000 - int(route[destination])*100 - int(reachable[destination])*3
                 score += 15000 if site["kind"] == "city" else 10000
+                if bool(plan.get("valid",false)):
+                    score += Director.site_bonus(plan,str(site["kind"]))
                 if destination == target:
                     score += 50000
                 if score > best_score or (score == best_score and _prefer_cell(destination,best_cell,faction)):
