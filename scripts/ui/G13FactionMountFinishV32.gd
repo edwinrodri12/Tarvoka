@@ -55,7 +55,7 @@ static func _faction_body(hi: bool) -> Array[Transform3D]:
         # The hero model has a true service hatch on the rear. Do not put
         # rear badge patches on tactical LOD8: that model lacks the hatch.
         if hi:
-            plates.append(_plate(Vector3(s * 0.306, 0.965, 1.309),
+            plates.append(_plate(Vector3(s * 0.306, 0.965, 1.299),
                 Vector3(0.190, 0.060, 0.016)))
     return plates
 
@@ -64,7 +64,7 @@ static func _faction_turret() -> Array[Transform3D]:
     for side in [-1, 1]:
         var s: float = float(side)
         # Roof shoulders sit OUTSIDE existing central V2 faction roof enamel.
-        plates.append(_plate(Vector3(s * 0.336, 0.424, 0.145),
+        plates.append(_plate(Vector3(s * 0.336, 0.417, 0.145),
             Vector3(0.143, 0.020, 0.220)))
         # Short rear-edge identification tabs, not full armor repaint.
         plates.append(_plate(Vector3(s * 0.480, 0.343, 0.223),
