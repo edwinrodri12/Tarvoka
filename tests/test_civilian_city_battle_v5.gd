@@ -30,7 +30,12 @@ static func _max_horizontal_radius(model: Node3D) -> Vector2:
         var current: Node=visit["node"]
         var frame: Transform3D=visit["frame"]
         if current is Node3D:
-            frame=frame*(current as Node3D).transform
+            var local: Transform3D=(current as Node3D).transform
+            if current==model:
+                # The root may be positioned at x=17 or z=10 on the
+                # battlefield. Its placement is NOT part of its footprint.
+                local.origin=Vector3.ZERO
+            frame=frame*local
         if current is MeshInstance3D:
             var mesh:=current as MeshInstance3D
             if mesh.mesh!=null:
