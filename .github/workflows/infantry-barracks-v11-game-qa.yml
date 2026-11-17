@@ -1,0 +1,75 @@
+name: TARVOKA Approved Infantry Barracks V11 Real Game Integration
+
+on:
+  push:
+    branches:
+      - feat/game-infantry-barracks-v11-final-3d-20261116
+    paths:
+      - "scripts/ui/InfantryBarracks*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/SiteOverlayData.gd"
+      - "scripts/ui/SiteOverlayPainter.gd"
+      - "tests/test_infantry_barracks_battle_v11.gd"
+      - ".github/workflows/infantry-barracks-v11-game-qa.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/InfantryBarracks*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/SiteOverlayData.gd"
+      - "scripts/ui/SiteOverlayPainter.gd"
+      - "tests/test_infantry_barracks_battle_v11.gd"
+      - ".github/workflows/infantry-barracks-v11-game-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-game-barracks:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      # The playable Android game scene is exercised directly, not the art
+      # Studio's isolated scene. No static mock or placeholder art accepted.
+      - name: Real game 3D, 2D, eight factions, three tiers, fog and economy QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_infantry_barracks_battle_v11 test_building_info_3d test_map_site_overlays; do
+            echo "Starting real gameplay QA: $test"
+            timeout 200s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+              /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --rendering-method gl_compatibility --audio-driver Dummy --path . \
+              --script "res://tests/${test}.gd" \
+              2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            case "$test" in
+              test_infantry_barracks_battle_v11)
+                grep -F 'PASS INFANTRY V11 IN REAL GAME:' "/tmp/${test}.log" ;;
+              test_building_info_3d)
+                grep -F 'PASS BUILDING INFO 3D:' "/tmp/${test}.log" ;;
+              test_map_site_overlays)
+                grep -E '^PASS ' "/tmp/${test}.log" ;;
+            esac
+          done
+          test -s artifacts/tarvoka_infantry_v11_in_game_battle.png
+      - name: Archive actual playable battle screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Infantry-V11-Real-Game-Android-3D-QA
+          path: |
+            artifacts/tarvoka_infantry_v11_in_game_battle.png
+            /tmp/test_infantry_barracks_battle_v11.log
+            /tmp/test_building_info_3d.log
+            /tmp/test_map_site_overlays.log
+          if-no-files-found: warn
+          retention-days: 21
