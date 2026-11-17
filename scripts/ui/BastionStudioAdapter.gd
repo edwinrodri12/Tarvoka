@@ -101,6 +101,10 @@ var _heli_v12_button: Button
 var _heli_v10_rim_light: DirectionalLight3D
 var _heli_camera_base: Vector3=Vector3.ZERO
 var _heli_focus_local: Vector3=Vector3.ZERO
+# True inspection camera beneath the native A01, not a tilted top view.
+# Plane meshes hidden for the inspection are restored on every exit path.
+var _heli_underbody_view_active: bool=false
+var _heli_hidden_floor_meshes: Array[MeshInstance3D]=[]
 var _heli_compare_button: Button
 var _heli_animation: String=""
 var _heli_playback_speed: float=1.0
@@ -185,7 +189,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V34 · blindaje y parachoques")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.2")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -506,7 +510,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "attack_heli":
             return [
-                {"group":"HELICÓPTERO HAT-29 V14 · VUELO Y ARMAMENTO"},
+                {"group":"HELICÓPTERO HAT-29 V14.2 · VUELO Y ARMAMENTO"},
                 {"title":"Vuelo y rotores en marcha","action":"move"},
                 {"title":"Mantener posición / hover","action":"hover"},
                 {"title":"Ráfaga de cañón frontal","action":"attack"},
@@ -767,7 +771,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14 · IMPACTOS Y DESTRUCCIÓN",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.2 · IMPACTOS Y DETALLES",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -827,6 +831,15 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(24.0,-11.0,2.55,Vector3(0,0.90,-1.40)),
         "V12: soporte articulado del cañón",
         func(): _heli_inspect_focus(54.0,-14.0,2.72,Vector3(0.19,0.57,-1.38)))
+    # V14.2: real geometry closeups within the unified Studio.
+    _add_paired(heli_controls,"V14.2: escotilla inferior",
+        _heli_underbody_inspect,
+        "V14.2: lamas de motor",
+        func(): _heli_inspect_focus(92.0,10.0,2.20,Vector3(0.62,1.61,1.01)))
+    _add_paired(heli_controls,"V14.2: registros de cola",
+        func(): _heli_inspect_focus(130.0,8.0,2.25,Vector3(0.16,1.10,1.97)),
+        "V14.2: posterior completa",
+        func(): _heli_inspect(180.0,-6.0,1.30))
     _heli_v12_button=_button(heli_controls,
         "Comparar morro V11 / V12",_heli_toggle_v12)
     _heli_v11_button=_button(heli_controls,
@@ -913,7 +926,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14")
+        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.2")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
@@ -992,6 +1005,37 @@ func _install_heli_lighting_v10() -> void:
     _heli_v10_rim_light.visible=false
     preview.add_child(_heli_v10_rim_light)
 
+# Inspection-only camera mode; does not rotate a destroyed helicopter or
+# change its fuselage, gear, flight rig or stage. The floor is hidden only
+# while looking upward at the octagonal belly panel.
+func _heli_underbody_restore_floor() -> void:
+    _heli_underbody_view_active=false
+    for plane in _heli_hidden_floor_meshes:
+        if is_instance_valid(plane):
+            plane.visible=true
+    _heli_hidden_floor_meshes.clear()
+
+func _heli_underbody_inspect() -> void:
+    if _role!="attack_heli" or model_root==null or camera==null:
+        return
+    _heli_inspect(36.0,0.0,2.08)
+    _heli_focus_local=Vector3(0.0,0.605,0.06)
+    _heli_underbody_view_active=true
+    _heli_hidden_floor_meshes.clear()
+    if preview!=null:
+        for candidate in preview.find_children("*","MeshInstance3D",true,false):
+            var plane: MeshInstance3D=candidate as MeshInstance3D
+            if plane==null or model_root.is_ancestor_of(plane):
+                continue
+            var label: String=str(plane.name).to_lower()
+            var ground: bool=plane.mesh is PlaneMesh or (
+                label.contains("suelo") or label.contains("floor")
+                or label.contains("ground"))
+            if ground and plane.visible:
+                _heli_hidden_floor_meshes.append(plane)
+                plane.visible=false
+    _update_camera()
+
 func _heli_inspect_focus(yaw: float,tilt: float,zoom_level: float,
         local_point: Vector3) -> void:
     _heli_inspect(yaw,tilt,zoom_level)
@@ -1036,6 +1080,7 @@ func _heli_toggle_v11() -> void:
 func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     if _role!="attack_heli" or model_root==null:
         return
+    _heli_underbody_restore_floor()
     _heli_stop()
     _heli_focus_local=Vector3.ZERO
     _yaw=yaw
@@ -1088,6 +1133,7 @@ func _heli_toggle_v8() -> void:
 func _heli_view(yaw: float) -> void:
     if _role!="attack_heli" or model_root==null:
         return
+    _heli_underbody_restore_floor()
     _heli_stop()
     _yaw=yaw
     var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
@@ -1098,6 +1144,7 @@ func _heli_view(yaw: float) -> void:
 func _heli_top_view() -> void:
     if _role!="attack_heli" or model_root==null:
         return
+    _heli_underbody_restore_floor()
     _heli_stop()
     _yaw=38.0
     var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
@@ -2213,6 +2260,9 @@ func _update_camera() -> void:
             if _heli_focus_local!=Vector3.ZERO else home)
         camera.position=_heli_camera_base+(target-home)
         camera.look_at(target,Vector3.UP)
+        if _heli_underbody_view_active:
+            camera.position=target+Vector3(2.45,-2.65,-2.65)
+            camera.look_at(target,Vector3.UP)
     if _role=="apc" and _p06_fleet!=null and camera!=null:
         # Orthographic view needs size rather than moving the camera closer.
         var full: float=13.4 if _p06_fleet_count<=8 else (
@@ -2312,6 +2362,7 @@ func _display_role(role: String) -> void:
     if _p06_fleet!=null:
         _hide_p06_fleet()
     if role!="attack_heli" and _role=="attack_heli" and camera!=null:
+        _heli_underbody_restore_floor()
         camera.position=_heli_camera_base
         _heli_focus_local=Vector3.ZERO
     super._display_role(role)

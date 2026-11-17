@@ -60,8 +60,43 @@ func _run() -> void:
             and service!=null and service.mesh is BoxMesh
             and tail_clamp!=null and tail_clamp.mesh is BoxMesh,
             "new real 3D panel seams, hinges, engine hatch and tail clamps")
-        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_1",
-            "V14.1 tactical treatment installed without changing the rig")
+        var belly: MeshInstance3D=model.find_child(
+            "A01V14_2_PlacaVentralOctagonal",true,false) as MeshInstance3D
+        var vent: MeshInstance3D=model.find_child(
+            "A01V14_2_MotorLouver_1_1",true,false) as MeshInstance3D
+        var service_panel: MeshInstance3D=model.find_child(
+            "A01V14_2_TailServicePanel_-1",true,false) as MeshInstance3D
+        var tail_bolt: MeshInstance3D=model.find_child(
+            "A01V14_2_TailServiceBolt_1_1",true,false) as MeshInstance3D
+        _check(belly!=null and belly.mesh is ArrayMesh
+            and belly.mesh.get_surface_count()==1
+            and vent!=null and vent.mesh is BoxMesh
+            and service_panel!=null and service_panel.mesh is BoxMesh
+            and tail_bolt!=null and tail_bolt.mesh is CylinderMesh,
+            "V14.2 closed ventral hatch, visible motor vents and tail service bolts")
+        _check(belly!=null and belly.position.y<0.66
+            and service_panel!=null and service_panel.position.z>1.80,
+            "V14.2 sculpture correctly mounted below hull and on aft boom")
+        var gasket_count: int=0
+        for i in range(8):
+            var gasket: MeshInstance3D=model.find_child(
+                "A01V14_2_Gasket_%d" % i,true,false) as MeshInstance3D
+            if gasket!=null and gasket.mesh is CylinderMesh:
+                _check(absf(gasket.position.y-0.574)<0.001,
+                    "V14.2.1 gasket sits below the original hatch surface")
+                gasket_count+=1
+        _check(gasket_count==8,
+            "V14.2.1 octagonal hatch has all eight physical perimeter segments")
+        for side in [-1,1]:
+            for index in range(3):
+                var screw: MeshInstance3D=model.find_child(
+                    "A01V14_2_VentralBolt_%d_%d" % [side,index],true,false) as MeshInstance3D
+                _check(screw!=null and screw.mesh is CylinderMesh
+                    and screw.rotation_degrees.is_equal_approx(Vector3.ZERO)
+                    and screw.position.y<belly.position.y-0.04,
+                    "V14.2.1 underside screw axis points outward, not sideways")
+        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_2_1",
+            "V14.2.1 preserves muted faction treatment and the original rig")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")

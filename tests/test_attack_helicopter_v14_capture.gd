@@ -69,6 +69,14 @@ func _run() -> void:
     mat.albedo_color=Color("#46565b")
     floor.material_override=mat
     vp.add_child(floor)
+    # An independent cool fill light illuminates physical relief beneath the
+    # fuselage only in the underbody camera; it never alters faction renders.
+    var underside_light:=OmniLight3D.new()
+    underside_light.position=Vector3(0.7,-0.55,-1.2)
+    underside_light.omni_range=5.5
+    underside_light.light_energy=1.3
+    underside_light.visible=false
+    vp.add_child(underside_light)
 
     for army in range(8):
         var unit: Node3D=Models.build("attack_heli",army,true,14)
@@ -81,6 +89,45 @@ func _run() -> void:
         await _save(vp,folder.path_join("hat29_v14_faccion_%d.png" % army))
         unit.queue_free()
         await process_frame
+
+    # V14.2 orbit review around the intact native aircraft, including real
+    # rear, overhead and low-angle ventral views. Keep all 14 V14 captures.
+    var orbit_model: Node3D=Models.build("attack_heli",0,true,14)
+    _check(orbit_model!=null and FX.has_model(orbit_model),
+        "V14.2 intact A01 available for 360 degree inspection")
+    if orbit_model==null:
+        quit(1)
+        return
+    vp.add_child(orbit_model)
+    var orbit_target: Vector3=orbit_model.to_global(Vector3(0.0,1.12,0.25))
+    for angle_index in range(8):
+        var angle: float=TAU*float(angle_index)/8.0
+        cam.position=Vector3(4.90*sin(angle),2.75,4.90*cos(angle))
+        cam.look_at(orbit_target,Vector3.UP)
+        await _save(vp,folder.path_join(
+            "hat29_v14_2_orbita_%02d.png" % angle_index))
+    cam.position=Vector3(3.1,5.35,-2.4)
+    cam.look_at(orbit_target,Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_2_superior.png"))
+    # V14.2.1: a genuine BELOW-the-hull camera. The previous low side shot
+    # kept the floor in front of the camera and hid the ventral hatch.
+    floor.visible=false
+    underside_light.visible=true
+    cam.position=Vector3(2.45,-0.95,-2.65)
+    var underside_target: Vector3=orbit_model.to_global(Vector3(0,0.61,0.06))
+    cam.look_at(underside_target,Vector3.UP)
+    _check(cam.position.y<0.0 and not floor.visible,
+        "V14.2.1 camera really below the airframe with unobstructed floor")
+    await _save(vp,folder.path_join("hat29_v14_2_bajos.png"))
+    # Additional tight underbody inspection identifies overlapping fasteners,
+    # gasket or hatch seams; this is a real Godot camera, not a 2D crop.
+    cam.position=Vector3(0.52,-1.22,-0.36)
+    cam.look_at(underside_target,Vector3.FORWARD)
+    await _save(vp,folder.path_join("hat29_v14_2_escotilla_macro.png"))
+    floor.visible=true
+    underside_light.visible=false
+    orbit_model.queue_free()
+    await process_frame
 
     var model: Node3D=Models.build("attack_heli",0,true,14)
     _check(model!=null and FX.has_model(model),"combat model")
@@ -115,10 +162,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==14,"exactly 8 faction and 6 animation PNG captures")
+    _check(count==25,"exactly 8 faction, 6 animation, 10 V14.2 orbit and 1 real belly macro captures")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 14 real native Godot PNGs of all army colors, bullet, flying missiles, rocket damage, flames, destruction and repair")
+        print("PASS HAT29 V14 CAPTURE: 25 native Godot PNGs: eight armies, six effects, eight orbit, top, true underside and belly macro")
         quit(0)
