@@ -2364,23 +2364,27 @@ func _update_details() -> void:
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:
             return
+        # Report the VISIBLE sculpt stage. An installed but hidden V12 root
+        # must never be described as active after the V11 comparison toggle.
+        var current_stage: String="V1 · casco básico"
+        if HeliV2.has_model(model_root) and _heli_v2_enabled:
+            current_stage="V2 · cabina y casco"
+        if HeliV6.has_model(model_root) and _heli_v2_enabled:
+            current_stage="V6 · tren y motores"
+        if HeliV7.has_model(model_root) and _heli_v2_enabled and _heli_v7_enabled:
+            current_stage="V7 · identidad a 360p"
+        if HeliV8.has_model(model_root) and _heli_v2_enabled and _heli_v8_enabled:
+            current_stage="V8 · identidad a 320p"
+        if HeliV10.has_model(model_root) and bool(model_root.get_meta(HeliV10.ENABLED,false)):
+            current_stage="V10 · acabados ópticos"
+        if HeliV11.has_model(model_root) and bool(model_root.get_meta(HeliV11.ENABLED,false)):
+            current_stage="V11 · transmisión y lanzadores"
+        if HeliV12.has_model(model_root) and bool(model_root.get_meta(HeliV12.ENABLED,false)):
+            current_stage="V12 · morro y cañón articulado"
         detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D" % [
-            "V11 cola y armamento" if HeliV11.has_model(model_root) and _heli_v2_enabled and _heli_v11_enabled and _heli_v10_enabled else (
-                "V8 identidad a 320p" if HeliV8.has_model(model_root) and _heli_v2_enabled and _heli_v8_enabled else (
-                "V7 identidad a 360p" if HeliV7.has_model(model_root) and _heli_v2_enabled and _heli_v7_enabled else (
-                "V6 comparación táctica" if HeliV6.has_model(model_root) and _heli_v2_enabled else "V1 comparación"))),
-            P06Models.inspect_meshes(model_root)]
-        status_label.text="%s · %s" % [
-            str(Factions.FACTIONS[_faction]["name"]),
-            "escultura V11 cargada" if HeliV11.has_model(model_root) else (
-                "escultura V8 cargada" if HeliV8.has_model(model_root) else (
-                "escultura V7 cargada" if HeliV7.has_model(model_root) else (
-                "escultura V6 cargada" if HeliV6.has_model(model_root) else (
-                "escultura V5 cargada" if HeliV5.has_model(model_root) else (
-                "escultura V4 cargada" if HeliV4.has_model(model_root) else (
-                "escultura V3 cargada" if HeliV3.has_model(model_root) else (
-                "escultura V2 cargada" if HeliV2.has_model(model_root) else (
-                "escultura V1 cargada" if HeliV1.has_model(model_root) else "modelo detallado sin cargar"))))))))]
+            current_stage,P06Models.inspect_meshes(model_root)]
+        status_label.text="%s · escultura %s cargada" % [
+            str(Factions.FACTIONS[_faction]["name"]),current_stage]
         return
     if _role == "mlrs":
         if model_root == null or detail_label == null or status_label == null:
