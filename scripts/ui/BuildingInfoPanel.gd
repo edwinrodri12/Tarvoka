@@ -105,8 +105,7 @@ func bind_site(data: Dictionary, can_open_catalog: bool) -> void:
     if known:
         match owner:
             -1: owner_text = "NEUTRAL"
-            0, 1: owner_text = "ALIADO" if bool(data.get("production",false)) or (
-                str(data.get("detail","")).contains("Propietario aliado")) else "ENEMIGO"
+            0, 1: owner_text = "ALIADO" if bool(data.get("friendly",false)) else "ENEMIGO"
     title_label.text = str(data.get("title","Instalación")).to_upper()
     owner_label.text = "PROPIETARIO: %s    ·    CASILLA %d,%d" % [
         owner_text,site_pos.x+1,site_pos.y+1]
