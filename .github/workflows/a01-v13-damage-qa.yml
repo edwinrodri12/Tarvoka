@@ -1,0 +1,83 @@
+name: TARVOKA A01 V13 bullet damage, smoke and wreck animation native QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/AttackHelicopterDamageV13.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v13.gd'
+      - 'tests/test_attack_helicopter_v13_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v13-damage-qa.yml'
+  push:
+    # Also test the active art branch if GitHub does not emit a PR synchronize event.
+    branches: [main, 'art/a01-v11-tail-weapon-detail', 'art/a01-v13-integration-20261117']
+    paths:
+      - 'scripts/ui/AttackHelicopterDamageV13.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v13.gd'
+      - 'tests/test_attack_helicopter_v13_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v13-damage-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  a01-v13-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install original Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate V13 reversible damage stages, 8 armies, rotor debris and preserved mobile LOD
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v13.gd \
+            2>&1 | tee /tmp/a01-v13-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v13-qa.log; then
+            echo 'Native V13 QA failed'; exit 1
+          fi
+          grep -F 'PASS A01 V13:' /tmp/a01-v13-qa.log
+      - name: Capture 13 native damage, shock, rotor fracture and crash frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v13-review
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v13-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v13_capture.gd \
+            2>&1 | tee /tmp/a01-v13-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v13-capture.log; then
+            echo 'Native V13 13-frame rendering failed'; exit 1
+          fi
+          grep -F 'PASS A01 V13 CAPTURE:' /tmp/a01-v13-capture.log
+          test "$(find /tmp/a01-v13-review -maxdepth 1 -name '*.png' | wc -l)" -eq 13
+      - name: Archive 13 native V13 smoke/fire, impact and rotor wreck frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v13-real-godot-13-frame-review
+          path: |
+            /tmp/a01-v13-review/*.png
+            /tmp/a01-v13-qa.log
+            /tmp/a01-v13-capture.log
+          if-no-files-found: warn
+          retention-days: 14
