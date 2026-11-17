@@ -1,0 +1,271 @@
+extends RefCounted
+class_name TarvokaNextTurnThreatV36
+
+# A bounded, conservative NEXT-ENEMY-TURN threat envelope.
+# Read only Visibility.observed_state. Assume known enemies regain
+# movement on their next turn; never read enemy private ammo/fuel/reaction.
+# This is a threat estimate, NOT a guarantee of what a rival will do.
+# Move orders are validated once by the authoritative BattleSession in AI.
+const Rules = preload("res://scripts/core/Rules.gd")
+const Turns = preload("res://scripts/core/Turns.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
+const Weather = preload("res://scripts/core/Weather.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
+const Economy = preload("res://scripts/core/UrbanEconomy.gd")
+const Terrain = preload("res://scripts/core/TerrainTactics.gd")
+const Battle = preload("res://scripts/core/BattleActions.gd")
+const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
+
+const MAX_ALLIES := 5
+const MAX_ENEMIES := 6
+const MAX_DESTINATIONS := 9
+
+static func _distance(a: Vector2i, b: Vector2i) -> int:
+    return abs(a.x-b.x)+abs(a.y-b.y)
+
+static func _nearest(cell: Vector2i, units: Array) -> int:
+    var best := 999999
+    for u in units:
+        if u is Dictionary and u.get("pos") is Vector2i:
+            best = mini(best,_distance(cell,u["pos"]))
+    return best
+
+static func _side_key(cell: Vector2i, side: int, width: int) -> String:
+    var x: int = cell.x if side == 0 else width-1-cell.x
+    return "%04d:%04d" % [x,cell.y]
+
+static func _attackers(known: Dictionary, side: int) -> Array:
+    var foes: Array = []
+    var allies: Array = []
+    for u in known.get("units",[]):
+        if not u is Dictionary or int(u.get("hp",0)) <= 0:
+            continue
+        if int(u.get("faction",-1)) == side:
+            allies.append(u)
+        elif int(u.get("faction",-1)) == 1-side and \
+                int(u.get("attack",0)) > 0 and \
+                u.get("pos") is Vector2i:
+            foes.append(u)
+    var width: int = Rules.map_size(known["terrain"]).x
+    foes.sort_custom(func(a,b):
+        var da: int = _nearest(a["pos"],allies)
+        var db: int = _nearest(b["pos"],allies)
+        if da != db:
+            return da < db
+        return _side_key(a["pos"],side,width) < \
+            _side_key(b["pos"],side,width))
+    if foes.size() > MAX_ENEMIES:
+        foes.resize(MAX_ENEMIES)
+    return foes
+
+static func _route_for_enemy(known: Dictionary,
+        enemy: Dictionary) -> Dictionary:
+    # Do not use privately tracked enemy fuel or movement readiness.
+    # A rival can move again next turn even if it moved/acted this turn.
+    var blocked: Array[Vector2i] = []
+    var transit: Array[Vector2i] = []
+    for u in known.get("units",[]):
+        if not u is Dictionary or int(u.get("hp",0)) <= 0 or \
+                str(u.get("id","")) == str(enemy["id"]) or \
+                Domains.layer(u) != Domains.layer(enemy):
+            continue
+        if int(u.get("faction",-1)) == int(enemy["faction"]):
+            transit.append(u["pos"])
+        else:
+            blocked.append(u["pos"])
+    var route: Dictionary = Rules.reachable(
+        enemy["pos"],int(enemy.get("move_points",0)),
+        known["terrain"],blocked,Domains.domain(enemy),
+        Logistics.road_fast(enemy),transit,
+        Weather.from_state(known),Weather.traction(enemy))
+    # The current position remains a potential firing point even if
+    # there are obstacles on the way to other firing points.
+    route[enemy["pos"]] = 0
+    return route
+
+static func _records(known: Dictionary, side: int) -> Array:
+    var result: Array = []
+    for enemy in _attackers(known,side):
+        var public_unit: Dictionary = enemy.duplicate(true)
+        public_unit.erase("ammo")
+        public_unit.erase("fuel")
+        public_unit.erase("reacted")
+        public_unit.erase("acted")
+        public_unit.erase("moved")
+        result.append({
+            "unit":public_unit,
+            "positions":_route_for_enemy(known,public_unit)
+        })
+    return result
+
+static func _max_strike(known: Dictionary,
+        defender: Dictionary, record: Dictionary) -> int:
+    var foe: Dictionary = record["unit"]
+    var highest := 0
+    var seen: int = 0
+    for pos in record["positions"]:
+        var attacker: Dictionary = foe.duplicate(true)
+        attacker["pos"] = pos
+        if not Turns.in_attack_range(attacker,defender):
+            continue
+        # The authoritative attack preview recomputes terrain cover,
+        # elevation and domain. No speculative attack is executed.
+        var preview: Dictionary = Battle.public_preview_exchange(
+            attacker,defender,known["terrain"],
+            known.get("economy",{}),known["units"])
+        if bool(preview.get("valid",false)):
+            highest = maxi(highest,int(preview.get("damage",0)))
+            seen += 1
+            if highest >= int(defender["hp"]):
+                break
+    return highest
+
+static func _risk(known: Dictionary,
+        defender: Dictionary, records: Array) -> Dictionary:
+    var greatest := 0
+    var second := 0
+    var threatening := 0
+    for record in records:
+        var damage: int = _max_strike(known,defender,record)
+        if damage > 0:
+            threatening += 1
+        if damage >= greatest:
+            second = greatest
+            greatest = damage
+        elif damage > second:
+            second = damage
+    return {"one":greatest,"two":greatest+second,
+        "threats":threatening}
+
+static func forecast(known: Dictionary, side: int,
+        unit_id: String) -> Dictionary:
+    if side not in [0,1] or not Rules.valid_terrain(
+            known.get("terrain",[])):
+        return {}
+    var records: Array = _records(known,side)
+    for u in known.get("units",[]):
+        if u is Dictionary and str(u.get("id","")) == unit_id and \
+                int(u.get("faction",-1)) == side and int(u.get("hp",0)) > 0:
+            return _risk(known,u,records)
+    return {}
+
+static func _worth(unit: Dictionary, known: Dictionary,
+        side: int) -> int:
+    var score: int = maxi(100,Economy.cost(str(unit.get("role",""))))
+    if int(unit.get("attack_min_range",1)) >= 2:
+        score += 500 # Protect artillery/indirect weapons.
+    if str(unit.get("role","")) in ["logistics","uav_recon"]:
+        score += 380 # Preserve non-combat support investments.
+    if Economy.can_capture(unit):
+        for site in known.get("economy",{}).get("sites",[]):
+            if site.get("pos") == unit["pos"] and \
+                    int(site.get("owner",-2)) != side:
+                score += 700 # Valuable, but not worth certain death.
+                break
+    return score
+
+static func _destinations(known: Dictionary,side: int,
+        unit: Dictionary, enemies: Array) -> Array:
+    var reachable: Dictionary = Positioning._routes(known,unit)
+    var filtered: Array = []
+    var visible: Dictionary = Visibility.visible_cells(known,side) if \
+        Visibility.enabled(known) else {}
+    var size: Vector2i = Rules.map_size(known["terrain"])
+    for cell in reachable:
+        if cell == unit["pos"] or not Positioning._vacant(
+                known,cell,unit) or \
+                (Visibility.enabled(known) and not visible.has(cell)):
+            continue
+        var cover: int = int(Terrain.COVER.get(
+            Terrain.tile_at(known["terrain"],cell),0))
+        var site_cover := 0
+        for site in known.get("economy",{}).get("sites",[]):
+            if site.get("pos") == cell and \
+                    str(site.get("kind","")) == "city":
+                site_cover = 1
+                break
+        var score: int = (cover+site_cover)*155 + \
+            mini(10,_nearest(cell,enemies))*35 - \
+            int(reachable[cell])*18
+        filtered.append({"cell":cell,"estimate":score,
+            "movement_cost":int(reachable[cell])})
+    filtered.sort_custom(func(a,b):
+        if int(a["estimate"]) != int(b["estimate"]):
+            return int(a["estimate"]) > int(b["estimate"])
+        return _side_key(a["cell"],side,size.x) < \
+            _side_key(b["cell"],side,size.x))
+    if filtered.size() > MAX_DESTINATIONS:
+        filtered.resize(MAX_DESTINATIONS)
+    return filtered
+
+static func propose(known: Dictionary,side: int,
+        level: int = 10) -> Dictionary:
+    if side not in [0,1] or not Rules.valid_terrain(
+            known.get("terrain",[])) or level < 8:
+        return {}
+    var foes: Array = _attackers(known,side)
+    if foes.is_empty():
+        return {}
+    var records: Array = _records(known,side)
+    var allies: Array = []
+    for u in known.get("units",[]):
+        if u is Dictionary and int(u.get("faction",-1)) == side and \
+                Turns.can_move(u,side) and u.get("pos") is Vector2i and \
+                int(u.get("hp",0)) > 0:
+            allies.append(u)
+    var dimensions: Vector2i = Rules.map_size(known["terrain"])
+    allies.sort_custom(func(a,b):
+        var da: int = _nearest(a["pos"],foes)
+        var db: int = _nearest(b["pos"],foes)
+        if da != db:
+            return da < db
+        return _side_key(a["pos"],side,dimensions.x) < \
+            _side_key(b["pos"],side,dimensions.x))
+    if allies.size() > MAX_ALLIES:
+        allies.resize(MAX_ALLIES)
+    var best: Dictionary = {}
+    var count := 0
+    for unit in allies:
+        var hp: int = int(unit["hp"])
+        var current: Dictionary = _risk(known,unit,records)
+        var danger: int = int(current["two"] if level >= 11 \
+            else current["one"])
+        if danger < hp:
+            continue # Don't flee just because something is nearby.
+        var value: int = _worth(unit,known,side)
+        for entry in _destinations(known,side,unit,foes):
+            var shifted: Dictionary = unit.duplicate(true)
+            var pos: Vector2i = entry["cell"]
+            shifted["pos"] = pos
+            var next: Dictionary = _risk(known,shifted,records)
+            count += 1
+            var future: int = int(next["two"] if level >= 11 \
+                else next["one"])
+            if future >= hp or future >= danger:
+                continue # Only reposition if survival genuinely improves.
+            var cover: int = int(Terrain.COVER.get(
+                Terrain.tile_at(known["terrain"],pos),0))
+            var score: int = 15000 + value*2 + \
+                (danger-future)*220 + cover*90 - \
+                int(entry["movement_cost"])*40 + \
+                mini(8,_nearest(pos,foes))*20
+            if best.is_empty() or score > int(best["score"]) or \
+                    (score == int(best["score"]) and \
+                    _side_key(pos,side,dimensions.x) < \
+                    _side_key(best["destination"],side,dimensions.x)):
+                best = {
+                    "valid":true,
+                    "unit_id":str(unit["id"]),
+                    "destination":pos,
+                    "reason":"anticipatory_defense",
+                    "expected_damage_before":danger,
+                    "expected_damage_after":future,
+                    "unit_hp":hp,
+                    "score":score,
+                    "terrain":Terrain.tile_at(known["terrain"],pos),
+                    "risk_model":"visible_enemy_next_turn"
+                }
+    if not best.is_empty():
+        best["evaluated"] = count
+    return best
