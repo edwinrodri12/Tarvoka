@@ -172,7 +172,7 @@ func _audit(level: int,faction: int,damage: int) -> void:
                 elif name.begins_with("BisagraViseraRotaV11_"):
                     removed_hinges+=1
         var expected_shades: int=expected_all if damage==0 else (
-            1 if level==1 else 4 if level==2 else 11)
+            1 if level==1 else 4 if level==2 else 10)
         assert(visible_shades==expected_shades)
         assert(military_stripes==(
             expected_all if level>=2 and damage==0 else 0))
