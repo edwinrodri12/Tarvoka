@@ -246,6 +246,23 @@ static func _smoke_alpha_texture() -> ImageTexture:
             img.set_pixel(px,py,Color(0.27,0.30,0.32,a))
     return ImageTexture.create_from_image(img)
 
+# Ground contact has its own warmer, denser alpha mask. Reusing the very
+# transparent engine-smoke texture made the dust nearly invisible in Godot.
+static func _dust_alpha_texture() -> ImageTexture:
+    var image:=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for py in range(64):
+        for px in range(64):
+            var u: float=(float(px)+0.5)/32.0-1.0
+            var v: float=(float(py)+0.5)/32.0-1.0
+            var angle: float=atan2(v,u)
+            var edge: float=0.10*sin(6.0*angle+0.72)+0.035*cos(11.0*angle)
+            var radius: float=sqrt(u*u+v*v)+edge
+            var opacity: float=0.83*(1.0-smoothstep(0.28,0.98,radius))
+            opacity*=0.88+0.12*sin(u*6.0-v*4.8)
+            image.set_pixel(px,py,Color(0.73,0.69,0.60,
+                clampf(opacity,0.0,0.83)))
+    return ImageTexture.create_from_image(image)
+
 static func _smoke_billboard_material(texture: Texture2D) -> StandardMaterial3D:
     var mat:=StandardMaterial3D.new()
     mat.albedo_texture=texture
@@ -354,16 +371,16 @@ static func _destruction_blast(body: Node3D) -> void:
         Color(1.0,0.66,0.30,0.58),Vector3(0.52,1.48,0.75),true)
     ring.rotation_degrees.z=90.0
     var smolder:=_group(body,LANDING_DUST)
-    var dust_texture: ImageTexture=_smoke_alpha_texture()
+    var dust_texture: ImageTexture=_dust_alpha_texture()
     for i in range(5):
         var angle: float=TAU*float(i)/5.0
         var quad:=QuadMesh.new()
-        quad.size=Vector2(0.80,0.54)
+        quad.size=Vector2(1.34,0.88)
         var dust:=_mesh(smolder,"A01V13_NubePolvo_%d" % i,quad,
             Color.WHITE,
-            Vector3(0.45*cos(angle),0.16,0.44*sin(angle)))
+            Vector3(0.58*cos(angle),0.28,0.57*sin(angle)))
         var material:=_smoke_billboard_material(dust_texture)
-        material.albedo_color=Color(0.95,0.79,0.66,0.70)
+        material.albedo_color=Color(1.0,1.0,1.0,0.92)
         dust.material_override=material
         dust.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         dust.set_meta("a01_v13_dust_rest",dust.position)
@@ -541,13 +558,13 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
         var origin: Vector3=puff.get_meta("a01_v13_dust_rest") as Vector3
         var angle: float=float(puff.get_meta("a01_v13_dust_angle"))
         puff.position=origin+Vector3(
-            cos(angle)*0.37*dust_phase,0.20*dust_phase,
-            sin(angle)*0.37*dust_phase)
+            cos(angle)*0.48*dust_phase,0.20*dust_phase,
+            sin(angle)*0.48*dust_phase)
         puff.scale=Vector3.ONE*(0.38+1.26*dust_phase)
         var dust_mat: StandardMaterial3D=puff.material_override as StandardMaterial3D
         if dust_mat!=null:
-            dust_mat.albedo_color=Color(0.95,0.79,0.66,
-                0.70*(1.0-dust_phase))
+            dust_mat.albedo_color=Color(1.0,1.0,1.0,
+                0.92*(1.0-dust_phase))
     smoke.visible=n>=2 or (kind=="destroy" and t>0.20)
     smoke.position.y=0.045*sin(TAU*t) if kind=="destroy" else 0.0
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
