@@ -268,6 +268,17 @@ func _run()->void:
         Vector3(0,1.10,1.15),2.0)
     Fold.set_fold(subject,1.0)
     await screenshot(vp,folder,"radar_foot_hinge_closeup")
+    for view_spec in [
+            {"name":"folded_rear_side","eye":Vector3(-4.2,2.5,1.8),
+                "target":Vector3(0,1.35,0.70),"size":3.8},
+            {"name":"folded_rear_top","eye":Vector3(1.0,5.4,2.5),
+                "target":Vector3(0,1.25,0.75),"size":4.4},
+            {"name":"folded_rear_low","eye":Vector3(0.6,1.9,4.3),
+                "target":Vector3(0,1.40,0.80),"size":3.8}
+        ]:
+        camera(cam,view_spec["eye"],view_spec["target"],
+            float(view_spec["size"]))
+        await screenshot(vp,folder,view_spec["name"])
     vp.remove_child(subject)
     subject.free()
 
