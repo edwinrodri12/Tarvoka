@@ -1,0 +1,185 @@
+name: Publish TARVOKA civilian city design preview V10 to shared 3D viewer
+
+on:
+  push:
+    branches:
+      - art/cities-v8-rear-facades-rooftops-20261117
+    paths:
+      - 'scripts/ui/CivilianCity*.gd'
+      - 'scenes/CivilianCityDesignStudioV10.tscn'
+      - '.github/workflows/cities-v10-shared-3d-viewer.yml'
+  workflow_dispatch:
+
+# This is a MANUAL ART PREVIEW WEB EXPORT, not gameplay QA, stress test,
+# APK build, model approval or an upload of a mockup/image.
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tarvoka-public-studio-pages
+  cancel-in-progress: false
+
+jobs:
+  compose-site:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    steps:
+      - name: Check out in-progress V10 civilian city native art only
+        uses: actions/checkout@v4
+      - name: Restore the existing LIVE TARVOKA 3D viewer site unchanged
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: previous-pages
+          repository: edwinrodri12/Tarvoka
+          run-id: 44140747450
+          github-token: ${{ github.token }}
+      - name: Expand existing published site without losing other 3D viewers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/site build/city-preview
+          archive=$(find previous-pages -maxdepth 2 -type f \( -name '*.tar' -o -name '*.tar.gz' \) -print -quit)
+          test -n "$archive"
+          tar -xaf "$archive" -C build/site
+          test -s build/site/index.html
+          test -s build/site/index.pck
+          test -s build/site/index.wasm
+          test -s build/site/index.js
+          test -s build/site/batalla/index.html
+          test -s build/site/tanque/index.html
+          test -s build/site/apc/index.html
+      - name: Download official Godot 4.3 and matching Web export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/city-godot.zip
+          unzip -q /tmp/city-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/city-web-templates.tpz
+          mkdir -p /tmp/city-templates
+          unzip -q /tmp/city-web-templates.tpz -d /tmp/city-templates
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
+          cp /tmp/city-templates/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+      - name: Select the actual editable 3D art scene V10 for WebGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
+          test -s scripts/ui/CivilianCityGroundFrontV10.gd
+          test -s scripts/ui/CivilianCityFinishV9.gd
+          test -s scripts/ui/CivilianCityArchitectureV8.gd
+          test -s scenes/CivilianCityDesignStudioV10.tscn
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV10.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV10.tscn"' project.godot
+          cat >> export_presets.cfg <<'PRESET'
+
+          [preset.1]
+
+          name="Web Studio"
+          platform="Web"
+          runnable=true
+          advanced_options=false
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/city-preview/index.html"
+          patches=PackedStringArray()
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          seed=0
+          encrypt_pck=false
+          encrypt_directory=false
+          script_export_mode=2
+
+          [preset.1.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          variant/extensions_support=false
+          variant/thread_support=false
+          vram_texture_compression/for_desktop=true
+          vram_texture_compression/for_mobile=true
+          html/export_icon=false
+          html/custom_html_shell=""
+          html/head_include=""
+          html/canvas_resize_policy=2
+          html/focus_canvas_on_start=true
+          html/experimental_virtual_keyboard=false
+          progressive_web_app/enabled=false
+          PRESET
+          printf 'CIUDADES 3D V10 · DISEÑO EN PROGRESO · %s\n' "$GITHUB_SHA" > assets/art_studio_revision.txt
+      - name: Package actual V10 native 3D meshes as a playable browser art scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit
+          mkdir -p build/city-preview
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-release 'Web Studio' build/city-preview/index.html
+          for file in index.html index.js index.pck index.wasm; do
+            test -s "build/city-preview/$file"
+          done
+          mkdir -p build/site/ciudades
+          cp -a build/city-preview/. build/site/ciudades/
+          # Clear import-only generated previews; no screenshot/benchmark run.
+      - name: Link cities from the EXISTING shared studio without removing the others
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import html,os
+          revision=os.environ["GITHUB_SHA"][:10]
+          homepage=Path("build/site/index.html")
+          city=Path("build/site/ciudades/index.html")
+          original=homepage.read_text(encoding="utf-8")
+          assert original.count("</body>")==1
+          link=('<nav id="tarvoka-city-in-progress" '
+                'style="position:fixed;right:16px;top:15px;z-index:2000;'
+                'font:700 13px system-ui,Arial,sans-serif">'
+                '<a href="ciudades/" style="display:inline-block;'
+                'padding:12px 14px;border:2px solid #dabb75;border-radius:9px;'
+                'background:#142330;color:#ffe2a0;text-decoration:none">'
+                'CIUDADES 3D V10 · EN DISEÑO</a></nav>')
+          homepage.write_text(original.replace("</body>",link+"\n</body>"),
+                              encoding="utf-8")
+          city_html=city.read_text(encoding="utf-8")
+          assert city_html.count("</body>")==1
+          header=('<nav style="position:fixed;left:12px;top:12px;z-index:2000;'
+                  'font:700 13px system-ui,Arial,sans-serif">'
+                  '<a href="../" style="padding:10px 13px;'
+                  'background:#142330;color:#ffe2a0;'
+                  'border:2px solid #dabb75;border-radius:8px;'
+                  'text-decoration:none">VOLVER AL ESTUDIO 3D</a></nav>'
+                  '<div style="position:fixed;right:12px;bottom:12px;'
+                  'z-index:2000;padding:7px 9px;border-radius:7px;'
+                  'background:#142330dd;color:#ffe2a0;'
+                  'font:600 11px system-ui,Arial,sans-serif;'
+                  'pointer-events:none">MODELO V10 EN DISEÑO · '
+                  +html.escape(revision)+'</div>')
+          city.write_text(city_html.replace("</body>",header+"\n</body>"),
+                          encoding="utf-8")
+          PY
+          test -s build/site/ciudades/index.pck
+          test -s build/site/ciudades/index.wasm
+          touch build/site/.nojekyll
+      - name: Publish full existing site plus /ciudades/ to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site/
+  deploy:
+    needs: compose-site
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+    steps:
+      - name: Update shared TARVOKA 3D viewer
+        uses: actions/deploy-pages@v4
