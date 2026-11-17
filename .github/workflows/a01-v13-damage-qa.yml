@@ -53,7 +53,7 @@ jobs:
             echo 'Native V13 QA failed'; exit 1
           fi
           grep -F 'PASS A01 V13:' /tmp/a01-v13-qa.log
-      - name: Capture 13 native damage, shock, rotor fracture and crash frames
+      - name: Capture 15 native explosion pulses, landing dust and wreck frames
         shell: bash
         run: |
           set -euo pipefail
@@ -66,15 +66,15 @@ jobs:
             --path . --script res://tests/test_attack_helicopter_v13_capture.gd \
             2>&1 | tee /tmp/a01-v13-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v13-capture.log; then
-            echo 'Native V13 13-frame rendering failed'; exit 1
+            echo 'Native V13 15-frame rendering failed'; exit 1
           fi
           grep -F 'PASS A01 V13 CAPTURE:' /tmp/a01-v13-capture.log
-          test "$(find /tmp/a01-v13-review -maxdepth 1 -name '*.png' | wc -l)" -eq 13
-      - name: Archive 13 native V13 smoke/fire, impact and rotor wreck frames
+          test "$(find /tmp/a01-v13-review -maxdepth 1 -name '*.png' | wc -l)" -eq 15
+      - name: Archive 15 real V13 explosion, impact dust, fire and wreck frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v13-real-godot-13-frame-review
+          name: tarvoka-a01-v13-real-godot-15-frame-review
           path: |
             /tmp/a01-v13-review/*.png
             /tmp/a01-v13-qa.log
