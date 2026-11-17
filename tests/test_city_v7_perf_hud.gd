@@ -66,6 +66,11 @@ func _run() -> void:
     assert(driver.update_now(viewer.camera,mobile_height)>0)
     probe.refresh_once()
     var near: Dictionary=probe.snapshot()
+    print("CITY V7 near snapshot=",JSON.stringify(near))
+    for city in driver.cities:
+        print("CITY V7 tier=",city.get_meta("visual_level",0),
+            " lod=",city.get_meta("city_lod",-1),
+            " world_scale=",city.global_transform.basis.y.length())
     assert(int(near["city_lod0"])>0)
     assert(int(near["city_meshes"])>int(before["city_meshes"]))
     viewer._camera_size=100.0
