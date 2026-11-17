@@ -139,6 +139,18 @@ static func _belly_mesh() -> ArrayMesh:
     st.generate_normals()
     return st.commit()
 
+# V14.3: separate metal and neoprene materials for real relief. These never
+# replace, duplicate or tint the approved eight-faction body enamel.
+static func _finish_strip(parent: Node3D,name: String,
+        location: Vector3,size: Vector3,color: Color,
+        metal: float,rough: float) -> void:
+    var shape:=BoxMesh.new()
+    shape.size=size
+    var piece: MeshInstance3D=_hardware(parent,name,shape,location,color)
+    var mat: StandardMaterial3D=piece.material_override as StandardMaterial3D
+    mat.metallic=metal
+    mat.roughness=rough
+
 static func _details(model: Node3D) -> bool:
     if model.find_child(DETAIL_ROOT,true,false)!=null:
         return true
@@ -231,6 +243,37 @@ static func _details(model: Node3D) -> bool:
         for cap in range(2):
             _rivet(root,"A01V14_2_TailServiceBolt_%d_%d" % [side,cap],
                 Vector3(sign*0.175,1.095,1.917+0.100*float(cap)))
+    # V14.3 daylight/night surface finish: tiny independent, real mesh layers.
+    # Engine heat shields and tail access frames are military alloy / rubber.
+    # The 11 original PAINTED mixing values and PBR properties stay identical.
+    for side in [-1,1]:
+        var sign: float=float(side)
+        # Brushed shoulder of the rear service hatch, close to V14.2 louvers.
+        _finish_strip(root,"A01V14_3_EscudoTermico_%d" % side,
+            Vector3(sign*0.643,1.625,1.084),
+            Vector3(0.014,0.104,0.026),Color("#85908d"),0.68,0.41)
+        for i in range(3):
+            _finish_strip(root,"A01V14_3_CostillaMetalicaMotor_%d_%d" % [side,i],
+                Vector3(sign*0.652,1.585+0.024*float(i),1.067),
+                Vector3(0.010,0.010,0.038),Color("#76858a"),0.60,0.48)
+        # Slim perimeter weather strips on the physical V2 cockpit doors;
+        # they do not cover the windows, trim or faction-coloured door.
+        _finish_strip(root,"A01V14_3_JuntaPuerta_%d" % side,
+            Vector3(sign*0.623,0.878,-0.520),
+            Vector3(0.010,0.012,0.420),Color("#202d35"),0.03,0.94)
+        # Brushed rim and dark seal running around the previously flat
+        # V14.2 tail service insert. Both are isolated, editable 3D meshes.
+        _finish_strip(root,"A01V14_3_BordeRegistroCola_%d" % side,
+            Vector3(sign*0.183,1.095,1.967),
+            Vector3(0.010,0.113,0.165),Color("#76858a"),0.63,0.46)
+        _finish_strip(root,"A01V14_3_SelloRegistroCola_%d" % side,
+            Vector3(sign*0.191,1.095,1.967),
+            Vector3(0.008,0.081,0.134),Color("#23323a"),0.04,0.94)
+        # Pair of small steel catches on each service registration.
+        for i in range(2):
+            _finish_strip(root,"A01V14_3_CierreCola_%d_%d" % [side,i],
+                Vector3(sign*0.199,1.095,1.908+0.118*float(i)),
+                Vector3(0.015,0.023,0.023),Color("#b1b7b1"),0.71,0.39)
     return true
 
 static func apply(model: Node3D,faction: Color,faction_index: int=-1) -> bool:
@@ -263,5 +306,5 @@ static func apply(model: Node3D,faction: Color,faction_index: int=-1) -> bool:
     model.set_meta("a01_v14_faction_painted_count",count)
     model.set_meta("a01_v14_faction_color",faction)
     model.set_meta("a01_v14_secondary_color",second)
-    model.set_meta("a01_v14_coat_revision","muted_tactical_v14_2_1")
+    model.set_meta("a01_v14_coat_revision","muted_tactical_v14_3")
     return true

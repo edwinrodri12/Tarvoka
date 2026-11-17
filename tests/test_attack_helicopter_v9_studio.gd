@@ -157,6 +157,33 @@ func _run() -> void:
     _check(not bool(studio.get("_heli_underbody_view_active"))
         and camera!=null and camera.position.y>0.0,
         "returning to overview restores original elevated Studio camera")
+    # V14.3 night mode controls the actual shared scene illumination,
+    # never the faction materials, and restores all daylight values.
+    var light: Light3D=studio.get("hq_key_light") as Light3D
+    var ambient: Light3D=studio.get("hq_fill_light") as Light3D
+    var night_lamp: OmniLight3D=studio.get("_heli_night_fill_v143") as OmniLight3D
+    var toggle: Button=studio.get("_heli_night_button_v143") as Button
+    _check(light!=null and ambient!=null and night_lamp!=null
+        and toggle!=null,"V14.3 night lighting and UI are installed in live Studio")
+    var original_key: float=light.light_energy
+    var original_fill: float=ambient.light_energy
+    var hull_v143: MeshInstance3D=model.find_child(
+        "A01_V2_Casco12CarasCerrado",true,false) as MeshInstance3D
+    var original_color: Color=(hull_v143.material_override as StandardMaterial3D).albedo_color
+    studio.call("_heli_toggle_night_v143")
+    _check(bool(studio.get("_heli_night_enabled_v143"))
+        and light.light_energy<original_key
+        and ambient.light_energy<original_fill
+        and night_lamp.visible and toggle.text.contains("diurna"),
+        "V14.3 night profile dims key and enables independent rim fill")
+    _check((hull_v143.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
+        original_color),"V14.3 light mode never changes muted faction color")
+    studio.call("_heli_toggle_night_v143")
+    _check(not bool(studio.get("_heli_night_enabled_v143"))
+        and absf(light.light_energy-original_key)<0.001
+        and absf(ambient.light_energy-original_fill)<0.001
+        and not night_lamp.visible,
+        "V14.3 daylight light energies and night fill restore without leak")
     var v7: Node3D=model.find_child(V8.ROOT,true,false) as Node3D
     _check(v7!=null and v7.visible,"V8 faction panels visible before compare")
     studio.call("_heli_toggle_v8")
@@ -332,8 +359,15 @@ func _run() -> void:
     _check(V13.stage(recolored_wreck)==0
         and not bool(studio.get("_heli_wreck_frozen")),
         "repair on another army removes wreck and restores original rotor")
+    # Leaving A01 during night inspection automatically restores shared sun.
+    studio.call("_heli_toggle_night_v143")
+    _check(bool(studio.get("_heli_night_enabled_v143")),
+        "V14.3 night remains selectable after faction and damage changes")
     studio.call("_display_role","apc")
     await process_frame
+    _check(not bool(studio.get("_heli_night_enabled_v143"))
+        and not night_lamp.visible,
+        "V14.3 automatic night cleanup on APC selection")
     _check(not quick.visible,
         "A01-only quick panel hides for Bastion, retaining other-unit UI")
     _check(rim!=null and not rim.visible,
