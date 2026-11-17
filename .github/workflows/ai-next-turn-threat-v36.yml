@@ -1,0 +1,84 @@
+name: TARVOKA v36 anticipatory AI defense and no-cheat threat forecasts
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/NextTurnThreatV36.gd"
+      - "scripts/core/BasicAI.gd"
+      - "tests/test_ai_next_turn_threat_v36.gd"
+      - ".github/workflows/ai-next-turn-threat-v36.yml"
+  workflow_dispatch:
+
+jobs:
+  next_turn_threat_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Actual threat-aware move, terrain cover, fog and bounded CPU contract
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 450s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_next_turn_threat_v36.gd \
+            2>&1 | tee /tmp/v36-defense.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v36-defense.log; then exit 1; fi
+          grep -Fq 'PASS strategic AI v36 anticipatory defense:' /tmp/v36-defense.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v36-defense-contract
+          path: /tmp/v36-defense.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  inherited_ai_regressions:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - test_ai_tactical_position_v35.gd
+          - test_ai_coordinated_fire_v34.gd
+          - test_ai_multiturn_objectives_v33.gd
+          - test_ai_strategy_levels_v32.gd
+          - test_ai_game_ui_profile_v32.gd
+          - test_ai_decisions.gd
+          - test_ai_retreat.gd
+          - test_ai_fog_sweep.gd
+          - test_ai_self_play.gd
+          - test_economic_ai.gd
+          - test_multidomain_ai.gd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Protect original AI, combat, missions, fog, economy and saved game behavior
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/${{ matrix.suite }} \
+            2>&1 | tee /tmp/v36-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v36-regression.log; then exit 1; fi
+          grep -Fq 'PASS' /tmp/v36-regression.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v36-${{ matrix.suite }}
+          path: /tmp/v36-regression.log
+          retention-days: 30
+          if-no-files-found: ignore

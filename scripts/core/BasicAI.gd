@@ -18,6 +18,7 @@ const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
+const Threats = preload("res://scripts/core/NextTurnThreatV36.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -207,6 +208,27 @@ static func _decide(state: Dictionary,
                 tactical_move["reason"] = "combined_position"
                 tactical_move["planned_shots"] = int(placement["planned_shots"])
                 return tactical_move
+
+    # High-level defense anticipates a visible enemy moving AND firing
+    # next turn. Earlier guaranteed kills, urgent current-turn retreats
+    # and legal joint attacks remain higher priority. The planner only
+    # computes from the observed snapshot and makes one real move.
+    if int(plan.get("level",1)) >= 8:
+        var safe: Dictionary = Threats.propose(
+            knowledge,faction,int(plan["level"]))
+        if bool(safe.get("valid",false)):
+            var survive: Dictionary = Session.move(state,
+                str(safe["unit_id"]),safe["destination"])
+            if bool(survive.get("valid",false)):
+                survive["action"] = "move"
+                survive["reason"] = "anticipatory_defense"
+                survive["unit_id"] = str(safe["unit_id"])
+                survive["destination"] = safe["destination"]
+                survive["threat_before"] = int(
+                    safe["expected_damage_before"])
+                survive["threat_after"] = int(
+                    safe["expected_damage_after"])
+                return survive
 
     if not best_hit.is_empty():
         var hit: Dictionary = Session.attack(state, best_hit["unit_id"], best_hit["enemy_id"])
