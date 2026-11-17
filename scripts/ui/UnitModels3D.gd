@@ -1038,7 +1038,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                             if AttackHelicopterTailV11.apply(model,faction_paint_color(faction)):
                                                 if AttackHelicopterNoseV12.apply(model,faction_paint_color(faction)):
                                                     if AttackHelicopterDamageV13.apply(model,faction_paint_color(faction)):
-                                                        if not AttackHelicopterFactionV14.apply(model,faction_paint_color(faction)):
+                                                        if not AttackHelicopterFactionV14.apply(model,faction_paint_color(faction),faction):
                                                             push_warning("A01 V14 faction identity coat could not be applied")
                                                         if not AttackHelicopterCombatFXV14.apply(model):
                                                             push_warning("A01 V14 combat animation effects could not be applied")
