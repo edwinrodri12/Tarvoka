@@ -1,4 +1,4 @@
-name: TARVOKA G13 V15 turret junction and tactical night LOD QA
+name: TARVOKA G13 V16 visible GPU batching and exact frame comparison QA
 
 on:
   push:
@@ -73,6 +73,7 @@ jobs:
             tests/test_g13_surface_finish_v13.gd
             tests/test_g13_sensor_sculpt_v14.gd
             tests/test_g13_turret_finish_v15.gd
+            tests/test_g13_static_batch_v16.gd
             tests/test_g13_inspection_studio.gd
           )
           for script in "${scripts[@]}"; do
@@ -93,46 +94,46 @@ jobs:
             }
             echo "::endgroup::"
           done
-      - name: Profile G13 V15 native CPU build and LOD8/13 geometry
+      - name: Profile G13 V16 visible GPU draw savings and LOD8/13 geometry
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 180s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 G13_V15_PROFILE_FILE=/tmp/g13-v15-profile.json \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V16_PROFILE_FILE=/tmp/g13-v16-profile.json \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy \
-            --path . --script res://tests/test_g13_v15_build_profile.gd 2>&1 | tee /tmp/g13-profile.log
+            --path . --script res://tests/test_g13_v16_visible_profile.gd 2>&1 | tee /tmp/g13-profile.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-profile.log; then exit 1; fi
-          grep -F 'PASS G13 V15 PROFILE:' /tmp/g13-profile.log
-          test -s /tmp/g13-v15-profile.json
+          grep -F 'PASS G13 V16 PROFILE:' /tmp/g13-profile.log
+          test -s /tmp/g13-v16-profile.json
       - name: Upload CPU and geometry profile (not Android FPS)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: g13-v15-native-lod8-lod13-headless-cpu-profile
-          path: /tmp/g13-v15-profile.json
+          name: g13-v16-visible-gpu-batch-lod8-lod13-profile
+          path: /tmp/g13-v16-profile.json
           if-no-files-found: ignore
           retention-days: 14
-      - name: Capture G13 V15 33-frame tactical distance, night and junction QA
+      - name: Capture G13 V16 35-frame identical original-vs-GPU comparison QA
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/g13-v15-gallery
+          mkdir -p /tmp/g13-v16-gallery
           timeout --signal=TERM --kill-after=5s 180s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            env LIBGL_ALWAYS_SOFTWARE=1 G13_V15_CAPTURE_DIR=/tmp/g13-v15-gallery \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V16_CAPTURE_DIR=/tmp/g13-v16-gallery \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy \
-            --path . --script res://tests/test_g13_v15_tactical_capture.gd 2>&1 | tee /tmp/g13-capture.log
+            --path . --script res://tests/test_g13_v16_visual_capture.gd 2>&1 | tee /tmp/g13-capture.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-capture.log; then exit 1; fi
-          grep -F 'PASS G13 V15 CAPTURE:' /tmp/g13-capture.log
-          test "$(find /tmp/g13-v15-gallery -name '*.png' | wc -l)" -eq 33
+          grep -F 'PASS G13 V16 CAPTURE:' /tmp/g13-capture.log
+          test "$(find /tmp/g13-v16-gallery -name '*.png' | wc -l)" -eq 35
       - name: Upload actual 3D inspection frames
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: g13-v15-night-tactical-joints-33-real-godot-frames
-          path: /tmp/g13-v15-gallery/*.png
+          name: g13-v16-35-real-godot-frames-visual-batch-comparison
+          path: /tmp/g13-v16-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
