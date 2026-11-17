@@ -1,13 +1,8 @@
 name: Publish TARVOKA civilian city design preview V10 to shared 3D viewer
 
+# The art branch holds MODEL DESIGN ONLY. Live Pages can deploy only
+# from the approved main publisher; do not waste time on branch deploys.
 on:
-  push:
-    branches:
-      - art/cities-v8-rear-facades-rooftops-20261117
-    paths:
-      - 'scripts/ui/CivilianCity*.gd'
-      - 'scenes/CivilianCityDesignStudioV10.tscn'
-      - '.github/workflows/cities-v10-shared-3d-viewer.yml'
   workflow_dispatch:
 
 # This is a MANUAL ART PREVIEW WEB EXPORT, not gameplay QA, stress test,
