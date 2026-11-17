@@ -2225,6 +2225,22 @@ func _display_role(role: String) -> void:
         camera.position=_heli_camera_base
         _heli_focus_local=Vector3.ZERO
     super._display_role(role)
+    if role == "tank" and model_root != null:
+        # The unified Studio navigation QA expects the approved G09 V31
+        # track geometry by default. UnitArtStudioWeb's base selector starts
+        # at art_level=10 until its legacy V25/V30/V31 comparison flags are
+        # enabled; previously this showed a proxy despite the V32 label.
+        # Replace ONLY the Studio instance with the already-approved V31
+        # native geometry. Do not touch game/battle roles, G13 or G11.
+        preview.remove_child(model_root)
+        model_root.queue_free()
+        model_root=P06Models.build("tank",_faction,true,31)
+        if model_root==null:
+            push_error("Studio G09 V31 final model was not built")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        _update_camera()
     if role == "attack_heli" and model_root != null:
         preview.remove_child(model_root)
         model_root.queue_free()
