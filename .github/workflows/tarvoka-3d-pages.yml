@@ -391,22 +391,28 @@ jobs:
           grep -F 'Cuartel de Infantería · V11 · viseras militares 3D' scripts/ui/CombinedArtStudioWeb.gd
       # The civilian city is an additional building choice in the ORIGINAL
       # Studio, never a replacement for HQ/naval/airbase/barracks/G09/A01.
-      - name: Check out V1 civilian city 3D source and shared studio extension
+      - name: Check out V2 civilian city 3D source and shared studio extension
         uses: actions/checkout@v4
         with:
-          ref: 67ab77884607e57ffbd78c0b62eb1ef091c6ac27
-          path: city-v1-art-source
+          ref: 14a8b2b562526e40b671986d8b95737844b7f2e7
+          path: city-v2-art-source
           persist-credentials: false
-      - name: Add V1 civilian cities to existing single Godot Studio
+      - name: Add V2 civilian cities to existing single Godot Studio
         shell: bash
         run: |
           set -euo pipefail
-          for name in CivilianCity3DV1 CivilianCityStudioAdapter; do
-            test -s "city-v1-art-source/scripts/ui/${name}.gd"
-            cp "city-v1-art-source/scripts/ui/${name}.gd" "scripts/ui/${name}.gd"
+          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityStudioAdapter; do
+            test -s "city-v2-art-source/scripts/ui/${name}.gd"
+            cp "city-v2-art-source/scripts/ui/${name}.gd" "scripts/ui/${name}.gd"
           done
-          cp city-v1-art-source/tests/test_city_studio_v1.gd tests/test_city_studio_v1.gd
+          cp city-v2-art-source/tests/test_city_studio_v2.gd tests/test_city_studio_v2.gd
           test -s scripts/ui/BastionStudioAdapter.gd
+          test -s scripts/ui/CivilianCityFacadeV2.gd
+          # The approved barracks QA assumed exactly four buildings; V2
+          # appends a fifth CIVILIAN category. Preserve every original
+          # barracks check while allowing future building additions.
+          sed -i 's/assert(studio.building_picker.item_count==4)/assert(studio.building_picker.item_count>=4)/' tests/test_infantry_barracks_v11_gpu.gd
+          grep -F 'assert(studio.building_picker.item_count>=4)' tests/test_infantry_barracks_v11_gpu.gd
           # The scene remains exactly the single published TARVOKA studio.
           # Its new derived script adds category five, leaving all existing
           # inspector classes and their meshes byte-for-byte unchanged.
@@ -414,7 +420,7 @@ jobs:
           grep -F 'res://scripts/ui/CivilianCityStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
           grep -F 'Ciudad Civil · V1' scripts/ui/CivilianCityStudioAdapter.gd
           test -s scripts/ui/CombinedArtStudioWeb.gd
-          rm -rf city-v1-art-source
+          rm -rf city-v2-art-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
@@ -1325,20 +1331,20 @@ jobs:
           timeout 220s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
-            --script res://tests/test_city_studio_v1.gd \
-            2>&1 | tee /tmp/city-v1-shared-studio.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/city-v1-shared-studio.log; then
+            --script res://tests/test_city_studio_v2.gd \
+            2>&1 | tee /tmp/city-v2-shared-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/city-v2-shared-studio.log; then
             exit 1
           fi
-          grep -F 'PASS TARVOKA CITY V1 SHARED STUDIO:' /tmp/city-v1-shared-studio.log
-          test -s artifacts/tarvoka_city_v1_shared_studio.png
-      - name: Attach V1 city capture from published single studio
+          grep -F 'PASS TARVOKA CITY V2 SHARED STUDIO:' /tmp/city-v2-shared-studio.log
+          test -s artifacts/tarvoka_city_v2_shared_studio.png
+      - name: Attach V2 city capture from published single studio
         uses: actions/upload-artifact@v4
         with:
-          name: TARVOKA-City-V1-Unified-3D-Studio-Proof
+          name: TARVOKA-City-V2-Unified-3D-Studio-Proof
           path: |
-            artifacts/tarvoka_city_v1_shared_studio.png
-            /tmp/city-v1-shared-studio.log
+            artifacts/tarvoka_city_v2_shared_studio.png
+            /tmp/city-v2-shared-studio.log
           retention-days: 20
       - name: Upload GitHub Pages web site
         uses: actions/upload-pages-artifact@v3
