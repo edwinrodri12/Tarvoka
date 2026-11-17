@@ -519,6 +519,8 @@ func _update_order_ui() -> void:
         return
     var active: bool = Orders.can_control(_live_board)
     var pending: bool = active and not _order_quote.is_empty()
+    if pending and building_info_panel != null:
+        building_info_panel.hide() # Combat preview always takes priority.
     _cancel_order_button.visible = pending
     _confirm_order_button.visible = pending
     _move_here_button.hide()
