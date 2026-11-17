@@ -57,12 +57,25 @@ func _run() -> void:
         _check(V13.set_stage(model,2) and burn.visible and smoke.visible
             and not fire.visible and rotor.visible,
             "stage2 scorched armor and smoke, no flames")
+        var smoke_puff: MeshInstance3D=model.find_child(
+            "A01V13_ColumnaHumo_0",true,false) as MeshInstance3D
+        var smoke_start: Vector3=smoke_puff.position if smoke_puff!=null else Vector3.ZERO
+        _check(V13.animate_ambient(model,2.7) and smoke_puff!=null
+            and smoke_puff.position.distance_to(smoke_start)>0.07,
+            "stage2 smoke plumes rise even without impact playback")
+
         _check(V13.pose(model,"hit_explosive",0.34) and burst.visible,
             "stage2 explosive hit retains original shake and 3D flash")
         V13.restore(model)
         _check(V13.set_stage(model,3) and fire.visible and smoke.visible
             and rotor.visible and tail.visible,
             "stage3 critical burning damage before final destruction")
+        var flame: MeshInstance3D=model.find_child(
+            "A01V13_LlamaMotor_0",true,false) as MeshInstance3D
+        var flame_start: Vector3=flame.scale if flame!=null else Vector3.ZERO
+        _check(V13.animate_ambient(model,0.84) and flame!=null
+            and flame.scale.distance_to(flame_start)>0.01,
+            "stage3 flames flicker independently while helicopter remains still")
         _check(V13.pose(model,"move",0.43),
             "original mobile motion still animates with critical visual damage")
         V13.restore(model)
