@@ -28,8 +28,8 @@ static func _priority(knowledge: Dictionary, side: int,
         if not ally is Dictionary or int(ally.get("faction",-1)) != side or \
                 int(ally.get("hp",0)) <= 0:
             continue
-        var range: int = _distance(ally["pos"],target)
-        if range > 3:
+        var proximity: int = _distance(ally["pos"],target)
+        if proximity > 3:
             continue
         if Economy.can_capture(ally):
             for site in knowledge.get("economy",{}).get("sites",[]):
