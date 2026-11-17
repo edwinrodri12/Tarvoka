@@ -48,6 +48,10 @@ func _run() -> void:
         var original_guard: Node3D=model.find_child(V3.GUARD,true,false) as Node3D
         var intact_guard_mark: Node3D=model.find_child(
             V7.TAIL_MARK+"0",true,false) as Node3D
+        var intact_canopy_rail: Node3D=model.find_child(
+            "A01_V2_MarcoLong_2_0",true,false) as Node3D
+        var crash_finish: Node3D=model.find_child(
+            "A01V13_AcabadoMetalRoto",true,false) as Node3D
         var detonation: Node3D=model.find_child(V13.DETONATION,true,false) as Node3D
         var ground_dust: Node3D=model.find_child(V13.LANDING_DUST,true,false) as Node3D
         _check(detonation!=null and not detonation.visible
@@ -55,8 +59,10 @@ func _run() -> void:
             "V13.2 explosion and landing dust begin hidden on a pristine A01")
         _check(wreck_body!=null and not wreck_body.visible
             and original_glass!=null and original_glass.visible
-            and original_guard!=null and original_guard.visible,
-            "V13.3 leaves approved canopy and complete tail guard untouched at stage0")
+            and original_guard!=null and original_guard.visible
+            and intact_canopy_rail!=null and intact_canopy_rail.visible
+            and crash_finish!=null and not wreck_body.visible,
+            "V13.4 leaves original canopy/rail and complete tail guard untouched until wreck")
         _check(rotor!=null and rotor.visible and tail!=null and tail.visible
             and scratches!=null and not scratches.visible
             and burn!=null and not burn.visible
@@ -157,6 +163,16 @@ func _run() -> void:
             and bent_rim!=null and bent_rim.get_parent()==wreck_body
             and model.find_child("A01V13_CarbonizacionFinal",true,false)==null,
             "V13.3 soot follows fuselage, with real shattered glass and severed rim")
+        var exposed_engine: MeshInstance3D=model.find_child(
+            "A01V13_AberturaMotorOscura",true,false) as MeshInstance3D
+        var roof_flap: MeshInstance3D=model.find_child(
+            "A01V13_TapaMotorLevantada_1",true,false) as MeshInstance3D
+        var bent_canopy: MeshInstance3D=model.find_child(
+            "A01V13_MarcoTorcidoDelantero_1",true,false) as MeshInstance3D
+        _check(exposed_engine!=null and exposed_engine.mesh is BoxMesh
+            and roof_flap!=null and bent_canopy!=null
+            and not intact_canopy_rail.visible and crash_finish.visible,
+            "V13.4 reveals torn engine, lifted metal and interrupted wreck canopy instead of pristine rails")
         var rest_position: Vector3=model.position
         var rest_rotation: Vector3=model.rotation_degrees
         var detached_origin: Vector3=wreck.global_position
@@ -220,7 +236,8 @@ func _run() -> void:
         _check(V13.set_stage(model,0) and rotor.visible and tail.visible
             and not wreck.visible and not wreck.top_level
             and not wreck_body.visible and original_glass.visible
-            and original_guard.visible and intact_guard_mark.visible
+            and intact_canopy_rail.visible and original_guard.visible
+            and intact_guard_mark.visible
             and not ground_dust.top_level and not ground_dust.visible
             and not detonation.visible and not smoke.visible
             and not scratches.visible and not fire.visible,
