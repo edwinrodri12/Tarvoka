@@ -54,7 +54,7 @@ jobs:
             echo "Godot V14 regression failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14:' /tmp/hat29-v14.log
-      - name: Generate twenty-four native HAT-29 orbital and combat captures
+      - name: Generate twenty-five native HAT-29 orbital and combat captures
         shell: bash
         run: |
           set -euo pipefail
@@ -70,12 +70,12 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 24
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 25
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-2-real-godot-24-frames
+          name: tarvoka-hat29-v14-2-1-real-godot-25-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
