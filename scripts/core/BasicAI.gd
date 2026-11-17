@@ -275,6 +275,15 @@ static func _decide(state: Dictionary,
     for unit in friends:
         if bool(unit.get("moved", false)):
             continue
+        # Units that reached a designated escort/defense position should
+        # not desert it just because the generic nearest enemy is far
+        # away. They still fire/retreat above when tactical facts demand.
+        var ordered: Dictionary = Missions.for_unit(
+            options.get("_goals_v33",{}),str(unit["id"]))
+        if str(ordered.get("task","")) in ["escort","defend"] and \
+                _distance(unit["pos"],Vector2i(
+                    int(ordered["x"]),int(ordered["y"]))) <= 2:
+            continue
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = _reachable_for(knowledge, unit)
         var route: Dictionary = _approach_costs(knowledge["terrain"], enemies, blocked, unit, Weather.from_state(knowledge))
