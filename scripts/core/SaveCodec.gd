@@ -19,6 +19,7 @@ const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
+const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -49,6 +50,8 @@ static func encode(state: Dictionary) -> String:
         snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
     if state.has("ai_config"):
         snapshot["ai_config"] = state["ai_config"].duplicate(true)
+    if state.has("ai_objectives"):
+        snapshot["ai_objectives"] = state["ai_objectives"].duplicate(true)
     if state.has("map_seed"):
         snapshot["map_seed"] = int(state["map_seed"])
     if state.has("opening"):
@@ -143,6 +146,19 @@ static func decode(raw: String) -> Dictionary:
                 not _whole(state["ai_config"].get("level",null)):
             return {}
         state["ai_config"]["level"] = int(state["ai_config"]["level"])
+    if state.has("ai_objectives"):
+        if not state["ai_objectives"] is Dictionary or \
+                not _whole(state["ai_objectives"].get("side",null)) or \
+                not state["ai_objectives"].get("assignments") is Array:
+            return {}
+        state["ai_objectives"]["side"] = int(state["ai_objectives"]["side"])
+        for goal in state["ai_objectives"]["assignments"]:
+            if not goal is Dictionary:
+                return {}
+            for field in ["x","y"]:
+                if not _whole(goal.get(field,null)):
+                    return {}
+                goal[field] = int(goal[field])
     if state.has("control"):
         var objective = state["control"]
         if not objective is Dictionary or not objective.get("nodes") is Array:
@@ -256,6 +272,13 @@ static func _valid_state(state: Dictionary) -> bool:
         return false
     if state.has(Identity.STATE_FIELD) and not Identity.is_valid(state[Identity.STATE_FIELD]):
         return false
+    # Optional long-term AI missions. Source data must be legal, local
+    # and strictly bounded to stop tampered saves from injecting unit IDs
+    # or clandestine AI orders. Only a configured AI may have goals.
+    if state.has("ai_objectives"):
+        if not state.has("ai_config") or \
+                not Missions.valid(state["ai_objectives"],state):
+            return false
     # Optional per-match AI difficulty. Absent for all legacy saves.
     # Never store hidden AI memory or bonuses; only the public settings.
     if state.has("ai_config"):
