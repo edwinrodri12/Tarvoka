@@ -79,14 +79,14 @@ func _run()->void:
                 check(v.y>=0.195 and v.y<=0.423 and
                     v.z>=-0.247 and v.z<=0.285,
                     "actual armor geometry inside 4x4 turret silhouette")
-                if absf(v.z+0.246)<0.0001 and
-                    absf(v.x)>0.503 and absf(v.x)<0.507:
+                if (absf(v.z+0.246)<0.0001 and
+                    absf(v.x)>0.503 and absf(v.x)<0.507):
                     found_nose=true
-                if absf(v.z-0.170)<0.0001 and
-                    absf(v.x)>0.602 and absf(v.x)<0.606:
+                if (absf(v.z-0.170)<0.0001 and
+                    absf(v.x)>0.602 and absf(v.x)<0.606):
                     found_broad=true
-                if absf(v.z-0.284)<0.0001 and
-                    absf(v.x)>0.562 and absf(v.x)<0.565:
+                if (absf(v.z-0.284)<0.0001 and
+                    absf(v.x)>0.562 and absf(v.x)<0.565):
                     found_tail=true
             check(found_nose and found_broad and found_tail,
                 "real front bearing cutback, wide faction-marking panel and tapered V20 aft join")
