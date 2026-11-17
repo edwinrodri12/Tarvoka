@@ -130,16 +130,20 @@ static func _particles(body: Node3D) -> void:
     for i in range(4):
         var t: float=float(i)
         var fog:=Color(0.19,0.23,0.26,0.37-t*0.045)
-        _sphere(smoke,"A01V13_ColumnaHumo_%d" % i,
+        var puff:=_sphere(smoke,"A01V13_ColumnaHumo_%d" % i,
             Vector3(0.42+t*0.052,1.55+t*0.23,0.82+t*0.12),
             Vector3(0.22+t*0.08,0.24+t*0.07,0.22+t*0.09),fog)
+        puff.set_meta("a01_v13_fx_rest",puff.position)
+        puff.set_meta("a01_v13_fx_scale",puff.scale)
     var fire:=_group(body,FIRE)
     for i in range(3):
         var tint:=Color("#ffb236") if i==0 else (
             Color("#f56a2e") if i==1 else Color("#c83718"))
-        _sphere(fire,"A01V13_LlamaMotor_%d" % i,
+        var flame:=_sphere(fire,"A01V13_LlamaMotor_%d" % i,
             Vector3(0.45,1.54+float(i)*0.10,0.82),
             Vector3(0.11-float(i)*0.014,0.23,0.12),tint,true)
+        flame.set_meta("a01_v13_fx_rest",flame.position)
+        flame.set_meta("a01_v13_fx_scale",flame.scale)
     var burst:=_group(body,IMPACT)
     _sphere(burst,"A01V13_NucleoDestelloImpacto",
         Vector3(-0.52,1.18,-0.28),Vector3(0.20,0.19,0.22),
@@ -190,6 +194,7 @@ static func set_stage(model: Node3D,level: int) -> bool:
     _part(model,FIRE).visible=n>=3
     _part(model,WRECK).visible=n>=4
     _part(model,IMPACT).visible=false
+    animate_ambient(model,0.0)
     # Hide the entire original main rotor assembly only in the destroyed
     # state. It is never modified or deleted; stage zero restores it.
     var main: Node3D=_part(model,V1.MAIN_ROTOR)
@@ -198,6 +203,41 @@ static func set_stage(model: Node3D,level: int) -> bool:
     var tail: Node3D=_part(model,V1.TAIL_ROTOR)
     if tail!=null:
         tail.visible=n<4
+    return true
+
+# Ambient smoke/fire has its own clock and NEVER touches the original
+# helicopter pose, so the particles continue after an impact animation ends.
+# Oscillating local meshes avoid spawning particles on Android/WebGL.
+static func animate_ambient(model: Node3D,seconds: float) -> bool:
+    if not has_model(model):
+        return false
+    var clock: float=maxf(0.0,seconds)
+    var smoke: Node3D=_part(model,SMOKE)
+    var fire: Node3D=_part(model,FIRE)
+    for i in range(smoke.get_child_count()):
+        var puff: MeshInstance3D=smoke.get_child(i) as MeshInstance3D
+        if puff==null or not puff.has_meta("a01_v13_fx_rest"):
+            continue
+        var base_pos: Vector3=puff.get_meta("a01_v13_fx_rest") as Vector3
+        var base_size: Vector3=puff.get_meta("a01_v13_fx_scale") as Vector3
+        var phase: float=fposmod(clock*0.43+float(i)*0.21,1.0)
+        puff.position=base_pos+Vector3(
+            0.055*sin(clock*0.9+float(i)),phase*0.19,
+            0.045*sin(clock*0.75+float(i)*1.3))
+        puff.scale=base_size*(0.88+phase*0.28)
+    for i in range(fire.get_child_count()):
+        var flame: MeshInstance3D=fire.get_child(i) as MeshInstance3D
+        if flame==null or not flame.has_meta("a01_v13_fx_rest"):
+            continue
+        var start: Vector3=flame.get_meta("a01_v13_fx_rest") as Vector3
+        var shape: Vector3=flame.get_meta("a01_v13_fx_scale") as Vector3
+        flame.position=start+Vector3(
+            0.012*sin(clock*5.1+float(i)*1.4),
+            0.024*sin(clock*4.3+float(i)),0.0)
+        flame.scale=shape*Vector3(
+            0.92+0.08*sin(clock*5.3+float(i)),
+            0.90+0.19*sin(clock*7.2+float(i)*0.6),
+            0.94+0.07*sin(clock*4.1+float(i)))
     return true
 
 static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
@@ -212,6 +252,7 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
     smoke.position.y=0.045*sin(TAU*t) if kind=="destroy" else 0.0
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
     fire.scale=Vector3.ONE*(0.94+0.12*sin(TAU*t*3.0))
+    animate_ambient(model,t*DESTROY_DURATION)
     if kind=="destroy":
         for child in wreck.get_children():
             var piece: MeshInstance3D=child as MeshInstance3D
