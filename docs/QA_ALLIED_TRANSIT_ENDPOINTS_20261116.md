@@ -87,3 +87,8 @@ Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió ce
 - Código: commit `7059fc677185b09605d0507c38aed6dbb9fc9552`.
 - CI confirmado para el commit anterior `16cdf7b4`: [regresión táctica 44043718904](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718904) PASÓ; [exportación Android 44043718910](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718910) PASÓ; [workflow general 44043718915](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718915) FALLÓ. Estas ejecuciones **no** validan el nuevo test.
 - Nuevo test: **NO EJECUTADO** hasta obtener CI del commit; Android físico: **NO EJECUTADO EN DISPOSITIVO**. Mantener la PR draft hasta resolver la validación e integración.
+
+## 2026-11-17 — Esquina superior izquierda en mapa 24×18
+- Commit de prueba `2b9fadcd46ee8cdc7423d3c0c1cfcd138262ec44`: caso espejo del borde inferior derecho, con origen (0,0), aliado (1,0) y enemigo (0,1). Verifica llegada a (2,0) con coste 2, exclusión del aliado como destino, ausencia de coordenadas negativas e inmutabilidad de entradas.
+- Reproducción: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`. Después ejecutar reglas, sesión/victoria, IA y guardado mediante el workflow de la rama.
+- **Godot 4.3: NO EJECUTADO** para este commit; **Android: NO EJECUTADO EN DISPOSITIVO**. No se modifica lógica de producción ni se autoriza merge.
