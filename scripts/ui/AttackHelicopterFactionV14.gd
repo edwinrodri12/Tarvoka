@@ -56,7 +56,7 @@ static func _enamel(mesh: MeshInstance3D,color: Color) -> void:
 # V14.1 high-detail surface sculpt: real raised seams, hinges and fasteners.
 # Exclusively on the Studio aircraft; no additional tactical mobile geometry.
 static func _hardware(parent: Node3D,name: String,shape: Mesh,
-        location: Vector3,color: Color,rotation: Vector3=Vector3.ZERO) -> void:
+        location: Vector3,color: Color,rotation: Vector3=Vector3.ZERO) -> MeshInstance3D:
     var part:=MeshInstance3D.new()
     part.name=name
     part.mesh=shape
@@ -68,6 +68,7 @@ static func _hardware(parent: Node3D,name: String,shape: Mesh,
     mat.roughness=0.58
     part.material_override=mat
     parent.add_child(part)
+    return part
 
 static func _seam(parent: Node3D,name: String,location: Vector3,
         size: Vector3,color: Color) -> void:
@@ -75,14 +76,30 @@ static func _seam(parent: Node3D,name: String,location: Vector3,
     shape.size=size
     _hardware(parent,name,shape,location,color)
 
-static func _rivet(parent: Node3D,name: String,location: Vector3) -> void:
+static func _rivet(parent: Node3D,name: String,location: Vector3,
+        underside: bool=false) -> void:
     var shape:=CylinderMesh.new()
     shape.top_radius=0.017
     shape.bottom_radius=0.018
     shape.height=0.020
     shape.radial_segments=10
     _hardware(parent,name,shape,location,Color("#b0b8b5"),
-        Vector3(0.0,0.0,90.0))
+        Vector3.ZERO if underside else Vector3(0.0,0.0,90.0))
+
+# V14.2.1: a continuous physical gasket on the eight-sided ventral
+# hatch, as eight small cylindrical edges. No fake planar texture or decal.
+static func _gasket_segment(parent: Node3D,index: int,
+        start: Vector3,end: Vector3) -> void:
+    var axis: Vector3=end-start
+    var tube:=CylinderMesh.new()
+    tube.top_radius=0.010
+    tube.bottom_radius=0.010
+    tube.height=axis.length()
+    tube.radial_segments=8
+    var part: MeshInstance3D=_hardware(
+        parent,"A01V14_2_Gasket_%d" % index,tube,
+        (start+end)*0.5,Color("#28343a"))
+    part.quaternion=Quaternion(Vector3.UP,axis.normalized())
 
 # V14.2: a closed eight-sided service hatch, genuinely triangulated on both
 # faces and at the perimeter. Its belly normal is outward (negative Y).
@@ -175,14 +192,28 @@ static func _details(model: Node3D) -> bool:
     var belly:=_belly_mesh()
     _hardware(root,"A01V14_2_PlacaVentralOctagonal",belly,
         Vector3(0,0.605,0.06),Color("#667781"))
+    # Eight segments follow the real underside perimeter. The gasket
+    # protrudes just below the hatch (0.605-0.018) without Z-fighting it.
+    var rim: Array[Vector2]=[
+        Vector2(-0.23,-0.25),Vector2(0.23,-0.25),
+        Vector2(0.35,-0.17),Vector2(0.35,0.17),
+        Vector2(0.23,0.25),Vector2(-0.23,0.25),
+        Vector2(-0.35,0.17),Vector2(-0.35,-0.17)
+    ]
+    for i in range(rim.size()):
+        var a: Vector2=rim[i]
+        var b: Vector2=rim[(i+1)%rim.size()]
+        _gasket_segment(root,i,
+            Vector3(a.x,0.574,a.y+0.06),
+            Vector3(b.x,0.574,b.y+0.06))
     for side in [-1,1]:
         var sign: float=float(side)
         _seam(root,"A01V14_2_VentralLateral_%d" % side,
-            Vector3(sign*0.23,0.581,0.06),
-            Vector3(0.027,0.014,0.39),graphite)
+            Vector3(sign*0.282,0.568,0.06),
+            Vector3(0.023,0.013,0.31),graphite)
         for bolt in range(3):
             _rivet(root,"A01V14_2_VentralBolt_%d_%d" % [side,bolt],
-                Vector3(sign*0.255,0.572,-0.10+0.16*float(bolt)))
+                Vector3(sign*0.282,0.555,-0.06+0.12*float(bolt)),true)
         # These three actual metal louvers sit on the V14.1 motor service hatch,
         # not inside the pod; no old engine housing is touched.
         for index in range(3):
@@ -232,5 +263,5 @@ static func apply(model: Node3D,faction: Color,faction_index: int=-1) -> bool:
     model.set_meta("a01_v14_faction_painted_count",count)
     model.set_meta("a01_v14_faction_color",faction)
     model.set_meta("a01_v14_secondary_color",second)
-    model.set_meta("a01_v14_coat_revision","muted_tactical_v14_2")
+    model.set_meta("a01_v14_coat_revision","muted_tactical_v14_2_1")
     return true
