@@ -98,6 +98,8 @@ La revisión de la V13.4 desde el encuadre general reveló que el fuselaje páli
 
 Se mantienen íntegros el casco V12.1, el armamento, el rig, los niveles 0–3, las estadísticas y el LOD ligero Android (sin nuevos efectos de daño); reparación sigue restaurando el helicóptero intacto. Se añadieron comprobaciones de visibilidad/material por las ocho facciones.
 
-Se amplió el protocolo visual de 17 a **18 imágenes reales de Godot 4.3**, incorporando `a01_v13_07e_contraste_vista_general.png`, una perspectiva oblicua que permite decidir sobre las heridas sin macro. Los flujos V12 y V13 de la rama ya exigen exactamente 18 imágenes. Hasta recibir el resultado satisfactorio de esa ejecución, V13.5 permanece como candidato no publicado.
+Se amplió el protocolo visual de 17 a **18 imágenes reales de Godot 4.3**, incorporando `a01_v13_07e_contraste_vista_general.png`, una perspectiva oblicua que permite decidir sobre las heridas sin macro. Los flujos V12 y V13 de la rama exigen exactamente 18 imágenes. **Validación nativa V13.5 aprobada**, incluidas las 18 capturas, los cinco estados de daño y las ocho facciones: [GitHub Actions 44155746748](https://github.com/edwinrodri12/Tarvoka/actions/runs/44155746748). El modelo V13.5 se considera **candidato artístico final aprobado para integración**; esto no implica publicación en `main`.
 
 Ver [PR #522](https://github.com/edwinrodri12/Tarvoka/pull/522). El [visor 3D público](https://edwinrodri12.github.io/Tarvoka/) puede seguir sirviendo la versión anterior porque la rama aún no se ha integrado.
+
+**Pendiente de integración/publicación:** la PR #522 continúa en borrador y su rama puede quedar detrás de `main` debido a otros modelos en desarrollo (G13, etc.). Antes de fusionar, comprobar divergencia y las pruebas Android/Studio de la cabeza que se vaya a integrar; conservar las actualizaciones concurrentes. No alterar las ventajas ni poderes de facción ni los parámetros de combate del A01.
