@@ -218,6 +218,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
+          test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
+          cp hq-android-v15/tests/test_studio_full_animation_inventory.gd tests/test_studio_full_animation_inventory.gd
           test -s scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
