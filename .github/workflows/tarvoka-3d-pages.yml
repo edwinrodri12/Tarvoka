@@ -23,6 +23,7 @@ on:
       - "scripts/ui/G13GunTrunnionV19.gd"
       - "scripts/ui/G13TurretArmorV20.gd"
       - "scripts/ui/G13SideArmorV21.gd"
+      - "scripts/ui/G13UnderbodyAuditV22.gd"
       - "scripts/ui/G13DetailV2.gd"
       - "scripts/ui/G13UndercarriageV6.gd"
       - "scripts/ui/AttackHelicopterV1.gd"
