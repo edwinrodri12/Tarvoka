@@ -25,3 +25,10 @@ Pasar de V11 (transmisión y lanzadores) a un morro blindado y una montura de ca
 
 ## Estado
 Geometría y pruebas guardadas en la rama de desarrollo de [PR #476](https://github.com/edwinrodri12/Tarvoka/pull/476). La integración en `main` y el visor publicado requieren compatibilidad con la rama que contiene `CombinedArtStudioWeb.gd`. No indicar que está desplegada hasta verificar integración y publicación.
+
+## Inspección ventral V12.2 — prueba en Godot 4.3
+- La primera prueba cuantitativa de cajas 3D detectó una separación insuficiente entre el travesaño fijo y el carenado móvil al disparar (8 fallos, uno por facción). Por eso se reubicaron **el travesaño y los dos anclajes superiores de -1.240 a -1.085 en Z local**, detrás de la envolvente del arma. No se ocultó ni desactivó la geometría.
+- La prueba `tests/test_attack_helicopter_v12.gd` mide los volúmenes completos, transformados al sistema local del modelo, de los patines V5, la montura V12, el travesaño y la cuna. Comprueba reposo, disparo y siete fases adicionales por facción, manteniendo los ocho colores aprobados y el LOD10 intacto.
+- **Resultado: aprobado** en [Godot V12 — inspección de patines y cañón](https://github.com/edwinrodri12/Tarvoka/actions/runs/44021658674).
+- La nueva captura nativa genera **20 PNG**: ocho giros a 320×180; cuatro referencias V11 idénticas; cuatro macros del morro; cuatro ángulos desde debajo (ambos patines y cañón en disparo, sin ocultación del fuselaje por el plano del suelo).
+- El trabajo sigue en la rama de PR #476; el visor publicado en Pages todavía no está confirmado con V12, porque la escena de Estudio depende de otra rama pendiente de integrar.
