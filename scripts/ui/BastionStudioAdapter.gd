@@ -58,6 +58,7 @@ const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
 const G13DeckV28=preload("res://scripts/ui/G13RadarDeckMountV28.gd")
 const G13FoldV29=preload("res://scripts/ui/G13FoldingRadarV29.gd")
+const G13GunMountV31=preload("res://scripts/ui/G13GunMountFinishV31.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -178,7 +179,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V29 · radar abatible, 4×4")
+        role_picker.set_item_text(aa_index,"G13 · AA V31 · 4×4, radar y cañones blindados")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14")
@@ -721,7 +722,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · catálogo completo"
+            "aa_mobile": label="G13 · Antiaéreo · V31 articulada"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1289,7 +1290,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V29 · RADAR ABATIBLE · 2 CAÑONES · SIN MISILES",14)
+        "G13 V31 · SOPORTES ARTICULADOS · 2 CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1311,7 +1312,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V29 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V31 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1335,6 +1336,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V31 · Mostrar soportes de cañones",
+        func(): _g13_v31_compare(true),
+        "V31 · Comparar con V30",
+        func(): _g13_v31_compare(false))
     _add_paired(g13_controls,"V29 · Plegar radar para inspección",
         func(): _g13_v29_fold(true),
         "V29 · Desplegar radar",
@@ -1362,8 +1367,8 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V29 táctico: radar plegable con eje de apoyo, 0 nodos extra. "
-            + "Sin medición FPS física de Android."
+            "G13 V31 táctico: radar abatible, soportes fijos y blindaje articulado. "
+            + "Diseño de bajo detalle; FPS Android aún no medidos."
             if art_level==8 else
             "G13 V24: escultura completa LOD13 restaurada.")
 
@@ -1458,6 +1463,17 @@ func _g13_v28_compare(show_v27:bool)->void:
             "G13 V28: mástil blindado con base apoyada en cubierta trasera.")
     else:
         status_label.text="Selecciona primero el G13 táctico LOD8."
+
+func _g13_v31_compare(show_v31:bool)->void:
+    if _role!="aa_mobile" or model_root==null or _g13_preview_lod!=8:
+        status_label.text="G13 V31: abre primero el modelo táctico LOD8."
+        return
+    var ok:bool=G13GunMountV31.set_detail_visible(model_root,show_v31)
+    status_label.text=(
+        ("G13 V31: los refuerzos giran con la elevación; dos cañones."
+        if show_v31 else
+        "G13 V30: referencia sin los nuevos soportes V31, mismo modelo y cámara.")
+        if ok else "G13 V31: las piezas articuladas no están disponibles.")
 
 func _g13_v29_fold(folded:bool)->void:
     if _role!="aa_mobile" or model_root==null or (
