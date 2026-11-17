@@ -68,3 +68,46 @@ static func build_site(state: Dictionary,site: Dictionary,
         city.set_meta("tactical_compact",lod>0)
         city.set_meta("city_economy_untouched",true)
     return city
+
+# Runtime LOD swaps the approved V4 sculpt only when the camera crosses
+# a hysteresis threshold. The same city root stays at the same tile.
+# This avoids keeping all the distant facade meshes alive on Android.
+static func set_runtime_detail(city: Node3D,lod: int) -> bool:
+    if city==null or not is_instance_valid(city) or lod<0 or lod>2:
+        return false
+    if int(city.get_meta("approved_art_version",-1))!=ART_VERSION or (
+            str(city.get_meta("site_kind",""))!="city"):
+        return false
+    var old: int=int(city.get_meta("city_lod",2))
+    if old==lod:
+        return true
+    var level: int=int(city.get_meta("visual_level",1))
+    var faction: int=int(city.get_meta("visual_faction",-1))
+    var damage: int=int(city.get_meta("visual_damage_stage",0))
+    if not City.valid_spec(level,faction,damage):
+        return false
+    # Construct OFF-TREE before removing anything; no partial city on failure.
+    var replacement: Node3D=LOD.build_tactical(level,faction,damage,lod)
+    if replacement==null:
+        return false
+    var old_children: Array[Node]=[]
+    for child in city.get_children():
+        old_children.append(child)
+    for child in old_children:
+        city.remove_child(child)
+        child.free()
+    var new_children: Array[Node]=[]
+    for child in replacement.get_children():
+        new_children.append(child)
+    for child in new_children:
+        replacement.remove_child(child)
+        city.add_child(child)
+    city.set_meta("city_lod",lod)
+    city.set_meta("city_drawable_count",LOD.drawable_count(city))
+    city.set_meta("city_mesh_count",LOD.drawable_count(city))
+    city.set_meta("actual_3d_meshes",LOD.drawable_count(city))
+    city.set_meta("removed_render_meshes",int(
+        replacement.get_meta("removed_render_meshes",0)))
+    city.set_meta("tactical_compact",lod>0)
+    replacement.free()
+    return true
