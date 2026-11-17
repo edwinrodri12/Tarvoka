@@ -31,7 +31,7 @@ func _initialize() -> void:
         for new_side in [0,1]:
             var outcome: Dictionary = _play(map_id,fog,level,first,new_side)
             reports.append(outcome)
-            print("AB361_MATCH " + JSON.stringify(outcome))
+            print("AB362_MATCH " + JSON.stringify(outcome))
     assert(reports.size() == 4)
     var totals := {"games":4,"resolved":0,"draws_or_censored":0,
         "v362_wins":0,"v35_wins":0,
@@ -58,7 +58,7 @@ func _initialize() -> void:
             totals["v35_" + metric] = int(totals["v35_" + metric]) + int(report[metric][old_side])
         totals["v362_anticipatory"] += int(report["anticipatory"])
         totals["questionable_anticipatory"] += int(report["questionable_anticipatory"])
-    print("AB361_SUMMARY " + JSON.stringify({"level":level,"map":map_id,"fog":fog,"totals":totals}))
+    print("AB362_SUMMARY " + JSON.stringify({"level":level,"map":map_id,"fog":fog,"totals":totals}))
     print("PASS AI v35-v362 matched full-session battle telemetry: 4 fair starts, real moves, damage, economy, captures and casualties")
     quit(0)
 

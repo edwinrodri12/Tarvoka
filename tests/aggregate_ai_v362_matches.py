@@ -9,7 +9,7 @@ import pathlib
 import sys
 from collections import defaultdict
 
-PREFIX = "AB361_MATCH "
+PREFIX = "AB362_MATCH "
 METRICS = ("losses", "captures", "retreats", "attacks",
            "buys", "initial_survivors", "remaining_hp",
            "decision_us", "decision_calls")
@@ -124,7 +124,7 @@ def main() -> int:
         ""])
     report = "\n".join(md)
     (out_dir / "ai_v362_ab_summary.md").write_text(report, encoding="utf-8")
-    print("AB361_ALL " + json.dumps(summary, separators=(",", ":"), ensure_ascii=False))
+    print("AB362_ALL " + json.dumps(summary, separators=(",", ":"), ensure_ascii=False))
     print(report)
     print("PASS AI v362 aggregate: exact 32 unique starts validated")
     return 0
