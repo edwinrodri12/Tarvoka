@@ -97,3 +97,9 @@ Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió ce
 - Código `cca10ec4b500475dd9c8b5542f590705a57fc53b`: corredor en fila 17, aliado en (22,17), destino libre (23,17), enemigo que bloquea el desvío por (21,16). Las dos casillas de carretera cuestan juntas 1 punto para vehículo motorizado; infantería con presupuesto 1 no llega. El aliado no es destino legal; se comprueba inmutabilidad de mapa y ocupación.
 - Reproducir: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; después ejecutar reglas, sesión/victoria, IA y guardado.
 - **Godot 4.3/CI del commit nuevo: NO EJECUTADO/NO CONFIRMADO. Android físico: NO EJECUTADO EN DISPOSITIVO.** No hay cambios de producción, balance ni merge.
+
+## 2026-11-17 — Maximum supported map 40×30
+
+Commit `58a4eff1e5e0cce9f3c4a8fc2005e92a45e08a19` adds a 40×30 corner scenario with two allied occupants at (38,29) and (39,29), enemy at (37,28), and origin (37,29). Verify neither ally is a legal endpoint, (38,28) is reachable for cost 2 via the first ally, no coordinate wraps past x=39/y=29, and terrain/occupancy inputs remain unchanged. No production logic changed.
+
+Run: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; expected exactly one `PASS: allied transit and endpoint isolation`. Godot 4.3 CI on this commit: **NO CONFIRMADO**. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Prior successful CI runs do not validate this addition. Before merge, verify this suite and the movement/AI/save/victory regression set.
