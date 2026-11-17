@@ -82,10 +82,28 @@ func _run() -> void:
         "unified V11 Animar/Cámara/Detalles is the ONLY visible toolbar")
     _check(tab_animations!=null and tab_camera!=null and tab_details!=null,
         "unified V11 studio has all three live navigation tabs")
-    var primary_attack: Button=studio.get("studio_attack_button") as Button
-    _check(primary_attack!=null and primary_attack.visible
-        and primary_attack.text=="Atacar",
-        "the real unified Animar tab exposes working attack controls")
+    # The unified Studio now renders a complete dynamic animation inventory.
+    # The old dedicated "Atacar" button was removed by the modern catalog;
+    # assert real connected buttons for the current V13 helicopter instead.
+    var inventory: VBoxContainer=studio.get("studio_animation_inventory") as VBoxContainer
+    var titles: Array[String]=[]
+    if inventory!=null:
+        for item in inventory.get_children():
+            if item is Button:
+                titles.append((item as Button).text)
+    _check(inventory!=null and inventory.visible
+        and titles.has("Ráfaga del cañón frontal")
+        and titles.has("Impacto explosivo y onda de choque")
+        and titles.has("Daño crítico · llamas")
+        and titles.has("Destrucción · caída y fragmentos")
+        and titles.has("Reparar helicóptero por completo"),
+        "unified Animar inventory exposes all real A01 V13 controls")
+    studio.call("_studio_run_animation","damage_2")
+    _check(V13.stage(model)==2,
+        "unified V13 damage button activates real smoke on current model")
+    studio.call("_studio_run_animation","damage_0")
+    _check(V13.stage(model)==0,
+        "unified repair command restores A01 before the camera tests")
     _check(advanced!=null and not advanced.visible,
         "long technical list folded until opened explicitly")
     _check(bool(studio.get("_heli_compact_landscape")),
