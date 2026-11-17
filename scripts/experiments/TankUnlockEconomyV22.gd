@@ -129,7 +129,8 @@ static func half_turn(b: Dictionary, policy: String, mode: String,
     return {"valid":true,"battle":current}
 
 static func duel(map_id: int, size: Vector2i, first: int, policies: Array,
-        mode: String, limit: int = 42) -> Dictionary:
+        mode: String, limit: int = 42,
+        options: Dictionary = {}) -> Dictionary:
     if policies.size() != 2 or first not in [0,1] or mode not in MODES or \
             limit < 2 or str(policies[0]) not in Lab.STRATEGIES or \
             str(policies[1]) not in Lab.STRATEGIES:
@@ -141,7 +142,7 @@ static func duel(map_id: int, size: Vector2i, first: int, policies: Array,
         if int(b["session"]["world"]["state"].get("winner",-1)) in [0,1]:
             break
         var side: int = int(b["session"]["world"]["state"]["faction"])
-        var step: Dictionary = half_turn(b,str(policies[side]),mode)
+        var step: Dictionary = half_turn(b,str(policies[side]),mode,options)
         if not bool(step.get("valid",false)):
             return {"valid":false,"reason":"illegal_state","halfturn":half}
         b = step["battle"]

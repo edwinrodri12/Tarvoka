@@ -1,0 +1,82 @@
+name: TARVOKA v27 barracks Rompedor access A-B
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/UrbanEconomy.gd"
+      - "scripts/core/BattleSession.gd"
+      - "scripts/experiments/CapturableProductionV18.gd"
+      - "scripts/experiments/FixedSiteOrdersV19.gd"
+      - "scripts/experiments/StrategicMatchBalanceV21.gd"
+      - "scripts/experiments/TankUnlockEconomyV22.gd"
+      - "tests/test_barracks_piercer_smoke_v27.gd"
+      - "tests/test_barracks_piercer_ab_v27.gd"
+      - ".github/workflows/barracks-piercer-v27.yml"
+  workflow_dispatch:
+
+jobs:
+  barracks_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate real 300-credit L1 factory recruitment and no regressions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_barracks_piercer_smoke_v27.gd \
+            2>&1 | tee /tmp/v27-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v27-smoke.log; then exit 1; fi
+          grep -Fq 'PASS v27 real piercer recruitment:' /tmp/v27-smoke.log
+      - name: Preserve logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v27-smoke
+          path: /tmp/v27-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  piercer_matches:
+    needs: barracks_smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [small_open, medium_open, medium_forest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: 16 matched real battles with 650-credit LII tank gates
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 480s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_barracks_piercer_ab_v27.gd \
+            -- ${{ matrix.scenario }} \
+            2>&1 | tee /tmp/v27-mirrors.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v27-mirrors.log; then exit 1; fi
+          grep -Fq 'PASS v27 mirrored legal piercer matches:' /tmp/v27-mirrors.log
+      - name: Preserve battle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v27-${{ matrix.scenario }}
+          path: /tmp/v27-mirrors.log
+          retention-days: 30
+          if-no-files-found: ignore
