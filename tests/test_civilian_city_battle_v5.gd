@@ -49,6 +49,57 @@ static func _max_horizontal_radius(model: Node3D) -> Vector2:
                 pending.append({"node":child,"frame":frame})
     return furthest
 
+func _frames(n: int=8) -> void:
+    for _i in range(n):
+        await process_frame
+
+func _capture_live_city_map(state: Dictionary,close_up: bool=false) -> void:
+    # Real playable terrain scene, never the art viewer or a mock render.
+    var frame:=SubViewportContainer.new()
+    frame.name="TarvokaV5CiudadCapturaReal"
+    frame.size=Vector2(1024,640)
+    root.add_child(frame)
+    var viewport:=SubViewport.new()
+    viewport.size=Vector2i(1024,640)
+    viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+    viewport.transparent_bg=false
+    frame.add_child(viewport)
+    var battlefield: Node3D=Terrain.build(state,"",0)
+    assert(battlefield!=null)
+    viewport.add_child(battlefield)
+    assert(_site(battlefield,Vector2i(3,4))!=null)
+    var camera:=Camera3D.new()
+    camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+    camera.size=6.2 if close_up else 29.0
+    viewport.add_child(camera)
+    if close_up:
+        camera.position=Vector3(11.7,10.2,17.5)
+        camera.look_at(Vector3(7.2,0.8,9.6),Vector3.UP)
+    else:
+        camera.position=Vector3(22.0,27.0,32.0)
+        camera.look_at(Vector3(10.8,0.0,8.4),Vector3.UP)
+    camera.current=true
+    var sun:=DirectionalLight3D.new()
+    sun.rotation_degrees=Vector3(-55.0,24.0,0.0)
+    sun.light_energy=1.7
+    viewport.add_child(sun)
+    await _frames(23)
+    var result: Image=viewport.get_texture().get_image()
+    assert(result!=null and not result.is_empty())
+    var palette: Dictionary={}
+    for py in range(0,result.get_height(),maxi(1,int(result.get_height()/19))):
+        for px in range(0,result.get_width(),maxi(1,int(result.get_width()/24))):
+            palette[result.get_pixel(px,py).to_html()]=true
+    assert(palette.size()>8)
+    assert(DirAccess.make_dir_recursive_absolute(
+        ProjectSettings.globalize_path("res://artifacts"))==OK)
+    var destination: String=(
+        "res://artifacts/tarvoka_city_v5_live_closeup.png" if close_up
+        else "res://artifacts/tarvoka_city_v5_live_battle.png")
+    assert(result.save_png(destination)==OK)
+    frame.queue_free()
+    await _frames(3)
+
 func _run() -> void:
     var terrain: Array=Scenarios.terrain(0)
     var state: Dictionary=Session.start(
@@ -158,5 +209,8 @@ func _run() -> void:
     assert(tiered==tiered_before)
     assert(not Session.purchase(tiered,Vector2i(2,1),"scout")["valid"])
     stage.free()
+    if DisplayServer.get_name()!="headless":
+        await _capture_live_city_map(state,false)
+        await _capture_live_city_map(state,true)
     print("PASS TARVOKA CITY V5 LIVE BATTLE: real V4 art, tiles, variants, 8 factions, fog, immutable economy")
     quit(0)
