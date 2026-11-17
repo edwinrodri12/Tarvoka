@@ -4,6 +4,9 @@ class_name TarvokaAttackHelicopterDamageV13
 # V13 Studio-only visual destruction. No gameplay HP/damage modifications.
 # Original V1 animation rig, V12.1 cannon and mobile art-level <=10 remain.
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
+const V2=preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
+const V3=preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
+const V7=preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
 const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const FLAG := "tarvoka_a01_damage_fx_v13"
 const STAGE := "tarvoka_a01_damage_stage_v13"
@@ -14,6 +17,7 @@ const BURN := "A01V13_BlindajeChamuscado"
 const SMOKE := "A01V13_HumoMotor"
 const FIRE := "A01V13_FuegoMotor"
 const WRECK := "A01V13_RotorYEscombrosDesprendidos"
+const WRECK_BODY := "A01V13_CabinaAstilladaYProteccionRota"
 const DETONATION := "A01V13_DetonacionEnDosFases"
 const LANDING_DUST := "A01V13_PolvoAterrizaje"
 const MAX_STAGE := 4
@@ -27,7 +31,8 @@ static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false)) and (
         _part(model,ROOT)!=null and _part(model,IMPACT)!=null
         and _part(model,SMOKE)!=null and _part(model,WRECK)!=null
-        and _part(model,DETONATION)!=null and _part(model,LANDING_DUST)!=null)
+        and _part(model,DETONATION)!=null and _part(model,LANDING_DUST)!=null
+        and _part(model,WRECK_BODY)!=null)
 
 static func _group(parent: Node3D,name: String) -> Node3D:
     var n:=Node3D.new()
@@ -386,6 +391,80 @@ static func _destruction_blast(body: Node3D) -> void:
         dust.set_meta("a01_v13_dust_rest",dust.position)
         dust.set_meta("a01_v13_dust_angle",angle)
 
+# V13.3: wreck-only cockpit fracture and fixed, bent tail-guard remnants.
+# These parts follow the fallen fuselage, unlike the airborne rotor shards.
+static func _glass_triangle(a: Vector3,b: Vector3,c: Vector3) -> ArrayMesh:
+    var tool:=SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for point in [a,b,c,a,c,b]:
+        tool.add_vertex(point)
+    tool.generate_normals()
+    return tool.commit()
+
+static func _wreck_fuselage(body: Node3D) -> void:
+    var damage:=_group(body,WRECK_BODY)
+    var soot:=Color("#283035")
+    var steel:=Color("#546067")
+    var cracked:=Color(0.18,0.29,0.34,0.78)
+    var fractured:=Color("#c2ccd1")
+    # Previously this dark disc was placed in the world-anchored debris
+    # layer at y=1.53 and floated over a wreck; weld it to the engine.
+    var scorch:=_sphere(damage,"A01V13_CarbonizacionFijaMotor",
+        Vector3(0.15,1.67,0.54),Vector3(0.43,0.052,0.51),soot)
+    scorch.rotation_degrees=Vector3(7.0,12.0,-11.0)
+    for side in [-1,1]:
+        var x: float=float(side)
+        _box(damage,"A01V13_ChapaDoblada_%d" % side,
+            Vector3(x*0.61,1.08,0.06),
+            Vector3(0.040,0.22,0.48),steel,
+            Vector3(-6.0,x*9.0,x*21.0))
+        _rod(damage,"A01V13_CosturaAbierta_%d" % side,
+            Vector3(x*0.646,0.99,-0.16),
+            Vector3(x*0.692,1.18,0.13),0.011,soot)
+    # Broken glazing follows V2's real canopy stations.
+    # Omit the original unfractured windshield in the wreck state.
+    var triangles: Array[Array]=[
+        [Vector3(-0.19,1.68,-1.24),Vector3(0.02,1.76,-1.04),
+            Vector3(-0.31,1.59,-0.96)],
+        [Vector3(0.24,1.65,-1.17),Vector3(0.35,1.58,-0.89),
+            Vector3(0.06,1.77,-0.98)],
+        [Vector3(-0.33,1.57,-0.72),Vector3(-0.27,1.75,-0.67),
+            Vector3(-0.37,1.61,-0.42)],
+        [Vector3(0.34,1.58,-0.69),Vector3(0.29,1.76,-0.55),
+            Vector3(0.38,1.58,-0.32)]
+    ]
+    for i in range(triangles.size()):
+        var tri: Array=triangles[i]
+        _mesh(damage,"A01V13_VidrioAstillado_%d" % i,
+            _glass_triangle(tri[0] as Vector3,tri[1] as Vector3,
+                tri[2] as Vector3),cracked)
+    for side in [-1,1]:
+        var x: float=float(side)
+        var epicenter:=Vector3(x*0.28,1.69,-0.87)
+        var ends: Array[Vector3]=[
+            Vector3(x*0.24,1.79,-0.97),
+            Vector3(x*0.38,1.61,-0.70),
+            Vector3(x*0.26,1.75,-0.60)
+        ]
+        for i in range(ends.size()):
+            _rod(damage,"A01V13_GrietaParabrisas_%d_%d" % [side,i],
+                epicenter,ends[i],0.008,fractured)
+    # The 24-segment V3 ring remains complete in earlier damage levels.
+    # At destruction, replace it with short misaligned surviving arcs.
+    var hub:=Vector3(0.285,1.38,2.62)
+    for i in [1,2,3,4,13,14,15,16]:
+        var a: float=TAU*float(i)/24.0
+        var b: float=TAU*float(i+1)/24.0
+        var start:=hub+Vector3(
+            0.035*sin(a*1.3),0.525*sin(a),0.525*cos(a))
+        var finish:=hub+Vector3(
+            0.045*sin(b*1.3),0.515*sin(b),0.510*cos(b))
+        _rod(damage,"A01V13_AroColaTorcido_%02d" % i,
+            start,finish,0.020,steel)
+    _rod(damage,"A01V13_PuntaAroColaRota",
+        hub+Vector3(0.05,0.510,0.02),
+        hub+Vector3(0.09,0.63,-0.09),0.018,steel)
+
 static func _wreck(body: Node3D) -> void:
     var debris:=_group(body,WRECK)
     var steel:=Color("#4d565a")
@@ -421,8 +500,6 @@ static func _wreck(body: Node3D) -> void:
         piece.set_meta("a01_v13_launch",Vector3(s*0.59,1.06,-0.16))
         piece.set_meta("a01_v13_rest",piece.position)
         piece.set_meta("a01_v13_rot",piece.rotation_degrees)
-    _sphere(debris,"A01V13_CarbonizacionFinal",
-        Vector3(0,1.53,0.42),Vector3(0.54,0.085,0.60),Color("#1b2429"))
 
 static func stage(model: Node3D) -> int:
     if not has_model(model):
@@ -459,6 +536,16 @@ static func set_stage(model: Node3D,level: int) -> bool:
     _part(model,SMOKE).visible=n>=2
     _part(model,FIRE).visible=n>=3
     _part(model,WRECK).visible=n>=4
+    _part(model,WRECK_BODY).visible=n>=4
+    # The undamaged glass and intact V3 tail guard must NOT survive the crash.
+    var glass: Node3D=_part(model,V2.GLASS)
+    if glass!=null:
+        glass.visible=n<4
+    var ring_guard: Node3D=_part(model,V3.GUARD)
+    if ring_guard!=null:
+        ring_guard.visible=n<4 and bool(model.get_meta(V3.ENABLED,true))
+    for mark in model.find_children(V7.TAIL_MARK+"*","Node3D",true,false):
+        (mark as Node3D).visible=n<4 and bool(model.get_meta(V7.ENABLED,true))
     _part(model,IMPACT).visible=false
     _part(model,DETONATION).visible=false
     dust.visible=false
@@ -625,6 +712,7 @@ static func apply(model: Node3D,_faction: Color) -> bool:
     _burns(root_node)
     _particles(root_node)
     _destruction_blast(root_node)
+    _wreck_fuselage(root_node)
     _wreck(root_node)
     model.set_meta(FLAG,true)
     return set_stage(model,0)
