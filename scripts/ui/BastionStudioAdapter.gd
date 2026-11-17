@@ -2026,7 +2026,7 @@ func _display_role(role: String) -> void:
         if model_root!=null:
             if _g13_preview_lod==8 and _g13_v25_show_original:
                 G13TacticalV25.show_v1_reference(model_root,true)
-            preview.add_child(model_root
+            preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
     if role == "mlrs" and model_root != null:
