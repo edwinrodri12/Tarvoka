@@ -1,4 +1,4 @@
-name: TARVOKA G13 V21 sculpted side armor real 3D and 56-frame comparison QA
+name: TARVOKA G13 V22 360-degree model audit and detailed real 3D undercarriage
 
 on:
   push:
@@ -78,6 +78,7 @@ jobs:
             tests/test_g13_gun_trunnion_v19.gd
             tests/test_g13_turret_armor_v20.gd
             tests/test_g13_side_armor_v21.gd
+            tests/test_g13_360_underbody_v22.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
@@ -230,6 +231,28 @@ jobs:
         with:
           name: g13-v21-56-real-godot-side-armor-art-captures
           path: /tmp/g13-v21-gallery/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Capture G13 V22 62 authentic 360-degree Godot inspection views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v22-gallery
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V22_CAPTURE_DIR=/tmp/g13-v22-gallery \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_v22_visual_capture.gd 2>&1 | tee /tmp/g13-v22-gallery.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v22-gallery.log; then exit 1; fi
+          grep -F 'PASS G13 V22 CAPTURE:' /tmp/g13-v22-gallery.log
+          test "$(find /tmp/g13-v22-gallery -name '*.png' | wc -l)" -eq 62
+      - name: Upload native V22 62-image 360 inspection and V21/V22 undercarriage comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v22-62-real-godot-360-inspection-and-underbody
+          path: /tmp/g13-v22-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
