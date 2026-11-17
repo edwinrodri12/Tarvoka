@@ -539,7 +539,6 @@ jobs:
           grep -Fq 'AttackHelicopterCombatFXV14.apply(model)' scripts/ui/UnitModels3D.gd
           grep -Fq 'Helicóptero A01 HAT-29 · V14' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'const HeliV13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")' scripts/ui/BastionStudioAdapter.gd
-          grep -Fq 'Helicóptero A01 · V13.5' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'AttackHelicopterDamageV13.gd' scripts/ui/UnitModels3D.gd
           test -s scripts/ui/G11Art3D.gd
           test -s scripts/ui/G11VisualRig3D.gd
