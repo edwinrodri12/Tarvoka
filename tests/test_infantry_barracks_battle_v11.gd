@@ -132,6 +132,10 @@ func _run() -> void:
     board.autosave_enabled=false
     board.new_game(0,false,false,false,true,true)
     var before: Dictionary=board.state.duplicate(true)
+    # Hide the intro overlay before opening the battle: otherwise a
+    # successful GUI test can still produce a flat, never-drawn viewport.
+    main._continue_from_home()
+    await _frames(8)
     main._open_battle_3d()
     var view=main.battle_3d_view
     await _frames(13)
@@ -146,6 +150,12 @@ func _run() -> void:
     if DisplayServer.get_name()!="headless":
         var image: Image=view.preview.get_texture().get_image()
         assert(image!=null and not image.is_empty())
+        var palette: Dictionary={}
+        for py in range(0,image.get_height(),maxi(1,int(image.get_height()/18))):
+            for px in range(0,image.get_width(),maxi(1,int(image.get_width()/24))):
+                palette[image.get_pixel(px,py).to_html()]=true
+        # A uniform clear-color image is NOT evidence of a rendered battle.
+        assert(palette.size()>6)
         assert(DirAccess.make_dir_recursive_absolute(
             ProjectSettings.globalize_path("res://artifacts"))==OK)
         assert(image.save_png(
