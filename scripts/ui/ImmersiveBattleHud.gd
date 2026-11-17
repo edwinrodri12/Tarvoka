@@ -7,6 +7,7 @@ class_name TarvokaImmersiveBattleHud
 signal menu_requested
 signal expand_requested
 signal objectives_requested
+signal battle_3d_requested
 signal cancel_order_requested
 signal end_turn_requested
 signal zoom_requested(step: int)
@@ -34,6 +35,7 @@ var weather_label: Label
 var menu_button: Button
 var expand_button: Button
 var objective_button: Button
+var battle_3d_button: Button
 var radar_panel: PanelContainer
 var radar: Control
 var camera_buttons: BoxContainer
@@ -109,6 +111,15 @@ func _build() -> void:
     objective_button.custom_minimum_size = Vector2(45,44)
     objective_button.pressed.connect(func(): objectives_requested.emit())
     top_content.add_child(objective_button)
+    # The old compact shortcut row is intentionally hidden on mobile.
+    # Keep the playable 3D map reachable in the ACTIVE immersive HUD.
+    battle_3d_button = Button.new()
+    battle_3d_button.name = "AbrirBatalla3DMovil"
+    battle_3d_button.text = "3D"
+    battle_3d_button.tooltip_text = "Abrir mapa de batalla 3D"
+    battle_3d_button.custom_minimum_size = Vector2(45,44)
+    battle_3d_button.pressed.connect(func(): battle_3d_requested.emit())
+    top_content.add_child(battle_3d_button)
     menu_button = Button.new()
     menu_button.text = "☰"
     menu_button.tooltip_text = "Centro de mando y ajustes"
