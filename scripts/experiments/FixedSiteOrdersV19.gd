@@ -114,10 +114,12 @@ static func end_turn(session: Dictionary) -> Dictionary:
         return {"valid":false}
     return _apply(session,Lab.end_turn(session["world"]))
 
-static func purchase(session: Dictionary, cell: Vector2i, role: String) -> Dictionary:
+static func purchase(session: Dictionary, cell: Vector2i, role: String,
+        experimental_piercer_factory: bool = false) -> Dictionary:
     if not _valid(session):
         return {"valid":false}
-    return _apply(session,Lab.purchase(session["world"],cell,role))
+    return _apply(session,Lab.purchase(session["world"],cell,role,
+        experimental_piercer_factory))
 
 static func _apply(session: Dictionary, action: Dictionary) -> Dictionary:
     if not bool(action.get("valid",false)):
