@@ -109,9 +109,12 @@ func _run()->void:
                 cheek.mesh is ArrayMesh and weld!=null and weld.visible and
                 bearing!=null and bearing.visible,
                 "both visible solid sculpted armor halves and external joints")
-            require(insignia!=null and insignia.visible and
+            # V16 deliberately hides source insignia nodes after copying
+            # their colored material into visible GPU MultiMesh batches.
+            # Source node visibility must NOT be mistaken for lost paint.
+            require(insignia!=null and
                 insignia.material_override is StandardMaterial3D,
-                "correct original visible faction paint on original turret")
+                "approved faction paint exists even when source insignia is GPU-batched")
             if insignia!=null and (
                     insignia.material_override is StandardMaterial3D):
                 var mat:=insignia.material_override as StandardMaterial3D
