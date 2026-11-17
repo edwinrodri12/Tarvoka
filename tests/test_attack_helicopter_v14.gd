@@ -77,8 +77,26 @@ func _run() -> void:
         _check(belly!=null and belly.position.y<0.66
             and service_panel!=null and service_panel.position.z>1.80,
             "V14.2 sculpture correctly mounted below hull and on aft boom")
-        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_2",
-            "V14.2 retains approved muted faction finish without changing the rig")
+        var gasket_count: int=0
+        for i in range(8):
+            var gasket: MeshInstance3D=model.find_child(
+                "A01V14_2_Gasket_%d" % i,true,false) as MeshInstance3D
+            if gasket!=null and gasket.mesh is CylinderMesh:
+                _check(absf(gasket.position.y-0.574)<0.001,
+                    "V14.2.1 gasket sits below the original hatch surface")
+                gasket_count+=1
+        _check(gasket_count==8,
+            "V14.2.1 octagonal hatch has all eight physical perimeter segments")
+        for side in [-1,1]:
+            for index in range(3):
+                var screw: MeshInstance3D=model.find_child(
+                    "A01V14_2_VentralBolt_%d_%d" % [side,index],true,false) as MeshInstance3D
+                _check(screw!=null and screw.mesh is CylinderMesh
+                    and screw.rotation_degrees.is_equal_approx(Vector3.ZERO)
+                    and screw.position.y<belly.position.y-0.04,
+                    "V14.2.1 underside screw axis points outward, not sideways")
+        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_2_1",
+            "V14.2.1 preserves muted faction treatment and the original rig")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
