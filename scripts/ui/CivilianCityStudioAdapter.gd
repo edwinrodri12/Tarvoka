@@ -17,7 +17,7 @@ var city_v3_toggle: CheckButton
 
 func _ready() -> void:
     super._ready()
-    building_picker.add_item("Ciudad Civil · V1 · villa, ciudad y metrópoli")
+    building_picker.add_item("Ciudad Civil · V3 · plaza y accesos urbanos")
     city_controls=VBoxContainer.new()
     city_controls.name="OpcionesCiudadCivilV1"
     city_controls.add_theme_constant_override("separation",7)
