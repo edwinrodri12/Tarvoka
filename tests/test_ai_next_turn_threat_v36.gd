@@ -84,24 +84,27 @@ static func _risk_from_future_move() -> void:
         str(decision["destination"])])
 
 static func _terrain_defense() -> void:
-    var tiles: Array = _plain()
-    tiles[3][1] = "forest"
-    tiles[2][1] = "mountain"
-    var s: Dictionary = _artillery(false,tiles)
-    var known: Dictionary = Vision.observed_state(s,0)
-    var line: Dictionary = known["units"][0].duplicate(true)
-    line["pos"] = Vector2i(1,3)
-    var forest_risk: Dictionary = Threat._risk(known,line,
-        Threat._records(known,0))
-    line["pos"] = Vector2i(1,2)
-    var mountain_risk: Dictionary = Threat._risk(known,line,
-        Threat._records(known,0))
-    assert(int(forest_risk["one"]) <= 8)
-    assert(int(mountain_risk["one"]) <= int(forest_risk["one"]))
+    # Hold the SAME exposed cell within reach of the moving tank.
+    # Changing only the tile from plain -> forest -> mountain must
+    # strictly reduce the actual public attack damage. Previous tests
+    # with two distant unreachable cells did not establish this.
+    var risks: Array = []
+    for kind in ["plain","forest","mountain"]:
+        var tiles: Array = _plain()
+        tiles[3][3] = kind
+        var s: Dictionary = _artillery(false,tiles)
+        var known: Dictionary = Vision.observed_state(s,0)
+        var test_unit: Dictionary = known["units"][0].duplicate(true)
+        test_unit["pos"] = Vector2i(3,3)
+        var risk: Dictionary = Threat._risk(known,test_unit,
+            Threat._records(known,0))
+        risks.append(int(risk["one"]))
+    assert(int(risks[0]) > int(risks[1]))
+    assert(int(risks[1]) > int(risks[2]))
     assert(int(Terrain.COVER["mountain"]) >
         int(Terrain.COVER["forest"]))
-    print("DEFENSE_TERRAIN_V36 forest_risk=%d mountain_risk=%d real_cover=true" % [
-        int(forest_risk["one"]),int(mountain_risk["one"])])
+    print("DEFENSE_TERRAIN_V36 plain=%d forest=%d mountain=%d strict_cover_reduction=true" % [
+        int(risks[0]),int(risks[1]),int(risks[2])])
 
 static func _capturer_hold() -> void:
     var s: Dictionary = Session.start([
