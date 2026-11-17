@@ -1,4 +1,4 @@
-name: TARVOKA G13 V16 visible GPU batching and exact frame comparison QA
+name: TARVOKA G13 V17 32-unit stress, Android LOD policy and device FPS instrumentation QA
 
 on:
   push:
@@ -74,6 +74,8 @@ jobs:
             tests/test_g13_sensor_sculpt_v14.gd
             tests/test_g13_turret_finish_v15.gd
             tests/test_g13_static_batch_v16.gd
+            tests/test_g13_v17_lod_policy.gd
+            tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
           )
           for script in "${scripts[@]}"; do
@@ -135,5 +137,29 @@ jobs:
         with:
           name: g13-v16-35-real-godot-frames-visual-batch-comparison
           path: /tmp/g13-v16-gallery/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v17-stress
+          timeout --signal=TERM --kill-after=5s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V17_STRESS_DIR=/tmp/g13-v17-stress \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_v17_stress_scene.gd 2>&1 | tee /tmp/g13-v17-stress.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v17-stress.log; then exit 1; fi
+          grep -F 'PASS G13 V17 STRESS:' /tmp/g13-v17-stress.log
+          test -s /tmp/g13-v17-stress/g13-v17-stress.json
+          test "$(find /tmp/g13-v17-stress -name '*.png' | wc -l)" -eq 8
+      - name: Publish V17 native software benchmark, memory JSON and 8 real formation images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v17-real-godot-1to32-fleet-stress-and-memory
+          path: /tmp/g13-v17-stress/
           if-no-files-found: ignore
           retention-days: 14

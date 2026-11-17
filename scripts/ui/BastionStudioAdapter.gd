@@ -97,6 +97,7 @@ var _heli_mobile_expanded: bool=false
 var _heli_frame_reflows: int=0
 var g11_controls: VBoxContainer
 var g13_controls: VBoxContainer
+var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
@@ -155,7 +156,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · Antiaéreo V16")
+        role_picker.set_item_text(aa_index,"G13 · Antiaéreo V17")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 · V10")
@@ -1136,6 +1137,10 @@ func _install_g13_controls() -> void:
         func(): _g13_attack_v4("attack_ground"),
         "V4 · Ataque antiaéreo",
         func(): _g13_attack_v4("attack_air"))
+    _add_paired(g13_controls,"V17 · Medir FPS en Android",
+        func(): _g13_start_android_test(),
+        "V17 · Ver política LOD",
+        func(): _g13_lod_status())
     _title(g13_controls,
         "V4: el mismo G13 dispara a tierra con cañones bajos y "
         + "ráfagas más espaciadas, o al aire con elevación alta, "
@@ -1143,6 +1148,46 @@ func _install_g13_controls() -> void:
         + "humo transparente y retroceso mínimo de los dos cañones. "
         + "Es una simulación visual: aún no ejecuta daño en batalla.",12)
     g13_controls.visible=false
+
+func _g13_lod_status() -> void:
+    if _role!="aa_mobile":
+        return
+    var mobile:bool=OS.get_name()=="Android"
+    var detail:int=P06Models.recommend_g13_art_level(4.0,1,
+        mobile,true,13)
+    status_label.text=("G13 V17: Android LOD8 obligatorio; "
+        if mobile else
+        "G13 V17: vista de estudio LOD13; ")
+    status_label.text+=(
+        "distancia de campo + 3 unidades fuerzan LOD8. "
+        + "Este G13 todavía es arte de estudio, no unidad de batalla.")
+
+func _g13_start_android_test() -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if OS.get_name()!="Android":
+        status_label.text=(
+            "G13 V17: medición real de FPS solo dentro de una "
+            + "compilación nativa Android; GitHub Pages utiliza Web.")
+        return
+    if g13_android_probe!=null and is_instance_valid(g13_android_probe):
+        status_label.text="G13 V17: prueba de rendimiento ya iniciada."
+        return
+    var profiler:=preload("res://scripts/ui/G13AndroidPerfV17.gd").new()
+    g13_android_probe=profiler
+    add_child(profiler)
+    profiler.finished.connect(Callable(self,"_g13_device_test_finished"))
+    profiler.start_test("G13 3D Studio V17 - 1 unit",1,45,180)
+    status_label.text="G13 V17: midiendo FPS reales en Android (180 fotogramas)..."
+
+func _g13_device_test_finished(file_path:String,stats:Dictionary)->void:
+    status_label.text=("G13 V17 Android: FPS medio %.1f; "
+        + "frame p95 %.1f ms. Archivo: %s") % [
+        float(stats.get("estimated_mean_fps",0.0)),
+        float(stats.get("p95_frame_ms",0.0)),file_path]
+    if g13_android_probe!=null and is_instance_valid(g13_android_probe):
+        g13_android_probe.queue_free()
+    g13_android_probe=null
 
 func _g13_attack_v4(kind: String) -> void:
     if _role!="aa_mobile" or model_root==null or (

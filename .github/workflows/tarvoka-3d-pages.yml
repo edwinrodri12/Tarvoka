@@ -17,6 +17,8 @@ on:
       - "scripts/ui/G13SensorSculptV14.gd"
       - "scripts/ui/G13TurretFinishV15.gd"
       - "scripts/ui/G13StaticBatchV16.gd"
+      - "scripts/ui/G13LODPolicyV17.gd"
+      - "scripts/ui/G13AndroidPerfV17.gd"
       - "scripts/ui/G13DetailV2.gd"
       - "scripts/ui/G13UndercarriageV6.gd"
       - "scripts/ui/AttackHelicopterV1.gd"
