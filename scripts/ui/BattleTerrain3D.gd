@@ -13,6 +13,7 @@ const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
+const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
@@ -660,6 +661,21 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
+    # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
+    # public viewer are registered. Model roots and selection cells persist.
+    var city_lod: Node=CityDistance.new()
+    city_lod.name="CiudadesCivilesV6_LOD_Camara"
+    var city_count: int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta("site_kind",""))=="city":
+            city_lod.register(placed as Node3D)
+            city_count+=1
+    if city_count>0:
+        scene.add_child(city_lod)
+    else:
+        city_lod.free()
+    counters["city_lod_models"]=city_count
+    counters["city_dynamic_lod"]=city_count>0
     # Camera-based LOD runs at 4 Hz AFTER the scene enters the viewport.
     # Headless battle/test scenes without a camera keep their stable V8 mesh.
     if int(counters["units"].get("apc_lod",0))>0:
