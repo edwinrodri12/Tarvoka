@@ -6,6 +6,7 @@ class_name TarvokaG13MobileAirDefenseV1
 # target acquisition, ammunition, range or new BattleSession unit IDs.
 const FLAG := "tarvoka_g13_mobile_aa_visual_v1"
 const V4 = preload("res://scripts/ui/G13GroundAirFinishV4.gd")
+const RadarFoldV29=preload("res://scripts/ui/G13FoldingRadarV29.gd")
 const WheelV7 = preload("res://scripts/ui/G13WheelFinishV7.gd")
 const BODY := "G13_Casco4x4"
 const TURRET := "G13_TorretaAzimut"
@@ -252,6 +253,8 @@ static func restore(root: Node3D)->void:
             smoke.visible=false
             smoke.scale=Vector3.ONE
     V4.reset(root)
+    # V29 only runs on the mobile, rear-deck-mounted prototype.
+    RadarFoldV29.reset(root)
     root.set_meta("tarvoka_g13_v1_pose","idle")
 
 # Visual-only cinematic firing poses. No damage, target selection, or ammo.
@@ -316,6 +319,9 @@ static func pose(root: Node3D,kind: String,t: float,
                 pitch.rotation_degrees.x+=1.2*sin(p*TAU*12.0)
     if kind in ["attack_ground","attack_air"]:
         if not V4.pose(root,kind,p):
+            return false
+    if bool(root.get_meta(RadarFoldV29.FLAG,false)):
+        if not RadarFoldV29.apply_pose(root,kind):
             return false
     root.set_meta("tarvoka_g13_v1_pose",kind)
     root.set_meta("tarvoka_g13_v1_demo_domain",

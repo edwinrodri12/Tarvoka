@@ -57,6 +57,7 @@ const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
 const G13DeckV28=preload("res://scripts/ui/G13RadarDeckMountV28.gd")
+const G13FoldV29=preload("res://scripts/ui/G13FoldingRadarV29.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -177,7 +178,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V28 · radar anclado, 4×4")
+        role_picker.set_item_text(aa_index,"G13 · AA V29 · radar abatible, 4×4")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14")
@@ -1288,7 +1289,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V28 · RADAR ANCLADO · 2 CAÑONES · SIN MISILES",14)
+        "G13 V29 · RADAR ABATIBLE · 2 CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1310,7 +1311,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V28 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V29 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1330,6 +1331,14 @@ func _install_g13_controls() -> void:
         func(): _g13_v28_compare(false),
         "V28 · Comparar soporte V27",
         func(): _g13_v28_compare(true))
+    _add_paired(g13_controls,"V29 · Ataque terrestre hacia atrás",
+        func(): _g13_v29_rear_attack("attack_ground"),
+        "V29 · Ataque aéreo hacia atrás",
+        func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V29 · Plegar radar para inspección",
+        func(): _g13_v29_fold(true),
+        "V29 · Desplegar radar",
+        func(): _g13_v29_fold(false))
     _add_paired(g13_controls,"V17 · Medir FPS en Android",
         func(): _g13_start_android_test(),
         "V17 · Ver política LOD",
@@ -1353,7 +1362,7 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V28 táctico: radar anclado al techo, sin nodos extra. "
+            "G13 V29 táctico: radar plegable con eje de apoyo, 0 nodos extra. "
             + "Sin medición FPS física de Android."
             if art_level==8 else
             "G13 V24: escultura completa LOD13 restaurada.")
@@ -1449,6 +1458,46 @@ func _g13_v28_compare(show_v27:bool)->void:
             "G13 V28: mástil blindado con base apoyada en cubierta trasera.")
     else:
         status_label.text="Selecciona primero el G13 táctico LOD8."
+
+func _g13_v29_fold(folded:bool)->void:
+    if _role!="aa_mobile" or model_root==null or (
+            _g13_preview_lod!=8):
+        status_label.text="G13 V29: selecciona primero la vista táctico LOD8."
+        return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
+    P06Models.restore_model_pose("aa_mobile",model_root)
+    var ok:bool=G13FoldV29.set_fold(model_root,1.0 if folded else 0.0)
+    status_label.text=(
+        ("G13 V29: mástil abatido desde el pie fijo en cubierta."
+        if folded else "G13 V29: mástil erguido y radar de búsqueda.")
+        if ok else "G13 V29: activa antes la versión táctica LOD8.")
+
+func _g13_v29_rear_attack(kind:String)->void:
+    if _role!="aa_mobile" or model_root==null or (
+            _g13_preview_lod!=8) or (
+            kind not in ["attack_ground","attack_air"]):
+        status_label.text="Selecciona G13 en la vista táctica LOD8."
+        return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
+    var art:Node3D=model_root
+    P06Models.restore_model_pose("aa_mobile",art)
+    _g13_v29_rear_tick(0.02,art,kind)
+    _g13_v4_tween=art.create_tween()
+    _g13_v4_tween.tween_method(
+        Callable(self,"_g13_v29_rear_tick").bind(art,kind),
+        0.0,0.99,1.72)
+    _g13_v4_tween.tween_callback(
+        Callable(self,"_g13_v4_done").bind(art))
+    status_label.text=(
+        "G13 V29: giro 180°, dos cañones en ataque a tierra y radar plegado."
+        if kind=="attack_ground" else
+        "G13 V29: giro 180°, ataque antiaéreo y radar plegado.")
+
+func _g13_v29_rear_tick(progress:float,art:Node3D,kind:String)->void:
+    if is_instance_valid(art):
+        P06Models.pose_model("aa_mobile",art,kind,progress,Vector2i(0,1))
 
 func _g13_v23_show_lights(show_v22:bool) -> void:
     if _role!="aa_mobile" or model_root==null:
@@ -2198,6 +2247,22 @@ func _display_role(role: String) -> void:
         camera.position=_heli_camera_base
         _heli_focus_local=Vector3.ZERO
     super._display_role(role)
+    if role == "tank" and model_root != null:
+        # The unified Studio navigation QA expects the approved G09 V31
+        # track geometry by default. UnitArtStudioWeb's base selector starts
+        # at art_level=10 until its legacy V25/V30/V31 comparison flags are
+        # enabled; previously this showed a proxy despite the V32 label.
+        # Replace ONLY the Studio instance with the already-approved V31
+        # native geometry. Do not touch game/battle roles, G13 or G11.
+        preview.remove_child(model_root)
+        model_root.queue_free()
+        model_root=P06Models.build("tank",_faction,true,31)
+        if model_root==null:
+            push_error("Studio G09 V31 final model was not built")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        _update_camera()
     if role == "attack_heli" and model_root != null:
         preview.remove_child(model_root)
         model_root.queue_free()
