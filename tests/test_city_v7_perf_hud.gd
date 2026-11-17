@@ -56,14 +56,21 @@ func _run() -> void:
     assert(driver!=null)
     viewer._camera_size=4.0
     viewer._refresh_camera()
-    assert(driver.update_now(viewer.camera,float(viewer.preview.size.y))>0)
+    # Offscreen CI containers may give this Control a tiny viewport during
+    # the first frame. Exercise the actual engine driver using a known
+    # 640x360 mobile render target instead of assuming layout settled.
+    var mobile_height: float=maxf(360.0,float(viewer.preview.size.y))
+    print("CITY V7 HUD viewport=",viewer.preview.size,
+        " presentation=",viewer.holder.size,
+        " test_pixels=",mobile_height)
+    assert(driver.update_now(viewer.camera,mobile_height)>0)
     probe.refresh_once()
     var near: Dictionary=probe.snapshot()
     assert(int(near["city_lod0"])>0)
     assert(int(near["city_meshes"])>int(before["city_meshes"]))
     viewer._camera_size=100.0
     viewer._refresh_camera()
-    assert(driver.update_now(viewer.camera,float(viewer.preview.size.y))>0)
+    assert(driver.update_now(viewer.camera,mobile_height)>0)
     probe.refresh_once()
     var far: Dictionary=probe.snapshot()
     assert(int(far["city_lod2"])==4)
