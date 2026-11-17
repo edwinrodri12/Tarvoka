@@ -376,6 +376,10 @@ static func _refine_existing_materials(model: Node3D) -> int:
     var nodes: Array[Node]=[model]
     while not nodes.is_empty():
         var current: Node=nodes.pop_back()
+        # Never replace V9's bespoke copper, ceramic and oxidized metal:
+        # those materials were already chosen individually for this stage.
+        if current.name==STAGE_NAME:
+            continue
         for child in current.get_children():
             nodes.append(child)
         if not current is MeshInstance3D:
