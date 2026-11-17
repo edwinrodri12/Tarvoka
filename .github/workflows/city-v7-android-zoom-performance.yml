@@ -61,6 +61,7 @@ jobs:
           fi
           grep -F 'PASS TARVOKA CITY V7 REAL 3D HUD' /tmp/city-v7-hud.log
       - name: Measure actual city mesh LOD and Mesa frame timings, capture 3D images
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
