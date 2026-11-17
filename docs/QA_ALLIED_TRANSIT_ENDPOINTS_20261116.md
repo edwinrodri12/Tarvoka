@@ -109,3 +109,9 @@ Run: `godot --headless --path . --script res://tests/test_allied_transit_endpoin
 Commit `8512497b71445ed386f870750c0c8d27131049fd`: barrido de presupuestos 1–5 desde (37,29) con aliados en (38,29)/(39,29) y enemigo en (37,28). Cada incremento de presupuesto debe conservar todos los destinos previos y su coste mínimo, excluir siempre casillas aliadas y coordenadas fuera del mapa, y no modificar entradas. Detecta podas prematuras y regresiones de coste en rutas largas. Sin cambios de balance ni reglas de producción.
 
 Reproducir: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`; exigir `PASS: allied transit and endpoint isolation` y cero errores inesperados. **Godot 4.3: NO EJECUTADO en este commit; CI: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO.** Ejecutar además IA, guardado, victoria y regresiones generales antes de integrar. No confundir commit con prueba superada.
+
+## 2026-11-17 — Duplicate occupancy records
+- Added a 40×30 regression comparing canonical occupancy lists against duplicate ally/enemy entries, including caller-data immutability.
+- Commit `8320681877346233114939fe9b524419c428f00e` on the existing PR #466 branch; **not merged**.
+- Godot 4.3 / CI on this commit: **NO EJECUTADO / NO CONFIRMADO**. Android physical: **NO EJECUTADO EN DISPOSITIVO**.
+- Acceptance: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd` exits successfully with its PASS marker, followed by AI/save/victory regressions.
