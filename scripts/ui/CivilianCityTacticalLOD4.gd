@@ -24,6 +24,7 @@ const V20=preload("res://scripts/ui/CivilianCityExteriorFinishV20.gd")
 const V21=preload("res://scripts/ui/CivilianCityArchitecturalDetailV21.gd")
 const V22=preload("res://scripts/ui/CivilianCityCohesionV22.gd")
 const V23=preload("res://scripts/ui/CivilianCitySilhouetteV23.gd")
+const V24=preload("res://scripts/ui/CivilianCityStructuralContactsV24.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -201,7 +202,12 @@ static func _keep_medium(name: String) -> bool:
         "V22_MetroVidrioCantonera_",
         "V22_MetroIdentidadDiscreta_",
         # V23 low-priority close-up stamps; preserve large silhouettes.
-        "V23_MetroMarcaSilueta_","V23_SombraJuntaFractura_"]:
+        "V23_MetroMarcaSilueta_","V23_SombraJuntaFractura_",
+        # V24 micro joints have no tactical silhouette value.
+        "V24_CierreCornisa_","V24_EscuadraMadera_",
+        "V24_ClaveMortero_","V24_AnclajeAluminio_",
+        "V24_AcaboDespostillado_","V24_ArmaduraDesdeForjado_",
+        "V24_VidrioEnForjadoCaido_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -343,7 +349,14 @@ static func _keep_far(name: String) -> bool:
         "V23_MetroPerfilCorona_","V23_BordeTejadoPartido_",
         "V23_CosturaFachadaRota_","V23_RetornoCascaron_",
         "V23_ForjadoArrancado_","V23_CrestaRuinaBaja_",
-        "V23_RemateMunicipal360_","V23_RestanteMunicipalSuelo_"]:
+        "V23_RemateMunicipal360_","V23_RestanteMunicipalSuelo_",
+        # V24 keep only material contacts large enough to read at LOD2.
+        "V24_PuntalDescentrado_","V24_FracturaApoyada_",
+        "V24_FiloForjadoInterrumpido_","V24_PiezaTabiqueAbierta_",
+        "V24_ZapataCortada_","V24_VigaEntreCascotes_",
+        "V24_ApoyoAccesoMunicipalRoto",
+        "V24_VigaAccesoMunicipalBaja",
+        "V24_PiedrasPlacaMunicipalCaida"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -447,7 +460,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V23.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",23)
+    if not V24.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",24)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
