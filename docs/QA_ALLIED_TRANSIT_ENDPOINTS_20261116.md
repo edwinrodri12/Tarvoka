@@ -40,3 +40,10 @@ Prior standalone CI on commit `cfe23b6a`: [43967487342](https://github.com/edwin
 A motorized ground unit starts at (0,0), with enemy occupants at (0,1) and (1,0). The road at (1,0) is also listed as allied transit, deliberately creating contradictory occupancy inputs. Even with movement budget 2 and the motorized road discount, the reachable set must contain only the origin; enemy blocking takes precedence. Enemy occupancy input must remain unchanged. This is a regression of existing precedence, not a gameplay-rule change.
 
 Code commit: `74243bd69415dc86b55d28d1a0cb73c01a92f071`. Previous PR head `df8147a9`: standalone Godot CI [43977221628](https://github.com/edwinrodri12/Tarvoka/actions/runs/43977221628) PASÓ; Android export [43977221608](https://github.com/edwinrodri12/Tarvoka/actions/runs/43977221608) PASÓ; general rules [43977221783](https://github.com/edwinrodri12/Tarvoka/actions/runs/43977221783) FALLÓ (root cause not established). These previous runs do not validate the new assertion. New Godot 4.3 CI: NO EJECUTADO / awaiting run; physical Android: NO EJECUTADO EN DISPOSITIVO. Before merge: inspect fresh CI and full movement, AI, save and victory regressions.
+
+
+## Impassable water with allied occupant (2026-11-16)
+
+New regression commit `6e1446b5`: a ground unit starts at (0,0), the allied transit tile (1,0) is water, and (0,1) is enemy-blocked. Even with movement budget 5, only the origin may be reachable: an allied occupant must not turn impassable water into a valid route. Terrain and both occupancy arrays must remain unchanged. This is a regression of existing `Rules.reachable` semantics, not a gameplay rule change.
+
+Reproduce: `godot --headless --path . --script res://tests/test_allied_transit_endpoints.gd`. Expected single marker: `PASS: allied transit and endpoint isolation`. **Godot CI for this new commit: NO EJECUTADO / not yet confirmed. Android physical: NO EJECUTADO EN DISPOSITIVO.** Before merging, inspect current CI and run the full tactical/AI/save/victory suites. No APK generated.
