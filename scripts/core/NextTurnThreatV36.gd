@@ -60,7 +60,7 @@ static func _attackers(known: Dictionary, side: int) -> Array:
     return foes
 
 static func _route_for_enemy(known: Dictionary,
-        enemy: Dictionary) -> Dictionary:
+        enemy: Dictionary, ignore_own_blockers: bool = false) -> Dictionary:
     # Do not use privately tracked enemy fuel or movement readiness.
     # A rival can move again next turn even if it moved/acted this turn.
     var blocked: Array[Vector2i] = []
@@ -72,8 +72,11 @@ static func _route_for_enemy(known: Dictionary,
             continue
         if int(u.get("faction",-1)) == int(enemy["faction"]):
             transit.append(u["pos"])
-        else:
+        elif not ignore_own_blockers:
             blocked.append(u["pos"])
+        # In a NEXT-TURN destination risk check, the endangered ally
+        # may vacate its current tile. For safety, allow the foe to pass
+        # through any friendly tile, an upper bound on enemy mobility.
     var route: Dictionary = Rules.reachable(
         enemy["pos"],int(enemy.get("move_points",0)),
         known["terrain"],blocked,Domains.domain(enemy),
@@ -84,7 +87,8 @@ static func _route_for_enemy(known: Dictionary,
     route[enemy["pos"]] = 0
     return route
 
-static func _records(known: Dictionary, side: int) -> Array:
+static func _records(known: Dictionary, side: int,
+        ignore_own_blockers: bool = false) -> Array:
     var result: Array = []
     for enemy in _attackers(known,side):
         var public_unit: Dictionary = enemy.duplicate(true)
@@ -95,7 +99,8 @@ static func _records(known: Dictionary, side: int) -> Array:
         public_unit.erase("moved")
         result.append({
             "unit":public_unit,
-            "positions":_route_for_enemy(known,public_unit)
+            "positions":_route_for_enemy(known,public_unit,
+                ignore_own_blockers)
         })
     return result
 
@@ -208,6 +213,10 @@ static func propose(known: Dictionary,side: int,
     if foes.is_empty():
         return {}
     var records: Array = _records(known,side)
+    # Potential retreat vacates an allied chokepoint. Use conservative
+    # future travel without the stale blockers; otherwise a destination
+    # can look safe only because the planner left a ghost ally behind.
+    var future_records: Array = _records(known,side,true)
     var allies: Array = []
     for u in known.get("units",[]):
         if u is Dictionary and int(u.get("faction",-1)) == side and \
@@ -238,7 +247,7 @@ static func propose(known: Dictionary,side: int,
             var shifted: Dictionary = unit.duplicate(true)
             var pos: Vector2i = entry["cell"]
             shifted["pos"] = pos
-            var next: Dictionary = _risk(known,shifted,records)
+            var next: Dictionary = _risk(known,shifted,future_records)
             count += 1
             var future: int = int(next["two"] if level >= 11 \
                 else next["one"])
