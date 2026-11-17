@@ -1,0 +1,105 @@
+name: TARVOKA AI fair-round classic relays and first-player bias audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_fair_relay_audit_v363.gd"
+      - "tests/test_ai_fair_round_contract_v363.gd"
+      - "tests/aggregate_ai_fair_relay_v363.py"
+      - ".github/workflows/ai-fair-relay-v363.yml"
+  workflow_dispatch:
+
+jobs:
+  matched_and_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10, 12]
+        map: [0, 2]
+        fog: ["false", "true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run equal-round classic relay A/B and self-mirror sessions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_fair_relay_audit_v363.gd \
+            2>&1 | tee /tmp/ai-fair-relay-audit.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-fair-relay-audit.log; then exit 1; fi
+          grep -Fq 'PASS AI fair relay v363 audit:' /tmp/ai-fair-relay-audit.log
+          grep -Fq 'FAIR363_SUMMARY ' /tmp/ai-fair-relay-audit.log
+          test "$(grep -c '^FAIR363_MATCH ' /tmp/ai-fair-relay-audit.log)" -eq 4
+          test "$(grep -c '^FAIR363_MIRROR ' /tmp/ai-fair-relay-audit.log)" -eq 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-fair-relay-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-fair-relay-audit.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  fair_round_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot-contract.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot-contract.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify symmetric scoring and unchanged classic relay cells
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_fair_round_contract_v363.gd \
+            2>&1 | tee /tmp/ai-fair-relay-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-fair-relay-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI fair-round v363 contract:' /tmp/ai-fair-relay-contract.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-fair-relay-contract
+          path: /tmp/ai-fair-relay-contract.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  assessment:
+    needs: [matched_and_mirrors, fair_round_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-fair-relay-*
+          path: .ci-fair-relay-logs
+          merge-multiple: false
+      - name: Validate 64 real matches and report first-player and relay outcome
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_fair_relay_v363.py .ci-fair-relay-logs
+          cat reports/ai_fair_round_relay_v363.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-fair-relay-v363-study
+          path: reports/ai_fair_round_relay_v363.*
+          retention-days: 30
+          if-no-files-found: ignore
