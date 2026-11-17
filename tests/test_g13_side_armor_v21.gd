@@ -65,10 +65,12 @@ func _run()->void:
                 continue
             check(cheek.get_parent()==turret and weld.get_parent()==turret,
                 "both armored side surfaces follow yaw but not cannon pitch")
-            check(cheek.name=="G13_V2_TurretCheek_%d" % side,
-                "historical inspector and node identity intact")
+            check(cheek.visible and weld.visible,
+                "the actual V11 rendered panels—not hidden V2 anchors—are sculpted")
+            check(cheek.name=="G13_V11_TurretCheek_%d" % side,
+                "visible V11 turret cheek node identity and original material intact")
             check(cheek.mesh is ArrayMesh and not cheek.mesh is BoxMesh,
-                "replaced real box with a closed 5-profile flared armor hull")
+                "replaced visible V11 3D shell with a new flared 5-profile armor hull")
             var verts:=_vertices(cheek.mesh)
             check(verts.size()==288,
                 "5 decagonal cross-sections, closed end caps: 96 triangles")
@@ -99,8 +101,8 @@ func _run()->void:
             check(cheek.position.is_equal_approx(Vector3.ZERO),
                 "new mesh uses actual turret coordinates, not the old cube offset")
             check(cheek.has_meta(Sides.ORIGINAL) and
-                cheek.get_meta(Sides.ORIGINAL) is BoxMesh,
-                "old side panel remains available for exact before/after QA")
+                cheek.get_meta(Sides.ORIGINAL) is ArrayMesh,
+                "actual visible V11 shell remains available for before/after QA")
             var line:=_vertices(weld.mesh)
             check(line.size()==132 and weld.visible,
                 "new physical closed 3-section weld seam, no floating decals")
@@ -127,10 +129,10 @@ func _run()->void:
                 true,false) as MeshInstance3D
             var weld:=hero.find_child(Sides.LOWER_SEAM % side,
                 true,false) as MeshInstance3D
-            check(cheek.mesh is BoxMesh and not weld.visible and
+            check(cheek.mesh==cheek.get_meta(Sides.ORIGINAL) and not weld.visible and
                 cheek.position.is_equal_approx(
                     Vector3(float(side)*0.52,0.31,0)),
-                "exact original box / pivot offset and no V21 seam in reference")
+                "exact V11 original closed shell / offset and no V21 seam in reference")
         check(Sides.show_legacy_cheeks(hero,false),
             "return to new closed V21 side silhouette")
         for side in [-1,1]:
@@ -138,8 +140,8 @@ func _run()->void:
                 true,false) as MeshInstance3D
             var weld:=hero.find_child(Sides.LOWER_SEAM % side,
                 true,false) as MeshInstance3D
-            check(cheek.mesh is ArrayMesh and weld.visible,
-                "V21 is actually visible in studio after toggling reference")
+            check(cheek.mesh==cheek.get_meta(Sides.FACETED) and weld.visible,
+                "actual visible V21 sculpt restored after toggling old V11 shell")
         for pose in ["idle","move","scan","aim_ground",
                 "attack_ground","aim_air","attack_air"]:
             check(Models.pose_model("aa_mobile",hero,pose,0.42,
