@@ -139,5 +139,28 @@ func _initialize() -> void:
     assert(terrain == before and allies == [Vector2i(1, 0)]
         and enemy_blocked == [Vector2i(0, 1), Vector2i(2, 0)],
         "Rejected movement requests must preserve all caller-owned inputs")
+    # Regression on a supported 24x18 map: never assume the legacy 10x8 bounds.
+    # The occupied ally at x=22 is traversable, but cannot be selected.
+    var large_map: Array = []
+    for y in range(18):
+        var large_row: Array = []
+        for x in range(24):
+            large_row.append("plain")
+        large_map.append(large_row)
+    var large_snapshot: Array = large_map.duplicate(true)
+    var large_allies: Array[Vector2i] = [Vector2i(22, 17)]
+    var large_blocked: Array[Vector2i] = [Vector2i(21, 16)]
+    var large_reached: Dictionary = rules.reachable(
+        Vector2i(21, 17), 2, large_map, large_blocked, "ground", false, large_allies
+    )
+    assert(not large_reached.has(Vector2i(22, 17)),
+        "Allied occupant at large-map edge must not be a legal endpoint")
+    assert(large_reached.get(Vector2i(23, 17), -1) == 2,
+        "Transit must reach the final column of a supported large map")
+    assert(not large_reached.has(Vector2i(24, 17)),
+        "Pathfinding must never escape the right boundary")
+    assert(large_map == large_snapshot and large_allies == [Vector2i(22, 17)]
+        and large_blocked == [Vector2i(21, 16)],
+        "Large-map transit must preserve input collections")
     print("PASS: allied transit and endpoint isolation")
     quit()
