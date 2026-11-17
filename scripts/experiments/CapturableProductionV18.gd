@@ -211,14 +211,15 @@ static func end_turn(world: Dictionary) -> Dictionary:
 # Propagate only purchased unit, spent credits and next-unit serial to
 # the original valid world. Every sidecar site keeps its own cooldown.
 static func purchase(world: Dictionary, location: Vector2i,
-        role: String) -> Dictionary:
+        role: String, experimental_piercer_factory: bool = false) -> Dictionary:
     if not _valid(world):
         return {"valid":false,"world":world}
     var active: int = int(world["state"]["faction"])
     var site: Dictionary = _site(world["layout"]["sites"],location)
     if site.is_empty() or str(site.get("kind","")) == "city" or \
             int(site.get("owner",-1)) != active or \
-            str(site["kind"]) != Economy.producer_for(role,true):
+            str(site["kind"]) != Economy.producer_for(role,true,
+                experimental_piercer_factory):
         return {"valid":false,"world":world}
     if int(site.get("produced_turn",-1)) == int(world["state"]["economy"]["turn"]):
         return {"valid":false,"world":world}
@@ -229,7 +230,8 @@ static func purchase(world: Dictionary, location: Vector2i,
     }]
     if not Economy.valid(proxy["economy"],proxy["terrain"]):
         return {"valid":false,"world":world}
-    var action: Dictionary = Session.purchase(proxy,location,role)
+    var action: Dictionary = Session.purchase(proxy,location,role,
+        experimental_piercer_factory)
     if not bool(action.get("valid",false)):
         return {"valid":false,"world":world}
     var result: Dictionary = world.duplicate(true)
