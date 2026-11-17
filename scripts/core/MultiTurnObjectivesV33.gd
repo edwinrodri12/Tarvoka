@@ -251,12 +251,24 @@ static func valid(objectives: Dictionary, state: Dictionary) -> bool:
             return false
         if str(state["terrain"][cell.y][cell.x]) == "water":
             return false
+        # A goal must correspond to an ACTUAL public objective, even if its
+        # owner changed since last turn. Save loading cannot forge targets.
+        var site_ok := false
+        for site in state.get("economy",{}).get("sites",[]):
+            if site.get("pos") == cell and str(site.get("kind","")) == \
+                    str(g["kind"]):
+                site_ok = true
+                break
+        if not site_ok:
+            return false
         if str(g["task"]) == "capture":
-            if not Economy.can_capture(units[id]) or captures.has(cell):
+            if (int(units[id].get("hp",0)) > 0 and \
+                    not Economy.can_capture(units[id])) or captures.has(cell):
                 return false
             captures[cell] = true
         else:
-            if Economy.can_capture(units[id]) or \
+            if (Economy.can_capture(units[id]) and \
+                    int(units[id].get("hp",0)) > 0) or \
                     int(units[id].get("attack",0)) <= 0 or \
                     Domains.domain(units[id]) != Domains.GROUND:
                 return false
