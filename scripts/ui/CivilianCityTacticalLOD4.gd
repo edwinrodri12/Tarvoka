@@ -23,6 +23,7 @@ const V19=preload("res://scripts/ui/CivilianCityUrbanCohesionV19.gd")
 const V20=preload("res://scripts/ui/CivilianCityExteriorFinishV20.gd")
 const V21=preload("res://scripts/ui/CivilianCityArchitecturalDetailV21.gd")
 const V22=preload("res://scripts/ui/CivilianCityCohesionV22.gd")
+const V23=preload("res://scripts/ui/CivilianCitySilhouetteV23.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -198,7 +199,9 @@ static func _keep_medium(name: String) -> bool:
         # V22 close sculpt: floor friezes, narrow mortar/glass facets.
         "V22_VillaMaderaResalte_","V22_CiudadFrisoPiso_",
         "V22_MetroVidrioCantonera_",
-        "V22_MetroIdentidadDiscreta_"]:
+        "V22_MetroIdentidadDiscreta_",
+        # V23 low-priority close-up stamps; preserve large silhouettes.
+        "V23_MetroMarcaSilueta_","V23_SombraJuntaFractura_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -333,7 +336,14 @@ static func _keep_far(name: String) -> bool:
         "V21_MarcoCaido_","V21_CristalYTabiquesRotos_",
         # V22 silhouette family remains distinguishable at mobile zoom.
         "V22_VillaCeramicaPedestal_","V22_CiudadPilastraEsquina_",
-        "V22_MetroNervioVertical_","V22_FragmentoReconocible_"]:
+        "V22_MetroNervioVertical_","V22_FragmentoReconocible_",
+        # V23 polygonal roof profile and jagged fragments remain
+        # readable from all four cardinals at tactical zoom.
+        "V23_VillaRematePerfil_","V23_CiudadPerfilEscalonado_",
+        "V23_MetroPerfilCorona_","V23_BordeTejadoPartido_",
+        "V23_CosturaFachadaRota_","V23_RetornoCascaron_",
+        "V23_ForjadoArrancado_","V23_CrestaRuinaBaja_",
+        "V23_RemateMunicipal360_","V23_RestanteMunicipalSuelo_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -435,7 +445,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V22.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",22)
+    if not V23.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",23)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
