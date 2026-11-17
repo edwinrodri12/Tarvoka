@@ -85,10 +85,12 @@ func _run() -> void:
             "original mobile motion still animates with critical visual damage")
         V13.restore(model)
         _check(V13.set_stage(model,4) and wreck.visible
-            and not rotor.visible and not tail.visible,
-            "stage4 uses detached blade geometry instead of two intact rotors")
+            and not rotor.visible and not tail.visible
+            and wreck.top_level,
+            "stage4 ejects debris into independent world-space frame")
         var rest_position: Vector3=model.position
         var rest_rotation: Vector3=model.rotation_degrees
+        var detached_origin: Vector3=wreck.global_position
         var debris: Node3D=model.find_child(
             "A01V13_FragmentoRotor_0",true,false) as Node3D
         var rest_debris: Vector3=debris.position if debris!=null else Vector3.ZERO
@@ -109,11 +111,16 @@ func _run() -> void:
             and model.position.y<rest_position.y-0.09
             and absf(model.rotation_degrees.z-rest_rotation.z)>15.0,
             "stage4 real crash animation falls and banks dramatically")
+        _check(wreck.top_level
+            and wreck.global_position.distance_to(detached_origin)<0.001,
+            "broken rotor shards DO NOT fall or bank with helicopter fuselage")
         _check(debris!=null and debris.position.distance_to(rest_debris)>0.05
             and fire.visible and smoke.visible,
             "wreckage moves independently and sustained smoke/fire remains")
         _check(V13.pose(model,"destroy",1.0),
             "end of destruction pose is a valid original-asset scene")
+        _check(debris!=null and debris.global_position.y<0.23,
+            "main rotor fragment rests near terrain instead of hovering")
         _check(debris!=null and debris.position.distance_to(rest_debris)<0.001,
             "ballistic rotor fragment settles at pre-authored wreck position")
         V13.restore(model)
@@ -122,9 +129,10 @@ func _run() -> void:
             and wreck.visible and not rotor.visible,
             "restore resets transforms without repairing permanent stage4 wreck")
         _check(V13.set_stage(model,0) and rotor.visible and tail.visible
-            and not wreck.visible and not smoke.visible and not scratches.visible
+            and not wreck.visible and not wreck.top_level
+            and not smoke.visible and not scratches.visible
             and not fire.visible,
-            "repair restores all original rotor geometry and hides every effect")
+            "repair reattaches hidden wreck root and restores both original rotors")
         _check(V13.pose(model,"attack",0.34)
             and V12.has_model(model),
             "approved V12 cannon and original muzzle flash still function")
