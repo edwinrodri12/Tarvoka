@@ -159,6 +159,19 @@ func _run() -> void:
         _check(debris!=null and debris.position.distance_to(rest_debris)>0.05
             and fire.visible and smoke.visible and ground_dust.visible,
             "wreckage, ground dust and burning engine overlap in crash interval")
+        var dust_quad: MeshInstance3D=model.find_child(
+            "A01V13_NubePolvo_0",true,false) as MeshInstance3D
+        var dust_material: StandardMaterial3D=(
+            dust_quad.material_override as StandardMaterial3D
+            if dust_quad!=null else null)
+        var dust_texture: ImageTexture=(
+            dust_material.albedo_texture as ImageTexture
+            if dust_material!=null else null)
+        _check(ground_dust.get_child_count()==5 and dust_quad!=null
+            and dust_quad.mesh is QuadMesh
+            and dust_texture!=null
+            and dust_texture.get_image().get_pixel(32,32).a>0.65,
+            "contact dust uses a dense feathered independent native texture")
         _check(V13.pose(model,"destroy",1.0) and not ground_dust.visible
             and not detonation.visible,
             "final wreck leaves only sustained engine fire; blast/dust expire")
