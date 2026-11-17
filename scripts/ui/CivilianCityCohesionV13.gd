@@ -50,8 +50,8 @@ static func _eave_to_wall(stage: Node3D,tag: String,
         return
     var group:=V1._group(stage,"UnionFisicaTejadoMuroV13_"+tag)
     var height: float=float(floors)*2.10+0.21
-    var surface: Color=TERRA if level==1 else
-        CEMENT if level==2 else SLATE
+    var surface: Color=(
+        TERRA if level==1 else CEMENT if level==2 else SLATE)
     # A quiet weathered eave joint at D1, NOT a destroyed roof.
     if damage==1:
         for edge in [-1,1]:
@@ -181,11 +181,10 @@ static func _civic_eave(stage: Node3D,level: int,
                 Vector3(0.27,0.17,south+0.48),
                 Vector3(0.41,0.11,0.30),CHAR,"steel")
         return
-    # D3: broken civic fronton and a disconnected flight of stairs.
+    # D3: broken inner fronton inset behind V11's street facade.
     # D4: keep only ground-height fragments; never a phantom upper tower.
-    var cap: float=1.34 if damage==3 else 0.44
     V11._broken_wall(civic,"FrontonMunicipalTruncadoV13",
-        Vector3(0.0,0.08,south-0.05),
+        Vector3(0.0,0.08,south-0.24),
         Vector3(2.89,0.0,0.0),
         PackedFloat32Array(
             [0.55,0.92,1.34,0.83,0.37]
