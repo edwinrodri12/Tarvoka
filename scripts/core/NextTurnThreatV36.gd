@@ -204,8 +204,34 @@ static func _destinations(known: Dictionary,side: int,
         filtered.resize(MAX_DESTINATIONS)
     return filtered
 
+# Optional 3.6.1 research filter. A conservative potential kill by TWO
+# different foes is not equivalent to a forced real-life double attack.
+# Preserve specialists and genuinely wounded capturers; give healthy
+# front-line troops a chance to retain useful offensive pressure.
+static func _critical_specialist(unit: Dictionary) -> bool:
+    return int(unit.get("attack_min_range",1)) >= 2 or \
+        str(unit.get("role","")) in ["logistics","uav_recon","ew","sam","mlrs"]
+
+static func _has_valuable_shot(known: Dictionary,side: int,
+        unit: Dictionary,foes: Array) -> bool:
+    if not Turns.can_act(unit,side) or not Logistics.can_fire(unit):
+        return false
+    for foe in foes:
+        if not Turns.in_attack_range(unit,foe):
+            continue
+        var preview: Dictionary = Battle.public_preview_exchange(
+            unit,foe,known["terrain"],
+            known.get("economy",{}),known["units"])
+        if not bool(preview.get("valid",false)):
+            continue
+        var inflicted: int = int(preview.get("damage",0))
+        if int(preview.get("attacker_hp",0)) > 0 and \
+                inflicted >= maxi(3,ceili(float(foe["hp"])*0.5)):
+            return true
+    return false
+
 static func propose(known: Dictionary,side: int,
-        level: int = 10) -> Dictionary:
+        level: int = 10, offensive_discipline: bool = false) -> Dictionary:
     if side not in [0,1] or not Rules.valid_terrain(
             known.get("terrain",[])) or level < 8:
         return {}
@@ -242,6 +268,16 @@ static func propose(known: Dictionary,side: int,
             else current["one"])
         if danger < hp:
             continue # Don't flee just because something is nearby.
+        if offensive_discipline and not _critical_specialist(unit):
+            # Protect real offensive opportunities from a risk envelope
+            # that assumes the rival optimally chooses to attack us.
+            if _has_valuable_shot(known,side,unit,foes):
+                continue
+            # The level-11/12 two-enemy SUM is an upper bound, not an
+            # established forced double strike. Healthy combat platforms
+            # should not flee solely on that pessimistic assumption.
+            if level >= 11 and hp >= 8 and int(current["one"]) < hp:
+                continue
         var value: int = _worth(unit,known,side)
         for entry in _destinations(known,side,unit,foes):
             var shifted: Dictionary = unit.duplicate(true)
