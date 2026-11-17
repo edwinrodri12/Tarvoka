@@ -20,7 +20,7 @@ func _initialize() -> void:
     var level: int = int(OS.get_environment("TARVOKA_AB_LEVEL"))
     var map_id: int = int(OS.get_environment("TARVOKA_AB_MAP"))
     var fog: bool = OS.get_environment("TARVOKA_AB_FOG") == "true"
-    if level not in [10,12] or map_id not in [0,3]:
+    if level not in [10,12] or map_id not in [0,2]:
         push_error("Unsupported paired benchmark environment")
         quit(1)
         return
