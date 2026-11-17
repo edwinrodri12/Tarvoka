@@ -80,3 +80,10 @@ Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió ce
 - Run [44036734451](https://github.com/edwinrodri12/Tarvoka/actions/runs/44036734451), job 133881300638: **FAILED** because the SaveCodec negative JSON case emits the expected Godot engine diagnostic `ERROR: Parse JSON failed...` despite printing its exact PASS marker. The transit, rules, session/victory, and AI steps all passed in that run.
 - Workflow fix `c60cae0f`: accept exactly one known malformed-JSON diagnostic in `test_save_codec`, continue rejecting all other Godot errors and require the exact suite PASS marker. This changes only CI interpretation, not production code.
 - **New workflow CI: PENDING** until a run of the fix completes. Android device: **NO EJECUTADO EN DISPOSITIVO**. No merge authorized on this evidence alone.
+
+## 2026-11-17 — Determinismo ante permutaciones de ocupación
+- El escenario de corredor aliado se vuelve a consultar con las listas de aliados y bloqueos en orden inverso y con una segunda consulta idéntica.
+- Criterio: ambos diccionarios de casillas/costes deben coincidir exactamente con el resultado original; las listas reordenadas no deben mutarse.
+- Código: commit `7059fc677185b09605d0507c38aed6dbb9fc9552`.
+- CI confirmado para el commit anterior `16cdf7b4`: [regresión táctica 44043718904](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718904) PASÓ; [exportación Android 44043718910](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718910) PASÓ; [workflow general 44043718915](https://github.com/edwinrodri12/Tarvoka/actions/runs/44043718915) FALLÓ. Estas ejecuciones **no** validan el nuevo test.
+- Nuevo test: **NO EJECUTADO** hasta obtener CI del commit; Android físico: **NO EJECUTADO EN DISPOSITIVO**. Mantener la PR draft hasta resolver la validación e integración.
