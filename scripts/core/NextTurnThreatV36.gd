@@ -20,6 +20,8 @@ const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
 const MAX_ALLIES := 5
 const MAX_ENEMIES := 6
 const MAX_DESTINATIONS := 9
+const MAX_CRITICAL_DESTINATIONS := 16
+const Tradeoff = preload("res://scripts/core/RiskRewardV363.gd")
 
 static func _distance(a: Vector2i, b: Vector2i) -> int:
     return abs(a.x-b.x)+abs(a.y-b.y)
@@ -208,6 +210,31 @@ static func _destinations(known: Dictionary,side: int,
             return int(a["estimate"]) > int(b["estimate"])
         return _side_key(a["cell"],side,size.x) < \
             _side_key(b["cell"],side,size.x))
+    if keep_near_front:
+        # A near-first top-nine selection previously omitted every safe
+        # escape in the wounded-city test (tank could reach nearby tiles).
+        # Combine nearby candidates with distant / opposite-flank exits,
+        # while bounding CPU and never probing the real Session.
+        var picks: Array = filtered.slice(0,mini(8,filtered.size()))
+        var farthest: Array = filtered.duplicate()
+        farthest.sort_custom(func(a,b):
+            var da: int = _nearest(a["cell"],enemies)
+            var db: int = _nearest(b["cell"],enemies)
+            if da != db:
+                return da > db
+            return _side_key(a["cell"],side,size.x) < \
+                _side_key(b["cell"],side,size.x))
+        for item in farthest:
+            if picks.size() >= MAX_CRITICAL_DESTINATIONS:
+                break
+            var present := false
+            for chosen in picks:
+                if chosen["cell"] == item["cell"]:
+                    present = true
+                    break
+            if not present:
+                picks.append(item)
+        return picks
     if filtered.size() > MAX_DESTINATIONS:
         filtered.resize(MAX_DESTINATIONS)
     return filtered
@@ -240,7 +267,8 @@ static func _has_valuable_shot(known: Dictionary,side: int,
 
 static func propose(known: Dictionary,side: int,
         level: int = 10, offensive_discipline: bool = false,
-        critical_rescue: bool = false) -> Dictionary:
+        critical_rescue: bool = false,
+        risk_reward: bool = false) -> Dictionary:
     if side not in [0,1] or not Rules.valid_terrain(
             known.get("terrain",[])) or level < 8:
         return {}
@@ -320,6 +348,11 @@ static func propose(known: Dictionary,side: int,
                 future = int(next["one"])
             if future >= hp or future >= danger:
                 continue # Only reposition if survival genuinely improves.
+            var trade: Dictionary = {}
+            if risk_reward:
+                trade = Tradeoff.evaluate(known,side,unit,pos,danger,future)
+                if not bool(trade.get("permit",false)):
+                    continue # A city or active objective can outweigh sacrifice.
             var cover: int = int(Terrain.COVER.get(
                 Terrain.tile_at(known["terrain"],pos),0))
             var score: int = 15000 + value*2 + \
@@ -331,6 +364,8 @@ static func propose(known: Dictionary,side: int,
                 score = 15000 + value*2 + (danger-future)*110 + \
                     cover*70 - int(entry["movement_cost"])*155 - \
                     _distance(unit["pos"],pos)*55
+            if risk_reward:
+                score += int(trade["margin"]) * 4
             if best.is_empty() or score > int(best["score"]) or \
                     (score == int(best["score"]) and \
                     _side_key(pos,side,dimensions.x) < \
@@ -347,6 +382,8 @@ static func propose(known: Dictionary,side: int,
                     "terrain":Terrain.tile_at(known["terrain"],pos),
                     "risk_model":"visible_enemy_next_turn"
                 }
+                if risk_reward:
+                    best["tradeoff"] = trade
     if not best.is_empty():
         best["evaluated"] = count
     return best
