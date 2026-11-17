@@ -54,3 +54,10 @@ Reproduce: `godot --headless --path . --script res://tests/test_allied_transit_e
 - Las tres solicitudes deben preservar terreno y listas de ocupación originales.
 - Commit de prueba: `080b3c0418719ba297c026dd52353077fcf0d7b3`.
 - **NO EJECUTADO en Godot 4.3/CI para este commit; NO EJECUTADO EN DISPOSITIVO Android.** No se modifica `Rules.gd`.
+
+
+## 2026-11-16 — Bloqueo enemigo en borde de mapa grande
+- Commit `edbba0b6`: escenario 24×18 con aliado en (22,17) y enemigo en (23,17). La salida enemiga debe seguir bloqueada aunque el aliado anterior permita tránsito; ningún destino puede escapar del borde derecho o inferior. Verifica inmutabilidad de los datos de entrada.
+- **NO EJECUTADO** en Godot/CI para este commit; la ejecución anterior `44008359620` pasó sobre `89f8a811`, no valida este añadido.
+- CI general anterior `44008359522` **FALLÓ** en el paso de sprites HQ V13; CI Android anterior `44008359534` **PASÓ** como exportación, no prueba física.
+- **NO EJECUTADO EN DISPOSITIVO**. No fusionar hasta confirmar regresiones pertinentes y revisar el fallo general independiente.
