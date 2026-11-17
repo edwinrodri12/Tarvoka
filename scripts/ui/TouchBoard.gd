@@ -8,6 +8,7 @@ signal tactical_phase_completed(completed_side: int)
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
+const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
@@ -43,6 +44,7 @@ var symmetric_setup := false
 var specialized_roster := false
 var modern_roster := false
 var ai_enabled := true # Faction 1 is computer-controlled; disable for local two-player tests.
+var ai_profile: Dictionary = {} # Per-match level/style, never extra resources.
 var autosave_enabled := false # Enabled by Main after board initializes; tests opt in explicitly.
 var autosave_path := "user://tarvoka_autosave_v1.json"
 var autosave_warning := ""
@@ -104,7 +106,8 @@ func _ready() -> void:
     new_game()
 
 func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false,
-        visual_biome: String = Winter.TEMPERATE) -> void:
+        visual_biome: String = Winter.TEMPERATE,
+        ai_options: Dictionary = {}) -> void:
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -145,6 +148,13 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
     state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
+    ai_profile = {}
+    if ai_enabled and ai_options.has("ai_level") and \
+            Director.valid_style(str(ai_options.get("ai_style","adaptive"))):
+        var level: int = clampi(int(ai_options["ai_level"]),1,12)
+        var style: String = str(ai_options.get("ai_style","adaptive"))
+        state["ai_config"] = {"level":level,"style":style}
+        ai_profile = {"ai_level":level,"ai_style":style}
     # Persistent decorative setting: separate from snow weather penalties.
     # Omitted from normal/legacy matches to preserve v1 save payloads.
     if Winter.valid(visual_biome) and visual_biome != Winter.TEMPERATE:
@@ -1367,7 +1377,7 @@ func _play_ai_turn() -> void:
         if campaign_locked or int(state.get("winner", -1)) != -1:
             break
         var prior_state: Dictionary = state
-        var result: Dictionary = BasicAI.step(state)
+        var result: Dictionary = BasicAI.step(state,ai_profile)
         if not result.get("valid", false):
             break
         state = result["state"]
@@ -1430,6 +1440,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    ai_profile = _profile_from_state()
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
@@ -1464,6 +1475,17 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     queue_redraw()
     return true
 
+static func _profile_from_saved_state(saved: Dictionary) -> Dictionary:
+    var config = saved.get("ai_config",{})
+    if not config is Dictionary or not config.has("level") or \
+            not Director.valid_style(str(config.get("style",""))):
+        return {}
+    return {"ai_level":clampi(int(config["level"]),1,12),
+        "ai_style":str(config["style"])}
+
+func _profile_from_state() -> Dictionary:
+    return _profile_from_saved_state(state)
+
 # Autosave is a separate file; manual "Guardar partida" always remains untouched.
 # The main scene chooses when to restore so unit tests can create fresh boards.
 func _infer_symmetric_setup() -> bool:
@@ -1480,6 +1502,7 @@ func resume_autosave() -> bool:
     if restored.is_empty():
         return false
     state = restored
+    ai_profile = _profile_from_state()
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0

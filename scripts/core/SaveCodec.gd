@@ -18,6 +18,7 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
+const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -46,6 +47,8 @@ static func encode(state: Dictionary) -> String:
         snapshot["weather_cycle"] = state["weather_cycle"].duplicate(true)
     if state.has(Identity.STATE_FIELD):
         snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
+    if state.has("ai_config"):
+        snapshot["ai_config"] = state["ai_config"].duplicate(true)
     if state.has("map_seed"):
         snapshot["map_seed"] = int(state["map_seed"])
     if state.has("opening"):
@@ -135,6 +138,11 @@ static func decode(raw: String) -> Dictionary:
         if not _whole(state["map_seed"]):
             return {}
         state["map_seed"] = int(state["map_seed"])
+    if state.has("ai_config"):
+        if not state["ai_config"] is Dictionary or \
+                not _whole(state["ai_config"].get("level",null)):
+            return {}
+        state["ai_config"]["level"] = int(state["ai_config"]["level"])
     if state.has("control"):
         var objective = state["control"]
         if not objective is Dictionary or not objective.get("nodes") is Array:
@@ -248,6 +256,17 @@ static func _valid_state(state: Dictionary) -> bool:
         return false
     if state.has(Identity.STATE_FIELD) and not Identity.is_valid(state[Identity.STATE_FIELD]):
         return false
+    # Optional per-match AI difficulty. Absent for all legacy saves.
+    # Never store hidden AI memory or bonuses; only the public settings.
+    if state.has("ai_config"):
+        if not state["ai_config"] is Dictionary:
+            return false
+        var ai_config: Dictionary = state["ai_config"]
+        if ai_config.size() != 2 or not ai_config.get("level") is int or \
+                int(ai_config["level"]) < 1 or int(ai_config["level"]) > 12 or \
+                not ai_config.get("style") is String or \
+                not Director.valid_style(str(ai_config["style"])):
+            return false
     if not state.get("terrain") is Array or not Rules.valid_terrain(state["terrain"]):
         return false
     var dimensions: Vector2i = Rules.map_size(state["terrain"])

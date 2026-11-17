@@ -92,6 +92,7 @@ var _gallery_from_home := false
 var skirmish_setup: Control
 var faction_selector: Control
 var _pending_visual_factions: Dictionary = {}
+var _selected_ai_configuration: Dictionary = {} # Optional; legacy new games remain identical.
 var compact_combat_preview: Control
 var sidebar_combat_preview: Control
 var compact_move_risk_card: Control
@@ -2185,7 +2186,8 @@ func _confirm_new_game() -> void:
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
         str(Weather.TYPES[weather_picker.get_selected_id()]),
         weather_cycle_picker.get_selected_id() == 1,
-        Winter.from_index(biome_picker.get_selected_id()))
+        Winter.from_index(biome_picker.get_selected_id()),
+        _selected_ai_configuration)
     _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
@@ -2315,7 +2317,9 @@ func _prepare_skirmish() -> void:
         "weather_cycle":weather_cycle_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
-        "seed":int(map_seed_picker.value)
+        "seed":int(map_seed_picker.value),
+        "ai_level":int(_selected_ai_configuration.get("ai_level",5)),
+        "ai_style":str(_selected_ai_configuration.get("ai_style","adaptive"))
     })
     _reveal_screen(skirmish_setup)
 
@@ -2358,6 +2362,10 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     first_picker.select(int(configuration["first"]))
     map_seed_picker.value = int(configuration["seed"])
     _pending_visual_factions = Identity.resolved(configuration.get("factions",{}))
+    _selected_ai_configuration = {
+        "ai_level":clampi(int(configuration.get("ai_level",5)),1,12),
+        "ai_style":str(configuration.get("ai_style","adaptive"))
+    }
     _new_game() # Same confirmation, permissions and autosave guards.
 
 func _open_arsenal_from_home() -> void:
