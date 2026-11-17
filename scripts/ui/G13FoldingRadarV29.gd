@@ -85,13 +85,17 @@ static func reset(root:Node3D)->void:
     var source:Dictionary=root.get_meta(METADATA,{})
     if source.is_empty():
         return
-    (p["radar"] as Node3D).position=source["radar"]
-    (p["mast"] as MeshInstance3D).position=source["mast"]
-    (p["dish"] as MeshInstance3D).position=source["dish"]
-    (p["receiver"] as MeshInstance3D).position=source["receiver"]
-    (p["mast"] as MeshInstance3D).scale=source["mast_scale"]
-    (p["dish"] as MeshInstance3D).rotation_degrees.x=source["dish_pitch"]
-    (p["radar"] as Node3D).rotation_degrees.x=0.0
+    var radar:Node3D=p["radar"]
+    var mast:MeshInstance3D=p["mast"]
+    var dish:MeshInstance3D=p["dish"]
+    var receiver:MeshInstance3D=p["receiver"]
+    radar.position=source["radar"]
+    mast.position=source["mast"]
+    dish.position=source["dish"]
+    receiver.position=source["receiver"]
+    mast.scale=source["mast_scale"]
+    dish.rotation_degrees.x=source["dish_pitch"]
+    radar.rotation_degrees.x=0.0
     root.set_meta("tarvoka_g13_v29_fold_degrees",0.0)
 
 static func set_fold(root:Node3D,fraction:float)->bool:
