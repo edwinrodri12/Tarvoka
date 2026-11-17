@@ -161,7 +161,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V25 · dos cañones, radar 4×4")
+        role_picker.set_item_text(aa_index,"G13 · AA V26 · blindaje táctico 4×4")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 · V10")
@@ -1150,13 +1150,13 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V25 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V26 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
-    _add_paired(g13_controls,"V25 · Silueta mejorada",
+    _add_paired(g13_controls,"LOD8 · Mostrar V26 completa",
         func(): _g13_v25_compare(false),
-        "V25 · Comparar con LOD8 original",
+        "LOD8 · Comparar con original",
         func(): _g13_v25_compare(true))
     _add_paired(g13_controls,"V26 · Blindaje táctico angular",
         func(): _g13_v26_compare(false),
@@ -1183,7 +1183,7 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V25 táctico: modelo 3D LOD8, sin nodos de dibujo extra. "
+            "G13 V26 táctico: blindaje biselado 3D, sin nodos extra. "
             + "Sin medición FPS física de Android."
             if art_level==8 else
             "G13 V24: escultura completa LOD13 restaurada.")
@@ -1191,14 +1191,19 @@ func _g13_show_tactical_lod(art_level:int)->void:
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
         return
-    var matched:bool=G13TacticalV25.show_v1_reference(
+    # The original LOD8 comparison removes BOTH V25 paint/barrel tweaks
+    # and V26 faceted shapes while keeping camera, faction and pose fixed.
+    var guns:bool=G13TacticalV25.show_v1_reference(
         model_root,show_v1)
-    if matched:
+    var armor:bool=G13ArmorV26.show_v25_reference(
+        model_root,show_v1)
+    if guns and armor:
         _g13_v25_show_original=show_v1
+        _g13_v26_show_previous=show_v1
         status_label.text=(
-            "G13 LOD8 original: mismo ángulo y misma animación."
+            "G13 LOD8 original: mismas ruedas, cámara y poses."
             if show_v1 else
-            "G13 V25 LOD8: cañones y radar más legibles, sin piezas extra.")
+            "G13 V26 LOD8: blindaje biselado y dos cañones reforzados.")
     else:
         status_label.text="Selecciona primero vista táctica LOD8."
 
