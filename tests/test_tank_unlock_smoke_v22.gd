@@ -10,7 +10,7 @@ func _initialize() -> void:
     assert(int(Tier.UPGRADE_COSTS["armor_plant"][2]) == 650)
     assert(Tier.required_level("tank") == 2)
     assert(Tier.required_level("ifv") == 2)
-    var start: Dictionary = Lab.begin(0,Vector2i(10,8),0)
+    var start: Dictionary = Lab.begin(0,Vector2i(24,18),0)
     assert(start.get("valid",false))
     assert(start["original"] == start["session"])
     var old_cash: int = int(start["session"]["world"]["state"]["economy"]["credits"][0])
@@ -26,9 +26,9 @@ func _initialize() -> void:
         raised["session"]["world"]["state"]["terrain"]))
     # No sudden upgrade on the other army.
     assert(not Lab._has_upgraded_plant(raised,1))
-    var instant: Dictionary = Lab.duel(0,Vector2i(10,8),0,
+    var instant: Dictionary = Lab.duel(0,Vector2i(24,18),0,
         ["armor","pressure"],"instant",8)
-    var gated: Dictionary = Lab.duel(0,Vector2i(10,8),0,
+    var gated: Dictionary = Lab.duel(0,Vector2i(24,18),0,
         ["armor","pressure"],"level2",8)
     assert(instant.get("valid",false))
     assert(gated.get("valid",false))
@@ -49,7 +49,7 @@ func _initialize() -> void:
     assert(int(gated["sides"]["1"]["upgrade_count"]) == 0)
     print("GATE_SMOKE_V22 instant=%s gated=%s" % [str(instant),str(gated)])
     # Controls keep original A/B simulation completely backwards compatible.
-    var control: Dictionary = V21.duel(0,Vector2i(10,8),0,
+    var control: Dictionary = V21.duel(0,Vector2i(24,18),0,
         ["armor","pressure"],8)
     assert(control.get("valid",false))
     for side in ["0","1"]:
