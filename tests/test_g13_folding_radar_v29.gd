@@ -74,6 +74,7 @@ func weapon_clearances(model:Node3D)->Vector2:
         Vector3(0,Deck.PROFILE[Deck.PROFILE.size()-1].x,0))
     var min_mast:float=100.0
     var min_dish:float=100.0
+    var worldscale:float=model.global_transform.basis.get_scale().x
     for side in [-1,1]:
         for weapon in ["G13_Autocannon_%d" % side,
                 "G13_RealMuzzle_%d" % side]:
@@ -92,7 +93,7 @@ func weapon_clearances(model:Node3D)->Vector2:
                     Vector3(0,(t-0.5)*tube.height,0))
                 min_mast=minf(min_mast,
                     distance_point_segment(location,foot,top)
-                    -radius-Deck.PROFILE[0].y)
+                    -(radius+Deck.PROFILE[0].y)*worldscale)
                 var local:Vector3=dish.to_local(location)
                 var dish_mesh:=dish.mesh as CylinderMesh
                 var outside_radius:float=maxf(0.0,
@@ -179,8 +180,9 @@ func _run()->void:
             "mast inclines from deck while guns aim backward")
         var foot:Vector3=mast.to_global(
             Vector3(0,Deck.PROFILE[0].x,0))
-        require(absf(foot.y-1.095)<0.001 and
-            absf(foot.z-Deck.RADAR_DECK_Z)<0.001,
+        var anchored_foot:Vector3=model.to_global(
+            Vector3(0,1.095,Deck.RADAR_DECK_Z))
+        require(foot.distance_to(anchored_foot)<0.001,
             "folding joint is grounded to physical deck")
         require(draw_count(model)==original,
             "all seven animation geometries still allocated identically")
@@ -230,7 +232,8 @@ func _run()->void:
             var foot:Vector3=mast.to_global(
                 Vector3(0,Deck.PROFILE[0].x,0))
             max_foot_deviation=maxf(max_foot_deviation,
-                foot.distance_to(Vector3(0,1.095,Deck.RADAR_DECK_Z)))
+                foot.distance_to(subject.to_global(
+                    Vector3(0,1.095,Deck.RADAR_DECK_Z))))
     require(worst_mast>0.0,
         "real gun cylinder envelopes never hit rotating mast")
     require(worst_dish>0.0,
