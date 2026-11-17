@@ -84,6 +84,17 @@ static func _joint_gutters(root: Node3D,tag: String,
     if damage>=3:
         return
     var junction:=V1._group(root,"JuntasCanalonesV9_"+tag)
+    if damage==2:
+        # Roof V2 is severed in this state; a complete gutter would
+        # visibly float above the broken cornice. Only bent fragments stay.
+        var bent:=_part(junction,"RestosCanalonRetorcidoV9_"+tag,
+            Vector3(x-w*0.28,height+0.23,z+d*0.5+0.12),
+            Vector3(w*0.39,0.09,0.17),AGED,"oxidized")
+        bent.rotation_degrees.z=-12.0
+        _part(junction,"FragmentoBajanteV9_"+tag,
+            Vector3(x+w*0.52,0.65,z+d*0.5+0.16),
+            Vector3(0.12,0.96,0.15),OXIDE,"oxidized")
+        return
     var front: float=z-d*0.5
     var rear: float=z+d*0.5
     # Copper/Zinc sheet edges are physically contiguous with the roof
