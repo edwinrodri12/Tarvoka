@@ -204,7 +204,7 @@ static func _wreck(body: Node3D) -> void:
         var a: float=TAU*float(i)/3.0
         var blade:=_mesh(debris,"A01V13_FragmentoRotor_%d" % i,
             _blade_fragment(0.86-float(i)*0.17),graphite,
-            Vector3(-0.76+float(i)*0.42,0.50,0.12+float(i)*0.43))
+            Vector3(-0.76+float(i)*0.42,0.105,0.12+float(i)*0.43))
         blade.rotation_degrees=Vector3(
             -16.0+float(i)*15.0,27.0+float(i)*31.0,
             24.0-float(i)*17.0)
@@ -215,7 +215,7 @@ static func _wreck(body: Node3D) -> void:
     # V1's tail rotor is also hidden at the final crash stage. A smaller,
     # actual torn-off blade now accounts for its missing silhouette.
     var tail_piece:=_mesh(debris,"A01V13_FragmentoRotorCola",
-        _blade_fragment(0.32),graphite,Vector3(1.12,0.47,2.02))
+        _blade_fragment(0.32),graphite,Vector3(1.12,0.087,2.02))
     tail_piece.rotation_degrees=Vector3(35.0,71.0,-22.0)
     tail_piece.set_meta("a01_v13_launch",Vector3(0.285,1.38,2.62))
     tail_piece.set_meta("a01_v13_rest",tail_piece.position)
@@ -223,7 +223,7 @@ static func _wreck(body: Node3D) -> void:
     for side in [-1,1]:
         var s: float=float(side)
         var piece:=_box(debris,"A01V13_FragmentoBlindaje_%d" % side,
-            Vector3(s*0.91,0.49,-0.53),
+            Vector3(s*0.91,0.115,-0.53),
             Vector3(0.35,0.035,0.33),steel,
             Vector3(0,s*23.0,s*37.0))
         piece.set_meta("a01_v13_launch",Vector3(s*0.59,1.06,-0.16))
@@ -240,7 +240,22 @@ static func stage(model: Node3D) -> int:
 static func set_stage(model: Node3D,level: int) -> bool:
     if not has_model(model):
         return false
+    var previous: int=stage(model)
     var n: int=clampi(level,0,MAX_STAGE)
+    var wreck: Node3D=_part(model,WRECK)
+    if n==MAX_STAGE and previous<MAX_STAGE:
+        # Take a snapshot of the actual world pose BEFORE the helicopter
+        # banks and falls. The shards detach from the fuselage's transform
+        # but retain the same world pose as the original rotor hubs.
+        var body: Node3D=_part(model,V1.ROOT)
+        var launch_frame: Transform3D=body.global_transform
+        wreck.top_level=true
+        wreck.global_transform=launch_frame
+    elif n<MAX_STAGE and previous==MAX_STAGE:
+        # Repair returns the debris node to the original V1 body tree.
+        # Repeating destroy/repair never leaves world-space orphan shards.
+        wreck.top_level=false
+        wreck.transform=Transform3D.IDENTITY
     model.set_meta(STAGE,n)
     _part(model,SCRATCH).visible=n>=1
     _part(model,BURN).visible=n>=2
