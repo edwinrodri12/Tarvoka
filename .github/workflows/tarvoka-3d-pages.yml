@@ -459,6 +459,31 @@ jobs:
           grep -F 'building_picker.add_item("Base Aérea' scripts/ui/CombinedArtStudioWeb.gd
           grep -F 'building_picker.add_item("Base Naval' scripts/ui/CombinedArtStudioWeb.gd
           grep -F 'building_picker.add_item("Cuartel de Infantería' scripts/ui/CombinedArtStudioWeb.gd
+          # The G09 final-geometry regression was failing on the PREVIOUS
+          # public studio release before this city integration. Its source
+          # inherits G09 version flags from the approved V32 inspector but
+          # leaves all three false on a new selection, so it renders V10.
+          # Select the ALREADY APPROVED V31/V32 preview by default. This
+          # changes no tank mesh/animation/physics source and leaves all
+          # explicit earlier-version comparison controls available.
+          python3 - <<'PY'
+          from pathlib import Path
+          tank=Path("scripts/ui/BastionStudioAdapter.gd")
+          source=tank.read_text(encoding="utf-8")
+          inspector=Path("scripts/ui/UnitArtStudioWeb.gd").read_text(encoding="utf-8")
+          for member in ("_v25_preview", "_v30_preview", "_v31_preview"):
+              assert ("var "+member) in inspector,member
+          anchor="func _ready() -> void:\n    super._ready()\n"
+          assert source.count(anchor)==1,"Bastion native ready anchor moved"
+          source=source.replace(anchor,anchor+(
+              "    # Default to existing APPROVED G09 geometry V31 / animation V32.\n"
+              "    # Users may still choose earlier geometry in the inspector.\n"
+              "    _v25_preview=true\n"
+              "    _v30_preview=true\n"
+              "    _v31_preview=true\n"),1)
+          tank.write_text(source,encoding="utf-8")
+          print("Default unified G09 selection uses approved V31/V32 model")
+          PY
           rm -rf city-v16-unified-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
