@@ -427,6 +427,39 @@ jobs:
           test -s scenes/UnitArtStudioWeb.tscn
           grep -F 'InfantryBarracksV10.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -F 'Cuartel de Infantería · V10 · ventanas frontales 3D' scripts/ui/CombinedArtStudioWeb.gd
+      # The sculpt is still being approved. Bring ONLY civilian art files
+      # into this one Web export (never commit the unfinished model to main).
+      # Add cities to the REAL EDIFICIOS OptionButton inside Godot, not to a
+      # floating HTML link that opens a separate site.
+      - name: Check out editable V16 civilian city sculpture for unified buildings panel
+        uses: actions/checkout@v4
+        with:
+          ref: art/cities-v8-rear-facades-rooftops-20261117
+          path: city-v16-unified-source
+          persist-credentials: false
+      - name: Add V16 native city to the existing unified EDIFICIOS picker
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityArchitectureV8 CivilianCityFinishV9 CivilianCityGroundFrontV10 CivilianCityStructuralRuinsV11 CivilianCityDamageFinishV12 CivilianCityCohesionV13 CivilianCitySilhouetteV14 CivilianCityIdentityV15 CivilianCityMaterialJointsV16 CivilianCityStudioAdapter; do
+            test -s "city-v16-unified-source/scripts/ui/$name.gd"
+            cp "city-v16-unified-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          test -s scripts/ui/BastionStudioAdapter.gd
+          test -s scripts/ui/CivilianCityStudioAdapter.gd
+          test -s scenes/UnitArtStudioWeb.tscn
+          # Subclass BastionStudioAdapter: same HUD, same render viewport
+          # and the same four prior building entries plus new City at #5.
+          grep -F 'extends "res://scripts/ui/BastionStudioAdapter.gd"' scripts/ui/CivilianCityStudioAdapter.gd
+          grep -F 'building_picker.add_item("Ciudades civiles' scripts/ui/CivilianCityStudioAdapter.gd
+          sed -i 's|res://scripts/ui/BastionStudioAdapter.gd|res://scripts/ui/CivilianCityStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/CivilianCityStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
+          # Verify all four original categories remain in the approved base.
+          grep -F 'building_picker.add_item("Cuartel General")' scripts/ui/CombinedArtStudioWeb.gd
+          grep -F 'building_picker.add_item("Base Aérea' scripts/ui/CombinedArtStudioWeb.gd
+          grep -F 'building_picker.add_item("Base Naval' scripts/ui/CombinedArtStudioWeb.gd
+          grep -F 'building_picker.add_item("Cuartel de Infantería' scripts/ui/CombinedArtStudioWeb.gd
+          rm -rf city-v16-unified-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
