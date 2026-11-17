@@ -4,6 +4,8 @@ class_name TarvokaG13InspectionStudio
 # Standalone 3D G13 inspection scene, NOT a replacement for the shared
 # UnitArtStudioWeb. Loads the SAME native model via UnitModels3D.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
+const FrontV23=preload("res://scripts/ui/G13FrontLightingV23.gd")
+const IntakeV24=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const POSES=["idle","scan","move","aim_air","attack_air","aim_ground","attack_ground"]
 const POSE_LABELS=[
     "Reposo","Radar","Rodaje","Apuntar: aire",
@@ -23,6 +25,7 @@ var _playing: bool=false
 var _heading: Vector2i=Vector2i(0,-1)
 var _status: Label
 var _preview_detail: int=13
+var _front_version:int=24
 
 func _ready()->void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -121,11 +124,27 @@ func _create_layout()->void:
     stop.pressed.connect(_stop)
     controls.add_child(stop)
     _label(controls,"Inspección física 3D",15)
+    _label(controls,"Comparador real de faros: misma malla, luz y cámara",12)
+    var original_lights:=Button.new()
+    original_lights.text="V22 · Faros originales"
+    original_lights.pressed.connect(_show_front_comparison.bind(true))
+    controls.add_child(original_lights)
+    var sculpted_lights:=Button.new()
+    sculpted_lights.text="V23 · Faros 3D encastrados"
+    sculpted_lights.pressed.connect(_show_front_comparison.bind(false))
+    controls.add_child(sculpted_lights)
+    var intake_finish:=Button.new()
+    intake_finish.text="V24 · Rejilla frontal blindada 3D"
+    intake_finish.pressed.connect(_show_v24_finish)
+    controls.add_child(intake_finish)
     for view in [
         ["Isométrica","iso"],["Frontal","front"],
         ["Posterior","rear"],["Izquierda","left"],
         ["Derecha","right"],["Superior","top"],
-        ["Inferior / bajos","under"]
+        ["Inferior / bajos","under"],
+        ["Faros: frontal cercano","lamp_front"],
+        ["Faro izquierdo: macro","lamp_left"],
+        ["Faro derecho: macro","lamp_right"]
     ]:
         var camera_button:=Button.new()
         camera_button.text=str(view[0])
@@ -169,8 +188,32 @@ func _display_role(role: String)->void:
     _progress=0.0
     _playing=false
     Models.restore_model_pose("aa_mobile",model_root)
+    if _front_version==22:
+        FrontV23.compare_v22(model_root,true)
+        IntakeV24.show_v23_reference(model_root,true)
+    elif _front_version==23:
+        IntakeV24.show_v23_reference(model_root,true)
     if _status!=null:
         _status.text="G13 cargado — arte 3D, sin combate táctico"
+
+func _show_front_comparison(show_original:bool)->void:
+    if not is_instance_valid(model_root):
+        return
+    if FrontV23.compare_v22(model_root,show_original) and (
+            IntakeV24.show_v23_reference(model_root,true)):
+        _front_version=22 if show_original else 23
+        _status.text=(
+            "G13 V22: frontal original, misma cámara y animación."
+            if show_original else
+            "G13 V23: lentes encastradas; sin rejilla V24.")
+
+func _show_v24_finish()->void:
+    if not is_instance_valid(model_root):
+        return
+    if FrontV23.compare_v22(model_root,false) and (
+            IntakeV24.show_v23_reference(model_root,false)):
+        _front_version=24
+        _status.text="G13 V24: rejilla blindada y faros 3D; frontal completo."
 
 func _change_faction(_index: int)->void:
     _display_role("aa_mobile")
@@ -232,12 +275,27 @@ func _inspect_view(view: String)->void:
         "left":Vector3(-5.0,1.25,0.0),
         "right":Vector3(5.0,1.25,0.0),
         "top":Vector3(0.1,6.0,0.8),
-        "under":Vector3(2.3,-2.1,3.0)
+        "under":Vector3(2.3,-2.1,3.0),
+        "lamp_front":Vector3(0.0,1.08,-3.8),
+        "lamp_left":Vector3(-1.9,1.12,-2.8),
+        "lamp_right":Vector3(1.9,1.12,-2.8)
     }
     if not views.has(view):
         return
     camera.position=views[view]
-    var look_target:=Vector3(0,0.85,0) if view=="under" else Vector3(0,1.08,0)
+    camera.size=(
+        1.45 if view=="lamp_front" else (
+        0.85 if view in ["lamp_left","lamp_right"] else 4.70))
+    var look_target:=Vector3(0,1.08,0)
+    match view:
+        "under":
+            look_target=Vector3(0,0.85,0)
+        "lamp_front":
+            look_target=Vector3(0,0.85,-1.2)
+        "lamp_left":
+            look_target=Vector3(-0.5,0.85,-1.245)
+        "lamp_right":
+            look_target=Vector3(0.5,0.85,-1.245)
     camera.look_at(look_target,Vector3.UP)
     if _status!=null:
         _status.text="Inspección: "+view+" | G13 visual"

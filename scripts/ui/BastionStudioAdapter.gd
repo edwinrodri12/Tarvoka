@@ -1141,6 +1141,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v23_show_lights(false),
         "V23 · Comparar con V22",
         func(): _g13_v23_show_lights(true))
+    _add_paired(g13_controls,"V24 · Rejilla frontal 3D",
+        func(): _g13_v24_show_intake(),
+        "V24 · Comparar frontal V23",
+        func(): _g13_v23_show_lights(false))
     _add_paired(g13_controls,"V17 · Medir FPS en Android",
         func(): _g13_start_android_test(),
         "V17 · Ver política LOD",
@@ -1156,15 +1160,34 @@ func _install_g13_controls() -> void:
 func _g13_v23_show_lights(show_v22:bool) -> void:
     if _role!="aa_mobile" or model_root==null:
         return
+    # A V22/V23 reference must also hide the *newer* V24 intake,
+    # otherwise this is no longer an honest same-model comparison.
+    var previous:bool=preload(
+        "res://scripts/ui/G13ArmoredIntakeV24.gd").show_v23_reference(
+            model_root,true)
     var finished:bool=preload(
         "res://scripts/ui/G13FrontLightingV23.gd").compare_v22(
             model_root,show_v22)
     status_label.text=(
-        ("G13 V22: faros originales para comparar a igual cámara."
+        ("G13 V22: frontal original y faros originales."
         if show_v22 else
-        "G13 V23: biseles 3D y lentes ópticas encastradas.")
-        if finished else
-        "G13 V23: selecciona la vista de detalle LOD13 para comparar.")
+        "G13 V23: biseles y lentes 3D; sin rejilla V24.")
+        if finished and previous else
+        "G13: selecciona vista detalle LOD13 para comparar.")
+
+func _g13_v24_show_intake()->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    var lights:bool=preload(
+        "res://scripts/ui/G13FrontLightingV23.gd").compare_v22(
+            model_root,false)
+    var intake:bool=preload(
+        "res://scripts/ui/G13ArmoredIntakeV24.gd").show_v23_reference(
+            model_root,false)
+    status_label.text=(
+        "G13 V24: cuatro lamas 3D protegidas dentro del frontal blindado."
+        if lights and intake else
+        "G13 V24: inspección disponible solo en detalle LOD13.")
 
 func _g13_lod_status() -> void:
     if _role!="aa_mobile":
