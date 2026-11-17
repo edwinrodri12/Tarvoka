@@ -926,7 +926,8 @@ jobs:
         env:
           # An ART ONLY city-preview release is not a G09/A01 approval.
           # Normal studio releases still execute the entire inventory.
-          CITY_ART_PREVIEW: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') }}
+          CITY_ART_PREVIEW: >-
+            ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') }}
         run: |
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/studio-pages-import.log
