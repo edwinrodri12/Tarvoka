@@ -18,6 +18,8 @@ const ARCH_START := 1.06
 const ARCH_END := 2.08
 const REAR_STATIONS := 4
 const DRAW_NODES := 3
+const EXPECTED_RIM_FACES := 272
+const EXPECTED_REAR_FACES := 56
 
 static func _coat(color: Color, metal: float, rough: float) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -165,8 +167,6 @@ static func apply(root: Node3D) -> bool:
     var rear_mesh := _rear_transition_mesh()
     # 4 wheels * (8 bands * 4 quads * 2 triangles + 2 caps * 2 triangles)
     # 2 rear panels * (3 stations * 4 quads * 2 + 2 caps * 2)
-    const EXPECTED_RIM_FACES := 272
-    const EXPECTED_REAR_FACES := 56
     if rim_mesh == null or rear_mesh == null or (
             rim_mesh.get_faces().size() != EXPECTED_RIM_FACES * 3) or (
             rear_mesh.get_faces().size() != EXPECTED_REAR_FACES * 3):
