@@ -87,7 +87,7 @@ static func _residential_rear(stage: Node3D,tag: String,
             continue
         var y: float=1.06+float(floor_index)*2.10
         for side in [-1,1]:
-            var wx: float=x+float(side)*width*0.235
+            var wx: float=x+float(side)*width*0.29
             _rear_window(group,"%s_P%d_E%d" %
                 [tag,floor_index,side],wx,y,wall_z,0.55,
                 damage,accent)
@@ -124,7 +124,7 @@ static func _residential_rear(stage: Node3D,tag: String,
     elif level==1 and damage==0:
         # Villa: handmade wood shutters and a small covered doorstep.
         for side in [-1,1]:
-            var wx: float=x+float(side)*width*0.235
+            var wx: float=x+float(side)*width*0.29
             for edge in [-1,1]:
                 _box(group,"ContraventanaVillaV8_%s_%d_%d" %
                     [tag,side,edge],
@@ -359,7 +359,9 @@ static func apply(model: Node3D,level: int,
             or int(model.get_meta("visual_damage_stage",-1))!=damage):
         return false
     var stage:=V1._group(model,STAGE_NAME)
-    var accent: Color=Style.faction_color(faction) if faction>=0         else V1.NEUTRAL_ACCENT
+    var accent: Color=(
+        Style.faction_color(faction) if faction>=0
+        else V1.NEUTRAL_ACCENT)
     var rear_floors: int=1 if level==1 else 2 if level==2 else 4
     var front_floors: int=1 if level==1 else 3 if level==2 else 5
     for side in [-1,1]:
