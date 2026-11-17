@@ -121,6 +121,10 @@ on:
       - "scripts/ui/APCRubberArchV24.gd"
       - "scripts/ui/APCClosedTiresV25.gd"
       - "scripts/ui/APCVisualRigV1.gd"
+  # Verify publication inside the same workflow before touching live Pages.
+  pull_request:
+    paths:
+      - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
   workflow_run:
     workflows: ["TARVOKA Browser 3D Art Studio", "TARVOKA G09 V32 native animation filmstrips and QA", "TARVOKA G09 V32 final animation and Android QA", "TARVOKA APC P06 V3 Roof, Turret and Five-Stage Damage QA", "TARVOKA Airbase V6 Architecture and Real Godot Visual QA", "TARVOKA Airbase V7 Native PBR Textures and Weathering GPU QA", "TARVOKA Airbase V8 Glass, Hangar Lighting and Grime Godot QA", "TARVOKA Airbase V9 Panoramic Glass 360 Degree Model QA", "TARVOKA Airbase V10 Roof Supports and Rear Facade Godot QA", "TARVOKA Airbase V11 Exposed Trusses and Damage Godot QA", "TARVOKA Airbase V12 Charred Steel and Explosion Debris Godot QA", "TARVOKA Airbase V13 Material Specific Combat Impacts Godot QA", "TARVOKA Airbase V14 Persistent Impact Scars Godot QA", "TARVOKA Airbase V15 Organic Fracture and Char Godot QA", "TARVOKA Airbase V16 Final 360 Degree Visual Acceptance Godot QA", "TARVOKA Naval Base V1 Native Godot Visual QA", "TARVOKA Naval Base V2 Quays Hangar Crane Water Godot QA", "TARVOKA Naval Base V3 Berths Ramps Shipyard Native Godot QA", "TARVOKA Naval Base V4 Marine Weathering Coast Native Godot QA", "TARVOKA Naval Base V5 Shipyard Signage Lighting Native Godot QA", "TARVOKA Naval Base V6 Night Readability LOD Native Godot QA", "TARVOKA Naval Base V7 Boarding Detail Native Godot QA", "TARVOKA Naval Base V8 Fenders Foam Shipyard Native Godot QA", "TARVOKA Naval Base V9 Sculpted Fenders PBR Native Godot QA", "TARVOKA Naval Base V10 Mooring Alignment Native Godot QA", "TARVOKA Naval Base V11 Contact Seals Chain Native Godot QA", "TARVOKA Naval Base V12 Final 360 Contact Chain Native Godot QA", "TARVOKA Naval Base V13 Visual Audit Cameras Native Godot QA", "TARVOKA Infantry Barracks V1 Three Distinct Levels Native Godot QA", "TARVOKA Infantry Barracks V3 Procedural Materials Native Godot QA", "TARVOKA Infantry Barracks V4 Real Rear and Side Facades Native Godot QA", "TARVOKA Infantry Barracks V5 Tower Clearance and Detail Native Godot QA"]
@@ -299,6 +303,80 @@ jobs:
           grep -q 'func _studio_quick_action' scripts/ui/BastionStudioAdapter.gd
           # Avoid Godot importing a second project with duplicate class_name.
           rm -rf g09-unified-source
+      # Single-site publication. The current root scene stays the same:
+      # BastionStudioAdapter -> CombinedArtStudioWeb. Only infantry-only
+      # sections of that parent are upgraded; never replace the whole editor.
+      - name: Check out QA-tested Infantry Barracks V9 3D art layers
+        uses: actions/checkout@v4
+        with:
+          ref: 115f2f9303dba5d47e2919bcb7058dbb6f82e323
+          path: infantry-v9-approved
+          persist-credentials: false
+      - name: Integrate Infantry V9 into the SAME native Godot Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in InfantryBarracks3DV1 InfantryBarracksFinishV2 InfantryBarracksMaterialsV3 InfantryBarracksRearFacadeV4 InfantryBarracksEntranceYardV5 InfantryBarracksRoofCommandV6 InfantryBarracksSideTowersV7 InfantryBarracksTowerFinishV8 InfantryBarracksFinalAccessV9; do
+            test -s "infantry-v9-approved/scripts/ui/$name.gd"
+            cp "infantry-v9-approved/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          cp infantry-v9-approved/tests/test_infantry_barracks_v9_gpu.gd tests/test_infantry_barracks_v9_gpu.gd
+          python3 - <<'PY'
+          from pathlib import Path
+
+          current=Path("scripts/ui/CombinedArtStudioWeb.gd")
+          old=current.read_text(encoding="utf-8")
+          updated=Path("infantry-v9-approved/scripts/ui/CombinedArtStudioWeb.gd").read_text(encoding="utf-8")
+          original=old
+
+          def transplant(studio,source,start,stop):
+              assert studio.count(start)==1,(start,studio.count(start))
+              assert source.count(start)==1,(start,source.count(start))
+              p=studio.index(start)
+              q=studio.index(stop,p)
+              a=source.index(start)
+              b=source.index(stop,a)
+              assert p<q and a<b,(start,stop)
+              return studio[:p]+source[a:b]+studio[q:]
+
+          # Only infantry preloads and controls are exchanged. All HQ,
+          # Naval, Airbase, APC, G09, G11, G13 and A01 routines remain
+          # byte-for-byte from the existing approved published code.
+          for start,stop in [
+              ("const InfantryBarracksV1","const AirbaseHangarV2"),
+              ("var infantry_controls:","var naval_detail_v2_toggle:"),
+              ("func _add_infantry_controls()","func _change_selected_building("),
+              ("func _update_camera() -> void:\n",'    if _role=="naval_base":'),
+              ("func _update_details() -> void:\n",'    if _role=="naval_base" and model_root!=null:')
+          ]:
+              old=transplant(old,updated,start,stop)
+
+          former='    building_picker.add_item("Cuartel de Infantería · V5 · uniones y remates 360°")'
+          newer='    building_picker.add_item("Cuartel de Infantería · V9 · detalles finales")'
+          assert old.count(former)==1
+          old=old.replace(former,newer)
+          for critical in [
+              "InfantryBarracksV9.apply", "InfantryBarracksV8.apply",
+              "func _toggle_infantry_access_v9",
+              "func _display_naval_base", "func _display_airbase",
+              "HQSmokeV23.build(damage_stage)",
+              "func _change_selected_building("
+          ]:
+              assert critical in old,critical
+          # Compare non-infantry landmark functions in the two versions:
+          # they must survive the change without being replaced wholesale.
+          for func in ["func _display_airbase()", "func _display_naval_base()",
+                       "func _display_headquarters()"]:
+              assert (func in original)==(func in old),func
+          current.write_text(old,encoding="utf-8")
+          print("PASS UNIFIED INFANTRY V9 OVERLAY: 9 exact mesh modules, one shared Studio, no replaced external model")
+          PY
+          rm -rf infantry-v9-approved
+          test -s scripts/ui/InfantryBarracksFinalAccessV9.gd
+          test -s scripts/ui/BastionStudioAdapter.gd
+          test -s scenes/UnitArtStudioWeb.tscn
+          grep -F 'InfantryBarracksV9.apply' scripts/ui/CombinedArtStudioWeb.gd
+          grep -F 'Cuartel de Infantería · V9 · detalles finales' scripts/ui/CombinedArtStudioWeb.gd
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
@@ -465,7 +543,7 @@ jobs:
           test -s tests/test_naval_base_v1_gpu.gd
           test -s NAVAL_BASE_V1_ARCHITECTURE.md
           grep -q 'Base Naval · V13 · inspección real de amarres' scripts/ui/CombinedArtStudioWeb.gd
-          grep -q 'Cuartel de Infantería · V5 · uniones y remates 360°' scripts/ui/CombinedArtStudioWeb.gd
+          grep -q 'Cuartel de Infantería · V9 · detalles finales' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV5.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV4.apply' scripts/ui/CombinedArtStudioWeb.gd
           grep -q 'InfantryBarracksV3.apply' scripts/ui/CombinedArtStudioWeb.gd
@@ -773,6 +851,20 @@ jobs:
             echo "G13 visual 3D Studio selection regression"; exit 1
           fi
           grep -F 'PASS G13 V1 LIVE STUDIO:' /tmp/g13-studio-smoke.log
+          # Prove the real SHARED published scene, NOT a second building
+          # viewer. Fails the publication if V9 is absent or the other
+          # buildings cannot be selected. Existing Pages remains untouched.
+          timeout 240s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_infantry_barracks_v9_gpu.gd \
+            2>&1 | tee /tmp/infantry-v9-pages-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/infantry-v9-pages-smoke.log; then
+            echo "Published single Studio Infantry V9 regression"; exit 1
+          fi
+          grep -F 'PASS INFANTRY BARRACKS V9:' /tmp/infantry-v9-pages-smoke.log
+          test -s artifacts/tarvoka_infantry_v9_door_close.png
+          test -s artifacts/tarvoka_infantry_v9_compare_v9_detail.png
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release "Web Studio" build/web/index.html 2>&1 | tee /tmp/studio-publish.log
           if grep -E "SCRIPT ERROR:|ERROR:|Export failed" /tmp/studio-publish.log; then
@@ -1194,6 +1286,7 @@ jobs:
           path: build/web/
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-22.04
     environment:
