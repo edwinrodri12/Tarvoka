@@ -176,5 +176,20 @@ func _initialize() -> void:
         "Enemy blockade must not produce out-of-bounds destinations")
     assert(edge_enemies == [Vector2i(23, 17), Vector2i(21, 16)] and large_map == large_snapshot,
         "Edge enemy blockade must not mutate caller inputs")
+    # Occupancy list ordering must not affect the reachable set or costs.
+    # Repeated queries must be deterministic and leave all caller data intact.
+    var shuffled_allies: Array[Vector2i] = [Vector2i(2, 0), Vector2i(1, 0)]
+    var shuffled_blocked: Array[Vector2i] = [Vector2i(2, 1), Vector2i(0, 1), Vector2i(1, 1)]
+    var reordered: Dictionary = rules.reachable(
+        Vector2i(0, 0), 3, terrain, shuffled_blocked, "ground", false, shuffled_allies
+    )
+    var repeated: Dictionary = rules.reachable(
+        Vector2i(0, 0), 3, terrain, corridor_blocked, "ground", false, corridor_allies
+    )
+    assert(reordered == corridor and repeated == corridor,
+        "Occupancy order and repeated queries must preserve reachable costs")
+    assert(shuffled_allies == [Vector2i(2, 0), Vector2i(1, 0)]
+        and shuffled_blocked == [Vector2i(2, 1), Vector2i(0, 1), Vector2i(1, 1)],
+        "Pathfinding must preserve reordered occupancy inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
