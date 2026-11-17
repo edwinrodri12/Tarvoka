@@ -171,6 +171,35 @@ func _run() -> void:
                     break
         _check(ground_button!=null and ground_button.is_visible_in_tree(),
             "G13 terrestrial attack appears in its complete Animar inventory")
+    # Verify the live *shared Web studio*, not only isolated G13 unit tests:
+    # the G13 V29 LOD8 is accessible and its fold and rear attack buttons
+    # drive native meshes without replacing either of the two autocannons.
+    studio.call("_g13_show_tactical_lod",8)
+    await process_frame
+    var mobile_g13:Node3D=studio.get("model_root") as Node3D
+    _check(mobile_g13!=null and bool(mobile_g13.get_meta(
+        "tarvoka_g13_v29_rear_folding_radar",false)),
+        "G13 V29 actual 3D telescoping radar loads in unified LOD8 Studio")
+    if mobile_g13!=null:
+        _check(mobile_g13.find_child(
+            "G13_Autocannon_-1",true,false) is MeshInstance3D and
+            mobile_g13.find_child(
+            "G13_Autocannon_1",true,false) is MeshInstance3D,
+            "G13 V29 shared studio still contains exactly the twin autocannons")
+        studio.call("_g13_v29_fold",true)
+        _check(absf(float(mobile_g13.get_meta(
+            "tarvoka_g13_v29_fold_degrees",0.0))-35.0)<0.01,
+            "G13 V29 viewer folds the actual 3D radar to rear")
+        studio.call("_g13_v29_fold",false)
+        _check(absf(float(mobile_g13.get_meta(
+            "tarvoka_g13_v29_fold_degrees",-1.0)))<0.01,
+            "G13 V29 viewer redeploys original search mast")
+        studio.call("_g13_v29_rear_attack","attack_ground")
+        _check(str(mobile_g13.get_meta(
+            "tarvoka_g13_v1_pose",""))=="attack_ground" and
+            float(mobile_g13.get_meta(
+            "tarvoka_g13_v29_fold_degrees",0.0))>34.9,
+            "G13 V29 rear land firing triggers actual radar retraction")
     studio.call("_display_role","apc")
     await process_frame
     # Capture the actual native GUI + 3D viewport for publication QA.
