@@ -52,11 +52,19 @@ static func pixel_height(city: Node3D,camera: Camera3D,
     if city==null or camera==null or viewport_height<=1.0:
         return 0.0
     var tier: int=clampi(int(city.get_meta("visual_level",1)),1,3)
-    var world_height: float=LEVEL_HEIGHTS[tier-1]*(
-        city.global_transform.basis.y.length())
+    # Headless acceptance fixtures construct Terrain.build() off-tree.
+    # The local basis still carries the approved 0.125 city scale; querying
+    # global_transform off-tree emits engine errors and loses that scale.
+    var scale_y: float=(
+        city.global_transform.basis.y.length() if city.is_inside_tree()
+        else city.transform.basis.y.length())
+    var world_height: float=LEVEL_HEIGHTS[tier-1]*scale_y
     if camera.projection==Camera3D.PROJECTION_ORTHOGONAL:
         return world_height*viewport_height/maxf(0.05,camera.size)
-    var relative: Vector3=camera.to_local(city.global_position)
+    var relative: Vector3=(
+        camera.to_local(city.global_position)
+        if camera.is_inside_tree() and city.is_inside_tree()
+        else camera.transform.affine_inverse()*city.position)
     var depth: float=maxf(0.05,-relative.z)
     return world_height*viewport_height/(
         2.0*depth*maxf(0.05,tan(deg_to_rad(camera.fov)*0.5)))
