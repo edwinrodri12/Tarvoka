@@ -3,6 +3,7 @@ extends SceneTree
 # Native G13 V4 inspection scene: controls and 3D geometry smoke test.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
+const Lights=preload("res://scripts/ui/G13FrontLightingV23.gd")
 var failures:=0
 
 func check(ok: bool,what: String)->void:
@@ -44,6 +45,32 @@ func _run()->void:
         var swapped:=studio.get("model_root") as Node3D
         check(swapped!=null and swapped!=model and G13.has_model(swapped),
             "changing faction rebuilds same G13 family")
+    # V23 headlight geometry is inspected in the same true 3D scene.
+    # Switching factions while comparing V22 must not restore V23
+    # accidentally, and both originals must be reversible.
+    studio.call("_inspect_view","lamp_front")
+    var front_camera:=studio.get("camera") as Camera3D
+    check(front_camera!=null and front_camera.size<1.6,
+        "front macro inspection has genuinely closer Godot camera framing")
+    studio.call("_show_front_comparison",true)
+    var current:=studio.get("model_root") as Node3D
+    var bezel:=current.find_child(Lights.RIM % -1,true,false) as MeshInstance3D
+    check(bezel!=null and not bezel.visible,
+        "V22 comparison hides only new V23 visual frame")
+    studio.call("_change_faction",2)
+    await process_frame
+    var refreshed:=studio.get("model_root") as Node3D
+    var new_bezel:=refreshed.find_child(Lights.RIM % -1,
+        true,false) as MeshInstance3D
+    check(new_bezel!=null and not new_bezel.visible,
+        "same V22 reference survives faction rebuilding")
+    studio.call("_show_front_comparison",false)
+    check(new_bezel!=null and new_bezel.visible,
+        "V23 actual 3D model returns without duplicated nodes")
+    studio.call("_inspect_view","lamp_left")
+    check(front_camera.size<1.0,"left lamp physical macro view")
+    studio.call("_inspect_view","lamp_right")
+    check(front_camera.size<1.0,"right lamp physical macro view")
     studio.queue_free()
     await process_frame
     if failures>0:
