@@ -19,8 +19,9 @@ const FOLD_BEGIN_YAW_DEG:=40.0
 const FULL_FOLD_YAW_DEG:=80.0
 const MAST_STOWED_SCALE:=0.22
 const DISH_STOWED_LOCAL_PITCH_DEG:=-35.0
-const ROTATING_MODES:=[ "aim","attack","aim_air",
-    "attack_air","aim_ground","attack_ground" ]
+const ROTATING_MODES = [
+    "aim","attack","aim_air","attack_air","aim_ground","attack_ground"
+]
 const METADATA:="tarvoka_g13_v29_original_pose"
 const NEW_DRAW_NODES:=0
 
@@ -102,20 +103,24 @@ static func set_fold(root:Node3D,fraction:float)->bool:
         return false
     var blend:float=clampf(fraction,0.0,1.0)
     var mast_factor:float=lerpf(1.0,MAST_STOWED_SCALE,blend)
+    var initial_mast:Vector3=original["mast"]
+    var initial_dish:Vector3=original["dish"]
+    var initial_receiver:Vector3=original["receiver"]
+    var initial_radar:Vector3=original["radar"]
     var radar:=p["radar"] as Node3D
     var mast:=p["mast"] as MeshInstance3D
     mast.position=Vector3(0,lerpf(
-        (original["mast"] as Vector3).y,0.640*MAST_STOWED_SCALE,blend),0)
+        initial_mast.y,0.640*MAST_STOWED_SCALE,blend),0)
     mast.scale=Vector3(1.0,mast_factor,1.0)
     var dish:=p["dish"] as MeshInstance3D
     dish.position=Vector3(0,lerpf(
-        (original["dish"] as Vector3).y,
+        initial_dish.y,
         (0.780+FOOT_SHIFT_Y)*MAST_STOWED_SCALE,blend),0)
     dish.rotation_degrees.x=lerpf(
         float(original["dish_pitch"]),DISH_STOWED_LOCAL_PITCH_DEG,blend)
     var receiver:=p["receiver"] as MeshInstance3D
     receiver.position=Vector3(0,lerpf(
-        (original["receiver"] as Vector3).y,
+        initial_receiver.y,
         (0.790+FOOT_SHIFT_Y)*MAST_STOWED_SCALE,blend),-0.12)
     radar.rotation_degrees.x=MAX_FOLD_DEG*blend
     # The hinge is pinned to the physical deck for EVERY fold fraction.
@@ -124,8 +129,7 @@ static func set_fold(root:Node3D,fraction:float)->bool:
     # at (0,1.095,1.135), not floating through its animation.
     var local_foot:=Vector3(
         0,mast.position.y-0.640*mast_factor,0)
-    var fixed_foot:Vector3=(
-        (original["radar"] as Vector3)-Vector3(0,FOOT_SHIFT_Y,0))
+    var fixed_foot:Vector3=initial_radar-Vector3(0,FOOT_SHIFT_Y,0)
     radar.position=fixed_foot-radar.basis*local_foot
     root.set_meta("tarvoka_g13_v29_fold_degrees",
         radar.rotation_degrees.x)
