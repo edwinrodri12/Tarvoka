@@ -29,6 +29,7 @@ const G13BatchesV16 = preload("res://scripts/ui/G13StaticBatchV16.gd")
 const G13CannonV18 = preload("res://scripts/ui/G13AutocannonSculptV18.gd")
 const G13JointV19 = preload("res://scripts/ui/G13GunTrunnionV19.gd")
 const G13ArmorV20 = preload("res://scripts/ui/G13TurretArmorV20.gd")
+const G13SidesV21 = preload("res://scripts/ui/G13SideArmorV21.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -975,6 +976,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V19 gun joint art integration failed to apply")
                 if not G13ArmorV20.apply(model):
                     push_warning("G13 V20 turret-to-hull armor finishing failed to apply")
+                if not G13SidesV21.apply(model):
+                    push_warning("G13 V21 side armor sculpt failed to apply")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
