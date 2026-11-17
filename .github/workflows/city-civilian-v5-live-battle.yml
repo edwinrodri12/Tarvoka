@@ -52,11 +52,15 @@ jobs:
             exit 1
           fi
           grep -F 'PASS TARVOKA CITY V5 LIVE BATTLE' /tmp/city-v5-live-battle.log
+          test -s artifacts/tarvoka_city_v5_live_battle.png
+          test -s artifacts/tarvoka_city_v5_live_closeup.png
       - name: Upload engine validation log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TARVOKA-City-V5-Live-Battle-3D-Log
-          path: /tmp/city-v5-live-battle.log
+          name: TARVOKA-City-V5-Real-Godot-3D-Previews
+          path: |
+            /tmp/city-v5-live-battle.log
+            artifacts/tarvoka_city_v5_live_*.png
           retention-days: 20
           if-no-files-found: warn
