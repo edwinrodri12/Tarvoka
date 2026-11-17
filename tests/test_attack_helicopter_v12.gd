@@ -147,6 +147,12 @@ func _run() -> void:
             "V12.1 guide rail physically follows pitched gun, not static fuselage")
         _verify_underbody(model,"disparo")
         Models.restore_model_pose("attack_heli",model)
+        # Sample the full pitch curve, not only one firing instant.
+        for phase in [0.08,0.20,0.34,0.48,0.62,0.78,0.92]:
+            _check(Models.pose_model("attack_heli",model,"attack",phase),
+                "attack pose remains valid throughout cannon pitch sweep")
+            _verify_underbody(model,"disparo_%.2f" % phase)
+        Models.restore_model_pose("attack_heli",model)
         _check(Models.pose_model("attack_heli",model,"move",0.52),
             "original A01 aerial movement remains intact")
         Models.restore_model_pose("attack_heli",model)
