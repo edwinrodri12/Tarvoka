@@ -137,8 +137,10 @@ static func _parcel_walkways(stage: Node3D,
     for side in [-1,1]:
         var x: float=float(side)*2.47
         for neighborhood in [-1,1]:
-            var z: float=-3.67 if neighborhood==-1 else 3.57
-            var length: float=3.04 if neighborhood==-1 else 3.09
+            # Exact sidewalk-to-backlot contact:
+            # north: -5.19..-1.39, south: +1.395..+5.025
+            var z: float=-3.29 if neighborhood==-1 else 3.21
+            var length: float=3.80 if neighborhood==-1 else 3.63
             if damage>=3:
                 # Visible broken urban connections, not fresh pavement.
                 for segment in range(3):
