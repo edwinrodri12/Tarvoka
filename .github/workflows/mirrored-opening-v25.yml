@@ -1,0 +1,77 @@
+name: TARVOKA v25 mirrored opening initiative A/B
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/StrategicMatchBalanceV21.gd"
+      - "tests/test_opening_cap_mirror_smoke_v25.gd"
+      - "tests/test_opening_policy_ab_v25.gd"
+      - ".github/workflows/mirrored-opening-v25.yml"
+  workflow_dispatch:
+
+jobs:
+  opening_cap_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify default parity, mirror keys, and exact first-turn order cap
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_opening_cap_mirror_smoke_v25.gd \
+            2>&1 | tee /tmp/v25-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v25-smoke.log; then exit 1; fi
+          grep -Fq 'PASS v25 opening smoke:' /tmp/v25-smoke.log
+      - name: Save smoke proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v25-smoke
+          path: /tmp/v25-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  mirrored_modes:
+    needs: opening_cap_smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [small_open, medium_open, medium_forest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Play 48 legal A/B battles in four independent opening rules
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_opening_policy_ab_v25.gd \
+            -- ${{ matrix.scenario }} \
+            2>&1 | tee /tmp/v25-comparison.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v25-comparison.log; then exit 1; fi
+          grep -Fq 'PASS opening policy A-B v25:' /tmp/v25-comparison.log
+      - name: Save battle-by-battle statistics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v25-${{ matrix.scenario }}
+          path: /tmp/v25-comparison.log
+          retention-days: 30
+          if-no-files-found: ignore
