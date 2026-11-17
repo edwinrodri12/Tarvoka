@@ -490,14 +490,20 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "attack_heli":
             return [
-                {"group":"HELICÓPTERO A01 V10 · VUELO Y ROTORES"},
-                {"title":"Vuelo con rotores","action":"move"},
-                {"title":"Suspensión / hover","action":"hover"},
-                {"group":"ARMAMENTO Y REACCIONES"},
-                {"title":"Ráfaga frontal","action":"attack"},
-                {"title":"Impacto de bala","action":"hit_bullet"},
-                {"title":"Impacto explosivo","action":"hit_explosive"},
-                {"title":"Detener y restaurar rotores","action":"stop"}
+                {"group":"HELICÓPTERO A01 V13 · VUELO Y COMBATE"},
+                {"title":"Vuelo y rotores","action":"move"},
+                {"title":"Mantener posición / hover","action":"hover"},
+                {"title":"Ráfaga del cañón frontal","action":"attack"},
+                {"group":"IMPACTOS V13 · EFECTOS ANIMADOS"},
+                {"title":"Impacto de bala y chispas","action":"hit_bullet"},
+                {"title":"Impacto explosivo y onda de choque","action":"hit_explosive"},
+                {"group":"DAÑO ACUMULATIVO Y DESTRUCCIÓN V13"},
+                {"title":"Daño leve · marcas","action":"damage_1"},
+                {"title":"Daño moderado · humo","action":"damage_2"},
+                {"title":"Daño crítico · llamas","action":"damage_3"},
+                {"title":"Destrucción · caída y fragmentos","action":"damage_4"},
+                {"title":"Reparar helicóptero por completo","action":"damage_0"},
+                {"title":"Detener / conservar estado","action":"stop"}
             ]
     return []
 
@@ -556,7 +562,11 @@ func _studio_run_animation(action: String) -> void:
         "tank_standalone":
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
-            _set_damage(int(action.get_slice("_",1)))
+            var selected_stage: int=int(action.get_slice("_",1))
+            if _role=="attack_heli":
+                _heli_select_damage(selected_stage)
+            else:
+                _set_damage(selected_stage)
         "p06_fleet_move","p06_fleet_attack":
             if _role=="apc":
                 _show_p06_fleet(8)
@@ -685,7 +695,7 @@ func _refresh_unified_studio_navigation() -> void:
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
-            "attack_heli": label="A01 · Helicóptero · V12"
+            "attack_heli": label="A01 · Helicóptero · V13"
             "aa_mobile": label="G13 · Antiaéreo · catálogo completo"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
@@ -1065,6 +1075,25 @@ func _heli_top_view() -> void:
     model_root.rotation_degrees=Vector3(43.0,_yaw,wreck_roll)
     _heli_focus_local=Vector3.ZERO
     _update_camera()
+
+func _heli_select_damage(level: int) -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    var next_level: int=clampi(level,0,HeliV13.MAX_STAGE)
+    if next_level==0:
+        _heli_repair()
+    elif next_level>=HeliV13.MAX_STAGE:
+        _heli_destroy()
+    else:
+        # If coming back from a wreck, restore the original flight transform
+        # before previewing lesser damage stages.
+        if _heli_wreck_frozen:
+            _heli_repair()
+        else:
+            _heli_stop(true)
+        _heli_damage_stage=next_level
+        HeliV13.set_stage(model_root,next_level)
+        _update_details()
 
 func _heli_next_damage() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
