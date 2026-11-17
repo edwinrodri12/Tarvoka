@@ -22,6 +22,7 @@ const V18=preload("res://scripts/ui/CivilianCitySideJointsV18.gd")
 const V19=preload("res://scripts/ui/CivilianCityUrbanCohesionV19.gd")
 const V20=preload("res://scripts/ui/CivilianCityExteriorFinishV20.gd")
 const V21=preload("res://scripts/ui/CivilianCityArchitecturalDetailV21.gd")
+const V22=preload("res://scripts/ui/CivilianCityCohesionV22.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -193,7 +194,11 @@ static func _keep_medium(name: String) -> bool:
         "V21_MontanteVentana_","V21_ImpostaVentana_",
         "V21_VidrioOscurecido_","V21_CristalAstillado_",
         "V21_JuntaMorteroCiudad_","V21_Respiradero_",
-        "V21_BocaBajante_","V21_CanalonArrancado_"]:
+        "V21_BocaBajante_","V21_CanalonArrancado_",
+        # V22 close sculpt: floor friezes, narrow mortar/glass facets.
+        "V22_VillaMaderaResalte_","V22_CiudadFrisoPiso_",
+        "V22_MetroVidrioCantonera_",
+        "V22_MetroIdentidadDiscreta_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -325,7 +330,10 @@ static func _keep_far(name: String) -> bool:
         # doors/glazing/individual fittings remain LOD0/LOD1 only.
         "V21_CumbreraCeramica_","V21_CubremuroPiedra_",
         "V21_TejadoHundido_","V21_DintelCaido_",
-        "V21_MarcoCaido_","V21_CristalYTabiquesRotos_"]:
+        "V21_MarcoCaido_","V21_CristalYTabiquesRotos_",
+        # V22 silhouette family remains distinguishable at mobile zoom.
+        "V22_VillaCeramicaPedestal_","V22_CiudadPilastraEsquina_",
+        "V22_MetroNervioVertical_","V22_FragmentoReconocible_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -360,6 +368,7 @@ static func set_detail(model: Node3D,lod: int) -> bool:
             # superseded cube ruins at ALL zoom tiers, not just LOD0.
             mesh.visible=(not bool(mesh.get_meta(
                 "v11_schematic_replaced",false))
+                and not bool(mesh.get_meta("city_v22_superseded",false))
                 and _keep(str(mesh.name),lod))
             total+=1
             if mesh.visible:
@@ -424,7 +433,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V21.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",21)
+    if not V22.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",22)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
@@ -449,6 +460,7 @@ static func build_tactical(level: int,faction: int,
         var current: Node=pending.pop_back()
         if current is MeshInstance3D:
             if (bool(current.get_meta("v11_schematic_replaced",false))
+                    or bool(current.get_meta("city_v22_superseded",false))
                     or not _keep(str(current.name),lod)):
                 remove.append(current)
         for child in current.get_children():
