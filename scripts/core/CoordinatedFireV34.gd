@@ -13,8 +13,8 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 
-const MAX_ATTACKERS_PER_TARGET := 8
-const MAX_VISIBLE_TARGETS := 10
+const MAX_ATTACKERS_PER_TARGET := 6
+const MAX_VISIBLE_TARGETS := 8
 const MAX_DEPTH := 3
 
 static func _distance(a: Vector2i, b: Vector2i) -> int:
@@ -152,7 +152,9 @@ static func propose(knowledge: Dictionary, side: int,
                 if not plan.is_empty() and (best.is_empty() or \
                         int(plan["score"]) > int(best["score"])):
                     best = plan
-                if limit < 3:
+                if limit < 3 or not plan.is_empty():
+                    # Two shots already finish this target more cheaply
+                    # than three, so this permutation needs no extension.
                     continue
                 for k in range(shooters.size()):
                     if k == i or k == j:
