@@ -25,17 +25,28 @@ Bajo A01 se ofrecen: **Impactos de bala**, **Impacto explosivo**, **Siguiente ni
 Rama provisional [PR #476](https://github.com/edwinrodri12/Tarvoka/pull/476). El visor [GitHub Pages](https://edwinrodri12.github.io/Tarvoka/) es el sitio público del proyecto, **no evidencia de que V13 esté publicada**. Las capturas y tests se revisan antes de fusionar.
 
 ## Estado de validación
-El módulo y las pruebas V13 están implementados en la rama. **No dar V13 por aprobada ni publicada sin ejecución nueva de CI Godot 4.3** y revisión de los once fotogramas; las comprobaciones V12 anteriores no equivalen a haber probado V13. Se añade disparador de push a la rama de arte como respaldo a la PR draft.
+El módulo y las pruebas V13 están implementados en la rama. **V13 dispone ya de una ejecución real aprobada en CI Godot 4.3, pero no está publicada** y revisión de los once fotogramas; las comprobaciones V12 anteriores no equivalen a haber probado V13. Se añade disparador de push a la rama de arte como respaldo a la PR draft.
 
 ## Revisión de la siguiente prioridad
-Se reforzó el flujo V12 probado para ejecutar también pruebas V13 y exportar sus 13 imágenes originales de Godot. Las verificaciones ahora incluyen mallas cerradas de rotores principal/cola, puntos de salida junto a los bujes, fases inicial y final de la trayectoria, anillo expansivo y persistencia del daño al cambiar de facción en el Estudio 3D. **No se ha verificado visualmente V13 mediante capturas nuevas hasta recibir un artefacto de CI; la rama permanece draft.**
+Se reforzó el flujo V12 probado para ejecutar también pruebas V13 y exportar sus 13 imágenes originales de Godot. Las verificaciones ahora incluyen mallas cerradas de rotores principal/cola, puntos de salida junto a los bujes, fases inicial y final de la trayectoria, anillo expansivo y persistencia del daño al cambiar de facción en el Estudio 3D. **Las trece capturas nativas ya se produjeron y archivaron en GitHub Actions; la rama permanece draft hasta decisión de publicación.**
 
 ## V13 — Revisión de persistencia de destrucción
 El Estudio ahora conserva la posición final de caída (altura inferior y alabeo de 70°) al detenerse la animación, cambiar la cámara, inspeccionar detalles o cambiar de facción. La única acción que restablece la aeronave y sus rotores es **Reparar helicóptero**. Llegar al nivel 4 desde **Siguiente nivel de daño** inicia directamente la animación de destrucción; una unidad destruida no vuelve a volar o disparar sin reparar. El control de detener conserva el estado destruido.
 
-Pruebas estáticas de integración: 11/11 invariantes sobre presencia de controles, retención del estado, animación original y CI de 13 capturas. Se añadieron pruebas de integración Godot al archivo `tests/test_attack_helicopter_v9_studio.gd` para comprobar el aterrizaje de los restos, su conservación al girar e inspeccionar la cámara y el cambio de facción. **Pendiente:** nueva ejecución real de Godot 4.3 para validar el render de V13; no confundir la revisión estática con una prueba visual aprobada.
+Pruebas estáticas de integración: 11/11 invariantes sobre presencia de controles, retención del estado, animación original y CI de 13 capturas. Se añadieron pruebas de integración Godot al archivo `tests/test_attack_helicopter_v9_studio.gd` para comprobar el aterrizaje de los restos, su conservación al girar e inspeccionar la cámara y el cambio de facción. **Completado:** prueba de Godot 4.3 y 13 capturas nativas aprobadas; continuar revisión artística y publicación en un paso separado.
 
 ## V13 — Fragmentos desacoplados del fuselaje
 Los fragmentos se fijan a un marco del mundo en el instante de destrucción: la aeronave puede inclinarse y caer sin arrastrar consigo las aspas rotas. El modelo ubica los restos junto al terreno (centros locales ~0.09–0.12 antes de escala/offset originales), mientras que en reparación vuelve a vincular el contenedor de restos al fuselaje y lo oculta. El Estudio primero inserta el nuevo modelo recoloreado en el viewport, configura su orientación y **después** reconstruye el estado destruido, para evitar coordenadas globales obsoletas.
 
-Se ampliaron las pruebas Godot V13 y del Estudio para exigir anclaje independiente, posición baja de fragmentos, retención durante giro y reconstrucción tras cambiar de facción. Sigue sin haber nuevas capturas de V13 verificadas en esta sesión; el conector de ejecuciones solo informa workflows activados por PR, de modo que no prueba que falten o hayan fallado todas las ejecuciones de tipo push.
+Se ampliaron las pruebas Godot V13 y del Estudio para exigir anclaje independiente, posición baja de fragmentos, retención durante giro y reconstrucción tras cambiar de facción. Las capturas de V13 están disponibles como artefacto nativo de Godot; se consultaron las ejecuciones de tipo push mediante la colección GitHub Actions, no solamente las asociadas a pull requests.
+
+## Validación efectiva — 17 de noviembre de 2026
+Se reubicó esta entrega en la nueva [PR #522](https://github.com/edwinrodri12/Tarvoka/pull/522), creada desde main actual y fusionando los cambios propios del A01 con las mejoras concurrentes de G13/APC. La PR de respaldo #476 permanece sin fusionar.
+
+- **V11**: prueba de Godot nativa y capturas, aprobada.
+- **V12**: prueba de holguras 8 facciones y 20 capturas de Godot, aprobada.
+- **V13**: fallo inicial detectado por CI (recorrido insuficiente de humo). Se corrigió aumentando el desplazamiento vertical de las nubes de 0,19 a 0,40 en unidades locales. [Ejecución V13 exitosa](https://github.com/edwinrodri12/Tarvoka/actions/runs/44137497098) con las 13 capturas nativas de Godot 4.3; artefacto `tarvoka-a01-v13-real-godot-13-frame-review` (ID 14352951739).
+- **Estudio 3D V9**: la primera prueba reveló una interfaz antigua que esperaba un botón de ataque obsoleto. Se actualizó el catálogo unificado de A01 para exponer vuelo, ataque, impacto, onda, niveles de daño, destrucción y reparación. [CI del Estudio aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44138297119).
+- **Android debug APK**: [compilación de integración aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44138296832), sin publicación automática de V13.
+
+La URL pública del Estudio sigue siendo https://edwinrodri12.github.io/Tarvoka/, pero puede mostrar código anterior mientras la PR está en borrador. La aprobación de CI **no equivale** a fusión ni publicación.
