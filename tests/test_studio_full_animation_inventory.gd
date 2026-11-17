@@ -16,7 +16,10 @@ const EXPECTED := {
         "g11_battle_move","g11_battle_attack","g11_battle_close","stop"],
     "aa_mobile":["move","g13_scan","g13_aim_legacy","g13_aim_air",
         "g13_aim_ground","g13_attack_air","g13_attack_ground","stop"],
-    "attack_heli":["move","hover","attack","hit_bullet","hit_explosive","stop"]
+    "attack_heli":["move","hover","attack","fire_missiles",
+        "hit_bullet","heli_bullet_slow","hit_explosive","heli_missile_slow",
+        "damage_0","damage_1","damage_2","damage_3","damage_4",
+        "heli_destroy_slow","stop"]
 }
 var failures: int=0
 
@@ -134,11 +137,25 @@ func _run() -> void:
             "attack_heli":
                 studio.call("_studio_run_animation","hover")
                 _check(str(studio.get("_heli_animation"))=="hover",
-                    "A01 hover works independently from forward flight")
-                studio.call("_studio_run_animation","hit_explosive")
-                _check(str(studio.get("_heli_animation"))=="hit_explosive",
-                    "A01 heavy-impact playback works")
+                    "HAT-29 hover works independently from forward flight")
+                studio.call("_studio_run_animation","fire_missiles")
+                _check(str(studio.get("_heli_animation"))=="fire_missiles"
+                    and bool(model.get_meta("tarvoka_a01_hat29_combat_fx_v14",false)),
+                    "HAT-29 dual-missile native rig launches from Animar")
+                studio.call("_studio_run_animation","heli_bullet_slow")
+                _check(str(studio.get("_heli_animation"))=="hit_bullet"
+                    and float(studio.get("_heli_playback_speed"))<=0.43,
+                    "HAT-29 bullet slow motion uses real reduced playback speed")
+                studio.call("_studio_run_animation","heli_missile_slow")
+                _check(str(studio.get("_heli_animation"))=="hit_explosive"
+                    and float(studio.get("_heli_playback_speed"))<=0.43,
+                    "HAT-29 missile slow motion uses independent real playback")
+                studio.call("_studio_run_animation","heli_destroy_slow")
+                _check(str(studio.get("_heli_animation"))=="destroy"
+                    and float(studio.get("_heli_playback_speed"))<=0.44,
+                    "HAT-29 destruction plays including rotor fragments, slowed")
                 studio.call("_studio_run_animation","stop")
+                studio.call("_studio_run_animation","damage_0")
     for role in ["line","scout","fighter","destroyer"]:
         _check((studio.call("_studio_animation_specs",role) as Array).is_empty(),
             "%s honestly reports no dedicated animation rig" % role)
