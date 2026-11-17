@@ -52,7 +52,9 @@ static func _is_frontage(tag: String,face: int) -> bool:
 
 static func _resolve_v21_lot(stage: Node3D,
         tag: String,damage: int) -> int:
-    var group: Node=stage.get_node_or_null("V21_Detallado_"+tag)
+    var group_name: String=("V21_DetalladoAyuntamiento"
+        if tag=="Ayuntamiento" else "V21_Detallado_"+tag)
+    var group: Node=stage.get_node_or_null(group_name)
     if group==null:
         return 0
     var hidden: int=0
@@ -61,7 +63,7 @@ static func _resolve_v21_lot(stage: Node3D,
         var node: Node=pending.pop_back()
         for child in node.get_children():
             pending.append(child)
-        if not node is MeshInstance3D:
+        if not (node is MeshInstance3D):
             continue
         var mesh:=node as MeshInstance3D
         var n: String=str(mesh.name)
