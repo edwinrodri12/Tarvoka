@@ -534,7 +534,7 @@ jobs:
           assert x['sweep_heading_increment_degrees']==5
           assert x['minimum_gun_to_mast_gap_m']>0.0
           assert x['minimum_gun_to_dish_gap_m']>0.0
-          assert x['maximum_hinge_foot_deviation_m']<0.022
+          assert x['maximum_hinge_foot_deviation_m']<0.002
           assert x['same_camera_comparison']['same_camera_changed_pixels']>100
           assert x['failures']==0 and x['gameplay_integrated'] is False
           assert x['android_phone_fps_measured'] is False
