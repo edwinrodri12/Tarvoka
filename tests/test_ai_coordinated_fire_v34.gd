@@ -146,6 +146,24 @@ static func _capture_protection() -> void:
     print("FOCUS_DEFENSE_V34 captured_city_guard=%d artillery_guard=%d no_guard=%d" % [
         guard_score,arty_score,no_guard])
 
+static func _avoid_suicide() -> void:
+    var nearly_dead: Dictionary = _two_shots()
+    nearly_dead["units"][0]["hp"] = 1
+    nearly_dead["units"][1]["hp"] = 1
+    var observed: Dictionary = Visibility.observed_state(nearly_dead,0)
+    var visible: Dictionary = Team.propose(observed,0,2)
+    # Defending Guardia can counter a nonlethal hit. Two attackers would
+    # die before firing a safely coordinated volley: do not choose it.
+    assert(visible.is_empty())
+    assert(nearly_dead["units"][0]["hp"] == 1)
+    assert(nearly_dead["units"][1]["hp"] == 1)
+    var safe: Dictionary = _two_shots()
+    var safe_plan: Dictionary = Team.propose(
+        Visibility.observed_state(safe,0),0,2)
+    assert(safe_plan.get("valid",false))
+    assert(int(safe_plan["estimated_losses"]) == 0)
+    print("PASS v34 counterattack filter: reject avoidable lethal retaliation before ordering multi-unit commitment")
+
 static func _fairness() -> void:
     var full: Dictionary = _two_shots(true)
     # Use the game's actual visibility wrapper; distant enemy Y is hidden.
@@ -178,6 +196,7 @@ func _initialize() -> void:
     _focus_two()
     _focus_three()
     _capture_protection()
+    _avoid_suicide()
     _fairness()
     print("PASS strategic AI v34 coordinated fire: 2/3 unit lethal volleys, levels 8/11, capturer and artillery defense, legal Session attacks, no fog cheats")
     quit(0)
