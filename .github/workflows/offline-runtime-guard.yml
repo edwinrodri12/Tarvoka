@@ -5,6 +5,8 @@ on:
       - 'scripts/**'
       - 'scenes/**'
       - 'tests/test_offline_network_guard.gd'
+      - 'tests/test_android_network_permissions.py'
+      - 'export_presets.cfg'
       - '.github/workflows/offline-runtime-guard.yml'
   push:
     branches: [main]
@@ -16,6 +18,11 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - name: Reject explicitly enabled Android network permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_android_network_permissions.py
       - name: Install official Godot 4.3
         shell: bash
         run: |
