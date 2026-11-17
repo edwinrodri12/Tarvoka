@@ -12,6 +12,7 @@ const V8=preload("res://scripts/ui/CivilianCityArchitectureV8.gd")
 const V9=preload("res://scripts/ui/CivilianCityFinishV9.gd")
 const V10=preload("res://scripts/ui/CivilianCityGroundFrontV10.gd")
 const V11=preload("res://scripts/ui/CivilianCityStructuralRuinsV11.gd")
+const V12=preload("res://scripts/ui/CivilianCityDamageFinishV12.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -123,7 +124,15 @@ static func _keep_medium(name: String) -> bool:
         # V11: retain shape-changing structural walls, cull tiny rebar.
         "VarillaForjadoExpuestaV11_","PiedraRematePosteriorV11_",
         "BasePilastraTraseraAytoV11_","CornisaComercialV11_",
-        "CantoLosaExpuestoV11_","LadrilloSaltadoDintelV11_"]:
+        "CantoLosaExpuestoV11_","LadrilloSaltadoDintelV11_",
+        # V12 only: microscopic cracks, rebar and individual debris details.
+        "GrietaLateralVolumetricaV12_",
+        "PiedraDesconchadaCostadoV12_",
+        "AceroCostadoVisibleV12_",
+        "ApoyoVigaV12_","EscalonInteriorRotoV12_",
+        "ArmaduraPilarInteriorV12_",
+        "CascoteCostadoV12_","PiedraDesgastadaMunicipalV12",
+        "CasquilloCivicoV12_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -175,7 +184,13 @@ static func _keep_far(name: String) -> bool:
         "ForjadoColapsadoV11_","PisoInterrumpidoV11_",
         "PortalCivilArrancadoV11","LosaTechoDesplazadaV11_",
         "AberturaCubiertaQuemadaV11_",
-        "ClaveMunicipalDerribadaV9"]:
+        "ClaveMunicipalDerribadaV9",
+        # V12 silhouette: only rubble heaps and major room supports.
+        "DintelDerribadoV12_","FragmentoContinuoV12_",
+        "VigaTransversalExpuestaV12_",
+        "VigaCaidaSueloV12_","ZapataCimentacionAbiertaV12_",
+        "EscaleraCivicaInterrumpidaV12",
+        "VigaCivicaVolcadaV12"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -254,7 +269,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V11.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",11)
+    if not V12.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",12)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
