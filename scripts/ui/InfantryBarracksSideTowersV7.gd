@@ -31,6 +31,7 @@ static func _side_face(stage: Node3D,module: Dictionary,
     var floors: int=int(module["floors"])
     var outer_x: float=cx+float(side)*w*0.5
     var root:=Base._group(stage,"FachadaLateralV7_"+label)
+    root.set_meta("module_tag",label)
     root.set_meta("side_direction",side)
     root.set_meta("inside_u_courtyard",
         label in ["AlaOesteDosPisosN3","AlaEsteDosPisosN3"])

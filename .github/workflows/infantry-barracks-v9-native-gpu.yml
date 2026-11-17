@@ -1,0 +1,94 @@
+name: TARVOKA Infantry Barracks V9 Final Access and Shared Viewer Native Godot QA
+
+on:
+  push:
+    branches:
+      - feat/infantry-barracks-v9-access-damage-shared-viewer-20261116
+    paths:
+      - "scripts/ui/InfantryBarracks3DV1.gd"
+      - "scripts/ui/InfantryBarracksFinishV2.gd"
+      - "scripts/ui/InfantryBarracksMaterialsV3.gd"
+      - "scripts/ui/InfantryBarracksRearFacadeV4.gd"
+      - "scripts/ui/InfantryBarracksEntranceYardV5.gd"
+      - "scripts/ui/InfantryBarracksRoofCommandV6.gd"
+      - "scripts/ui/InfantryBarracksSideTowersV7.gd"
+      - "scripts/ui/InfantryBarracksTowerFinishV8.gd"
+      - "scripts/ui/InfantryBarracksFinalAccessV9.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_infantry_barracks_v9_gpu.gd"
+      - ".github/workflows/infantry-barracks-v9-native-gpu.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/InfantryBarracks3DV1.gd"
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "tests/test_infantry_barracks_v9_gpu.gd"
+      - ".github/workflows/infantry-barracks-v9-native-gpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  infantry-barracks-native-3d:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bring original HQ sprites needed for the shared 3D Studio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-android
+          persist-credentials: false
+      - name: Import exactly nine approved HQ sprite assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/buildings/hq_v15
+          for i in {0..7}; do
+            test -s "source-android/assets/buildings/hq_v15/hq_${i}.png"
+            cp "source-android/assets/buildings/hq_v15/hq_${i}.png" assets/buildings/hq_v15/
+          done
+          cp source-android/assets/buildings/hq_v15/hq_neutral.png assets/buildings/hq_v15/
+          rm -rf source-android
+          test "$(find assets/buildings/hq_v15 -name '*.png' | wc -l)" -eq 9
+      - name: Install native Godot 4.3 and parse imported GDScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fL --retry 3 "$URL/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/infantry-godot.zip
+          unzip -q /tmp/infantry-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          timeout --signal=TERM --kill-after=5s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/infantry-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed' /tmp/infantry-import.log; then
+            echo "Infantry Barracks GDScript failed real Godot import" >&2
+            exit 1
+          fi
+      - name: Native GPU validate 120 final entrance/window variants and capture 13 shared Studio scenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 210s \
+            xvfb-run -a -s "-screen 0 1280x800x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
+            --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/test_infantry_barracks_v9_gpu.gd \
+            2>&1 | tee /tmp/infantry-gpu.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/infantry-gpu.log; then
+            echo "Native Infantry Barracks visual QA failed" >&2
+            exit 1
+          fi
+          grep -q 'PASS INFANTRY BARRACKS V9:' /tmp/infantry-gpu.log
+          for name in level_1 level_2 level_3 door_close tower_n3 courtyard_n3 compare_v8_no_v9 compare_v9_detail damage_1 damage_2 damage_3 damage_4 faction_7; do
+            test -s "artifacts/tarvoka_infantry_v9_${name}.png"
+          done
+      - name: Archive original native Godot renders for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-Infantry-Barracks-V9-13-Godot-Captures
+          retention-days: 30
+          if-no-files-found: error
+          path: artifacts/tarvoka_infantry_v9_*.png
