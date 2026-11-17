@@ -20,7 +20,7 @@ var city_lod_picker: OptionButton
 
 func _ready() -> void:
     super._ready()
-    building_picker.add_item("Ciudad Civil · V3 · plaza y accesos urbanos")
+    building_picker.add_item("Ciudad Civil · V4 · silueta y LOD táctico")
     city_controls=VBoxContainer.new()
     city_controls.name="OpcionesCiudadCivilV1"
     city_controls.add_theme_constant_override("separation",7)
