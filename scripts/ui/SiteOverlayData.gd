@@ -40,7 +40,9 @@ static func snapshots(state: Dictionary, viewer: int = 0) -> Array:
             "owner_known":owner_known,"income":revenue if kind == "city" else 0,
             "status":"city" if kind == "city" else "unknown",
             "caption":"", "capture_pending":false,
-            "visual_command_city":CommandArt.is_visual_command_city(kind,cell,grid_size)
+            "visual_command_city":CommandArt.is_visual_command_city(kind,cell,grid_size),
+            "visual_infantry_barracks":kind=="factory",
+            "visual_level":clampi(int(site.get("visual_level",1)),1,3)
         }
         # Only a friendly occupying capturer can create a capture hint. Capture
         # happens on end_turn, not gradually and not on the first tap.
