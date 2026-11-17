@@ -464,6 +464,48 @@ static func _wreck_fuselage(body: Node3D) -> void:
     _rod(damage,"A01V13_PuntaAroColaRota",
         hub+Vector3(0.05,0.510,0.02),
         hub+Vector3(0.09,0.63,-0.09),0.018,steel)
+    _wreck_surface_finish(damage)
+
+# V13.4 high-contrast crash sculpt. The production V2/V12 hull is
+# untouched: everything here is added ONLY to the hidden wreck-body node.
+static func _wreck_surface_finish(parent: Node3D) -> void:
+    var finish:=_group(parent,"A01V13_AcabadoMetalRoto")
+    var cavity:=Color("#131e23")
+    var edge:=Color("#a1a6a3")
+    var burnt:=Color("#283135")
+    var alloy:=Color("#52636a")
+    # Torn top engine hatch exposes a dark well and a pair of bent lips.
+    _box(finish,"A01V13_AberturaMotorOscura",
+        Vector3(0.13,1.79,0.56),Vector3(0.49,0.021,0.39),
+        cavity,Vector3(-3.0,0.0,8.0))
+    for side in [-1,1]:
+        var x: float=float(side)
+        _box(finish,"A01V13_TapaMotorLevantada_%d" % side,
+            Vector3(x*0.41,1.81,0.59),
+            Vector3(0.085,0.24,0.39),alloy,
+            Vector3(19.0,x*12.0,x*31.0))
+        _rod(finish,"A01V13_BordeMetalExpuesto_%d" % side,
+            Vector3(x*0.35,1.77,0.37),
+            Vector3(x*0.37,1.83,0.80),0.013,edge)
+        for i in range(3):
+            var t: float=float(i)
+            _rod(finish,"A01V13_CicatrizLateral_%d_%d" % [side,i],
+                Vector3(x*(0.635+0.007*t),1.16+0.040*t,
+                    -0.46+0.20*t),
+                Vector3(x*(0.675+0.008*t),1.035+0.043*t,
+                    -0.27+0.20*t),0.010,burnt)
+    # Bent canopy rails keep visible gaps between damaged segments.
+    for side in [-1,1]:
+        var x: float=float(side)
+        _rod(finish,"A01V13_MarcoTorcidoDelantero_%d" % side,
+            Vector3(x*0.21,1.61,-1.24),
+            Vector3(x*0.32,1.77,-0.95),0.017,alloy)
+        _rod(finish,"A01V13_MarcoTorcidoTrasero_%d" % side,
+            Vector3(x*0.35,1.75,-0.87),
+            Vector3(x*0.39,1.62,-0.45),0.018,alloy)
+        _rod(finish,"A01V13_PuntaMarcoExpuesta_%d" % side,
+            Vector3(x*0.35,1.75,-0.87),
+            Vector3(x*0.29,1.82,-0.81),0.010,edge)
 
 static func _wreck(body: Node3D) -> void:
     var debris:=_group(body,WRECK)
@@ -540,7 +582,14 @@ static func set_stage(model: Node3D,level: int) -> bool:
     # The undamaged glass and intact V3 tail guard must NOT survive the crash.
     var glass: Node3D=_part(model,V2.GLASS)
     if glass!=null:
-        glass.visible=n<4
+        glass.visible=n<4 and bool(model.get_meta(V2.SHOW,true))
+    # V2's original continuous roof and window rails looked untouched
+    # across the shattered V13.3 windshield. Replace them at stage 4
+    # with short separated bent sections, restoring them on repair.
+    for pattern in ["A01_V2_Costilla_*","A01_V2_MarcoLong_*",
+            "A01_V2_MarcoOp_*"]:
+        for original in model.find_children(pattern,"Node3D",true,false):
+            (original as Node3D).visible=n<4 and bool(model.get_meta(V2.SHOW,true))
     var ring_guard: Node3D=_part(model,V3.GUARD)
     if ring_guard!=null:
         ring_guard.visible=n<4 and bool(model.get_meta(V3.ENABLED,true))
