@@ -22,6 +22,7 @@ const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
 const FullUnitData = preload("res://scripts/ui/UnitDetailData.gd")
 const FullUnitPanel = preload("res://scripts/ui/UnitDetailPanel.gd")
+const CityPerfProbe = preload("res://scripts/ui/City3DPerfProbeV7.gd")
 
 var holder: SubViewportContainer
 var preview: SubViewport
@@ -64,6 +65,7 @@ var _legacy_header: PanelContainer
 var _legacy_footer: PanelContainer
 var immersive_hud: Control
 var _three_d_shortcuts: HBoxContainer
+var city_perf_probe
 var _immersive_mode := false
 var building_info_panel
 var unit_detail_panel
@@ -233,13 +235,14 @@ func _ready() -> void:
     _three_d_shortcuts.add_theme_constant_override("separation",5)
     add_child(_three_d_shortcuts)
     _three_d_shortcuts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    _three_d_shortcuts.offset_left = -115
+    _three_d_shortcuts.offset_left = -177
     _three_d_shortcuts.offset_right = -9
     _three_d_shortcuts.offset_top = 67
     _three_d_shortcuts.offset_bottom = 111
     for descriptor in [
         ["↻",_rotate_camera,"Girar el mapa 3D"],
-        ["RANGO",_toggle_ranges,"Mostrar u ocultar rangos legales"]
+        ["RANGO",_toggle_ranges,"Mostrar u ocultar rangos legales"],
+        ["FPS",_toggle_city_perf,"Mostrar FPS reales y detalle de ciudades en este dispositivo"]
     ]:
         var shortcut := Button.new()
         shortcut.text = str(descriptor[0])
@@ -248,6 +251,15 @@ func _ready() -> void:
         shortcut.pressed.connect(descriptor[1])
         _three_d_shortcuts.add_child(shortcut)
     _three_d_shortcuts.hide()
+    city_perf_probe=CityPerfProbe.new()
+    add_child(city_perf_probe)
+    city_perf_probe.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    city_perf_probe.offset_left=-289
+    city_perf_probe.offset_right=-9
+    city_perf_probe.offset_top=119
+    city_perf_probe.offset_bottom=185
+    city_perf_probe.z_index=8
+    city_perf_probe.set_recording(false)
     # A 3D building tap now opens the SAME native contextual card as 2D.
     # Add after immersive HUD so its purchase link receives touch events.
     building_info_panel = BuildingInfoCard.new()
@@ -266,6 +278,13 @@ func _ready() -> void:
     resized.connect(_reflow_3d_hud)
     _layout_3d_building_card()
     _layout_3d_unit_detail()
+
+# The probe is opt-in and only observes publicly drawn meshes;
+# it never touches the battle engine or sends telemetry.
+func _toggle_city_perf() -> void:
+    if _scene==null or not visible:
+        return
+    city_perf_probe.toggle_recording()
 
 func _reflow_3d_hud() -> void:
     if immersive_hud != null:
@@ -491,6 +510,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     _ranges_visible = true
     _reset_gesture()
     preview.add_child(_scene)
+    city_perf_probe.set_recording(false)
+    city_perf_probe.attach_battle(_scene)
     _cells = model.get_meta("public_cells")
     _dims = model.get_meta("board_size")
     # Open on the *whole* tactical environment, not zoomed into the first
@@ -1014,6 +1035,8 @@ func close_view() -> void:
     _set_immersive_mode(false)
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
+    city_perf_probe.set_recording(false)
+    city_perf_probe.attach_battle(null)
     if _scene != null:
         _scene.queue_free()
         _scene = null
