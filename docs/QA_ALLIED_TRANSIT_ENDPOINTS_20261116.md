@@ -69,3 +69,9 @@ El workflow de esta rama ahora ejecuta también `test_rules.gd`, `test_battle_se
 Diagnóstico reproducible del fallo del workflow general en el commit anterior `77ecea54`: ejecución [44015178678](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178678), importación HQ V15 abortada porque `scripts/ui/BastionStudioAdapter.gd` no puede resolver `res://scripts/ui/CombinedArtStudioWeb.gd`. El problema no demuestra un fallo de movimiento. Evitar corregir la rama artística en esta PR de movimiento.
 
 Evidencia de base para `77ecea54`: [tránsito aliado 44015178674](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178674) PASÓ; [exportación Android 44015178689](https://github.com/edwinrodri12/Tarvoka/actions/runs/44015178689) PASÓ (solo compilación). **Nuevo workflow extendido: NO EJECUTADO / pendiente de verificar CI**. **Android físico: NO EJECUTADO EN DISPOSITIVO**. Ninguna PR fusionada.
+
+## 2026-11-17 — Endurecimiento de criterios de CI
+
+Commit `1c67511e`: se sustituyó la búsqueda genérica de `PASS` por la comprobación de **exactamente una línea de cierre esperada por suite** (`test_rules`, `test_battle_session`, `test_basic_ai`, `test_save_codec`). Esto evita falsos positivos cuando un log menciona PASS sin que el test haya alcanzado su final; el código de salida, errores de Godot y timeouts siguen siendo obligatorios. Verificar que cada suite termina con su marcador literal; si cambia su texto, actualizar la tabla `expected` en el workflow y justificarlo. No se alteraron reglas de juego.
+
+Al consultar las ejecuciones asociadas al commit `1c67511e`, GitHub devolvió cero runs; **CI NUEVO NO CONFIRMADO**, no equivale a PASÓ. **Android físico NO EJECUTADO EN DISPOSITIVO**. PR pendiente de revisión; no fusionar hasta CI verde.
