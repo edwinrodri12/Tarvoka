@@ -151,12 +151,12 @@ func _run()->void:
         var mobile:=Models.build("aa_mobile",faction,true,8)
         check(mobile!=null,"LOD8 Android model still builds")
         if mobile!=null:
-            var simple:=mobile.find_child(Sides.CHEEK % -1,
+            var simple:=mobile.find_child("G13_TwinGunReceiver",
                 true,false) as MeshInstance3D
             check(not bool(mobile.get_meta(Sides.FLAG,false)) and
                 mobile.find_child(Sides.LOWER_SEAM % 1,true,false)==null and
                 simple!=null and simple.mesh is BoxMesh,
-                "Android LOD8 geometry exactly unchanged")
+                "Android LOD8 original box-shaped receiver remains and has no V21 hero-only geometry")
             mobile.free()
     if failed>0:
         quit(1)
