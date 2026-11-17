@@ -491,6 +491,11 @@ jobs:
           assert x['modified_existing_meshes']==1 and x['new_draw_nodes']==0
           assert x['mast_triangles_v28']==96
           assert abs(x['radar_deck_overlap_m']-0.025)<0.001
+          assert abs(x['deck_depth_v28_m']-1.15)<0.001
+          assert abs(x['radar_rear_offset_z_m']-1.135)<0.001
+          assert x['turret_sweep_step_degrees']==5
+          assert x['turret_armor_min_clearance_v27_m']<0.0
+          assert x['turret_armor_min_clearance_v28_m']>0.025
           assert x['failures']==0 and x['android_device_fps_measured'] is False
           assert len(x['360_same_camera_differences'])==5
           assert x['360_same_camera_differences']['rear']['changed']>25
