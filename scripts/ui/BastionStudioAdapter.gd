@@ -1024,7 +1024,7 @@ func _heli_underbody_inspect() -> void:
             var plane: MeshInstance3D=candidate as MeshInstance3D
             if plane==null or model_root.is_ancestor_of(plane):
                 continue
-            var label: String=plane.name.to_lower()
+            var label: String=str(plane.name).to_lower()
             var ground: bool=plane.mesh is PlaneMesh or (
                 label.contains("suelo") or label.contains("floor")
                 or label.contains("ground"))
