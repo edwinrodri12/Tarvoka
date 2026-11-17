@@ -73,7 +73,9 @@ static func evaluate(known: Dictionary,side: int,unit: Dictionary,
             role in ["logistics","uav_recon","ew","sam","mlrs"]:
         preservation += 260
     if hp <= 3:
-        preservation += 220
+        # A critically wounded infantry survivor may be worth extracting
+        # even from a classical income city (three-turn approximation).
+        preservation += 300
     preservation += mini(4,danger_before-danger_after)*10
 
     var capture_loss: int = _objective_cost(known,side,unit,destination)
