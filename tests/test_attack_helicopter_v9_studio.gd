@@ -238,6 +238,23 @@ func _run() -> void:
     _check(absf(float(studio.get("_yaw"))-90.0)<0.01,
         "the landing gear inspection is reachable without full technical menu")
     await _capture("a01_v9_landing_gear_horizontal")
+    # Damage state must survive an army-color rebuild in the SAME inspector.
+    # We do this after portrait/landscape identity assertions because a
+    # faction change intentionally recreates the colorized hero mesh.
+    studio.call("_heli_next_damage")
+    studio.call("_heli_next_damage")
+    _check(V13.stage(studio.get("model_root") as Node3D)==2,
+        "moderate A01 damage remains selected in current faction")
+    studio.call("_on_faction",1)
+    await process_frame
+    var recolored: Node3D=studio.get("model_root") as Node3D
+    _check(recolored!=null and V13.has_model(recolored)
+        and V13.stage(recolored)==2
+        and V12.has_model(recolored),
+        "switching faction recreates A01 with same V13 smoke and approved V12 rig")
+    studio.call("_heli_repair")
+    _check(V13.stage(recolored)==0,
+        "repair remains functional after faction color switching")
     studio.call("_display_role","apc")
     await process_frame
     _check(not quick.visible,
@@ -261,5 +278,5 @@ func _run() -> void:
         push_error("A01 V9: %d real mobile Studio failures" % failures)
         quit(1)
         return
-    print("PASS A01 V9 WEB MOBILE: V12 unified Animar/Cámara/Detalles, compare V10/V11/V12, 960x540 landscape, 540x960 portrait rotation, real attack animation and Bastion isolation; captures="+str(images))
+    print("PASS A01 V9 WEB MOBILE: V13 unified damage, crash and repair, faction-persistent effects, V12 comparators, 960x540/540x960 portrait rotation and Bastion isolation; captures="+str(images))
     quit(0)
