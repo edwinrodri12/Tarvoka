@@ -13,6 +13,7 @@ const V9=preload("res://scripts/ui/CivilianCityFinishV9.gd")
 const V10=preload("res://scripts/ui/CivilianCityGroundFrontV10.gd")
 const V11=preload("res://scripts/ui/CivilianCityStructuralRuinsV11.gd")
 const V12=preload("res://scripts/ui/CivilianCityDamageFinishV12.gd")
+const V13=preload("res://scripts/ui/CivilianCityCohesionV13.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -132,7 +133,14 @@ static func _keep_medium(name: String) -> bool:
         "ApoyoVigaV12_","EscalonInteriorRotoV12_",
         "ArmaduraPilarInteriorV12_",
         "CascoteCostadoV12_","PiedraDesgastadaMunicipalV12",
-        "CasquilloCivicoV12_"]:
+        "CasquilloCivicoV12_",
+        # V13: retain structural contacts but omit close-range rebar
+        # and single pavement shards when the camera pulls back.
+        "NervioConectorV13_","ArmaduraTejadoRotaV13_",
+        "JuntaAdoquinConFisuraV13_","AdoquinTejadoLeveV13_",
+        "EncuentroEscombroV13_","AnclajeTechoAytoV13_",
+        "MamposteriaCivilSueloV13_",
+        "BordilloDesmoronadoV13_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -190,7 +198,17 @@ static func _keep_far(name: String) -> bool:
         "VigaTransversalExpuestaV12_",
         "VigaCaidaSueloV12_","ZapataCimentacionAbiertaV12_",
         "EscaleraCivicaInterrumpidaV12",
-        "VigaCivicaVolcadaV12"]:
+        "VigaCivicaVolcadaV12",
+        # V13: preserve broken roof outline and civic ruin identity.
+        "MensulaTejadoFracturadoV13_","CornisaMordidaV13_",
+        "PiedraCimentacionPartidaV13_",
+        "DintelAytoTorsionadoV13_",
+        "MensulaTechoMunicipalV13_",
+        "FrontonMunicipalTruncadoV13",
+        "PilarTruncadoMunicipalV13_",
+        "EscaleraCivicaInterrumpidaV12",
+        "UmbralColapsadoV13_",
+        "AleroRetorcidoV13_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -271,7 +289,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V12.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",12)
+    if not V13.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",13)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
