@@ -38,8 +38,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 450s /tmp/Godot_v4.3-stable_linux.x86_64 \
-            --headless --rendering-method gl_compatibility \
+          # xvfb invokes the same real OpenGL compatibility renderer used
+          # by the V4 GPU visual-approval workflow. Headless/dummy mode
+          # produces invalid null-mesh diagnostics on real 3D geometry.
+          timeout 240s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility \
             --audio-driver Dummy --path . \
             --script res://tests/test_civilian_city_battle_v5.gd \
             2>&1 | tee /tmp/city-v5-live-battle.log
