@@ -153,6 +153,31 @@ static func _two_enemies() -> void:
     print("DEFENSE_DUAL_V36 level10_single_risk=hold level12_two_attackers=retreat top_one=%d top_two=%d" % [
         int(risk["one"]),int(risk["two"])])
 
+static func _no_ghost_blocker() -> void:
+    # One-lane corridor. A damaged defender vacates the single choke tile:
+    # enemy movement must be forecast through the FORMER defender tile.
+    # With stale blockers, fleeing left can be incorrectly declared safe.
+    var known: Dictionary = _artillery()
+    var corridor: Array = []
+    for y in range(8):
+        var row: Array = []
+        for x in range(10):
+            row.append("plain" if y == 3 else "water")
+        corridor.append(row)
+    known["terrain"] = corridor
+    known["units"][0]["pos"] = Vector2i(4,3)
+    var shifted: Dictionary = known["units"][0].duplicate(true)
+    shifted["pos"] = Vector2i(1,3)
+    var old_model: Dictionary = Threat._risk(known,shifted,
+        Threat._records(known,0))
+    var conservative: Dictionary = Threat._risk(known,shifted,
+        Threat._records(known,0,true))
+    assert(int(old_model["one"]) < 8)
+    assert(int(conservative["one"]) >= 8)
+    assert(Threat.propose(known,0,10).is_empty())
+    print("DEFENSE_CHOKE_V36 vacated_tile_not_blocked_in_future=true future_damage=%d no_false_safe_retreat=true" % [
+        int(conservative["one"])])
+
 static func _fog_and_private_resources() -> void:
     var s: Dictionary = _artillery(true)
     s["units"].append(_unit("SCOUT",0,Vector2i(3,1),"scout"))
@@ -202,6 +227,7 @@ func _initialize() -> void:
     _terrain_defense()
     _capturer_hold()
     _two_enemies()
+    _no_ghost_blocker()
     _fog_and_private_resources()
     _bounds()
     print("PASS strategic AI v36 anticipatory defense: observed enemy next-turn move+attack, terrain, capture, two-threat and fog fairness")
