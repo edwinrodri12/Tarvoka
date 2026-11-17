@@ -7,6 +7,7 @@ extends SceneTree
 const V8=preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const V10=preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 const V11=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
+const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 var failures: int=0
 var images: int=0
 
@@ -64,8 +65,8 @@ func _run() -> void:
     var advanced: VBoxContainer=studio.get("heli_controls") as VBoxContainer
     var model_holder: SubViewportContainer=studio.get("model_holder") as SubViewportContainer
     var camera: Camera3D=studio.get("camera") as Camera3D
-    _check(model!=null and V8.has_model(model) and V10.has_model(model) and V11.has_model(model),
-        "actual full V11 helicopter is loaded, not low-poly proxy")
+    _check(model!=null and V8.has_model(model) and V10.has_model(model) and V11.has_model(model) and V12.has_model(model),
+        "actual full V12 helicopter is loaded, not low-poly proxy")
     if model==null or quick==null or advanced==null or model_holder==null:
         _check(false,"required UI nodes must exist before interactive mobile tests")
         studio.queue_free()
@@ -157,6 +158,23 @@ func _run() -> void:
         Vector3(0.15,1.39,2.60))
     _check(studio.get("_heli_focus_local")==Vector3(0.15,1.39,2.60),
         "V11 tail macro camera focuses on the real gearbox")
+    var nose_root: Node3D=model.find_child(V12.ROOT,true,false) as Node3D
+    var gun_root: Node3D=model.find_child(V12.GUN_ROOT,true,false) as Node3D
+    var gun: Node3D=model.find_child("A01_ArmaMorro",true,false) as Node3D
+    _check(nose_root!=null and nose_root.visible and gun_root!=null
+        and gun_root.get_parent()==gun,
+        "V12 front armour visible and gimbal bound to authentic gun pivot")
+    studio.call("_heli_toggle_v12")
+    _check(nose_root!=null and not nose_root.visible
+        and gun_root!=null and not gun_root.visible,
+        "V12 comparison hides BOTH static armour and moving cannon shell")
+    studio.call("_heli_toggle_v12")
+    _check(nose_root.visible and gun_root.visible,
+        "V12 comparison restores the same original geometry")
+    studio.call("_heli_inspect_focus",54.0,-14.0,2.72,
+        Vector3(0.19,0.57,-1.38))
+    _check(studio.get("_heli_focus_local")==Vector3(0.19,0.57,-1.38),
+        "V12 inspect camera focuses precisely on the gun trunnion")
     var rim: DirectionalLight3D=studio.get("_heli_v10_rim_light")
     _check(rim!=null and rim.visible and not rim.shadow_enabled,
         "dedicated cool fill light affects only A01 without extra WebGL shadows")
@@ -202,14 +220,14 @@ func _run() -> void:
     _check(rim!=null and not rim.visible,
         "V10 extra light disabled when viewing Bastion or any other category")
     var shared_picker: OptionButton=studio.get("role_picker") as OptionButton
-    var has_v11_label: bool=false
+    var has_v12_label: bool=false
     if shared_picker!=null:
         for idx in range(shared_picker.item_count):
             if shared_picker.get_item_text(idx).contains("Helicóptero A01") and (
-                    shared_picker.get_item_text(idx).contains("V11")):
-                has_v11_label=true
-    _check(shared_picker!=null and has_v11_label and shared_picker.clip_text,
-        "unified model selector includes A01 V11 with Android-safe clipping")
+                    shared_picker.get_item_text(idx).contains("V12")):
+                has_v12_label=true
+    _check(shared_picker!=null and has_v12_label and shared_picker.clip_text,
+        "unified model selector includes A01 V12 with Android-safe clipping")
     _check(studio.get("model_root")!=null,
         "old Bastion inspector still loads after A01")
     studio.queue_free()
@@ -218,5 +236,5 @@ func _run() -> void:
         push_error("A01 V9: %d real mobile Studio failures" % failures)
         quit(1)
         return
-    print("PASS A01 V9 WEB MOBILE: V11 unified Animar/Cámara/Detalles, compare V10/V11, 960x540 landscape, 540x960 portrait rotation, real attack animation and Bastion isolation; captures="+str(images))
+    print("PASS A01 V9 WEB MOBILE: V12 unified Animar/Cámara/Detalles, compare V10/V11/V12, 960x540 landscape, 540x960 portrait rotation, real attack animation and Bastion isolation; captures="+str(images))
     quit(0)
