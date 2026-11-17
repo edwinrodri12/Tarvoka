@@ -68,15 +68,16 @@ func _run()->void:
             check(cheek.name=="G13_V2_TurretCheek_%d" % side,
                 "historical inspector and node identity intact")
             check(cheek.mesh is ArrayMesh and not cheek.mesh is BoxMesh,
-                "replaced real rectangular box with closed 5-profile polygon hull")
+                "replaced real box with a closed 5-profile flared armor hull")
             var verts:=_vertices(cheek.mesh)
-            check(verts.size()==228,
-                "5 octagonal cross-sections and closed end caps: 76 triangles")
+            check(verts.size()==288,
+                "5 decagonal cross-sections, closed end caps: 96 triangles")
             var found_nose:bool=false
             var found_broad:bool=false
             var found_tail:bool=false
+            var found_lower_flare:bool=false
             for v in verts:
-                check(v.y>=0.195 and v.y<=0.423 and
+                check(v.y>=0.177 and v.y<=0.423 and
                     v.z>=-0.247 and v.z<=0.285,
                     "actual armor geometry inside 4x4 turret silhouette")
                 if (absf(v.z+0.246)<0.0001 and
@@ -86,10 +87,15 @@ func _run()->void:
                     absf(v.x)>0.602 and absf(v.x)<0.606):
                     found_broad=true
                 if (absf(v.z-0.284)<0.0001 and
-                    absf(v.x)>0.562 and absf(v.x)<0.565):
+                    absf(v.x)>0.564 and absf(v.x)<0.567):
                     found_tail=true
+                if (v.y<0.265 and absf(v.x)>0.659 and
+                    absf(v.x)<0.664):
+                    found_lower_flare=true
             check(found_nose and found_broad and found_tail,
                 "real front bearing cutback, wide faction-marking panel and tapered V20 aft join")
+            check(found_lower_flare,
+                "lower armored cheek flare exceeds original box while keeping upper faction paint")
             check(cheek.position.is_equal_approx(Vector3.ZERO),
                 "new mesh uses actual turret coordinates, not the old cube offset")
             check(cheek.has_meta(Sides.ORIGINAL) and
@@ -99,9 +105,9 @@ func _run()->void:
             check(line.size()==132 and weld.visible,
                 "new physical closed 3-section weld seam, no floating decals")
             for v in line:
-                check(v.y>=0.204 and v.y<=0.220 and
+                check(v.y>=0.236 and v.y<=0.251 and
                     v.z>=-0.043 and v.z<=0.189,
-                    "weld remains below faction insignia and inside side contour")
+                    "weld follows visibly flared bottom edge, below faction insignia")
             var paint:=insignia.material_override as StandardMaterial3D
             check(paint!=null,"approved faction paint remains present")
             var gun:=hero.find_child("G13_Autocannon_%d" % side,
