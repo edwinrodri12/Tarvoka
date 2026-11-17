@@ -1,0 +1,82 @@
+name: TARVOKA HAT-29 V14 faction identity and ballistic animations
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/AttackHelicopterFactionV14.gd'
+      - 'scripts/ui/AttackHelicopterCombatFXV14.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v14.gd'
+      - 'tests/test_attack_helicopter_v14_capture.gd'
+      - '.github/workflows/a01-v14-hat29-visual-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/AttackHelicopterFactionV14.gd'
+      - 'scripts/ui/AttackHelicopterCombatFXV14.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - '.github/workflows/a01-v14-hat29-visual-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hat29-real-godot:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout complete proposed HAT-29 Godot source
+        uses: actions/checkout@v4
+      - name: Install actual Godot 4.3 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Test eight armies, visual missiles and reversible destruction
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v14.gd \
+            2>&1 | tee /tmp/hat29-v14.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v14.log; then
+            echo "Godot V14 regression failed"; exit 1
+          fi
+          grep -F 'PASS HAT29 V14:' /tmp/hat29-v14.log
+      - name: Generate fourteen native HAT-29 render captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hat29-v14-images
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 HAT29_CAPTURE_DIR=/tmp/hat29-v14-images \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v14_capture.gd \
+            2>&1 | tee /tmp/hat29-v14-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v14-capture.log; then
+            echo "Godot V14 image capture failed"; exit 1
+          fi
+          grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 14
+      - name: Upload actual Godot 3D screenshots of all factions and animation states
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-hat29-v14-real-godot-14-frames
+          path: |
+            /tmp/hat29-v14-images/*.png
+            /tmp/hat29-v14.log
+            /tmp/hat29-v14-capture.log
+          if-no-files-found: warn
+          retention-days: 14
