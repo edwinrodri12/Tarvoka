@@ -82,6 +82,31 @@ func _run() -> void:
         unit.queue_free()
         await process_frame
 
+    # V14.2 orbit review around the intact native aircraft, including real
+    # rear, overhead and low-angle ventral views. Keep all 14 V14 captures.
+    var orbit_model: Node3D=Models.build("attack_heli",0,true,14)
+    _check(orbit_model!=null and FX.has_model(orbit_model),
+        "V14.2 intact A01 available for 360 degree inspection")
+    if orbit_model==null:
+        quit(1)
+        return
+    vp.add_child(orbit_model)
+    var orbit_target: Vector3=orbit_model.to_global(Vector3(0.0,1.12,0.25))
+    for angle_index in range(8):
+        var angle: float=TAU*float(angle_index)/8.0
+        cam.position=Vector3(4.90*sin(angle),2.75,4.90*cos(angle))
+        cam.look_at(orbit_target,Vector3.UP)
+        await _save(vp,folder.path_join(
+            "hat29_v14_2_orbita_%02d.png" % angle_index))
+    cam.position=Vector3(3.1,5.35,-2.4)
+    cam.look_at(orbit_target,Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_2_superior.png"))
+    cam.position=Vector3(3.55,0.28,-3.40)
+    cam.look_at(orbit_target,Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_2_bajos.png"))
+    orbit_model.queue_free()
+    await process_frame
+
     var model: Node3D=Models.build("attack_heli",0,true,14)
     _check(model!=null and FX.has_model(model),"combat model")
     if model==null or not FX.has_model(model):
@@ -115,10 +140,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==14,"exactly 8 faction and 6 animation PNG captures")
+    _check(count==24,"exactly 8 faction, 6 animation and 10 V14.2 360-angle PNG captures")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 14 real native Godot PNGs of all army colors, bullet, flying missiles, rocket damage, flames, destruction and repair")
+        print("PASS HAT29 V14 CAPTURE: 24 real native Godot PNGs with eight armies, all effects, 360 orbit, overhead and underbelly")
         quit(0)
