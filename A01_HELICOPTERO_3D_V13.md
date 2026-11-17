@@ -86,3 +86,18 @@ Tras revisar las **17 capturas nativas** de la V13.3 ([Godot aprobado](https://g
 - Rendimiento: cambios exclusivos del modelo de inspección de alta calidad `art_level>=13`; el LOD10 Android de batalla y todos los valores de combate siguen intactos.
 
 **Validación:** [primera ejecución V13.4 aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44151582359) y [segunda ejecución de Godot V12 + V13 aprobada](https://github.com/edwinrodri12/Tarvoka/actions/runs/44151723612). Esta segunda ejecución incluye las aserciones del nuevo metal y marcos, preserva el cañón V12.1, verifica las ocho facciones y vuelve a generar las **17 capturas reales**; los acercamientos de cabina y cola usan el encuadre relativo al fuselaje. El acabado V13.4 queda como **candidato artístico validado**; PR #522 sigue sin fusionarse y el visor público no está confirmado.
+
+## V13.5 — Lectura de daño a distancia, candidato de aprobación artística
+
+La revisión de la V13.4 desde el encuadre general reveló que el fuselaje pálido y la cabina seguían pareciendo poco dañados, aunque los fragmentos de rotor y el aro de cola mostraban la destrucción. Se ha añadido una capa de geometría nativa `A01V13_ContrasteDañoTotal` **exclusiva del estado 4**:
+
+- Apertura oscura de cabina formada por dos polígonos 3D de superficie irregular, visibles desde lejos.
+- Tres láminas supervivientes de vidrio azul con triangulación real, sin reconstruir la cúpula original.
+- Dos rasgaduras laterales con planos negros, aleación desgarrada y bordes metálicos que capturan luz.
+- Huellas de quemadura traseras sin afectar las insignias de facción.
+
+Se mantienen íntegros el casco V12.1, el armamento, el rig, los niveles 0–3, las estadísticas y el LOD ligero Android (sin nuevos efectos de daño); reparación sigue restaurando el helicóptero intacto. Se añadieron comprobaciones de visibilidad/material por las ocho facciones.
+
+Se amplió el protocolo visual de 17 a **18 imágenes reales de Godot 4.3**, incorporando `a01_v13_07e_contraste_vista_general.png`, una perspectiva oblicua que permite decidir sobre las heridas sin macro. Los flujos V12 y V13 de la rama ya exigen exactamente 18 imágenes. Hasta recibir el resultado satisfactorio de esa ejecución, V13.5 permanece como candidato no publicado.
+
+Ver [PR #522](https://github.com/edwinrodri12/Tarvoka/pull/522). El [visor 3D público](https://edwinrodri12.github.io/Tarvoka/) puede seguir sirviendo la versión anterior porque la rama aún no se ha integrado.
