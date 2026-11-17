@@ -18,7 +18,7 @@ func _run() -> void:
     board.set_isometric(false)
     var original: Dictionary = board.state.duplicate(true)
     var card: Control = main.building_info_panel as Control
-    assert(card != null and card is SiteCard)
+    assert(card != null and card.get_script() == SiteCard)
     assert(card.get_parent() == main.battle_hud_overlay)
     assert(not card.visible)
 
@@ -79,13 +79,15 @@ func _run() -> void:
     assert(card.visible and card.production_button.visible)
     board.state["faction"] = 1
     main._process(0.0)
-    # In two-player turns the viewer owns the red sites, not the blue shop.
-    assert(card.visible and not card.production_button.visible)
+    # An AI-controlled rival turn cannot open a human production catalog.
+    assert(card.visible and card.production_button.visible)
+    assert(card.production_button.disabled)
 
-    # Fog privacy: an unvisited installation has no card or owner hint.
+    # Independent no-leak check: unknown sites produce no building card.
     var hidden: Dictionary = SiteData.describe(original,Vector2i(-1,-1),0)
     assert(hidden.is_empty())
-    assert(original == original) # Read-only UI did not mutate the battle.
+    card.bind_site({},false)
+    assert(not card.visible)
     main.queue_free()
     await process_frame
     print("PASS BUILDING INFO MENU: city income, allied shop, Android HUD, enemy, close, turn and no automatic purchases")
