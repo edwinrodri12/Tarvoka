@@ -15,11 +15,47 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
+const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
 # Fog decisions use only currently visible units and previously explored terrain.
-static func step(state: Dictionary,
+static func step(state: Dictionary, options: Dictionary = {}) -> Dictionary:
+    # A short, persistent mission plan is prepared from the OBSERVED world,
+    # then updated after the authoritative action. Legacy calls remain
+    # EXACTLY the previous behavior and do not add save fields.
+    if not (options.has("ai_level") or options.has("ai_style")) or \
+            int(state.get("faction",-1)) not in [0,1] or \
+            int(state.get("winner",-1)) != -1 or \
+            not state.get("units") is Array or \
+            not state.get("terrain") is Array:
+        return _decide(state,options)
+    var side: int = int(state["faction"])
+    var observed: Dictionary = Visibility.observed_state(state,side)
+    var strategy: Dictionary = Director.choose(observed,side,options)
+    if not bool(strategy.get("valid",false)) or \
+            int(strategy.get("level",1)) < 5:
+        # Low-level opponents still use simple v32 tactical heuristics.
+        return _decide(state,options)
+    var goals: Dictionary = Missions.refresh(observed,side,
+        state.get("ai_objectives",{}),strategy)
+    var planned: Dictionary = options.duplicate()
+    planned["_goals_v33"] = goals
+    var action: Dictionary = _decide(state,planned)
+    if not bool(action.get("valid",false)):
+        return action
+    var after: Dictionary = action["state"]
+    var updated_view: Dictionary = Visibility.observed_state(after,side)
+    var updated_strategy: Dictionary = Director.choose(updated_view,side,options)
+    if after.has("ai_config"):
+        # Direct AI API callers without a match profile retain a perfectly
+        # valid legacy state. Playable TouchBoard always has ai_config.
+        after["ai_objectives"] = Missions.refresh(updated_view,side,goals,
+            updated_strategy)
+    action["state"] = after
+    return action
+
+static func _decide(state: Dictionary,
         options: Dictionary = {}) -> Dictionary:
     var idle := {"valid": false, "state": state.duplicate(true), "action": "none"}
     if not state.has("units") or not state["units"] is Array or not state.has("terrain"):
@@ -207,7 +243,7 @@ static func step(state: Dictionary,
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
     var urban_action: Dictionary = _capture_urban_site(state, knowledge,
-        friends, occupied,plan)
+        friends, occupied,plan,options.get("_goals_v33",{}))
     if urban_action.get("valid", false):
         return urban_action
     var reinforcement: Dictionary = _produce_reinforcements(state,
@@ -220,6 +256,12 @@ static func step(state: Dictionary,
     var objective_action: Dictionary = _advance_relay(state, knowledge, friends, occupied)
     if objective_action.get("valid", false):
         return objective_action
+    # Dedicated escorts/defenders support separate long-term goals instead
+    # of every soldier chasing the closest enemy or blocking a capture tile.
+    var escort: Dictionary = _advance_assigned_support(state,knowledge,
+        friends,occupied,options.get("_goals_v33",{}))
+    if escort.get("valid",false):
+        return escort
     if enemies.is_empty():
         return _reconnoiter(state, knowledge, friends, occupied) if Visibility.enabled(state) else idle
 
@@ -232,6 +274,15 @@ static func step(state: Dictionary,
     var best_cell := Vector2i(-1, -1)
     for unit in friends:
         if bool(unit.get("moved", false)):
+            continue
+        # Units that reached a designated escort/defense position should
+        # not desert it just because the generic nearest enemy is far
+        # away. They still fire/retreat above when tactical facts demand.
+        var ordered: Dictionary = Missions.for_unit(
+            options.get("_goals_v33",{}),str(unit["id"]))
+        if str(ordered.get("task","")) in ["escort","defend"] and \
+                _distance(unit["pos"],Vector2i(
+                    int(ordered["x"]),int(ordered["y"]))) <= 2:
             continue
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = _reachable_for(knowledge, unit)
@@ -451,7 +502,7 @@ static func _produce_modern_reinforcements(state: Dictionary,
 
 static func _capture_urban_site(state: Dictionary, knowledge: Dictionary,
         friends: Array, occupied: Array[Vector2i],
-        plan: Dictionary = {}) -> Dictionary:
+        plan: Dictionary = {}, goals: Dictionary = {}) -> Dictionary:
     var idle := {"valid":false}
     if not knowledge.has("economy") or not knowledge.get("economy") is Dictionary:
         return idle
@@ -501,6 +552,8 @@ static func _capture_urban_site(state: Dictionary, knowledge: Dictionary,
                 score += 15000 if site["kind"] == "city" else 10000
                 if bool(plan.get("valid",false)):
                     score += Director.site_bonus(plan,str(site["kind"]))
+                if not goals.is_empty():
+                    score += Missions.capture_bonus(goals,str(unit["id"]),target)
                 if destination == target:
                     score += 50000
                 if score > best_score or (score == best_score and _prefer_cell(destination,best_cell,faction)):
@@ -839,6 +892,70 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
     order["unit_id"] = best_id
     order["destination"] = best_cell
     return order
+
+# An escort follows a long-term capture goal but NEVER occupies the
+# target urban tile, so the assigned infantry can finish its capture.
+# Immediate attacks, wounded retreats and supply actions take precedence.
+static func _advance_assigned_support(state: Dictionary,
+        knowledge: Dictionary, friends: Array,
+        occupied: Array[Vector2i], goals: Dictionary) -> Dictionary:
+    var idle := {"valid":false}
+    if goals.is_empty() or not bool(goals.get("assignments",[]).size() > 0):
+        return idle
+    var side: int = int(state.get("faction",-1))
+    var fog: bool = Visibility.enabled(state)
+    var visible: Dictionary = Visibility.visible_cells(state,side) if fog else {}
+    var best_score := -99999999
+    var best_id := ""
+    var best_cell := Vector2i(-1,-1)
+    var best_task := ""
+    for unit in friends:
+        if bool(unit.get("moved",false)) or \
+                Domains.domain(unit) != Domains.GROUND:
+            continue
+        var assignment: Dictionary = Missions.for_unit(goals,str(unit["id"]))
+        var task: String = str(assignment.get("task",""))
+        if task not in ["escort","defend"]:
+            continue
+        var target := Vector2i(int(assignment["x"]),int(assignment["y"]))
+        if _distance(unit["pos"],target) <= 2:
+            continue # Hold formation; leave other useful orders available.
+        var blocked: Array[Vector2i] = _blocked_for(knowledge,unit)
+        var route: Dictionary = _route_to_relay(knowledge["terrain"],target,
+            blocked,Weather.from_state(knowledge),Weather.traction(unit),
+            Logistics.road_fast(unit))
+        var from_cost: int = int(route.get(unit["pos"],999999))
+        if from_cost >= 999999:
+            continue
+        var reachable: Dictionary = _reachable_for(knowledge,unit)
+        for cell in reachable:
+            var destination: Vector2i = cell
+            if destination == unit["pos"] or destination == target or \
+                    (fog and not visible.has(destination)) or \
+                    not route.has(destination):
+                continue
+            var remaining: int = int(route[destination])
+            if remaining >= from_cost or _distance(destination,target) < 1:
+                continue
+            var score := 100000 - remaining*100 - int(reachable[cell])*3
+            if task == "defend":
+                score += 2000
+            if score > best_score or (score == best_score and \
+                    _prefer_cell(destination,best_cell,side)):
+                best_score = score
+                best_id = str(unit["id"])
+                best_cell = destination
+                best_task = task
+    if best_id.is_empty():
+        return idle
+    var moved: Dictionary = Session.move(state,best_id,best_cell)
+    if not bool(moved.get("valid",false)):
+        return idle
+    moved["action"] = "move"
+    moved["reason"] = "cover_capture" if best_task == "escort" else "defend_facility"
+    moved["unit_id"] = best_id
+    moved["destination"] = best_cell
+    return moved
 
 # Reverse Dijkstra: forward movement pays the cost of the entered tile.
 # Bounded by board dimensions; no heuristic path through impassable unknowns.

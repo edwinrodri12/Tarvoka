@@ -1,0 +1,83 @@
+name: TARVOKA v33 multi-turn AI mission coordination
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/MultiTurnObjectivesV33.gd"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SaveCodec.gd"
+      - "tests/test_ai_multiturn_objectives_v33.gd"
+      - ".github/workflows/ai-multiturn-objectives-v33.yml"
+  workflow_dispatch:
+
+jobs:
+  ai_multiturn_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Godot full mission contract
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 360s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_multiturn_objectives_v33.gd \
+            2>&1 | tee /tmp/v33-missions.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v33-missions.log; then exit 1; fi
+          grep -Fq 'PASS strategic AI v33 multiturn missions:' /tmp/v33-missions.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v33-mission-contract
+          path: /tmp/v33-missions.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  preserve_ai_and_saves:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 13
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [
+          "test_ai_strategy_levels_v32.gd",
+          "test_ai_game_ui_profile_v32.gd",
+          "test_ai_decisions.gd",
+          "test_ai_retreat.gd",
+          "test_ai_fog_sweep.gd",
+          "test_ai_self_play.gd",
+          "test_economic_ai.gd",
+          "test_multidomain_ai.gd"
+        ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Preserve original AI, save and UI behavior
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 400s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/${{ matrix.test }} \
+            2>&1 | tee /tmp/v33-regression.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v33-regression.log; then exit 1; fi
+          grep -Fq 'PASS' /tmp/v33-regression.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-v33-${{ matrix.test }}
+          path: /tmp/v33-regression.log
+          retention-days: 30
+          if-no-files-found: ignore
