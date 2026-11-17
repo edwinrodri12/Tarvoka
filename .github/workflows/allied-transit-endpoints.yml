@@ -50,7 +50,18 @@ jobs:
           for suite in test_rules test_battle_session test_basic_ai test_save_codec; do
             echo "::group::${suite}"
             timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script "res://tests/${suite}.gd" 2>&1 | tee "/tmp/${suite}.log"
-            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log"; then
+            # SaveCodec deliberately parses malformed JSON in its negative test.
+            # Godot emits one engine ERROR for that expected rejection; reject
+            # every other diagnostic and any missing/duplicated expected error.
+            if [ "${suite}" = "test_save_codec" ]; then
+              expected_error="ERROR: Parse JSON failed. Error at line 0: Expected 'true','false' or 'null', got 'not'."
+              if [ "$(grep -Fxc "${expected_error}" "/tmp/${suite}.log")" -ne 1 ]; then
+                echo "SaveCodec malformed-JSON rejection was missing or duplicated"; exit 1
+              fi
+              if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log" | grep -Fv "${expected_error}"; then
+                echo "Unexpected Godot diagnostic in ${suite}"; exit 1
+              fi
+            elif grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log"; then
               echo "Unexpected Godot diagnostic in ${suite}"
               exit 1
             fi
