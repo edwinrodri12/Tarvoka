@@ -161,16 +161,23 @@ func _run() -> void:
     var nose_root: Node3D=model.find_child(V12.ROOT,true,false) as Node3D
     var gun_root: Node3D=model.find_child(V12.GUN_ROOT,true,false) as Node3D
     var gun: Node3D=model.find_child("A01_ArmaMorro",true,false) as Node3D
+    var revision_status: Label=studio.get("status_label") as Label
     _check(nose_root!=null and nose_root.visible and gun_root!=null
         and gun_root.get_parent()==gun,
         "V12 front armour visible and gimbal bound to authentic gun pivot")
+    _check(revision_status!=null and revision_status.text.contains("V12"),
+        "the live model label reports the selected V12 nose sculpt")
     studio.call("_heli_toggle_v12")
     _check(nose_root!=null and not nose_root.visible
         and gun_root!=null and not gun_root.visible,
         "V12 comparison hides BOTH static armour and moving cannon shell")
+    _check(revision_status!=null and revision_status.text.contains("V11"),
+        "comparison status correctly returns to visible V11, not hidden V12")
     studio.call("_heli_toggle_v12")
     _check(nose_root.visible and gun_root.visible,
         "V12 comparison restores the same original geometry")
+    _check(revision_status!=null and revision_status.text.contains("V12"),
+        "restored V12 status matches actual visible nose model")
     studio.call("_heli_inspect_focus",54.0,-14.0,2.72,
         Vector3(0.19,0.57,-1.38))
     _check(studio.get("_heli_focus_local")==Vector3(0.19,0.57,-1.38),
