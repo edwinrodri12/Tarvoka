@@ -6,6 +6,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const V26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
+const RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const V24=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const TOTAL:=19
@@ -117,6 +118,8 @@ func _run()->void:
         verify(model!=null,"native G13 LOD8 for faction "+str(faction))
         if model==null:
             continue
+        verify(RadarV27.show_v26_reference(model,true),
+            "historic V26 faction captures have original V26 radar geometry")
         verify(bool(model.get_meta(V25.FLAG,false)) and
             bool(model.get_meta(V26.FLAG,false)),
             "both optical V25 and faceted V26 mobile finishes applied")
@@ -186,6 +189,8 @@ func _run()->void:
     if subject==null:
         quit(1)
         return
+    verify(RadarV27.show_v26_reference(subject,true),
+        "V25/V26 3D comparisons exclude later V27 radar raise")
     view.add_child(subject)
     for zoom in ["close","medium","far"]:
         var ortho:float=({"close":4.6,"medium":8.0,"far":14.0})[zoom]
