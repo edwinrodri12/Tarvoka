@@ -143,6 +143,20 @@ func _run() -> void:
     _check(absf(float(studio.get("_yaw"))-35.0)<0.01 and
         absf(float(studio.get("_zoom"))-1.0)<0.01,
         "one tap returns A01 to full overview")
+    # V14.2.1: the underbody button must move the real camera below the
+    # fuselage and return it safely on home without recreating the aircraft.
+    studio.call("_heli_underbody_inspect")
+    _check(bool(studio.get("_heli_underbody_view_active"))
+        and camera!=null and camera.position.y<0.0,
+        "ventral studio macro uses actual below-airframe camera")
+    _check(studio.get("_heli_focus_local")==Vector3(0,0.605,0.06),
+        "real underbody camera targets the octagonal service hatch")
+    _check(model.get_instance_id()==original_id,
+        "underside inspection keeps original 3D unit and animation rig")
+    studio.call("_heli_mobile_home")
+    _check(not bool(studio.get("_heli_underbody_view_active"))
+        and camera!=null and camera.position.y>0.0,
+        "returning to overview restores original elevated Studio camera")
     var v7: Node3D=model.find_child(V8.ROOT,true,false) as Node3D
     _check(v7!=null and v7.visible,"V8 faction panels visible before compare")
     studio.call("_heli_toggle_v8")
