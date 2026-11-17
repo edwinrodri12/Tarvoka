@@ -59,3 +59,18 @@ Se mejoró el efecto visual del daño sin cambiar reglas de juego ni la geometr�
 - **Fuego:** seis lenguas 3D fabricadas con `SurfaceTool`, con secciones cónicas curvas, color por vértice (amarillo, naranja, rojo) y emisión moderada. Cada lengua tiene oscilación propia.
 - **Rendimiento:** el humo pasa de mallas volumétricas repetidas a ocho quads ligeros; una sola textura compartida por modelo. Los efectos siguen cargándose exclusivamente en el nivel de arte del visor, no en el LOD táctico móvil ≤10.
 - **Validación:** la prueba nativa de Godot V13 [44142050983](https://github.com/edwinrodri12/Tarvoka/actions/runs/44142050983) confirmó las ocho facciones, humo suave con `ImageTexture` y billboards 3D, seis lenguas cónicas y compatibilidad con los cinco niveles de daño. Se generaron 13 capturas originales para revisar el acabado. La PR #522 continúa en borrador; estas mejoras todavía no están confirmadas en la versión pública.
+
+## V13.3 — Silueta final del helicóptero destruido
+
+Revisión realizada a partir de las 15 capturas nativas V13.2, incluido el polvo corregido ([Actions 44146894538](https://github.com/edwinrodri12/Tarvoka/actions/runs/44146894538)): se descubrió una marca plana y oscura que flotaba sobre el helicóptero destruido. El problema se debía a `A01V13_CarbonizacionFinal`, creada en la jerarquía de fragmentos **separados del fuselaje**. Su posición ahora se reemplaza por `A01V13_CarbonizacionFijaMotor`, que pertenece a un grupo adherido al casco.
+
+En el nivel 4 (destruido), y exclusivamente para el visor hero:
+- La cúpula de vidrio intacto V2 se oculta y deja paso a cuatro paneles triangulares 3D astillados y seis grietas superficiales, sin retirar el modelo original.
+- El aro protector V3 y los cuatro marcadores V7 completos dejan de verse; se presenta un conjunto de tramos cortos retorcidos, con separaciones visibles.
+- Dos chapas abolladas y costuras abiertas evidencian el daño lateral de la aeronave.
+- La capa `A01V13_CabinaAstilladaYProteccionRota` continúa unida al casco al caer, mientras que los fragmentos de rotor y el polvo permanecen en el mundo.
+- Reparar recupera vidrio, aro y marcadores originales. Los estados 0–3 conservan la V12.1 aprobada.
+
+**Rendimiento:** se incorporan mallas sencillas, sin efectos adicionales en la versión de batalla LOD ≤10; no cambia movilidad, daño, alcance, economía, munición ni interfaz.
+
+**Estado de QA:** se ampliaron las aserciones sobre los ocho ejércitos y las capturas de inspección de 15 a **17**, con macros específicas de parabrisas y aro de cola dañados. Las pruebas de esta revisión V13.3 siguen en cola de GitHub Actions; no considerar aprobada esta nueva revisión hasta finalizar la ejecución. Los 15 renders V13.2 anteriores sí fueron aprobados.
