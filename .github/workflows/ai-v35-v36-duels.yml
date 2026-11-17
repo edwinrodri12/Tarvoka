@@ -1,0 +1,51 @@
+name: TARVOKA IA v3.5 vs v3.6 paired complete-battle telemetry
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/BasicAI.gd"
+      - "tests/test_ai_v35_v36_full_matches.gd"
+      - ".github/workflows/ai-v35-v36-duels.yml"
+  workflow_dispatch:
+
+jobs:
+  matched_duels:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10, 12]
+        map: [0, 2]
+        fog: ["false", "true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run four swapped-side and swapped-initiative complete sessions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_v35_v36_full_matches.gd \
+            2>&1 | tee /tmp/v35-v36-duels.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v35-v36-duels.log; then exit 1; fi
+          grep -Fq 'PASS AI v35-v36 matched full-session battle telemetry:' /tmp/v35-v36-duels.log
+          grep -Fq 'AB_SUMMARY ' /tmp/v35-v36-duels.log
+          test "$(grep -c '^AB_MATCH ' /tmp/v35-v36-duels.log)" -eq 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-ab-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/v35-v36-duels.log
+          retention-days: 30
+          if-no-files-found: ignore
