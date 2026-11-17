@@ -94,6 +94,12 @@ static func _broken_wall(root: Node3D,tag: String,
     root.add_child(wall)
     return wall
 
+static func _scaled_profile(values: Array,scale: float) -> PackedFloat32Array:
+    var profile:=PackedFloat32Array()
+    for value in values:
+        profile.append(float(value)*scale)
+    return profile
+
 static func _flag_schematic_ruins(model: Node3D) -> int:
     # The old blocky V1 proxy is retained in the source model, but no
     # longer rendered after V11 replaces it with jagged 3D fragments.
@@ -127,17 +133,17 @@ static func _fractured_shell(root: Node3D,tag: String,
         # the rear. No roof cover and no glass: you can see inside.
         _broken_wall(shell,"FachadaNorteQuebradaV11_"+tag,
             Vector3(x,0.12,front),Vector3(w,0,0),
-            PackedFloat32Array([0.95,1.82,1.09,2.06,0.74])*intact_h/2.1,
+            _scaled_profile([0.95,1.82,1.09,2.06,0.74],intact_h/2.1),
             BRICK)
         _broken_wall(shell,"FachadaSurQuebradaV11_"+tag,
             Vector3(x,0.12,rear),Vector3(w,0,0),
-            PackedFloat32Array([1.92,1.22,2.16,1.46,0.68])*intact_h/2.1,
+            _scaled_profile([1.92,1.22,2.16,1.46,0.68],intact_h/2.1),
             CEMENT)
         for side in [-1,1]:
             var xx: float=x+float(side)*w*0.5
             _broken_wall(shell,"MuroCostadoRotoV11_%s_%d" % [tag,side],
                 Vector3(xx,0.12,z),Vector3(0,0,d),
-                PackedFloat32Array([1.20,1.83,0.78,1.62,0.59])*intact_h/2.1,
+                _scaled_profile([1.20,1.83,0.78,1.62,0.59],intact_h/2.1),
                 CLAY if side==-1 else MORTAR,0.19)
         # Exposed room cores and the split stairwell make the ruined
         # interior credible when inspected from above or the rear.
