@@ -546,7 +546,8 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
         puff.scale=Vector3.ONE*(0.38+1.26*dust_phase)
         var dust_mat: StandardMaterial3D=puff.material_override as StandardMaterial3D
         if dust_mat!=null:
-            dust_mat.albedo_color.a=0.70*(1.0-dust_phase)
+            dust_mat.albedo_color=Color(0.95,0.79,0.66,
+                0.70*(1.0-dust_phase))
     smoke.visible=n>=2 or (kind=="destroy" and t>0.20)
     smoke.position.y=0.045*sin(TAU*t) if kind=="destroy" else 0.0
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
