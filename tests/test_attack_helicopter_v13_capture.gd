@@ -118,15 +118,23 @@ func _run() -> void:
     cam.position=Vector3(2.40,2.55,2.65)
     cam.look_at(model.to_global(Vector3(0,0.58,0.42)),Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_07b_fragmentos_rotor_macro.png"))
+    # Close-up of fracture, buckled armour and fixed motor carbonization.
+    cam.position=Vector3(2.65,2.55,-2.85)
+    cam.look_at(model.to_global(Vector3(0.03,1.56,-0.78)),Vector3.UP)
+    await _save(vp,folder.path_join("a01_v13_07c_cabina_astillada.png"))
+    # The full V3 protective hoop is gone; only torn segments should remain.
+    cam.position=Vector3(2.58,2.55,3.48)
+    cam.look_at(model.to_global(Vector3(0.285,1.38,2.62)),Vector3.UP)
+    await _save(vp,folder.path_join("a01_v13_07d_aro_cola_roto.png"))
     Damage.restore(model)
     _check(Damage.set_stage(model,0),"repair")
     cam.position=Vector3(4.15,3.10,-5.30)
     cam.look_at(model.to_global(Vector3(0,1.18,0.24)),Vector3.UP)
     await _save(vp,folder.path_join("a01_v13_08_reparado.png"))
-    _check(images==15,"fifteen real native damage, two-phase ignition, engine plume/fire, ground-impact dust, broken rotors, crash and repair screenshots")
+    _check(images==17,"seventeen real native damage, two-phase ignition, engine plume/fire, ground-impact dust, broken rotors, crash and repair screenshots")
     if failures>0:
         push_error("A01 V13 CAPTURE: %d failures" % failures)
         quit(1)
         return
-    print("PASS A01 V13 CAPTURE: 15 real Godot renders showing two-stage explosion, ground impact dust, progressive damage, smoke/fire, fractured rotor, crash and repair")
+    print("PASS A01 V13 CAPTURE: 17 real Godot renders showing two-stage explosion, ground impact dust, progressive damage, smoke/fire, fractured rotor, crash and repair")
     quit(0)
