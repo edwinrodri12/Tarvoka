@@ -29,7 +29,8 @@ func _run() -> void:
     assert(card.site_pos == city)
     assert(card.title_label.text.contains("CIUDAD"))
     assert(card.owner_label.text.contains("NEUTRAL"))
-    assert(card.function_label.text.contains("créditos/turno"))
+    assert(card.income_label.visible)
+    assert(card.income_label.text.contains("créditos/turno"))
     assert(not card.production_button.visible)
     assert(board.state == original)
 
