@@ -14,8 +14,8 @@ const EXPECTED := {
         "g11_turn_right","g11_slope","hit_bullet","hit_explosive",
         "damage_1","damage_2","damage_3","damage_4","damage_0",
         "g11_battle_move","g11_battle_attack","g11_battle_close","stop"],
-    "aa_mobile":["move","g13_scan","g13_aim_air","g13_aim_ground",
-        "g13_attack_air","g13_attack_ground","stop"],
+    "aa_mobile":["move","g13_scan","g13_aim_legacy","g13_aim_air",
+        "g13_aim_ground","g13_attack_air","g13_attack_ground","stop"],
     "attack_heli":["move","hover","attack","hit_bullet","hit_explosive","stop"]
 }
 var failures: int=0
@@ -103,6 +103,9 @@ func _run() -> void:
                     "P06 steering animation exists")
                 studio.call("_studio_run_animation","stop")
             "mlrs":
+                studio.call("_studio_run_animation","g11_turn_left")
+                _check(studio.get("_g11_turn_tween")!=null,
+                    "G11 differential turn has a real timed playback")
                 studio.call("_studio_run_animation","g11_attack_slow")
                 _check(str(studio.get("_g11_animation"))=="attack",
                     "G11 slow rocket salvo activates real native rig")
@@ -113,6 +116,11 @@ func _run() -> void:
                     "G11 independently accessible cooldown runs")
                 studio.call("_studio_run_animation","stop")
             "aa_mobile":
+                studio.call("_studio_run_animation","g13_scan")
+                _check(str(model.get_meta("tarvoka_g13_v1_pose",""))=="scan",
+                    "G13 scans with its native radar")
+                _check(studio.get("_g13_v4_tween")!=null,
+                    "G13 radar is a timed animation, not a frozen pose")
                 studio.call("_studio_run_animation","g13_aim_ground")
                 _check(str(model.get_meta("tarvoka_g13_v1_pose",""))=="aim_ground",
                     "G13 terrestrial targeting uses a separate aim pose")
