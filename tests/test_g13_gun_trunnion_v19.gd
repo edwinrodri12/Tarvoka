@@ -93,15 +93,21 @@ func _run()->void:
             if cheek.mesh is ArrayMesh:
                 var verts:PackedVector3Array=(
                     cheek.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
-                check(verts.size()==84,
-                    "closed actual 3D armored cheek has 2 octagonal profiles")
+                check(verts.size()==132,
+                    "closed actual 3D armored cheek has 3 eight-sided profiles")
                 var min_x:float=INF
                 var max_x:float=-INF
                 for vertex in verts:
                     min_x=minf(min_x,absf(vertex.x))
                     max_x=maxf(max_x,absf(vertex.x))
                 check(min_x<=0.302 and max_x>=0.484,
-                    "receiver cheek physically bridges hull to pivot follower")
+                    "receiver cheek physically bridges housing to exposed pivot spindle")
+                for point in verts:
+                    # Outer two loft sections, which enter the fixed annular
+                    # bearing, must fit the 0.100m bore in ALL gun pitch poses.
+                    if absf(point.x)>0.400:
+                        check(Vector2(point.y,point.z).length()<0.099,
+                            "moving support stays inside open ring, avoiding interpenetration")
             if cap.mesh is CylinderMesh:
                 var cyl:=cap.mesh as CylinderMesh
                 check(absf(cyl.top_radius-0.080)<0.001 and
