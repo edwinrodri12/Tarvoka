@@ -89,6 +89,37 @@ static func _rod(parent: Node3D,name: String,a: Vector3,b: Vector3,
     n.quaternion=Quaternion(Vector3.UP,axis.normalized())
     return n
 
+# Close a five-vertex irregular rotor cross-section into a genuine solid,
+# rather than leaving featureless rectangular shards after destruction.
+static func _blade_fragment(length: float) -> ArrayMesh:
+    var outline: Array[Vector2]=[
+        Vector2(-0.064,-0.50*length),
+        Vector2(0.064,-0.50*length),
+        Vector2(0.053,0.16*length),
+        Vector2(0.006,0.50*length),
+        Vector2(-0.060,0.34*length)]
+    var st:=SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for j in range(1,outline.size()-1):
+        for index in [0,j,j+1]:
+            var p: Vector2=outline[index]
+            st.add_vertex(Vector3(p.x,0.022,p.y))
+        for index in [0,j+1,j]:
+            var p: Vector2=outline[index]
+            st.add_vertex(Vector3(p.x,-0.022,p.y))
+    for j in range(outline.size()):
+        var k: int=(j+1)%outline.size()
+        var a: Vector2=outline[j]
+        var b: Vector2=outline[k]
+        var tl:=Vector3(a.x,0.022,a.y)
+        var tr:=Vector3(b.x,0.022,b.y)
+        var bl:=Vector3(a.x,-0.022,a.y)
+        var br:=Vector3(b.x,-0.022,b.y)
+        for point in [tl,bl,br,tl,br,tr]:
+            st.add_vertex(point)
+    st.generate_normals()
+    return st.commit()
+
 static func _bullets(body: Node3D) -> void:
     var layer:=_group(body,SCRATCH)
     var crater:=Color("#252c31")
@@ -154,25 +185,48 @@ static func _particles(body: Node3D) -> void:
         var to: Vector3=from+Vector3(cos(a)*0.25,sin(a)*0.18,0.12)
         _rod(burst,"A01V13_Chispa_%d" % i,
             from,to,0.012,Color("#ffdf73"),true)
+    var shock:=TorusMesh.new()
+    shock.inner_radius=0.125
+    shock.outer_radius=0.159
+    shock.rings=8
+    shock.ring_segments=28
+    var wave:=_mesh(burst,"A01V13_OndaChoqueLateral",shock,
+        Color("#ffd68c"),Vector3(-0.54,1.18,-0.28),true)
+    wave.rotation_degrees.z=90.0
 
 static func _wreck(body: Node3D) -> void:
     var debris:=_group(body,WRECK)
     var steel:=Color("#4d565a")
     var graphite:=Color("#252d32")
-    # Broken rotor blades are rigid debris, not extra spinning V1 blades.
+    # Jagged solid blade fragments launch from the actual V1 hub at
+    # (0,1.97,0.08), then settle onto separated positions by the skids.
     for i in range(3):
-        var blade:=_box(debris,"A01V13_FragmentoRotor_%d" % i,
-            Vector3(-0.76+float(i)*0.42,0.50,0.12+float(i)*0.43),
-            Vector3(0.12,0.040,0.85-float(i)*0.18),graphite,
-            Vector3(-16+float(i)*15,27+float(i)*31,24-float(i)*17))
+        var a: float=TAU*float(i)/3.0
+        var blade:=_mesh(debris,"A01V13_FragmentoRotor_%d" % i,
+            _blade_fragment(0.86-float(i)*0.17),graphite,
+            Vector3(-0.76+float(i)*0.42,0.50,0.12+float(i)*0.43))
+        blade.rotation_degrees=Vector3(
+            -16.0+float(i)*15.0,27.0+float(i)*31.0,
+            24.0-float(i)*17.0)
+        blade.set_meta("a01_v13_launch",
+            Vector3(cos(a)*0.43,1.97,sin(a)*0.43+0.08))
         blade.set_meta("a01_v13_rest",blade.position)
         blade.set_meta("a01_v13_rot",blade.rotation_degrees)
+    # V1's tail rotor is also hidden at the final crash stage. A smaller,
+    # actual torn-off blade now accounts for its missing silhouette.
+    var tail_piece:=_mesh(debris,"A01V13_FragmentoRotorCola",
+        _blade_fragment(0.32),graphite,Vector3(1.12,0.47,2.02))
+    tail_piece.rotation_degrees=Vector3(35.0,71.0,-22.0)
+    tail_piece.set_meta("a01_v13_launch",Vector3(0.285,1.38,2.62))
+    tail_piece.set_meta("a01_v13_rest",tail_piece.position)
+    tail_piece.set_meta("a01_v13_rot",tail_piece.rotation_degrees)
     for side in [-1,1]:
         var s: float=float(side)
         var piece:=_box(debris,"A01V13_FragmentoBlindaje_%d" % side,
             Vector3(s*0.91,0.49,-0.53),
             Vector3(0.35,0.035,0.33),steel,
             Vector3(0,s*23.0,s*37.0))
+        piece.set_meta("a01_v13_launch",Vector3(s*0.59,1.06,-0.16))
         piece.set_meta("a01_v13_rest",piece.position)
         piece.set_meta("a01_v13_rot",piece.rotation_degrees)
     _sphere(debris,"A01V13_CarbonizacionFinal",
@@ -248,6 +302,10 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
     var n: int=stage(model)
     burst.visible=kind in ["hit_bullet","hit_explosive","destroy"] and t>=0.16 and t<0.44
     burst.scale=Vector3.ONE*(0.70+0.40*sin(PI*t))
+    var wave: Node3D=_part(model,"A01V13_OndaChoqueLateral")
+    if wave!=null:
+        var expansion: float=clampf((t-0.16)/0.28,0.0,1.0)
+        wave.scale=Vector3.ONE*(0.45+1.85*expansion)
     smoke.visible=n>=2 or (kind=="destroy" and t>0.20)
     smoke.position.y=0.045*sin(TAU*t) if kind=="destroy" else 0.0
     fire.visible=n>=3 or (kind=="destroy" and t>0.29)
@@ -258,9 +316,13 @@ static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
             var piece: MeshInstance3D=child as MeshInstance3D
             if piece!=null and piece.has_meta("a01_v13_rest"):
                 var rest: Vector3=piece.get_meta("a01_v13_rest") as Vector3
+                var launch: Vector3=piece.get_meta("a01_v13_launch") as Vector3
                 var angle: Vector3=piece.get_meta("a01_v13_rot") as Vector3
-                piece.position=rest+Vector3(rest.x*0.38*t,-0.14*t*t,rest.z*0.23*t)
-                piece.rotation_degrees=angle+Vector3(32*t,49*t,23*t)
+                var progress: float=t*t*(3.0-2.0*t)
+                piece.position=launch.lerp(rest,progress)+Vector3(
+                    0,0.28*sin(PI*t),0)
+                piece.rotation_degrees=angle+Vector3(
+                    42.0*sin(PI*t),74.0*sin(PI*t),38.0*sin(PI*t))
     else:
         for child in wreck.get_children():
             var piece: MeshInstance3D=child as MeshInstance3D
