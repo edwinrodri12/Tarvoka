@@ -9,6 +9,7 @@ const V10=preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
 const V11=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
+const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var failures: int=0
 var images: int=0
 
@@ -167,6 +168,10 @@ func _run() -> void:
         and toggle!=null,"V14.3 night lighting and UI are installed in live Studio")
     var original_key: float=light.light_energy
     var original_fill: float=ambient.light_energy
+    var accents: Node3D=model.find_child(Night.ROOT,true,false) as Node3D
+    _check(accents!=null and accents.get_child_count()==3
+        and not accents.visible,
+        "V14.4 studio installs three model-anchored glancing fill lamps, default off")
     var hull_v143: MeshInstance3D=model.find_child(
         "A01_V2_Casco12CarasCerrado",true,false) as MeshInstance3D
     var original_color: Color=(hull_v143.material_override as StandardMaterial3D).albedo_color
@@ -176,6 +181,9 @@ func _run() -> void:
         and ambient.light_energy<original_fill
         and night_lamp.visible and toggle.text.contains("diurna"),
         "V14.3 night profile dims key and enables independent rim fill")
+    _check(accents!=null and accents.visible
+        and (accents.get_child(0) as OmniLight3D).omni_range<=1.90,
+        "V14.4 true engine/tail metal relief gets narrow no-shadow night lighting")
     _check((hull_v143.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
         original_color),"V14.3 light mode never changes muted faction color")
     studio.call("_heli_toggle_night_v143")
@@ -184,6 +192,8 @@ func _run() -> void:
         and absf(ambient.light_energy-original_fill)<0.001
         and not night_lamp.visible,
         "V14.3 daylight light energies and night fill restore without leak")
+    _check(accents!=null and not accents.visible,
+        "V14.4 localized hardware highlights switch off in daylight")
     var v7: Node3D=model.find_child(V8.ROOT,true,false) as Node3D
     _check(v7!=null and v7.visible,"V8 faction panels visible before compare")
     studio.call("_heli_toggle_v8")

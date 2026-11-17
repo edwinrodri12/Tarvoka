@@ -49,6 +49,7 @@ const HeliV11 = preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 const HeliV12 = preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const HeliV13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const HeliCombatV14 = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
+const HeliNightV144 = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
@@ -778,7 +779,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.3 · ACABADO Y LUZ",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.4 · REFLEJOS DE SUPERFICIE",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -852,7 +853,7 @@ func _install_heli_controls() -> void:
         "V14.3: sellos de cola",
         func(): _heli_inspect_focus(132.0,8.0,2.18,Vector3(0.18,1.10,1.97)))
     _heli_night_button_v143=_button(heli_controls,
-        "V14.3: activar noche táctica",_heli_toggle_night_v143)
+        "V14.4: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
         "Comparar morro V11 / V12",_heli_toggle_v12)
     _heli_v11_button=_button(heli_controls,
@@ -1075,10 +1076,16 @@ func _heli_set_night_v143(enabled: bool) -> void:
     _heli_night_enabled_v143=enabled
     if _heli_night_fill_v143!=null:
         _heli_night_fill_v143.visible=enabled
+    # Three narrow no-shadow lamps ride with the real high-detail airframe.
+    # They illuminate only the old physical metal engine and tail hardware.
+    if _role=="attack_heli" and model_root!=null:
+        if enabled and not HeliNightV144.has_lights(model_root):
+            HeliNightV144.install(model_root)
+        HeliNightV144.set_enabled(model_root,enabled)
     if _heli_night_button_v143!=null:
         _heli_night_button_v143.text=(
-            "V14.3: volver a iluminación diurna" if enabled
-            else "V14.3: activar noche táctica")
+            "V14.4: volver a iluminación diurna" if enabled
+            else "V14.4: activar noche táctica")
 
 func _heli_toggle_night_v143() -> void:
     if _role=="attack_heli":
@@ -2532,6 +2539,8 @@ func _display_role(role: String) -> void:
             HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
+            # Studio-only, never in build("attack_heli") or Android battle LOD.
+            HeliNightV144.install(model_root)
             # World-anchored wreckage MUST spawn after the recolored helicopter
             # is inside the real viewport, with its final faction/yaw transform.
             # Otherwise the launch hub and detached debris get stale globals.

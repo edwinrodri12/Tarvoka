@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
+const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
 var failures: int=0
 
@@ -168,8 +169,21 @@ func _run() -> void:
         cam.look_at(night_model.to_global(Vector3(0,1.14,0.25)),Vector3.UP)
         await _save(vp,folder.path_join(
             "hat29_v14_3_noche_%02d.png" % angle_index))
+    # V14.4 side-by-side comparisons: same model, camera and night settings;
+    # only three local no-shadow grazing lights are turned on. This isolates
+    # metallic edge visibility, not fake paint/emissive editing.
+    _check(Night.install(night_model) and Night.set_enabled(night_model,true),
+        "V14.4 real-metal night-raking lamps attach to hero only")
+    for angle_index in range(3):
+        var angle: float=deg_to_rad([38.0,94.0,151.0][angle_index])
+        cam.position=Vector3(4.90*sin(angle),2.62,4.90*cos(angle))
+        cam.look_at(night_model.to_global(Vector3(0,1.14,0.25)),Vector3.UP)
+        await _save(vp,folder.path_join(
+            "hat29_v14_4_rasante_noche_%02d.png" % angle_index))
+    _check(Night.set_enabled(night_model,false),
+        "V14.4 night detail lights release without changing material")
     _check((hull.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
-        original_hull_color),"V14.3 night changes lights, never faction albedo")
+        original_hull_color),"V14.4 localized night light never changes faction albedo")
     moon.queue_free()
     sun.light_energy=prior_sun
     sun.light_color=Color.WHITE
@@ -214,10 +228,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==28,"8 faction, 6 combat, 11 orbit/belly and 3 real V14.3 night frames")
+    _check(count==31,"8 faction, 6 combat, 11 orbit/belly, 3 night baseline and 3 real V14.4 grazing-light frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 28 native Godot PNGs with eight armies, six effects, 11 orbit/belly views and three night inspection frames")
+        print("PASS HAT29 V14 CAPTURE: 31 native Godot PNGs with eight armies, six effects, 11 orbit/belly views and 6 paired night exposure frames")
         quit(0)

@@ -6,6 +6,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const V13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const Coat = preload("res://scripts/ui/AttackHelicopterFactionV14.gd")
 const FX = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
+const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var failures: int=0
 
 func _check(condition: bool,reason: String) -> void:
@@ -23,6 +24,8 @@ func _run() -> void:
         and (tactical==null or tactical.find_child(Coat.DETAIL_ROOT,true,false)==null),
         "Android battle LOD10 never receives hero paint, hardware or particles")
     if tactical!=null:
+        _check(not Night.install(tactical) and not Night.has_lights(tactical),
+            "V14.4 night studio lamps never attach to Android combat LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -123,6 +126,31 @@ func _run() -> void:
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
+        var old_hull_color: Color=main_color
+        _check(Night.install(model) and Night.install(model),
+            "V14.4 three local spot fill lights install idempotently in hero only")
+        var details: Node3D=model.find_child(Night.ROOT,true,false) as Node3D
+        _check(details!=null and details.get_child_count()==3
+            and not details.visible,
+            "V14.4 engine/tail night lights start disabled")
+        if details!=null:
+            for lamp in details.get_children():
+                var light: OmniLight3D=lamp as OmniLight3D
+                _check(light!=null and light.light_energy<=0.25
+                    and not light.shadow_enabled and light.omni_range<=1.90,
+                    "V14.4 restrained local glancing lights use no extra shadows")
+        _check(Night.set_enabled(model,true)
+            and details.visible
+            and Night.set_enabled(model,false)
+            and not details.visible,
+            "V14.4 localized glancing lights toggle reversibly")
+        var after_hull: MeshInstance3D=model.find_child(
+            "A01_V2_Casco12CarasCerrado",true,false) as MeshInstance3D
+        var after_coat: StandardMaterial3D=(
+            after_hull.material_override as StandardMaterial3D)
+        _check(after_coat!=null
+            and after_coat.albedo_color.is_equal_approx(old_hull_color),
+            "V14.4 lighting never rewrites faction body materials")
 
         var bullets: Node3D=model.find_child(FX.BULLETS,true,false) as Node3D
         var missile: Node3D=model.find_child(FX.MISSILE_HIT,true,false) as Node3D
