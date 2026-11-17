@@ -20,6 +20,7 @@ const V16=preload("res://scripts/ui/CivilianCityMaterialJointsV16.gd")
 const V17=preload("res://scripts/ui/CivilianCityRearFinishV17.gd")
 const V18=preload("res://scripts/ui/CivilianCitySideJointsV18.gd")
 const V19=preload("res://scripts/ui/CivilianCityUrbanCohesionV19.gd")
+const V20=preload("res://scripts/ui/CivilianCityExteriorFinishV20.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -180,7 +181,12 @@ static func _keep_medium(name: String) -> bool:
         "V19_AnclajeEsquinaMamposteria_",
         "V19_TablonRemateVilla_","V19_DintelLadrilloUrbano_",
         "V19_PerfilAluminioUrbano_","V19_CintaCristalUrbana_",
-        "V19_PuntoIdentidadBarrio_","V19_LosaHundidaPasaje_"]:
+        "V19_PuntoIdentidadBarrio_","V19_LosaHundidaPasaje_",
+        # V20 microfinish appears only at close architectural zoom.
+        "V20_TejaBorde360Villa_","V20_JuntaMorteroCiudad_",
+        "V20_RejillaAzoteaMetro_","V20_CantoneraInferior_",
+        "V20_EncuentroCuatroFachadas_","V20_PicadoRevestimiento_",
+        "V20_RemateBordillo_","V20_JuntaMetalPasaje_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -302,7 +308,12 @@ static func _keep_far(name: String) -> bool:
         # V19 far-LOD keeps the visual roof rhythm and pedestrian structure.
         "V19_DerrumbeMaterial_","V19_RibeteCubierta_",
         "V19_PasajePeatonal_","V19_PasajeInterrumpido_",
-        "V19_BordePlazaDerruido_"]:
+        "V19_BordePlazaDerruido_",
+        # V20: distance silhouette retains meaningful roof caps and
+        # material-specific 360-degree wreckage without tiny facade trim.
+        "V20_CoronacionPiedraCiudad_","V20_PerfilTapajuntasMetro_",
+        "V20_LosaFracturada360_","V20_PerfilDerrumbe360_",
+        "V20_CascoteIdentidadTotal_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -397,7 +408,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V19.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",19)
+    if not V20.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",20)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
