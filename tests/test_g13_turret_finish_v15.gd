@@ -57,10 +57,16 @@ func _run()->void:
             "fixed support uses a tapered cylinder and seal is a hollow ArrayMesh")
         if pedestal.mesh is CylinderMesh:
             var shaft:=pedestal.mesh as CylinderMesh
-            check(absf(shaft.height-0.592)<0.001 and
+            check(absf(shaft.height-0.340)<0.001 and
                 absf(shaft.top_radius-0.408)<0.001 and
-                absf(pedestal.position.y-1.124)<0.001,
-                "support overlaps chassis top and the original rotating ring")
+                absf(shaft.bottom_radius-0.535)<0.001 and
+                absf(pedestal.position.y-1.250)<0.001,
+                "low tapered support embeds into deck and terminates at original ring")
+            var pedestal_bottom:float=pedestal.position.y-shaft.height*0.5
+            var pedestal_top:float=pedestal.position.y+shaft.height*0.5
+            check(pedestal_bottom>1.07 and pedestal_bottom<1.10 and
+                absf(pedestal_top-1.42)<0.001,
+                "pedestal cannot return to exposed 0.59m tower silhouette")
         if seal.mesh is ArrayMesh:
             var raw:PackedVector3Array=seal.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
             check(raw.size()>=576 and raw.size()<=600,
