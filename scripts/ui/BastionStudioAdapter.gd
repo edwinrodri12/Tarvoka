@@ -45,6 +45,9 @@ const HeliV6 = preload("res://scripts/ui/AttackHelicopterLandingFinishV6.gd")
 const HeliV7 = preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
 const HeliV8 = preload("res://scripts/ui/AttackHelicopterSilhouetteV8.gd")
 const HeliV10 = preload("res://scripts/ui/AttackHelicopterFinishV10.gd")
+const HeliV11 = preload("res://scripts/ui/AttackHelicopterTailV11.gd")
+const HeliV12 = preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
+const HeliV13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
@@ -85,11 +88,18 @@ var _heli_v8_enabled: bool=true
 var _heli_v8_button: Button
 var _heli_v10_enabled: bool=true
 var _heli_v10_button: Button
+var _heli_v11_enabled: bool=true
+var _heli_v11_button: Button
+var _heli_v12_enabled: bool=true
+var _heli_v12_button: Button
 var _heli_v10_rim_light: DirectionalLight3D
 var _heli_camera_base: Vector3=Vector3.ZERO
 var _heli_focus_local: Vector3=Vector3.ZERO
 var _heli_compare_button: Button
 var _heli_animation: String=""
+var _heli_damage_stage: int=0
+var _heli_wreck_frozen: bool=false
+var _heli_damage_clock: float=0.0
 var _heli_time: float=0.0
 # A01 V9 — mobile landscape: quick actions near the model picker, not below
 # the full technical catalogue. Other units keep their existing controls.
@@ -168,7 +178,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V28 · radar anclado, 4×4")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 · V10")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 · V13")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -489,14 +499,20 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "attack_heli":
             return [
-                {"group":"HELICÓPTERO A01 V10 · VUELO Y ROTORES"},
-                {"title":"Vuelo con rotores","action":"move"},
-                {"title":"Suspensión / hover","action":"hover"},
-                {"group":"ARMAMENTO Y REACCIONES"},
-                {"title":"Ráfaga frontal","action":"attack"},
-                {"title":"Impacto de bala","action":"hit_bullet"},
-                {"title":"Impacto explosivo","action":"hit_explosive"},
-                {"title":"Detener y restaurar rotores","action":"stop"}
+                {"group":"HELICÓPTERO A01 V13 · VUELO Y COMBATE"},
+                {"title":"Vuelo y rotores","action":"move"},
+                {"title":"Mantener posición / hover","action":"hover"},
+                {"title":"Ráfaga del cañón frontal","action":"attack"},
+                {"group":"IMPACTOS V13 · EFECTOS ANIMADOS"},
+                {"title":"Impacto de bala y chispas","action":"hit_bullet"},
+                {"title":"Impacto explosivo y onda de choque","action":"hit_explosive"},
+                {"group":"DAÑO ACUMULATIVO Y DESTRUCCIÓN V13"},
+                {"title":"Daño leve · marcas","action":"damage_1"},
+                {"title":"Daño moderado · humo","action":"damage_2"},
+                {"title":"Daño crítico · llamas","action":"damage_3"},
+                {"title":"Destrucción · caída y fragmentos","action":"damage_4"},
+                {"title":"Reparar helicóptero por completo","action":"damage_0"},
+                {"title":"Detener / conservar estado","action":"stop"}
             ]
     return []
 
@@ -555,7 +571,11 @@ func _studio_run_animation(action: String) -> void:
         "tank_standalone":
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
-            _set_damage(int(action.get_slice("_",1)))
+            var selected_stage: int=int(action.get_slice("_",1))
+            if _role=="attack_heli":
+                _heli_select_damage(selected_stage)
+            else:
+                _set_damage(selected_stage)
         "p06_fleet_move","p06_fleet_attack":
             if _role=="apc":
                 _show_p06_fleet(8)
@@ -684,7 +704,7 @@ func _refresh_unified_studio_navigation() -> void:
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
-            "attack_heli": label="A01 · Helicóptero · V10"
+            "attack_heli": label="A01 · Helicóptero · V13"
             "aa_mobile": label="G13 · Antiaéreo · catálogo completo"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
@@ -727,11 +747,16 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO A01 · V10 · ACABADO ÓPTICO Y MECÁNICO",14)
+    _title(heli_controls,"HELICÓPTERO A01 · V13 · IMPACTOS Y DESTRUCCIÓN",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
         "Impacto explosivo",func(): _heli_play("hit_explosive"))
+    _add_paired(heli_controls,"V13: siguiente nivel de daño",_heli_next_damage,
+        "V13: reparar helicóptero",_heli_repair)
+    _add_paired(heli_controls,"V13: animar destrucción",_heli_destroy,
+        "V13: detalle humo e impactos",
+        func(): _heli_inspect_focus(62.0,14.0,2.35,Vector3(0.45,1.55,0.72)))
     _add_paired(heli_controls,"Vista frontal",func(): _heli_view(0.0),
         "Vista 3/4 delantera",func(): _heli_view(40.0))
     _add_paired(heli_controls,"Ver armamento lateral",func(): _heli_view(90.0),
@@ -774,14 +799,26 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(130.0,24.0,2.04,Vector3(0.37,1.58,0.77)),
         "V10: cañón y soporte",
         func(): _heli_inspect_focus(25.0,-13.0,2.26,Vector3(0,0.59,-1.49)))
+    _add_paired(heli_controls,"V11: transmisión y rotor de cola",
+        func(): _heli_inspect_focus(153.0,20.0,2.48,Vector3(0.15,1.39,2.60)),
+        "V11: soportes y lanzadores",
+        func(): _heli_inspect_focus(63.0,-13.0,2.37,Vector3(1.05,0.68,-0.38)))
+    _add_paired(heli_controls,"V12: casco y blindajes del morro",
+        func(): _heli_inspect_focus(24.0,-11.0,2.55,Vector3(0,0.90,-1.40)),
+        "V12: soporte articulado del cañón",
+        func(): _heli_inspect_focus(54.0,-14.0,2.72,Vector3(0.19,0.57,-1.38)))
+    _heli_v12_button=_button(heli_controls,
+        "Comparar morro V11 / V12",_heli_toggle_v12)
+    _heli_v11_button=_button(heli_controls,
+        "Comparar mecánica V10 / V11",_heli_toggle_v11)
     _heli_v10_button=_button(heli_controls,"Comparar acabados V8 / V10",_heli_toggle_v10)
     _heli_v8_button=_button(heli_controls,"Comparar identidad V7 / V8",_heli_toggle_v8)
     _heli_v7_button=_button(heli_controls,"Comparar legibilidad V6 / V7",_heli_toggle_v7)
     _heli_compare_button=_button(heli_controls,"Comparar casco anterior V1",_heli_toggle_v2)
-    _button(heli_controls,"Detener y restaurar hélices",_heli_stop)
+    _button(heli_controls,"Detener (para reparar: botón V13)",_heli_stop)
     _title(heli_controls,
-        "V10: cristales brillantes, aleación de motor, fijaciones físicas de rotor "
-        + "y remates de arma. Solo arte 3D de Estudio; no cambia el combate.",12)
+        "V12: blindaje frontal cerrado, óptica y montura móvil del cañón; "
+        + "conserva V10/V11 y animaciones del original. V13 agrega 4 daños y destrucción 3D.",12)
     var index: int=column.get_children().find(detail_label)
     column.move_child(heli_controls,maxi(0,index))
     heli_controls.visible=false
@@ -856,7 +893,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 · V10")
+        role_picker.set_item_text(role_index,"Helicóptero A01 · V13")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
@@ -949,6 +986,29 @@ func _heli_toggle_v10() -> void:
     _heli_stop()
     _heli_v10_enabled=not _heli_v10_enabled
     HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
+    HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
+    HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
+    _sync_p06_controls()
+    _update_details()
+    _update_camera()
+
+func _heli_toggle_v12() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV12.has_model(model_root):
+        return
+    _heli_stop()
+    _heli_v12_enabled=not _heli_v12_enabled
+    HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
+    _sync_p06_controls()
+    _update_details()
+    _update_camera()
+
+func _heli_toggle_v11() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV11.has_model(model_root):
+        return
+    _heli_stop()
+    _heli_v11_enabled=not _heli_v11_enabled
+    HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
+    HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
     _sync_p06_controls()
     _update_details()
     _update_camera()
@@ -960,7 +1020,10 @@ func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     _heli_focus_local=Vector3.ZERO
     _yaw=yaw
     _zoom=zoom_level
-    model_root.rotation_degrees=Vector3(tilt,yaw,0.0)
+    # A completed crash stays banked and grounded while inspecting it.
+    # Only the orbit/tilt changes, never the 70-degree wreck roll.
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(tilt,yaw,wreck_roll)
     _update_camera()
 
 func _heli_toggle_v2() -> void:
@@ -976,6 +1039,8 @@ func _heli_toggle_v2() -> void:
     HeliV7.set_enabled(model_root,_heli_v2_enabled and _heli_v7_enabled)
     HeliV8.set_enabled(model_root,_heli_v2_enabled and _heli_v8_enabled)
     HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
+    HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
+    HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
     _update_details()
     _update_camera()
     _sync_p06_controls()
@@ -1005,7 +1070,8 @@ func _heli_view(yaw: float) -> void:
         return
     _heli_stop()
     _yaw=yaw
-    model_root.rotation_degrees=Vector3(0,yaw,0)
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(0,yaw,wreck_roll)
     _heli_focus_local=Vector3.ZERO
     _update_camera()
 
@@ -1014,21 +1080,89 @@ func _heli_top_view() -> void:
         return
     _heli_stop()
     _yaw=38.0
-    model_root.rotation_degrees=Vector3(43.0,_yaw,0.0)
+    var wreck_roll: float=model_root.rotation_degrees.z if _heli_wreck_frozen else 0.0
+    model_root.rotation_degrees=Vector3(43.0,_yaw,wreck_roll)
     _heli_focus_local=Vector3.ZERO
     _update_camera()
+
+func _heli_select_damage(level: int) -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    var next_level: int=clampi(level,0,HeliV13.MAX_STAGE)
+    if next_level==0:
+        _heli_repair()
+    elif next_level>=HeliV13.MAX_STAGE:
+        _heli_destroy()
+    else:
+        # If coming back from a wreck, restore the original flight transform
+        # before previewing lesser damage stages.
+        if _heli_wreck_frozen:
+            _heli_repair()
+        else:
+            _heli_stop(true)
+        _heli_damage_stage=next_level
+        HeliV13.set_stage(model_root,next_level)
+        _update_details()
+
+func _heli_next_damage() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop()
+    _heli_damage_stage=mini(HeliV13.stage(model_root)+1,HeliV13.MAX_STAGE)
+    if _heli_damage_stage==4 and not _heli_wreck_frozen:
+        _heli_destroy()
+        return
+    HeliV13.set_stage(model_root,_heli_damage_stage)
+    _update_details()
+
+func _heli_repair() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop(true)
+    _heli_wreck_frozen=false
+    _heli_damage_stage=0
+    _heli_damage_clock=0.0
+    HeliV13.set_stage(model_root,0)
+    _update_details()
+
+func _heli_destroy() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
+        return
+    _heli_stop(true)
+    _heli_wreck_frozen=false
+    _heli_damage_stage=4
+    HeliV13.set_stage(model_root,4)
+    _heli_play("destroy")
 
 func _heli_play(kind: String) -> void:
     if _role!="attack_heli" or model_root==null or not HeliV1.has_model(model_root):
         return
+    if HeliV13.has_model(model_root):
+        if kind!="destroy" and HeliV13.stage(model_root)>=4:
+            return
+        if kind=="hit_bullet":
+            _heli_damage_stage=maxi(1,HeliV13.stage(model_root))
+            HeliV13.set_stage(model_root,_heli_damage_stage)
+        elif kind=="hit_explosive":
+            _heli_damage_stage=maxi(2,HeliV13.stage(model_root))
+            HeliV13.set_stage(model_root,_heli_damage_stage)
     _heli_animation=kind
     _heli_time=0.0
-    HeliV1.pose(model_root,kind,0.0)
+    if HeliV13.has_model(model_root):
+        HeliV13.pose(model_root,kind,0.0)
+    else:
+        HeliV1.pose(model_root,kind,0.0)
+    _update_details()
 
-func _heli_stop() -> void:
+func _heli_stop(force_restore: bool=false) -> void:
     _heli_animation=""
     _heli_time=0.0
-    if model_root!=null and HeliV1.has_model(model_root):
+    # Ending preview must NOT magically levitate a destroyed helicopter.
+    if _heli_wreck_frozen and not force_restore:
+        return
+    if model_root!=null and HeliV13.has_model(model_root):
+        HeliV13.restore(model_root)
+    elif model_root!=null and HeliV1.has_model(model_root):
         HeliV1.restore(model_root)
 
 func _install_p06_controls() -> void:
@@ -1958,6 +2092,12 @@ func _sync_p06_controls() -> void:
     if _heli_v10_rim_light!=null:
         _heli_v10_rim_light.visible=_role=="attack_heli"
     if _role == "attack_heli" and damage_picker != null:
+        if _heli_v12_button!=null:
+            _heli_v12_button.text=("Comparar morro V11" if _heli_v12_enabled
+                else "Activar carenado V12")
+        if _heli_v11_button!=null:
+            _heli_v11_button.text=("Comparar mecánica V10" if _heli_v11_enabled
+                else "Activar transmisión V11")
         if _heli_v10_button!=null:
             _heli_v10_button.text=("Comparar acabado anterior V8" if _heli_v10_enabled
                 else "Activar acabado V10")
@@ -2019,10 +2159,9 @@ func _display_role(role: String) -> void:
     # All eight units and the buildings share the SAME viewport and camera.
     # For the native G09 V32, V25 materials + V30 damage + V31 inboard
     # geometry activate the final V32 animation rig in TankVisualRig3D.gd.
-    if role == "tank":
-        _v25_preview = true
-        _v30_preview = true
-        _v31_preview = true
+    # The current CombinedArtStudioWeb base has no _v25/_v30/_v31
+    # switches: these unused legacy writes broke real Studio import.
+    # Tank rendering continues through the base role-selection code.
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
     if _g11_turn_tween!=null and _g11_turn_tween.is_running():
@@ -2050,8 +2189,17 @@ func _display_role(role: String) -> void:
             HeliV7.set_enabled(model_root,_heli_v2_enabled and _heli_v7_enabled)
             HeliV8.set_enabled(model_root,_heli_v2_enabled and _heli_v8_enabled)
             HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
+            HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
+            HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
+            # World-anchored wreckage MUST spawn after the recolored helicopter
+            # is inside the real viewport, with its final faction/yaw transform.
+            # Otherwise the launch hub and detached debris get stale globals.
+            if HeliV13.has_model(model_root):
+                HeliV13.set_stage(model_root,_heli_damage_stage)
+                if _heli_wreck_frozen and _heli_damage_stage>=4:
+                    HeliV13.pose(model_root,"destroy",1.0)
             _update_camera()
         _heli_animation=""
     if role == "apc" and model_root != null:
@@ -2699,14 +2847,27 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role=="attack_heli" and HeliV13.has_model(model_root):
+        _heli_damage_clock+=maxf(0.0,delta)
+        if _heli_animation.is_empty():
+            HeliV13.animate_ambient(model_root,_heli_damage_clock)
     if _role=="attack_heli" and not _heli_animation.is_empty() and HeliV1.has_model(model_root):
         _heli_time+=maxf(0.0,delta)
-        var duration: float=HeliV1.MOVE_DURATION if _heli_animation=="move" else (
-            HeliV1.ATTACK_DURATION if _heli_animation=="attack" else HeliV1.HIT_DURATION)
+        var duration: float=(HeliV13.DESTROY_DURATION if _heli_animation=="destroy" else (
+            HeliV1.MOVE_DURATION if _heli_animation=="move" else (
+            HeliV1.ATTACK_DURATION if _heli_animation=="attack" else HeliV1.HIT_DURATION)))
         var t: float=minf(1.0,_heli_time/maxf(0.01,duration))
-        HeliV1.pose(model_root,_heli_animation,t)
+        if HeliV13.has_model(model_root):
+            HeliV13.pose(model_root,_heli_animation,t)
+        else:
+            HeliV1.pose(model_root,_heli_animation,t)
         if t>=1.0:
-            _heli_stop()
+            if _heli_animation=="destroy":
+                _heli_wreck_frozen=true
+                _heli_animation=""
+                _heli_time=0.0
+            else:
+                _heli_stop()
             _update_details()
     if _role == "mlrs" and model_root != null and _g11_animation.is_empty() and G11Art.stage(model_root) >= 2:
         _g11_fx_clock += maxf(0.0,delta)
@@ -2783,21 +2944,30 @@ func _update_details() -> void:
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:
             return
-        detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D" % [
-            "V8 identidad a 320p" if HeliV8.has_model(model_root) and _heli_v2_enabled and _heli_v8_enabled else (
-                "V7 identidad a 360p" if HeliV7.has_model(model_root) and _heli_v2_enabled and _heli_v7_enabled else (
-                "V6 comparación táctica" if HeliV6.has_model(model_root) and _heli_v2_enabled else "V1 comparación")),
-            P06Models.inspect_meshes(model_root)]
-        status_label.text="%s · %s" % [
-            str(Factions.FACTIONS[_faction]["name"]),
-            "escultura V8 cargada" if HeliV8.has_model(model_root) else (
-                "escultura V7 cargada" if HeliV7.has_model(model_root) else (
-                "escultura V6 cargada" if HeliV6.has_model(model_root) else (
-                "escultura V5 cargada" if HeliV5.has_model(model_root) else (
-                "escultura V4 cargada" if HeliV4.has_model(model_root) else (
-                "escultura V3 cargada" if HeliV3.has_model(model_root) else (
-                "escultura V2 cargada" if HeliV2.has_model(model_root) else (
-                "escultura V1 cargada" if HeliV1.has_model(model_root) else "modelo detallado sin cargar")))))))]
+        # Report the VISIBLE sculpt stage. An installed but hidden V12 root
+        # must never be described as active after the V11 comparison toggle.
+        var current_stage: String="V1 · casco básico"
+        if HeliV2.has_model(model_root) and _heli_v2_enabled:
+            current_stage="V2 · cabina y casco"
+        if HeliV6.has_model(model_root) and _heli_v2_enabled:
+            current_stage="V6 · tren y motores"
+        if HeliV7.has_model(model_root) and _heli_v2_enabled and _heli_v7_enabled:
+            current_stage="V7 · identidad a 360p"
+        if HeliV8.has_model(model_root) and _heli_v2_enabled and _heli_v8_enabled:
+            current_stage="V8 · identidad a 320p"
+        if HeliV10.has_model(model_root) and bool(model_root.get_meta(HeliV10.ENABLED,false)):
+            current_stage="V10 · acabados ópticos"
+        if HeliV11.has_model(model_root) and bool(model_root.get_meta(HeliV11.ENABLED,false)):
+            current_stage="V11 · transmisión y lanzadores"
+        if HeliV12.has_model(model_root) and bool(model_root.get_meta(HeliV12.ENABLED,false)):
+            current_stage="V12 · morro y cañón articulado"
+        var damage_text: String=""
+        if HeliV13.has_model(model_root):
+            damage_text=" · daño: %s" % HeliV13.STAGE_LABELS[HeliV13.stage(model_root)]
+        detail_label.text="Helicóptero A01 · %s · %d mallas nativas · rotor y armas 3D%s" % [
+            current_stage,P06Models.inspect_meshes(model_root),damage_text]
+        status_label.text="%s · escultura %s cargada%s" % [
+            str(Factions.FACTIONS[_faction]["name"]),current_stage,damage_text]
         return
     if _role == "mlrs":
         if model_root == null or detail_label == null or status_label == null:
