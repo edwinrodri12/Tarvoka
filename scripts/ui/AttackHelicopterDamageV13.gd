@@ -225,24 +225,56 @@ static func _fx_sculpt(is_fire: bool,seed: float) -> ArrayMesh:
     st.generate_normals()
     return st.commit()
 
+# Soft, deterministic procedural alpha texture projected on native 3D
+# billboards. It removes the hard polygon silhouettes of smoke spheres.
+# One shared 64x64 texture serves every wisp in a hero model.
+static func _smoke_alpha_texture() -> ImageTexture:
+    var img:=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for py in range(64):
+        for px in range(64):
+            var u: float=(float(px)+0.5)/32.0-1.0
+            var v: float=(float(py)+0.5)/32.0-1.0
+            var angle: float=atan2(v,u)
+            var distortion: float=0.065*sin(5.0*angle+1.2)+0.04*cos(9.0*angle-0.8)
+            var r: float=sqrt(u*u+v*v)+distortion
+            var density: float=1.0-smoothstep(0.28,0.97,r)
+            density*=0.82+0.18*sin(u*7.0+v*5.0)
+            var a: float=0.36*clampf(density,0.0,1.0)
+            img.set_pixel(px,py,Color(0.27,0.30,0.32,a))
+    return ImageTexture.create_from_image(img)
+
+static func _smoke_billboard_material(texture: Texture2D) -> StandardMaterial3D:
+    var mat:=StandardMaterial3D.new()
+    mat.albedo_texture=texture
+    mat.albedo_color=Color.WHITE
+    mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.billboard_mode=BaseMaterial3D.BILLBOARD_ENABLED
+    mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+    return mat
+
 static func _particles(body: Node3D) -> void:
     var smoke:=_group(body,SMOKE)
-    # Staggered ribbons on the engine pods, not a line of solid balls.
-    # Sculpted smoke never touches the HUD or tactical-map LOD<=10.
+    var smoke_map: ImageTexture=_smoke_alpha_texture()
+    # Eight soft world-space wisps with translucent irregular feathering.
+    # The gradient keeps each puff readable without cartoon spheres.
     for i in range(8):
         var right: bool=i<6
         var lane: float=float(i%6)
         var side: float=1.0 if right else -1.0
+        var cloud:=QuadMesh.new()
+        cloud.size=Vector2(0.52+0.05*float(i%3),0.72+0.07*float(i%2))
         var puff:=_mesh(smoke,"A01V13_ColumnaHumo_%d" % i,
-            _fx_sculpt(false,0.79+float(i)*1.49),Color.WHITE,
-            Vector3(side*(0.59+0.045*sin(float(i)*1.83)),
-                1.51+0.055*float(i%3),
-                0.73+0.09*cos(lane*1.56)))
-        puff.material_override=_fx_material(false)
+            cloud,Color.WHITE,
+            Vector3(side*(0.55+0.042*sin(float(i)*1.83)),
+                1.69+0.075*float(i%3),
+                1.13+0.07*cos(lane*1.56)))
+        puff.material_override=_smoke_billboard_material(smoke_map)
+        puff.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         puff.scale=Vector3(
-            0.88+0.12*float(i%3),
-            0.78+0.08*float(i%2),
-            0.89+0.08*float(i%4))
+            0.86+0.12*float(i%3),
+            0.86+0.09*float(i%2),
+            1.0)
         puff.set_meta("a01_v13_fx_rest",puff.position)
         puff.set_meta("a01_v13_fx_scale",puff.scale)
     var fire:=_group(body,FIRE)
