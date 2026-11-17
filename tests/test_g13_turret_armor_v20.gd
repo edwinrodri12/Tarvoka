@@ -59,6 +59,11 @@ func _run()->void:
                     "gun shield fits under receiver without covering muzzles")
             check(not underside.mesh is BoxMesh,
                 "undershield is real sculpt, not a floating cube")
+            var coat:=underside.material_override as StandardMaterial3D
+            check(coat!=null and
+                coat.albedo_color.is_equal_approx(Color("#5e7077")),
+                "elevated gun belly uses visible armored steel instead of black void")
+
         for side in [-1,1]:
             var rear:=turret.find_child(V20.TURRET_AFT % side,
                 false,false) as MeshInstance3D
