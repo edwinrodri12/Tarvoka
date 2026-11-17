@@ -1,0 +1,42 @@
+name: TARVOKA v22 tank LII unlock A-B balance audit
+
+on:
+  pull_request:
+    paths:
+      - "scripts/experiments/TankUnlockEconomyV22.gd"
+      - "scripts/experiments/StrategicMatchBalanceV21.gd"
+      - "tests/test_tank_unlock_smoke_v22.gd"
+      - "tests/test_tank_unlock_pairs_v22.gd"
+      - ".github/workflows/tank-unlock-balance-v22.yml"
+  workflow_dispatch:
+
+jobs:
+  tank_unlock_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit isolated paid tank upgrade and v21 baseline parity
+        run: |
+          set -euo pipefail
+          timeout --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_tank_unlock_smoke_v22.gd \
+            2>&1 | tee /tmp/v22-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v22-smoke.log; then exit 1; fi
+          grep -Fq 'PASS tank unlock smoke v22:' /tmp/v22-smoke.log
+      - name: Attach review logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v22-smoke
+          path: /tmp/v22-smoke.log
+          retention-days: 30
+          if-no-files-found: ignore
