@@ -72,6 +72,24 @@ Estos ejemplos no significan que el jugador que comienza segundo reciba más din
 - `.github/workflows/fairness-opening-v24.yml`: 4 jobs en Godot 4.3; ver resultados de Actions antes de hacer afirmaciones de ejecución.
 - Rama/PR experimental: no altera `BattleSession`, `UrbanEconomy`, `OpeningBalance`, `SaveCodec`, APK ni reglas de campamentos.
 
+## Hallazgos ejecutados y auditables (Godot 4.3)
+
+- [CI inicial — 4/4 jobs PASS](https://github.com/edwinrodri12/Tarvoka/actions/runs/44102989641): validaciones de ingresos exactos y simulaciones anti-meta por tres mapas, sin cambios al núcleo.
+- [CI con validación de espejos iniciales](https://github.com/edwinrodri12/Tarvoka/actions/runs/44103349841): test `opening_income` completado con éxito. **Seis de seis comprobaciones de mapa** (10×8, 24×18, 40×30 por dos terrenos) comprobaron espejo horizontal exacto de terreno, ciudades y fábricas, propietarios y escuadras iniciales. La regla de cobro por jugador también pasó para ambos colores y tres tamaños.
+
+| Mapa | Inicio primero ganó entre decididas | Decididas / censuradas | Blindados V/D/C | Discrepancias al invertir lado + iniciativa |
+|---|---:|---:|---:|---:|
+| 10×8 abierto | 6/12 | 12 / 0 | 7/1/0 | 2 de 6 |
+| 24×18 abierto | 1/3 | 3 / 9 | 1/1/6 | 3 de 6 |
+| 24×18 bosque | 1/3 | 3 / 9 | 1/0/7 | 3 de 6 |
+
+**Interpretación:**
+- La compensación de ingresos ya es correcta: ningún jugador recibe antes de su primera fase, el segundo cobra al entrar y el primero en su segunda fase.
+- La alerta de dominancia 10×8 **sí persiste**: doctrina blindada 7/8, presión 1/8 y expansión 4/8 participaciones. No es demostración de victoria segura para humanos.
+- El **mapa inicial es geométricamente simétrico**, así que las diferencias en partidas reflejadas no se explican por un error grueso de terreno/ciudades/despliegue inicial. Revisar desempates/orden de iteración de IA, orden de objetivos, captura, compras y evolución de estado de cada partido antes de acusar a una facción. La simulación usa dos ejércitos experimentales, no los ocho poderes reales.
+- Los porcentajes de victoria de mapas 24×18 son **inconclusos**: 75% partidas censuradas. Necesario estudiar condiciones de victoria por HQ/territorio o más turnos; no forzar empate ni designar ganador artificial.
+- **NO añadir otro bono al segundo jugador** por ahora; primero replicar con IA imparcial y una muestra mayor.
+
 ## Prioridad siguiente
 
 1. Confirmar que las pruebas v2.4 de primeros ingresos y ausencia de pagos duplicados pasan en CI.
