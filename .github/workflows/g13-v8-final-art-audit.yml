@@ -82,6 +82,7 @@ jobs:
             tests/test_g13_front_lighting_v23.gd
             tests/test_g13_armored_intake_v24.gd
             tests/test_g13_tactical_zoom_v25.gd
+            tests/test_g13_tactical_armor_v26.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
@@ -395,6 +396,42 @@ jobs:
           path: |
             /tmp/g13-v25-tactical/*.png
             /tmp/g13-v25-tactical/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Capture G13 V26 19 native Godot beveled armor and same-camera V25 comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v26-native
+          timeout --signal=TERM --kill-after=5s 175s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V26_CAPTURE_DIR=/tmp/g13-v26-native \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_tactical_armor_v26.gd 2>&1 | tee /tmp/g13-v26-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/g13-v26-native.log; then exit 1; fi
+          grep -F 'PASS G13 V26 FACETED 3D ARMOR:' /tmp/g13-v26-native.log
+          test "$(find /tmp/g13-v26-native -name '*.png' | wc -l)" -eq 19
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/g13-v26-native/g13-v26-geometry-report.json'))
+          assert x['screenshot_count']==19 and x['factions']==8
+          assert x['new_draw_nodes']==0 and x['modified_existing_meshes']==3
+          assert x['extra_triangles_per_mobile_unit']==108
+          assert x['no_additional_weapons'] is True and x['failures']==0
+          assert x['android_device_fps_measured'] is False
+          assert set(x['same_camera_zooms'])=={'close','medium','far'}
+          assert x['same_camera_zooms']['close']['pixels_changed']>40
+          print('PASS G13 V26 3D closed-facet mesh geometry and visual-delta report')
+          PY
+      - name: Upload G13 V26 actual 19 frame geometric sculpture dossier
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v26-19-real-godot-mobile-faceted-armor-views
+          path: |
+            /tmp/g13-v26-native/*.png
+            /tmp/g13-v26-native/*.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
