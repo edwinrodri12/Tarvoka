@@ -19,8 +19,9 @@ func _initialize() -> void:
 func _run() -> void:
     var tactical: Node3D=Models.build("attack_heli",0,true,10)
     _check(tactical!=null and not Coat.has_model(tactical)
-        and not FX.has_model(tactical),
-        "Android battle LOD10 never receives hero paint or V14 particles")
+        and not FX.has_model(tactical)
+        and (tactical==null or tactical.find_child(Coat.DETAIL_ROOT,true,false)==null),
+        "Android battle LOD10 never receives hero paint, hardware or particles")
     if tactical!=null:
         tactical.free()
     var colors: Array[Color]=[]
@@ -42,6 +43,25 @@ func _run() -> void:
             colors.append(main_color)
         _check(main_color.a>0.9,
             "large actual V2 hull carries enamel for army "+str(faction))
+        var muted: Color=Color("#32444e").lerp(
+            Models.faction_paint_color(faction),0.52)
+        _check(main_color.is_equal_approx(muted),
+            "HAT-29 hull has deliberately muted official faction paint")
+        var door_seam: MeshInstance3D=model.find_child(
+            "A01V14_1_DoorTop_1",true,false) as MeshInstance3D
+        var hinge: MeshInstance3D=model.find_child(
+            "A01V14_1_DoorHinge_-1_0",true,false) as MeshInstance3D
+        var service: MeshInstance3D=model.find_child(
+            "A01V14_1_EngineServicePlate_1",true,false) as MeshInstance3D
+        var tail_clamp: MeshInstance3D=model.find_child(
+            "A01V14_1_TailClamp_-1_1",true,false) as MeshInstance3D
+        _check(door_seam!=null and door_seam.mesh is BoxMesh
+            and hinge!=null and hinge.mesh is BoxMesh
+            and service!=null and service.mesh is BoxMesh
+            and tail_clamp!=null and tail_clamp.mesh is BoxMesh,
+            "new real 3D panel seams, hinges, engine hatch and tail clamps")
+        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_1",
+            "V14.1 tactical treatment installed without changing the rig")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
@@ -94,5 +114,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14: 8 vivid factions; bullets, missile blast, dual flying rockets, unchanged mobile LOD and reversible V13 destruction")
+        print("PASS HAT29 V14: 8 muted factions and sculpted hardware; bullets, missile blast, dual flying rockets, unchanged mobile LOD and reversible V13 destruction")
         quit(0)
