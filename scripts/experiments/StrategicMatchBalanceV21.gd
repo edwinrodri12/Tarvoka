@@ -437,6 +437,13 @@ static func _purchase(battle: Dictionary, side: int, policy: String,
                 bool(options.get("experimental_piercer_factory",false)) and \
                 bool(options.get("adaptive_counter_mix",false)):
             wishlist = _adaptive_factory_roles(session,side)
+        # Distinct v30 experiment: an owned armor plant is not magically
+        # transformed into a barracks after piercer production moves.
+        # Its ACTUAL level-I APC remains a legal purchase option.
+        if policy == "pressure" and str(site["kind"]) == "armor_plant" and \
+                bool(options.get("experimental_piercer_factory",false)) and \
+                bool(options.get("level1_apc_support",false)):
+            wishlist = ["apc"]
         for role in wishlist:
             if Economy.producer_for(str(role),true,
                     bool(options.get("experimental_piercer_factory",false))) != str(site["kind"]):
@@ -464,6 +471,11 @@ static func _purchase(battle: Dictionary, side: int, policy: String,
                 bonus += 50
             if policy == "pressure" and str(role) == "piercer":
                 bonus += 35
+            if policy == "pressure" and str(role) == "apc" and \
+                    bool(options.get("level1_apc_support",false)):
+                # Prefer frontline infantry if its barracks is usable;
+                # APC is an alternate legal production path, not spam.
+                bonus -= 20
             # Prefer a facility that is farther toward the front; no fake
             # constructed producers or free access to an enemy's base.
             var dims: Vector2i = Rules.map_size(state["terrain"])
@@ -502,7 +514,13 @@ static func play_half_turn(battle: Dictionary, policy: String,
         return {"valid":false}
     var initial_attacks: int = int(current["stats"]["attacks"][side])
     var initial_orders: int = int(current["stats"]["orders"][side])
-    if not bool(options.get("skip_purchase",false)):
+    # Separate experimental lever: a good player can MOVE a fresh unit
+    # off the barracks before ordering the next recruitment. Buying only
+    # at phase start (old bot) loses every other recruiting opportunity.
+    # Do not change the rival armor bot or ordinary/default V21 actions.
+    var late_buy: bool = policy == "pressure" and \
+        bool(options.get("pressure_buy_after_actions",false))
+    if not bool(options.get("skip_purchase",false)) and not late_buy:
         var taken: Dictionary = _purchase(current,side,policy,options)
         if bool(taken.get("valid",false)):
             current = taken["battle"]
@@ -518,6 +536,11 @@ static func play_half_turn(battle: Dictionary, policy: String,
             current = moved["battle"]
             continue
         break
+    if late_buy and not bool(options.get("skip_purchase",false)) and \
+            int(current["session"]["world"]["state"]["winner"]) == -1:
+        var late: Dictionary = _purchase(current,side,policy,options)
+        if bool(late.get("valid",false)):
+            current = late["battle"]
     if int(current["stats"]["attacks"][side]) > initial_attacks:
         current["stats"]["contact_turns"][side] += 1
     if int(current["stats"]["orders"][side]) == initial_orders:
