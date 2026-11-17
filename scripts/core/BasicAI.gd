@@ -33,7 +33,9 @@ static func step(state: Dictionary, options: Dictionary = {}) -> Dictionary:
     var side: int = int(state["faction"])
     var observed: Dictionary = Visibility.observed_state(state,side)
     var strategy: Dictionary = Director.choose(observed,side,options)
-    if not bool(strategy.get("valid",false)):
+    if not bool(strategy.get("valid",false)) or \
+            int(strategy.get("level",1)) < 5:
+        # Low-level opponents still use simple v32 tactical heuristics.
         return _decide(state,options)
     var goals: Dictionary = Missions.refresh(observed,side,
         state.get("ai_objectives",{}),strategy)
@@ -45,8 +47,11 @@ static func step(state: Dictionary, options: Dictionary = {}) -> Dictionary:
     var after: Dictionary = action["state"]
     var updated_view: Dictionary = Visibility.observed_state(after,side)
     var updated_strategy: Dictionary = Director.choose(updated_view,side,options)
-    after["ai_objectives"] = Missions.refresh(updated_view,side,goals,
-        updated_strategy)
+    if after.has("ai_config"):
+        # Direct AI API callers without a match profile retain a perfectly
+        # valid legacy state. Playable TouchBoard always has ai_config.
+        after["ai_objectives"] = Missions.refresh(updated_view,side,goals,
+            updated_strategy)
     action["state"] = after
     return action
 
