@@ -178,7 +178,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V28 · radar anclado, 4×4")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 · V13")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 · V13.5")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -499,7 +499,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "attack_heli":
             return [
-                {"group":"HELICÓPTERO A01 V13 · VUELO Y COMBATE"},
+                {"group":"HELICÓPTERO A01 V13.5 · VUELO Y COMBATE"},
                 {"title":"Vuelo y rotores","action":"move"},
                 {"title":"Mantener posición / hover","action":"hover"},
                 {"title":"Ráfaga del cañón frontal","action":"attack"},
@@ -704,7 +704,7 @@ func _refresh_unified_studio_navigation() -> void:
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
-            "attack_heli": label="A01 · Helicóptero · V13"
+            "attack_heli": label="A01 · Helicóptero · V13.5"
             "aa_mobile": label="G13 · Antiaéreo · catálogo completo"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
@@ -747,7 +747,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO A01 · V13 · IMPACTOS Y DESTRUCCIÓN",14)
+    _title(heli_controls,"HELICÓPTERO A01 · V13.5 · IMPACTOS Y DESTRUCCIÓN",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -893,7 +893,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 · V13")
+        role_picker.set_item_text(role_index,"Helicóptero A01 · V13.5")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
