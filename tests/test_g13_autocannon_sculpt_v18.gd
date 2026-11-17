@@ -120,8 +120,22 @@ func _run()->void:
                 light.find_child(Sculpt.RIVETS,true,false)==null,
                 "no added V18 art cost on Android LOD8")
             var simple:=light.find_child(Sculpt.RECEIVER,true,false) as MeshInstance3D
-            check(simple!=null and simple.mesh is BoxMesh,
-                "LOD8 unchanged original tactical silhouette")
+            # The lightweight V26 armor pass reuses the original V1 gun
+            # receiver NODE and pivot, replacing only its 12-triangle box
+            # with a closed, 48-triangle faceted ArrayMesh. V18 hero parts
+            # are still forbidden on LOD8; no receiver node is duplicated.
+            var mobile_v26:bool=bool(light.get_meta(
+                "tarvoka_g13_v26_mobile_faceted_armor",false))
+            check(simple!=null and (
+                (mobile_v26 and simple.mesh is ArrayMesh) or
+                (not mobile_v26 and simple.mesh is BoxMesh)),
+                "LOD8 keeps same real gun receiver, V26 changes only mesh")
+            if mobile_v26 and simple!=null and simple.mesh is ArrayMesh:
+                var receiver_verts:PackedVector3Array=(
+                    simple.mesh as ArrayMesh).surface_get_arrays(0)[
+                        Mesh.ARRAY_VERTEX]
+                check(receiver_verts.size()==144,
+                    "V26 receiver is 48 genuine closed polygon triangles")
             light.free()
     if failures>0:
         quit(1)
