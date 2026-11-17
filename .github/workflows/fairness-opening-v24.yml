@@ -1,0 +1,75 @@
+name: TARVOKA v24 opening income and anti-meta fairness checks
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_opening_income_fairness_v24.gd"
+      - "tests/test_dominant_strategy_watch_v24.gd"
+      - ".github/workflows/fairness-opening-v24.yml"
+  workflow_dispatch:
+
+jobs:
+  opening_income:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate equal starting cash and exactly once income for the second player
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_opening_income_fairness_v24.gd \
+            2>&1 | tee /tmp/v24-income.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v24-income.log; then exit 1; fi
+          grep -Fq 'PASS opening income fairness v24:' /tmp/v24-income.log
+      - name: Retain audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v24-opening-income
+          path: /tmp/v24-income.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  meta_watch:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [small_open, medium_open, medium_forest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit first turn advantage and dominant strategic policies
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 390s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_dominant_strategy_watch_v24.gd \
+            -- ${{ matrix.scenario }} \
+            2>&1 | tee /tmp/v24-meta.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v24-meta.log; then exit 1; fi
+          grep -Fq 'PASS fairness meta watch v24:' /tmp/v24-meta.log
+      - name: Retain warning flags and matchup logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-v24-${{ matrix.scenario }}
+          path: /tmp/v24-meta.log
+          retention-days: 30
+          if-no-files-found: ignore
