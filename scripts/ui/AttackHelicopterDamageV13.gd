@@ -507,6 +507,67 @@ static func _wreck_surface_finish(parent: Node3D) -> void:
             Vector3(x*0.35,1.75,-0.87),
             Vector3(x*0.29,1.82,-0.81),0.010,edge)
 
+    _wreck_silhouette_contrast(parent)
+
+# V13.5: broad-view silhouette readability. Dark recessed triangles break up
+# the still-pristine light hull; peeled outer edges catch light at 320p.
+# Only the stage-4, body-attached hero sculpt receives these low-cost meshes.
+static func _wreck_silhouette_contrast(parent: Node3D) -> void:
+    var contrast:=_group(parent,"A01V13_ContrasteDañoTotal")
+    var deep:=Color("#111b21")
+    var dark:=Color("#283239")
+    var bare:=Color("#b4bdbe")
+    var blue_glass:=Color(0.14,0.37,0.46,0.85)
+    # Open, irregular cockpit silhouette rather than an intact pale roof.
+    var rear_left:=Vector3(-0.31,1.535,-0.66)
+    var front_left:=Vector3(-0.26,1.54,-1.13)
+    var front_right:=Vector3(0.27,1.54,-1.13)
+    var rear_right:=Vector3(0.31,1.535,-0.66)
+    _mesh(contrast,"A01V13_CabinaAbiertaOscuraA",
+        _glass_triangle(front_left,front_right,rear_left),deep)
+    _mesh(contrast,"A01V13_CabinaAbiertaOscuraB",
+        _glass_triangle(front_right,rear_right,rear_left),deep)
+    # Only short surviving panes remain: they do not recreate the V2 dome.
+    var shards: Array=[
+        [Vector3(-0.28,1.575,-1.07),Vector3(-0.10,1.66,-1.01),
+            Vector3(-0.26,1.58,-0.86)],
+        [Vector3(0.27,1.59,-1.07),Vector3(0.12,1.67,-0.98),
+            Vector3(0.28,1.58,-0.81)],
+        [Vector3(-0.23,1.61,-0.57),Vector3(0.08,1.66,-0.62),
+            Vector3(-0.13,1.57,-0.51)]
+    ]
+    for i in range(shards.size()):
+        var v: Array=shards[i]
+        _mesh(contrast,"A01V13_LaminaCristalAzul_%d" % i,
+            _glass_triangle(v[0] as Vector3,v[1] as Vector3,
+                v[2] as Vector3),blue_glass)
+    for side in [-1,1]:
+        var x: float=float(side)
+        # Asymmetric torn openings on both flanks of the cockpit, aligned
+        # to V2's hull stations rather than floating out near the weapons.
+        var upper:=Vector3(x*0.605,1.32,-0.60)
+        var front:=Vector3(x*0.652,1.02,-0.58)
+        var rear:=Vector3(x*0.656,1.12,-0.19)
+        var apex:=Vector3(x*0.64,1.27,-0.27)
+        _mesh(contrast,"A01V13_RoturaLateralOscura_%d_a" % side,
+            _glass_triangle(upper,front,rear),deep)
+        _mesh(contrast,"A01V13_RoturaLateralOscura_%d_b" % side,
+            _glass_triangle(upper,rear,apex),dark)
+        var bent:=Vector3(x*0.73,1.36,-0.61)
+        _mesh(contrast,"A01V13_LaminaDesprendidaCostado_%d" % side,
+            _glass_triangle(upper,bent,apex),bare)
+        _rod(contrast,"A01V13_BordeRasgadoSuperior_%d" % side,
+            bent,apex,0.018,bare)
+        _rod(contrast,"A01V13_BordeRasgadoInferior_%d" % side,
+            front,rear,0.016,bare)
+        # Long, high-contrast soot score on the aft body gives the wreck a
+        # readable history of scraping, without touching faction paint.
+        var streak:=_box(contrast,"A01V13_QuemaduraCostado_%d" % side,
+            Vector3(x*0.575,1.225,0.52),
+            Vector3(0.026,0.11,0.60),dark,
+            Vector3(3.0,x*9.0,x*13.0))
+        streak.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
 static func _wreck(body: Node3D) -> void:
     var debris:=_group(body,WRECK)
     var steel:=Color("#4d565a")
