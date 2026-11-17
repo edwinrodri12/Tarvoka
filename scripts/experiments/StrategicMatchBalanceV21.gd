@@ -13,6 +13,7 @@ const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Battle = preload("res://scripts/core/BattleActions.gd")
+const Specialist = preload("res://scripts/experiments/RoleSpecializationV08.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
@@ -133,7 +134,8 @@ static func _record_captures(stats: Dictionary, before: Array,
         var category: String = "captures_city" if str(present["kind"]) == "city" else "captures_base"
         stats[category][new_owner] += 1
 
-static func _attack(battle: Dictionary, side: int, policy: String) -> Dictionary:
+static func _attack(battle: Dictionary, side: int, policy: String,
+        options: Dictionary = {}) -> Dictionary:
     var session: Dictionary = battle["session"]
     var state: Dictionary = session["world"]["state"]
     var best := {}
@@ -146,8 +148,12 @@ static func _attack(battle: Dictionary, side: int, policy: String) -> Dictionary
             if int(foe.get("faction",-1)) == side or int(foe.get("hp",0)) <= 0 or \
                     not Turns.in_attack_range(ally,foe):
                 continue
-            var impact: Dictionary = Battle.preview_exchange(
-                ally,foe,true,state["terrain"],state["economy"],state["units"])
+            var eligible: bool = bool(options.get("antiarmor_enabled",false)) and \
+                Specialist.armor_bonus(ally,foe,2) > 0
+            var impact: Dictionary = Specialist.preview_antiarmor(
+                ally,foe,2,state["terrain"],state["economy"],state["units"]) if eligible else \
+                Battle.preview_exchange(ally,foe,true,state["terrain"],
+                    state["economy"],state["units"])
             if not bool(impact.get("valid",false)):
                 continue
             var value: int = int(impact["damage"])*12-int(impact["counter_damage"])*7
@@ -160,10 +166,29 @@ static func _attack(battle: Dictionary, side: int, policy: String) -> Dictionary
             if value > top:
                 top = value
                 best = {"attacker":str(ally["id"]),"target":str(foe["id"]),
-                    "old_hp":int(foe["hp"])}
+                    "old_hp":int(foe["hp"]),"eligible_tech":eligible}
     if best.is_empty():
         return {"valid":false}
-    var hit: Dictionary = Orders.attack(session,str(best["attacker"]),str(best["target"]))
+    var hit: Dictionary = {}
+    var bonus_gain := 0
+    if bool(best.get("eligible_tech",false)):
+        var shooter: Dictionary = _find(state["units"],str(best["attacker"]))
+        var target: Dictionary = _find(state["units"],str(best["target"]))
+        var unmodified: Dictionary = Battle.preview_exchange(
+            shooter,target,true,state["terrain"],state["economy"],state["units"])
+        var raw: Dictionary = Specialist.attack_antiarmor(
+            state,str(best["attacker"]),str(best["target"]),2)
+        if not bool(raw.get("valid",false)):
+            return {"valid":false}
+        var renewed: Dictionary = session.duplicate(true)
+        renewed["world"]["state"] = raw["state"]
+        if not Orders._valid(renewed):
+            return {"valid":false}
+        bonus_gain = maxi(0,int(raw.get("damage",0))-int(unmodified.get("damage",0)))
+        hit = {"valid":true,"session":renewed,"damage":int(raw.get("damage",0)),
+            "counter_damage":int(raw.get("counter_damage",0))}
+    else:
+        hit = Orders.attack(session,str(best["attacker"]),str(best["target"]))
     if not bool(hit.get("valid",false)):
         return {"valid":false}
     var updated: Dictionary = battle.duplicate(true)
@@ -171,6 +196,11 @@ static func _attack(battle: Dictionary, side: int, policy: String) -> Dictionary
     updated["stats"]["orders"][side] += 1
     updated["stats"]["attacks"][side] += 1
     updated["stats"]["damage"][side] += int(hit.get("damage",0))
+    if bool(best.get("eligible_tech",false)) and updated["stats"].has("tech_attacks"):
+        updated["stats"]["tech_attacks"][side] += 1
+        updated["stats"]["tech_bonus_damage"][side] += bonus_gain
+        updated["stats"]["tech_ammo_spent"][side] += 1
+        updated["stats"]["tech_counters_taken"][side] += int(hit.get("counter_damage",0))
     var target: Dictionary = _find(updated["session"]["world"]["state"]["units"],str(best["target"]))
     if int(best["old_hp"]) > 0 and int(target.get("hp",0)) == 0:
         updated["stats"]["kills"][side] += 1
@@ -392,7 +422,7 @@ static func play_half_turn(battle: Dictionary, policy: String,
     for i in range(MAX_ORDERS_PER_HALF_TURN):
         if int(current["session"]["world"]["state"]["winner"]) != -1:
             break
-        var hit: Dictionary = _attack(current,side,policy)
+        var hit: Dictionary = _attack(current,side,policy,options)
         if bool(hit.get("valid",false)):
             current = hit["battle"]
             continue
