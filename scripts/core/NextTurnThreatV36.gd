@@ -171,7 +171,8 @@ static func _worth(unit: Dictionary, known: Dictionary,
     return score
 
 static func _destinations(known: Dictionary,side: int,
-        unit: Dictionary, enemies: Array) -> Array:
+        unit: Dictionary, enemies: Array,
+        keep_near_front: bool = false) -> Array:
     var reachable: Dictionary = Positioning._routes(known,unit)
     var filtered: Array = []
     var visible: Dictionary = Visibility.visible_cells(known,side) if \
@@ -193,6 +194,13 @@ static func _destinations(known: Dictionary,side: int,
         var score: int = (cover+site_cover)*155 + \
             mini(10,_nearest(cell,enemies))*35 - \
             int(reachable[cell])*18
+        if keep_near_front:
+            # A rescue should not be a cross-map withdrawal when a legal
+            # nearby safe cell can preserve pressure at the objective.
+            score = (cover+site_cover)*155 - \
+                int(reachable[cell])*105 - \
+                _distance(cell,unit["pos"])*65 - \
+                mini(10,_nearest(cell,enemies))*10
         filtered.append({"cell":cell,"estimate":score,
             "movement_cost":int(reachable[cell])})
     filtered.sort_custom(func(a,b):
@@ -231,7 +239,8 @@ static func _has_valuable_shot(known: Dictionary,side: int,
     return false
 
 static func propose(known: Dictionary,side: int,
-        level: int = 10, offensive_discipline: bool = false) -> Dictionary:
+        level: int = 10, offensive_discipline: bool = false,
+        critical_rescue: bool = false) -> Dictionary:
     if side not in [0,1] or not Rules.valid_terrain(
             known.get("terrain",[])) or level < 8:
         return {}
@@ -266,8 +275,28 @@ static func propose(known: Dictionary,side: int,
         var current: Dictionary = _risk(known,unit,records)
         var danger: int = int(current["two"] if level >= 11 \
             else current["one"])
+        if critical_rescue:
+            # A second attack is an upper bound, not an inevitable
+            # coordinated enemy turn. Require ONE visible lethal hit.
+            danger = int(current["one"])
         if danger < hp:
             continue # Don't flee just because something is nearby.
+        if critical_rescue:
+            var designated: bool = _critical_specialist(unit) or hp <= 4
+            if not designated and Economy.can_capture(unit) and hp <= 6:
+                for site in known.get("economy",{}).get("sites",[]):
+                    if site is Dictionary and str(site.get("kind","")) == "city" and \
+                            site.get("pos") == unit["pos"] and \
+                            int(site.get("owner",-2)) != side:
+                        designated = true
+                        break
+            if not designated:
+                continue
+            # An immediately useful legal shot has first claim on a turn,
+            # including one by a specialist; do not abandon it for a
+            # conservative next-turn hypothetical.
+            if _has_valuable_shot(known,side,unit,foes):
+                continue
         if offensive_discipline and not _critical_specialist(unit):
             # Protect real offensive opportunities from a risk envelope
             # that assumes the rival optimally chooses to attack us.
@@ -279,7 +308,7 @@ static func propose(known: Dictionary,side: int,
             if level >= 11 and hp >= 8 and int(current["one"]) < hp:
                 continue
         var value: int = _worth(unit,known,side)
-        for entry in _destinations(known,side,unit,foes):
+        for entry in _destinations(known,side,unit,foes,critical_rescue):
             var shifted: Dictionary = unit.duplicate(true)
             var pos: Vector2i = entry["cell"]
             shifted["pos"] = pos
@@ -287,6 +316,8 @@ static func propose(known: Dictionary,side: int,
             count += 1
             var future: int = int(next["two"] if level >= 11 \
                 else next["one"])
+            if critical_rescue:
+                future = int(next["one"])
             if future >= hp or future >= danger:
                 continue # Only reposition if survival genuinely improves.
             var cover: int = int(Terrain.COVER.get(
@@ -295,6 +326,11 @@ static func propose(known: Dictionary,side: int,
                 (danger-future)*220 + cover*90 - \
                 int(entry["movement_cost"])*40 + \
                 mini(8,_nearest(pos,foes))*20
+            if critical_rescue:
+                # Minimize lost ground after FIRST ensuring actual safety.
+                score = 15000 + value*2 + (danger-future)*110 + \
+                    cover*70 - int(entry["movement_cost"])*155 - \
+                    _distance(unit["pos"],pos)*55
             if best.is_empty() or score > int(best["score"]) or \
                     (score == int(best["score"]) and \
                     _side_key(pos,side,dimensions.x) < \

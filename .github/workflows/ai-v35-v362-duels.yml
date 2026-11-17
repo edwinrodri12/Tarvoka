@@ -1,0 +1,110 @@
+name: TARVOKA IA v3.5 vs v3.6.2 paired complete-battle telemetry
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/NextTurnThreatV36.gd"
+      - "tests/test_ai_anticipation_critical_v362.gd"
+      - "tests/test_ai_v35_v362_full_matches.gd"
+      - "tests/test_ai_anticipation_critical_v362.gd"
+      - "tests/aggregate_ai_v362_matches.py"
+      - ".github/workflows/ai-v35-v362-duels.yml"
+  workflow_dispatch:
+
+jobs:
+  matched_duels:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10, 12]
+        map: [0, 2]
+        fog: ["false", "true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run four swapped-side and swapped-initiative complete sessions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_v35_v362_full_matches.gd \
+            2>&1 | tee /tmp/v35-v362-duels.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v35-v362-duels.log; then exit 1; fi
+          grep -Fq 'PASS AI v35-v362 matched full-session battle telemetry:' /tmp/v35-v362-duels.log
+          grep -Fq 'AB361_SUMMARY ' /tmp/v35-v362-duels.log
+          test "$(grep -c '^AB361_MATCH ' /tmp/v35-v362-duels.log)" -eq 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-ab-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/v35-v362-duels.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  discipline_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Protect wounded infantry and specialists without forcing frontline retreat
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 450s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_anticipation_critical_v362.gd \
+            2>&1 | tee /tmp/v362-discipline.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v362-discipline.log; then exit 1; fi
+          grep -Fq 'PASS AI v362 offensive discipline:' /tmp/v362-discipline.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v362-discipline-contract
+          path: /tmp/v362-discipline.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  aggregate_results:
+    needs: [matched_duels]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all 8 evidence logs without overwriting them
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ai-ab-*
+          path: .ci-duel-logs
+          merge-multiple: false
+      - name: Validate exactly 32 battles and produce comparable summary
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_v362_matches.py .ci-duel-logs
+          cat reports/ai_v362_ab_summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive inspectable A/B summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-v362-32-battle-summary
+          path: |
+            reports/ai_v362_ab_summary.json
+            reports/ai_v362_ab_summary.md
+          retention-days: 30

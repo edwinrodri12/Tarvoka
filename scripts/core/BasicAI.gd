@@ -216,7 +216,8 @@ static func _decide(state: Dictionary,
     if int(plan.get("level",1)) >= 8 and not bool(options.get("_ab_disable_future_threat_v36",false)):
         var safe: Dictionary = Threats.propose(
             knowledge,faction,int(plan["level"]),
-            bool(options.get("_ab_offensive_discipline_v361",false)))
+            bool(options.get("_ab_offensive_discipline_v361",false)),
+            bool(options.get("_ab_critical_rescue_v362",false)))
         if bool(safe.get("valid",false)):
             var survive: Dictionary = Session.move(state,
                 str(safe["unit_id"]),safe["destination"])
