@@ -103,7 +103,7 @@ var sidebar_dossier: Control
 var compact_dossier: Control
 var sidebar_site_actions: Control
 var compact_site_actions: Control
-var building_info_panel: Control
+var building_info_panel # Script-backed Control with site_pos and bind_site()
 var _dismissed_building_cell := Vector2i(-1,-1)
 var autosave_alert: Label
 var enemy_turn_label: Label
