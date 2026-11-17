@@ -6,6 +6,7 @@ class_name TarvokaCivilianCityStudioAdapter
 const CivilianCity=preload("res://scripts/ui/CivilianCity3DV1.gd")
 const CityV2=preload("res://scripts/ui/CivilianCityFacadeV2.gd")
 const CityV3=preload("res://scripts/ui/CivilianCityPublicSpaceV3.gd")
+const CityV4=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 var city_controls: VBoxContainer
 var city_level_picker: OptionButton
@@ -14,6 +15,8 @@ var city_damage_picker: OptionButton
 var city_caption: Label
 var city_v2_toggle: CheckButton
 var city_v3_toggle: CheckButton
+var city_v4_toggle: CheckButton
+var city_lod_picker: OptionButton
 
 func _ready() -> void:
     super._ready()
@@ -72,18 +75,49 @@ func _ready() -> void:
     city_v3_toggle.button_pressed=true
     city_v3_toggle.toggled.connect(_toggle_city_v3)
     city_controls.add_child(city_v3_toggle)
+    city_v4_toggle=CheckButton.new()
+    city_v4_toggle.name="CiudadCivilSiluetaTacticaV4"
+    city_v4_toggle.text="V4 · identidad urbana y optimización móvil (comparar V3)"
+    city_v4_toggle.button_pressed=true
+    city_v4_toggle.toggled.connect(_toggle_city_v4)
+    city_controls.add_child(city_v4_toggle)
+    city_lod_picker=OptionButton.new()
+    city_lod_picker.name="CiudadCivilNivelDeDetalle3D"
+    city_lod_picker.custom_minimum_size.y=44
+    for label in CityV4.LEVELS:
+        city_lod_picker.add_item(str(label))
+    city_lod_picker.select(0)
+    city_lod_picker.item_selected.connect(_change_city_lod)
+    city_controls.add_child(city_lod_picker)
     # The parent already connected its handler to this SAME picker. Its
     # handler handles 0..3; this one enables category 4 after that cleanup.
     building_picker.item_selected.connect(_on_building_city_selected)
 
 func _toggle_city_v2(_enabled: bool) -> void:
     city_v3_toggle.disabled=not city_v2_toggle.button_pressed
+    city_v4_toggle.disabled=not (city_v2_toggle.button_pressed and city_v3_toggle.button_pressed)
+    city_lod_picker.disabled=city_v4_toggle.disabled or not city_v4_toggle.button_pressed
     if _role=="civilian_city":
         _display_civilian_city()
 
 func _toggle_city_v3(_enabled: bool) -> void:
+    city_v4_toggle.disabled=not (city_v2_toggle.button_pressed and
+        city_v3_toggle.button_pressed)
+    city_lod_picker.disabled=city_v4_toggle.disabled
     if _role=="civilian_city":
         _display_civilian_city()
+
+func _toggle_city_v4(_enabled: bool) -> void:
+    city_lod_picker.disabled=not (city_v4_toggle.button_pressed and
+        not city_v4_toggle.disabled)
+    if _role=="civilian_city":
+        _display_civilian_city()
+
+func _change_city_lod(_index: int) -> void:
+    if (_role=="civilian_city" and model_root!=null and
+            model_root.has_node(CityV4.STAGE_NAME)):
+        CityV4.set_detail(model_root,city_lod_picker.selected)
+        _update_details()
 
 func _change_city_visual(_index: int) -> void:
     if _role=="civilian_city":
@@ -117,6 +151,12 @@ func _display_civilian_city() -> void:
         var public_ok: bool=CityV3.apply(model_root,level,faction,damage)
         if not public_ok:
             push_error("Ciudad Civil V3: espacio público no se aplicó")
+    if (city_v2_toggle.button_pressed and city_v3_toggle.button_pressed and
+            city_v4_toggle.button_pressed):
+        if not CityV4.apply(model_root,level,faction,damage):
+            push_error("Ciudad Civil V4: silueta táctica no aplicada")
+        else:
+            CityV4.set_detail(model_root,city_lod_picker.selected)
     model_root.name="CiudadCivilVisibleEnEstudio"
     preview.add_child(model_root)
     if hq_ground!=null:
@@ -140,13 +180,17 @@ func _update_details() -> void:
         var damage: int=int(model_root.get_meta("visual_damage_stage",0))
         var faction: int=int(model_root.get_meta("visual_faction",-1))
         detail_label.text="Ciudad Civil %s · %s · %d mallas 3D reales" % [
+            "V4" if model_root.has_node(CityV4.STAGE_NAME) else
             "V3" if model_root.has_node(CityV3.STAGE_NAME) else
             "V2" if model_root.has_node(CityV2.STAGE_NAME) else "V1",
             str(CivilianCity.LABELS[level-1]),
-            CivilianCity.count_meshes(model_root)]
+            CityV4.drawable_count(model_root)]
         status_label.text="%s · %s · solo apariencia visual" % [
             "Neutral" if faction<0 else str(CityStyle.FACTIONS[faction]["name"]),
             str(CivilianCity.DAMAGE_LABELS[damage])]
-        city_caption.text="Ciudad civil · %s · Ayuntamiento, plaza, cruces peatonales y accesos municipales 3D. Los niveles y los daños son gráficos: no cambian ingresos ni capturas." % ("espacio público V3" if model_root.has_node(CityV3.STAGE_NAME) else "fachadas V2" if model_root.has_node(CityV2.STAGE_NAME) else "volúmenes V1")
+        city_caption.text="Ciudad civil · %s · %d/%d mallas visibles · Ayuntamiento, plaza y señales reconocibles a escala táctica. Los niveles gráficos no modifican ingresos ni capturas." % [
+            str(CityV4.LEVELS[city_lod_picker.selected]) if model_root.has_node(CityV4.STAGE_NAME) else "modelo base",
+            CityV4.drawable_count(model_root),
+            CityV4.drawable_count(model_root,false)]
         return
     super._update_details()
