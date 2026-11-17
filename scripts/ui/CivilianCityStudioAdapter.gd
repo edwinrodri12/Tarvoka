@@ -86,7 +86,7 @@ func _install_city_options() -> void:
         b.text=str(data[0])
         b.custom_minimum_size=Vector2(90,35)
         var index: int=int(data[1])
-        b.pressed.connect(func(): _city_camera_preset(index))
+        b.pressed.connect(Callable(self,"_city_camera_preset").bind(index))
         views.add_child(b)
     civilian_city_hint=_title(civilian_city_controls,
         "ARTE V16 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
