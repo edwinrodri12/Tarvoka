@@ -16,6 +16,7 @@ const V12=preload("res://scripts/ui/CivilianCityDamageFinishV12.gd")
 const V13=preload("res://scripts/ui/CivilianCityCohesionV13.gd")
 const V14=preload("res://scripts/ui/CivilianCitySilhouetteV14.gd")
 const V15=preload("res://scripts/ui/CivilianCityIdentityV15.gd")
+const V16=preload("res://scripts/ui/CivilianCityMaterialJointsV16.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -155,7 +156,18 @@ static func _keep_medium(name: String) -> bool:
         "HileraMamposteriaV15_","PilastraEsquinaCiudadV15_",
         "NervaduraAluminioAltaV15_","CintaVidrioTacticaV15_",
         "AceroArmaduraMetroV15_","BarraArrancadaCostadoV14_",
-        "RelievePiedraAyuntamientoVillaV15"]:
+        "RelievePiedraAyuntamientoVillaV15",
+        # V16 narrow joinery and individual material fragments.
+        "AlfajiaEnMaderaVillaV16_",
+        "PiezaEsquinaPiedraVillaV16_",
+        "JuntaMorteroErosionadaVillaV16_",
+        "JuntaMorteroCornisaV16_",
+        "SillarEsquinaCornisaV16_",
+        "CantoneraAluminioMetroV16_",
+        "TravesanoMetalMetroV16_",
+        "RibeteVidrioTacticoMetroV16_",
+        "DetalleColorMetroV16_",
+        "DespieceArquitecturaCivilV16_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -258,7 +270,19 @@ static func _keep_far(name: String) -> bool:
         "AleroMetalicoAytoMetropoliV15",
         "MolduraVillaCivicaCaidaV15",
         "LadrilloCornisaCiudadCaidoV15_",
-        "VigaAceroAytoDestruidaV15"]:
+        "VigaAceroAytoDestruidaV15",
+        # V16 architectural signatures preserve material joints at
+        # strategic distance even in total-ruin stages.
+        "TejaRemateCeramicoVillaV16_",
+        "TejaDelaminadaVillaV16_",
+        "PerfilTejaCaidaVillaV16_",
+        "BocelCornisaPiedraCiudadV16_",
+        "CornisaRotaMaterialCiudadV16_",
+        "SillarSeparadoCiudadV16_",
+        "TapajuntaCoronaMetroV16_",
+        "PerfilRetorcidoMetroV16_",
+        "CristalDesprendidoMetroV16_",
+        "CornisaCivicaTransicionV16_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -345,7 +369,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V15.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",15)
+    if not V16.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",16)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
