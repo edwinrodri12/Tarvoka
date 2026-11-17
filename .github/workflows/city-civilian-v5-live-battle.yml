@@ -6,12 +6,14 @@ on:
       - feat/cities-v5-live-battle-3d-20261117
     paths:
       - "scripts/ui/CivilianCityBattle3D.gd"
+      - "scripts/ui/CivilianCityDistanceLODV6.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "tests/test_civilian_city_battle_v5.gd"
       - ".github/workflows/city-civilian-v5-live-battle.yml"
   pull_request:
     paths:
       - "scripts/ui/CivilianCityBattle3D.gd"
+      - "scripts/ui/CivilianCityDistanceLODV6.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "tests/test_civilian_city_battle_v5.gd"
       - ".github/workflows/city-civilian-v5-live-battle.yml"
@@ -44,7 +46,7 @@ jobs:
           timeout 240s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility \
-            --audio-driver Dummy --quit-after 120 --path . \
+            --audio-driver Dummy --quit-after 180 --path . \
             --script res://tests/test_civilian_city_battle_v5.gd \
             2>&1 | tee /tmp/city-v5-live-battle.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v5-live-battle.log; then
