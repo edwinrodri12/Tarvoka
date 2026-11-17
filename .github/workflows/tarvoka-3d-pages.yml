@@ -330,12 +330,18 @@ jobs:
           original=old
 
           def transplant(studio,source,start,stop):
-              assert studio.count(start)==1,(start,studio.count(start))
-              assert source.count(start)==1,(start,source.count(start))
-              p=studio.index(start)
-              q=studio.index(stop,p)
-              a=source.index(start)
-              b=source.index(stop,a)
+              # Match whole declaration lines, not partial names: V1 is
+              # a prefix of V10, so string.count('const ...V1') is unsafe.
+              import re
+              anchor=re.compile(r'(?m)^'+re.escape(start))
+              dest=list(anchor.finditer(studio))
+              src=list(anchor.finditer(source))
+              assert len(dest)==1,(start,len(dest))
+              assert len(src)==1,(start,len(src))
+              p=dest[0].start()
+              a=src[0].start()
+              q=studio.index(stop,p+len(start))
+              b=source.index(stop,a+len(start))
               assert p<q and a<b,(start,stop)
               return studio[:p]+source[a:b]+studio[q:]
 
@@ -370,7 +376,7 @@ jobs:
                        "func _display_headquarters()"]:
               assert (func in original)==(func in old),func
           current.write_text(old,encoding="utf-8")
-          print("PASS UNIFIED INFANTRY V9 OVERLAY: 9 exact mesh modules, one shared Studio, no replaced external model")
+          print("PASS UNIFIED INFANTRY V10 OVERLAY: 10 exact mesh modules, one shared Studio, no replaced external model")
           PY
           rm -rf infantry-v9-approved
           test -s scripts/ui/InfantryBarracksFinalAccessV9.gd
