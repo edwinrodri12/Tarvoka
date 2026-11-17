@@ -5,7 +5,7 @@ extends SceneTree
 # Draw-object counts are *scene-visible node estimates*, NOT driver calls.
 # Render-frame duration uses wall clock + virtualized CI; compare cautiously.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
-const LEVELS:Array[int]=[13,8]
+const LEVELS = [13,8]
 var failures:int=0
 var cases:Array[Dictionary]=[]
 
