@@ -236,10 +236,11 @@ static func _metro_signature(layer: Node3D,tag: String,
         _rod(metro,"AceroArmaduraMetroV15_%s_%d" % [tag,side],
             Vector3(xx,0.24+height*0.28,z-d*0.25),
             0.044,height*0.56,OXIDE)
-        V12._rubble_wedge(metro,
+        var shard: MeshInstance3D=V12._rubble_wedge(metro,
             "VidrioRestosMetroV15_%s_%d" % [tag,side],
             Vector3(xx,0.04,z+d*0.29),
             Vector3(0.52,0.20,0.42),DARK_GLASS)
+        shard.material_override=V9._finish(DARK_GLASS,"glass")
     if damage==3:
         _box(metro,"LosaMiradorTorcidaMetroV15_"+tag,
             Vector3(x,0.83,z+d*0.12),
@@ -300,10 +301,12 @@ static func _municipal_identity(layer: Node3D,level: int,
             Vector3(0.41,0.20,rear+0.28),
             Vector3(1.21,0.16,0.25),ALUMINUM,"steel")
         beam.rotation_degrees.y=16.0
-        V12._rubble_wedge(civic,"VidrioMunicipalDerruidoV15",
+        var glass: MeshInstance3D=V12._rubble_wedge(
+            civic,"VidrioMunicipalDerruidoV15",
             Vector3(-0.65,0.04,rear+0.24),
             Vector3(0.46,0.22 if damage<4 else 0.13,0.38),
             BLUE_GLASS)
+        glass.material_override=V9._finish(BLUE_GLASS,"glass")
     if damage==2:
         # Just a small split strip at D2. Do not draw intact crown above
         # a torn city hall roof.
