@@ -1,6 +1,6 @@
 extends SceneTree
 
-# 11 native Godot 4.3 A01 V12 renders for real human 360-degree art QA.
+# 20 native Godot 4.3 A01 V12 renders for real human 360-degree art QA.
 # No AI generated art, no imported screenshot and no mobile FPS claims.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Cabin=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
@@ -152,10 +152,32 @@ func _run() -> void:
     camera.position=muzzle_focus+Vector3(0.38,0.18,-2.25)
     camera.look_at(muzzle_focus,Vector3.UP)
     await _save(viewport,output.path_join("a01_v12_boca_canon.png"))
-    _check(captures==16,"eight V12 320x180 orbital, four same-scene V11 reference and four full-resolution nose/gun views")
+    # Four genuine underside inspections: the ground plane would obscure the
+    # helicopter from below, so switch it off ONLY for these QA camera frames.
+    base.visible=false
+    var belly_focus: Vector3=model.to_global(Vector3(0,0.60,-1.25))
+    camera.position=model.to_global(Vector3(0,-2.38,-3.30))
+    camera.look_at(belly_focus,Vector3.UP)
+    await _save(viewport,output.path_join("a01_v12_ventral_frontal.png"))
+    var right_focus: Vector3=model.to_global(Vector3(0.34,0.60,-1.10))
+    camera.position=model.to_global(Vector3(2.35,-1.34,-2.50))
+    camera.look_at(right_focus,Vector3.UP)
+    await _save(viewport,output.path_join("a01_v12_ventral_patín_derecho.png"))
+    var left_focus: Vector3=model.to_global(Vector3(-0.34,0.60,-1.10))
+    camera.position=model.to_global(Vector3(-2.35,-1.34,-2.50))
+    camera.look_at(left_focus,Vector3.UP)
+    await _save(viewport,output.path_join("a01_v12_ventral_patín_izquierdo.png"))
+    _check(Models.pose_model("attack_heli",model,"attack",0.48),
+        "underbelly shot tests live cannon pitch relative to skids")
+    camera.position=model.to_global(Vector3(1.75,-1.88,-2.80))
+    camera.look_at(model.to_global(Vector3(0.17,0.58,-1.34)),Vector3.UP)
+    await _save(viewport,output.path_join("a01_v12_ventral_canon_en_disparo.png"))
+    Models.restore_model_pose("attack_heli",model)
+    base.visible=true
+    _check(captures==20,"8 full A01 320x180 views, 4 exact V11 controls, 4 nose macros, 4 underside/skid/attack native views")
     if failures>0:
         push_error("A01 V12: failed %d renders" % failures)
         quit(1)
         return
-    print("PASS A01 V12 CAPTURE: 16 native Godot frames, 8 V12 tactical 320x180, 4 exact V11 references and 4 high-res front armour/gimbal/gun macros")
+    print("PASS A01 V12 CAPTURE: 20 native Godot frames, 8 tactical, 4 exact V11 references, 4 3D nose macros and 4 underside/skid clearance shots")
     quit(0)
