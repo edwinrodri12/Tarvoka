@@ -103,7 +103,6 @@ static func set_fold(root:Node3D,fraction:float)->bool:
     var blend:float=clampf(fraction,0.0,1.0)
     var mast_factor:float=lerpf(1.0,MAST_STOWED_SCALE,blend)
     var radar:=p["radar"] as Node3D
-    radar.position=original["radar"]-Vector3(0,FOOT_SHIFT_Y*blend,0)
     var mast:=p["mast"] as MeshInstance3D
     mast.position=Vector3(0,lerpf(
         (original["mast"] as Vector3).y,0.640*MAST_STOWED_SCALE,blend),0)
@@ -119,6 +118,15 @@ static func set_fold(root:Node3D,fraction:float)->bool:
         (original["receiver"] as Vector3).y,
         (0.790+FOOT_SHIFT_Y)*MAST_STOWED_SCALE,blend),-0.12)
     radar.rotation_degrees.x=MAX_FOLD_DEG*blend
+    # The hinge is pinned to the physical deck for EVERY fold fraction.
+    # Calculate the actual mast-foot offset in the radar's own yaw/pitch
+    # basis and solve the original pivot translation so the foot is fixed
+    # at (0,1.095,1.135), not floating through its animation.
+    var local_foot:=Vector3(
+        0,mast.position.y-0.640*mast_factor,0)
+    var fixed_foot:Vector3=(
+        (original["radar"] as Vector3)-Vector3(0,FOOT_SHIFT_Y,0))
+    radar.position=fixed_foot-radar.basis*local_foot
     root.set_meta("tarvoka_g13_v29_fold_degrees",
         radar.rotation_degrees.x)
     root.set_meta("tarvoka_g13_v29_mast_telescopic_scale",mast_factor)
@@ -126,8 +134,7 @@ static func set_fold(root:Node3D,fraction:float)->bool:
         dish.rotation_degrees.x)
     root.set_meta("tarvoka_g13_v29_mast_base_y_m",
         radar.position.y+(
-            mast.position.y-0.640*mast_factor)*cos(
-                deg_to_rad(radar.rotation_degrees.x)))
+            radar.basis*local_foot).y)
     return true
 
 static func apply_pose(root:Node3D,kind:String)->bool:
