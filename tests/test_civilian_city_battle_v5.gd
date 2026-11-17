@@ -4,6 +4,7 @@ extends SceneTree
 # 3D battle map; this is not a replacement preview nor a balance patch.
 const City=preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const V4=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
+const CityDistance=preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
 const Session=preload("res://scripts/core/BattleSession.gd")
 const Economy=preload("res://scripts/core/UrbanEconomy.gd")
@@ -209,6 +210,46 @@ func _run() -> void:
     assert(tiered==tiered_before)
     assert(not Session.purchase(tiered,Vector2i(2,1),"scout")["valid"])
     stage.free()
+    # V6 adaptive native LOD: preserve the SAME city root, cell, owner
+    # and save state while rebuilding only the mesh stages on camera zoom.
+    assert(CityDistance.preferred_detail(70.0,2)==0)
+    assert(CityDistance.preferred_detail(40.0,0)==0)
+    assert(CityDistance.preferred_detail(32.0,0)==1)
+    assert(CityDistance.preferred_detail(17.0,1)==1)
+    assert(CityDistance.preferred_detail(11.0,1)==2)
+    var runtime: Node3D=Terrain.build(state,"",0)
+    assert(runtime!=null)
+    var dynamic_driver=runtime.get_node_or_null("CiudadesCivilesV6_LOD_Camara")
+    assert(dynamic_driver!=null)
+    assert(int(runtime.get_meta("render_stats")["city_lod_models"])==4)
+    assert(dynamic_driver.cities.size()==4)
+    var target_cell:=Vector2i(3,4)
+    var same_root: Node3D=_site(runtime,target_cell)
+    var before_pos: Vector3=same_root.position
+    var before_owner: int=int(same_root.get_meta("owner_public",-5))
+    var far_count: int=V4.drawable_count(same_root)
+    assert(int(same_root.get_meta("city_lod",-1))==2)
+    var zoom_camera:=Camera3D.new()
+    zoom_camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+    zoom_camera.size=3.0
+    assert(dynamic_driver.update_now(zoom_camera,540.0)>0)
+    assert(_site(runtime,target_cell)==same_root)
+    assert(int(same_root.get_meta("city_lod",-1))==0)
+    var full_count: int=V4.drawable_count(same_root)
+    assert(full_count>far_count*2)
+    assert(same_root.position==before_pos)
+    assert(int(same_root.get_meta("owner_public",-5))==before_owner)
+    assert(same_root.has_node(V4.STAGE_NAME))
+    # Reset to a far/mobile camera. The mesh instances themselves vanish,
+    # not just their visible flag: important for modest Android hardware.
+    zoom_camera.size=90.0
+    assert(dynamic_driver.update_now(zoom_camera,540.0)>0)
+    assert(int(same_root.get_meta("city_lod",-1))==2)
+    assert(V4.drawable_count(same_root)==far_count)
+    assert(_site(runtime,target_cell)==same_root)
+    assert(state==untouched)
+    zoom_camera.free()
+    runtime.free()
     if DisplayServer.get_name()!="headless":
         await _capture_live_city_map(state,false)
         await _capture_live_city_map(state,true)
