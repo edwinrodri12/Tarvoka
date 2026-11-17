@@ -161,10 +161,18 @@ func _run()->void:
         if mobile!=null:
             var simple:=mobile.find_child("G13_TwinGunReceiver",
                 true,false) as MeshInstance3D
+            # LOD8 V26 reuses the same receiver instance with a closed
+            # 48-triangle faceted mesh. V21 cheek/seam hero geometry is
+            # still excluded from Android; don't require stale BoxMesh art.
+            var v26:bool=bool(mobile.get_meta(
+                "tarvoka_g13_v26_mobile_faceted_armor",false))
+            var lightweight_shape:bool=simple!=null and (
+                (v26 and simple.mesh is ArrayMesh) or
+                (not v26 and simple.mesh is BoxMesh))
             check(not bool(mobile.get_meta(Sides.FLAG,false)) and
                 mobile.find_child(Sides.LOWER_SEAM % 1,true,false)==null and
-                simple!=null and simple.mesh is BoxMesh,
-                "Android LOD8 original box-shaped receiver remains and has no V21 hero-only geometry")
+                lightweight_shape,
+                "Android LOD8 keeps the original receiver node, without V21 hero seams")
             mobile.free()
     if failed>0:
         quit(1)
