@@ -10,6 +10,7 @@ const V2=preload("res://scripts/ui/CivilianCityFacadeV2.gd")
 const V3=preload("res://scripts/ui/CivilianCityPublicSpaceV3.gd")
 const V8=preload("res://scripts/ui/CivilianCityArchitectureV8.gd")
 const V9=preload("res://scripts/ui/CivilianCityFinishV9.gd")
+const V10=preload("res://scripts/ui/CivilianCityGroundFrontV10.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -112,7 +113,12 @@ static func _keep_medium(name: String) -> bool:
         "TapajuntaMarquesinaV9_","FajaEntrePisosV9_",
         "CostillaPanelSolarV9_","PerfilAluminioV9_",
         "FiloCoronaMetropolitanaV9_","JambaTorreRelojV9_",
-        "PilastraMunicipalDelanteraV9_","PilastraMunicipalTraseraV9_"]:
+        "PilastraMunicipalDelanteraV9_","PilastraMunicipalTraseraV9_",
+        # V10: only close-up doorway hardware and walkway joints.
+        "TiradorPortalV10_","MontantePortalV10_",
+        "BordilloEntradaV10_","CenefaMarcaComercialV10_",
+        "FiloMarquesinaV10_","BandaTactilAccesoMunicipalV10",
+        "BordeRampaMunicipalV10_","DesgasteEscalonV10_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -151,7 +157,12 @@ static func _keep_far(name: String) -> bool:
         "RemateTejaBordeVillaV9_","VigaCoronaMetropolitanaV9_",
         "VigaCoronaPosteriorV9_","VigaCoronaFrontalV9_",
         "JuntaCubiertaAyuntamientoV9","ClaveMunicipalDerribadaV9",
-        "RemateParapetoRotoV9_","PanelCoronaDobladoV9"]:
+        "RemateParapetoRotoV9_","PanelCoronaDobladoV9",
+        # V10: major entry proportions survive from a distance.
+        "PlataformaAccesoCivilV10","RampaPeatonalConectadaV10",
+        "UmbralMunicipalHundidoV10",
+        "ArcoDintelMunicipalV10","MarquesinaEscalonadaV10_",
+        "PorcheVillaV10_","AccesoViviendaDerruidoV10_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -222,7 +233,9 @@ static func apply(model: Node3D,level: int,
     # V9 is modeled, not artistically locked or final-approved yet.
     if not V9.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",9)
+    if not V10.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",10)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
