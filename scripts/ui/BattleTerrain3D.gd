@@ -12,6 +12,7 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
+const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
@@ -485,6 +486,21 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var visible: bool = bool(known.get("visible",false))
         # Ownership cannot leak through fog; unknown allegiance is neutral.
         var owner: int = int(site["owner"]) if visible else -1
+        # Real civil V4 district, identical to the shared Art Studio.
+        # CELL_MODEL_SCALE confines all geometry to one 2.4 m board tile.
+        # An explored-but-not-visible city must not reveal its new owner.
+        if str(site["kind"])=="city":
+            var city: Node3D=CivilianCity.build_site(state,site,owner,2)
+            if city!=null:
+                city.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
+                city.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                city.set_meta("owner_public",owner)
+                city.set_meta("kind","city")
+                city.set_meta("battle_cell",cell)
+                parent.add_child(city)
+                drawn+=1
+                continue
         # The approved Infantry Barracks V11 replaces the generic cube
         # for the pre-existing factory site in actual playable 3D battles.
         # FOW still hides unexplored cells and unknown ownership.
