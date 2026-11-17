@@ -191,5 +191,21 @@ func _initialize() -> void:
     assert(shuffled_allies == [Vector2i(2, 0), Vector2i(1, 0)]
         and shuffled_blocked == [Vector2i(2, 1), Vector2i(0, 1), Vector2i(1, 1)],
         "Pathfinding must preserve reordered occupancy inputs")
+    # Mirror the large-map edge case on the upper-left boundary to catch
+    # asymmetric bounds checks and accidental wraparound through allied transit.
+    var corner_allies: Array[Vector2i] = [Vector2i(1, 0)]
+    var corner_enemies: Array[Vector2i] = [Vector2i(0, 1)]
+    var corner_reached: Dictionary = rules.reachable(
+        Vector2i(0, 0), 2, large_map, corner_enemies, "ground", false, corner_allies
+    )
+    assert(not corner_reached.has(Vector2i(1, 0)),
+        "Upper-left allied transit cannot be a legal endpoint")
+    assert(corner_reached.get(Vector2i(2, 0), -1) == 2,
+        "Upper-left allied transit must reach a free cell at exact cost")
+    assert(not corner_reached.has(Vector2i(-1, 0)) and not corner_reached.has(Vector2i(0, -1)),
+        "Upper-left transit must not wrap to negative coordinates")
+    assert(large_map == large_snapshot and corner_allies == [Vector2i(1, 0)]
+        and corner_enemies == [Vector2i(0, 1)],
+        "Mirrored edge transit must preserve caller-owned collections")
     print("PASS: allied transit and endpoint isolation")
     quit()
