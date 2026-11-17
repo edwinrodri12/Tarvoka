@@ -62,6 +62,20 @@ func _run() -> void:
             _check(trunnion!=null and trunnion.get_parent()==moving
                 and trunnion.mesh is CylinderMesh,
                 "left/right rotary bearing belongs to animated gun")
+        # V12.1: genuine side gussets clear the original moving gun.
+        var gusset: MeshInstance3D=model.find_child(
+            "A01V12_PilarCunaDelantero_1",true,false) as MeshInstance3D
+        var guide: MeshInstance3D=model.find_child(
+            "A01V12_GuiaMovilCanon_1",true,false) as MeshInstance3D
+        var bridge: MeshInstance3D=model.find_child(
+            "A01V12_PuenteTransversalCuna",true,false) as MeshInstance3D
+        _check(gusset!=null and guide!=null and bridge!=null
+            and gusset.mesh is CylinderMesh and bridge.mesh is CylinderMesh,
+            "V12.1 three-dimensional cradle bridge and exposed gussets")
+        _check(gusset!=null and absf(gusset.position.x)>=0.295
+            and moving!=null and guide!=null and guide.get_parent()==moving,
+            "braces clear 0.19m gun shell and moving guides inherit original pivot")
+        var guide_rest: Vector3=guide.global_position if guide!=null else Vector3.ZERO
         var meshes: int=Models.inspect_meshes(model)
         _check(V12.apply(model,Models.faction_paint_color(faction))
             and Models.inspect_meshes(model)==meshes,
@@ -76,6 +90,8 @@ func _run() -> void:
             "original A01 gun still pitches and fires in attack animation")
         _check(absf(gun.rotation_degrees.x)>0.2 and moving.get_parent()==gun,
             "V12 cannon cover rotates with actual animated gun")
+        _check(guide!=null and guide.global_position.distance_to(guide_rest)>0.005,
+            "V12.1 guide rail physically follows pitched gun, not static fuselage")
         Models.restore_model_pose("attack_heli",model)
         _check(Models.pose_model("attack_heli",model,"move",0.52),
             "original A01 aerial movement remains intact")
