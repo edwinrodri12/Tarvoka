@@ -77,8 +77,9 @@ static func apply(model:Node3D)->bool:
     var prior_paint:=paint_source.material_override as StandardMaterial3D
     if prior_paint==null:
         return false
-    var signature:=_coat(prior_paint.albedo_color.lightened(0.18),
-        0.24,0.59)
+    # Keep the EXACT faction albedo across LOD8 and LOD13: distinct
+    # official identity remains unchanged. Only PBR reflectance improves.
+    var signature:=_coat(prior_paint.albedo_color,0.24,0.59)
     var replacement:Dictionary={}
     for label in _names():
         var part:=parts[label] as MeshInstance3D
