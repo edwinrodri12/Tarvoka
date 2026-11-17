@@ -198,6 +198,7 @@ static func refresh(knowledge: Dictionary, side: int,
                 nearest_threat = dist
                 defense = {"kind":str(site["kind"]),"pos":site["pos"]}
     var escorts := 0
+    var all_targets: Dictionary = chosen.duplicate()
     for u in own:
         if escorts >= MAX_ESCORT_ORDERS or tasks.size() >= MAX_ASSIGNMENTS:
             break
@@ -212,14 +213,16 @@ static func refresh(knowledge: Dictionary, side: int,
             task = "escort"
         if target.is_empty():
             continue
-        if _target_count(tasks) >= MAX_TARGETS and \
-                not chosen.has(target["pos"]):
+        if all_targets.size() >= MAX_TARGETS and \
+                not all_targets.has(target["pos"]):
             continue
         var cost: int = _route_cost(knowledge,u,target["pos"],route_cache)
         if cost >= 999999:
             continue
         tasks.append(_goal(u,task,target))
+        all_targets[target["pos"]] = true
         assigned_ids[str(u["id"])] = true
+        escorts += 1
     return {
         "side":side,
         "style":str(strategic.get("style","balanced")),
