@@ -108,13 +108,14 @@ static func _cheek_mesh(side: int) -> ArrayMesh:
         for j in range(4):
             _quad(st,points[i][j],points[i][(j+1)%4],
                 points[i+1][(j+1)%4],points[i+1][j])
+    # Close the two ends with two non-degenerate triangles each.
     for j in range(1,3):
-        _quad(st,points[0][0],points[0][j],points[0][j+1],
-            points[0][0])
-        _quad(st,points[points.size()-1][0],
-            points[points.size()-1][j+1],
-            points[points.size()-1][j],
-            points[points.size()-1][0])
+        st.add_vertex(points[0][0])
+        st.add_vertex(points[0][j+1])
+        st.add_vertex(points[0][j])
+        st.add_vertex(points[points.size()-1][0])
+        st.add_vertex(points[points.size()-1][j])
+        st.add_vertex(points[points.size()-1][j+1])
     st.generate_normals()
     return st.commit()
 
