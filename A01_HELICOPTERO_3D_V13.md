@@ -29,3 +29,8 @@ El módulo y las pruebas V13 están implementados en la rama. **No dar V13 por a
 
 ## Revisión de la siguiente prioridad
 Se reforzó el flujo V12 probado para ejecutar también pruebas V13 y exportar sus 13 imágenes originales de Godot. Las verificaciones ahora incluyen mallas cerradas de rotores principal/cola, puntos de salida junto a los bujes, fases inicial y final de la trayectoria, anillo expansivo y persistencia del daño al cambiar de facción en el Estudio 3D. **No se ha verificado visualmente V13 mediante capturas nuevas hasta recibir un artefacto de CI; la rama permanece draft.**
+
+## V13 — Revisión de persistencia de destrucción
+El Estudio ahora conserva la posición final de caída (altura inferior y alabeo de 70°) al detenerse la animación, cambiar la cámara, inspeccionar detalles o cambiar de facción. La única acción que restablece la aeronave y sus rotores es **Reparar helicóptero**. Llegar al nivel 4 desde **Siguiente nivel de daño** inicia directamente la animación de destrucción; una unidad destruida no vuelve a volar o disparar sin reparar. El control de detener conserva el estado destruido.
+
+Pruebas estáticas de integración: 11/11 invariantes sobre presencia de controles, retención del estado, animación original y CI de 13 capturas. Se añadieron pruebas de integración Godot al archivo `tests/test_attack_helicopter_v9_studio.gd` para comprobar el aterrizaje de los restos, su conservación al girar e inspeccionar la cámara y el cambio de facción. **Pendiente:** nueva ejecución real de Godot 4.3 para validar el render de V13; no confundir la revisión estática con una prueba visual aprobada.
