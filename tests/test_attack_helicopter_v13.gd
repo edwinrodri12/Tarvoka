@@ -3,6 +3,9 @@ extends SceneTree
 # V13 visual-stage, impact, crash and original-geometry regression in Godot 4.3.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
+const V2=preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
+const V3=preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
+const V7=preload("res://scripts/ui/AttackHelicopterReadabilityV7.gd")
 const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 var failures: int=0
@@ -40,11 +43,20 @@ func _run() -> void:
         var fire: Node3D=model.find_child(V13.FIRE,true,false) as Node3D
         var burst: Node3D=model.find_child(V13.IMPACT,true,false) as Node3D
         var wreck: Node3D=model.find_child(V13.WRECK,true,false) as Node3D
+        var wreck_body: Node3D=model.find_child(V13.WRECK_BODY,true,false) as Node3D
+        var original_glass: Node3D=model.find_child(V2.GLASS,true,false) as Node3D
+        var original_guard: Node3D=model.find_child(V3.GUARD,true,false) as Node3D
+        var intact_guard_mark: Node3D=model.find_child(
+            V7.TAIL_MARK+"0",true,false) as Node3D
         var detonation: Node3D=model.find_child(V13.DETONATION,true,false) as Node3D
         var ground_dust: Node3D=model.find_child(V13.LANDING_DUST,true,false) as Node3D
         _check(detonation!=null and not detonation.visible
             and ground_dust!=null and not ground_dust.visible,
             "V13.2 explosion and landing dust begin hidden on a pristine A01")
+        _check(wreck_body!=null and not wreck_body.visible
+            and original_glass!=null and original_glass.visible
+            and original_guard!=null and original_guard.visible,
+            "V13.3 leaves approved canopy and complete tail guard untouched at stage0")
         _check(rotor!=null and rotor.visible and tail!=null and tail.visible
             and scratches!=null and not scratches.visible
             and burn!=null and not burn.visible
@@ -130,6 +142,21 @@ func _run() -> void:
             and not rotor.visible and not tail.visible
             and wreck.top_level and ground_dust.top_level,
             "stage4 world-anchors detached debris AND later ground-impact dust")
+        var charred: MeshInstance3D=model.find_child(
+            "A01V13_CarbonizacionFijaMotor",true,false) as MeshInstance3D
+        var chip: MeshInstance3D=model.find_child(
+            "A01V13_VidrioAstillado_0",true,false) as MeshInstance3D
+        var bent_rim: MeshInstance3D=model.find_child(
+            "A01V13_AroColaTorcido_01",true,false) as MeshInstance3D
+        _check(wreck_body.visible and not wreck_body.top_level
+            and not original_glass.visible and not original_guard.visible
+            and intact_guard_mark!=null and not intact_guard_mark.visible,
+            "V13.3 hides intact canopy, complete guard and floating tail markers")
+        _check(charred!=null and charred.get_parent()==wreck_body
+            and chip!=null and chip.mesh is ArrayMesh
+            and bent_rim!=null and bent_rim.get_parent()==wreck_body
+            and model.find_child("A01V13_CarbonizacionFinal",true,false)==null,
+            "V13.3 soot follows fuselage, with real shattered glass and severed rim")
         var rest_position: Vector3=model.position
         var rest_rotation: Vector3=model.rotation_degrees
         var detached_origin: Vector3=wreck.global_position
@@ -192,10 +219,12 @@ func _run() -> void:
             "restore resets transforms without repairing permanent stage4 wreck")
         _check(V13.set_stage(model,0) and rotor.visible and tail.visible
             and not wreck.visible and not wreck.top_level
+            and not wreck_body.visible and original_glass.visible
+            and original_guard.visible and intact_guard_mark.visible
             and not ground_dust.top_level and not ground_dust.visible
             and not detonation.visible and not smoke.visible
             and not scratches.visible and not fire.visible,
-            "repair reattaches both world-space effects and restores original rotors")
+            "repair restores original canopy, complete tail guard and both rotors")
         _check(V13.pose(model,"attack",0.34)
             and V12.has_model(model),
             "approved V12 cannon and original muzzle flash still function")
