@@ -158,7 +158,7 @@ static func _roof_hardware(parent: Node3D,tag: String,
             var chip:=V14._sloped_slab(group,
                 "V21_TejadoHundido_%s_%d" % [tag,i],
                 Vector3(x+(float(i)-1.0)*w*0.24,
-                    0.13,z+((float(i)%2.0)-0.5)*d*0.55),
+                    0.13,z+(float(i%2)-0.5)*d*0.55),
                 0.45,0.38,0.08,0.18,
                 CLAY if level==1 else BRICK if level==2 else STEEL)
             chip.rotation_degrees.y=float(i)*19.0
@@ -229,7 +229,7 @@ static func _rubble_openings(parent: Node3D,tag: String,
             "steel" if level==3 else "stone")
         piece.rotation_degrees.y=float(i)*29.0
     if damage==4:
-        _part(group,"V21_CristalYTabiquesRotOs_"+tag,
+        _part(group,"V21_CristalYTabiquesRotos_"+tag,
             Vector3(x+0.19,0.11,z+d*0.24),
             Vector3(0.42,0.10,0.45),
             DARK_WOOD if level==1 else DUST if level==2 else
