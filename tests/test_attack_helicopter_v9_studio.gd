@@ -92,12 +92,17 @@ func _run() -> void:
             if item is Button:
                 titles.append((item as Button).text)
     _check(inventory!=null and inventory.visible
-        and titles.has("Ráfaga del cañón frontal")
-        and titles.has("Impacto explosivo y onda de choque")
-        and titles.has("Daño crítico · llamas")
-        and titles.has("Destrucción · caída y fragmentos")
-        and titles.has("Reparar helicóptero por completo"),
-        "unified Animar inventory exposes all real A01 V13 controls")
+        and titles.has("Ráfaga de cañón frontal")
+        and titles.has("Lanzamiento de dos misiles")
+        and titles.has("Impactos múltiples de balas / chispas")
+        and titles.has("Impactos de balas · cámara lenta")
+        and titles.has("Impacto de misil / doble explosión")
+        and titles.has("Impacto de misil · cámara lenta")
+        and titles.has("Daño crítico · incendio activo")
+        and titles.has("Destrucción · choque y rotor desprendido")
+        and titles.has("Destrucción · cámara lenta")
+        and titles.has("Aeronave intacta / reparar"),
+        "unified Animar inventory exposes all real A01 V14 animation controls")
     studio.call("_studio_run_animation","damage_2")
     _check(V13.stage(model)==2,
         "unified V13 damage button activates real smoke on current model")
@@ -320,14 +325,14 @@ func _run() -> void:
     _check(rim!=null and not rim.visible,
         "V10 extra light disabled when viewing Bastion or any other category")
     var shared_picker: OptionButton=studio.get("role_picker") as OptionButton
-    var has_v13_label: bool=false
+    var has_v14_label: bool=false
     if shared_picker!=null:
         for idx in range(shared_picker.item_count):
             if shared_picker.get_item_text(idx).contains("Helicóptero A01") and (
-                    shared_picker.get_item_text(idx).contains("V13")):
-                has_v13_label=true
-    _check(shared_picker!=null and has_v13_label and shared_picker.clip_text,
-        "unified model selector includes A01 V13 with Android-safe clipping")
+                    shared_picker.get_item_text(idx).contains("V14")):
+                has_v14_label=true
+    _check(shared_picker!=null and has_v14_label and shared_picker.clip_text,
+        "unified model selector includes A01 HAT-29 V14 with Android-safe clipping")
     _check(studio.get("model_root")!=null,
         "old Bastion inspector still loads after A01")
     studio.queue_free()
