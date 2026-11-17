@@ -256,13 +256,12 @@ static func _civic_rupture(root: Node3D,
     var civic:=V1._group(root,"AyuntamientoPosteriorDeformadoV11")
     var z: float=-3.75+2.74*0.5
     if damage>=3:
+        var profile:=PackedFloat32Array([0.46,1.43,0.61,1.84,0.38])
+        if damage==4:
+            profile=PackedFloat32Array([0.12,0.42,0.26,0.69,0.10])
         _broken_wall(civic,"PortalCivilArrancadoV11",
             Vector3(0,0.11,z),Vector3(2.87,0,0),
-            PackedFloat32Array(
-                [0.46,1.43,0.61,1.84,0.38]
-                if damage==3 else
-                [0.12,0.42,0.26,0.69,0.10]),
-            MORTAR,0.30)
+            profile,MORTAR,0.30)
         _part(civic,"FrisoAyuntamientoEnSueloV11",
             Vector3(0.38,0.19,z+0.68),
             Vector3(1.39,0.18,0.45),SOOT)
