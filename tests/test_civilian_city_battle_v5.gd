@@ -112,6 +112,9 @@ func _run() -> void:
         var ids: Dictionary=Identity.resolved(
             colored.get(Identity.STATE_FIELD,{}))
         ids["0"]=str(Style.FACTIONS[faction]["key"])
+        # Every army uses a DIFFERENT faction identity; otherwise
+        # FactionIdentity.resolved rightfully rejects the test fixture.
+        ids["1"]=str(Style.FACTIONS[(faction+1)%8]["key"])
         colored[Identity.STATE_FIELD]=ids
         var city_site: Dictionary=Economy.site_at(
             colored["economy"],Vector2i(2,1))
