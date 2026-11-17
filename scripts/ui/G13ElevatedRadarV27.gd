@@ -31,7 +31,9 @@ static func _parts(root:Node3D)->Dictionary:
     var receiver:=radar.find_child(
         RECEIVER,false,false) as MeshInstance3D
     if mast==null or dish==null or receiver==null or (
-            not mast.mesh is CylinderMesh) or (
+            not (mast.mesh is CylinderMesh or (
+                bool(root.get_meta("tarvoka_g13_v28_radar_deck_mounted",false))
+                and mast.mesh is ArrayMesh))) or (
             not dish.mesh is CylinderMesh) or (
             not receiver.mesh is BoxMesh):
         return {}
