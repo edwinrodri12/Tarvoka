@@ -176,7 +176,8 @@ concurrency:
   # city V16/native EDIFICIOS publishing commit a dedicated slot. Frequent
   # unrelated main updates must not evict it from GitHub's single pending
   # Actions slot before the export even starts.
-  group: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-public-studio-pages' }}
+  group: >-
+    ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-public-studio-pages' }}
   cancel-in-progress: false
 
 jobs:
