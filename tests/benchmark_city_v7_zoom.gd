@@ -125,27 +125,27 @@ func _run_case(spec: Dictionary) -> Dictionary:
     var far_meshes: int=0
     var near_meshes: int=0
     var transitions_before: int=int(driver.transitions)
-    for pass in [
+    for phase in [
         {"label":"lejos","camera":90.0},
         {"label":"tactico","camera":13.0},
         {"label":"cerca","camera":2.9},
         {"label":"regreso_lejos","camera":90.0},
     ]:
-        camera.size=float(pass["camera"])
+        camera.size=float(phase["camera"])
         var start: int=Time.get_ticks_usec()
         var swapped: int=int(driver.update_now(camera,float(viewport.size.y)))
         var cpu_ms: float=float(Time.get_ticks_usec()-start)/1000.0
         var meshes: int=_sample_meshes(driver)
-        var measured: Dictionary=await _frame_readings(str(pass["label"]))
+        var measured: Dictionary=await _frame_readings(str(phase["label"]))
         measured["mesh_count"]=meshes
         measured["city_lod_changes_this_zoom"]=swapped
         measured["lod_change_cpu_ms"]=snappedf(cpu_ms,0.01)
         passes.append(measured)
-        if str(pass["label"])=="lejos":
+        if str(phase["label"])=="lejos":
             far_meshes=meshes
             if spec["id"]=="10x8_real":
                 await _picture("tarvoka_city_v7_far_godot_mesa.png")
-        if str(pass["label"])=="cerca":
+        if str(phase["label"])=="cerca":
             near_meshes=meshes
             if spec["id"]=="10x8_real":
                 await _picture("tarvoka_city_v7_near_godot_mesa.png")
