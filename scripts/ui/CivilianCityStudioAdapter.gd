@@ -7,7 +7,7 @@ class_name TarvokaCivilianCityStudioAdapter
 # Native Godot meshes; no iframes, external links or screenshot proxies.
 const Cities=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
 const CityBase=preload("res://scripts/ui/CivilianCity3DV1.gd")
-const CityMaterials=preload("res://scripts/ui/CivilianCityMaterialJointsV16.gd")
+const CityMaterials=preload("res://scripts/ui/CivilianCityRearFinishV17.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 
 var civilian_city_controls: VBoxContainer
@@ -27,19 +27,19 @@ func _ready() -> void:
     if building_picker.item_count!=CITY_BUILDING_INDEX:
         push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
         return
-    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V16")
+    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V17")
     building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
     _install_city_options()
     _refresh_unified_studio_navigation()
 
 func _install_city_options() -> void:
     civilian_city_controls=VBoxContainer.new()
-    civilian_city_controls.name="Edificios_Ciudades_Civiles_V16"
+    civilian_city_controls.name="Edificios_Ciudades_Civiles_V17"
     civilian_city_controls.add_theme_constant_override("separation",6)
     civilian_city_controls.visible=false
     building_controls.add_child(civilian_city_controls)
     _title(civilian_city_controls,
-        "CIUDAD CIVIL · V16 · MODELO 3D EN DISEÑO",14)
+        "CIUDAD CIVIL · V17 · MODELO 3D EN DISEÑO",14)
     _title(civilian_city_controls,
         "Elige Villa, Ciudad o Metrópoli; visualiza 5 etapas de daño.",12)
     civilian_city_tier=OptionButton.new()
@@ -89,7 +89,7 @@ func _install_city_options() -> void:
         b.pressed.connect(Callable(self,"_city_camera_preset").bind(index))
         views.add_child(b)
     civilian_city_hint=_title(civilian_city_controls,
-        "ARTE V16 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
+        "ARTE V17 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
     civilian_city_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
 func _on_city_option(_index: int) -> void:
@@ -152,10 +152,10 @@ func _display_civilian_city() -> void:
     var lod: int=civilian_city_lod.selected
     model_root=Cities.build_tactical(level,faction,damage,lod)
     if model_root==null:
-        push_error("Ciudad V16: no fue posible construir mallas de Godot")
+        push_error("Ciudad V17: no fue posible construir mallas de Godot")
         return
     preview.add_child(model_root)
-    model_root.name="EDIFICIO_CIUDAD_CIVIL_V16_N%d_D%d" % [level,damage]
+    model_root.name="EDIFICIO_CIUDAD_CIVIL_V17_N%d_D%d" % [level,damage]
     model_root.rotation_degrees.y=_yaw
     if hq_ground!=null:
         hq_ground.visible=false
@@ -170,7 +170,7 @@ func _display_civilian_city() -> void:
     _update_details()
     _refresh_unified_studio_navigation()
     if studio_overview_label!=null:
-        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V16 · EN DISEÑO"
+        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V17 · EN DISEÑO"
 
 func _update_camera() -> void:
     if _role=="civilian_city":
@@ -204,7 +204,7 @@ func _update_details() -> void:
             "Piedra y ladrillo" if tier==2 else "Vidrio y aluminio")
         if detail_label!=null:
             detail_label.text=(
-                "CIUDAD CIVIL V16 · %s · %d mallas reales" %
+                "CIUDAD CIVIL V17 · %s · %d mallas reales" %
                 [identity,Cities.drawable_count(model_root)])
         if status_label!=null:
             status_label.text=(
