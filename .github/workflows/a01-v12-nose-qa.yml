@@ -1,0 +1,82 @@
+name: TARVOKA A01 V12 nose armour and articulated cannon native QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/AttackHelicopterNoseV12.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v12.gd'
+      - 'tests/test_attack_helicopter_v12_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v12-tail-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/AttackHelicopterNoseV12.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'tests/test_attack_helicopter_v12.gd'
+      - 'tests/test_attack_helicopter_v12_capture.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - '.github/workflows/a01-v12-tail-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  a01-v12-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install original Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate V12 sealed front armour, live gun gimbal and trunnions and mobile compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 125s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v12.gd \
+            2>&1 | tee /tmp/a01-v12-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v12-qa.log; then
+            echo 'Native V12 QA failed'; exit 1
+          fi
+          grep -F 'PASS A01 V12:' /tmp/a01-v12-qa.log
+      - name: Capture 8 V12 angles, 4 exact V11 baselines and 4 native nose/cannon closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a01-v12-review
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 A01_CAPTURE_DIR=/tmp/a01-v12-review \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v12_capture.gd \
+            2>&1 | tee /tmp/a01-v12-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/a01-v12-capture.log; then
+            echo 'Native V12 16-frame rendering failed'; exit 1
+          fi
+          grep -F 'PASS A01 V12 CAPTURE:' /tmp/a01-v12-capture.log
+          test "$(find /tmp/a01-v12-review -maxdepth 1 -name '*.png' | wc -l)" -eq 16
+      - name: Archive 16 genuine Godot V12 nose and cannon review frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a01-v12-real-godot-16-frame-review
+          path: |
+            /tmp/a01-v12-review/*.png
+            /tmp/a01-v12-qa.log
+            /tmp/a01-v12-capture.log
+          if-no-files-found: warn
+          retention-days: 14
