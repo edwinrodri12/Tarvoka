@@ -123,6 +123,12 @@ func _run() -> void:
             "main rotor fragment rests near terrain instead of hovering")
         _check(debris!=null and debris.position.distance_to(rest_debris)<0.001,
             "ballistic rotor fragment settles at pre-authored wreck position")
+        var stable_world_origin: Vector3=wreck.global_position
+        model.rotation_degrees.y+=37.0
+        _check(wreck.top_level and
+            wreck.global_position.distance_to(stable_world_origin)<0.001,
+            "wreck pieces keep ground anchor when preview model rotates")
+        model.rotation_degrees.y-=37.0
         V13.restore(model)
         _check(model.position.distance_to(rest_position)<0.001
             and model.rotation_degrees.distance_to(rest_rotation)<0.001
