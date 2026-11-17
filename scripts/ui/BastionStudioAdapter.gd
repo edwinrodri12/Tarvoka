@@ -100,6 +100,7 @@ var g13_controls: VBoxContainer
 var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g11_animation: String = ""
+var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
 var _g11_playback_speed: float = 1.0
 var _g11_fx_clock: float = 0.0
@@ -131,6 +132,10 @@ var studio_legacy_controls: VBoxContainer
 var studio_attack_button: Button
 var studio_impact_button: Button
 var studio_g13_ground_button: Button
+var studio_animation_inventory: VBoxContainer
+var studio_animation_message: Label
+var studio_animation_role: String = ""
+var studio_animation_rebuild_count: int = 0
 
 
 func _ready() -> void:
@@ -215,29 +220,16 @@ func _install_unified_studio_navigation() -> void:
         button.clip_text=true
 
     studio_animation_panel=VBoxContainer.new()
+    studio_animation_panel.name="Estudio3D_TodasLasAnimaciones"
     studio_animation_panel.add_theme_constant_override("separation",6)
     studio_quick_panel.add_child(studio_animation_panel)
-    var action_row:=HBoxContainer.new()
-    action_row.add_theme_constant_override("separation",6)
-    studio_animation_panel.add_child(action_row)
-    var move_button: Button=_button(action_row,"Mover",func(): _studio_quick_action("move"))
-    studio_attack_button=_button(action_row,"Atacar",func(): _studio_quick_action("attack"))
-    for control in [move_button,studio_attack_button]:
-        control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-        control.custom_minimum_size.x=0
-        control.clip_text=true
-    var damage_row:=HBoxContainer.new()
-    damage_row.add_theme_constant_override("separation",6)
-    studio_animation_panel.add_child(damage_row)
-    studio_impact_button=_button(damage_row,"Impacto",func(): _studio_quick_action("hit"))
-    var stop_button: Button=_button(damage_row,"Detener",_studio_quick_stop)
-    for control in [studio_impact_button,stop_button]:
-        control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-        control.custom_minimum_size.x=0
-        control.clip_text=true
-    studio_g13_ground_button=_button(studio_animation_panel,
-        "G13 · Disparo terrestre",func(): _studio_quick_action("attack_ground"))
-    studio_g13_ground_button.visible=false
+    studio_animation_message=_title(studio_animation_panel,
+        "Animaciones disponibles del modelo seleccionado",12)
+    studio_animation_message.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    studio_animation_inventory=VBoxContainer.new()
+    studio_animation_inventory.name="CatalogoCompletoDeAnimaciones"
+    studio_animation_inventory.add_theme_constant_override("separation",5)
+    studio_animation_panel.add_child(studio_animation_inventory)
     studio_camera_panel=VBoxContainer.new()
     studio_camera_panel.add_theme_constant_override("separation",6)
     studio_quick_panel.add_child(studio_camera_panel)
@@ -401,6 +393,242 @@ func _studio_jump_details() -> void:
     if scroll!=null:
         scroll.ensure_control_visible(detail_label)
 
+# Complete role-specific previews: only animations and conditions actually
+# supported by the current native rig. Camera angles, LOD, material audits
+# and former revision buttons stay available on the separate Details tab.
+func _studio_animation_specs(role: String) -> Array[Dictionary]:
+    match role:
+        "tank":
+            return [
+                {"group":"G09 V32 · MOVIMIENTO Y COMBATE"},
+                {"title":"Orugas y suspensión","action":"move"},
+                {"title":"Apuntar, cañón y disparar","action":"attack"},
+                {"group":"IMPACTOS · ANIMACIONES INDEPENDIENTES"},
+                {"title":"Reacción general","action":"damaged"},
+                {"title":"Impacto de bala V30","action":"hit_bullet"},
+                {"title":"Explosión V30","action":"hit_explosion"},
+                {"group":"ESTADOS VISUALES DE DAÑO"},
+                {"title":"Impactos leves","action":"damage_1"},
+                {"title":"Blindaje dañado","action":"damage_2"},
+                {"title":"Daño crítico","action":"damage_3"},
+                {"title":"Destrucción","action":"damage_4"},
+                {"title":"Reparar por completo","action":"damage_0"},
+                {"group":"REVISAR MODELO APROBADO"},
+                {"title":"G09 V32 · Visor final separado","action":"tank_standalone"},
+                {"title":"Detener animación","action":"stop"}
+            ]
+        "apc":
+            return [
+                {"group":"BASTIÓN P06 V25 · MOVIMIENTO Y ARMAMENTO"},
+                {"title":"Movimiento 6×6","action":"move"},
+                {"title":"Giro y dirección 6×6","action":"move_turn"},
+                {"title":"Orientar torreta","action":"turn_turret"},
+                {"title":"Ráfaga de ametralladora","action":"attack"},
+                {"group":"INTERIOR Y SISTEMAS MÓVILES"},
+                {"title":"Abrir rampa","action":"open_ramp"},
+                {"title":"Cerrar rampa","action":"close_ramp"},
+                {"group":"IMPACTOS Y ESTADOS"},
+                {"title":"Impacto de balas","action":"hit_bullet"},
+                {"title":"Impacto explosivo","action":"hit_explosive"},
+                {"title":"Daño leve","action":"damage_1"},
+                {"title":"Daño moderado","action":"damage_2"},
+                {"title":"Daño crítico","action":"damage_3"},
+                {"title":"Destrucción","action":"damage_4"},
+                {"title":"Restaurar blindaje","action":"damage_0"},
+                {"group":"SIMULACIÓN DE GRUPO"},
+                {"title":"8 vehículos · marcha","action":"p06_fleet_move"},
+                {"title":"8 vehículos · ráfagas","action":"p06_fleet_attack"},
+                {"title":"Volver a un Bastión","action":"p06_fleet_close"},
+                {"title":"Detener animación","action":"stop"}
+            ]
+        "mlrs":
+            return [
+                {"group":"LANZADOR G11 V33 · ANIMACIONES"},
+                {"title":"Orugas y marcha","action":"move"},
+                {"title":"Salva de cohetes","action":"attack"},
+                {"title":"Salva a velocidad 0.35×","action":"g11_attack_slow"},
+                {"title":"Enfriar y retraer","action":"cooldown"},
+                {"title":"Giro sobre oruga izquierda","action":"g11_turn_left"},
+                {"title":"Giro sobre oruga derecha","action":"g11_turn_right"},
+                {"title":"Suspensión en desnivel","action":"g11_slope"},
+                {"group":"IMPACTOS Y DAÑOS"},
+                {"title":"Impactos de balas","action":"hit_bullet"},
+                {"title":"Explosión y sacudida","action":"hit_explosive"},
+                {"title":"Daño leve","action":"damage_1"},
+                {"title":"Daño moderado","action":"damage_2"},
+                {"title":"Daño crítico","action":"damage_3"},
+                {"title":"Destrucción","action":"damage_4"},
+                {"title":"Reparación completa","action":"damage_0"},
+                {"group":"SIMULACIÓN DE BATALLA V29–V32"},
+                {"title":"Mover en escenario","action":"g11_battle_move"},
+                {"title":"Salva con humo y cohetes","action":"g11_battle_attack"},
+                {"title":"Cerrar escenario de prueba","action":"g11_battle_close"},
+                {"title":"Detener animación","action":"stop"}
+            ]
+        "aa_mobile":
+            return [
+                {"group":"G13 · MOVIMIENTO, RADAR Y APUNTADO"},
+                {"title":"Rodaje 4×4","action":"move"},
+                {"title":"Barrido del radar","action":"g13_scan"},
+                {"title":"Apuntado de barrido V1","action":"g13_aim_legacy"},
+                {"title":"Apuntar a objetivo aéreo","action":"g13_aim_air"},
+                {"title":"Apuntar a objetivo terrestre","action":"g13_aim_ground"},
+                {"group":"G13 V4 · DOS DISPAROS VISUALES"},
+                {"title":"Ráfaga antiaérea","action":"g13_attack_air"},
+                {"title":"Ráfaga terrestre","action":"g13_attack_ground"},
+                {"title":"Restaurar radar y cañones","action":"stop"}
+            ]
+        "attack_heli":
+            return [
+                {"group":"HELICÓPTERO A01 V10 · VUELO Y ROTORES"},
+                {"title":"Vuelo con rotores","action":"move"},
+                {"title":"Suspensión / hover","action":"hover"},
+                {"group":"ARMAMENTO Y REACCIONES"},
+                {"title":"Ráfaga frontal","action":"attack"},
+                {"title":"Impacto de bala","action":"hit_bullet"},
+                {"title":"Impacto explosivo","action":"hit_explosive"},
+                {"title":"Detener y restaurar rotores","action":"stop"}
+            ]
+    return []
+
+func _studio_rebuild_animation_catalog() -> void:
+    if studio_animation_inventory==null:
+        return
+    var building: bool=category_picker!=null and category_picker.selected==1
+    var key: String="building" if building else _role
+    if studio_animation_role==key:
+        return
+    studio_animation_role=key
+    studio_animation_rebuild_count+=1
+    for node in studio_animation_inventory.get_children():
+        studio_animation_inventory.remove_child(node)
+        node.queue_free()
+    if building:
+        studio_animation_message.text="Los edificios tienen inspección y niveles, no animaciones de unidades."
+        return
+    var specs: Array[Dictionary]=_studio_animation_specs(_role)
+    if specs.is_empty():
+        studio_animation_message.text=(
+            "Este modelo aún no dispone de un rig de animaciones propio. "
+            + "Puedes inspeccionarlo desde la pestaña Cámara.")
+        return
+    studio_animation_message.text="%d opciones disponibles · %s" % [
+        specs.filter(func(item: Dictionary)->bool: return item.has("action")).size(),
+        studio_overview_label.text]
+    var row: HBoxContainer=null
+    for spec in specs:
+        if spec.has("group"):
+            row=null
+            var heading: Label=_title(studio_animation_inventory,
+                str(spec["group"]),11)
+            heading.add_theme_color_override("font_color",Color("#E7BE70"))
+            heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+            continue
+        if row==null or row.get_child_count()>=2:
+            row=HBoxContainer.new()
+            row.add_theme_constant_override("separation",5)
+            studio_animation_inventory.add_child(row)
+        var title: String=str(spec["title"])
+        var action: String=str(spec["action"])
+        var button: Button=_button(row,title,
+            Callable(self,"_studio_run_animation").bind(action))
+        button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+        button.custom_minimum_size.x=0
+        button.custom_minimum_size.y=40
+        button.clip_text=true
+        button.tooltip_text=title
+
+func _studio_run_animation(action: String) -> void:
+    if model_root==null or category_picker==null or category_picker.selected!=0:
+        return
+    if not _studio_animation_specs(_role).any(
+            func(entry: Dictionary)->bool: return str(entry.get("action",""))==action):
+        return
+    match action:
+        "stop":
+            _studio_quick_stop()
+        "tank_standalone":
+            OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
+        "damage_0","damage_1","damage_2","damage_3","damage_4":
+            _set_damage(int(action.get_slice("_",1)))
+        "p06_fleet_move","p06_fleet_attack":
+            if _role=="apc":
+                _show_p06_fleet(8)
+                _animate_p06_fleet(
+                    "move_turn" if action=="p06_fleet_move" else "attack")
+        "p06_fleet_close":
+            if _role=="apc":
+                _hide_p06_fleet()
+        "g11_attack_slow":
+            _g11_play("attack",0.35)
+        "g11_turn_left":
+            _studio_g11_animated_turn(-1)
+        "g11_turn_right":
+            _studio_g11_animated_turn(1)
+        "g11_slope":
+            if _g11_context_v25==null:
+                _g11_battle_context_v25("temperate")
+            _g11_battle_gear_v32("slope")
+        "g11_battle_move","g11_battle_attack":
+            if _g11_context_v25==null:
+                _g11_battle_context_v25("temperate")
+            _g11_battle_action_v29(
+                "move" if action=="g11_battle_move" else "attack")
+        "g11_battle_close":
+            _g11_close_context_v25()
+        "g13_scan","g13_aim_air","g13_aim_ground","g13_aim_legacy":
+            var pose_kind: String=(
+                "scan" if action=="g13_scan" else
+                "aim" if action=="g13_aim_legacy" else
+                "aim_air" if action=="g13_aim_air" else "aim_ground")
+            _studio_g13_animated_pose(pose_kind)
+        "g13_attack_air","g13_attack_ground":
+            _g13_attack_v4(
+                "attack_air" if action=="g13_attack_air" else "attack_ground")
+        _:
+            _studio_quick_action(action)
+
+func _studio_g13_animated_pose(kind: String) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if kind not in ["move","scan","aim","aim_air","aim_ground"]:
+        return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
+    var art: Node3D=model_root
+    P06Models.restore_model_pose("aa_mobile",art)
+    _g13_v4_tick(0.01,art,kind)
+    _g13_v4_tween=art.create_tween()
+    _g13_v4_tween.tween_method(
+        Callable(self,"_g13_v4_tick").bind(art,kind),0.01,0.99,
+        1.75 if kind=="scan" else 1.25)
+    _g13_v4_tween.tween_callback(Callable(self,"_g13_v4_done").bind(art))
+    status_label.text="G13 · "+kind.replace("_"," ")+" · animación completa"
+
+func _studio_g11_animated_turn(direction: int) -> void:
+    if _role!="mlrs" or model_root==null or not G11Rig.has_rig(model_root):
+        return
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
+    _g11_animation=""
+    var art: Node3D=model_root
+    var heading:=Vector2i(-1 if direction<0 else 1,-1)
+    G11Rig.pose(art,"move",0.01,heading)
+    _g11_turn_tween=art.create_tween()
+    _g11_turn_tween.tween_method(
+        Callable(self,"_studio_g11_turn_tick").bind(art,heading),0.01,0.99,1.20)
+    _g11_turn_tween.tween_callback(
+        Callable(self,"_studio_g11_turn_done").bind(art))
+    status_label.text="G11 V32 · giro diferencial de orugas en reproducción"
+
+func _studio_g11_turn_tick(t: float,art: Node3D,heading: Vector2i) -> void:
+    if is_instance_valid(art):
+        G11Rig.pose(art,"move",t,heading)
+
+func _studio_g11_turn_done(art: Node3D) -> void:
+    if is_instance_valid(art):
+        G11Rig.restore(art)
+
 func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
@@ -412,19 +640,30 @@ func _studio_quick_action(kind: String) -> void:
         "apc":
             _play("hit_bullet" if kind=="hit" else kind)
         "aa_mobile":
-            var visual_kind: String=(
-                "attack_ground" if kind=="attack_ground" else
-                "attack_air" if kind=="attack" else
-                "move" if kind=="move" else "idle")
-            _g13_demo_v1(visual_kind,0.65)
+            if kind in ["attack","attack_air","attack_ground"]:
+                _g13_attack_v4("attack_ground" if kind=="attack_ground" else "attack_air")
+            elif kind=="hit":
+                _g13_demo_v1("idle",1.0)
+            else:
+                _studio_g13_animated_pose(kind)
+        "tank":
+            _play("hit_bullet" if kind=="hit" else kind)
         _:
-            _play("damaged" if kind=="hit" else kind)
+            # No misleading animation button on units without a native rig.
+            status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
     if _role=="attack_heli":
         _heli_stop()
     elif _role=="mlrs":
         _g11_stop()
+    elif _role=="aa_mobile":
+        if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+            _g13_v4_tween.kill()
+        _g13_demo_v1("idle",1.0)
+    elif _role=="apc" and _p06_fleet!=null:
+        _hide_p06_fleet()
+        _stop_animation()
     else:
         _stop_animation()
 
@@ -441,7 +680,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero · V10"
-            "aa_mobile": label="G13 · Antiaéreo · diseño en progreso"
+            "aa_mobile": label="G13 · Antiaéreo · catálogo completo"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -475,12 +714,7 @@ func _refresh_unified_studio_navigation() -> void:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
-    if studio_attack_button!=null:
-        studio_attack_button.text="Disparo aéreo" if _role=="aa_mobile" else "Atacar"
-    if studio_impact_button!=null:
-        studio_impact_button.text="Restaurar" if _role=="aa_mobile" else "Impacto"
-    if studio_g13_ground_button!=null:
-        studio_g13_ground_button.visible=not building and _role=="aa_mobile" and studio_active_tab==0
+    _studio_rebuild_animation_catalog()
 
 func _install_heli_controls() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1395,6 +1629,8 @@ func _g11_view(yaw: float) -> void:
     _update_camera()
 
 func _g11_play(kind: String, speed: float = 1.0) -> void:
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     if not _g11_require_hero_v24() or not G11Rig.has_rig(model_root):
         return
     if G11Art.stage(model_root) >= 4 and kind in ["move","attack"]:
@@ -1406,6 +1642,8 @@ func _g11_play(kind: String, speed: float = 1.0) -> void:
     G11Rig.pose(model_root,kind,0.0)
 
 func _g11_stop() -> void:
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     _g11_animation = ""
     _g11_time = 0.0
     _g11_playback_speed = 1.0
@@ -1614,6 +1852,8 @@ func _display_role(role: String) -> void:
         _v31_preview = true
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     if _g13_v4_tween!=null and _g13_v4_tween.is_running():
         _g13_v4_tween.kill()
     if role!="mlrs":
