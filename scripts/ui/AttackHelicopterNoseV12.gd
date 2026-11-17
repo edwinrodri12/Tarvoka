@@ -149,6 +149,26 @@ static func _fixed_nose(body: Node3D,faction: Color) -> void:
         var b:=_mesh(root_node,"A01V12_CojineteFijo_%d" % side,
             bearing,steel,Vector3(sign*0.224,0.570,-1.330))
         b.rotation_degrees.z=90.0
+        # Exposed, paired cradle side-gussets keep the turret mechanically
+        # attached to the V2 belly without intersecting its animated sphere.
+        # Minimum x clearance to the existing 0.19m gun housing is 0.076m.
+        _rod(root_node,"A01V12_PilarCunaSuperior_%d" % side,
+            Vector3(sign*0.300,0.805,-1.240),
+            Vector3(sign*0.300,0.641,-1.355),
+            0.018,seam)
+        _rod(root_node,"A01V12_PilarCunaDelantero_%d" % side,
+            Vector3(sign*0.300,0.641,-1.355),
+            Vector3(sign*0.302,0.637,-1.468),
+            0.016,paint)
+        _rod(root_node,"A01V12_RefuerzoDiagonalCuna_%d" % side,
+            Vector3(sign*0.300,0.805,-1.240),
+            Vector3(sign*0.302,0.637,-1.468),
+            0.011,steel)
+    # The transverse structure is behind/above the gun elevation envelope,
+    # so the authentic 6-degree V1 firing pitch never clips through it.
+    _rod(root_node,"A01V12_PuenteTransversalCuna",
+        Vector3(-0.300,0.805,-1.240),
+        Vector3(0.300,0.805,-1.240),0.020,seam)
     _ring(root_node,OPTIC_RING,Vector3(0,0.650,-1.791),
         0.075,0.115,steel)
     _rod(root_node,"A01V12_ProteccionInferiorMorro",
@@ -187,6 +207,18 @@ static func _moving_cannon(weapon: Node3D) -> void:
         _rod(moving,"A01V12_PernoMunon_%d" % side,
             Vector3(s*0.226,0,0),Vector3(s*0.252,0,0),
             0.024,seam)
+    # Parallel physical guide rails share the ORIGINAL A01 gun pivot.
+    # They are outside the 0.078m barrel and never touch the muzzle flash.
+    for side in [-1,1]:
+        var sign: float=float(side)
+        _rod(moving,"A01V12_GuiaMovilCanon_%d" % side,
+            Vector3(sign*0.143,-0.075,-0.135),
+            Vector3(sign*0.143,-0.075,-0.345),
+            0.018,armor)
+        _rod(moving,"A01V12_BisagraGuiaCanon_%d" % side,
+            Vector3(sign*0.143,-0.075,-0.135),
+            Vector3(sign*0.143,-0.075,-0.153),
+            0.030,steel)
     # Subtle bevel and bore rim are visible at close range, while the
     # original V10 chrome band and V1 muzzle flash are preserved.
     _ring(moving,"A01V12_AroBocaExterior",
