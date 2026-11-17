@@ -213,7 +213,7 @@ static func _decide(state: Dictionary,
     # next turn. Earlier guaranteed kills, urgent current-turn retreats
     # and legal joint attacks remain higher priority. The planner only
     # computes from the observed snapshot and makes one real move.
-    if int(plan.get("level",1)) >= 8:
+    if int(plan.get("level",1)) >= 8 and not bool(options.get("_ab_disable_future_threat_v36",false)):
         var safe: Dictionary = Threats.propose(
             knowledge,faction,int(plan["level"]))
         if bool(safe.get("valid",false)):
