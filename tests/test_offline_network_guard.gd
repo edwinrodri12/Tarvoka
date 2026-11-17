@@ -64,6 +64,13 @@ func _find_network_usage(source: String, is_scene: bool) -> Array[String]:
             continue
         if constructor.search(source) != null:
             hits.append(kind + ".new")
+        # ClassDB can instantiate a client without a direct Type.new() call.
+        var dynamic_detector := RegEx.new()
+        var dynamic_expression := "\\bClassDB\\s*\\.\\s*instantiate\\s*\\(\\s*&?\\s*\\\"" + kind + "\\\""
+        if dynamic_detector.compile(dynamic_expression) != OK:
+            hits.append("Invalid ClassDB detector: " + kind)
+        elif dynamic_detector.search(source) != null:
+            hits.append("ClassDB.instantiate(" + kind + ")")
         if is_scene:
             var node_detector := RegEx.new()
             var node_expression := "\\[node\\b[^\\]\\n]*\\btype\\s*=\\s*\\\"" + kind + "\\\""
@@ -78,5 +85,9 @@ func _self_test(failures: Array[String]) -> void:
         failures.append("Detector misses whitespace-separated HTTPClient constructor")
     if not _find_network_usage("[node name=\"Request\" type=\"HTTPRequest\"]", true).has("HTTPRequest scene node"):
         failures.append("Detector misses HTTPRequest scene node")
+    if not _find_network_usage('var x = ClassDB.instantiate(&"HTTPClient")', false).has("ClassDB.instantiate(HTTPClient)"):
+        failures.append("Detector misses ClassDB dynamic HTTPClient construction")
+    if not _find_network_usage('var x = ClassDB . instantiate ("PacketPeerUDP")', false).has("ClassDB.instantiate(PacketPeerUDP)"):
+        failures.append("Detector misses whitespace-separated ClassDB construction")
     if not _find_network_usage("var x = Vector2.new(1, 2)", false).is_empty():
         failures.append("Detector incorrectly rejects unrelated constructors")
