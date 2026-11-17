@@ -1,4 +1,4 @@
-name: TARVOKA G13 V19 mechanical gun pivot and 44-frame 3D close-up QA
+name: TARVOKA G13 V20 turret armor and pitching gun protection real 3D QA
 
 on:
   push:
@@ -76,6 +76,7 @@ jobs:
             tests/test_g13_static_batch_v16.gd
             tests/test_g13_autocannon_sculpt_v18.gd
             tests/test_g13_gun_trunnion_v19.gd
+            tests/test_g13_turret_armor_v20.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
@@ -184,6 +185,28 @@ jobs:
         with:
           name: g13-v19-native-joint-44-godot-art-inspection-views
           path: /tmp/g13-v19-gallery/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Capture V20 50 real turret armor and underside 3D views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v20-gallery
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V20_CAPTURE_DIR=/tmp/g13-v20-gallery \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_v20_visual_capture.gd 2>&1 | tee /tmp/g13-v20-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v20-capture.log; then exit 1; fi
+          grep -F 'PASS G13 V20 CAPTURE:' /tmp/g13-v20-capture.log
+          test "$(find /tmp/g13-v20-gallery -name '*.png' | wc -l)" -eq 50
+      - name: Upload authentic V20 50-image turret shield and same-camera before-after gallery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v20-armor-50-real-godot-3d-views
+          path: /tmp/g13-v20-gallery/*.png
           if-no-files-found: ignore
           retention-days: 14
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
