@@ -16,6 +16,7 @@ const Weather = preload("res://scripts/core/Weather.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
+const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -134,6 +135,23 @@ static func _decide(state: Dictionary,
         if finishing_hit.get("valid", false):
             finishing_hit["action"] = "attack"
             return finishing_hit
+    # Better difficulty means deeper legal joint attack calculation, never
+    # extra attacks. Lower levels retain exactly their previous tactics.
+    # This comes AFTER a guaranteed single-shot elimination and BEFORE
+    # spending one-way missiles or abandoning a viable group kill.
+    if int(plan.get("level",1)) >= 7:
+        var depth: int = 3 if int(plan["level"]) >= 10 else 2
+        var volley: Dictionary = FireTeam.propose(knowledge,faction,depth)
+        if not volley.is_empty() and \
+                int(volley.get("estimated_losses",0)) <= 1:
+            var coordinated: Dictionary = Session.attack(state,
+                str(volley["first_attacker"]),str(volley["target_id"]))
+            if bool(coordinated.get("valid",false)):
+                coordinated["action"] = "attack"
+                coordinated["reason"] = "coordinated_fire"
+                coordinated["planned_shots"] = int(volley["shots"])
+                coordinated["target_id"] = str(volley["target_id"])
+                return coordinated
     # Expendable missiles must not retreat to save their own HP when a legal
     # target is currently visible. They are deliberately spent on impact.
     var expendable_choice: Dictionary = {}
