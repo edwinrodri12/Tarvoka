@@ -131,8 +131,9 @@ static func _service_hinges(high_detail: bool) -> Array[Transform3D]:
     # sits on the existing rear engine-cover lid (there is no service door).
     var y: float = 0.98 if high_detail else 1.128
     var z: float = 1.311 if high_detail else 0.985
-    var orient: Basis = Basis(Vector3.RIGHT, PI * 0.5) if (
-        high_detail) else Basis.IDENTITY
+    # Door hinges have vertical axes; deck hatch hinges run transversely.
+    var orient: Basis = Basis.IDENTITY if high_detail else (
+        Basis(Vector3.FORWARD, PI * 0.5))
     for side in [-1, 1]:
         var s: float = float(side)
         for offset in [-0.068, 0.068]:
