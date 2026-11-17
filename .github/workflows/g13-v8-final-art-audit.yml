@@ -22,7 +22,7 @@ on:
 jobs:
   g13-final-audit:
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.3 and headless display
@@ -80,6 +80,7 @@ jobs:
             tests/test_g13_side_armor_v21.gd
             tests/test_g13_360_underbody_v22.gd
             tests/test_g13_front_lighting_v23.gd
+            tests/test_g13_armored_intake_v24.gd
             tests/test_g13_v17_lod_policy.gd
             tests/test_g13_v17_android_telemetry.gd
             tests/test_g13_inspection_studio.gd
@@ -323,6 +324,42 @@ jobs:
           path: |
             /tmp/g13-v23-front-review/*.png
             /tmp/g13-v23-front-review/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Capture G13 V24 new sculpt 22 true Godot frontal views and V23 reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/g13-v24-frontal
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 G13_V24_CAPTURE_DIR=/tmp/g13-v24-frontal \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_g13_v24_front_visual_capture.gd 2>&1 | tee /tmp/g13-v24-frontal.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error' /tmp/g13-v24-frontal.log; then exit 1; fi
+          grep -F 'PASS G13 V24 3D FRONTAL REVIEW:' /tmp/g13-v24-frontal.log
+          test "$(find /tmp/g13-v24-frontal -name '*.png' | wc -l)" -eq 22
+          test -s /tmp/g13-v24-frontal/g13_v24_real_3d_review.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/g13-v24-frontal/g13_v24_real_3d_review.json'))
+          assert x['authentic_godot_screenshots']==22 and x['factions']==8
+          assert x['failures']==0 and x['android_lod8_modified'] is False
+          assert x['louvres']==4 and x['new_gun_modules']==0
+          assert len(x['same_camera_comparison'])==5
+          for k,v in x['same_camera_comparison'].items():
+              assert v['changed']>35,(k,v)
+          print('PASS G13 V24 real Godot frontal report:',x['same_camera_comparison'])
+          PY
+      - name: Upload G13 V24 real armored front 22-image dossier
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g13-v24-frontal-sculpt-22-native-3d-images
+          path: |
+            /tmp/g13-v24-frontal/*.png
+            /tmp/g13-v24-frontal/*.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Stress render G13 V17 1–32 vehicles across mobile and hero LODs
