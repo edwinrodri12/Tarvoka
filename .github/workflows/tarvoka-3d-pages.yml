@@ -309,7 +309,7 @@ jobs:
       - name: Check out QA-tested Infantry Barracks V9 3D art layers
         uses: actions/checkout@v4
         with:
-          ref: feat/infantry-barracks-v9-access-damage-shared-viewer-20261116
+          ref: 115f2f9303dba5d47e2919bcb7058dbb6f82e323
           path: infantry-v9-approved
           persist-credentials: false
       - name: Integrate Infantry V9 into the SAME native Godot Studio
