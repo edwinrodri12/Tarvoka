@@ -1,0 +1,58 @@
+name: TARVOKA Civilian City V5 Real 3D Battle Integration QA
+
+on:
+  push:
+    branches:
+      - feat/cities-v5-live-battle-3d-20261117
+    paths:
+      - "scripts/ui/CivilianCityBattle3D.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "tests/test_civilian_city_battle_v5.gd"
+      - ".github/workflows/city-civilian-v5-live-battle.yml"
+  pull_request:
+    paths:
+      - "scripts/ui/CivilianCityBattle3D.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "tests/test_civilian_city_battle_v5.gd"
+      - ".github/workflows/city-civilian-v5-live-battle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actual-city-3d-battle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify native V5 real city mesh, 2.4m tile, 8 factions, fog and immutable gameplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 450s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . \
+            --script res://tests/test_civilian_city_battle_v5.gd \
+            2>&1 | tee /tmp/city-v5-live-battle.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed|ERROR:' /tmp/city-v5-live-battle.log; then
+            echo "City V5 real battle integration validation failed"
+            exit 1
+          fi
+          grep -F 'PASS TARVOKA CITY V5 LIVE BATTLE' /tmp/city-v5-live-battle.log
+      - name: Upload engine validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-City-V5-Live-Battle-3D-Log
+          path: /tmp/city-v5-live-battle.log
+          retention-days: 20
+          if-no-files-found: warn
