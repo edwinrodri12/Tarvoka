@@ -15,9 +15,12 @@ const InspectorData = preload("res://scripts/ui/InspectionData.gd")
 const TileContextData = preload("res://scripts/ui/TileContextData.gd")
 const TileContextCard = preload("res://scripts/ui/TileContextCard.gd")
 const DossierData = preload("res://scripts/ui/UnitDossierData.gd")
+const FullUnitData = preload("res://scripts/ui/UnitDetailData.gd")
+const FullUnitPanel = preload("res://scripts/ui/UnitDetailPanel.gd")
 const DossierView = preload("res://scripts/ui/UnitDossierView.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const SiteActions = preload("res://scripts/ui/SiteActionBar.gd")
+const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
 const CommandMenu = preload("res://scripts/ui/CommandMenu.gd")
 const HomeMenu = preload("res://scripts/ui/HomeMenu.gd")
 const CreditsHomeScreen = preload("res://scripts/ui/CreditsHomeScreen.gd")
@@ -102,6 +105,9 @@ var sidebar_dossier: Control
 var compact_dossier: Control
 var sidebar_site_actions: Control
 var compact_site_actions: Control
+var building_info_panel # Script-backed Control with site_pos and bind_site()
+var unit_detail_panel # Script-backed Control with inspected_id and bind_dossier()
+var _dismissed_building_cell := Vector2i(-1,-1)
 var autosave_alert: Label
 var enemy_turn_label: Label
 var faction_gallery: AcceptDialog
@@ -310,6 +316,8 @@ func _ready() -> void:
     board.autosave_enabled = true
     board.resume_autosave()
     _build_battle_hud()
+    _install_building_info_panel()
+    _install_unit_detail_panel()
 
     sidebar = PanelContainer.new()
     sidebar.size_flags_horizontal = Control.SIZE_FILL
@@ -1467,11 +1475,100 @@ func _build_battle_hud() -> void:
     immersive_battle_hud.center_requested.connect(
         func(): board.frame_player_force())
     immersive_battle_hud.resupply_requested.connect(_resupply_unit)
+    immersive_battle_hud.unit_details_requested.connect(_open_unit_detail)
     battle_hud_commands.hide()
     compact_center.hide()
     compact_iso.hide()
     expanded_header.show()
     expanded_actions.show()
+
+# A site tap now opens a real Android/desktop building card above the map.
+# The legacy compact info widgets are hidden by ImmersiveBattleHud on mobile;
+# this card is a sibling of that HUD, so its button remains touchable.
+func _install_building_info_panel() -> void:
+    building_info_panel = BuildingInfoCard.new()
+    building_info_panel.name = "MenuInformacionDeEdificio"
+    battle_hud_overlay.add_child(building_info_panel)
+    building_info_panel.z_index = 16
+    building_info_panel.production_requested.connect(_open_site_production)
+    building_info_panel.close_requested.connect(_close_building_info)
+    building_info_panel.hide()
+    _layout_building_info()
+
+func _layout_building_info() -> void:
+    if building_info_panel == null or board_holder == null:
+        return
+    # Keep the top turn ribbon and bottom command rail readable, even at
+    # Android's 882x411 landscape resolution. A small card does not replace
+    # or cover the whole tactical board.
+    var board_width: float = maxf(300.0, board_holder.size.x)
+    var board_height: float = maxf(250.0, board_holder.size.y)
+    var width: float = clampf(board_width * 0.43, 278.0, 344.0)
+    var bottom: float = 76.0 if battle_hud_compact else 84.0
+    var height: float = minf(238.0,maxf(155.0,board_height - bottom - 64.0))
+    building_info_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    building_info_panel.offset_left = -width - 8.0
+    building_info_panel.offset_right = -8.0
+    building_info_panel.offset_top = -bottom - height
+    building_info_panel.offset_bottom = -bottom
+
+func _close_building_info() -> void:
+    if building_info_panel == null:
+        return
+    _dismissed_building_cell = building_info_panel.site_pos
+    building_info_panel.hide()
+
+# The small unit card at the bottom left is now an accessible shortcut to
+# the FULL, read-only current-unit dossier. This uses exactly the same
+# authoritative game state as combat and resupply, never default placeholders.
+func _install_unit_detail_panel() -> void:
+    unit_detail_panel = FullUnitPanel.new()
+    unit_detail_panel.name = "PantallaEstadisticasUnidad"
+    battle_hud_overlay.add_child(unit_detail_panel)
+    unit_detail_panel.z_index = 20
+    unit_detail_panel.close_requested.connect(_close_unit_detail)
+    unit_detail_panel.hide()
+    _layout_unit_detail()
+
+func _layout_unit_detail() -> void:
+    if unit_detail_panel == null or board_holder == null:
+        return
+    var width: float = clampf(board_holder.size.x*0.46,300.0,420.0)
+    var height: float = maxf(190.0,board_holder.size.y-149.0)
+    unit_detail_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    unit_detail_panel.offset_left = -width-10.0
+    unit_detail_panel.offset_right = -10.0
+    unit_detail_panel.offset_top = 70.0
+    unit_detail_panel.offset_bottom = 70.0+height
+
+func _open_unit_detail(unit_id: String) -> void:
+    if board == null or not board.pending_order.is_empty():
+        return
+    if unit_id.is_empty() or unit_id != str(board.selected_id):
+        return
+    var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",-1))
+    var info: Dictionary = FullUnitData.inspect(board.state,unit_id,viewer)
+    if info.is_empty():
+        return
+    if building_info_panel != null:
+        building_info_panel.hide()
+    unit_detail_panel.bind_dossier(info)
+    _layout_unit_detail()
+
+func _close_unit_detail() -> void:
+    if unit_detail_panel != null:
+        unit_detail_panel.hide()
+
+func _refresh_unit_detail() -> void:
+    if unit_detail_panel == null or not unit_detail_panel.visible:
+        return
+    if board == null or not board.pending_order.is_empty() or (
+            str(board.selected_id) != str(unit_detail_panel.inspected_id)):
+        unit_detail_panel.hide()
+        return
+    var viewer: int = 0 if board.ai_enabled else int(board.state.get("faction",-1))
+    var info: Dictionary = FullUnitData.inspect(board.state,str(board.selected_id),viewer)
+    unit_detail_panel.bind_dossier(info)
 
 func _set_compact_hud(compact: bool) -> void:
     battle_hud_compact = compact
@@ -1529,6 +1626,8 @@ func layout_for_size(view_size: Vector2) -> void:
         board_holder.custom_minimum_size = Vector2(255, 0)
     if immersive_battle_hud != null:
         immersive_battle_hud.reflow_for_size(view_size)
+    _layout_building_info()
+    _layout_unit_detail()
 
 func _on_viewport_resized() -> void:
     # Camera offsets from the previous orientation can place the entire
@@ -1556,6 +1655,7 @@ func _process(_delta: float) -> void:
             battle_minimap.queue_redraw()
     if summary_key != _unit_summary_cache_key:
         _unit_summary_cache_key = summary_key
+        _refresh_unit_detail()
         unit_summary_refresh_count += 1
         if immersive_battle_hud != null:
             immersive_battle_hud.refresh_from_board()
@@ -1660,6 +1760,24 @@ func _process(_delta: float) -> void:
             site_info = SiteInteraction.describe(board.state,site_cell,viewer)
         sidebar_site_actions.bind_site(site_info)
         compact_site_actions.bind_site(site_info)
+        # The new building card is the actual visible Android entry point.
+        # It uses the fog-filtered site description and never purchases on tap.
+        if building_info_panel != null:
+            var site_visible: bool = bool(site_info.get("valid",false)) and (
+                board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
+                and not board.compare_mode)
+            var site_cell: Vector2i = site_info.get("pos",Vector2i(-1,-1))
+            if not site_visible:
+                building_info_panel.hide()
+                _dismissed_building_cell = Vector2i(-1,-1)
+            elif site_cell != _dismissed_building_cell and (
+                    unit_detail_panel == null or not unit_detail_panel.visible):
+                var can_open_catalog: bool = bool(site_info.get("production",false)) and (
+                    int(board.state.get("winner",-1)) == -1) and (
+                    not board.ai_enabled or int(board.state.get("faction",-1)) == 0)
+                building_info_panel.bind_site(site_info,can_open_catalog)
+            else:
+                building_info_panel.hide()
         # A context action receives taps; all unrelated map regions continue
         # forwarding touch/pinch to the tactical board.
         compact_info_panel.mouse_filter = Control.MOUSE_FILTER_PASS if compact_site_actions.visible else Control.MOUSE_FILTER_IGNORE
@@ -2438,6 +2556,9 @@ func _open_site_production(site_pos: Vector2i) -> void:
     board.inspected_cell = site_pos
     board.focus_view_cell(site_pos)
     board.queue_redraw()
+    if building_info_panel != null:
+        _dismissed_building_cell = site_pos
+        building_info_panel.hide()
     command_menu.open_for(board,"Produccion")
     _reveal_screen(command_menu)
 
@@ -2513,6 +2634,8 @@ func _open_battle_3d() -> void:
         battle_3d_view.connect("objectives_requested",Callable(self,"_open_objectives_radar"))
         battle_3d_view.connect("end_turn_requested",Callable(self,"_end_turn"))
         battle_3d_view.connect("resupply_requested",Callable(self,"_resupply_unit"))
+        battle_3d_view.connect("site_production_requested",
+            Callable(self,"_open_site_production"))
     if not battle_3d_view.open_from_board(board):
         board.message = "No se pudo abrir el terreno 3D de esta partida."
         board.queue_redraw()

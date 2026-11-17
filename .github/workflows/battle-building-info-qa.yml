@@ -1,0 +1,70 @@
+name: TARVOKA Building Information and Production Menu QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/battle-building-info-qa.yml"
+      - "scripts/ui/BuildingInfoPanel.gd"
+      - "scripts/ui/SiteInteractionData.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "tests/test_building_info_menu.gd"
+      - "tests/test_building_info_3d.gd"
+  pull_request:
+    paths:
+      - ".github/workflows/battle-building-info-qa.yml"
+      - "scripts/ui/BuildingInfoPanel.gd"
+      - "scripts/ui/SiteInteractionData.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "tests/test_building_info_menu.gd"
+      - "tests/test_building_info_3d.gd"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  building-menu-qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import and parse actual Android game project
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/building-menu-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/building-menu-import.log; then exit 1; fi
+      - name: Verify building taps, ownership, purchase navigation and live 3D view
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_building_info_menu test_building_info_3d; do
+            timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+              /tmp/Godot_v4.3-stable_linux.x86_64 \
+              --rendering-method gl_compatibility --audio-driver Dummy --path . \
+              --script "res://tests/${test}.gd" \
+              2>&1 | tee "/tmp/${test}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' "/tmp/${test}.log"; then exit 1; fi
+            grep -q '^PASS BUILDING INFO' "/tmp/${test}.log"
+          done
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-building-menu-qa-logs
+          path: |
+            /tmp/building-menu-import.log
+            /tmp/test_building_info_menu.log
+            /tmp/test_building_info_3d.log
+          if-no-files-found: warn
+          retention-days: 14

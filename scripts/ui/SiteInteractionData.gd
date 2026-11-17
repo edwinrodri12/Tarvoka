@@ -6,6 +6,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 # This is an intelligence-limited, read-only view of a selected site.
 # It only lists friendly capturers; never schedules movement or spends money.
@@ -84,6 +85,9 @@ static func describe(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
         "valid":true,"pos":cell,"kind":site_kind,
         "title":str(names.get(site_kind,"Instalación")),
         "owner":owner, "owner_known":bool(marker.get("owner_known",false)),
+        "friendly":owner == viewer,
+        "owner_name":Identity.name_for(state,owner) if owner in [0,1] else "",
+        "owner_emblem":Identity.index_for(Identity.key_for(state,owner)) if owner in [0,1] else -1,
         "detail":detail,"income":int(marker.get("income",0)),
         "status":str(marker.get("status","unknown")),
         "capture_pending":bool(marker.get("capture_pending",false)),

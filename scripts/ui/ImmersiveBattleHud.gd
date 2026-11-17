@@ -12,6 +12,7 @@ signal end_turn_requested
 signal zoom_requested(step: int)
 signal center_requested
 signal resupply_requested
+signal unit_details_requested(unit_id: String)
 
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Factions = preload("res://scripts/ui/VisualStyle.gd")
@@ -172,7 +173,10 @@ func _build() -> void:
 
     unit_panel = PanelContainer.new()
     unit_panel.name = "FichaContextualDeUnidad"
-    unit_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    unit_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    unit_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    unit_panel.tooltip_text = "Toca para abrir todas las características de esta unidad"
+    unit_panel.gui_input.connect(_on_unit_card_input)
     unit_panel.add_theme_stylebox_override("panel",
         Chrome.box_style(Color("#091B2DEB"),Chrome.GOLD,7,7))
     add_child(unit_panel)
@@ -241,6 +245,22 @@ func _build() -> void:
     order_panel.hide()
     supply_button.hide()
 
+func _on_unit_card_input(event: InputEvent) -> void:
+    if not event is InputEventMouseButton:
+        return
+    if not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+        return
+    if board == null or str(board.selected_id).is_empty():
+        return
+    var state: Dictionary = board.state
+    var viewer: int = 0 if bool(board.ai_enabled) else int(state.get("faction",-1))
+    for unit in state.get("units",[]):
+        if unit is Dictionary and str(unit.get("id","")) == str(board.selected_id) and (
+                int(unit.get("faction",-1)) == viewer) and int(unit.get("hp",0)) > 0:
+            unit_details_requested.emit(str(board.selected_id))
+            accept_event()
+            return
+
 func attach_board(next_board: Control) -> void:
     board = next_board
     if radar != null:
@@ -282,6 +302,7 @@ func refresh_from_board() -> void:
         unit_stats.text = "PV %d  ·  ATQ %d  ·  DEF %d" % [
             int(selected.get("hp",0)),int(selected.get("attack",0)),
             int(selected.get("defense",0))]
+        unit_panel.tooltip_text = "VER FICHA COMPLETA: "+unit_name.text
     var order: Dictionary = board.pending_order
     var kind: String = str(order.get("kind",""))
     order_panel.visible = kind in ["move","attack"]
