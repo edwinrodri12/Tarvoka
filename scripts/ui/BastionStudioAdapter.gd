@@ -514,26 +514,22 @@ func _studio_rebuild_animation_catalog() -> void:
     studio_animation_message.text="%d opciones disponibles · %s" % [
         specs.filter(func(item: Dictionary)->bool: return item.has("action")).size(),
         studio_overview_label.text]
-    var row: HBoxContainer=null
+    # One full-width row per unique animation: pairs clipped the labels
+    # on a 306 px Android sidebar and made several actions look absent.
     for spec in specs:
         if spec.has("group"):
-            row=null
             var heading: Label=_title(studio_animation_inventory,
                 str(spec["group"]),11)
             heading.add_theme_color_override("font_color",Color("#E7BE70"))
             heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
             continue
-        if row==null or row.get_child_count()>=2:
-            row=HBoxContainer.new()
-            row.add_theme_constant_override("separation",5)
-            studio_animation_inventory.add_child(row)
         var title: String=str(spec["title"])
         var action: String=str(spec["action"])
-        var button: Button=_button(row,title,
+        var button: Button=_button(studio_animation_inventory,title,
             Callable(self,"_studio_run_animation").bind(action))
         button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
         button.custom_minimum_size.x=0
-        button.custom_minimum_size.y=40
+        button.custom_minimum_size.y=42
         button.clip_text=true
         button.tooltip_text=title
 
