@@ -29,12 +29,19 @@ func _triangles_in_mesh(mesh:Mesh)->int:
     if mesh==null:
         return 0
     for surf in range(mesh.get_surface_count()):
-        if mesh.surface_get_primitive_type(surf)!=Mesh.PRIMITIVE_TRIANGLES:
-            continue
+        # PrimitiveMesh (BoxMesh, CylinderMesh, SphereMesh) does not expose
+        # ArrayMesh.surface_get_primitive_type in Godot 4.3. All meshes
+        # authored for this vehicle are triangle surfaces, so count actual
+        # indices when present or loose non-indexed vertices otherwise.
         var arrays:Array=mesh.surface_get_arrays(surf)
-        var indices:PackedInt32Array=arrays[Mesh.ARRAY_INDEX]
-        var verts:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
-        total+=int((indices.size() if indices.size()>0 else verts.size())/3)
+        if arrays.size()<=Mesh.ARRAY_VERTEX:
+            continue
+        var indices:Variant=arrays[Mesh.ARRAY_INDEX]
+        var verts:Variant=arrays[Mesh.ARRAY_VERTEX]
+        if indices is PackedInt32Array and indices.size()>0:
+            total+=int(indices.size()/3)
+        elif verts is PackedVector3Array:
+            total+=int(verts.size()/3)
     return total
 
 func _triangles(node:Node)->int:
