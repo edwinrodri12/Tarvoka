@@ -27,6 +27,7 @@ const InfantryBarracksV6 = preload("res://scripts/ui/InfantryBarracksRoofCommand
 const InfantryBarracksV7 = preload("res://scripts/ui/InfantryBarracksSideTowersV7.gd")
 const InfantryBarracksV8 = preload("res://scripts/ui/InfantryBarracksTowerFinishV8.gd")
 const InfantryBarracksV9 = preload("res://scripts/ui/InfantryBarracksFinalAccessV9.gd")
+const InfantryBarracksV10 = preload("res://scripts/ui/InfantryBarracksFrontWindowV10.gd")
 const AirbaseHangarV2 = preload("res://scripts/ui/AirbaseHangarV2.gd")
 const AirbaseDoorsV2 = preload("res://scripts/ui/AirbaseDoorRigV2.gd")
 const AirbaseDamageV3 = preload("res://scripts/ui/AirbaseDamageFXV3.gd")
@@ -80,6 +81,7 @@ var infantry_roof_v6_toggle: CheckButton
 var infantry_side_v7_toggle: CheckButton
 var infantry_tower_v8_toggle: CheckButton
 var infantry_access_v9_toggle: CheckButton
+var infantry_front_v10_toggle: CheckButton
 var infantry_level_picker: OptionButton
 var infantry_damage_picker: OptionButton
 var infantry_camera_picker: OptionButton
@@ -1335,7 +1337,7 @@ func _add_infantry_controls() -> void:
     infantry_controls.name="OpcionesCuartelInfanteriaV1"
     infantry_controls.add_theme_constant_override("separation",8)
     building_controls.add_child(infantry_controls)
-    _title(infantry_controls,"CUARTEL DE INFANTERÍA V9 · TRES SILUETAS",14)
+    _title(infantry_controls,"CUARTEL DE INFANTERÍA V10 · TRES SILUETAS",14)
     infantry_detail_v2_toggle=CheckButton.new()
     infantry_detail_v2_toggle.name="AccesosFachadasTorresYEntrenamientoV2"
     infantry_detail_v2_toggle.text="V2 · accesos, cristales y torres (comparar V1)"
@@ -1384,6 +1386,12 @@ func _add_infantry_controls() -> void:
     infantry_access_v9_toggle.button_pressed=true
     infantry_access_v9_toggle.toggled.connect(_toggle_infantry_access_v9)
     infantry_controls.add_child(infantry_access_v9_toggle)
+    infantry_front_v10_toggle=CheckButton.new()
+    infantry_front_v10_toggle.name="MarcosFrontalesProfundidadV10"
+    infantry_front_v10_toggle.text="V10 · ventanas frontales 3D (comparar V9)"
+    infantry_front_v10_toggle.button_pressed=true
+    infantry_front_v10_toggle.toggled.connect(_toggle_infantry_front_v10)
+    infantry_controls.add_child(infantry_front_v10_toggle)
     _title(infantry_controls,"NIVEL · CADA MEJORA RECONSTRUYE LA ARQUITECTURA",12)
     infantry_level_picker=OptionButton.new()
     infantry_level_picker.name="NivelArquitecturaInfanteriaV1"
@@ -1412,7 +1420,8 @@ func _add_infantry_controls() -> void:
             "Pista lateral de entrenamiento","Cubiertas y evolución arquitectónica",
             "Fachadas laterales y cabinas de vigilancia",
             "Torre de vigilancia · primer plano",
-            "Puertas, escaleras y mirilla · detalle V9"]:
+            "Puertas, escaleras y mirilla · detalle V9",
+            "Ventanas frontales · profundidad V10"]:
         infantry_camera_picker.add_item(label)
     infantry_camera_picker.select(0)
     infantry_camera_picker.item_selected.connect(_change_infantry_camera)
@@ -1429,6 +1438,7 @@ func _toggle_infantry_detail_v2(_enabled: bool) -> void:
     infantry_side_v7_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed)
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1439,6 +1449,7 @@ func _toggle_infantry_material_v3(_enabled: bool) -> void:
     infantry_side_v7_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed)
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1448,6 +1459,7 @@ func _toggle_infantry_rear_v4(_enabled: bool) -> void:
     infantry_side_v7_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed)
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1456,6 +1468,7 @@ func _toggle_infantry_yard_v5(_enabled: bool) -> void:
     infantry_side_v7_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed)
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1463,21 +1476,31 @@ func _toggle_infantry_roof_v6(_enabled: bool) -> void:
     infantry_side_v7_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed)
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
 func _toggle_infantry_side_v7(_enabled: bool) -> void:
     infantry_tower_v8_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed)
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
 func _toggle_infantry_tower_v8(_enabled: bool) -> void:
     infantry_access_v9_toggle.disabled=not (infantry_detail_v2_toggle.button_pressed and infantry_material_v3_toggle.button_pressed and infantry_rear_v4_toggle.button_pressed and infantry_yard_v5_toggle.button_pressed and infantry_roof_v6_toggle.button_pressed and infantry_side_v7_toggle.button_pressed and infantry_tower_v8_toggle.button_pressed)
+    infantry_front_v10_toggle.disabled=not (infantry_access_v9_toggle.button_pressed and not infantry_access_v9_toggle.disabled)
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
 func _toggle_infantry_access_v9(_enabled: bool) -> void:
+    infantry_front_v10_toggle.disabled=not (
+        infantry_access_v9_toggle.button_pressed and
+        not infantry_access_v9_toggle.disabled)
+    if _role=="infantry_barracks":
+        _display_infantry_barracks()
+
+func _toggle_infantry_front_v10(_enabled: bool) -> void:
     if _role=="infantry_barracks":
         _display_infantry_barracks()
 
@@ -1486,7 +1509,7 @@ func _change_infantry_setting(_index: int) -> void:
         _display_infantry_barracks()
 
 func _change_infantry_camera(index: int) -> void:
-    _infantry_camera_view=clampi(index,0,6)
+    _infantry_camera_view=clampi(index,0,7)
     if _role=="infantry_barracks":
         _apply_infantry_camera()
 
@@ -1498,7 +1521,8 @@ func _apply_infantry_camera() -> void:
         Vector3(-6.05,0.48,-3.45),Vector3(0,1.5,0),
         Vector3(0,2.30,-0.75),
         Vector3(5.67,4.45,-2.77),
-        Vector3(-1.70,1.17,-0.19)]
+        Vector3(-1.70,1.17,-0.19),
+        Vector3(-1.70,1.18,-0.19)]
     var offsets: Array[Vector3]=[
         Vector3(-17.1,11.6,-17.7),
         Vector3(-8.2,5.2,-11.3),
@@ -1506,7 +1530,8 @@ func _apply_infantry_camera() -> void:
         Vector3(-0.02,28.0,-0.02),
         Vector3(0.25,8.1,-10.3),
         Vector3(4.7,3.35,-5.20),
-        Vector3(3.60,2.40,-5.70)]
+        Vector3(3.60,2.40,-5.70),
+        Vector3(2.75,2.20,-4.30)]
     if _infantry_camera_view==2:
         # N3's full-length track is now alongside the WEST wing; N1/N2
         # retain their short front-side obstacle course.
@@ -1550,6 +1575,16 @@ func _apply_infantry_camera() -> void:
         else:
             points[6]=Vector3(0.0,1.16,0.88)
             offsets[6]=Vector3(3.65,2.45,-5.85)
+    if _infantry_camera_view==7:
+        if infantry_level_picker.selected==0:
+            points[7]=Vector3(-1.70,1.18,-0.19)
+            offsets[7]=Vector3(2.75,2.20,-4.30)
+        elif infantry_level_picker.selected==1:
+            points[7]=Vector3(-2.06,3.40,-0.24)
+            offsets[7]=Vector3(2.85,2.70,-4.40)
+        else:
+            points[7]=Vector3(0.0,5.62,0.88)
+            offsets[7]=Vector3(2.85,2.70,-4.40)
     var rotate:=Basis(Vector3.UP,deg_to_rad(_yaw))
     var focus: Vector3=rotate*points[_infantry_camera_view]
     camera.position=rotate*(points[_infantry_camera_view]+offsets[_infantry_camera_view])
@@ -1621,6 +1656,18 @@ func _display_infantry_barracks() -> void:
         var access_ok: bool=InfantryBarracksV9.apply(model_root,level,_faction,damage)
         if not access_ok:
             push_error("Cuartel de Infantería V9: puertas y desgaste no aplicados")
+    if (infantry_detail_v2_toggle.button_pressed and
+            infantry_material_v3_toggle.button_pressed and
+            infantry_rear_v4_toggle.button_pressed and
+            infantry_yard_v5_toggle.button_pressed and
+            infantry_roof_v6_toggle.button_pressed and
+            infantry_side_v7_toggle.button_pressed and
+            infantry_tower_v8_toggle.button_pressed and
+            infantry_access_v9_toggle.button_pressed and
+            infantry_front_v10_toggle.button_pressed):
+        var front_ok: bool=InfantryBarracksV10.apply(model_root,level,_faction,damage)
+        if not front_ok:
+            push_error("Cuartel de Infantería V10: ventanas frontales no aplicadas")
     preview.add_child(model_root)
     if hq_climate_stage!=null:
         hq_climate_stage.visible=false
@@ -2578,6 +2625,7 @@ func _update_camera() -> void:
                 11.3 if _infantry_camera_view==4 else
                 6.9 if _infantry_camera_view==5 else
                 7.6 if _infantry_camera_view==6 else
+                8.6 if _infantry_camera_view==7 else
                 20.5)/maxf(0.35,_zoom)
         if model_root!=null and model_root.has_node(InfantryBarracksV5.STAGE_NAME):
             # Keep architectural silhouette; hide tiny pieces at wide zoom.
@@ -2634,6 +2682,7 @@ func _update_details() -> void:
     if _role=="infantry_barracks" and model_root!=null:
         var level: int=int(model_root.get_meta("visual_level",1))
         detail_label.text="Cuartel de Infantería %s · Nivel %d · %d mallas 3D" % [
+            "V10" if model_root.has_node(InfantryBarracksV10.STAGE_NAME) else
             "V9" if model_root.has_node(InfantryBarracksV9.STAGE_NAME) else
             "V8" if model_root.has_node(InfantryBarracksV8.STAGE_NAME) else
             "V7" if model_root.has_node(InfantryBarracksV7.STAGE_NAME) else
