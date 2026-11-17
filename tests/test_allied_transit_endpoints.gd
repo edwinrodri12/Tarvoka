@@ -107,5 +107,19 @@ func _initialize() -> void:
     assert(not mountain_full.has(Vector2i(1, 0)), "Mountain ally remains an invalid destination")
     assert(mountain_map == mountain_before and mountain_allies == [Vector2i(1, 0)]
         and mountain_enemies == [Vector2i(0, 1)], "Mountain routing must preserve inputs")
+    # An allied occupant never makes impassable water traversable by ground units.
+    # Block the southern exit to prevent a land detour around the water tile.
+    var water_map: Array = terrain.duplicate(true)
+    water_map[0][1] = "water"
+    var water_allies: Array[Vector2i] = [Vector2i(1, 0)]
+    var water_blocked: Array[Vector2i] = [Vector2i(0, 1)]
+    var water_before: Array = water_map.duplicate(true)
+    var water_ground: Dictionary = rules.reachable(
+        Vector2i(0, 0), 5, water_map, water_blocked, "ground", false, water_allies
+    )
+    assert(water_ground.size() == 1 and water_ground.has(Vector2i(0, 0)),
+        "Allied occupancy must not override impassable ground terrain")
+    assert(water_map == water_before and water_allies == [Vector2i(1, 0)]
+        and water_blocked == [Vector2i(0, 1)], "Water routing must preserve inputs")
     print("PASS: allied transit and endpoint isolation")
     quit()
