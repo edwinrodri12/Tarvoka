@@ -103,7 +103,7 @@ func _toggle_city_v2(_enabled: bool) -> void:
 func _toggle_city_v3(_enabled: bool) -> void:
     city_v4_toggle.disabled=not (city_v2_toggle.button_pressed and
         city_v3_toggle.button_pressed)
-    city_lod_picker.disabled=city_v4_toggle.disabled
+    city_lod_picker.disabled=city_v4_toggle.disabled or not city_v4_toggle.button_pressed
     if _role=="civilian_city":
         _display_civilian_city()
 
