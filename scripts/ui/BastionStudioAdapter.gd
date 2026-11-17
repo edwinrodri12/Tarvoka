@@ -99,6 +99,7 @@ var g11_controls: VBoxContainer
 var g13_controls: VBoxContainer
 var _g13_v4_tween: Tween
 var _g11_animation: String = ""
+var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
 var _g11_playback_speed: float = 1.0
 var _g11_fx_clock: float = 0.0
@@ -468,6 +469,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"group":"G13 · MOVIMIENTO, RADAR Y APUNTADO"},
                 {"title":"Rodaje 4×4","action":"move"},
                 {"title":"Barrido del radar","action":"g13_scan"},
+                {"title":"Apuntado de barrido V1","action":"g13_aim_legacy"},
                 {"title":"Apuntar a objetivo aéreo","action":"g13_aim_air"},
                 {"title":"Apuntar a objetivo terrestre","action":"g13_aim_ground"},
                 {"group":"G13 V4 · DOS DISPAROS VISUALES"},
@@ -559,10 +561,12 @@ func _studio_run_animation(action: String) -> void:
         "g11_attack_slow":
             _g11_play("attack",0.35)
         "g11_turn_left":
-            _g11_hero_turn_v32(-1)
+            _studio_g11_animated_turn(-1)
         "g11_turn_right":
-            _g11_hero_turn_v32(1)
+            _studio_g11_animated_turn(1)
         "g11_slope":
+            if _g11_context_v25==null:
+                _g11_battle_context_v25("temperate")
             _g11_battle_gear_v32("slope")
         "g11_battle_move","g11_battle_attack":
             if _g11_context_v25==null:
@@ -571,16 +575,58 @@ func _studio_run_animation(action: String) -> void:
                 "move" if action=="g11_battle_move" else "attack")
         "g11_battle_close":
             _g11_close_context_v25()
-        "g13_scan","g13_aim_air","g13_aim_ground":
+        "g13_scan","g13_aim_air","g13_aim_ground","g13_aim_legacy":
             var pose_kind: String=(
                 "scan" if action=="g13_scan" else
+                "aim" if action=="g13_aim_legacy" else
                 "aim_air" if action=="g13_aim_air" else "aim_ground")
-            _g13_demo_v1(pose_kind,0.78)
+            _studio_g13_animated_pose(pose_kind)
         "g13_attack_air","g13_attack_ground":
             _g13_attack_v4(
                 "attack_air" if action=="g13_attack_air" else "attack_ground")
         _:
             _studio_quick_action(action)
+
+func _studio_g13_animated_pose(kind: String) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if kind not in ["move","scan","aim","aim_air","aim_ground"]:
+        return
+    if _g13_v4_tween!=null and _g13_v4_tween.is_running():
+        _g13_v4_tween.kill()
+    var art: Node3D=model_root
+    P06Models.restore_model_pose("aa_mobile",art)
+    _g13_v4_tick(0.01,art,kind)
+    _g13_v4_tween=art.create_tween()
+    _g13_v4_tween.tween_method(
+        Callable(self,"_g13_v4_tick").bind(art,kind),0.01,0.99,
+        1.75 if kind=="scan" else 1.25)
+    _g13_v4_tween.tween_callback(Callable(self,"_g13_v4_done").bind(art))
+    status_label.text="G13 · "+kind.replace("_"," ")+" · animación completa"
+
+func _studio_g11_animated_turn(direction: int) -> void:
+    if _role!="mlrs" or model_root==null or not G11Rig.has_rig(model_root):
+        return
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
+    _g11_animation=""
+    var art: Node3D=model_root
+    var heading:=Vector2i(-1 if direction<0 else 1,-1)
+    G11Rig.pose(art,"move",0.01,heading)
+    _g11_turn_tween=art.create_tween()
+    _g11_turn_tween.tween_method(
+        Callable(self,"_studio_g11_turn_tick").bind(art,heading),0.01,0.99,1.20)
+    _g11_turn_tween.tween_callback(
+        Callable(self,"_studio_g11_turn_done").bind(art))
+    status_label.text="G11 V32 · giro diferencial de orugas en reproducción"
+
+func _studio_g11_turn_tick(t: float,art: Node3D,heading: Vector2i) -> void:
+    if is_instance_valid(art):
+        G11Rig.pose(art,"move",t,heading)
+
+func _studio_g11_turn_done(art: Node3D) -> void:
+    if is_instance_valid(art):
+        G11Rig.restore(art)
 
 func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
@@ -598,7 +644,7 @@ func _studio_quick_action(kind: String) -> void:
             elif kind=="hit":
                 _g13_demo_v1("idle",1.0)
             else:
-                _g13_demo_v1(kind,0.65)
+                _studio_g13_animated_pose(kind)
         "tank":
             _play("hit_bullet" if kind=="hit" else kind)
         _:
@@ -1538,6 +1584,8 @@ func _g11_view(yaw: float) -> void:
     _update_camera()
 
 func _g11_play(kind: String, speed: float = 1.0) -> void:
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     if not _g11_require_hero_v24() or not G11Rig.has_rig(model_root):
         return
     if G11Art.stage(model_root) >= 4 and kind in ["move","attack"]:
@@ -1549,6 +1597,8 @@ func _g11_play(kind: String, speed: float = 1.0) -> void:
     G11Rig.pose(model_root,kind,0.0)
 
 func _g11_stop() -> void:
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     _g11_animation = ""
     _g11_time = 0.0
     _g11_playback_speed = 1.0
@@ -1757,6 +1807,8 @@ func _display_role(role: String) -> void:
         _v31_preview = true
     if _g11_context_v25!=null:
         _g11_clear_battle_context_v25()
+    if _g11_turn_tween!=null and _g11_turn_tween.is_running():
+        _g11_turn_tween.kill()
     if _g13_v4_tween!=null and _g13_v4_tween.is_running():
         _g13_v4_tween.kill()
     if role!="mlrs":
