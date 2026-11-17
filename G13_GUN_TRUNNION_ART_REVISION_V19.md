@@ -6,7 +6,7 @@
 
 - Dos **rodamientos huecos** con mallas `ArrayMesh`, 20 segmentos y cuatro superficies físicas (cara lateral, camisa exterior, camisa interior y cara interior), en `G13_TorretaAzimut`. Radios: interior 0,100 m, exterior 0,137 m; profundidad 0,087 m, adelantando la cara exterior por fuera del blindaje lateral; sin discos sólidos ni tapas falsas. Siguen el azimut original de la torreta.
 - Dos **cubos móviles** de eje de cañón (radio 0,080 m) dentro de los rodamientos, en `G13_ElevacionCanones`, que siguen el ángulo de elevación del arma.
-- Dos **refuerzos de recámara** biselados, malla cerrada de dos perfiles octagonales, que unen visualmente el bloque de cierre de V18 con el eje de elevación. Se integran en el mismo pivote de movimiento. No son lanzadores ni compartimentos externos.
+- Dos **refuerzos de recámara** biselados, malla cerrada de tres perfiles octagonales (raíz ancha, cuello de transición y punta estrecha con holgura comprobada dentro del aro fijo), que unen visualmente el bloque de cierre de V18 con el eje de elevación. Se integran en el mismo pivote de movimiento. No son lanzadores ni compartimentos externos.
 
 Son seis piezas 3D nuevas, sin texturas que simulen geometría, sin fuentes de luz adicionales y sin cambiar los cañones huecos V12, retroceso V4, colores de las ocho facciones, radar, vehículo o reglas de juego. **Cero misiles/lanzadores, dos cañones**. Se aplica exclusivamente al detalle LOD13; el LOD8 Android no cambia.
 
