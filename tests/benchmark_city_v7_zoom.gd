@@ -193,8 +193,10 @@ func _run_case(spec: Dictionary) -> Dictionary:
         result["budgeted_runtime_city_changes"]=total_changed
         result["budgeted_runtime_steps"]=total_steps
         result["budgeted_peak_step_ms"]=snappedf(peak,0.01)
-        result["budgeted_sum_cpu_ms"]=snappedf(
-            per_step.reduce(func(a,b):return a+b,0.0),0.01)
+        var total_cpu: float=0.0
+        for sample in per_step:
+            total_cpu+=sample
+        result["budgeted_sum_cpu_ms"]=snappedf(total_cpu,0.01)
         # Android is not emulated here: these are Mesa CPU timings only.
         result["budgeted_runtime_profiling_source"]="Linux Mesa CI (not physical Android)"
         assert(state==untouched)
