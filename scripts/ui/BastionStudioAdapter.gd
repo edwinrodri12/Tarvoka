@@ -93,6 +93,7 @@ var _heli_camera_base: Vector3=Vector3.ZERO
 var _heli_focus_local: Vector3=Vector3.ZERO
 var _heli_compare_button: Button
 var _heli_animation: String=""
+var _heli_damage_stage: int=0
 var _heli_time: float=0.0
 # A01 V9 — mobile landscape: quick actions near the model picker, not below
 # the full technical catalogue. Other units keep their existing controls.
@@ -831,13 +832,15 @@ func _heli_next_damage() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
         return
     _heli_stop()
-    HeliV13.set_stage(model_root,mini(HeliV13.stage(model_root)+1,HeliV13.MAX_STAGE))
+    _heli_damage_stage=mini(HeliV13.stage(model_root)+1,HeliV13.MAX_STAGE)
+    HeliV13.set_stage(model_root,_heli_damage_stage)
     _update_details()
 
 func _heli_repair() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
         return
     _heli_stop()
+    _heli_damage_stage=0
     HeliV13.set_stage(model_root,0)
     _update_details()
 
@@ -845,6 +848,7 @@ func _heli_destroy() -> void:
     if _role!="attack_heli" or model_root==null or not HeliV13.has_model(model_root):
         return
     _heli_stop()
+    _heli_damage_stage=4
     HeliV13.set_stage(model_root,4)
     _heli_play("destroy")
 
@@ -855,9 +859,11 @@ func _heli_play(kind: String) -> void:
         if kind in ["move","attack"] and HeliV13.stage(model_root)>=4:
             return
         if kind=="hit_bullet":
-            HeliV13.set_stage(model_root,maxi(1,HeliV13.stage(model_root)))
+            _heli_damage_stage=maxi(1,HeliV13.stage(model_root))
+            HeliV13.set_stage(model_root,_heli_damage_stage)
         elif kind=="hit_explosive":
-            HeliV13.set_stage(model_root,maxi(2,HeliV13.stage(model_root)))
+            _heli_damage_stage=maxi(2,HeliV13.stage(model_root))
+            HeliV13.set_stage(model_root,_heli_damage_stage)
     _heli_animation=kind
     _heli_time=0.0
     if HeliV13.has_model(model_root):
@@ -1682,6 +1688,8 @@ func _display_role(role: String) -> void:
             HeliV10.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled)
             HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
             HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
+            if HeliV13.has_model(model_root):
+                HeliV13.set_stage(model_root,_heli_damage_stage)
             preview.add_child(model_root)
             model_root.rotation_degrees.y=_yaw
             _update_camera()
