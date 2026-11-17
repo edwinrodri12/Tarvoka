@@ -116,11 +116,11 @@ func bind_dossier(data: Dictionary) -> void:
         return
     inspected_id=str(data.get("unit_id",""))
     title_label.text=str(data.get("name","Unidad")).to_upper()
-    subtitle_label.text="%s  ·  %s  ·  ID %s" % [
+    subtitle_label.text="%s  ·  %s  ·  %s  ·  ID %s" % [
         str(data.get("code","")),str(data.get("domain_label","")),
-        inspected_id]
+        str(data.get("faction_name","")),inspected_id]
     icon.call("configure",str(data.get("role","line")),
-        Factions.faction_color(int(data.get("faction",0))))
+        data.get("faction_color",Chrome.BLUE))
     var hp: int=maxi(0,int(data.get("hp",0)))
     var cap: int=maxi(1,int(data.get("max_hp",hp)))
     health.max_value=cap

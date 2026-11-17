@@ -9,6 +9,7 @@ const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 
 static func inspect(state: Dictionary, unit_id: String, viewer: int = 0) -> Dictionary:
     if unit_id.is_empty() or viewer not in [0,1]:
@@ -64,6 +65,8 @@ static func inspect(state: Dictionary, unit_id: String, viewer: int = 0) -> Dict
     var price: int = Economy.cost(role) if Roles.valid(role) else -1
     var result: Dictionary = data.duplicate(true)
     result["code"] = Arsenal.code(role) if Arsenal.valid(role) else role.to_upper()
+    result["faction_color"] = Identity.color_for(state,viewer)
+    result["faction_name"] = Identity.name_for(state,viewer)
     result["domain_label"] = domain_name
     result["target_label"] = ", ".join(target_words) if not target_words.is_empty() else "No ataca"
     result["range_label"] = (
@@ -86,6 +89,7 @@ static func inspect(state: Dictionary, unit_id: String, viewer: int = 0) -> Dict
         {"name":"TIPO","value":domain_name},
         {"name":"MUNICIÓN","value":ammo_value},
         {"name":"COMBUSTIBLE","value":fuel_value},
-        {"name":"COSTE","value":str(result["price_label"])}
+        {"name":"COSTE","value":str(result["price_label"])},
+        {"name":"CONTRAATAQUE","value":"Depende de rango, PV y munición"}
     ]
     return result
