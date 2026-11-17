@@ -1705,7 +1705,8 @@ func _process(_delta: float) -> void:
         # It uses the fog-filtered site description and never purchases on tap.
         if building_info_panel != null:
             var site_visible: bool = bool(site_info.get("valid",false)) and (
-                board.selected_id.is_empty() and board.inspected_enemy_id.is_empty())
+                board.selected_id.is_empty() and board.inspected_enemy_id.is_empty()
+                and not board.compare_mode)
             var site_cell: Vector2i = site_info.get("pos",Vector2i(-1,-1))
             if not site_visible:
                 building_info_panel.hide()
