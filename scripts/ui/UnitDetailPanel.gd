@@ -136,7 +136,9 @@ func bind_dossier(data: Dictionary) -> void:
     var level: String=str(data.get("level_label",""))
     level_label.text="VETERANCIA: %s" % level if not level.is_empty() else (
         "VETERANCIA: aún no registrada en esta versión")
-    var features: Array=data.get("features",[])
+    var features: PackedStringArray=[]
+    for item in data.get("features",[]):
+        features.append(str(item))
     features_label.text="\n".join(features)
     note_label.text=str(data.get("note","Sin bonificaciones especiales registradas."))
     show()
