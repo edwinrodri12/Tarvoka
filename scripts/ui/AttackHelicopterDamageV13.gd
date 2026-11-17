@@ -156,23 +156,111 @@ static func _burns(body: Node3D) -> void:
             Vector3(s*0.88,0.835,-0.14),
             Vector3(0.37,0.035,0.26),soot)
 
+
+# V13.1 sculpted mesh effects: vertex alpha fades through the volume instead
+# of using dark opaque balls. All meshes remain native editable Godot assets.
+static func _fx_material(is_fire: bool) -> StandardMaterial3D:
+    var m:=StandardMaterial3D.new()
+    m.albedo_color=Color.WHITE
+    m.vertex_color_use_as_albedo=true
+    m.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+    m.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+    m.cull_mode=BaseMaterial3D.CULL_DISABLED
+    m.roughness=1.0
+    if is_fire:
+        m.emission_enabled=true
+        m.emission=Color("#ff7f31")
+        m.emission_energy_multiplier=0.32
+    return m
+
+static func _fx_point(height: float,radius: float,segment: int,seed: float,
+        bend: float) -> Vector3:
+    var a: float=TAU*float(segment)/10.0
+    var jagged: float=1.0+0.13*sin(a*3.0+seed+height*9.0)
+    return Vector3(
+        cos(a)*radius*jagged+bend*height*height,
+        height,
+        sin(a)*radius*(1.0+0.10*cos(a*4.0+seed))
+    )
+
+static func _fx_vertex(st: SurfaceTool,pos: Vector3,color: Color) -> void:
+    st.set_color(color)
+    st.add_vertex(pos)
+
+static func _fx_sculpt(is_fire: bool,seed: float) -> ArrayMesh:
+    var heights: Array[float]=[0.0,0.035,0.12,0.20,0.30,0.40] if is_fire else [
+        0.0,0.09,0.20,0.34,0.49,0.63]
+    var radii: Array[float]=[0.054,0.088,0.081,0.061,0.039,0.003] if is_fire else [
+        0.035,0.095,0.15,0.19,0.145,0.009]
+    var colors: Array[Color]=[
+        Color(1.0,0.92,0.43,0.80),
+        Color(1.0,0.73,0.22,0.96),
+        Color(1.0,0.39,0.10,0.93),
+        Color(0.92,0.20,0.055,0.77),
+        Color(0.59,0.13,0.055,0.41),
+        Color(0.40,0.12,0.08,0.0)
+    ] if is_fire else [
+        Color(0.16,0.20,0.22,0.0),
+        Color(0.17,0.21,0.235,0.34),
+        Color(0.22,0.25,0.27,0.31),
+        Color(0.27,0.30,0.315,0.23),
+        Color(0.33,0.36,0.37,0.13),
+        Color(0.38,0.40,0.41,0.0)
+    ]
+    var st:=SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var bend: float=(0.21 if is_fire else 0.32)*(sin(seed*1.73)*0.7+0.3)
+    for ring in range(heights.size()-1):
+        for j in range(10):
+            var a: Vector3=_fx_point(heights[ring],radii[ring],j,seed,bend)
+            var b: Vector3=_fx_point(heights[ring],radii[ring],j+1,seed,bend)
+            var c: Vector3=_fx_point(heights[ring+1],radii[ring+1],j,seed,bend)
+            var d: Vector3=_fx_point(heights[ring+1],radii[ring+1],j+1,seed,bend)
+            _fx_vertex(st,a,colors[ring])
+            _fx_vertex(st,c,colors[ring+1])
+            _fx_vertex(st,b,colors[ring])
+            _fx_vertex(st,b,colors[ring])
+            _fx_vertex(st,c,colors[ring+1])
+            _fx_vertex(st,d,colors[ring+1])
+    st.generate_normals()
+    return st.commit()
+
 static func _particles(body: Node3D) -> void:
     var smoke:=_group(body,SMOKE)
-    for i in range(4):
-        var t: float=float(i)
-        var fog:=Color(0.19,0.23,0.26,0.37-t*0.045)
-        var puff:=_sphere(smoke,"A01V13_ColumnaHumo_%d" % i,
-            Vector3(0.42+t*0.052,1.55+t*0.23,0.82+t*0.12),
-            Vector3(0.22+t*0.08,0.24+t*0.07,0.22+t*0.09),fog)
+    # Staggered ribbons on the engine pods, not a line of solid balls.
+    # Sculpted smoke never touches the HUD or tactical-map LOD<=10.
+    for i in range(8):
+        var right: bool=i<6
+        var lane: float=float(i%6)
+        var side: float=1.0 if right else -1.0
+        var puff:=_mesh(smoke,"A01V13_ColumnaHumo_%d" % i,
+            _fx_sculpt(false,0.79+float(i)*1.49),Color.WHITE,
+            Vector3(side*(0.59+0.045*sin(float(i)*1.83)),
+                1.51+0.055*float(i%3),
+                0.73+0.09*cos(lane*1.56)))
+        puff.material_override=_fx_material(false)
+        puff.scale=Vector3(
+            0.88+0.12*float(i%3),
+            0.78+0.08*float(i%2),
+            0.89+0.08*float(i%4))
         puff.set_meta("a01_v13_fx_rest",puff.position)
         puff.set_meta("a01_v13_fx_scale",puff.scale)
     var fire:=_group(body,FIRE)
-    for i in range(3):
-        var tint:=Color("#ffb236") if i==0 else (
-            Color("#f56a2e") if i==1 else Color("#c83718"))
-        var flame:=_sphere(fire,"A01V13_LlamaMotor_%d" % i,
-            Vector3(0.45,1.54+float(i)*0.10,0.82),
-            Vector3(0.11-float(i)*0.014,0.23,0.12),tint,true)
+    # Bright base, orange outer tongues and short ember tips extend
+    # outside the engine shell rather than hiding inside the armour.
+    for i in range(6):
+        var right: bool=i<4
+        var side: float=1.0 if right else -1.0
+        var flame:=_mesh(fire,"A01V13_LlamaMotor_%d" % i,
+            _fx_sculpt(true,1.9+float(i)*1.26),Color.WHITE,
+            Vector3(side*(0.66+0.028*float(i%3)),
+                1.52+0.024*float(i%2),
+                0.74+0.075*sin(float(i)*1.5)))
+        flame.material_override=_fx_material(true)
+        flame.scale=Vector3(
+            1.0-0.09*float(i%3),
+            0.79+0.10*float(i%3),
+            0.84+0.07*float(i%2))
         flame.set_meta("a01_v13_fx_rest",flame.position)
         flame.set_meta("a01_v13_fx_scale",flame.scale)
     var burst:=_group(body,IMPACT)
@@ -291,9 +379,14 @@ static func animate_ambient(model: Node3D,seconds: float) -> bool:
         var base_size: Vector3=puff.get_meta("a01_v13_fx_scale") as Vector3
         var phase: float=fposmod(clock*0.43+float(i)*0.21,1.0)
         puff.position=base_pos+Vector3(
-            0.055*sin(clock*0.9+float(i)),phase*0.40,
-            0.045*sin(clock*0.75+float(i)*1.3))
-        puff.scale=base_size*(0.88+phase*0.28)
+            0.09*sin(clock*0.82+float(i)*1.27),phase*0.46,
+            0.065*sin(clock*0.67+float(i)*1.7))
+        puff.scale=base_size*Vector3(
+            0.91+0.22*phase,0.89+0.16*phase,0.91+0.24*phase)
+        var vapor: StandardMaterial3D=puff.material_override as StandardMaterial3D
+        if vapor!=null:
+            # Every wisp fades in and out of its loop without popping.
+            vapor.albedo_color.a=0.18+0.82*sin(PI*phase)
     for i in range(fire.get_child_count()):
         var flame: MeshInstance3D=fire.get_child(i) as MeshInstance3D
         if flame==null or not flame.has_meta("a01_v13_fx_rest"):
@@ -301,12 +394,13 @@ static func animate_ambient(model: Node3D,seconds: float) -> bool:
         var start: Vector3=flame.get_meta("a01_v13_fx_rest") as Vector3
         var shape: Vector3=flame.get_meta("a01_v13_fx_scale") as Vector3
         flame.position=start+Vector3(
-            0.012*sin(clock*5.1+float(i)*1.4),
-            0.024*sin(clock*4.3+float(i)),0.0)
+            0.028*sin(clock*5.1+float(i)*1.4),
+            0.022*sin(clock*4.3+float(i)),0.017*sin(clock*4.7+float(i)))
+        flame.rotation_degrees.z=7.0*sin(clock*3.7+float(i)*0.85)
         flame.scale=shape*Vector3(
-            0.92+0.08*sin(clock*5.3+float(i)),
-            0.90+0.19*sin(clock*7.2+float(i)*0.6),
-            0.94+0.07*sin(clock*4.1+float(i)))
+            0.89+0.13*sin(clock*5.3+float(i)),
+            0.84+0.23*sin(clock*7.2+float(i)*0.6),
+            0.88+0.14*sin(clock*4.1+float(i)))
     return true
 
 static func _animate_fx(model: Node3D,kind: String,t: float) -> void:
