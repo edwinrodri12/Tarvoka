@@ -9,6 +9,7 @@ const V1=preload("res://scripts/ui/CivilianCity3DV1.gd")
 const V2=preload("res://scripts/ui/CivilianCityFacadeV2.gd")
 const V3=preload("res://scripts/ui/CivilianCityPublicSpaceV3.gd")
 const V8=preload("res://scripts/ui/CivilianCityArchitectureV8.gd")
+const V9=preload("res://scripts/ui/CivilianCityFinishV9.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -104,7 +105,14 @@ static func _keep_medium(name: String) -> bool:
         "ContraventanaVillaV8_","MarcoBuhardillaV8_",
         "BastidorSolarV8_","BarandaEvacuacionV8_",
         "EscaleraEvacuacionV8_","SoporteDepositoV8_",
-        "ParteluzComercioV8_","DovelaCivicaV8_"]:
+        "ParteluzComercioV8_","DovelaCivicaV8_",
+        # V9: model the material joints in full only near the camera.
+        "AbrazaderaCanalonV9_","GrapaBajanteV9_","BocaPluvialV9_",
+        "HiladaEsquinaV9_","BaberoBuhardillaV9_",
+        "TapajuntaMarquesinaV9_","FajaEntrePisosV9_",
+        "CostillaPanelSolarV9_","PerfilAluminioV9_",
+        "FiloCoronaMetropolitanaV9_","JambaTorreRelojV9_",
+        "PilastraMunicipalDelanteraV9_","PilastraMunicipalTraseraV9_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -138,7 +146,12 @@ static func _keep_far(name: String) -> bool:
         "RemateTorreCivicaV8",
         "EntablamentoMunicipalPosteriorV8",
         "CornisaMunicipalQuebradaV8",
-        "MamposteriaFracturadaV8_","RestosCoronaMetropoliV8"]:
+        "MamposteriaFracturadaV8_","RestosCoronaMetropoliV8",
+        # V9: preserve only the material joins that affect the outline.
+        "RemateTejaBordeVillaV9_","VigaCoronaMetropolitanaV9_",
+        "VigaCoronaPosteriorV9_","VigaCoronaFrontalV9_",
+        "JuntaCubiertaAyuntamientoV9","ClaveMunicipalDerribadaV9",
+        "RemateParapetoRotoV9_","PanelCoronaDobladoV9"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -206,7 +219,10 @@ static func apply(model: Node3D,level: int,
     # use this single build path; previous V1-V4 meshes remain unchanged.
     if not V8.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",8)
+    # V9 is modeled, not artistically locked or final-approved yet.
+    if not V9.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",9)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
