@@ -17,6 +17,7 @@ const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 const Director = preload("res://scripts/core/StrategicDirectorV32.gd")
 const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
+const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -186,6 +187,26 @@ static func _decide(state: Dictionary,
     var finish_setup: Dictionary = _advance_finishing_hit(state, knowledge, friends, enemies, occupied)
     if finish_setup.get("valid", false):
         return finish_setup
+
+    # Opt-in levels 9+: position ONE unit to make a legal group kill
+    # possible, then re-evaluate and execute shots on later AI steps.
+    # No Session probes while planning: only ONE authoritative move
+    # attempt after a public-only choice, to prevent fog leaks.
+    if int(plan.get("level",1)) >= 9:
+        var depth: int = 3 if int(plan["level"]) >= 10 else 2
+        var placement: Dictionary = Positioning.propose(
+            knowledge,faction,depth,options.get("_goals_v33",{}))
+        if not placement.is_empty():
+            var tactical_move: Dictionary = Session.move(state,
+                str(placement["unit_id"]),placement["destination"])
+            if bool(tactical_move.get("valid",false)):
+                tactical_move["action"] = "move"
+                tactical_move["unit_id"] = str(placement["unit_id"])
+                tactical_move["destination"] = placement["destination"]
+                tactical_move["target_id"] = str(placement["target_id"])
+                tactical_move["reason"] = "combined_position"
+                tactical_move["planned_shots"] = int(placement["planned_shots"])
+                return tactical_move
 
     if not best_hit.is_empty():
         var hit: Dictionary = Session.attack(state, best_hit["unit_id"], best_hit["enemy_id"])

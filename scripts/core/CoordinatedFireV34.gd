@@ -122,7 +122,7 @@ static func _simulate(squad: Array, foe: Dictionary,
         "score":score}
 
 static func propose(knowledge: Dictionary, side: int,
-        max_shots: int = 2) -> Dictionary:
+        max_shots: int = 2, only_target_id: String = "") -> Dictionary:
     if side not in [0,1] or \
             not Rules.valid_terrain(knowledge.get("terrain",[])):
         return {}
@@ -130,7 +130,9 @@ static func propose(knowledge: Dictionary, side: int,
     var candidates: Array = []
     for foe in knowledge.get("units",[]):
         if foe is Dictionary and int(foe.get("faction",-1)) == 1-side and \
-                int(foe.get("hp",0)) > 0 and foe.get("pos") is Vector2i:
+                int(foe.get("hp",0)) > 0 and foe.get("pos") is Vector2i and \
+                (only_target_id.is_empty() or \
+                str(foe.get("id","")) == only_target_id):
             candidates.append(foe)
     candidates.sort_custom(func(a,b):
         return str(a["id"]) < str(b["id"]))
