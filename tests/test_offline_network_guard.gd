@@ -2,14 +2,15 @@ extends SceneTree
 # Regression guard: the offline Android game must not instantiate network clients.
 # Static scope is intentionally limited to runtime scripts and scenes.
 const ROOTS: Array[String] = ["res://scripts", "res://scenes"]
-const FORBIDDEN: Array[String] = [
-    "HTTPRequest.new(", "HTTPClient.new(", "WebSocketPeer.new(",
-    "WebSocketMultiplayerPeer.new(", "ENetMultiplayerPeer.new(",
-    "TCPServer.new(", "StreamPeerTCP.new("
+const NETWORK_TYPES: Array[String] = [
+    "HTTPRequest", "HTTPClient", "WebSocketPeer",
+    "WebSocketMultiplayerPeer", "ENetMultiplayerPeer",
+    "TCPServer", "StreamPeerTCP", "PacketPeerUDP"
 ]
 
 func _initialize() -> void:
     var failures: Array[String] = []
+    _self_test(failures)
     var checked: int = 0
     for root in ROOTS:
         if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(root)):
@@ -46,9 +47,36 @@ func _scan(folder: String, failures: Array[String]) -> int:
                     failures.append("Cannot read: " + path)
                 else:
                     var source := file.get_as_text()
-                    for token in FORBIDDEN:
-                        if source.contains(token):
-                            failures.append("Network constructor '%s' in %s" % [token, path])
+                    for hit in _find_network_usage(source, entry.ends_with(".tscn")):
+                        failures.append("Network usage '%s' in %s" % [hit, path])
         entry = directory.get_next()
     directory.list_dir_end()
     return count
+
+# Detect whitespace variants and direct scene nodes as well as literal constructors.
+func _find_network_usage(source: String, is_scene: bool) -> Array[String]:
+    var hits: Array[String] = []
+    for kind in NETWORK_TYPES:
+        var constructor := RegEx.new()
+        var expression := "\\b" + kind + "\\s*\\.\\s*new\\s*\\("
+        if constructor.compile(expression) != OK:
+            hits.append("Invalid detector expression: " + kind)
+            continue
+        if constructor.search(source) != null:
+            hits.append(kind + ".new")
+        if is_scene:
+            var node_detector := RegEx.new()
+            var node_expression := "\\[node\\b[^\\]\\n]*\\btype\\s*=\\s*\\\"" + kind + "\\\""
+            if node_detector.compile(node_expression) != OK:
+                hits.append("Invalid scene detector: " + kind)
+            elif node_detector.search(source) != null:
+                hits.append(kind + " scene node")
+    return hits
+
+func _self_test(failures: Array[String]) -> void:
+    if not _find_network_usage("var x = HTTPClient  .  new ( )", false).has("HTTPClient.new"):
+        failures.append("Detector misses whitespace-separated HTTPClient constructor")
+    if not _find_network_usage("[node name=\"Request\" type=\"HTTPRequest\"]", true).has("HTTPRequest scene node"):
+        failures.append("Detector misses HTTPRequest scene node")
+    if not _find_network_usage("var x = Vector2.new(1, 2)", false).is_empty():
+        failures.append("Detector incorrectly rejects unrelated constructors")
