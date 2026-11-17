@@ -88,7 +88,7 @@ func _run() -> void:
     if colors.size()==8:
         for i in range(8):
             for j in range(i+1,8):
-                _check(colors[i].distance_to(colors[j])>0.04,
+                _check((absf(colors[i].r-colors[j].r)+absf(colors[i].g-colors[j].g)+absf(colors[i].b-colors[j].b))>0.08,
                     "distinct official faction hues "+str(i)+" / "+str(j))
     if failures>0:
         push_error("HAT29 V14: "+str(failures)+" failures")
