@@ -520,6 +520,10 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     _camera_size = clampf(float(maxi(_dims.x,_dims.y))*Terrain.CELL*0.83,
         22.0,90.0)
     _yaw = PI*0.25
+    # Set the REAL camera before the first rendered frame. Otherwise
+    # Camera3D starts at its tiny default size, needlessly building LOD0
+    # cities and cutting off the tactical battlefield on open.
+    _refresh_camera()
     _selected_cell = Vector2i(-1,-1)
     inspect_cell(_focus_for_selected(state,selected_id),false)
     _refresh_ranges()
