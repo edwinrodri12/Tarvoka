@@ -166,6 +166,38 @@ func _run_case(spec: Dictionary) -> Dictionary:
         "lod_transitions":int(driver.transitions),
         "phases":passes
     }
+    if spec["id"]=="24x18_stress_10cities":
+        # Measure real RUNTIME behavior: rather than rebuilding ten near
+        # city meshes in one 140ms tick, distribute changes into at most
+        # one native mesh rebuild per call with no gameplay mutations.
+        camera.size=2.9
+        var per_step: Array[float]=[]
+        var total_steps: int=0
+        var total_changed: int=0
+        var peak: float=0.0
+        for _tick in range(20):
+            var stamp: int=Time.get_ticks_usec()
+            var step: int=int(driver.update_budgeted(
+                camera,float(viewport.size.y)))
+            var elapsed: float=float(Time.get_ticks_usec()-stamp)/1000.0
+            per_step.append(elapsed)
+            peak=maxf(peak,elapsed)
+            total_steps+=1
+            total_changed+=step
+            assert(step<=1)
+            if not driver._pending_transition:
+                break
+        assert(total_changed>=expected)
+        assert(total_steps>=expected)
+        assert(_sample_meshes(driver)==near_meshes)
+        result["budgeted_runtime_city_changes"]=total_changed
+        result["budgeted_runtime_steps"]=total_steps
+        result["budgeted_peak_step_ms"]=snappedf(peak,0.01)
+        result["budgeted_sum_cpu_ms"]=snappedf(
+            per_step.reduce(func(a,b):return a+b,0.0),0.01)
+        # Android is not emulated here: these are Mesa CPU timings only.
+        result["budgeted_runtime_profiling_source"]="Linux Mesa CI (not physical Android)"
+        assert(state==untouched)
     print("CITY V7 MESA RESULT "+JSON.stringify(result))
     viewport.remove_child(battlefield)
     battlefield.free()
