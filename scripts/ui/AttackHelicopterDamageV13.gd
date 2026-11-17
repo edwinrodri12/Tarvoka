@@ -423,7 +423,7 @@ static func _wreck_fuselage(body: Node3D) -> void:
             Vector3(x*0.692,1.18,0.13),0.011,soot)
     # Broken glazing follows V2's real canopy stations.
     # Omit the original unfractured windshield in the wreck state.
-    var triangles: Array[Array]=[
+    var triangles: Array=[
         [Vector3(-0.19,1.68,-1.24),Vector3(0.02,1.76,-1.04),
             Vector3(-0.31,1.59,-0.96)],
         [Vector3(0.24,1.65,-1.17),Vector3(0.35,1.58,-0.89),
