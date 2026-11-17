@@ -83,6 +83,9 @@ func _audit(level: int,faction: int,damage: int) -> void:
         for child in stage.get_children():
             if str(child.name).begins_with("GoteronSuperiorVentanaV9_"):
                 caps+=1
+        if caps!=expected_drip:
+            push_error("V9 gutter cap mismatch: level=%d faction=%d damage=%d expected=%d actual=%d" % [
+                level,faction,damage,expected_drip,caps])
         assert(caps==expected_drip)
         var pane: MeshInstance3D=model.find_child(
             "CristalMirillaAccesoV9",true,false) as MeshInstance3D
