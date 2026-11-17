@@ -173,7 +173,7 @@ static func _collapsed_foundation_contacts(parent: Node3D,tag: String,
             "V24_VigaEntreCascotes_%s_%d" % [tag,side],
             Vector3(sx,0.14,z-d*0.22),
             Vector3(0.14,0.12,d*0.22),
-            TIMBER if level==1 else BRICK if level==2 else STEEL,
+            WOOD if level==1 else BRICK if level==2 else STEEL,
             "steel" if level==3 else "stone")
         bracket.rotation_degrees.y=float(side)*21.0
     if level==3:
