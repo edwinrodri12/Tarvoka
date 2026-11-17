@@ -4,6 +4,9 @@ on:
     paths:
       - 'tests/test_allied_transit_endpoints.gd'
       - 'scripts/core/Rules.gd'
+      - 'scripts/core/BasicAI.gd'
+      - 'scripts/core/SaveCodec.gd'
+      - 'scripts/core/BattleSession.gd'
       - '.github/workflows/allied-transit-endpoints.yml'
   workflow_dispatch:
 
@@ -30,3 +33,20 @@ jobs:
             echo 'Unexpected Godot diagnostic'; exit 1
           fi
           test "$(grep -Fc 'PASS: allied transit and endpoint isolation' /tmp/allied-transit.log)" -eq 1
+      - name: Run independent tactical AI save and victory smoke regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in test_rules test_battle_session test_basic_ai test_save_codec; do
+            echo "::group::${suite}"
+            timeout --signal=TERM --kill-after=5s 90s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script "res://tests/${suite}.gd" 2>&1 | tee "/tmp/${suite}.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' "/tmp/${suite}.log"; then
+              echo "Unexpected Godot diagnostic in ${suite}"
+              exit 1
+            fi
+            if ! grep -Eq 'PASS|All tests passed' "/tmp/${suite}.log"; then
+              echo "No success marker in ${suite}"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
