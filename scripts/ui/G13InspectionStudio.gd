@@ -5,6 +5,7 @@ class_name TarvokaG13InspectionStudio
 # UnitArtStudioWeb. Loads the SAME native model via UnitModels3D.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const FrontV23=preload("res://scripts/ui/G13FrontLightingV23.gd")
+const IntakeV24=preload("res://scripts/ui/G13ArmoredIntakeV24.gd")
 const POSES=["idle","scan","move","aim_air","attack_air","aim_ground","attack_ground"]
 const POSE_LABELS=[
     "Reposo","Radar","Rodaje","Apuntar: aire",
@@ -24,7 +25,7 @@ var _playing: bool=false
 var _heading: Vector2i=Vector2i(0,-1)
 var _status: Label
 var _preview_detail: int=13
-var _show_v22_reference: bool=false
+var _front_version:int=24
 
 func _ready()->void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -132,6 +133,10 @@ func _create_layout()->void:
     sculpted_lights.text="V23 · Faros 3D encastrados"
     sculpted_lights.pressed.connect(_show_front_comparison.bind(false))
     controls.add_child(sculpted_lights)
+    var intake_finish:=Button.new()
+    intake_finish.text="V24 · Rejilla frontal blindada 3D"
+    intake_finish.pressed.connect(_show_v24_finish)
+    controls.add_child(intake_finish)
     for view in [
         ["Isométrica","iso"],["Frontal","front"],
         ["Posterior","rear"],["Izquierda","left"],
@@ -183,20 +188,32 @@ func _display_role(role: String)->void:
     _progress=0.0
     _playing=false
     Models.restore_model_pose("aa_mobile",model_root)
-    if _show_v22_reference:
+    if _front_version==22:
         FrontV23.compare_v22(model_root,true)
+        IntakeV24.show_v23_reference(model_root,true)
+    elif _front_version==23:
+        IntakeV24.show_v23_reference(model_root,true)
     if _status!=null:
         _status.text="G13 cargado — arte 3D, sin combate táctico"
 
 func _show_front_comparison(show_original:bool)->void:
     if not is_instance_valid(model_root):
         return
-    if FrontV23.compare_v22(model_root,show_original):
-        _show_v22_reference=show_original
+    if FrontV23.compare_v22(model_root,show_original) and (
+            IntakeV24.show_v23_reference(model_root,true)):
+        _front_version=22 if show_original else 23
         _status.text=(
-            "G13 V22: faros de referencia, misma cámara y animación."
+            "G13 V22: frontal original, misma cámara y animación."
             if show_original else
-            "G13 V23: biseles y lentes 3D integrados, misma cámara.")
+            "G13 V23: lentes encastradas; sin rejilla V24.")
+
+func _show_v24_finish()->void:
+    if not is_instance_valid(model_root):
+        return
+    if FrontV23.compare_v22(model_root,false) and (
+            IntakeV24.show_v23_reference(model_root,false)):
+        _front_version=24
+        _status.text="G13 V24: rejilla blindada y faros 3D; frontal completo."
 
 func _change_faction(_index: int)->void:
     _display_role("aa_mobile")
