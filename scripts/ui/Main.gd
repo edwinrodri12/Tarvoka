@@ -1503,9 +1503,9 @@ func _layout_building_info() -> void:
     # or cover the whole tactical board.
     var board_width: float = maxf(300.0, board_holder.size.x)
     var board_height: float = maxf(250.0, board_holder.size.y)
-    var width: float = clampf(board_width * 0.43, 278.0, 344.0)
-    var bottom: float = 76.0 if battle_hud_compact else 84.0
-    var height: float = minf(238.0,maxf(155.0,board_height - bottom - 64.0))
+    var width: float = clampf(board_width * 0.43, 288.0, 404.0)
+    var bottom: float = 74.0 if battle_hud_compact else 82.0
+    var height: float = clampf(board_height - bottom - 70.0,178.0,378.0)
     building_info_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
     building_info_panel.offset_left = -width - 8.0
     building_info_panel.offset_right = -8.0
@@ -1534,12 +1534,12 @@ func _layout_unit_detail() -> void:
     if unit_detail_panel == null or board_holder == null:
         return
     var width: float = clampf(board_holder.size.x*0.46,300.0,420.0)
-    var height: float = maxf(190.0,board_holder.size.y-149.0)
+    var height: float = clampf(board_holder.size.y-188.0,177.0,420.0)
     unit_detail_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     unit_detail_panel.offset_left = -width-10.0
     unit_detail_panel.offset_right = -10.0
-    unit_detail_panel.offset_top = 70.0
-    unit_detail_panel.offset_bottom = 70.0+height
+    unit_detail_panel.offset_top = 114.0
+    unit_detail_panel.offset_bottom = 114.0+height
 
 func _open_unit_detail(unit_id: String) -> void:
     if board == null or not board.pending_order.is_empty():
