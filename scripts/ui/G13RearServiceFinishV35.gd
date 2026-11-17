@@ -137,7 +137,7 @@ static func _shroud_positions() -> Array[Transform3D]:
         out.append(_cube(Vector3(s * 0.380, 0.729, 1.214),
             Vector3(0.135, 0.036, 0.248)))
         # Low-lying side deflector protects the exposed exhaust wall.
-        out.append(_cube(Vector3(s * 0.458, 0.674, 1.234),
+        out.append(_cube(Vector3(s * 0.432, 0.674, 1.234),
             Vector3(0.028, 0.080, 0.225)))
     return out
 
@@ -172,7 +172,7 @@ static func apply(root: Node3D) -> bool:
     if high_detail and rear_door == null:
         return false
     var y: float = 1.044 if high_detail else 0.759
-    var z: float = 1.311 if high_detail else 1.267
+    var z: float = 1.301 if high_detail else 1.267
     var panel := _panel_mesh()
     var pipe := _exhaust_tube()
     if panel == null or pipe == null or panel.get_surface_count() != 1 or (
@@ -196,7 +196,7 @@ static func apply(root: Node3D) -> bool:
     hull.add_child(hatch)
     var box := BoxMesh.new()
     box.size = Vector3.ONE
-    _batch(hull, LATCHES, box, screws, _bolt_positions(y, z + 0.027))
+    _batch(hull, LATCHES, box, screws, _bolt_positions(y, z + 0.019))
     _batch(hull, EXHAUST, pipe, exhaust, _pipe_positions())
     _batch(hull, SHROUDS, box, shade, _shroud_positions())
     _batch(hull, AXLE, box, steel, _axle_positions())
