@@ -10,7 +10,9 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Sites = preload("res://scripts/experiments/StrategicMapSitesV17.gd")
 const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 
-const VERSION := 1
+const VERSION := 2
+const MIN_QUALITY_SCORE := 69
+const CANDIDATES_TO_COMPARE := 3
 const PROFILES := {
     "mixed":-1, "open":0, "forest":1, "river":2, "coast":3
 }
@@ -165,7 +167,21 @@ static func audit(terrain: Array, style: String = "mixed") -> Dictionary:
             first_producer > size.x+size.y:
         return _fail("objectives_too_far")
 
+    # Score distinguishes maps that are merely legal from maps with
+    # several approaches, varied cover and reasonable objective pacing.
+    # Its thresholds are initial DESIGN CANDIDATES, not proven PvP odds.
+    var crossing_score: int = mini(30,rows.size()*4+ \
+        mini(14,int(rows[rows.size()-1])-int(rows[0])))
+    var cover_score: int = maxi(0,20-int(absf(cover_share-0.18)*65.0))
+    var route_score: int = clampi(25-int(float(first_city)*16.0/float(size.x)),0,25)
+    var mountain_score: int = maxi(0,15-int(mountain_share*35.0))
+    var quality_score: int = mini(100,crossing_score+cover_score+ \
+        route_score+mountain_score+10)
+    if quality_score < MIN_QUALITY_SCORE:
+        return {"valid":false,"reason":"low_playability_score",
+            "quality_score":quality_score}
     return {"valid":true,"reason":"certified",
+        "quality_score":quality_score,
         "size":size,"crossing_rows":rows.duplicate(),
         "crossings":rows.size(),"cover_share":cover_share,
         "mountain_share":mountain_share,
@@ -207,6 +223,8 @@ static func generate(requested_seed: int, size: Vector2i,
     rng.seed = requested_seed
     var failures: Dictionary = {}
     var tried: Dictionary = {}
+    var best: Dictionary = {}
+    var qualified := 0
     for attempt in range(MAX_CANDIDATES):
         var candidate: int = requested_seed if attempt == 0 else \
             rng.randi_range(Scenarios.MIN_SEED,Scenarios.MAX_SEED)
@@ -215,12 +233,25 @@ static func generate(requested_seed: int, size: Vector2i,
         tried[candidate] = true
         var result: Dictionary = certify_seed(candidate,size,style)
         if bool(result.get("valid",false)):
-            result["attempts"] = attempt+1
-            result["requested_seed"] = requested_seed
-            result["rejected_by_reason"] = failures
-            return result
+            qualified += 1
+            if best.is_empty() or \
+                    int(result["quality_score"]) > int(best["quality_score"]):
+                best = result
+            if qualified >= CANDIDATES_TO_COMPARE:
+                best["attempts"] = attempt+1
+                best["requested_seed"] = requested_seed
+                best["evaluated_qualified"] = qualified
+                best["rejected_by_reason"] = failures
+                return best
+            continue
         var reason: String = str(result.get("reason","unknown"))
         failures[reason] = int(failures.get(reason,0))+1
+    if not best.is_empty():
+        best["attempts"] = MAX_CANDIDATES
+        best["requested_seed"] = requested_seed
+        best["evaluated_qualified"] = qualified
+        best["rejected_by_reason"] = failures
+        return best
     return {"valid":false,"reason":"no_qualified_seed",
         "attempts":MAX_CANDIDATES,
         "requested_seed":requested_seed,"rejected_by_reason":failures}
