@@ -31,6 +31,13 @@ static func _normalized(cell: Vector2i, side: int,
     var x: int = cell.x if side == 0 else width-1-cell.x
     return "%04d:%04d" % [x,cell.y]
 
+static func _nearest_from(cell: Vector2i, units: Array) -> int:
+    var best := 999999
+    for unit in units:
+        if unit is Dictionary and unit.get("pos") is Vector2i:
+            best = mini(best,_distance(cell,unit["pos"]))
+    return best
+
 static func _vacant(knowledge: Dictionary, cell: Vector2i,
         mover: Dictionary) -> bool:
     for u in knowledge.get("units",[]):
@@ -157,15 +164,26 @@ static func propose(knowledge: Dictionary, side: int,
                 u.get("pos") is Vector2i:
             foes.append(u)
     var dimensions: Vector2i = Rules.map_size(knowledge["terrain"])
+    # Select nearby useful movers before remote alphabetical unit IDs.
+    # A large Android map may contain dozens of soldiers.
     own.sort_custom(func(a,b):
-        return "%s|%s" % [
-            str(a.get("role","")),
-            _normalized(a["pos"],side,dimensions.x)] < \
-            "%s|%s" % [
-            str(b.get("role","")),
-            _normalized(b["pos"],side,dimensions.x)])
+        var da: int = _nearest_from(a["pos"],foes)
+        var db: int = _nearest_from(b["pos"],foes)
+        if da != db:
+            return da < db
+        return _normalized(a["pos"],side,dimensions.x) < \
+            _normalized(b["pos"],side,dimensions.x))
     foes.sort_custom(func(a,b):
-        return str(a["id"]) < str(b["id"]))
+        var pa: int = FireTeam._priority(knowledge,side,a)
+        var pb: int = FireTeam._priority(knowledge,side,b)
+        if pa != pb:
+            return pa > pb
+        var da: int = _nearest_from(a["pos"],own)
+        var db: int = _nearest_from(b["pos"],own)
+        if da != db:
+            return da < db
+        return _normalized(a["pos"],side,dimensions.x) < \
+            _normalized(b["pos"],side,dimensions.x))
     if own.size() > MAX_MOVERS:
         own.resize(MAX_MOVERS)
     if foes.size() > MAX_TARGETS:
@@ -190,8 +208,9 @@ static func propose(knowledge: Dictionary, side: int,
         if not has_support:
             continue
         for mover in own:
-            if Turns.in_attack_range(mover,foe):
-                continue # its immediate shot is already available.
+            # A shooter ALREADY at range may still need to change
+            # elevation/cover to create a legal combined kill. The v34
+            # check already ruled out an immediate group elimination.
             for candidate in _candidate_cells(knowledge,side,
                     mover,foe,observed_visible):
                 var cell: Vector2i = candidate["cell"]
