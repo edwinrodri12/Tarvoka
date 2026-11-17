@@ -82,7 +82,7 @@ func _run()->void:
             if cheek.mesh is ArrayMesh:
                 var verts:PackedVector3Array=(
                     cheek.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
-                check(verts.size()>=105 and verts.size()<=120,
+                check(verts.size()==84,
                     "closed actual 3D armored cheek has 2 octagonal profiles")
                 var min_x:float=INF
                 var max_x:float=-INF
