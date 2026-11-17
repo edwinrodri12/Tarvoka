@@ -129,6 +129,58 @@ func _run() -> void:
     orbit_model.queue_free()
     await process_frame
 
+    # V14.3: three untouched-geometry night exposures. No color materials
+    # are edited: only the temporary test world lights and sky are changed.
+    var night_model: Node3D=Models.build("attack_heli",0,true,14)
+    _check(night_model!=null and FX.has_model(night_model),
+        "V14.3 night test uses original faction 0 geometry")
+    if night_model==null:
+        quit(1)
+        return
+    vp.add_child(night_model)
+    var hull: MeshInstance3D=night_model.find_child(
+        "A01_V2_Casco12CarasCerrado",true,false) as MeshInstance3D
+    _check(hull!=null and hull.material_override is StandardMaterial3D,
+        "V14.3 night references actual existing body enamel")
+    var original_hull_color: Color=(hull.material_override as StandardMaterial3D).albedo_color
+    var prior_sun: float=sun.light_energy
+    var prior_bounce: float=bounce.light_energy
+    var prior_sky: Color=env.background_color
+    var prior_ambient: float=env.ambient_light_energy
+    var prior_ambient_color: Color=env.ambient_light_color
+    var moon:=OmniLight3D.new()
+    moon.position=Vector3(-2.6,2.8,0.65)
+    moon.omni_range=7.0
+    moon.light_color=Color("#a2c4dc")
+    moon.light_energy=0.66
+    moon.shadow_enabled=false
+    vp.add_child(moon)
+    sun.light_energy=0.22
+    sun.light_color=Color("#b6cbe2")
+    bounce.light_energy=0.24
+    bounce.light_color=Color("#86afce")
+    env.background_color=Color("#0c1622")
+    env.ambient_light_color=Color("#819bb5")
+    env.ambient_light_energy=0.23
+    for angle_index in range(3):
+        var angle: float=deg_to_rad([38.0,94.0,151.0][angle_index])
+        cam.position=Vector3(4.90*sin(angle),2.62,4.90*cos(angle))
+        cam.look_at(night_model.to_global(Vector3(0,1.14,0.25)),Vector3.UP)
+        await _save(vp,folder.path_join(
+            "hat29_v14_3_noche_%02d.png" % angle_index))
+    _check((hull.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
+        original_hull_color),"V14.3 night changes lights, never faction albedo")
+    moon.queue_free()
+    sun.light_energy=prior_sun
+    sun.light_color=Color.WHITE
+    bounce.light_energy=prior_bounce
+    bounce.light_color=Color.WHITE
+    env.background_color=prior_sky
+    env.ambient_light_color=prior_ambient_color
+    env.ambient_light_energy=prior_ambient
+    night_model.queue_free()
+    await process_frame
+
     var model: Node3D=Models.build("attack_heli",0,true,14)
     _check(model!=null and FX.has_model(model),"combat model")
     if model==null or not FX.has_model(model):
@@ -162,10 +214,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==25,"exactly 8 faction, 6 animation, 10 V14.2 orbit and 1 real belly macro captures")
+    _check(count==28,"8 faction, 6 combat, 11 orbit/belly and 3 real V14.3 night frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 25 native Godot PNGs: eight armies, six effects, eight orbit, top, true underside and belly macro")
+        print("PASS HAT29 V14 CAPTURE: 28 native Godot PNGs with eight armies, six effects, 11 orbit/belly views and three night inspection frames")
         quit(0)
