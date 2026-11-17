@@ -57,6 +57,13 @@ func _run() -> void:
     tap.pressed=true
     hud._on_unit_card_input(tap)
     assert(panel.visible)
+    panel.close_button.pressed.emit()
+    var finger:=InputEventScreenTouch.new()
+    finger.index=0
+    finger.position=Vector2(30,30)
+    finger.pressed=true
+    hud._on_unit_card_input(finger)
+    assert(panel.visible)
     board.selected_id=""
     main._process(0.0)
     assert(not panel.visible)
