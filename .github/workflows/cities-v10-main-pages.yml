@@ -1,6 +1,9 @@
 name: Publish TARVOKA civilian city design preview V17 to shared 3D viewer
 
 on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/cities-v10-main-pages.yml"]
   # First let the root studio publish the updated NATIVE EDIFICIOS picker.
   # Then append the optional /ciudades/ workshop without overwriting it.
   workflow_run:
