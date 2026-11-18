@@ -19,6 +19,7 @@ const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
+const HubWreck1414=preload("res://scripts/ui/AttackHelicopterHubWreckV1414.gd")
 var failures: int=0
 var images: int=0
 
@@ -392,6 +393,29 @@ func _run() -> void:
         and model.get_instance_id()==intact_model_id,
         "V14.13 inspection reuses original rotor animation at 25% speed")
     studio.call("_heli_stop")
+    _check(HubWreck1414.has_model(model),
+        "V14.14 two real metal crown sectors installed under V13 debris")
+    var wreck_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.14:"):
+            wreck_buttons+=1
+    _check(wreck_buttons==1,
+        "V14.14 direct visual wreck animation button exists in Details")
+    var v1414_piece: MeshInstance3D=model.find_child(
+        HubWreck1414.PREFIX+"0",true,false) as MeshInstance3D
+    _check(v1414_piece!=null and v1414_piece.visible,
+        "V14.14 original V13 wreck is prepared, but hidden while intact")
+    studio.call("_heli_toggle_v1414")
+    _check(v1414_piece!=null and not v1414_piece.visible
+        and V13.stage(model)==4 and model.get_instance_id()==intact_model_id,
+        "V14.14 live comparator shows old V13 wreck within same scene")
+    studio.call("_heli_toggle_v1414")
+    _check(v1414_piece!=null and v1414_piece.visible
+        and V13.stage(model)==4 and model.get_instance_id()==intact_model_id,
+        "V14.14 live comparator restores genuine broken crown pieces")
+    studio.call("_heli_repair")
+    _check(V13.stage(model)==0 and HubWreck1414.has_model(model),
+        "V14.14 studio repair safely restores pristine rotor and hides debris")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
