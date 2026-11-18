@@ -1104,6 +1104,7 @@ jobs:
             echo 'City V43 shared viewer did not render'; exit 1
           fi
           grep -F 'PASS CITY V43 SHARED STUDIO VISIBLE:' /tmp/city-shared-visual-smoke.log
+          test -s build/qa/city-v43-visible-main-studio.png
           test -s build/qa/studio-960x540.png
           test -s build/qa/studio-1280x720.png
           # G13 V53: real metal/alloy/rubber materials in both native LODs.
@@ -1360,6 +1361,7 @@ jobs:
           path: |
             build/qa/studio-960x540.png
             build/qa/studio-1280x720.png
+            build/qa/city-v43-visible-main-studio.png
           if-no-files-found: warn
           retention-days: 14
 
