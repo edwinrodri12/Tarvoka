@@ -1,0 +1,105 @@
+name: TARVOKA v368 objective-aware defensive opening (128 real battles)
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_objective_aware_opening_v368.gd"
+      - "tests/test_ai_objective_deployment_contract_v368.gd"
+      - "tests/FourthDeploymentPolicyV368.gd"
+      - "tests/aggregate_ai_objective_deployment_v368.py"
+      - ".github/workflows/ai-objective-deployment-v368.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,2]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run sixteen real games with fourth destination restrictions
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_objective_aware_opening_v368.gd \
+            2>&1 | tee /tmp/ai-v368-deployment.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v368-deployment.log; then exit 1; fi
+          grep -Fq 'PASS AI deployment v368:' /tmp/ai-v368-deployment.log
+          test "$(grep -c '^DEPLOY368_MATCH ' /tmp/ai-v368-deployment.log)" -eq 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v368-deploy-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v368-deployment.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  opening_budget_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Check public relay and city destinations, defensive motion and untouched engine
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_objective_deployment_contract_v368.gd \
+            2>&1 | tee /tmp/ai-v368-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v368-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI deployment v368 contract:' /tmp/ai-v368-contract.log
+          test "$(grep -c '^DEPLOY368_CONTRACT ' /tmp/ai-v368-contract.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v368-contract
+          path: /tmp/ai-v368-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, opening_budget_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v368-deploy-L*
+          path: .ci-v368-logs
+          merge-multiple: false
+      - name: Aggregate 128 genuine games, first-three parity, cap3/cap4 and objective telemetry
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_objective_deployment_v368.py .ci-v368-logs
+          cat reports/ai_v368_objective_deployment.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v368-objective-deployment-report
+          path: reports/ai_v368_objective_deployment.*
+          if-no-files-found: ignore
+          retention-days: 30
