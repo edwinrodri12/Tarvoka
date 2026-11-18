@@ -7,6 +7,7 @@ class_name TarvokaG13ArcTerminationV42
 # upper semicircle and taper each end INTO the existing V33 steel arch.
 # This replaces only a mesh resource on the already approved V41 nodes:
 # no new draw nodes, weapons, colors, wheel/aim/radar transforms or FX.
+const V41 = preload("res://scripts/ui/G13ContourPolishV41.gd")
 const FLAG := "tarvoka_g13_v42_fender_tip_continuity"
 const REQUIRES := "tarvoka_g13_v41_curved_contour_polish"
 const FENDERS := "G13_V40_CurvedOuterFenders"
@@ -150,8 +151,7 @@ static func show_finish(root: Node3D, enabled: bool) -> bool:
         return false
     # V41 turns V40's normal curved guards back on if an older inspector
     # toggle hid them. Then replace only the wheel guard mesh.
-    var v41 := preload("res://scripts/ui/G13ContourPolishV41.gd")
-    if not v41.show_finish(root, true):
+    if not V41.show_finish(root, true):
         return false
     var fender := _find_fender(root)
     if fender == null:
