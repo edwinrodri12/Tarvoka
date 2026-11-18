@@ -42,7 +42,8 @@ def self_test() -> None:
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
     assert len(PERMISSION_PREFIX.findall("uses-permission: name=android.permission.INTERNET")) == 1
-    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1\n    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-m: name=android.permission.INTERNET")) == 1
+    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1
+    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-m: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_LINE.findall("uses-permission: name=android.permission.INTERNET")) == 0
 
 
