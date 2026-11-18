@@ -11,8 +11,10 @@ on:
       - 'scripts/ui/AttackHelicopterDamperFinishV147.gd'
       - 'scripts/ui/AttackHelicopterPitchHingesV148.gd'
       - 'scripts/ui/AttackHelicopterRotorAnchorsV149.gd'
+      - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_attack_helicopter_v9_studio.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
       - '.github/workflows/a01-v14-hat29-visual-qa.yml'
@@ -23,6 +25,7 @@ on:
       - 'scripts/ui/AttackHelicopterCombatFXV14.gd'
       - 'scripts/ui/AttackHelicopterPitchHingesV148.gd'
       - 'scripts/ui/AttackHelicopterRotorAnchorsV149.gd'
+      - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
@@ -61,8 +64,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v14.log; then
             echo "Godot V14 regression failed"; exit 1
           fi
-          grep -F 'PASS HAT29 V14.9:' /tmp/hat29-v14.log
-      - name: Generate sixty-three native HAT-29 frames including rotor 360 at two elevations
+          grep -F 'PASS HAT29 V14.10:' /tmp/hat29-v14.log
+      - name: Generate 67 real HAT-29 frames including reversible V14.10 bevel compare
         shell: bash
         run: |
           set -euo pipefail
@@ -78,12 +81,12 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 63
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 67
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-9-godot-63-frames
+          name: tarvoka-hat29-v14-10-godot-67-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
