@@ -37,19 +37,22 @@ func _run()->void:
                 "tarvoka_g13_v60_added_draw_nodes",-1))==0,
                 "no new render objects or GPU batches")
             verify(int(model.get_meta(
-                "tarvoka_g13_v60_saved_visible_gpu_batch",-1))==1,
-                "avoid the old V7 tread batch entirely")
+                "tarvoka_g13_v60_saved_visible_gpu_batch",-1))==(
+                1 if hero else 0),
+                "hero saves an old tread batch, LOD8 never had one")
             var wheel:=model.find_child(V60.TIRES,
                 true,false) as MultiMeshInstance3D
             var pads:=model.find_child(V60.PADS,
                 true,false) as MultiMeshInstance3D
-            verify(wheel!=null and pads!=null,
-                "physical original four-wheel Mesh and old pads exist")
-            if wheel==null or pads==null:
+            verify(wheel!=null and (
+                (pads!=null) if hero else (pads==null)),
+                "real four-wheel tire; obsolete V7 batch exists only on hero")
+            if wheel==null or (hero and pads==null):
                 model.free()
                 continue
             verify(wheel.multimesh.instance_count==4 and
-                pads.multimesh.instance_count==32 and not pads.visible,
+                ((pads.multimesh.instance_count==32 and not pads.visible)
+                if hero else pads==null),
                 "all FOUR tire pivots, zero detached visible old pad clusters")
             var saved:Dictionary=model.get_meta(V60.SAVED,{})
             var geometry:Mesh=wheel.multimesh.mesh
@@ -99,10 +102,12 @@ func _run()->void:
             Models.restore_model_pose("aa_mobile",model)
             verify(wheel.multimesh.mesh==geometry,
                 "animation does not erase real sculpted V60 tread")
-            verify(V60.show_finish(model,false) and pads.visible and
+            verify(V60.show_finish(model,false) and
+                (pads.visible if pads!=null else true) and
                 wheel.multimesh.mesh==saved.get("old_mesh"),
                 "compare with exact V59 old scattered pad shapes")
-            verify(V60.show_finish(model,true) and not pads.visible and
+            verify(V60.show_finish(model,true) and
+                ((not pads.visible) if pads!=null else true) and
                 wheel.multimesh.mesh==geometry,
                 "restore V60 regular continuous rubber belt without rebuilding")
             model.free()
