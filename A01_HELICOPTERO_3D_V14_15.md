@@ -31,4 +31,10 @@ Godot 4.3 produjo **93 capturas reales** con los cuatro ángulos adicionales de 
 
 En la [ejecución A01 44269771494](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269771494), las pruebas de Godot del HAT-29, los 384 estados animados, los ocho ciclos V14.14 y la nueva **verificación de ambas mallas cerradas en ocho facciones** han superado las etapas respectivas. Las 93 capturas y su publicación como artefacto deben comprobarse como resultados independientes cuando termine el flujo. La [ejecución previa 44269702697](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269702697) generó correctamente 93 imágenes, pero marcó fallo por un contador antiguo que esperaba 89; el workflow actualizado ya usa 93.
 
-**El visor público solo se considera actualizado si el workflow Pages del último commit termina correctamente.** El hecho de que el código y la geometría del HAT-29 pasen no suprime las pruebas de G13 ni permite atribuir a HAT-29 fallos de otras unidades.
+**El visor público solo se considera actualizado si el workflow Pages del último commit termina correctamente.**
+
+### Cierre de validación de modelo — Godot 4.3
+**Ejecución final completa:** [HAT-29 V14.15, run 44269771494](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269771494) terminó en **SUCCESS**. Las 11 etapas pasaron, incluido el control de 2-manifold en las ocho facciones, los 384 estados de rotor, el daño V13 y la comparación del Estudio. El conjunto final de **93 PNG** está en el [artefacto 14412655617](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269771494/artifacts/14412655617).
+
+**Resultado artístico del rotor/destrucción:** cierre aprobado en pruebas nativas y revisión de los dos pares de capturas. No se añade arte a `art_level<=10`. La disponibilidad pública depende únicamente del resultado del flujo independiente de Pages; no afirmar despliegue por este resultado de Godot.
+ El hecho de que el código y la geometría del HAT-29 pasen no suprime las pruebas de G13 ni permite atribuir a HAT-29 fallos de otras unidades.
