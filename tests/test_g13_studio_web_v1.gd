@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G13V44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
+const G13V45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -68,6 +69,24 @@ func _run()->void:
         _check(colored!=null and not colored.visible,
             "V44 version compare really hides new 3D faction panels")
         studio.call("_g13_v44_compare",true)
+        _check(bool(model.get_meta(G13V45.FLAG,false)),
+            "G13 V45 REAL cab/doors and gun detail must be applied in hero")
+        for label in [G13V45.DOORS,G13V45.FITTINGS,G13V45.PILLARS,
+                G13V45.BROW,G13V45.PAINT,G13V45.RIBS]:
+            var part:=model.find_child(label,true,false) as VisualInstance3D
+            _check(part!=null and part.visible,
+                "G13 V45 missing real native draw node: "+label)
+        var weapon_ribs:=model.find_child(G13V45.RIBS,true,false)
+        var gun_pivot:=model.find_child(G13.GUNS,true,false) as Node3D
+        _check(weapon_ribs!=null and weapon_ribs.get_parent()==gun_pivot,
+            "G13 V45 cooling ribs must move with existing weapon elevation")
+        studio.call("_g13_v45_compare",false)
+        var doors:=model.find_child(G13V45.DOORS,true,false)
+        _check(doors!=null and not doors.visible,
+            "G13 V45 Studio comparison hides the lower sculpted doors")
+        studio.call("_g13_v45_compare",true)
+        _check(doors!=null and doors.visible,
+            "G13 V45 Studio comparison restores lower door geometry")
         _check(colored!=null and colored.visible,
             "V44 version compare restores the new 3D faction armor")
         studio.call("_g13_demo_v1","scan",0.80)
@@ -99,6 +118,9 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V44.FLAG,false)),
         "G13 V44 faction/armor sculpt is present in tactical LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V45.FLAG,false)),
+        "G13 V45 3D cab finish also exists in tactical LOD8")
     studio.call("_g13_show_tactical_lod",13)
     await process_frame
     studio.call("_display_role","mlrs")
@@ -112,5 +134,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 native faction armor on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor and V45 cabin finish on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
