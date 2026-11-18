@@ -97,8 +97,9 @@ func _run()->void:
             assert_ok(seams.visible,"V55 physical gasket restored")
         assert_ok(_mat(hero,"G13_V10_ChamferedCabShell")==cab,
             "reapply exact native material resource, no global duplication")
-        assert_ok((hero.find_child(V54.TIRE,true,false) as (
-            MultiMeshInstance3D)).multimesh.mesh==tiremesh,
+        var wheels_after:=hero.find_child(V54.TIRE,true,false) as MultiMeshInstance3D
+        assert_ok(wheels_after!=null and
+            wheels_after.multimesh.mesh==tiremesh,
             "V54 rolling tire mesh must not be replaced by surface pass")
         hero.free()
         var tactical:=Models.build("aa_mobile",faction,true,8)
