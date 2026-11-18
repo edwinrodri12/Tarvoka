@@ -207,6 +207,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Never silently suppress missing model or test files: print the
+          # exact command if any source used by the combined Studio is absent.
+          trap 'echo "::error::3D studio source-preparation failure at line $LINENO: $BASH_COMMAND" >&2' ERR
           mkdir -p assets/buildings/hq_v15
           for i in {0..7}; do
             test -s "hq-android-v15/assets/buildings/hq_v15/hq_${i}.png"
