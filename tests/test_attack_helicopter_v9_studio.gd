@@ -363,8 +363,8 @@ func _run() -> void:
     for option in advanced.find_children("*","Button",true,false):
         if (option as Button).text.contains("V14.13:"):
             hub_controls+=1
-    _check(hub_controls==2,
-        "V14.13 top and profile rotor head macros exist in original Details")
+    _check(hub_controls==3,
+        "V14.13 has top, profile and quarter-speed original rotor controls in Details")
     studio.call("_heli_inspect_focus",30.0,62.0,4.10,
         Vector3(0,2.07,0.08))
     _check(studio.get("_heli_focus_local")==Vector3(0,2.07,0.08),
@@ -386,6 +386,12 @@ func _run() -> void:
     _check(crown.mesh is ArrayMesh
         and model.get_instance_id()==intact_model_id,
         "V14.13 macro returns closed low-glare 3D hub without rebuild")
+    studio.call("_heli_play","move",0.25)
+    _check(str(studio.get("_heli_animation"))=="move"
+        and absf(float(studio.get("_heli_playback_speed"))-0.25)<0.001
+        and model.get_instance_id()==intact_model_id,
+        "V14.13 inspection reuses original rotor animation at 25% speed")
+    studio.call("_heli_stop")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
