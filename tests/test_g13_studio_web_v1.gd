@@ -17,6 +17,7 @@ const G13V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const G13V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const G13V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G13V57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
+const G13V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -134,6 +135,20 @@ func _run()->void:
             "G13 V56 suspension and rotating turret joints active on hero")
         _check(bool(model.get_meta(G13V57.FLAG,false)),
             "G13 V57 exterior supports must improve both 3D detail levels")
+        _check(bool(model.get_meta(G13V58.FLAG,false)),
+            "G13 V58 coherent metal finish active in shared native 3D Studio")
+        var iso_mounts:=model.find_child(
+            G13V57.BRACKETS,true,false) as MultiMeshInstance3D
+        var final_steel:=iso_mounts.material_override as StandardMaterial3D if iso_mounts!=null else null
+        _check(final_steel!=null and final_steel.roughness>=0.60,
+            "G13 V58 restrained metal roughness in actual hero showroom")
+        studio.call("_g13_v58_show_finish",false)
+        var earlier_metal:=iso_mounts.material_override as StandardMaterial3D if iso_mounts!=null else null
+        _check(earlier_metal!=null and earlier_metal!=final_steel,
+            "G13 V58 compare reveals actual original V57 native resource")
+        studio.call("_g13_v58_show_finish",true)
+        _check(iso_mounts!=null and iso_mounts.material_override==final_steel,
+            "G13 V58 reapply makes real new mechanical coating visible")
         var outside_mounts:=model.find_child(
             G13V57.BRACKETS,true,false) as MultiMeshInstance3D
         _check(outside_mounts!=null and outside_mounts.visible and
@@ -445,6 +460,10 @@ func _run()->void:
         g13_tactical.get_meta(G13V57.FLAG,false)) and
         int(g13_tactical.get_meta("tarvoka_g13_v57_added_draw_nodes",-1))==1,
         "G13 V57 readable mechanical arch brackets limited to 1 GPU draw on Android LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V58.FLAG,false)) and
+        int(g13_tactical.get_meta("tarvoka_g13_v58_extra_draw_nodes",-1))==0,
+        "G13 V58 LOD8 matte steel physical pass adds zero GPU draw nodes")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
