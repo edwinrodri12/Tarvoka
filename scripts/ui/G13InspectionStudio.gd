@@ -81,6 +81,16 @@ func _create_layout()->void:
     environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR
     environment.ambient_light_color=Color("#a2b5ca")
     environment.ambient_light_energy=0.75
+    # Neutral visible backdrop, genuine sky radiance for PBR metal/paint.
+    var studio_sky:=Sky.new()
+    var studio_gradient:=ProceduralSkyMaterial.new()
+    studio_gradient.sky_top_color=Color("#89acc5")
+    studio_gradient.sky_horizon_color=Color("#e1e9ed")
+    studio_gradient.ground_bottom_color=Color("#29343b")
+    studio_gradient.ground_horizon_color=Color("#9fb2bc")
+    studio_sky.sky_material=studio_gradient
+    environment.sky=studio_sky
+    environment.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
     world.environment=environment
     _scene_root.add_child(world)
 
