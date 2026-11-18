@@ -8,6 +8,7 @@ on:
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/G15ElectronicWarfareV1.gd"
       - "scripts/ui/G15ChassisAndMastFinishV2.gd"
+      - "scripts/ui/G15ShelterCabFinishV3.gd"
       - "scripts/ui/G13MobileAirDefenseV1.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
       - "scripts/ui/G13RubberSculptV54.gd"
@@ -270,6 +271,7 @@ jobs:
             cp "$g15_source" scripts/ui/
           done
           test -s scripts/ui/G15ChassisAndMastFinishV2.gd
+          test -s scripts/ui/G15ShelterCabFinishV3.gd
           test -s scripts/ui/G15ElectronicWarfareV1.gd
           test -s scripts/ui/G13SilhouetteV10.gd
           test -s scripts/ui/G13CabRearFinishV11.gd
