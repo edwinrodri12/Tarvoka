@@ -1,4 +1,4 @@
-name: TARVOKA V49 — ciudades 3D aisladas con evidencias reales
+name: TARVOKA V50 — ciudades 3D viewport nativo con evidencias reales
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
           test -x /tmp/Godot_v4.3-stable_linux.x86_64
           test -s scripts/ui/CivilianCityArtReviewV42.gd
           test -s scripts/ui/CivilianCityArtEvidenceV43.gd
-          test -s scripts/ui/CivilianCityVisualProofV44.gd
+          test -s scripts/ui/CivilianCityVisualProofV50.gd
           test -s scripts/ui/CivilianCityDesignStudioV43.gd
           test -s scenes/CivilianCityDesignStudioV43.tscn
 
@@ -83,7 +83,7 @@ jobs:
           xvfb-run -a -s "-screen 0 1280x720x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --path "$CITY_REVIEW_PROJECT" --rendering-method gl_compatibility \
-            --script res://scripts/ui/CivilianCityVisualProofV44.gd \
+            --script res://scripts/ui/CivilianCityVisualProofV50.gd \
             2>&1 | tee build/city-v44-evidence/godot-render.log
           engine_result=${PIPESTATUS[0]}
           set -e
