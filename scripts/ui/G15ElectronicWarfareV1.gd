@@ -264,6 +264,7 @@ static func pose(root: Node3D, kind: String, amount: float,
         return false
     var t := clampf(amount,0.0,1.0)
     vehicle.rotation.y = atan2(float(direction.x),-float(direction.y))
+    vehicle.rotation_degrees.z = 0.0
     mast.rotation_degrees.x = 0.0
     head.rotation_degrees.y = 0.0
     pulse.visible = false
