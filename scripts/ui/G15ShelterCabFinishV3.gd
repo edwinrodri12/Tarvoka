@@ -162,7 +162,7 @@ static func apply(root:Node3D)->bool:
     var f2:=_closed_octagon(0.71,0.855,1.735,-1.59,-0.39,0.12)
     var f3:=_closed_octagon(0.805,2.045,2.23,-0.34,1.63,0.07)
     for geo in [f1,f2,f3]:
-        if geo==null or geo.get_faces().size()!=44*3:
+        if geo==null or geo.get_faces().size()!=28*3:
             return false
     # A visible seam separates armor from removable roof, with physical
     # chamfers instead of a uniformly glossy primitive rectangular slab.
