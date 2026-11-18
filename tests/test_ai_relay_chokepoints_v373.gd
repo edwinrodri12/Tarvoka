@@ -95,7 +95,7 @@ static func _play(map_id: int, fog: bool, level: int, first: int, new_side: int,
         "opening_actions":-1,"opening_trace":[],
         "fair_round":true,"round_scoring":true,
         "relay_nodes":node_list.size(),"relay_target":target,
-        "relay_cells":[str(node["pos"]) for node in node_list],
+        "relay_cells":[],
         "relay_first_captured_nodes":[],
         "relay_first_score_round":-1,
         "relay_first_capture_phase":[-1,-1],
@@ -112,6 +112,8 @@ static func _play(map_id: int, fog: bool, level: int, first: int, new_side: int,
         "questionable_anticipatory":0,"abandoned_nonlethal_capture":0,
         "idle_streak":0,"termination":"phase_limit"
     }
+    for node in node_list:
+        report["relay_cells"].append(str(node["pos"]))
     var idle_streak := 0
     for phase in range(MAX_PHASES):
         if int(state["winner"]) != -1:
