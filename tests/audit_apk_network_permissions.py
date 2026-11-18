@@ -2,7 +2,7 @@
 """Audit network permissions in an exported TARVOKA APK.
 
 Usage: python3 tests/audit_apk_network_permissions.py build/TARVOKA-debug.apk
-Requires Android SDK aapt (or aapt2) on PATH. Fails closed if unavailable.
+Requires Android SDK aapt on PATH. Fails closed if unavailable.
 """
 from __future__ import annotations
 
@@ -35,10 +35,15 @@ def self_test() -> None:
     assert forbidden_permissions("package: name='android.permission.INTERNET'") == set()
     assert PACKAGE_LINE.search("package: name='com.example.tarvoka'")
     assert not PACKAGE_LINE.search("garbled output")
+    assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
+    assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
 
 
 def main(argv: list[str]) -> int:
     self_test()
+    if len(argv) == 2 and argv[1] == "--self-test":
+        print("PASS: APK manifest parser self-tests")
+        return 0
     if len(argv) != 2:
         print("Usage: audit_apk_network_permissions.py PATH_TO_APK", file=sys.stderr)
         return 2
