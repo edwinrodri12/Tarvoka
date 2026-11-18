@@ -94,6 +94,7 @@ const G13VisibleV57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd"
 const G13IsoV58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const G13PremiumV59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const G13TreadV60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
+const G13WheelArmorV61=preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -226,7 +227,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V60 · neumáticos continuos")
+        role_picker.set_item_text(aa_index,"G13 · AA V61 · rines y acero PBR")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -1643,6 +1644,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v61_show_finish(enabled: bool) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13WheelArmorV61.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V61: rines mecanizados no cargados."
+        return
+    if G13WheelArmorV61.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V61 · ocho radios realmente abiertos, 32 pernos y blindaje PBR"
+                if enabled else
+                "G13 V60 · comparación con discos macizos anteriores")
+
 func _g13_v60_show_finish(enabled: bool) -> void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -1664,6 +1679,10 @@ func _g13_v59_show_finish(enabled: bool) -> void:
         if status_label!=null:
             status_label.text="G13 V59: neumáticos y cristales no cargados."
         return
+    # V61 also owns the latest machined hub. Restore all comparison
+    # layers in historical sequence to prevent mixed older materials.
+    if not enabled and bool(model_root.get_meta(G13WheelArmorV61.FLAG,false)):
+        G13WheelArmorV61.show_finish(model_root,false)
     # V60 owns the final tire mesh. Expose V59 before V58, and restore
     # V60 AFTER V59 so switching old comparisons never destroys the wheel.
     if not enabled and bool(model_root.get_meta(G13TreadV60.FLAG,false)):
@@ -1671,6 +1690,8 @@ func _g13_v59_show_finish(enabled: bool) -> void:
     if G13PremiumV59.show_finish(model_root,enabled):
         if enabled and bool(model_root.get_meta(G13TreadV60.FLAG,false)):
             G13TreadV60.show_finish(model_root,true)
+        if enabled and bool(model_root.get_meta(G13WheelArmorV61.FLAG,false)):
+            G13WheelArmorV61.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V59 · neumáticos esculpidos, cristales reflectantes y facción"
@@ -1772,7 +1793,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V60 · BANDA CONTINUA Y CAUCHO MOLDEADO",14)
+        "G13 V61 · RINES ABIERTOS Y BLINDAJE PBR",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1818,6 +1839,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V61 · Ocho radios abiertos y acero real",
+        func(): _g13_v61_show_finish(true),
+        "V61 · Comparar con centro plano V60",
+        func(): _g13_v61_show_finish(false))
     _add_paired(g13_controls,"V60 · Banda continua real (160 tacos)",
         func(): _g13_v60_show_finish(true),
         "V60 · Comparar con tacos separados V59",
@@ -1971,10 +1996,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V60 LOD8: 48 tacos repartidos en el neumático; banda única. "
+            "G13 V61 LOD8: rines abiertos optimizados; banda V60 intacta. "
             + "Capturas reales pendientes de verificar."
             if art_level==8 else
-            "G13 V60 LOD13: 160 tacos circunferenciales; flancos sin picos.")
+            "G13 V61 LOD13: radios abiertos, PBR real y caucho V60 intacto.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
