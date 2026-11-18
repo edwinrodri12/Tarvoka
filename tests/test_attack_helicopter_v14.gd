@@ -9,6 +9,7 @@ const FX = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
+const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -34,6 +35,8 @@ func _run() -> void:
             "V14.5 fixed mast and rotating hinge meshes are excluded from Android LOD10")
         _check(not Dampers.has_model(tactical) and not Dampers.apply(tactical),
             "V14.6 rubber mast isolators and hydraulic damper meshes excluded from LOD10")
+        _check(not Finish147.has_model(tactical) and not Finish147.apply(tactical),
+            "V14.7 blade damper finishing never changes battle Android LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -212,10 +215,52 @@ func _run() -> void:
                 and pads.rotation_degrees.is_equal_approx(Vector3.ZERO),
                 "V14.6 dampers rotate with original hub while isolators stay fixed")
             V1.restore(model)
+        _check(Finish147.has_model(model),
+            "V14.7 four fully anchored sculpted dampers installed in faction hero")
+        for i in range(4):
+            var pivot147: Node3D=model.find_child(
+                V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+            var damper147: Node3D=model.find_child(
+                Dampers.DAMPER+str(i),true,false) as Node3D
+            var support147: Node3D=model.find_child(
+                Finish147.ROOT+str(i),true,false) as Node3D
+            var detail147: Node3D=model.find_child(
+                Finish147.DETAIL+str(i),true,false) as Node3D
+            _check(pivot147!=null and damper147!=null
+                and support147!=null and detail147!=null
+                and support147.get_parent()==pivot147
+                and detail147.get_parent()==damper147
+                and is_equal_approx(damper147.position.x,Finish147.OUTBOARD),
+                "V14.7 real hydraulic hardware is outboard but still anchored to blade pivot")
+            var housing147: MeshInstance3D=model.find_child(
+                "A01V146_CuerpoHidraulico_%d" % i,true,false) as MeshInstance3D
+            if housing147!=null:
+                var mat147: StandardMaterial3D=(
+                    housing147.material_override as StandardMaterial3D)
+                _check(mat147!=null and mat147.metallic>=0.55
+                    and mat147.roughness<0.55
+                    and housing147.has_meta("v147_original_material"),
+                    "V14.7 brushed housing is PBR metal with original reference stored")
+            for rid in range(3):
+                var fold: MeshInstance3D=model.find_child(
+                    "A01V147_NervioFuelle_%d_%d" % [i,rid],
+                    true,false) as MeshInstance3D
+                _check(fold!=null and fold.mesh is CylinderMesh
+                    and (fold.material_override as StandardMaterial3D).metallic<0.05,
+                    "V14.7 three real rubber bellows ribs stay matte and physical")
+            for sid in range(2):
+                var clevis: MeshInstance3D=model.find_child(
+                    "A01V147_HorquillaRaiz_%d_%d" % [i,sid],
+                    true,false) as MeshInstance3D
+                _check(clevis!=null and clevis.mesh is CylinderMesh,
+                    "V14.7 two physical support arms prevent the offset damper floating")
+        var count147: int=Models.inspect_meshes(model)
+        _check(Finish147.apply(model) and Models.inspect_meshes(model)==count147,
+            "V14.7 is idempotent and keeps the approved existing rotor pivot")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
-            "V14.6 retains original muted faction enamel on all eight hulls")
+            "V14.7 preserves original muted faction paint on every hull")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
