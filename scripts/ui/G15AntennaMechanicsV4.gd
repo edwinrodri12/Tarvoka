@@ -131,8 +131,8 @@ static func apply(root:Node3D,faction_color:Color)->bool:
     var chassis:=root.find_child(V1.CHASSIS,true,false) as Node3D
     var mast:=root.find_child(V1.MAST,true,false) as Node3D
     var head:=root.find_child(V1.ROTOR,true,false) as Node3D
-    var signal:=root.find_child(V1.PULSE,true,false) as MeshInstance3D
-    if chassis==null or mast==null or head==null or signal==null or (
+    var pulse:=root.find_child(V1.PULSE,true,false) as MeshInstance3D
+    if chassis==null or mast==null or head==null or pulse==null or (
             mast.get_parent()!=chassis or head.get_parent()!=mast):
         return false
     if root.find_child(ARRAY,true,false)!=null:
@@ -234,9 +234,9 @@ static func apply(root:Node3D,faction_color:Color)->bool:
     var rim:=_mesh(new_head,"G15_V4_CentralRadomeRim",
         rim_mesh,brushed,Vector3(0,0.13,-0.215))
     rim.rotation_degrees=Vector3(90,0,0)
-    # The signal preview remains pure visual, but now sits in front of
+    # The pulse preview remains pure visual, but now sits in front of
     # the actual antenna instead of being concealed behind the head.
-    var original_pulse:Vector3=signal.position
+    var original_pulse:Vector3=pulse.position
 
     var moving:=Node3D.new()
     moving.name=MAST_HARDWARE
@@ -282,7 +282,7 @@ static func apply(root:Node3D,faction_color:Color)->bool:
     _cylinder(fixed,PISTON,Vector3.ZERO,0.039,1.0,brushed,12)
     for old_node in old:
         old_node.visible=false
-    signal.position=Vector3(0,0.15,-0.315)
+    pulse.position=Vector3(0,0.15,-0.315)
     root.set_meta("tarvoka_g15_v4_original_signal_position",original_pulse)
     root.set_meta("tarvoka_g15_v4_original_head_visibility",prior)
     root.set_meta(FLAG,true)
@@ -327,11 +327,11 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
     if root==null or not bool(root.get_meta(FLAG,false)):
         return false
     var head:=root.find_child(V1.ROTOR,true,false) as Node3D
-    var signal:=root.find_child(V1.PULSE,true,false) as MeshInstance3D
+    var pulse:=root.find_child(V1.PULSE,true,false) as MeshInstance3D
     var array:=root.find_child(ARRAY,true,false) as Node3D
     var moving:=root.find_child(MAST_HARDWARE,true,false) as Node3D
     var fixed:=root.find_child(FIXED_HINGE,true,false) as Node3D
-    if head==null or signal==null or array==null or moving==null or fixed==null:
+    if head==null or pulse==null or array==null or moving==null or fixed==null:
         return false
     var prior:Dictionary=root.get_meta(
         "tarvoka_g15_v4_original_head_visibility",{})
@@ -341,7 +341,7 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
     array.visible=enabled
     moving.visible=enabled
     fixed.visible=enabled
-    signal.position=(Vector3(0,0.15,-0.315) if enabled else
+    pulse.position=(Vector3(0,0.15,-0.315) if enabled else
         root.get_meta("tarvoka_g15_v4_original_signal_position",
             Vector3(0,0.15,0.34)))
     root.set_meta("tarvoka_g15_v4_preview_enabled",enabled)
