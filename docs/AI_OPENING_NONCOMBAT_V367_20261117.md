@@ -46,3 +46,22 @@ Un contrato Godot prueba la política pura (el bonus de movimiento jamás admite
 El experimento **no autoriza integrar** esta mecánica. Si ambos bonus se quedan siempre en tres órdenes o siempre dan una cuarta, habrá que investigar el tipo concreto de decisión en esa fase. Si alguno reduce tanto sesgo de iniciativa como de color, se diseñará una implementación futura completamente opt-in y compatible con guardados, sujeta a otros mapas, composiciones modernas, pruebas Android y usuarios reales.
 
 PR DRAFT; no modificación de código de producción, lanzamiento ni APK.
+
+
+## RESULTADO VERIFICADO — CI en verde
+
+[128 partidas y contratos v3.6.7, GitHub Actions #44218514038](https://github.com/edwinrodri12/Tarvoka/actions/runs/44218514038): **10/10 trabajos correctos** (ocho grupos de 16 partidas, contrato de motor y agregación). El agregador verificó **128 registros de partidas únicas**, **512 comprobaciones de equivalencia de las primeras tres órdenes**, reproducibilidad exacta de cap3 y cap4, y cero partidas inconclusas.
+
+| Régimen probado | Primero gana | Segundo gana | Azul / Rojo | Cuarta adicional concedida |
+|---|---:|---:|---:|---:|
+| 3 órdenes reales | 8/32 | 24/32 | 16 / 16 | 0 |
+| 4 órdenes de prueba | 24/32 | 8/32 | 20 / 12 | 32 órdenes, cuarta sin restricción |
+| 3 + cuarto movimiento | 24/32 | 8/32 | 20 / 12 | 32/32 |
+| 3 + cuarto apoyo | 24/32 | 8/32 | 20 / 12 | 32/32 |
+
+**Observación determinante:** en los **32 inicios cruzados**, la cuarta decisión de la IA era `move` **en todos los casos**. Por ello los filtros `3plus_move` y `3plus_support` aceptaron la cuarta orden siempre. Son experimentos **operativamente idénticos a cap4 en esta matriz**, no una mejora del equilibrio. No hay evidencia para aprobar ninguno.
+
+Los controles de cuatro acciones también siguieron favoreciendo al primero en **Campo abierto 12/16** y **Puentes 12/16**. El equilibrio por color del cap3 es mejor que el de las opciones de cuatro órdenes. No ampliar `OpeningBalance.MAX_FIRST_ORDERS` ni alterar juego, APK o guardados con esta evidencia.
+
+**Próxima hipótesis fundamentada:** el exceso de ventaja no lo causa directamente la clase `attack` de la cuarta acción, sino **a qué casilla y con qué objetivo se mueve una unidad**. Antes de proponer una regla comercial, instrumentar `unit_id`, motivo del movimiento, destino, distancia al objetivo y si captura relé/ciudad al finalizar turno, y estudiar un cuarto desplazamiento solo de despliegue (sin otorgar captura inmediata), aislándolo del control cap3/cap4.
+
