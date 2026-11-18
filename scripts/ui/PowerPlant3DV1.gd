@@ -10,10 +10,7 @@ const TITLE="Central eléctrica"
 const STAGE="CentralElectricaV1ArteNativo"
 const LEVEL_NAMES=["Puesto energético","Subestación regional","Central industrial"]
 const DAMAGE_NAMES=["Intacta","Daños leves","Daños moderados","Daños críticos","Destruida"]
-const FACTION_PALETTE=[
-    "#d2a25e","#7aa6ba","#ac7da5","#86a978",
-    "#c86e65","#d3bb6e","#788bb8","#9aaca9"
-]
+const Style=preload("res://scripts/ui/VisualStyle.gd")
 const CONCRETE=Color("#7d8585")
 const DARK_CONCRETE=Color("#515b60")
 const STEEL=Color("#aab8bc")
@@ -144,7 +141,7 @@ static func build(level: int,faction: int=-1,damage: int=0) -> Node3D:
     if level<1 or level>3 or faction< -1 or faction>7 or (
             damage<0 or damage>4):
         return null
-    var accent: Color=Color(FACTION_PALETTE[faction]) if faction>=0 else STEEL
+    var accent: Color=Style.faction_color(faction) if faction>=0 else STEEL
     var model:=Node3D.new()
     model.name="CentralElectrica_N%d_F%d_D%d" % [level,faction,damage]
     var root:=_node(model,STAGE)
