@@ -1,4 +1,4 @@
-name: TARVOKA G15 V1-V7 native 3D finish and drivetrain QA
+name: TARVOKA G15 V1-V8 native 3D armor and suspension QA
 
 on:
   pull_request:
@@ -10,12 +10,14 @@ on:
       - "scripts/ui/G15AntennaFinishDamageV5.gd"
       - "scripts/ui/G15ArmoredExteriorV6.gd"
       - "scripts/ui/G15MechanicalExteriorV7.gd"
+      - "scripts/ui/G15ContinuitySuspensionV8.gd"
       - "tests/test_g15_native_art_v2.gd"
       - "tests/test_g15_native_art_v3.gd"
       - "tests/test_g15_native_art_v4.gd"
       - "tests/test_g15_native_art_v5.gd"
       - "tests/test_g15_native_art_v6.gd"
       - "tests/test_g15_native_art_v7.gd"
+      - "tests/test_g15_native_art_v8.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/BastionStudioAdapter.gd"
       - "tests/test_g15_native_art_v1.gd"
@@ -165,11 +167,25 @@ jobs:
           fi
           grep -F 'PASS G15 V7 NATIVE 3D:' /tmp/g15-v7-underbody-qa.log
           test "$(find build/qa/g15-v7 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Validate G15 V8 continuous armor and six true 3D suspension coils
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v8
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v8.gd \
+            2>&1 | tee /tmp/g15-v8-armor-and-springs-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v8-armor-and-springs-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V8 NATIVE 3D:' /tmp/g15-v8-armor-and-springs-qa.log
+          test "$(find build/qa/g15-v8 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
       - name: Upload authentic Godot multi-angle G15 artwork
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-g15-v1-v2-v3-v4-v5-v6-v7-godot-3d-render-comparisons
+          name: tarvoka-g15-v1-v2-v3-v4-v5-v6-v7-v8-godot-3d-render-comparisons
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -186,3 +202,5 @@ jobs:
             build/qa/g15-v6/g15-v6-manifest.json
             build/qa/g15-v7/*.png
             build/qa/g15-v7/g15-v7-manifest.json
+            build/qa/g15-v8/*.png
+            build/qa/g15-v8/g15-v8-manifest.json
