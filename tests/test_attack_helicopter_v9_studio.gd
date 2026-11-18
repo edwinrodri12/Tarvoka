@@ -11,6 +11,7 @@ const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
+const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 var failures: int=0
 var images: int=0
 
@@ -184,6 +185,28 @@ func _run() -> void:
         and spinning_mast.visible and not bool(
             studio.get("_heli_mast_view_active_v145")),
         "V14.5 rotor crown macro restores ordinary upper camera")
+    studio.call("_heli_mobile_home")
+    # V14.6: preserve the same HAT-29 instance when inspecting rubber
+    # isolation and the hydraulic blade-root hardware in the unified Studio.
+    var isolation: Node3D=model.find_child(Dampers.FIXED,true,false) as Node3D
+    var pistons: Node3D=model.find_child(Dampers.SPINNING,true,false) as Node3D
+    _check(Dampers.has_model(model) and isolation!=null and pistons!=null,
+        "V14.6 rotor dampers exist on real native Studio helicopter")
+    var damper_controls: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.6:"):
+            damper_controls+=1
+    _check(damper_controls==2,
+        "V14.6 two new mechanical macro views appear in Details")
+    studio.call("_heli_inspect_focus",42.0,55.0,3.05,
+        Vector3(0,2.04,-0.22))
+    _check(studio.get("_heli_focus_local")==Vector3(0,2.04,-0.22)
+        and model.get_instance_id()==original_id,
+        "V14.6 blade-root damper view targets same airframe and original rotor")
+    studio.call("_heli_mast_inspect_v145")
+    _check(bool(studio.get("_heli_mast_view_active_v145"))
+        and isolation.visible and pistons.visible,
+        "V14.6 fixed rubber isolator inspection uses true side camera")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
