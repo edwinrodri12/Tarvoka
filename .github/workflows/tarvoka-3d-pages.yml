@@ -570,6 +570,30 @@ jobs:
           print("Default unified G09 selection uses approved V31/V32 model")
           PY
           rm -rf city-v43-unified-source
+      - name: Retrieve Central Electrica V1 from the dedicated building art branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/power-plant-native-3d-v1-20261118
+          path: power-v1-source
+          persist-credentials: false
+      - name: Add Central Electrica to EDIFICIOS without replacing prior models
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in PowerPlant3DV1 PowerPlantStudioAdapterV1 PowerPlantDesignStudioV1; do
+            test -s "power-v1-source/scripts/ui/$name.gd"
+            cp "power-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          test -s power-v1-source/scenes/PowerPlantDesignStudioV1.tscn
+          cp power-v1-source/scenes/PowerPlantDesignStudioV1.tscn scenes/
+          grep -F 'extends "res://scripts/ui/CivilianCityStudioAdapter.gd"' scripts/ui/PowerPlantStudioAdapterV1.gd
+          grep -F 'building_picker.add_item("Central eléctrica' scripts/ui/PowerPlantStudioAdapterV1.gd
+          grep -F 'res://scripts/ui/CivilianCityStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
+          sed -i 's|res://scripts/ui/CivilianCityStudioAdapter.gd|res://scripts/ui/PowerPlantStudioAdapterV1.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          # The native power-plant model uses the same approved VisualStyle.
+          test -s scripts/ui/VisualStyle.gd
+          rm -rf power-v1-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
