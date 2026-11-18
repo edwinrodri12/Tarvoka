@@ -66,6 +66,10 @@ func _run() -> void:
                 "each jagged sector uses subset of original V14.13 crown triangles")
         _check(pieces.size()==2 and vertices_total<1848,
             "V14.14 makes two incomplete rather than duplicate intact crowns")
+        if pieces.size()!=2:
+            model.queue_free()
+            await process_frame
+            continue
         _check(Wreck.set_enabled(model,false)
             and not pieces[0].visible and not pieces[1].visible,
             "old V13-only crash silhouette can be previewed faithfully")
