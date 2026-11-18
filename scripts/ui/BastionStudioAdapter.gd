@@ -61,6 +61,7 @@ const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const G16Engineer=preload("res://scripts/ui/G16EngineerRecoveryV1.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -168,6 +169,7 @@ var _g13_v28_show_previous:bool=false
 var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g15_tween: Tween
+var _g16_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -229,6 +231,10 @@ func _ready() -> void:
     var ew_index: int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V1")
+    var engineer_index: int=P06Models.ROLES.find("engineer_recovery")
+    if engineer_index>=0:
+        role_picker.set_item_text(engineer_index,
+            "G16 · Ingeniería y recuperación · V1")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -547,6 +553,16 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"Sacudida por impacto","action":"damage"},
                 {"title":"Detener y restaurar","action":"stop"}
             ]
+        "engineer_recovery":
+            return [
+                {"group":"G16 V1 · INGENIERÍA / RECUPERACIÓN 3D"},
+                {"title":"Movimiento 8×8","action":"move"},
+                {"title":"Desplegar pala y brazo de grúa","action":"deploy"},
+                {"title":"Levantar grúa hidráulica","action":"lift"},
+                {"title":"Preparar remolque visual","action":"tow"},
+                {"title":"Reacción a daños","action":"damage"},
+                {"title":"Detener y restaurar","action":"stop"}
+            ]
         "aa_mobile":
             return [
                 {"group":"G13 · MOVIMIENTO, RADAR Y APUNTADO"},
@@ -739,6 +755,11 @@ func _studio_quick_action(kind: String) -> void:
                 status_label.text="G15 no tiene armamento: solo interferencia visual."
             else:
                 _g15_play("damage" if kind=="hit" else kind)
+        "engineer_recovery":
+            if kind in ["attack","attack_air","attack_ground"]:
+                status_label.text="G16: recuperación visual. Sin combate ni reparaciones implementadas."
+            else:
+                _g16_play("damage" if kind=="hit" else kind)
         "attack_heli":
             _heli_play("hit_bullet" if kind=="hit" else kind)
         "mlrs":
@@ -759,7 +780,11 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="ew_mobile":
+    if _role=="engineer_recovery":
+        if _g16_tween!=null and _g16_tween.is_running():
+            _g16_tween.kill()
+        P06Models.restore_model_pose("engineer_recovery",model_root)
+    elif _role=="ew_mobile":
         if _g15_tween!=null and _g15_tween.is_running():
             _g15_tween.kill()
         P06Models.restore_model_pose("ew_mobile",model_root)
@@ -792,6 +817,7 @@ func _refresh_unified_studio_navigation() -> void:
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             "ew_mobile": label="G15 · Guerra electrónica · V1 (arte 3D)"
+            "engineer_recovery": label="G16 · Ingeniería y recuperación · V1 (arte 3D)"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -3102,6 +3128,8 @@ func _display_role(role: String) -> void:
         _g13_v4_tween.kill()
     if _g15_tween!=null and _g15_tween.is_running():
         _g15_tween.kill()
+    if _g16_tween!=null and _g16_tween.is_running():
+        _g16_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
@@ -3121,6 +3149,18 @@ func _display_role(role: String) -> void:
         model_root=P06Models.build("ew_mobile",_faction,true,13)
         if model_root==null or not G15EW.has_model(model_root):
             push_error("G15 real native mesh missing from Studio")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        _update_camera()
+    if role == "engineer_recovery":
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("engineer_recovery",_faction,true,13)
+        if model_root==null or not G16Engineer.has_model(model_root):
+            push_error("G16 native recovery model missing from Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
@@ -3295,6 +3335,19 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if _role == "engineer_recovery":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var last_yaw: float=_yaw
+        var last_zoom: float=_zoom
+        _faction=index
+        _display_role("engineer_recovery")
+        _yaw=last_yaw
+        _zoom=last_zoom
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
     if _role == "ew_mobile":
         if index<0 or index>=Factions.FACTIONS.size():
             return
@@ -4074,3 +4127,33 @@ func _g15_tick(t: float,art: Node3D,kind: String) -> void:
 func _g15_finish(art: Node3D) -> void:
     if is_instance_valid(art):
         P06Models.restore_model_pose("ew_mobile",art)
+
+# G16: local art-only native rig in the shared Godot 3D studio.
+# No BattleSession repair/build/tow action is called by this UI.
+func _g16_play(kind: String) -> void:
+    if _role!="engineer_recovery" or model_root==null or (
+            not G16Engineer.has_model(model_root)):
+        return
+    if kind not in ["move","deploy","lift","tow","damage","idle"]:
+        return
+    if _g16_tween!=null and _g16_tween.is_running():
+        _g16_tween.kill()
+    var art: Node3D=model_root
+    P06Models.restore_model_pose("engineer_recovery",art)
+    if kind=="idle":
+        return
+    _g16_tick(0.0,art,kind)
+    _g16_tween=art.create_tween()
+    _g16_tween.tween_method(
+        Callable(self,"_g16_tick").bind(art,kind),0.0,1.0,
+        2.1 if kind in ["deploy","lift","tow"] else 1.25)
+    _g16_tween.tween_callback(Callable(self,"_g16_finish").bind(art))
+    status_label.text="G16 · "+kind+" · animación de ingeniería sin jugabilidad"
+
+func _g16_tick(t: float,art: Node3D,kind: String) -> void:
+    if is_instance_valid(art):
+        P06Models.pose_model("engineer_recovery",art,kind,t)
+
+func _g16_finish(art: Node3D) -> void:
+    if is_instance_valid(art):
+        P06Models.restore_model_pose("engineer_recovery",art)
