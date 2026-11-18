@@ -202,9 +202,11 @@ static func build(root: Node3D,faction_color: Color,
         _box(body,"G16_FactionDoor_%s" % side,
             Vector3(sx*0.738,1.04,-1.02),
             Vector3(0.018,0.13,0.56),paint)
+        # The earlier band sat INSIDE the metal sideboard and was hidden in
+        # real Godot screenshots. Place restrained color on its outer face.
         _box(body,"G16_FactionBed_%s" % side,
-            Vector3(sx*0.759,1.02,0.66),
-            Vector3(0.020,0.11,1.58),paint)
+            Vector3(sx*0.820,1.34,0.66),
+            Vector3(0.022,0.145,1.68),paint)
         _box(body,"G16_Headlamp_%s" % side,
             Vector3(sx*0.52,0.99,-1.839),
             Vector3(0.23,0.15,0.042),lamps)
