@@ -77,15 +77,35 @@ func _run()->void:
     await _frame(studio,"hero-undercarriage","V56")
 
     # Suspension from underneath; shock ends fixed to V6 and V22 brackets.
-    _view(studio,Vector3(-2.6,0.25,-1.15),
-        Vector3(-0.57,0.34,-0.86),1.15)
+    # Inspect from UNDER the hull, looking outward from inside the
+    # wheel span. The old side-on camera put the whole damper directly
+    # behind the opaque 0.31m tire, producing identical comparison frames.
+    _view(studio,Vector3(-0.08,-0.58,-1.42),
+        Vector3(-0.56,0.37,-0.86),0.94)
     await _frame(studio,"front-left-damper-v56","V56")
     check(V56.show_finish(model,false),"V55 before compare")
     await _frame(studio,"front-left-damper-before-v55","V55")
     check(V56.show_finish(model,true),"V56 restore after compare")
     await _frame(studio,"front-left-damper-after-v56","V56")
-    _view(studio,Vector3(2.65,0.18,1.45),
-        Vector3(0.57,0.34,0.86),1.10)
+    # A native before/after image is only visual evidence when actual
+    # Godot pixels differ; do not accept a hidden underbody as a render
+    # improvement merely because its mesh exists in the scene tree.
+    var prev:=Image.load_from_file(ProjectSettings.globalize_path(
+        OUTPUT.path_join("front-left-damper-before-v55.png")))
+    var now:=Image.load_from_file(ProjectSettings.globalize_path(
+        OUTPUT.path_join("front-left-damper-after-v56.png")))
+    var altered:int=0
+    if prev!=null and now!=null and prev.get_size()==now.get_size():
+        for y in range(0,prev.get_height(),4):
+            for x in range(0,prev.get_width(),4):
+                var p:Color=prev.get_pixel(x,y)
+                var q:Color=now.get_pixel(x,y)
+                if absf(p.r-q.r)+absf(p.g-q.g)+absf(p.b-q.b)>0.075:
+                    altered+=1
+    check(altered>=30,"visible physical shock geometry must alter >=30 sampled actual Godot pixels; got %d" % altered)
+    print("G13 V56 SHOCK PIXEL DELTA: %d changed subsampled pixels" % altered)
+    _view(studio,Vector3(0.08,-0.58,1.42),
+        Vector3(0.56,0.37,0.86),0.94)
     await _frame(studio,"rear-right-hydraulics-v56","V56")
 
     # Original turret azimuth ring, separate from original gun pitch.
