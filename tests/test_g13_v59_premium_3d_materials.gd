@@ -58,9 +58,19 @@ func _run()->void:
                     "tyre 3D mesh must NOT be a faceted low-poly cylinder")
                 check(tyre.multimesh.mesh==new_mesh.get(V59.TIRES),
                     "real tyre mesh replaced in Godot")
+                var detail_ribs:int=V59.HERO_SIDEWALL_RIBS if hero else (
+                    V59.MOBILE_SIDEWALL_RIBS)
                 check(tyre.multimesh.mesh.get_faces().size()==(
-                    (64 if hero else 32)*15*2*3),
-                    "64/32-side CLOSED annular tyre matches profile")
+                    (64 if hero else 32)*15*2*3+2*detail_ribs*12*3),
+                    "64/32-section tire and molded sidewall ribs physically sealed")
+                check(int(model.get_meta(
+                    "tarvoka_g13_v59_integrated_sidewall_ribs",-1))==
+                    2*detail_ribs,
+                    "Bastion-like sidewall embossing stored in original tire mesh")
+                var old_relief:=model.find_child(
+                    V59.OLD_RADIAL_RELIEF,true,false) as MultiMeshInstance3D
+                check(old_relief!=null and not old_relief.visible,
+                    "crude rectangular radial spokes replaced by sculpted rubber")
                 var rubber:=tyre.material_override as StandardMaterial3D
                 check(rubber!=null and rubber.metallic<0.02 and
                     rubber.roughness>0.96,
@@ -142,12 +152,20 @@ func _run()->void:
                     true,false)!=null,"two original autocannons unchanged")
             check(V59.show_finish(model,false),
                 "exact old G13 V58 finish reversible in real Studio")
+            var original_relief:=model.find_child(
+                V59.OLD_RADIAL_RELIEF,true,false) as MultiMeshInstance3D
+            if original_relief!=null:
+                check(original_relief.visible,
+                    "historical V58 comparison restores original sidewall bars")
             if tyre!=null:
                 check(tyre.multimesh.mesh==old_mesh[V59.TIRES] and
                     tyre.material_override==before[V59.TIRES],
                     "real V58 wheel geometry and tire coating restored")
             check(V59.show_finish(model,true),
                 "switch back to premium V59 without rebuilding mesh rig")
+            if original_relief!=null:
+                check(not original_relief.visible,
+                    "V59 hides obsolete angular sidewall spokes again")
             if tyre!=null:
                 check(tyre.multimesh.mesh==new_mesh[V59.TIRES] and
                     tyre.material_override==after[V59.TIRES],
