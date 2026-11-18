@@ -7,6 +7,7 @@ const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G13V44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13V45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G13V46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
+const G13V47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -114,6 +115,27 @@ func _run()->void:
         studio.call("_g13_v46_compare",true)
         _check(v46_rings!=null and v46_rings.visible,
             "G13 V46 compare must restore native wheel paint")
+        _check(bool(model.get_meta(G13V47.FLAG,false)),
+            "G13 V47 individual PBR surfaces installed on LOD13")
+        var cab_surface:=model.find_child(
+            "G13_V10_ChamferedCabShell",true,false) as MeshInstance3D
+        _check(cab_surface!=null,
+            "G13 V47 must repaint the visible hero cab shell")
+        if cab_surface!=null:
+            var final_mat:=cab_surface.material_override as StandardMaterial3D
+            _check(final_mat!=null and absf(final_mat.roughness-0.56)<0.002,
+                "G13 V47 correct cab PBR roughness applied")
+            var original_mesh:Mesh=cab_surface.mesh
+            studio.call("_g13_v47_compare",false)
+            var previous_mat:=cab_surface.material_override as StandardMaterial3D
+            _check(previous_mat!=null and absf(previous_mat.roughness-0.56)>0.04,
+                "G13 V47 switch actually restores V46 cab roughness")
+            studio.call("_g13_v47_compare",true)
+            _check(cab_surface.material_override==final_mat,
+                "G13 V47 comparison must restore real final PBR material")
+            _check(cab_surface.mesh==original_mesh,
+                "G13 V47 must not replace or duplicate original 3D cab")
+
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
         _check(radar!=null and absf(radar.rotation_degrees.y)>1.0,
@@ -149,6 +171,9 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V46.FLAG,false)),
         "G13 V46 machined wheel finish must also install in LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V47.FLAG,false)),
+        "G13 V47 polished PBR must be applied in LOD8 too")
     studio.call("_g13_show_tactical_lod",13)
     await process_frame
     studio.call("_display_role","mlrs")
@@ -162,5 +187,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin and spinning V46 4x4 wheels on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
