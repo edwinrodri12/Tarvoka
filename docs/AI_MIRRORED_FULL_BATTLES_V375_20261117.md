@@ -35,3 +35,30 @@ En `tests/MirrorSemanticsV375.gd` se realiza la normalización sin modificar el 
 Las salidas son `reports/ai_v375_full_battle_mirror.{json,md}` con diferencias de ganador, primera divergencia y desglose por mapa y color. La CI está en `.github/workflows/ai-mirrored-full-battles-v375.yml`.
 
 **No es una corrección de balance automática.** Si se detecta una primera asimetría, deberá estudiarse su causa en la regla compartida concreta y repararse por separado con pruebas de regresión y mapas variados; no se aprueban ajustes de unidades, poderes ni ayudas de facción por un dato aislado. Mantener PR en borrador.
+
+
+## Resultado comprobado — 384 partidas, CI aprobada
+
+[GitHub Actions #44238796124](https://github.com/edwinrodri12/Tarvoka/actions/runs/44238796124) terminó **18/18 trabajos en verde** (16 grupos, 48 contratos intermedios y agregador). El historial v3.7.3 quedó reproducido exactamente en las tres configuraciones.
+
+| Indicador | Resultado |
+|---|---:|
+| Parejas originales / reflejadas | 192 |
+| Batallas reales ejecutadas | 384 |
+| Parejas con ganador que **sí** corresponde tras intercambio de facciones | 140 |
+| Parejas con ganador **distinto** | **52** |
+| Parejas con algún estado no equivalente | 192 |
+| Primer campo diferente en las 192 parejas | `ai_objectives` |
+| Primera diferencia (fase y orden) | Fase 0, después de la primera acción |
+
+Por mapa, las parejas con ganador distinto fueron: Campo abierto **0/48**, Bosque **12/48**, Puentes **16/48** y Costa **24/48**. Por posición de relés: centros **8/64**, accesos **8/64**, laterales **36/64**.
+
+Las primeras acciones reales ejecutadas **coincidían**, igual que en la auditoría v3.7.4. Las discrepancias iniciales aparecieron en el contenido persistente de los objetivos de la IA, no en la acción visible; después las partidas podían divergir y generar ganadores distintos.
+
+**Importante:** la detección de `ai_objectives` como primer campo NO demuestra por sí sola que dicho campo sea la única causa de las 52 divergencias de ganador. El experimento mide diferencias reales, pero hacen falta pruebas aisladas para distinguir la selección/ordenación de capturadores, el desempate de ciudades y las siguientes decisiones.
+
+### Siguiente investigación prioritaria v3.7.6
+
+Auditar `MultiTurnObjectivesV33.gd`: `_alive_allies` ordena actualmente las tropas por **ID textual**; los ejércitos iniciales reflejados usan IDs distintos, aunque las unidades sean equivalentes, y la elección de ciudad en empates usa el **x absoluto**. Ambas decisiones pueden romper la equivalencia bajo reflexión. Primero imprimir y comparar las tareas de los dos estados tras la primera acción. Después construir **variante de investigación aislada** que ordene capturadores por posición normalizada respecto a su facción y resuelva empates por coordenadas normalizadas; medir si elimina las divergencias sin introducir sesgo por mapa. Comprobar que no cambia ni atributos ni reglas de movimiento/combate/captura, y mantener `main` y APK intactos.
+
+**No fusionar un parche de IA ni publicar una APK basándose únicamente en el control de 192 parejas.**
