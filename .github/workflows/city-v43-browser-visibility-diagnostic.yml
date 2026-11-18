@@ -30,6 +30,8 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
           cp /tmp/diag-templates/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
           printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+      # Final V43 regression: quick camera controls stay available, the
+      # full city is visible and full historical tools are scroll archived.
       # Verify V43's scrollable camera archive keeps a real WebGL canvas
       # on screen at 1280x720 after removing the 200-button layout overflow.
       - name: Create non-production real city visibility probe
