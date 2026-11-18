@@ -43,6 +43,16 @@ func _run() -> void:
         for child in n.get_children():
             stack.append(child)
     assert(visible>50,"City model has no visible meshes")
+    # An attached mesh tree is insufficient: a wrong camera or blank
+    # SubViewport can still leave the public Studio completely empty.
+    await _frames(18)
+    var render: Image=studio.preview.get_texture().get_image()
+    assert(render!=null and not render.is_empty(),"City viewport has no render")
+    var samples: Dictionary={}
+    for y in range(0,render.get_height(),maxi(1,render.get_height()/15)):
+        for x in range(0,render.get_width(),maxi(1,render.get_width()/21)):
+            samples[render.get_pixel(x,y).to_html()]=true
+    assert(samples.size()>8,"City viewport is effectively a blank canvas")
     for tier in [0,1,2]:
         studio.civilian_city_tier.select(tier)
         studio.civilian_city_tier.item_selected.emit(tier)
