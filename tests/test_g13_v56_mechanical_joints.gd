@@ -87,15 +87,21 @@ func _run()->void:
                     minf(upper.y,lower.y)>0.26,
                     "shock ends cannot hit original tire clearance")
         var original_turret_parent:Node=turret.get_parent()
-        var initial_collar:Transform3D=collar.global_transform
+        # The test model is deliberately built OFF-TREE so it cannot
+        # claim a global_transform. The inherited turret-local transform
+        # is still the true animated azimuth and can be checked directly.
+        var initial_turret:Transform3D=turret.transform
         check(Models.pose_model("aa_mobile",hero,"aim_air",0.73,
             Vector2i(1,1)),
             "V56 turret bearing must survive original air aiming pose")
         check(turret.get_parent()==original_turret_parent and
             collar.get_parent()==turret,
             "azimuth motor and yaw parent never rewired")
-        check(not collar.global_transform.is_equal_approx(initial_collar),
-            "metal band physically follows original rotating azimuth")
+        check(not turret.transform.is_equal_approx(initial_turret) and
+            collar.get_parent()==turret and
+            collar.transform.origin.is_equal_approx(
+                Vector3(0,V56.TURRET_RING_Y,0)),
+            "metal band physically follows inherited rotating azimuth")
         for mode in ["move","scan","attack_air","attack_ground"]:
             check(Models.pose_model("aa_mobile",hero,mode,0.43),
                 "mechanical details survive approved pose "+mode)
