@@ -9,11 +9,11 @@ const PREVIOUS := "tarvoka_g13_v52_integrated_roof_shoulder_rails"
 const SAVED := "tarvoka_g13_v53_material_before_after"
 const ESSENTIAL := [
     "G13_Ruedas4x4MultiMesh",
-    "G13_V7_Sidewalls",
-    "G13_V7_TreadBlocks",
     "G13_V46_MachinedArmoredHubCaps",
     "G13_V46_FactionHubRings"
 ]
+const HERO_REQUIRED := ["G13_V7_Sidewalls","G13_V7_TreadBlocks"]
+static var _normal_cache: Texture2D = null
 # Paint is never re-tinted to an arbitrary faction color.
 const FINISHES := {
     "G13_LowerMonocoque":"armor",
@@ -76,6 +76,8 @@ static func _original_material(item: GeometryInstance3D) -> StandardMaterial3D:
 # Deterministic, small 32x32 tangent-space microtexture; its RGB is
 # tangent-space normal data, NOT a glossy gray color pasted onto tire rubber.
 static func _rubber_normal() -> Texture2D:
+    if _normal_cache != null:
+        return _normal_cache
     var picture := Image.create(32, 32, false, Image.FORMAT_RGBA8)
     for y in range(32):
         for x in range(32):
@@ -83,7 +85,8 @@ static func _rubber_normal() -> Texture2D:
             var b: float = cos(float(y)*2.11 - float(x)*1.59)
             picture.set_pixel(x, y, Color(
                 0.5 + a*0.025, 0.5 + b*0.025, 0.998, 1.0))
-    return ImageTexture.create_from_image(picture)
+    _normal_cache = ImageTexture.create_from_image(picture)
+    return _normal_cache
 
 static func _coating(original: StandardMaterial3D, kind: String,
         rubber_bump: Texture2D) -> StandardMaterial3D:
@@ -139,15 +142,18 @@ static func apply(root: Node3D) -> bool:
     var originals: Dictionary = {}
     var polished: Dictionary = {}
     var bump := _rubber_normal()
+    var required: Array = ESSENTIAL.duplicate()
+    if bool(root.get_meta("tarvoka_g13_v1_high_detail",true)):
+        required.append_array(HERO_REQUIRED)
     for name in FINISHES.keys():
         var found := root.find_child(str(name), true, false) as GeometryInstance3D
         if found == null:
-            if name in ESSENTIAL:
+            if name in required:
                 return false
             continue
         var source := _original_material(found)
         if source == null:
-            if name in ESSENTIAL:
+            if name in required:
                 return false
             continue
         var coat := _coating(source, str(FINISHES[name]), bump)
@@ -156,7 +162,7 @@ static func apply(root: Node3D) -> bool:
         nodes[name] = found
         originals[name] = found.material_override
         polished[name] = coat
-    for name in ESSENTIAL:
+    for name in required:
         if not nodes.has(name):
             return false
     # Atomic assignment after validation: never leave half-polished wheels.
