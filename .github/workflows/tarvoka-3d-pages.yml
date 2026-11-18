@@ -114,6 +114,7 @@ on:
       - "tests/test_g11_final_lock_g13_v1.gd"
       - "tests/test_g13_native_v1_capture.gd"
       - "tests/test_g13_studio_web_v1.gd"
+      - "tests/test_g13_v43_visual_capture.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -985,6 +986,24 @@ jobs:
           grep -F 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
           test -s build/qa/studio-960x540.png
           test -s build/qa/studio-1280x720.png
+          # ART INSPECTION V43: attempt genuine 360 G13 screenshots early,
+          # before unrelated full-animation gates can abort the export.
+          # Capture failure must not change existing web publishing behavior.
+          if [[ -s tests/test_g13_v43_visual_capture.gd ]]; then
+            if timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+                /tmp/Godot_v4.3-stable_linux.x86_64 \
+                --rendering-method gl_compatibility --audio-driver Dummy --path . \
+                --script res://tests/test_g13_v43_visual_capture.gd \
+                2>&1 | tee /tmp/g13-v43-visual-capture.log; then
+              if ! grep -F 'PASS G13 V43 NATIVE VISUAL CAPTURE:' /tmp/g13-v43-visual-capture.log; then
+                echo '::warning::G13 V43 capture finished without confirmation'
+              fi
+            else
+              echo '::warning::G13 V43 visual frames are unavailable; original publish gate unchanged'
+            fi
+          else
+            echo '::warning::G13 V43 native capture script missing from checkout'
+          fi
           # ART-ONLY city preview: no unrelated A01 animation approval.
           # The currently failing A01 catalogue audit remains a HARD GATE
           # for every normal release, unchanged. Never claim it passed.
@@ -1037,6 +1056,17 @@ jobs:
           test -s build/web/index.pck
           test -s build/web/index.wasm
           touch build/web/.nojekyll
+
+      - name: Upload G13 V43 real Godot 360 inspection frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g13-v43-native-360-design
+          path: |
+            build/qa/g13-v43/*.png
+            build/qa/g13-v43/g13-v43-manifest.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Save actual landscape UI screenshot for visual review
         if: always()
