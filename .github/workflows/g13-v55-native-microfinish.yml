@@ -1,4 +1,4 @@
-name: TARVOKA G13 V55 native rubber sculpt and close-up visual QA
+name: TARVOKA G13 V55 PBR metal grain and real service hatch seals QA
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
       - "tests/test_g13_v55_microfinish.gd"
       - "tests/test_g13_v53_material_realism.gd"
       - "tests/test_g13_v55_visual_capture.gd"
-      - ".github/workflows/g13-v55-native-rubber-visual.yml"
+      - ".github/workflows/g13-v55-native-microfinish.yml"
   workflow_dispatch:
 
 permissions:
