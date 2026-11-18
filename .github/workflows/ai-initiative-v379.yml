@@ -7,6 +7,7 @@ on:
       - "tests/aggregate_ai_initiative_v379.py"
       - ".github/workflows/ai-initiative-v379.yml"
       - "scripts/core/BasicAI.gd"
+      - "scripts/core/CoordinatedFireV34.gd"
       - "scripts/core/MultiTurnObjectivesV33.gd"
   workflow_dispatch:
 
