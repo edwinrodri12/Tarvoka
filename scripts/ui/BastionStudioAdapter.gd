@@ -92,6 +92,7 @@ const G13MicroV55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const G13JointV56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G13VisibleV57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13IsoV58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
+const G13PremiumV59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -224,7 +225,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V58 · acabado isométrico")
+        role_picker.set_item_text(aa_index,"G13 · AA V59 · caucho y cristales")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -1641,6 +1642,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v59_show_finish(enabled: bool) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13PremiumV59.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V59: neumáticos y cristales no cargados."
+        return
+    if G13PremiumV59.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V59 · neumáticos esculpidos, cristales reflectantes y facción"
+                if enabled else
+                "G13 V58 · comparación de malla y acabados anteriores")
+
 func _g13_v58_show_finish(enabled: bool) -> void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -1736,7 +1751,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V58 · METALES MECÁNICOS UNIFICADOS",14)
+        "G13 V59 · NEUMÁTICOS Y VIDRIOS COMO BASTIÓN",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1782,6 +1797,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V59 · Caucho, cristal y facción reales",
+        func(): _g13_v59_show_finish(true),
+        "V59 · Comparar neumáticos y vidrios V58",
+        func(): _g13_v59_show_finish(false))
     _add_paired(g13_controls,"V58 · Metales mecánicos unificados",
         func(): _g13_v58_show_finish(true),
         "V58 · Comparar con V57",
@@ -1927,10 +1946,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V58 LOD8: soportes mate, sin geometría ni GPU adicionales. "
+            "G13 V59 LOD8: cristal PBR y 32 secciones de caucho; sin dibujados extras. "
             + "Capturas reales pendientes de verificar."
             if art_level==8 else
-            "G13 V58 LOD13: acabado coherente del metal, tornillos y torreta.")
+            "G13 V59 LOD13: 160 tacos/rueda, reflejos en cristales y color reforzado.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
