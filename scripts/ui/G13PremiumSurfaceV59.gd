@@ -39,6 +39,9 @@ const HERO_RADIAL := 64
 const MOBILE_RADIAL := 32
 const HERO_LUGS_PER_PAD := 20
 const MOBILE_LUGS_PER_PAD := 8
+const HERO_SIDEWALL_RIBS := 28
+const MOBILE_SIDEWALL_RIBS := 14
+const OLD_RADIAL_RELIEF := "G13_V46_RadialSidewallRelief"
 const PADS_PER_WHEEL := 8
 const TIRE_COUNT := 4
 const TIRE_RADIUS := 0.318
@@ -67,6 +70,39 @@ static func _quad(st:SurfaceTool,a:Vector3,b:Vector3,
 
 static func _ring_vertex(axial:float,radius:float,theta:float)->Vector3:
     return Vector3(radius*cos(theta),axial,radius*sin(theta))
+
+static func _sidewall_embossing(st:SurfaceTool,detail:bool)->void:
+    # Bastion P06-style molded sidewalls: ribbed, tapered radial surfaces,
+    # not the old 12 tall rectangular bars sticking out of the wheel.
+    # Embed 28 HERO / 14 Android ribs per visible SIDE inside the original
+    # four-wheels MultiMesh (no extra nodes or per-frame transforms).
+    var count:int=HERO_SIDEWALL_RIBS if detail else MOBILE_SIDEWALL_RIBS
+    for side in [-1,1]:
+        var sign:float=float(side)
+        for i in range(count):
+            var start:float=TAU*float(i)/float(count)
+            var end:float=start+TAU/float(count)*0.33
+            var upper:float=0.294
+            var lower:float=0.266
+            # The root is recessed INTO the true tire profile, while
+            # the outer rib face stands 4-8mm proud of its shoulder.
+            var inner:Array[Vector3]=[
+                _ring_vertex(sign*0.103,lower,start),
+                _ring_vertex(sign*0.095,upper,start+0.015),
+                _ring_vertex(sign*0.095,upper,end+0.015),
+                _ring_vertex(sign*0.103,lower,end)
+            ]
+            var outer:Array[Vector3]=[
+                _ring_vertex(sign*0.128,lower,start),
+                _ring_vertex(sign*0.118,upper,start+0.015),
+                _ring_vertex(sign*0.118,upper,end+0.015),
+                _ring_vertex(sign*0.128,lower,end)
+            ]
+            _quad(st,outer[0],outer[1],outer[2],outer[3])
+            _quad(st,inner[3],inner[2],inner[1],inner[0])
+            for edge in range(4):
+                var j:int=(edge+1)%4
+                _quad(st,inner[edge],inner[j],outer[j],outer[edge])
 
 static func _tire_mesh(detail:bool)->ArrayMesh:
     if detail and _hero_carcass!=null:
@@ -101,6 +137,7 @@ static func _tire_mesh(detail:bool)->ArrayMesh:
                 _ring_vertex(pb.x,pb.y,a),
                 _ring_vertex(pb.x,pb.y,b),
                 _ring_vertex(pa.x,pa.y,b))
+    _sidewall_embossing(st,detail)
     st.generate_normals()
     var result:=st.commit() as ArrayMesh
     if detail:
@@ -229,8 +266,8 @@ static func _rubber_coat(source:StandardMaterial3D,
         kind:String)->StandardMaterial3D:
     var coat:=source.duplicate(true) as StandardMaterial3D
     coat.albedo_color=Color(
-        "#24292a" if kind=="casing" else (
-        "#292e30" if kind=="tread" else "#222628"))
+        "#212526" if kind=="casing" else (
+        "#242829" if kind=="tread" else "#222628"))
     coat.metallic=0.0
     coat.roughness=(0.94 if kind=="tread" else 0.965)
     coat.clearcoat_enabled=false
@@ -263,6 +300,9 @@ static func apply(root:Node3D)->bool:
         return false
     if high and pads==null:
         return false
+    var old_relief:=root.find_child(OLD_RADIAL_RELIEF,
+        true,false) as MultiMeshInstance3D
+    var old_relief_visible:bool=(old_relief.visible if old_relief!=null else false)
     var before_mesh:Dictionary={}
     var after_mesh:Dictionary={}
     before_mesh[TIRES]=casing.multimesh.mesh
@@ -316,9 +356,12 @@ static func apply(root:Node3D)->bool:
     casing.multimesh.mesh=after_mesh[TIRES]
     if pads!=null:
         pads.multimesh.mesh=after_mesh[TREAD]
+    if old_relief!=null:
+        old_relief.visible=false
     root.set_meta(KEY,{
         "before_materials":before,"after_materials":after,
-        "before_mesh":before_mesh,"after_mesh":after_mesh})
+        "before_mesh":before_mesh,"after_mesh":after_mesh,
+        "old_relief_visible":old_relief_visible})
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g13_v59_hero_tread_blocks_per_wheel",
         PADS_PER_WHEEL*HERO_LUGS_PER_PAD)
@@ -327,6 +370,8 @@ static func apply(root:Node3D)->bool:
     root.set_meta("tarvoka_g13_v59_pbr_glass_panes",pane_count)
     root.set_meta("tarvoka_g13_v59_faction_colored_surfaces",painted)
     root.set_meta("tarvoka_g13_v59_unchanged_draw_nodes",0)
+    root.set_meta("tarvoka_g13_v59_integrated_sidewall_ribs",
+        2*(HERO_SIDEWALL_RIBS if high else MOBILE_SIDEWALL_RIBS))
     root.set_meta("tarvoka_g13_v59_true_tread_outer_radius",TREAD_OUTER_RADIUS)
     root.set_meta("tarvoka_g13_v59_no_gameplay_changes",true)
     return true
@@ -352,5 +397,10 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
         if item==null or item.multimesh==null:
             return false
         item.multimesh.mesh=meshes[name]
+    var relief:=root.find_child(OLD_RADIAL_RELIEF,
+        true,false) as MultiMeshInstance3D
+    if relief!=null:
+        relief.visible=(false if enabled else bool(
+            saved.get("old_relief_visible",false)))
     root.set_meta("tarvoka_g13_v59_preview_enabled",enabled)
     return true
