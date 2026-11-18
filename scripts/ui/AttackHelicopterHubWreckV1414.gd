@@ -9,6 +9,7 @@ const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const CROWN=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 const FLAG="tarvoka_a01_hub_wreck_v1414"
+const ENABLED="tarvoka_a01_hub_wreck_v1414_enabled"
 const PREFIX="A01V1414_FragmentoCoronaRotor_"
 const REST_POINTS=[
     Vector3(0.49,0.130,-0.42),
@@ -89,11 +90,19 @@ static func _material(index: int) -> StandardMaterial3D:
     material.cull_mode=BaseMaterial3D.CULL_DISABLED
     return material
 
+static func set_enabled(model: Node3D,enabled: bool) -> bool:
+    if not has_model(model):
+        return false
+    for i in range(2):
+        _fragment(model,i).visible=enabled
+    model.set_meta(ENABLED,enabled)
+    return true
+
 static func apply(model: Node3D) -> bool:
     if not CROWN.has_model(model) or not V13.has_model(model):
         return false
     if has_model(model):
-        return true
+        return set_enabled(model,true)
     var wreck: Node3D=_wreck(model)
     var cap: MeshInstance3D=_node(model,CROWN.CROWN) as MeshInstance3D
     var rotor: Node3D=_node(model,V1.MAIN_ROTOR)
@@ -101,7 +110,7 @@ static func apply(model: Node3D) -> bool:
         return false
     if not (cap.mesh is ArrayMesh) or not (cap.get_parent()!=null):
         return false
-    if not cap.is_ancestor_of(wreck) and wreck.is_ancestor_of(rotor):
+    if not rotor.is_ancestor_of(cap) or wreck.is_ancestor_of(rotor):
         return false
     for i in range(2):
         if _node(wreck,PREFIX+str(i))!=null:
@@ -139,4 +148,4 @@ static func apply(model: Node3D) -> bool:
         part.set_meta("a01_v1414_sector",CUT_SECTORS[i])
         wreck.add_child(part)
     model.set_meta(FLAG,true)
-    return has_model(model)
+    return set_enabled(model,true)
