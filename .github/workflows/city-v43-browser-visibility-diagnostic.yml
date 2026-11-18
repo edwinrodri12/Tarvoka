@@ -34,6 +34,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The art branch contains a legacy integrated-studio adapter whose
+          # inherited CombinedArtStudioWeb.gd is absent. The standalone V43
+          # viewer never uses either adapter. Remove only these dead scripts
+          # from this disposable diagnostic checkout so unrelated parse errors
+          # cannot mask the real browser framebuffer result.
+          rm -f scripts/ui/CivilianCityStudioAdapter.gd scripts/ui/BastionStudioAdapter.gd
           cat > scripts/ui/CivilianCityWebVisibilityProbe.gd <<'GDSCRIPT'
           extends "res://scripts/ui/CivilianCityDesignStudioV43.gd"
 
@@ -177,7 +183,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-city-real-webgl-visibility
-          path: |
-            artifacts/
-            /tmp/city-browser-http.log
+          path: artifacts/
           if-no-files-found: warn
