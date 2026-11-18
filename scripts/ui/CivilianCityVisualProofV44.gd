@@ -16,8 +16,15 @@ static func _image_diagnostics(img: Image) -> Dictionary:
     var total: float=0.0
     var squares: float=0.0
     var changed: int=0
-    # Measure against the real render's corner rather than assuming a
-    # fixed sRGB value for the Godot WorldEnvironment background.
+    var central_samples: int=0
+    var central_changed: int=0
+    var left: int=w
+    var right: int=0
+    var top: int=h
+    var bottom: int=0
+    # Use the actual viewport corner color as baseline. This is a
+    # framing heuristic, not a semantic recognition of architecture:
+    # distinct shadows/ground can also contribute to occupancy.
     var bg: Color=img.get_pixel(0,0)
     for y in range(0,h,maxi(1,int(float(h)/30.0))):
         for x in range(0,w,maxi(1,int(float(w)/48.0))):
@@ -26,14 +33,39 @@ static func _image_diagnostics(img: Image) -> Dictionary:
             total+=lum
             squares+=lum*lum
             n+=1
+            var in_center: bool=(
+                x>=int(float(w)*0.20) and x<=int(float(w)*0.80)
+                and y>=int(float(h)*0.15) and y<=int(float(h)*0.85))
+            if in_center:
+                central_samples+=1
             var delta: float=absf(c.r-bg.r)+absf(c.g-bg.g)+absf(c.b-bg.b)
             if delta>0.19:
                 changed+=1
+                left=mini(left,x)
+                right=maxi(right,x)
+                top=mini(top,y)
+                bottom=maxi(bottom,y)
+                if in_center:
+                    central_changed+=1
     var avg: float=total/maxf(1.0,float(n))
     var variance: float=maxf(0.0,squares/maxf(1.0,float(n))-avg*avg)
     var coverage: float=float(changed)/maxf(1.0,float(n))
-    return {"variance":variance,"coverage":coverage,
-        "nonempty":variance>=0.0004 and coverage>=0.025}
+    var center_coverage: float=float(central_changed)/maxf(
+        1.0,float(central_samples))
+    var frame_warning: bool=center_coverage<0.02
+    return {
+        "variance":variance,
+        "coverage":coverage,
+        "center_coverage":center_coverage,
+        "bbox":[
+            float(left)/float(w) if changed>0 else 0.0,
+            float(top)/float(h) if changed>0 else 0.0,
+            float(right)/float(w) if changed>0 else 0.0,
+            float(bottom)/float(h) if changed>0 else 0.0
+        ],
+        "framing_warning":frame_warning,
+        "nonempty":variance>=0.0004 and coverage>=0.025
+    }
 
 
 func _initialize() -> void:
@@ -117,6 +149,9 @@ func _capture_all() -> void:
                 "width":result.get_width(),"height":result.get_height(),
                 "variance":float(optics["variance"]),
                 "coverage":float(optics["coverage"]),
+                "center_coverage":float(optics["center_coverage"]),
+                "occupied_bbox":optics["bbox"],
+                "framing_warning":bool(optics["framing_warning"]),
                 "nonempty":bool(optics["nonempty"]),
                 "v42_geometry_findings":material_warnings,
                 "v43_art_findings":review_v43,
@@ -129,6 +164,9 @@ func _capture_all() -> void:
                 errors+=1
                 report.append("%s D%d: ZERO_VISIBLE_NATIVE_MESHES" % [
                     variant,damage])
+            if bool(optics["framing_warning"]):
+                report.append("%s D%d: POSSIBLE_CAMERA_FRAMING_ISSUE central_coverage=%.3f" % [
+                    variant,damage,float(optics["center_coverage"])])
             if not bool(optics["nonempty"]):
                 errors+=1
                 report.append("%s D%d: EMPTY_OR_UNIFORM_RENDER coverage=%.3f variance=%.6f" % [
@@ -167,6 +205,9 @@ func _capture_all() -> void:
                             "height":reverse.get_height(),
                             "variance":float(secondary["variance"]),
                             "coverage":float(secondary["coverage"]),
+                            "center_coverage":float(secondary["center_coverage"]),
+                            "occupied_bbox":secondary["bbox"],
+                            "framing_warning":bool(secondary["framing_warning"]),
                             "nonempty":bool(secondary["nonempty"]),
                             "v42_geometry_findings":material_warnings,
                             "v43_art_findings":review_v43,
@@ -174,6 +215,9 @@ func _capture_all() -> void:
                             "art_messages":"; ".join(art_messages),
                             "approved":false
                         })
+                        if bool(secondary["framing_warning"]):
+                            report.append("%s D%d REVERSE: POSSIBLE_CAMERA_FRAMING_ISSUE central_coverage=%.3f" % [
+                                variant,damage,float(secondary["center_coverage"])])
                         if not bool(secondary["nonempty"]):
                             errors+=1
                             report.append("%s D%d REVERSE: EMPTY_OR_UNIFORM_RENDER" % [
@@ -201,7 +245,7 @@ func _capture_all() -> void:
                     "city_v42_visual_warnings",PackedStringArray())
                 report.append("  WARNINGS: "+"; ".join(findings))
     var manifest: Dictionary={
-        "version":"V44",
+        "version":"V47-evidence-for-V43-models",
         "engine":"Godot 4.3",
         "origin":"native-city-model",
         "count":captured,
