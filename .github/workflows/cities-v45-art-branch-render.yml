@@ -1,4 +1,4 @@
-name: TARVOKA V49 - Ciudad 3D independiente
+name: TARVOKA V50 - Ciudades 3D con evidencias verificables
 
 on:
   push:
@@ -8,14 +8,15 @@ on:
       - ".github/workflows/cities-v45-art-branch-render.yml"
       - "scripts/ui/CivilianCity*.gd"
       - "scenes/CivilianCityDesignStudioV43.tscn"
+      - "scripts/ci/civilian_city_render_sandbox_v49.py"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: tarvoka-city-v48-art-${{ github.ref }}
-  cancel-in-progress: true
+  group: tarvoka-city-v50-art-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   visual-proof:
@@ -147,6 +148,16 @@ jobs:
           import json
           root=Path("build/city-v44-evidence")
           root.mkdir(parents=True,exist_ok=True)
+          native_pngs=[p for p in root.glob("*.png")
+                       if not p.name.startswith("comparativa-")]
+          if not native_pngs:
+              (root/"contact-sheet-status.txt").write_text(
+                  "V50: Godot produced no native PNG images; the blank "
+                  "contact sheet was intentionally omitted. Check sandbox "
+                  "inventory and Godot import/render logs.\n",
+                  encoding="utf-8")
+              print("V50: no native screenshots. No comparison images created.")
+              raise SystemExit(0)
           try:
               from PIL import Image, ImageDraw
           except ImportError:
@@ -264,6 +275,7 @@ jobs:
           names=[
               "manifest.json","review-log.txt","godot-import.log",
               "godot-render.log","source-commit.txt",
+              "v49-project-inventory.txt","v49-missing-resources.txt",
               "comparativa-24-vistas.png",
               "comparativa-villa.png","comparativa-ciudad.png",
               "comparativa-metropoli.png","contact-sheet-status.txt"
@@ -299,7 +311,7 @@ jobs:
               and all((source/x.get("png","")).is_file() for x in images)
           )
           report={
-              "version":"V48",
+              "version":"V50",
               "model_stage":"V43",
               "godot_engine":"4.3",
               "source_commit":os.getenv("GITHUB_SHA",""),
@@ -321,7 +333,7 @@ jobs:
               json.dumps(report,indent=2,ensure_ascii=False)+"\n",
               encoding="utf-8")
           lines=[
-              "# TARVOKA — Evidencia de ciudades 3D V48",
+              "# TARVOKA — Evidencia de ciudades 3D V50",
               "",
               "Capturas Godot reales del modelo V43. **Nunca indican aprobación automática.**",
               "",
@@ -342,7 +354,8 @@ jobs:
               "Diagnósticos: [status.json](./status.json) y "
               "[manifest.json](./manifest.json), si existe.",
               "",
-              "Si falta una imagen, consultar los registros y el artefacto de GitHub Actions.",
+              "Si falta una imagen, consultar los registros, el inventario "
+              "del sandbox y el artefacto de GitHub Actions.",
           ])
           (target/"README.md").write_text("\n".join(lines)+"\n",
                                           encoding="utf-8")
@@ -355,7 +368,7 @@ jobs:
             echo "V48: no hay evidencia nueva que publicar"
             exit 0
           fi
-          git commit -m "ci(city): publish V48 native render evidence [skip ci]"
+          git commit -m "ci(city): publish V50 verified native render evidence [skip ci]"
           # Rebase onto concurrent art changes; never force-push or overwrite.
           git fetch origin "refs/heads/$GITHUB_REF_NAME:refs/remotes/origin/$GITHUB_REF_NAME"
           if ! git rebase "refs/remotes/origin/$GITHUB_REF_NAME"; then
