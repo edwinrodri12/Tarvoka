@@ -70,6 +70,7 @@ const G13FinishV38=preload("res://scripts/ui/G13BodyJoineryV38.gd")
 const G13FinishV39=preload("res://scripts/ui/G13UndersealFinishV39.gd")
 const G13FinishV40=preload("res://scripts/ui/G13SilhouetteFinishV40.gd")
 const G13ContourV41=preload("res://scripts/ui/G13ContourPolishV41.gd")
+const G13ArcEndsV42=preload("res://scripts/ui/G13ArcTerminationV42.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -200,7 +201,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V41 · contorno curvo refinado")
+        role_picker.set_item_text(aa_index,"G13 · AA V42 · puntas de arcos corregidas")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.2")
@@ -743,7 +744,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V41 perfilado 360°"
+            "aa_mobile": label="G13 · Antiaéreo · V42 arcos cerrados"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1451,7 +1452,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V41 · INSPECCIÓN 360° · 4×4 · 2 CAÑONES · SIN MISILES",14)
+        "G13 V42 · CIERRE DE ARCOS 3D · 4×4 · 2 CAÑONES · SIN MISILES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1473,7 +1474,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V41 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V42 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1497,6 +1498,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V42 · Puntas curvas integradas",
+        func(): _g13_v42_compare(true),
+        "V42 · Comparar con V41",
+        func(): _g13_v42_compare(false))
     _add_paired(g13_controls,"V41 · Perfil de ruedas afinado",
         func(): _g13_v41_compare(true),
         "V41 · Comparar con V40",
@@ -1576,10 +1581,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V41 LOD8: pasos de rueda afinados y conexiones biseladas. "
-            + "FPS Android todavía no medidos."
+            "G13 V42 LOD8: extremos de arcos unidos a piezas V33. "
+            + "Render final y FPS Android pendientes."
             if art_level==8 else
-            "G13 V41 LOD13: refinamiento del perfil radial sin nuevos nodos.")
+            "G13 V42 LOD13: guardabarros cerrados hasta el eje, sin nodos extra.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
@@ -1681,6 +1686,19 @@ func _g13_v41_view(yaw:float, tilt:float=0.0)->void:
     _update_camera()
     if status_label!=null:
         status_label.text="G13 V41: inspección de silueta %.0f° / inclinación %.0f°." % [yaw,tilt]
+
+func _g13_v42_compare(show_v42:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        if status_label!=null:
+            status_label.text="G13 V42: selecciona primero el vehículo antiaéreo."
+        return
+    var ok:bool=G13ArcEndsV42.show_finish(model_root,show_v42)
+    if status_label!=null:
+        status_label.text=(
+            ("G13 V42: arcos completos y puntas integradas al guardabarros V33."
+            if show_v42 else
+            "G13 V41: arcos anteriores con extremos cortados.")
+            if ok else "G13 V42: esta revisión no está disponible.")
 
 func _g13_v41_compare(show_v41:bool)->void:
     if _role!="aa_mobile" or model_root==null:
