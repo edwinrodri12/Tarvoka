@@ -4,6 +4,7 @@ extends SceneTree
 # Validates BOTH hero LOD13 and tactical LOD8, with no gameplay changes.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Realism=preload("res://scripts/ui/G13MaterialRealismV53.gd")
+const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 var problems:int=0
 
 func _check(ok:bool,description:String)->void:
@@ -26,6 +27,11 @@ func _run()->void:
                 continue
             _check(bool(model.get_meta(Realism.FLAG,false)),
                 "V53 missing LOD%d faction %d" % [lod,faction])
+            # V55 is the final live hero coating. For historical V53
+            # assertions, temporarily reveal the exact V53 material layer.
+            if lod==13 and bool(model.get_meta(V55.FLAG,false)):
+                _check(V55.show_finish(model,false),
+                    "cannot expose historical V53 material for comparison")
             _check(bool(model.get_meta(
                 "tarvoka_g13_v53_no_new_draw_nodes",false)),
                 "extra draw nodes not permitted")
@@ -71,6 +77,9 @@ func _run()->void:
             _check(model.find_child("G13_Autocannon_-1",true,false)!=null and
                 model.find_child("G13_Autocannon_1",true,false)!=null,
                 "twin cannons must remain, not replaced with missiles")
+            if lod==13 and bool(model.get_meta(V55.FLAG,false)):
+                _check(V55.show_finish(model,true),
+                    "V55 final coating must be restored after V53 audit")
             model.free()
     if problems==0:
         print("PASS G13 V53 PBR METAL RUBBER: 6 real native variants")
