@@ -110,9 +110,13 @@ jobs:
                                f'Varianza: {float(entry.get("variance",0)):.5f} · '
                                f'Alertas: {entry.get("v42_geometry_findings","?")} / '
                                f'{entry.get("v43_art_findings","?")}')
+                      findings='; '.join(v for v in
+                          (entry.get("geometry_messages",""),entry.get("art_messages",""))
+                          if v)
                       cards.append(f'<section><h2>{tier} D{damage} · {label}</h2>'
                                    f'<img alt="{tier} D{damage} {label}" src="{png}">'
-                                   f'<p>{html.escape(metrics)}</p></section>')
+                                   f'<p>{html.escape(metrics)}</p>'
+                                   f'<p>{html.escape(findings)}</p></section>')
           page=('<html lang="es"><meta charset="utf-8"><meta name="viewport" '
                 'content="width=device-width,initial-scale=1"><title>TARVOKA V44</title>'
                 '<style>body{font:15px system-ui;background:#13202a;color:#eef3f5;'
