@@ -8,6 +8,7 @@ const G13V44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13V45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G13V46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G13V47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
+const G13V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -136,6 +137,48 @@ func _run()->void:
             _check(cab_surface.mesh==original_mesh,
                 "G13 V47 must not replace or duplicate original 3D cab")
 
+        _check(bool(model.get_meta(G13V48.FLAG,false)),
+            "G13 V48 must replace three REAL hero shell meshes")
+        _check(int(model.get_meta(
+            "tarvoka_g13_v48_altered_draw_nodes",-1))==0,
+            "G13 V48 sculpt cannot add decorative render nodes")
+        var new_cab:=model.find_child(
+            "G13_V10_ChamferedCabShell",true,false) as MeshInstance3D
+        var new_turret:=model.find_child(
+            "G13_V10_ChamferedTurretShell",true,false) as MeshInstance3D
+        var new_roof:=model.find_child(
+            "G13_V11_ArmoredRoof",true,false) as MeshInstance3D
+        _check(new_cab!=null and new_turret!=null and new_roof!=null,
+            "G13 V48 closed cab/turret/roof shapes remain real 3D nodes")
+        if new_cab!=null and new_turret!=null and new_roof!=null:
+            var revised_cab:Mesh=new_cab.mesh
+            var revised_turret:Mesh=new_turret.mesh
+            var revised_roof:Mesh=new_roof.mesh
+            _check(revised_cab is ArrayMesh and
+                revised_cab.get_faces().size()==96*3,
+                "V48 hero cab uses full six-ring closed sculpt")
+            _check(revised_turret is ArrayMesh and
+                revised_turret.get_faces().size()==96*3,
+                "V48 turret has a reinforced six-tier armored profile")
+            _check(revised_roof is ArrayMesh and
+                revised_roof.get_faces().size()==64*3,
+                "V48 roof replaces flat slab with sculpted four-ring canopy")
+            var badge:=model.find_child(
+                "G13_TurretFaction_1",true,false) as MeshInstance3D
+            _check(badge!=null and absf(badge.position.x-0.525)<0.001,
+                "V48 moving turret badge seats against armored housing")
+            studio.call("_g13_v48_compare",false)
+            _check(new_cab.mesh!=revised_cab and
+                new_turret.mesh!=revised_turret and
+                new_roof.mesh!=revised_roof,
+                "V48 same-scene comparison restores ALL three original meshes")
+            studio.call("_g13_v48_compare",true)
+            _check(new_cab.mesh==revised_cab and
+                new_turret.mesh==revised_turret and
+                new_roof.mesh==revised_roof,
+                "V48 comparison restores genuine sculpt without duplicates")
+            _check(badge!=null and absf(badge.position.x-0.525)<0.001,
+                "V48 compare restores faction badge position")
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
         _check(radar!=null and absf(radar.rotation_degrees.y)>1.0,
@@ -174,6 +217,15 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V47.FLAG,false)),
         "G13 V47 polished PBR must be applied in LOD8 too")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V48.FLAG,false)),
+        "G13 V48 sculpt must also replace tactical cab and turret volumes")
+    if g13_tactical!=null:
+        var tactical_cab:=g13_tactical.find_child(
+            "G13_SealedCab",true,false) as MeshInstance3D
+        _check(tactical_cab!=null and tactical_cab.mesh is ArrayMesh,
+            "G13 V48 tactical cab has actual closed beveled mesh")
+
     studio.call("_g13_show_tactical_lod",13)
     await process_frame
     studio.call("_display_role","mlrs")
@@ -187,5 +239,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR and V48 major cab/turret sculpt on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
