@@ -87,6 +87,7 @@ const G13GlazingV50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G13RoofV51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G13RoofRailsV52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
 const G13RealismV53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
+const G13RubberV54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -219,7 +220,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V53 · metal y neumáticos PBR")
+        role_picker.set_item_text(aa_index,"G13 · AA V54 · neumáticos esculpidos")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -762,7 +763,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V53 materiales realistas"
+            "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1636,6 +1637,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v54_show_finish(enabled: bool) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13RubberV54.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V54 solo disponible en detalle LOD13."
+        return
+    if G13RubberV54.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V54 · caucho redondeado y tacos 3D auténticos"
+                if enabled else
+                "G13 V53 · ruedas anteriores, misma cámara y animación")
+
 func _g13_v53_show_finish(enabled: bool) -> void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -1653,7 +1668,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V53 · METAL PBR Y CAUCHO · 4×4 · 2 CAÑONES",14)
+        "G13 V54 · CAUCHO ESCULPIDO + METAL PBR · 4×4",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1699,6 +1714,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V54 · Neumáticos esculpidos",
+        func(): _g13_v54_show_finish(true),
+        "V54 · Comparar ruedas V53",
+        func(): _g13_v54_show_finish(false))
     _add_paired(g13_controls,"V53 · Materiales y neumáticos",
         func(): _g13_v53_show_finish(true),
         "V53 · Comparar acabado V52",
@@ -1824,10 +1843,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V52 LOD8: carriles de techo con perfiles longitudinales. "
+            "G13 V53 LOD8: materiales PBR; neumático económico conservado. "
             + "Capturas reales pendientes de verificar."
             if art_level==8 else
-            "G13 V52 LOD13: hombros de techo acoplados a visera y tapas V38.")
+            "G13 V54 LOD13: caucho esculpido y reflejos de metal PBR.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
