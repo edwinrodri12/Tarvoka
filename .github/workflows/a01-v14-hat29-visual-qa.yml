@@ -15,12 +15,14 @@ on:
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
       - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
       - 'scripts/ui/AttackHelicopterHubCrownV1413.gd'
+      - 'scripts/ui/AttackHelicopterHubWreckV1414.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_attack_helicopter_v9_studio.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
       - 'tests/test_attack_helicopter_v14_13_motion.gd'
+      - 'tests/test_attack_helicopter_v14_14_wreck.gd'
       - '.github/workflows/a01-v14-hat29-visual-qa.yml'
   push:
     branches: [main]
@@ -33,10 +35,12 @@ on:
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
       - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
       - 'scripts/ui/AttackHelicopterHubCrownV1413.gd'
+      - 'scripts/ui/AttackHelicopterHubWreckV1414.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
       - 'tests/test_attack_helicopter_v14_13_motion.gd'
+      - 'tests/test_attack_helicopter_v14_14_wreck.gd'
       - '.github/workflows/a01-v14-hat29-visual-qa.yml'
   workflow_dispatch:
 
@@ -89,7 +93,23 @@ jobs:
           fi
           grep -F 'PASS HAT29 V14.13 MOTION:' /tmp/hat29-v1413-motion.log
 
-      - name: Generate 85 native HAT-29 frames including V14.13 rotor motion
+      - name: Test eight real V13 rotor hub wreck and repair cycles with V14.14 shards
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v14_14_wreck.gd \
+            2>&1 | tee /tmp/hat29-v1414-wreck.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v1414-wreck.log; then
+            echo "V14.14 rotor hub wreck continuity failed"; exit 1
+          fi
+          grep -F 'PASS HAT29 V14.14 WRECK:' /tmp/hat29-v1414-wreck.log
+
+      - name: Generate 89 real HAT-29 frames including V14.14 hub crash pieces
         shell: bash
         run: |
           set -euo pipefail
@@ -105,16 +125,17 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 85
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 89
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-13-godot-85-frames
+          name: tarvoka-hat29-v14-14-godot-89-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
             /tmp/hat29-v1413-motion.log
+            /tmp/hat29-v1414-wreck.log
             /tmp/hat29-v14-capture.log
           if-no-files-found: warn
           retention-days: 14
