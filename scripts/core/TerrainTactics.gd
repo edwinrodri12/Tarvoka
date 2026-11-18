@@ -14,13 +14,18 @@ const FLANK_BONUS := 1
 const CITY_COVER := 1
 
 static func tile_at(terrain: Array, cell: Vector2i) -> String:
-    # Terrain bonuses must work at every coordinate in 10x8, 24x18
-    # and 40x30 maps, not only within the legacy compact board.
-    if not Rules.inside(cell,terrain):
+    # A terrain lookup is public and can be requested for a missing,
+    # incomplete or legacy map (e.g. a combat preview with no board).
+    # Rules.inside defaults an EMPTY board to 10x8 for legacy movement.
+    # That default is NOT safe to index here: use actual row lengths.
+    if cell.x < 0 or cell.y < 0 or cell.y >= terrain.size():
         return ""
-    if not terrain[cell.y] is Array or cell.x >= terrain[cell.y].size():
+    if not terrain[cell.y] is Array:
         return ""
-    return str(terrain[cell.y][cell.x])
+    var row: Array = terrain[cell.y]
+    if cell.x >= row.size():
+        return ""
+    return str(row[cell.x])
 
 static func height_of(kind: String) -> int:
     return 1 if kind == "mountain" else 0
