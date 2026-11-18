@@ -74,6 +74,7 @@ const G13ArcEndsV42=preload("res://scripts/ui/G13ArcTerminationV42.gd")
 const G13ExteriorV44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13CabV45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G13WheelV46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
+const G13SurfaceV47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -204,7 +205,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V46 · ruedas mecanizadas 4×4")
+        role_picker.set_item_text(aa_index,"G13 · AA V47 · materiales de cabina y torreta")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.2")
@@ -747,7 +748,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V46 ruedas 3D terminadas"
+            "aa_mobile": label="G13 · Antiaéreo · V47 materiales PBR"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1459,7 +1460,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V46 · RUEDAS MECANIZADAS Y COLOR DE FACCIÓN · 4×4",14)
+        "G13 V47 · MATERIALES PBR Y ACABADO DE CABINA · 4×4",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1481,7 +1482,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V46 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V47 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1505,6 +1506,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V47 · Materiales PBR refinados",
+        func(): _g13_v47_compare(true),
+        "V47 · Comparar con V46",
+        func(): _g13_v47_compare(false))
     _add_paired(g13_controls,"V46 · Llantas mecanizadas 3D",
         func(): _g13_v46_compare(true),
         "V46 · Comparar con V45",
@@ -1600,10 +1605,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V46 LOD8: ruedas, aros y pernos girando con el vehículo. "
+            "G13 V47 LOD8: materiales de metal, óptica y facción refinados. "
             + "Capturas reales pendientes de verificar."
             if art_level==8 else
-            "G13 V46 LOD13: ruedas mecanizadas, pernos y acabado de facción.")
+            "G13 V47 LOD13: cabina, torreta y cristales con PBR individual.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
@@ -1705,6 +1710,19 @@ func _g13_v41_view(yaw:float, tilt:float=0.0)->void:
     _update_camera()
     if status_label!=null:
         status_label.text="G13 V43: vista %.0f° / inclinación %.0f°; inspección manual." % [yaw,tilt]
+
+func _g13_v47_compare(show_v47:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        if status_label!=null:
+            status_label.text="G13 V47: selecciona primero el antiaéreo."
+        return
+    var ok:bool=G13SurfaceV47.show_finish(model_root,show_v47)
+    if status_label!=null:
+        status_label.text=(
+            ("G13 V47: PBR individual en blindajes, torreta, cabina y cristales."
+            if show_v47 else
+            "G13 V46: materiales anteriores; misma geometría y cámara.")
+            if ok else "G13 V47: no hay materiales disponibles en esta vista.")
 
 func _g13_v46_compare(show_v46:bool)->void:
     if _role!="aa_mobile" or model_root==null:
