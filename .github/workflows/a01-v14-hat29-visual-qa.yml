@@ -14,11 +14,13 @@ on:
       - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
       - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
+      - 'scripts/ui/AttackHelicopterHubCrownV1413.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_attack_helicopter_v9_studio.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
+      - 'tests/test_attack_helicopter_v14_13_motion.gd'
       - '.github/workflows/a01-v14-hat29-visual-qa.yml'
   push:
     branches: [main]
@@ -30,9 +32,11 @@ on:
       - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
       - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
+      - 'scripts/ui/AttackHelicopterHubCrownV1413.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
+      - 'tests/test_attack_helicopter_v14_13_motion.gd'
       - '.github/workflows/a01-v14-hat29-visual-qa.yml'
   workflow_dispatch:
 
@@ -69,7 +73,23 @@ jobs:
             echo "Godot V14 regression failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14.12:' /tmp/hat29-v14.log
-      - name: Generate 75 actual HAT-29 frames with swept V14.12 junction compare
+      - name: Test 384 actual animated rotor poses, missiles, crash and repair on 8 factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s \
+            xvfb-run -a -s '-screen 0 1280x960x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_attack_helicopter_v14_13_motion.gd \
+            2>&1 | tee /tmp/hat29-v1413-motion.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v1413-motion.log; then
+            echo "V14.13 live rotor continuity and crash regression failed"; exit 1
+          fi
+          grep -F 'PASS HAT29 V14.13 MOTION:' /tmp/hat29-v1413-motion.log
+
+      - name: Generate 85 native HAT-29 frames including V14.13 rotor motion
         shell: bash
         run: |
           set -euo pipefail
@@ -85,15 +105,16 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 75
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 85
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-12-godot-75-frames
+          name: tarvoka-hat29-v14-13-godot-85-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
+            /tmp/hat29-v1413-motion.log
             /tmp/hat29-v14-capture.log
           if-no-files-found: warn
           retention-days: 14
