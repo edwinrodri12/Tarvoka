@@ -130,6 +130,14 @@ static func _count_phase_orders(frames: Array, phase: int) -> int:
             count += 1
     return count
 
+static func _first_three_actions(frames: Array, phase: int) -> Array:
+    var result: Array = []
+    for frame in frames:
+        if int(frame["phase"]) == phase and str(frame["tag"]) == "action":
+            if result.size() < 3:
+                result.append(frame["decision"])
+    return result
+
 static func _analyze(state: Dictionary, mode: String) -> Dictionary:
     var mirror_start: Dictionary = Mirror.reflect(state)
     assert(Mirror.reflect(mirror_start) == state)
@@ -177,6 +185,8 @@ static func _analyze(state: Dictionary, mode: String) -> Dictionary:
         "half_turns":int(a["stats"]["completed_half_turns"]),
         "opening_first_orders":int(a["stats"]["opening_orders"]),
         "opening_response_orders":responder_orders,
+        "starter_first_three_actions":_first_three_actions(a["frames"],0),
+        "responder_first_three_actions":_first_three_actions(a["frames"],1),
         "total_actions":int(a["stats"]["actions"]),
         "attacks":int(a["stats"]["attacks"]),
         "purchases":int(a["stats"]["purchases"]),
@@ -198,6 +208,10 @@ func _initialize() -> void:
         var state: Dictionary = Study._initial(SIZE,seed,fog,first)
         var baseline: Dictionary = _analyze(state,"starter3_responder_full")
         var matched: Dictionary = _analyze(state,"both3_first_round")
+        assert(baseline["starter_first_three_actions"] ==
+            matched["starter_first_three_actions"])
+        assert(baseline["responder_first_three_actions"] ==
+            matched["responder_first_three_actions"])
         # Both arms have the exact same map, starting money, roster,
         # observed fog, controller, first three official AI actions and
         # deterministic AI. Only the responder's opportunity is capped.
