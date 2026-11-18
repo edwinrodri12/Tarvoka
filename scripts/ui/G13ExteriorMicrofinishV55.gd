@@ -128,7 +128,9 @@ static func _segment(poses: Array[Transform3D],
     # Rotate the long Y axis to the actual hatch edge, THEN scale in
     # LOCAL coordinates. Basis.scaled() would scale world axes instead,
     # producing hanging spikes in oblique real Godot close-up renders.
-    var basis:=Basis(Vector3.RIGHT,angle).scaled_local(
+    # Godot 4.3 supports Basis.from_scale and matrix multiplication.
+    # Basis.scaled_local only appeared later; R * S is equivalent here.
+    var basis:Basis=Basis(Vector3.RIGHT,angle)*Basis.from_scale(
         Vector3(0.003,length,0.005))
     poses.append(Transform3D(
         basis,
