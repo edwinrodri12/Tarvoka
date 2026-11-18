@@ -72,7 +72,9 @@ static func _record(state: Dictionary, mirrored: bool,
         "state":Semantics.normalize(state,mirrored)}
 
 static func _play(initial: Dictionary, mirrored: bool,
-        max_phases: int) -> Dictionary:
+        max_phases: int, experimental_options: Dictionary = {}) -> Dictionary:
+    var ai_options: Dictionary = _configuration()
+    ai_options.merge(experimental_options,true)
     var state: Dictionary = initial.duplicate(true)
     var frames: Array = [_record(state,mirrored,-1,-1,"initial")]
     var first: int = int(state["faction"])
@@ -91,7 +93,7 @@ static func _play(initial: Dictionary, mirrored: bool,
         var budget: int = state["units"].size()*2+state["economy"]["sites"].size()
         for i in range(budget+1):
             var original: Dictionary = state.duplicate(true)
-            var decision: Dictionary = AI.step(state,_configuration())
+            var decision: Dictionary = AI.step(state,ai_options)
             assert(state == original)
             if not bool(decision.get("valid",false)):
                 frames.append(_record(state,mirrored,phase,orders,"no_action"))
