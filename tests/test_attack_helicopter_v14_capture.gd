@@ -14,6 +14,7 @@ const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
+const HubWreck1414=preload("res://scripts/ui/AttackHelicopterHubWreckV1414.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -313,6 +314,29 @@ func _run() -> void:
         and V13.pose(spin_model,"destroy",0.85),
         "V14.13 real V13 destroy hides original rotating hub with the wreck")
     await _save(vp,folder.path_join("hat29_v14_13_rotor_destruccion.png"))
+    # V14.14: V13 originally drops three blade bits but no spinning hub.
+    # Same camera/lighting, first hide the new native cut-metal sectors,
+    # then reveal them on the exact native V13 debris trajectories.
+    _check(HubWreck1414.has_model(spin_model),
+        "V14.14 real machined crown is cut into two V13-bound wreck parts")
+    cam.position=Vector3(1.58,1.21,-1.30)
+    cam.look_at(spin_model.to_global(Vector3(0,0.19,-0.32)),Vector3.UP)
+    _check(HubWreck1414.set_enabled(spin_model,false),
+        "V14.14 compare first renders original V13 wreck with no hub metal")
+    await _save(vp,folder.path_join("hat29_v14_14_comparar_restos_v13.png"))
+    _check(HubWreck1414.set_enabled(spin_model,true),
+        "V14.14 same-camera comparator restores two native hub metal shards")
+    await _save(vp,folder.path_join("hat29_v14_14_comparar_restos_v1414.png"))
+    _check(V13.pose(spin_model,"destroy",0.40),
+        "V14.14 original wreck FX moves cut metal sectors into ballistic fall")
+    cam.position=Vector3(1.52,2.62,-1.46)
+    cam.look_at(spin_model.to_global(Vector3(0,1.65,0.08)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_14_fragmentos_en_vuelo.png"))
+    _check(V13.pose(spin_model,"destroy",1.0),
+        "V14.14 original V13 wreck leaves jagged crown fragments on ground")
+    cam.position=Vector3(1.58,1.21,-1.30)
+    cam.look_at(spin_model.to_global(Vector3(0,0.19,-0.32)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_14_fragmentos_en_suelo.png"))
     V13.restore(spin_model)
     _check(V13.set_stage(spin_model,0)
         and Hub1413.has_model(spin_model),
@@ -418,10 +442,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==85,"75 previous real helicopter frames and 10 V14.13 crown/animated rotor inspections")
+    _check(count==89,"85 previous actual Godot frames plus 4 V14.14 broken-hub crash comparisons")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 85 native Godot PNGs including original V10 / V14.13 metal crown, 4 rotor spinning angles and combat damage")
+        print("PASS HAT29 V14 CAPTURE: 89 native Godot PNGs including V14.14 authentic two-sector broken hub, same-camera V13 wreck comparison and crash/ground")
         quit(0)
