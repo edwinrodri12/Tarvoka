@@ -19,6 +19,9 @@ window/stretch/aspect="expand"
 ; Android export requires mobile ETC2/ASTC texture import.
 textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
+; Godot 4.3 WebGL single-threaded export fails 3D at 1000+ instances.
+; Keep the original full V43 architectural meshes and never enter threaded culling.
+limits/spatial_indexer/threaded_cull_minimum_instances=1000000
 renderer/rendering_method.mobile="gl_compatibility"
 
 [input_devices]
