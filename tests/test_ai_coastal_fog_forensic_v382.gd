@@ -11,6 +11,7 @@ const AI = preload("res://scripts/core/BasicAI.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const Supply = preload("res://scripts/core/SupplyNavigation.gd")
 
 static func _unit_state(state: Dictionary, id: String) -> Dictionary:
     for unit in state["units"]:
@@ -25,8 +26,8 @@ static func _unit_state(state: Dictionary, id: String) -> Dictionary:
                 "vision":unit.get("vision",-1)}
     return {}
 
-static func _diagnose() -> Dictionary:
-    var start: Dictionary = Study._initial(Vector2i(40,30),631,true,0)
+static func _diagnose(first: int) -> Dictionary:
+    var start: Dictionary = Study._initial(Vector2i(40,30),631,true,first)
     var other: Dictionary = Mirror.reflect(start)
     var original: Dictionary = Study._play(start,false,24)
     var reflected: Dictionary = Study._play(other,true,24)
@@ -85,12 +86,31 @@ static func _diagnose() -> Dictionary:
             "unit_count":prior_a["units"].size(),
             "opening_orders":original["stats"]["opening_orders"]
         }
-    return {"equal_all":true,"frames":original["frames"].size()}
+    return {"equal_all":true,"frames":original["frames"].size(),
+        "first":first,"seed":631,"fog":true,
+        "mirror_equal":true,"phase_limit":24}
+
+static func _check_relative_ties() -> void:
+    for width in [10,24,40]:
+        var a := Vector2i(2,2)
+        var b := Vector2i(3,2)
+        assert(Supply._prefer_route_tie(a,b,0,width))
+        assert(not Supply._prefer_route_tie(b,a,0,width))
+        var reflected_a := Mirror.position(a,width)
+        var reflected_b := Mirror.position(b,width)
+        assert(Supply._prefer_route_tie(reflected_a,reflected_b,1,width))
+        assert(not Supply._prefer_route_tie(reflected_b,reflected_a,1,width))
+        assert(Supply._prefer_route_tie(Vector2i(2,1),a,0,width))
+        assert(Supply._prefer_route_tie(Vector2i(width-3,1),
+            reflected_a,1,width))
 
 func _initialize() -> void:
-    var result: Dictionary = _diagnose()
-    print("COAST382_CAUSE " + JSON.stringify(result))
-    assert(result.has("first_mismatch_frame"))
-    assert(int(result["equal_prefix"]) >= 250)
-    print("PASS TARVOKA v382 forensic: real first divergent AI decision captured")
+    _check_relative_ties()
+    for first in [0,1]:
+        var result: Dictionary = _diagnose(first)
+        print("COAST382_RESULT " + JSON.stringify(result))
+        assert(bool(result.get("equal_all",false)))
+        assert(bool(result.get("mirror_equal",false)))
+        assert(int(result["first"]) == first)
+    print("PASS TARVOKA v382: seed631 40x30 fog two first-player orders and exact mirrored logistics")
     quit(0)
