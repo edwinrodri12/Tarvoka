@@ -7,6 +7,7 @@ extends SceneTree
 # Each pair is independently replayed via exact horizontal+color reflection.
 const Study = preload("res://tests/test_ai_initiative_counterfactual_v379.gd")
 const Mirror = preload("res://tests/MirrorBattleV374.gd")
+const Semantics = preload("res://tests/MirrorSemanticsV375.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -188,11 +189,11 @@ static func _case(seed: int, fog: bool, first: int) -> Dictionary:
                 details["tag_b"] = b.get("tag","")
                 details["decision_a"] = a.get("decision",{})
                 details["decision_b"] = b.get("decision",{})
-                details["field"] = Study.Semantics.first_changed_key(
+                details["field"] = Semantics.first_changed_key(
                     a.get("state",{}),b.get("state",{}))
-                details["state_a"] = Study.Semantics.short_state(
+                details["state_a"] = Semantics.short_state(
                     a.get("state",{}))
-                details["state_b"] = Study.Semantics.short_state(
+                details["state_b"] = Semantics.short_state(
                     b.get("state",{}))
                 break
         print("CONTACT381_DIVERGENCE " + JSON.stringify(details))
