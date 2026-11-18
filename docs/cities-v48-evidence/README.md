@@ -2,8 +2,8 @@
 
 Capturas Godot reales del modelo V43. **Nunca indican aprobación automática.**
 
-- Commit artístico: `99c5bd6ce4435b2b0b0b9e74fd7dd50bc4af7b7e`
-- Ejecución: https://github.com/edwinrodri12/Tarvoka/actions/runs/44353912437
+- Commit artístico: `62d69acc8863ca76c75f8d5663412a98aac729ae`
+- Ejecución: https://github.com/edwinrodri12/Tarvoka/actions/runs/44355890139
 - Capturas válidas: 0/24
 - Errores registrados: sin manifest
 - Render completo: no (revisar logs)

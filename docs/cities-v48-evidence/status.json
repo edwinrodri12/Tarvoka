@@ -2,16 +2,15 @@
   "version": "V48",
   "model_stage": "V43",
   "godot_engine": "4.3",
-  "source_commit": "99c5bd6ce4435b2b0b0b9e74fd7dd50bc4af7b7e",
-  "actions_run_id": "44353912437",
-  "actions_run_url": "https://github.com/edwinrodri12/Tarvoka/actions/runs/44353912437",
+  "source_commit": "62d69acc8863ca76c75f8d5663412a98aac729ae",
+  "actions_run_id": "44355890139",
+  "actions_run_url": "https://github.com/edwinrodri12/Tarvoka/actions/runs/44355890139",
   "capture_count": 0,
   "nonempty_count": 0,
   "reported_errors": null,
   "fully_rendered": false,
   "artistically_approved": false,
   "copied_files": [
-    "godot-import.log",
     "source-commit.txt",
     "comparativa-24-vistas.png",
     "comparativa-villa.png",
@@ -21,6 +20,7 @@
   "missing_files": [
     "manifest.json",
     "review-log.txt",
+    "godot-import.log",
     "godot-render.log",
     "contact-sheet-status.txt"
   ]
