@@ -7,6 +7,7 @@ const Realism=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
+const V61=preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 var problems:int=0
 
 func _check(ok:bool,description:String)->void:
@@ -32,6 +33,9 @@ func _run()->void:
             # V59 is newer than V55 and intentionally boosts official enamel
             # hues. Verify old V53 on its own original 3D material snapshot:
             # remove the V59 overlay FIRST, never weaken the old QA rules.
+            if bool(model.get_meta(V61.FLAG,false)):
+                _check(V61.show_finish(model,false),
+                    "new V61 open hubs hidden during old V53 metal audit")
             if bool(model.get_meta(V60.FLAG,false)):
                 _check(V60.show_finish(model,false),
                     "V60 hidden during historical V53 proof")
@@ -97,6 +101,9 @@ func _run()->void:
             if bool(model.get_meta(V60.FLAG,false)):
                 _check(V60.show_finish(model,true),
                     "V60 3D tire restored after old V53 QA")
+            if bool(model.get_meta(V61.FLAG,false)):
+                _check(V61.show_finish(model,true),
+                    "new V61 steel hubs and armor restored after V53 audit")
             model.free()
     if problems==0:
         print("PASS G13 V53 PBR METAL RUBBER: 6 real native variants")
