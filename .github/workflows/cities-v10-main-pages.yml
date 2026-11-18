@@ -161,6 +161,11 @@ jobs:
           grep -F 'early_controls.reparent(scroll_contents)' scripts/ui/CivilianCityDesignStudioV43.gd
           grep -F '_v19_toolbar.reparent(scroll_contents)' scripts/ui/CivilianCityDesignStudioV43.gd
           grep -F '_compact_city_visible_status()' scripts/ui/CivilianCityDesignStudioV43.gd
+          # Release gate: do not ship the all-background WebGL canvas again.
+          # Proven 848 real city meshes / 4,650 Chrome pixel differences in
+          # actions/runs/44390576327; this code opens D0 in LOD1 and centers it.
+          grep -F '_lod.select(1)' scripts/ui/CivilianCityDesignStudioV43.gd
+          grep -F '_orient_camera()' scripts/ui/CivilianCityDesignStudioV43.gd
           test -s scenes/CivilianCityDesignStudioV43.tscn
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
