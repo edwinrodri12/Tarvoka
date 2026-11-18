@@ -18,6 +18,7 @@ const G13V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const G13V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G13V57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
+const G13V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -137,6 +138,24 @@ func _run()->void:
             "G13 V57 exterior supports must improve both 3D detail levels")
         _check(bool(model.get_meta(G13V58.FLAG,false)),
             "G13 V58 coherent metal finish active in shared native 3D Studio")
+        _check(bool(model.get_meta(G13V59.FLAG,false)),
+            "G13 V59 Bastion-grade physical rubber, glass and fraction active")
+        var v59_tyre:=model.find_child(
+            G13V59.TIRES,true,false) as MultiMeshInstance3D
+        var v59_glass:=model.find_child(
+            "G13_FrontGlass_1",true,false) as MeshInstance3D
+        _check(v59_tyre!=null and v59_tyre.multimesh.mesh is ArrayMesh
+            and v59_glass!=null and
+            (v59_glass.material_override as StandardMaterial3D).
+                albedo_texture is Texture2D,
+            "real mesh and real reflected glass present in public Studio")
+        var current_mesh:Mesh=v59_tyre.multimesh.mesh if v59_tyre!=null else null
+        studio.call("_g13_v59_show_finish",false)
+        _check(v59_tyre!=null and v59_tyre.multimesh.mesh!=current_mesh,
+            "public Studio must reveal original V58 physical wheel")
+        studio.call("_g13_v59_show_finish",true)
+        _check(v59_tyre!=null and v59_tyre.multimesh.mesh==current_mesh,
+            "public Studio restores V59 Bastion-density rubber")
         var iso_mounts:=model.find_child(
             G13V57.BRACKETS,true,false) as MultiMeshInstance3D
         var final_steel:=iso_mounts.material_override as StandardMaterial3D if iso_mounts!=null else null
@@ -464,6 +483,10 @@ func _run()->void:
         g13_tactical.get_meta(G13V58.FLAG,false)) and
         int(g13_tactical.get_meta("tarvoka_g13_v58_extra_draw_nodes",-1))==0,
         "G13 V58 LOD8 matte steel physical pass adds zero GPU draw nodes")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V59.FLAG,false)) and
+        int(g13_tactical.get_meta("tarvoka_g13_v59_pbr_glass_panes",-1))==2,
+        "G13 V59 Android LOD8 uses its own efficient 32-section rubber and reflective glass")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
