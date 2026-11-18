@@ -14,6 +14,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Relays = preload("res://scripts/core/RelayControl.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
+const Bonus = preload("res://tests/OpeningBonusPolicyV367.gd")
 
 const MAX_PHASES := 80
 const INITIAL_IDS := ["A","B","C","D","E","X","Y","Z","W","V"]
@@ -132,10 +133,7 @@ static func _play(map_id: int, fog: bool, level: int, first: int, new_side: int,
             if phase == 0 and actions_this_phase == 3:
                 report["fourth_candidate"] = str(result.get("action",""))
                 var choice: String = str(result.get("action",""))
-                if cap == "3plus_move" and choice != "move":
-                    break
-                if cap == "3plus_support" and choice not in \
-                        ["move","produce","resupply"]:
+                if not Bonus.eligible(cap,choice):
                     break
                 report["fourth_bonus_used"] = cap in \
                     ["3plus_move","3plus_support"]
