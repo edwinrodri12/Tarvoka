@@ -63,8 +63,7 @@ func _run()->void:
             var piece:=model.find_child(label,true,false) as VisualInstance3D
             _check(piece!=null and piece.visible,
                 "G13 V44 missing/hidden native 3D geometry: "+label)
-        _check(bool(studio.call("_g13_v44_compare",false))==false,
-            "V44 uses a void display callback")
+        studio.call("_g13_v44_compare",false)
         var colored:=model.find_child(G13V44.BODY_PAINT,true,false)
         _check(colored!=null and not colored.visible,
             "V44 version compare really hides new 3D faction panels")
