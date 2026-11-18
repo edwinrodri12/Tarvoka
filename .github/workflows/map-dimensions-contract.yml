@@ -1,0 +1,30 @@
+name: TARVOKA map dimensions contract
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/Rules.gd"
+      - "tests/test_map_dimensions_contract.gd"
+      - ".github/workflows/map-dimensions-contract.yml"
+  workflow_dispatch:
+
+jobs:
+  map-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 headless
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Execute map integrity assertions
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_map_dimensions_contract.gd 2>&1 | tee /tmp/map-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/map-contract.log; then
+            exit 1
+          fi
+          grep -q 'PASS: supported map dimensions, boundaries and integrity' /tmp/map-contract.log
