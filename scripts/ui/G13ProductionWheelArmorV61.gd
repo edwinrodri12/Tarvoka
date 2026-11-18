@@ -177,12 +177,19 @@ static func _armor_coat(original:StandardMaterial3D,
 
 static func _parts(model:Node3D)->Dictionary:
     var parts:Dictionary={}
-    for key in [HUB,RING,OUTER]:
+    # V46 steel hub and faction ring exist on BOTH art profiles.
+    # The older V7 OuterRims only exists in HERO LOD13, deliberately
+    # omitted in the original lightweight Android 8 model.
+    for key in [HUB,RING]:
         var node:=model.find_child(key,true,false) as MultiMeshInstance3D
         if node==null or node.multimesh==null or (
                 node.multimesh.instance_count!=4):
             return {}
         parts[key]=node
+    var outer:=model.find_child(OUTER,true,false) as MultiMeshInstance3D
+    if outer!=null and outer.multimesh!=null and (
+            outer.multimesh.instance_count==4):
+        parts[OUTER]=outer
     for key in ARMOR:
         var part:=model.find_child(key,true,false) as GeometryInstance3D
         if part!=null and part.material_override is StandardMaterial3D:
@@ -200,7 +207,7 @@ static func apply(model:Node3D)->bool:
     # Android LOD8 deliberately omits many hero armor panels. The
     # production eight-spoke wheel itself is REQUIRED on both levels;
     # additional armor material upgrades are opportunistic per LOD.
-    if parts.size()<3:
+    if parts.size()<2:
         return false
     var hubs:=parts.get(HUB,null) as MultiMeshInstance3D
     if hubs==null or not hubs.multimesh.mesh is CylinderMesh:
@@ -241,7 +248,7 @@ static func apply(model:Node3D)->bool:
     model.set_meta("tarvoka_g13_v61_true_open_spokes",8)
     model.set_meta("tarvoka_g13_v61_real_wheel_centers",4)
     model.set_meta("tarvoka_g13_v61_armor_panels",
-        parts.size()-3)
+        parts.size()-(3 if parts.has(OUTER) else 2))
     model.set_meta("tarvoka_g13_v61_extra_draw_nodes",EXTRA_DRAW_NODES)
     model.set_meta("tarvoka_g13_v61_exact_faction_albedo_preserved",true)
     model.set_meta("tarvoka_g13_v61_glass_and_continuous_tread_preserved",true)
