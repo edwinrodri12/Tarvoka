@@ -1,0 +1,46 @@
+name: TARVOKA v386 coastal matched-opening forensic
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_coastal_matched_forensic_v386.gd"
+      - ".github/workflows/ai-coastal-forensic-v386.yml"
+      - "scripts/core/BasicAI.gd"
+  workflow_dispatch:
+
+jobs:
+  forensic:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        fog: ["false","true"]
+    env:
+      TARVOKA_V386_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Record first mirrored AI movement divergence under equal responder budget
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1000s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_coastal_matched_forensic_v386.gd \
+            2>&1 | tee /tmp/coast-v386.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/coast-v386.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v386:' /tmp/coast-v386.log
+          test "$(grep -c '^COAST386_CAUSE ' /tmp/coast-v386.log)" -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v386-coast-fog${{ matrix.fog }}
+          path: /tmp/coast-v386.log
+          if-no-files-found: ignore
+          retention-days: 30
