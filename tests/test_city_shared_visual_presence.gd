@@ -53,6 +53,45 @@ func _run() -> void:
         for x in range(0,render.get_width(),maxi(1,render.get_width()/21)):
             samples[render.get_pixel(x,y).to_html()]=true
     assert(samples.size()>8,"City viewport is effectively a blank canvas")
+    # Camera UX regression: replacing ninety-three buttons must not lose
+    # any approved V1-V42 view or alter the original camera/damage behavior.
+    assert(studio.civilian_city_view_group!=null and
+        studio.civilian_city_view_group.item_count==5,
+        "City camera groups are missing")
+    assert(studio.civilian_city_view_preset!=null,
+        "City camera preset selector is missing")
+    var quick: Node=studio.civilian_city_controls.find_child(
+        "Ciudades_Camaras_Acceso_Rapido_V43",true,false)
+    assert(quick!=null and quick.get_child_count()==8,
+        "Compact quick cameras and rotation buttons must stay accessible")
+    assert(studio.civilian_city_controls.find_child(
+        "Ciudades_Camaras_3D",true,false)==null,
+        "Legacy 93-button sidebar should be replaced, not duplicated")
+    var visited: Dictionary={}
+    for group_index in range(studio.civilian_city_view_group.item_count):
+        studio.civilian_city_view_group.select(group_index)
+        studio.civilian_city_view_group.item_selected.emit(group_index)
+        for preset_index in range(studio.civilian_city_view_preset.item_count):
+            var original_id: int=studio.civilian_city_view_preset.get_item_id(
+                preset_index)
+            assert(original_id>=0 and original_id<=92,
+                "An original city camera ID was replaced")
+            assert(not visited.has(original_id),
+                "City camera group contains a duplicate original view")
+            visited[original_id]=true
+    assert(visited.size()==93,"All 93 original camera views must survive")
+    studio.civilian_city_view_preset.select(3)
+    studio.civilian_city_view_preset.item_selected.emit(3)
+    assert(studio._city_view==90,
+        "V42 fine-detail camera was not reached from the dropdown")
+    assert(studio.civilian_city_damage.selected==2,
+        "V42 damaged-roof preset no longer selects D2")
+    studio._city_camera_preset(5)
+    assert(studio.civilian_city_view_group.selected==0 and
+        studio.civilian_city_view_preset.get_selected_id()==5,
+        "Quick-view camera did not synchronize the grouped selectors")
+    assert(studio.model_root!=null and studio.camera.current,
+        "City camera switching lost the live Godot viewport")
     for tier in [0,1,2]:
         studio.civilian_city_tier.select(tier)
         studio.civilian_city_tier.item_selected.emit(tier)
