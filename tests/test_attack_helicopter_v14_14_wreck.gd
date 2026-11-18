@@ -99,6 +99,8 @@ func _run() -> void:
             var piece: MeshInstance3D=pieces[index]
             _check(piece.position.distance_to(Wreck.REST_POINTS[index])<0.0002,
                 "each metal sector settles on the real terrain position")
+            _check(absf(piece.position.x)>1.30 and piece.position.y<0.17,
+                "fractured crown parts remain readable outside the fuselage and close to ground")
         _check(not rotor.visible and crown.get_parent()!=wreck,
             "no intact rotor ghost remains visible at final crash")
         V13.restore(model)
