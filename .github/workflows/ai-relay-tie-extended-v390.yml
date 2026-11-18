@@ -1,0 +1,72 @@
+name: TARVOKA v390 longitudinal 9-9 relay tie forensic
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_budget_counterfactual_v383.gd"
+      - "tests/test_ai_relay_tie_extended_v390.gd"
+      - "tests/aggregate_ai_relay_tie_extended_v390.py"
+      - ".github/workflows/ai-relay-tie-extended-v390.yml"
+      - "scripts/core/RelayControl.gd"
+  workflow_dispatch:
+
+jobs:
+  longitudinal:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      matrix:
+        first: [0,1]
+    env:
+      TARVOKA_V390_FIRST: ${{ matrix.first }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Replay experimental tie from round 16 to up to round 32
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3000s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_tie_extended_v390.gd \
+            2>&1 | tee /tmp/tie-v390.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|TIE390_DIVERGENCE ' /tmp/tie-v390.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v390: verified 32-half-turn tie' /tmp/tie-v390.log
+          test "$(grep -c '^TIE390_RESULT ' /tmp/tie-v390.log)" -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v390-first${{ matrix.first }}
+          path: /tmp/tie-v390.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [longitudinal]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v390-first*
+          path: .ci-v390-logs
+          merge-multiple: false
+      - name: Validate 9-9 snapshot, both starters, complete paired round ledgers
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_relay_tie_extended_v390.py .ci-v390-logs
+          cat reports/ai_v390_relay_tie_longitudinal.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v390-relay-tie-longitudinal
+          path: reports/ai_v390_relay_tie_longitudinal.*
+          if-no-files-found: ignore
+          retention-days: 30
