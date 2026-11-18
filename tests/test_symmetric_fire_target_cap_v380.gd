@@ -20,7 +20,7 @@ static func _considered(state: Dictionary) -> Array:
         if int(u["faction"]) == 1-side:
             foes.append(u)
     foes.sort_custom(func(a,b):
-        return FireTeam._target_key(a,side,width) <
+        return FireTeam._target_key(a,side,width) < \
             FireTeam._target_key(b,side,width))
     if foes.size() > FireTeam.MAX_VISIBLE_TARGETS:
         foes.resize(FireTeam.MAX_VISIBLE_TARGETS)
