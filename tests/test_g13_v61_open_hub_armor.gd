@@ -77,8 +77,9 @@ func _run()->void:
             var source:Dictionary=vehicle.get_meta(V61.SAVED,{})
             var orig:Dictionary=source.get("before_materials",{})
             var live:Dictionary=source.get("after_materials",{})
-            check(orig.size()==live.size() and live.size()>=7,
-                "reversible genuine original armor coatings, no shortcuts")
+            check(orig.size()==live.size() and
+                live.size()>=(7 if hero else 3),
+                "hero full armor finish, Android sparse original panel LOD")
             for name in V61.ARMOR:
                 if not live.has(name):
                     continue
