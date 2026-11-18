@@ -76,7 +76,25 @@ func _run()->void:
             check(cam!=null and cam.position.is_finite() and
                 cam.global_transform.basis.is_finite(),
                 "finite camera orientation in view "+view)
+        # Drain the offscreen render target and procedural sky radiance
+        # before the headless process exits. The geometry assertions are
+        # unchanged: this cleans up inspection-only GPU resources.
+        var offscreen:=studio.get("_viewport") as SubViewport
+        if offscreen!=null:
+            offscreen.render_target_update_mode=SubViewport.UPDATE_DISABLED
+        var lighting:=studio.get("_scene_root") as Node3D
+        if lighting!=null:
+            for child in lighting.get_children():
+                if child is WorldEnvironment:
+                    var world:=child as WorldEnvironment
+                    if world.environment!=null:
+                        world.environment.sky=null
+                        world.environment.reflected_light_source=(
+                            Environment.REFLECTION_SOURCE_DISABLED)
         studio.queue_free()
+        await process_frame
+        await process_frame
+        await RenderingServer.frame_post_draw
         await process_frame
     if failures>0:
         quit(1)
