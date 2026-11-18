@@ -77,7 +77,7 @@ static func _profiled_root() -> ArrayMesh:
         Vector4(-0.315,0.113,0.027,0.006),
         Vector4(-0.345,0.104,0.019,0.004)
     ]
-    var loops: Array[Array]=[]
+    var loops: Array=[]
     for station in stations:
         # The original V3 MeshInstance remains positioned at z=-0.225.
         # Convert absolute pivot Z to local vertex Z to avoid a double shift.
