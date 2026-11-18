@@ -16,6 +16,7 @@ Se revisaron las capturas 3D **reales** de Godot correspondientes a V14.11 y V14
 - **V14.13: cubierta superior**: cámara cercana por encima del rotor.
 - **V14.13: perfil de buje**: cámara lateral del mecanizado.
 - **Comparar corona V10 / V14.13**: alterna geometría nativa sin reconstruir el helicóptero.
+- **V14.13: giro lento de inspección**: reproduce el **movimiento nativo** de V1/V13 a un cuarto de velocidad sobre el mismo rotor y bajo la cámara macro, sin crear una nueva animación independiente.
 
 ## Verificación en Godot
 Se agregó `tests/test_attack_helicopter_v14_13_motion.gd` y se incorporó al flujo de QA A01:
