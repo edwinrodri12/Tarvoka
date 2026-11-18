@@ -12,6 +12,7 @@ on:
       - "scripts/ui/G15AntennaMechanicsV4.gd"
       - "scripts/ui/G15AntennaFinishDamageV5.gd"
       - "scripts/ui/G15ArmoredExteriorV6.gd"
+      - "scripts/ui/G15MechanicalExteriorV7.gd"
       - "scripts/ui/G13MobileAirDefenseV1.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
       - "scripts/ui/G13RubberSculptV54.gd"
@@ -278,6 +279,7 @@ jobs:
           test -s scripts/ui/G15AntennaMechanicsV4.gd
           test -s scripts/ui/G15AntennaFinishDamageV5.gd
           test -s scripts/ui/G15ArmoredExteriorV6.gd
+          test -s scripts/ui/G15MechanicalExteriorV7.gd
           test -s scripts/ui/G15ElectronicWarfareV1.gd
           test -s scripts/ui/G13SilhouetteV10.gd
           test -s scripts/ui/G13CabRearFinishV11.gd
