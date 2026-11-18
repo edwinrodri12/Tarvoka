@@ -13,6 +13,7 @@ const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Root148=preload("res://scripts/ui/AttackHelicopterBladeRootFinishV148.gd")
 var failures: int=0
 var images: int=0
 
@@ -228,6 +229,26 @@ func _run() -> void:
     _check(studio.get("_heli_focus_local")==Vector3(0.18,2.04,-0.34)
         and not bool(studio.get("_heli_mast_view_active_v145")),
         "V14.7 rubber boot macro uses standard camera without stale mast mode")
+    studio.call("_heli_mobile_home")
+    # V14.8 real original blade-root hinges in the SAME existing web Studio.
+    _check(Root148.has_model(model),
+        "V14.8 four physical hinge yokes are visible in the native Studio")
+    var v148_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.8:"):
+            v148_buttons+=1
+    _check(v148_buttons==2,
+        "V14.8 both root hinge and strap macro views appear in Details")
+    studio.call("_heli_inspect_focus",39.0,41.0,4.15,
+        Vector3(0.0,2.08,-0.17))
+    _check(studio.get("_heli_focus_local")==Vector3(0.0,2.08,-0.17)
+        and model.get_instance_id()==original_id,
+        "V14.8 true crosspin camera preserves original spinning helicopter")
+    studio.call("_heli_inspect_focus",28.0,67.0,4.05,
+        Vector3(0.04,2.05,-0.40))
+    _check(studio.get("_heli_focus_local")==Vector3(0.04,2.05,-0.40)
+        and not bool(studio.get("_heli_mast_view_active_v145")),
+        "V14.8 root clamp macro switches camera without stale mount mode")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
