@@ -21,6 +21,8 @@ FORBIDDEN = {
 }
 PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-23):\s+name='([^']+)'", re.MULTILINE)
 
+PACKAGE_LINE = re.compile(r"^\s*package:\s+name='[^']+'", re.MULTILINE)
+
 
 def forbidden_permissions(dump: str) -> set[str]:
     return set(PERMISSION_LINE.findall(dump)) & FORBIDDEN
@@ -31,6 +33,8 @@ def self_test() -> None:
     assert forbidden_permissions("uses-permission-sdk-23: name='android.permission.ACCESS_NETWORK_STATE'") == {"android.permission.ACCESS_NETWORK_STATE"}
     assert forbidden_permissions("uses-permission: name='android.permission.CAMERA'") == set()
     assert forbidden_permissions("package: name='android.permission.INTERNET'") == set()
+    assert PACKAGE_LINE.search("package: name='com.example.tarvoka'")
+    assert not PACKAGE_LINE.search("garbled output")
 
 
 def main(argv: list[str]) -> int:
@@ -54,6 +58,9 @@ def main(argv: list[str]) -> int:
         return 2
     if result.returncode:
         print(f"FAIL: aapt returned {result.returncode}: {result.stderr.strip()}", file=sys.stderr)
+        return 2
+    if not PACKAGE_LINE.search(result.stdout):
+        print("FAIL: aapt output lacks APK package metadata; manifest NOT verified", file=sys.stderr)
         return 2
     violations = forbidden_permissions(result.stdout)
     if violations:
