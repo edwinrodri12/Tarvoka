@@ -76,11 +76,40 @@ func _run()->void:
                 "all four service hatches need 20 real seam segments")
             assert_ok(seams.get_parent().name=="G13_Casco4x4",
                 "seams stay attached to original hull, not turret or world")
-            for i in range(seams.multimesh.instance_count):
-                var pose:Transform3D=seams.multimesh.get_instance_transform(i)
-                assert_ok(absf(absf(pose.origin.x)-0.727)<0.001 and
-                    pose.origin.y>=0.70 and pose.origin.y<=0.87,
-                    "gasket lies on real lower hatch outline")
+            var line_index:int=0
+            for side in [-1,1]:
+                for start in [-0.380,0.055]:
+                    var points:Array[Vector2]=[
+                        Vector2(start,0.750),
+                        Vector2(start+0.039,0.855),
+                        Vector2(start+0.262,0.855),
+                        Vector2(start+0.310,0.775),
+                        Vector2(start+0.270,0.720)]
+                    for edge in range(5):
+                        if line_index>=seams.multimesh.instance_count:
+                            break
+                        var pose:Transform3D=seams.multimesh.get_instance_transform(
+                            line_index)
+                        var start_world:=Vector3(
+                            float(side)*0.727,points[edge].y,points[edge].x)
+                        var next:Vector2=points[(edge+1)%5]
+                        var end_world:=Vector3(
+                            float(side)*0.727,next.y,next.x)
+                        # Test the physical line endpoints, not just its
+                        # midpoint. Earlier global-axis scaling produced
+                        # long dangling spikes visible in real 3D images.
+                        var drawn_a:Vector3=pose.origin-pose.basis.y*0.5
+                        var drawn_b:Vector3=pose.origin+pose.basis.y*0.5
+                        assert_ok((drawn_a.distance_to(start_world)<0.002 and
+                            drawn_b.distance_to(end_world)<0.002) or (
+                            drawn_a.distance_to(end_world)<0.002 and
+                            drawn_b.distance_to(start_world)<0.002),
+                            "gasket endpoints must attach to real 3D edge %d" % line_index)
+                        assert_ok(absf(pose.basis.x.length()-0.003)<0.0005 and
+                            absf(pose.basis.z.length()-0.005)<0.0005,
+                            "gasket thickness cannot stretch into dangling spikes")
+                        line_index+=1
+            assert_ok(line_index==20,"all twenty real V45 panel edges checked")
         assert_ok(int(hero.get_meta("tarvoka_g13_v55_added_draw_nodes",-1))==1,
             "one GPU draw per entire 20-element gasket set, not 20 nodes")
         var tiremesh:Mesh=(hero.find_child(V54.TIRE,true,false
