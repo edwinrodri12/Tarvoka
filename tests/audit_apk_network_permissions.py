@@ -21,6 +21,8 @@ FORBIDDEN = {
 }
 PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-23):\s+name='([^']+)'", re.MULTILINE)
 
+PERMISSION_PREFIX = re.compile(r"^\\s*uses-permission(?:-sdk-23)?:", re.MULTILINE)
+
 PACKAGE_LINE = re.compile(r"^\s*package:\s+name='[^']+'", re.MULTILINE)
 
 
@@ -37,6 +39,8 @@ def self_test() -> None:
     assert not PACKAGE_LINE.search("garbled output")
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
+    assert len(PERMISSION_PREFIX.findall("uses-permission: name=android.permission.INTERNET")) == 1
+    assert len(PERMISSION_LINE.findall("uses-permission: name=android.permission.INTERNET")) == 0
 
 
 def main(argv: list[str]) -> int:
@@ -66,6 +70,11 @@ def main(argv: list[str]) -> int:
         return 2
     if not PACKAGE_LINE.search(result.stdout):
         print("FAIL: aapt output lacks APK package metadata; manifest NOT verified", file=sys.stderr)
+        return 2
+    declared = PERMISSION_PREFIX.findall(result.stdout)
+    parsed = PERMISSION_LINE.findall(result.stdout)
+    if len(declared) != len(parsed):
+        print("FAIL: unparseable permission declaration in aapt output; manifest NOT verified", file=sys.stderr)
         return 2
     violations = forbidden_permissions(result.stdout)
     if violations:
