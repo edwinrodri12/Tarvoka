@@ -10,6 +10,7 @@ const V11=preload("res://scripts/ui/AttackHelicopterTailV11.gd")
 const V12=preload("res://scripts/ui/AttackHelicopterNoseV12.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
+const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 var failures: int=0
 var images: int=0
 
@@ -158,6 +159,32 @@ func _run() -> void:
     _check(not bool(studio.get("_heli_underbody_view_active"))
         and camera!=null and camera.position.y>0.0,
         "returning to overview restores original elevated Studio camera")
+    # V14.5: both newly sculpted mechanical groups are accessible in the
+    # SAME shared 3D Studio with real macro camera buttons.
+    var fixed_mast: Node3D=model.find_child(Mount.FIXED,true,false) as Node3D
+    var spinning_mast: Node3D=model.find_child(Mount.SPINNING,true,false) as Node3D
+    _check(Mount.has_model(model) and fixed_mast!=null and spinning_mast!=null,
+        "V14.5 fixed airframe anchors and spinning hub are visible in Studio")
+    var rotor_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        var label_text: String=(option as Button).text
+        if label_text.contains("V14.5:"):
+            rotor_buttons+=1
+    _check(rotor_buttons==2,
+        "V14.5 two specialized mast/crown inspection buttons are in Details")
+    studio.call("_heli_mast_inspect_v145")
+    var mast_target: Vector3=model.to_global(Vector3(0,1.72,0.08))
+    _check(studio.get("_heli_focus_local")==Vector3(0,1.72,0.08)
+        and bool(studio.get("_heli_mast_view_active_v145"))
+        and camera.position.y<mast_target.y
+        and model.get_instance_id()==original_id,
+        "V14.5 mast macro uses actual side-below-rotor camera without swapping meshes")
+    studio.call("_heli_inspect_focus",31.0,61.0,2.70,Vector3(0,2.01,0.08))
+    _check(studio.get("_heli_focus_local")==Vector3(0,2.01,0.08)
+        and spinning_mast.visible and not bool(
+            studio.get("_heli_mast_view_active_v145")),
+        "V14.5 rotor crown macro restores ordinary upper camera")
+    studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
     var light: Light3D=studio.get("hq_key_light") as Light3D

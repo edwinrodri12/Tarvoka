@@ -5,6 +5,8 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
+const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
+const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
 var failures: int=0
@@ -127,6 +129,23 @@ func _run() -> void:
     await _save(vp,folder.path_join("hat29_v14_2_escotilla_macro.png"))
     floor.visible=true
     underside_light.visible=false
+    # V14.5 real native inspection cameras: two fixed airframe tie-bar views,
+    # plus upper rotating crown at rest and in an actual rotor animation pose.
+    _check(Mount.has_model(orbit_model),
+        "V14.5 true rotor-transmission sculpture included in all hero captures")
+    cam.position=Vector3(1.18,1.56,-0.90)
+    cam.look_at(orbit_model.to_global(Vector3(0,1.74,0.08)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_5_mastil_lateral.png"))
+    cam.position=Vector3(-1.35,1.51,0.92)
+    cam.look_at(orbit_model.to_global(Vector3(0,1.74,0.08)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_5_mastil_posterior.png"))
+    cam.position=Vector3(0.72,3.10,-0.52)
+    cam.look_at(orbit_model.to_global(Vector3(0,1.99,0.08)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_5_buje_superior.png"))
+    _check(V1.pose(orbit_model,"move",0.31),
+        "V14.5 rotating collar follows V1 rotor while fixed struts do not")
+    await _save(vp,folder.path_join("hat29_v14_5_buje_girando.png"))
+    V1.restore(orbit_model)
     orbit_model.queue_free()
     await process_frame
 
@@ -228,10 +247,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==31,"8 faction, 6 combat, 11 orbit/belly, 3 night baseline and 3 real V14.4 grazing-light frames")
+    _check(count==35,"8 faction, 6 combat, 11 orbit/belly, 6 paired night and 4 native rotor-transmission frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 31 native Godot PNGs with eight armies, six effects, 11 orbit/belly views and 6 paired night exposure frames")
+        print("PASS HAT29 V14 CAPTURE: 35 native Godot PNGs, eight armies, six effects, 11 orbit/belly, six night and four V14.5 fixed/rotating mast views")
         quit(0)
