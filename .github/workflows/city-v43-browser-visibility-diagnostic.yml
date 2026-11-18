@@ -45,6 +45,10 @@ jobs:
           # from this disposable diagnostic checkout so unrelated parse errors
           # cannot mask the real browser framebuffer result.
           rm -f scripts/ui/CivilianCityStudioAdapter.gd scripts/ui/BastionStudioAdapter.gd
+          # In Godot 4.3 Web export, default 1000-instance threaded culling
+          # blanks all 3D geometry with no runtime error. The art Web build
+          # must explicitly disable it; this test MUST fail without the fix.
+          grep -Fx 'limits/spatial_indexer/threaded_cull_minimum_instances=1000000' project.godot
           cat > scripts/ui/CivilianCityWebVisibilityProbe.gd <<'GDSCRIPT'
           extends "res://scripts/ui/CivilianCityDesignStudioV43.gd"
 
