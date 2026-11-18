@@ -912,6 +912,8 @@ func _install_heli_controls() -> void:
         "V14.13: perfil de buje",
         func(): _heli_inspect_focus(140.0,14.0,4.06,Vector3(0,2.05,0.08)))
     _button(heli_controls,"Comparar corona V10 / V14.13",_heli_toggle_v1413)
+    _button(heli_controls,"V14.13: giro lento de inspección",
+        func(): _heli_play("move",0.25))
     _heli_night_button_v143=_button(heli_controls,
         "V14.4: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
