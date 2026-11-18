@@ -152,6 +152,7 @@ jobs:
           export PATH="${ANDROID_HOME}/build-tools/34.0.0:${PATH}"
           command -v aapt
           python3 tests/audit_apk_network_permissions.py --self-test
+          python3 -m unittest discover -s tests -p 'test_apk_audit_cli.py' -v
           python3 tests/audit_apk_network_permissions.py build/TARVOKA-debug.apk
 
       - name: Upload APK artifact
