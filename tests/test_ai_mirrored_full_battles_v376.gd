@@ -20,7 +20,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Mirror = preload("res://tests/MirrorBattleV374.gd")
-const Semantics = preload("res://tests/MirrorSemanticsV376.gd")
+const Semantics = preload("res://tests/MirrorSemanticsV375.gd")
 
 const MAX_PHASES := 80
 const LAYOUTS := ["center","approach","flanks"]
