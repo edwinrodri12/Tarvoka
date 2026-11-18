@@ -21,7 +21,7 @@ FORBIDDEN = {
 }
 PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-23):\s+name='([^']+)'", re.MULTILINE)
 
-PERMISSION_PREFIX = re.compile(r"^\\s*uses-permission(?:-sdk-23)?:", re.MULTILINE)
+PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-23)?:", re.MULTILINE)
 
 PACKAGE_LINE = re.compile(r"^\s*package:\s+name='[^']+'", re.MULTILINE)
 
