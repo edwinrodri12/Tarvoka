@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
+const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 var failures:int=0
 
 func check(ok:bool, reason:String)->void:
@@ -22,6 +23,11 @@ func _run()->void:
         check(hero!=null,"cannot build hero faction %d" % faction)
         if hero==null:
             continue
+        # Restore exact old V54 geometry before auditing its 6 lugs/pad.
+        # The live V59 intentionally has 20 lugs/pad instead.
+        if bool(hero.get_meta(V59.FLAG,false)):
+            check(V59.show_finish(hero,false),
+                "historic V54 must first remove newer V59 meshes and shaders")
         check(bool(hero.get_meta(V53.FLAG,false)) and
             bool(hero.get_meta(V54.FLAG,false)),
             "V53 PBR and V54 sculpt both required")
@@ -68,16 +74,27 @@ func _run()->void:
             Models.restore_model_pose("aa_mobile",hero)
             check(wheels.multimesh.mesh==sculpted,
                 "pose and restore cannot lose the sculpted rubber")
+        if bool(hero.get_meta(V59.FLAG,false)):
+            check(V59.show_finish(hero,true),
+                "restore premium V59 after historical V54 inspection")
         hero.free()
         var light:=Models.build("aa_mobile",faction,true,8)
         check(light!=null,"LOD8 must still build")
         if light!=null:
+            # A live V59 tactical wheel is intentionally no longer a flat
+            # cylinder; temporarily expose V54-era Android reference.
+            if bool(light.get_meta(V59.FLAG,false)):
+                check(V59.show_finish(light,false),
+                    "restore exact old tactical tire for V54 era inspection")
             check(not bool(light.get_meta(V54.FLAG,false)),
                 "Android LOD8 mesh budget stays completely unchanged")
             var tire:=light.find_child(G13.WHEELS,true,false) as MultiMeshInstance3D
             check(tire!=null and tire.multimesh!=null and
                 tire.multimesh.mesh is CylinderMesh,
                 "LOD8 native original tyre cylinder must remain")
+            if bool(light.get_meta(V59.FLAG,false)):
+                check(V59.show_finish(light,true),
+                    "reapply V59 superior tactical tire after V54 audit")
             light.free()
     if failures==0:
         print("PASS G13 V54 RUBBER: 3 hero factions, 4 rounded wheels, 192 authentic tread lugs, reversible V53 comparison, rolling and LOD8 unchanged")
