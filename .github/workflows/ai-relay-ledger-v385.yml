@@ -1,0 +1,75 @@
+name: TARVOKA v385 real AI relay ownership at round boundaries
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_relay_round_ledger_v385.gd"
+      - "tests/aggregate_ai_relay_round_ledger_v385.py"
+      - ".github/workflows/ai-relay-ledger-v385.yml"
+      - "scripts/core/RelayControl.gd"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SupplyNavigation.gd"
+  workflow_dispatch:
+
+jobs:
+  real_rounds:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 32
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V385_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V385_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Assert capture timing and settlement on both initiators and their mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1800s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_round_ledger_v385.gd \
+            2>&1 | tee /tmp/relays-v385.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|RELAY385_DIVERGENCE ' /tmp/relays-v385.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v385: real baseline relay ownership' /tmp/relays-v385.log
+          test "$(grep -c '^RELAY385_RESULT ' /tmp/relays-v385.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v385-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/relays-v385.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [real_rounds]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v385-seed*
+          path: .ci-v385-logs
+          merge-multiple: false
+      - name: Verify 16 original rounds ledgers, mirrors and scores
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_relay_round_ledger_v385.py .ci-v385-logs
+          cat reports/ai_v385_relay_round_ledger.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v385-relay-ledger
+          path: reports/ai_v385_relay_round_ledger.*
+          if-no-files-found: ignore
+          retention-days: 30
