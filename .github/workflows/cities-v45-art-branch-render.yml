@@ -1,4 +1,4 @@
-name: TARVOKA V45 - Render de ciudades en rama de arte
+name: TARVOKA V48 - Render de ciudades y evidencia visible
 
 on:
   push:
@@ -11,10 +11,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: tarvoka-city-v45-art-${{ github.ref }}
+  group: tarvoka-city-v48-art-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
       - name: Obtener exactamente el commit de arte
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Preparar Godot 4.3 y Mesa GL
         shell: bash
@@ -223,3 +223,126 @@ jobs:
           path: build/city-v44-evidence/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Publicar evidencia V48 accesible en la rama artistica
+        if: always()
+        shell: bash
+        run: |
+          # Publishing only generated review artifacts. No game scripts, scenes
+          # or meshes are changed, and docs-only commits do not trigger this job.
+          set -euo pipefail
+          src="build/city-v44-evidence"
+          dst="docs/cities-v48-evidence"
+          mkdir -p "$dst"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,os,shutil
+
+          source=Path("build/city-v44-evidence")
+          target=Path("docs/cities-v48-evidence")
+          target.mkdir(parents=True,exist_ok=True)
+          names=[
+              "manifest.json","review-log.txt","godot-import.log",
+              "godot-render.log","source-commit.txt",
+              "comparativa-24-vistas.png",
+              "comparativa-villa.png","comparativa-ciudad.png",
+              "comparativa-metropoli.png","contact-sheet-status.txt"
+          ]
+          copied=[]
+          missing=[]
+          for name in names:
+              src=source/name
+              dst=target/name
+              if src.is_file():
+                  # Truncate oversized diagnostic logs, not screenshots.
+                  if name.endswith(".log") and src.stat().st_size>150_000:
+                      dst.write_bytes(src.read_bytes()[-150_000:])
+                  else:
+                      shutil.copyfile(src,dst)
+                  copied.append(name)
+              else:
+                  # Remove obsolete pictures from earlier successful runs,
+                  # otherwise a failed new build could appear successful.
+                  if dst.exists():
+                      dst.unlink()
+                  missing.append(name)
+          manifest={}
+          try:
+              manifest=json.loads((source/"manifest.json").read_text(encoding="utf-8"))
+          except (OSError,ValueError):
+              pass
+          images=[x for x in manifest.get("screenshots",[]) if isinstance(x,dict)]
+          good=[x for x in images if x.get("nonempty") is True]
+          errors=manifest.get("errors")
+          fully_rendered=(
+              len(images)==24 and len(good)==24 and errors==0
+              and all((source/x.get("png","")).is_file() for x in images)
+          )
+          report={
+              "version":"V48",
+              "model_stage":"V43",
+              "godot_engine":"4.3",
+              "source_commit":os.getenv("GITHUB_SHA",""),
+              "actions_run_id":os.getenv("GITHUB_RUN_ID",""),
+              "actions_run_url":(
+                  os.getenv("GITHUB_SERVER_URL","https://github.com")+"/"
+                  +os.getenv("GITHUB_REPOSITORY","edwinrodri12/Tarvoka")
+                  +"/actions/runs/"+os.getenv("GITHUB_RUN_ID","")
+              ),
+              "capture_count":len(images),
+              "nonempty_count":len(good),
+              "reported_errors":errors,
+              "fully_rendered":fully_rendered,
+              "artistically_approved":False,
+              "copied_files":copied,
+              "missing_files":missing
+          }
+          (target/"status.json").write_text(
+              json.dumps(report,indent=2,ensure_ascii=False)+"\n",
+              encoding="utf-8")
+          lines=[
+              "# TARVOKA — Evidencia de ciudades 3D V48",
+              "",
+              "Capturas Godot reales del modelo V43. **Nunca indican aprobación automática.**",
+              "",
+              f"- Commit artístico: `{report['source_commit']}`",
+              f"- Ejecución: {report['actions_run_url']}",
+              f"- Capturas válidas: {len(good)}/24",
+              f"- Errores registrados: {errors if errors is not None else 'sin manifest'}",
+              f"- Render completo: {'sí' if fully_rendered else 'no (revisar logs)'}",
+              "",
+              "## Comparativas disponibles"
+          ]
+          for name in ("comparativa-24-vistas.png","comparativa-villa.png",
+                       "comparativa-ciudad.png","comparativa-metropoli.png"):
+              if name in copied:
+                  lines.append(f"- [{name}](./{name})")
+          lines.extend([
+              "",
+              "Diagnósticos: [status.json](./status.json) y "
+              "[manifest.json](./manifest.json), si existe.",
+              "",
+              "Si falta una imagen, consultar los registros y el artefacto de GitHub Actions.",
+          ])
+          (target/"README.md").write_text("\n".join(lines)+"\n",
+                                          encoding="utf-8")
+          print(json.dumps(report,ensure_ascii=False))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "$dst"
+          if git diff --cached --quiet; then
+            echo "V48: no hay evidencia nueva que publicar"
+            exit 0
+          fi
+          git commit -m "ci(city): publish V48 native render evidence [skip ci]"
+          # Rebase onto concurrent art changes; never force-push or overwrite.
+          git fetch origin "refs/heads/$GITHUB_REF_NAME:refs/remotes/origin/$GITHUB_REF_NAME"
+          if ! git rebase "refs/remotes/origin/$GITHUB_REF_NAME"; then
+            echo "::warning::No se pudo integrar la evidencia V48 en la rama; consultar el artefacto de Actions"
+            git rebase --abort || true
+            exit 0
+          fi
+          if ! git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"; then
+            echo "::warning::No se pudo subir la evidencia V48; consultar el artefacto de Actions"
+          fi
