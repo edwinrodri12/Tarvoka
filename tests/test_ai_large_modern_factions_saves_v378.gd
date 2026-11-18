@@ -170,7 +170,7 @@ func _initialize() -> void:
                 assert(row["signature"] == baselines[key]["signature"])
                 assert(row["state"] == baselines[key]["state"])
             else:
-                baselines[key] = row
+                baselines[key] = row.duplicate(true)
             row.erase("state")
             print("LARGE378_RESULT " + JSON.stringify(row))
             verified += 1
