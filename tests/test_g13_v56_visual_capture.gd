@@ -81,7 +81,7 @@ func _run()->void:
     # wheel span. The old side-on camera put the whole damper directly
     # behind the opaque 0.31m tire, producing identical comparison frames.
     _view(studio,Vector3(-0.08,-0.58,-1.42),
-        Vector3(-0.56,0.37,-0.86),0.94)
+        Vector3(-0.56,0.37,-0.86),0.58)
     await _frame(studio,"front-left-damper-v56","V56")
     check(V56.show_finish(model,false),"V55 before compare")
     await _frame(studio,"front-left-damper-before-v55","V55")
@@ -105,7 +105,7 @@ func _run()->void:
     check(altered>=30,"visible physical shock geometry must alter >=30 sampled actual Godot pixels; got %d" % altered)
     print("G13 V56 SHOCK PIXEL DELTA: %d changed subsampled pixels" % altered)
     _view(studio,Vector3(0.08,-0.58,1.42),
-        Vector3(0.56,0.37,0.86),0.94)
+        Vector3(0.56,0.37,0.86),0.58)
     await _frame(studio,"rear-right-hydraulics-v56","V56")
 
     # Original turret azimuth ring, separate from original gun pitch.
