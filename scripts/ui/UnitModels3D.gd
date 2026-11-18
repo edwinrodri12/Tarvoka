@@ -67,6 +67,7 @@ const G13JointV56 = preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G13VisibleV57 = preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13VisibleV58 = preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const G13PremiumV59 = preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const G13TreadV60 = preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1091,6 +1092,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V58 isometric steel hardware finish failed on hero LOD13")
                 if not G13PremiumV59.apply(model):
                     push_warning("G13 V59 Bastion-density rubber, reflected glass and faction paint missing on hero LOD13")
+                if not G13TreadV60.apply(model):
+                    push_warning("G13 V60 continuous circumferential tread and molded sidewalls missing on LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1156,6 +1159,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V58 isometric tactical finish failed on LOD8")
                 if not G13PremiumV59.apply(model):
                     push_warning("G13 V59 optimized rubber, reflected glass and faction paint missing on Android LOD8")
+                if not G13TreadV60.apply(model):
+                    push_warning("G13 V60 lightweight continuous tread and molded sidewalls missing on LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
