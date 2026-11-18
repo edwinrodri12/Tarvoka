@@ -1,4 +1,4 @@
-name: TARVOKA V44 — revisión de arte 3D con capturas reales
+name: TARVOKA V49 — ciudades 3D aisladas con evidencias reales
 
 on:
   push:
@@ -53,11 +53,20 @@ jobs:
           test -s scripts/ui/CivilianCityDesignStudioV43.gd
           test -s scenes/CivilianCityDesignStudioV43.tscn
 
+      - name: Construir sandbox Godot V49 solo con ciudades civiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ci/civilian_city_render_sandbox_v49.py
+          python3 scripts/ci/civilian_city_render_sandbox_v49.py
+          test -s build/city-v49-sandbox/project.godot
+          echo "CITY_REVIEW_PROJECT=$PWD/build/city-v49-sandbox" >> "$GITHUB_ENV"
+
       - name: Comprobar importación y compilación de scripts de Godot
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path "$CITY_REVIEW_PROJECT" --import --quit \
             2>&1 | tee build/city-v44-evidence/godot-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:|ERROR:.*(Parse|Script|Resource)' \
               build/city-v44-evidence/godot-import.log; then
@@ -70,11 +79,21 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
           set -euo pipefail
+          set +e
           xvfb-run -a -s "-screen 0 1280x720x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
-            --path . --rendering-method gl_compatibility \
+            --path "$CITY_REVIEW_PROJECT" --rendering-method gl_compatibility \
             --script res://scripts/ui/CivilianCityVisualProofV44.gd \
             2>&1 | tee build/city-v44-evidence/godot-render.log
+          engine_result=${PIPESTATUS[0]}
+          set -e
+          if [ -d "$CITY_REVIEW_PROJECT/build/city-v44-evidence" ]; then
+            cp -a "$CITY_REVIEW_PROJECT/build/city-v44-evidence/." build/city-v44-evidence/
+          fi
+          if [ "$engine_result" -ne 0 ]; then
+            echo "::error::Isolated Godot city render failed ($engine_result)"
+            exit "$engine_result"
+          fi
           test "$(find build/city-v44-evidence -maxdepth 1 -name '*.png' | wc -l)" -eq 24
           test -s build/city-v44-evidence/manifest.json
           if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:|ERROR:.*(Parse|Script|Resource)' \
