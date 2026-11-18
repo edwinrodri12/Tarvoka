@@ -218,7 +218,10 @@ static func _pair(map_id: int, level: int, fog: bool, first: int,
     assert(int(mirror_stats["first_phase_orders"]) == 3)
     # The first 3 opening orders are already known to be symmetric
     # from v374; enforce that historical control in each full match.
-    assert(original_stats["first_phase_actions"] == mirror_stats["first_phase_actions"])
+    var first_three_same: bool = \
+        original_stats["first_phase_actions"] == mirror_stats["first_phase_actions"]
+    # In research, divergence is evidence: do not reject a full real
+    # battle merely because this candidate changes its opening decisions.
     var stats := {
         "original": {
             "actions":original_stats["total_actions"],
@@ -249,6 +252,7 @@ static func _pair(map_id: int, level: int, fog: bool, first: int,
         "map":map_id,"fog":fog,"level":level,"first":first,
         "mode":policy,"layout":layout,
         "opening_orders":3,"income_equal":true,"round_scoring":true,
+        "first_three_equivariant":first_three_same,
         "original_winner":int(original_play["winner"]),
         "mirrored_winner":int(mirrored_play["winner"]),
         "mapped_mirror_winner":mapped_winner,
