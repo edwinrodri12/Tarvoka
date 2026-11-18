@@ -13,6 +13,7 @@ const FENDERS := "G13_V40_CurvedOuterFenders"
 const META := "tarvoka_g13_v42_fender_mesh_pair"
 const SEGMENTS := 16
 const INNER_RADIUS := 0.348
+const END_INNER_RADIUS := 0.358
 const OUTER_RADIUS := 0.427
 const AXLE_CENTER_Y := 0.33
 const RADIAL_TREAD_BOUND := 0.324
@@ -42,20 +43,22 @@ static func _section(side: int, angle: float) -> Array[Vector3]:
     var s: float = float(side)
     var rise: float = sin(angle)
     var forward: float = cos(angle)
-    # At each end: x=.786..804, radii .348..419. This cross-section
+    # At each end: x=.786..804, radii .358..419. This cross-section
     # is physically INSIDE V33's x=.699..811, radial .354..419 arch,
     # so no new protruding end cap remains at the wheel axle level.
-    # At the crown: x=.786..1.005, outer radius=.427, preserving V41's
+    # At the crown: x=.786..1.005, radii .348..427, preserving V41's
     # prominent top arc and the welds already touching its upper face.
     var taper: float = smoothstep(0.0, 0.38, rise)
     var out_x: float = lerpf(END_OUTER_X, CREST_OUTER_X, taper)
     var out_radius: float = lerpf(END_OUTER_RADIUS, OUTER_RADIUS,
         smoothstep(0.0, 0.45, rise))
+    var in_radius: float = lerpf(END_INNER_RADIUS, INNER_RADIUS,
+        smoothstep(0.0, 0.25, rise))
     return [
-        Vector3(s * INNER_X, AXLE_CENTER_Y + INNER_RADIUS * rise,
-            INNER_RADIUS * forward),
-        Vector3(s * out_x, AXLE_CENTER_Y + INNER_RADIUS * rise,
-            INNER_RADIUS * forward),
+        Vector3(s * INNER_X, AXLE_CENTER_Y + in_radius * rise,
+            in_radius * forward),
+        Vector3(s * out_x, AXLE_CENTER_Y + in_radius * rise,
+            in_radius * forward),
         Vector3(s * out_x, AXLE_CENTER_Y + out_radius * rise,
             out_radius * forward),
         Vector3(s * INNER_X, AXLE_CENTER_Y + out_radius * rise,
@@ -115,6 +118,7 @@ static func apply(root: Node3D) -> bool:
     if fender == null:
         return false
     if INNER_RADIUS - RADIAL_TREAD_BOUND < 0.020 or (
+            END_INNER_RADIUS < 0.354) or (
             END_OUTER_RADIUS > 0.419) or (END_OUTER_X > 0.811):
         return false
     var finished := _full_arch_mesh()
