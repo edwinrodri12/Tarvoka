@@ -229,6 +229,28 @@ jobs:
           ref: main
           path: hq-android-v15
           persist-credentials: false
+      # The regular publisher stages an approved building branch, then copies
+      # unit art from main. On a PR, main cannot yet contain the new G16 files.
+      # Overlay only the exact proposing PR's three unit-art files into this
+      # TEMPORARY main snapshot, not into real main or any other repository.
+      - name: Check out exact G16 draft PR art for premerge Pages QA
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: g16-pr-review
+          persist-credentials: false
+      - name: Overlay proposed G16 files into temporary Studio source snapshot
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for art_file in scripts/ui/G16Logistics3DV1.gd scripts/ui/UnitModels3D.gd scripts/ui/BastionStudioAdapter.gd; do
+            test -s "g16-pr-review/$art_file"
+            cp "g16-pr-review/$art_file" "hq-android-v15/$art_file"
+          done
+          rm -rf g16-pr-review
+          test -s hq-android-v15/scripts/ui/G16Logistics3DV1.gd
       - name: Include V15 source PNGs in the HQ 3D showroom before import
         shell: bash
         run: |
