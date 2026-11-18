@@ -17,8 +17,8 @@ static func _image_diagnostics(img: Image) -> Dictionary:
     var squares: float=0.0
     var changed: int=0
     var bg: Color=Color("#374e5c")
-    for y in range(0,h,maxi(1,h/30)):
-        for x in range(0,w,maxi(1,w/48)):
+    for y in range(0,h,maxi(1,int(float(h)/30.0))):
+        for x in range(0,w,maxi(1,int(float(w)/48.0))):
             var c: Color=img.get_pixel(x,y)
             var lum: float=0.2126*c.r+0.7152*c.g+0.0722*c.b
             total+=lum
@@ -140,7 +140,7 @@ func _capture_all() -> void:
             if material_warnings>0:
                 errors+=1
                 var findings: PackedStringArray=studio._model.get_meta(
-                    "city_v43_visual_warnings",PackedStringArray())
+                    "city_v42_visual_warnings",PackedStringArray())
                 report.append("  WARNINGS: "+"; ".join(findings))
     var manifest: Dictionary={
         "version":"V43",
