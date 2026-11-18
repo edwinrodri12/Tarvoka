@@ -50,7 +50,7 @@ PR DRAFT; no modificación de código de producción, lanzamiento ni APK.
 
 ## RESULTADO VERIFICADO — CI en verde
 
-[128 partidas y contratos v3.6.7, GitHub Actions #44218514038](https://github.com/edwinrodri12/Tarvoka/actions/runs/44218514038): **10/10 trabajos correctos** (ocho grupos de 16 partidas, contrato de motor y agregación). El agregador verificó **128 registros de partidas únicas**, **512 comprobaciones de equivalencia de las primeras tres órdenes**, reproducibilidad exacta de cap3 y cap4, y cero partidas inconclusas.
+[128 partidas y contratos v3.6.7, GitHub Actions #44218514038](https://github.com/edwinrodri12/Tarvoka/actions/runs/44218514038): **10/10 trabajos correctos** (ocho grupos de 16 partidas, contrato de motor y agregación). El agregador verificó **128 registros de partidas únicas**, **128 comparaciones distintas de las primeras tres órdenes**, reproducibilidad exacta de cap3 y cap4, y cero partidas inconclusas.
 
 | Régimen probado | Primero gana | Segundo gana | Azul / Rojo | Cuarta adicional concedida |
 |---|---:|---:|---:|---:|
