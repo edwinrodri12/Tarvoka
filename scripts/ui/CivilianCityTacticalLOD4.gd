@@ -32,6 +32,7 @@ const V28=preload("res://scripts/ui/CivilianCityFourElevationV28.gd")
 const V29=preload("res://scripts/ui/CivilianCityArchitecturalPolishV29.gd")
 const V30=preload("res://scripts/ui/CivilianCityTierProportionsV30.gd")
 const V31=preload("res://scripts/ui/CivilianCityTacticalReadabilityV31.gd")
+const V32=preload("res://scripts/ui/CivilianCitySurfaceReviewV32.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -460,6 +461,7 @@ static func set_detail(model: Node3D,lod: int) -> bool:
                 "v11_schematic_replaced",false))
                 and not bool(mesh.get_meta("city_v22_superseded",false))
                 and lod<=int(mesh.get_meta("city_v31_max_lod",2))
+                and lod<=int(mesh.get_meta("city_v32_max_lod",2))
                 and _keep(str(mesh.name),lod))
             total+=1
             if mesh.visible:
@@ -544,7 +546,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V31.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",31)
+    if not V32.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",32)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
@@ -571,6 +575,7 @@ static func build_tactical(level: int,faction: int,
             if (bool(current.get_meta("v11_schematic_replaced",false))
                     or bool(current.get_meta("city_v22_superseded",false))
                     or lod>int(current.get_meta("city_v31_max_lod",2))
+                    or lod>int(current.get_meta("city_v32_max_lod",2))
                     or not _keep(str(current.name),lod)):
                 remove.append(current)
         for child in current.get_children():
