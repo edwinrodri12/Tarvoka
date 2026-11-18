@@ -31,7 +31,7 @@ static func _ground_top(model: Node3D) -> float:
             var box_mesh: BoxMesh=mesh.mesh as BoxMesh
             if box_mesh!=null:
                 return mesh.global_position.y+(
-                    box_mesh.size.y*absf(mesh.global_scale.y))*0.5
+                    box_mesh.size.y*absf(mesh.global_transform.basis.get_scale().y))*0.5
         for child in node.get_children():
             pending.append(child)
     return NAN
@@ -85,7 +85,7 @@ static func _seat_on_plot(mesh: MeshInstance3D,
     # The authored V1 groups have identity transforms. Work in the
     # existing parent's coordinate space so no x/z movement occurs.
     var parent: Node3D=mesh.get_parent() as Node3D
-    if parent==null or not is_equal_approx(parent.global_scale.y,1.0):
+    if parent==null or not is_equal_approx(parent.global_transform.basis.get_scale().y,1.0):
         return false
     var half_height: float=box_mesh.size.y*absf(mesh.scale.y)*0.5
     var desired_world_y: float=plot_top+half_height+0.002
