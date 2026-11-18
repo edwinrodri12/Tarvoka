@@ -78,8 +78,8 @@ static func _finish_blade(pivot: Node3D,i: int) -> void:
     for side in [-1,1]:
         var sign: float=float(side)
         _box(finish,CHEEK+str(i)+"_"+str(side),
-            Vector3(sign*0.129,0.068,-0.218),
-            Vector3(0.018,0.080,0.215),BLACK)
+            Vector3(sign*0.121,0.068,-0.218),
+            Vector3(0.020,0.080,0.215),BLACK)
     # One complete real crosspin through the two fork plates; visible hex
     # retaining heads. These are hardware, NOT a second rotational pivot.
     _axis_pin(finish,PIN+str(i),
@@ -97,14 +97,14 @@ static func _finish_blade(pivot: Node3D,i: int) -> void:
     for index in range(2):
         var z: float=-0.350-float(index)*0.078
         _box(finish,BAND+str(i)+"_"+str(index),
-            Vector3(0.005,0.041,z),
-            Vector3(0.184,0.016,0.021),ALLOY)
+            Vector3(0.005,0.025,z),
+            Vector3(0.184,0.022,0.021),ALLOY)
         for side in [-1,1]:
             var sign: float=float(side)
             _axis_pin(finish,"A01V148_PernoAbrazadera_%d_%d_%d" % [
                     i,index,side],
-                Vector3(sign*0.067,0.053,z),
-                Vector3(sign*0.067,0.071,z),
+                Vector3(sign*0.067,0.031,z),
+                Vector3(sign*0.067,0.059,z),
                 0.013,BOLT,6)
 
 static func apply(model: Node3D) -> bool:
