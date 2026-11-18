@@ -1,0 +1,75 @@
+name: TARVOKA v383 matched first-response order counterfactual
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_budget_counterfactual_v383.gd"
+      - "tests/aggregate_ai_opening_budget_v383.py"
+      - ".github/workflows/ai-opening-budget-v383.yml"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SupplyNavigation.gd"
+      - "scripts/core/OpeningBalance.gd"
+  workflow_dispatch:
+
+jobs:
+  opening_paired:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V383_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V383_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare real official AI games baseline versus identical three-order opening opportunities
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3200s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_budget_counterfactual_v383.gd \
+            2>&1 | tee /tmp/open-v383.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|OPEN383_DIVERGENCE ' /tmp/open-v383.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v383 opening budget counterfactual:' /tmp/open-v383.log
+          test "$(grep -c '^OPEN383_RESULT ' /tmp/open-v383.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v383-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/open-v383.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [opening_paired]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v383-seed*
+          path: .ci-v383-logs
+          merge-multiple: false
+      - name: Require 16 independent paired policies and 64 authoritative games
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_opening_budget_v383.py .ci-v383-logs
+          cat reports/ai_v383_opening_budget.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v383-opening-analysis
+          path: reports/ai_v383_opening_budget.*
+          if-no-files-found: ignore
+          retention-days: 30
