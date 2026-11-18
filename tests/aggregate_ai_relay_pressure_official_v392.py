@@ -180,4 +180,4 @@ def summarize(rows):
     print("PASS TARVOKA v392 aggregate: 32 real official-opening comparisons with 128 exact mirrored sessions")
 
 if __name__=="__main__":
-    main(sys.argv[1] if len(sys.argv)>1 else ".ci-v392-logs")
+    summarize(read(sys.argv[1] if len(sys.argv)>1 else ".ci-v392-logs"))
