@@ -18,6 +18,7 @@ const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
+const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 var failures: int=0
 var images: int=0
 
@@ -356,6 +357,35 @@ func _run() -> void:
         and (root_comparison.mesh as ArrayMesh).get_aabb().size.z>0.33
         and model.get_instance_id()==original_id,
         "V14.12 Studio compare restores 8-station swept root in place")
+    _check(Hub1413.has_model(model),
+        "V14.13 real enclosed hub cap is present on the original V1 rotor")
+    var hub_controls: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.13:"):
+            hub_controls+=1
+    _check(hub_controls==2,
+        "V14.13 top and profile rotor head macros exist in original Details")
+    studio.call("_heli_inspect_focus",30.0,62.0,4.10,
+        Vector3(0,2.07,0.08))
+    _check(studio.get("_heli_focus_local")==Vector3(0,2.07,0.08),
+        "V14.13 above-rotor macro examines enclosed central hub")
+    studio.call("_heli_inspect_focus",140.0,14.0,4.06,
+        Vector3(0,2.05,0.08))
+    _check(studio.get("_heli_focus_local")==Vector3(0,2.05,0.08),
+        "V14.13 lateral closeup keeps the V1 spinning mast")
+    var crown: MeshInstance3D=model.find_child(
+        Hub1413.CROWN,true,false) as MeshInstance3D
+    var intact_model_id: int=model.get_instance_id()
+    _check(crown!=null and crown.mesh is ArrayMesh,
+        "V14.13 crown exists as real native stepped ArrayMesh")
+    studio.call("_heli_toggle_v1413")
+    _check(crown.mesh is TorusMesh
+        and model.get_instance_id()==intact_model_id,
+        "V14.13 comparison restores actual V10 ring on same model")
+    studio.call("_heli_toggle_v1413")
+    _check(crown.mesh is ArrayMesh
+        and model.get_instance_id()==intact_model_id,
+        "V14.13 macro returns closed low-glare 3D hub without rebuild")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
