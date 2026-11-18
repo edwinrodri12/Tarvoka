@@ -86,6 +86,10 @@ func _run()->void:
             var m:=paint.material_override as StandardMaterial3D
             _check(m.clearcoat_enabled,"faction enamel has clearcoat")
             colors[m.albedo_color.to_html()]=true
+        var outer_band:=unit.find_child("G16_FactionBed_1",true,false) as MeshInstance3D
+        _check(outer_band!=null and outer_band.position.x>0.805 and
+            outer_band.position.y>1.26,
+            "faction band is actually OUTSIDE and above the metal cargo sideboard")
         for label in [G16.CRANE,G16.BOOM,G16.PALLET,G16.HOSE]:
             _check(unit.find_child(label,true,false)!=null,
                 "genuine pivot or cargo assembly exists: "+label)
