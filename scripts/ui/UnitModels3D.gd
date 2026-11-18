@@ -83,6 +83,7 @@ const AttackHelicopterRotorAnchorsV149 = preload("res://scripts/ui/AttackHelicop
 const AttackHelicopterRotorContactV1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const AttackHelicopterBladeRootsV1411 = preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const AttackHelicopterBladeSeamV1412 = preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
+const AttackHelicopterHubCrownV1413 = preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -1175,6 +1176,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                                             push_warning("A01 V14.11 sculpted original blade roots did not build")
                                                         if not AttackHelicopterBladeSeamV1412.apply(model):
                                                             push_warning("A01 V14.12 swept aerodynamic seam did not build")
+                                                        if not AttackHelicopterHubCrownV1413.apply(model):
+                                                            push_warning("A01 V14.13 enclosed rotor hub crown did not build")
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
