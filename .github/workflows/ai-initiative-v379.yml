@@ -1,0 +1,115 @@
+name: TARVOKA v379 matched initiative and modern battle diagnostics
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_initiative_counterfactual_v379.gd"
+      - "tests/aggregate_ai_initiative_v379.py"
+      - ".github/workflows/ai-initiative-v379.yml"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/MultiTurnObjectivesV33.gd"
+  workflow_dispatch:
+
+jobs:
+  small_complete:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V379_SIZE: "10x8"
+      TARVOKA_V379_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V379_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Play first0/first1 and independent mirrors to natural winner or 80 phases
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1650s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_initiative_counterfactual_v379.gd \
+            2>&1 | tee /tmp/ai-v379.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v379.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v379 initiative counterfactual:' /tmp/ai-v379.log
+          test "$(grep -c '^ORDER379_RESULT ' /tmp/ai-v379.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v379-10x8-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v379.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  larger_windows:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        size: ["24x18","40x30"]
+        seed_index: [0,1]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V379_SIZE: ${{ matrix.size }}
+      TARVOKA_V379_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V379_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare initiatives within bounded large-map observation windows
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1650s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_initiative_counterfactual_v379.gd \
+            2>&1 | tee /tmp/ai-v379.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v379.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v379 initiative counterfactual:' /tmp/ai-v379.log
+          test "$(grep -c '^ORDER379_RESULT ' /tmp/ai-v379.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v379-${{ matrix.size }}-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v379.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [small_complete, larger_windows]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v379-*
+          path: .ci-v379-logs
+          merge-multiple: false
+      - name: Require 16 exact terrain-matched initiative counterfactuals
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_initiative_v379.py .ci-v379-logs
+          cat reports/ai_v379_initiative.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v379-final-analysis
+          path: reports/ai_v379_initiative.*
+          if-no-files-found: ignore
+          retention-days: 30
