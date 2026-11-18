@@ -59,11 +59,11 @@ func _v30_d2() -> void:
 
 func _v30_d3() -> void:
     _set_damage(3)
-    _view_v19(Vector3(4.63,-2.80,3.62),124.0,45.0,17.2)
+    _view_v19(Vector3(4.63,0.70,3.62),124.0,45.0,17.2)
 
 func _v30_d4() -> void:
     _set_damage(4)
-    _view_v19(Vector3(4.63,-3.08,3.62),-113.0,39.0,17.6)
+    _view_v19(Vector3(4.63,0.16,3.62),-113.0,39.0,17.6)
 
 func _v30_overview() -> void:
     _view_v19(Vector3.ZERO,38.0,47.0,32.0)
