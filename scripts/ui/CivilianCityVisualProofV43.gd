@@ -89,7 +89,7 @@ func _capture_all() -> void:
                     variant,damage])
                 continue
             var material_warnings: int=int(studio._model.get_meta(
-                "city_v43_warning_count",-1))
+                "city_v42_warning_count",-1))
             var result: Image=studio.viewport.get_texture().get_image()
             if result==null or result.is_empty():
                 errors+=1
