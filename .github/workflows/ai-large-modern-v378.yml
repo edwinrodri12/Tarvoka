@@ -1,0 +1,75 @@
+name: TARVOKA v378 modern large-map official AI + save regression
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_large_modern_factions_saves_v378.gd"
+      - "tests/aggregate_ai_large_modern_v378.py"
+      - "scripts/core/MultiTurnObjectivesV33.gd"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SaveCodec.gd"
+      - ".github/workflows/ai-large-modern-v378.yml"
+  workflow_dispatch:
+
+jobs:
+  large_modern_human_ai:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        size: ["24x18", "40x30"]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V378_SIZE: ${{ matrix.size }}
+      TARVOKA_V378_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run 16 official AI responses to a legal human purchase
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1700s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_large_modern_factions_saves_v378.gd \
+            2>&1 | tee /tmp/ai-v378.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v378.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v378: 16 modern seeded large-map' /tmp/ai-v378.log
+          test "$(grep -c '^LARGE378_RESULT ' /tmp/ai-v378.log)" -eq 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v378-${{ matrix.size }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v378.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [large_modern_human_ai]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v378-*-fog*
+          path: .ci-v378-logs
+          merge-multiple: false
+      - name: Require all 64 verified human/AI scenarios
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_large_modern_v378.py .ci-v378-logs
+          cat reports/ai_v378_large_modern.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v378-report
+          path: reports/ai_v378_large_modern.*
+          if-no-files-found: ignore
+          retention-days: 30
