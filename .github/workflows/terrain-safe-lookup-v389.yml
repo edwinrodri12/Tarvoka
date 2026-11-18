@@ -1,0 +1,52 @@
+name: TARVOKA v389 terrain preview bounds
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/TerrainTactics.gd"
+      - "tests/test_terrain_safe_lookup_v389.gd"
+      - ".github/workflows/terrain-safe-lookup-v389.yml"
+  workflow_dispatch:
+
+jobs:
+  terrain_preview:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify absent and ragged terrain plus 1712 legitimate tiles
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_terrain_safe_lookup_v389.gd \
+            2>&1 | tee /tmp/terrain-v389.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/terrain-v389.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v389:' /tmp/terrain-v389.log
+          test "$(grep -c '^TERRAIN389_RESULT ' /tmp/terrain-v389.log)" -eq 1
+      - name: Guard original terrain combat, counterfire, and logistic scenarios
+        run: |
+          set -euo pipefail
+          for test in test_large_map_terrain_combat test_counterfire_doctrine test_supply_strategy; do
+            echo "Testing $test"
+            timeout --signal=TERM --kill-after=10s 120s \
+              /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+              --script "res://tests/${test}.gd" \
+              2>&1 | tee "/tmp/${test}-v389.log"
+            if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' "/tmp/${test}-v389.log"; then exit 1; fi
+            grep -Fq 'PASS ' "/tmp/${test}-v389.log"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terrain-safe-preview-v389
+          path: /tmp/*-v389.log
+          if-no-files-found: ignore
+          retention-days: 30
