@@ -18,8 +18,8 @@ const REAR_VENTS := "G13_V44_SculptedEngineDeckVents"
 const DRAW_NODES := 6
 const FENDER_SEGMENTS := 12
 const FENDER_TRIANGLES := 200
-const ARMOR_TRIANGLES := 44 # Two 6-sided closed prisms.
-const PAINT_TRIANGLES := 36 # Two 5-sided closed prisms.
+const ARMOR_TRIANGLES := 40 # Two 6-sided closed prisms.
+const PAINT_TRIANGLES := 32 # Two 5-sided closed prisms.
 
 static func _mat(c: Color, metallic: float, rough: float) -> StandardMaterial3D:
     var result := StandardMaterial3D.new()
