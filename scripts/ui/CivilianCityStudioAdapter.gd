@@ -19,6 +19,7 @@ var civilian_city_hint: Label
 var civilian_city_view_group: OptionButton
 var civilian_city_view_preset: OptionButton
 var _city_view: int=0
+var _city_render_key: String=""
 const CITY_BUILDING_INDEX: int=4
 const CITY_CAMERA_PRESETS = [
         ["360°",0],["FACHADA",1],["AZOTEA",2],["RUINAS",3],
@@ -332,6 +333,20 @@ func _display_civilian_city() -> void:
             or civilian_city_damage==null or civilian_city_faction==null
             or civilian_city_lod==null):
         return
+    var level: int=civilian_city_tier.selected+1
+    var damage: int=civilian_city_damage.selected
+    var faction: int=civilian_city_faction.selected-1
+    var lod: int=civilian_city_lod.selected
+    var desired_key: String="%d:%d:%d:%d" % [level,faction,damage,lod]
+    # Camera-only inspection is NOT a new 3D model. Avoid constructing
+    # V1-V43 all over again whenever the viewer switches a preset or orbits.
+    if (_role=="civilian_city" and model_root!=null and
+            is_instance_valid(model_root) and
+            _city_render_key==desired_key):
+        model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        _update_details()
+        return
     _stop_animation()
     if _p06_fleet!=null:
         _hide_p06_fleet()
@@ -340,10 +355,7 @@ func _display_civilian_city() -> void:
         model_root.queue_free()
         model_root=null
     _role="civilian_city"
-    var level: int=civilian_city_tier.selected+1
-    var damage: int=civilian_city_damage.selected
-    var faction: int=civilian_city_faction.selected-1
-    var lod: int=civilian_city_lod.selected
+    _city_render_key=""
     model_root=Cities.build_tactical(level,faction,damage,lod)
     if model_root==null:
         push_error("Ciudad V43: no fue posible construir mallas de Godot")
@@ -365,6 +377,7 @@ func _display_civilian_city() -> void:
     if civilian_city_hint!=null:
         civilian_city_hint.text="CIUDAD V43 · %d MALLAS VISIBLES · ARTE EN DESARROLLO" % visible_meshes
     preview.add_child(model_root)
+    _city_render_key=desired_key
     model_root.name="EDIFICIO_CIUDAD_CIVIL_V31_N%d_D%d" % [level,damage]
     model_root.rotation_degrees.y=_yaw
     if hq_ground!=null:
