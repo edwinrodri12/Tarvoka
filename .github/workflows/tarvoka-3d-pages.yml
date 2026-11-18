@@ -322,6 +322,9 @@ jobs:
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
           cp hq-android-v15/tests/test_studio_full_animation_inventory.gd tests/test_studio_full_animation_inventory.gd
+          # City V43: current art branch fixes repeated model regeneration on
+          # browser startup, and reuses native V43 meshes for camera-only
+          # inspection. Prove real city pixels and preserved camera controls.
           # Keep a native City V43 visibility regression in the Pages build.
           test -s hq-android-v15/tests/test_city_shared_visual_presence.gd
           cp hq-android-v15/tests/test_city_shared_visual_presence.gd tests/
