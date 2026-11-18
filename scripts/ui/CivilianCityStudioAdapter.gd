@@ -16,83 +16,11 @@ var civilian_city_damage: OptionButton
 var civilian_city_faction: OptionButton
 var civilian_city_lod: OptionButton
 var civilian_city_hint: Label
+var civilian_city_view_group: OptionButton
+var civilian_city_view_preset: OptionButton
 var _city_view: int=0
 const CITY_BUILDING_INDEX: int=4
-
-func _ready() -> void:
-    super._ready()
-    if building_picker==null or building_controls==null:
-        push_error("TARVOKA Edificios: no se encontró selector unificado")
-        return
-    if building_picker.item_count!=CITY_BUILDING_INDEX:
-        push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
-        return
-    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V43")
-    building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
-    _install_city_options()
-    _refresh_unified_studio_navigation()
-
-func _install_city_options() -> void:
-    civilian_city_controls=VBoxContainer.new()
-    civilian_city_controls.name="Edificios_Ciudades_Civiles_V31"
-    civilian_city_controls.add_theme_constant_override("separation",6)
-    civilian_city_controls.visible=false
-    building_controls.add_child(civilian_city_controls)
-    # Keep the city controls directly below the building picker, not after
-    # several screens of legacy HQ/base controls in the shared sidebar.
-    building_controls.move_child(civilian_city_controls,2)
-    _title(civilian_city_controls,
-        "CIUDAD CIVIL · V31 · MODELO 3D EN DISEÑO",14)
-    _title(civilian_city_controls,
-        "Elige Villa, Ciudad o Metrópoli; visualiza 5 etapas de daño.",12)
-    civilian_city_tier=OptionButton.new()
-    civilian_city_tier.name="Ciudades_Nivel_Arquitectonico"
-    for title in ["VILLA · terracota y madera",
-            "CIUDAD · piedra y ladrillo",
-            "METRÓPOLI · vidrio y metal"]:
-        civilian_city_tier.add_item(title)
-    civilian_city_tier.select(1)
-    civilian_city_tier.item_selected.connect(_on_city_option)
-    civilian_city_controls.add_child(civilian_city_tier)
-    var tier_shortcuts:=HFlowContainer.new()
-    tier_shortcuts.name="Ciudades_V31_Comparar_Escalas"
-    civilian_city_controls.add_child(tier_shortcuts)
-    for data in [["VILLA",0],["CIUDAD",1],["METRÓPOLI",2]]:
-        var shortcut:=Button.new()
-        shortcut.text=str(data[0])
-        shortcut.custom_minimum_size=Vector2(93,32)
-        shortcut.pressed.connect(
-            Callable(self,"_city_choose_tier").bind(int(data[1])))
-        tier_shortcuts.add_child(shortcut)
-    civilian_city_damage=OptionButton.new()
-    civilian_city_damage.name="Ciudades_Etapas_De_Dano"
-    for label in CityBase.DAMAGE_LABELS:
-        civilian_city_damage.add_item(str(label))
-    civilian_city_damage.select(0)
-    civilian_city_damage.item_selected.connect(_on_city_option)
-    civilian_city_controls.add_child(civilian_city_damage)
-    civilian_city_faction=OptionButton.new()
-    civilian_city_faction.name="Ciudades_Facciones_Y_Neutral"
-    civilian_city_faction.add_item("NEUTRAL")
-    for i in range(CityStyle.FACTIONS.size()):
-        civilian_city_faction.add_item(
-            str(CityStyle.FACTIONS[i]["name"]))
-    civilian_city_faction.select(0)
-    civilian_city_faction.item_selected.connect(_on_city_option)
-    civilian_city_controls.add_child(civilian_city_faction)
-    civilian_city_lod=OptionButton.new()
-    civilian_city_lod.name="Ciudades_Detalle_Geometrico"
-    for title in ["DETALLE COMPLETO", "VISTA TÁCTICA", "SILUETA LEJANA"]:
-        civilian_city_lod.add_item(title)
-    civilian_city_lod.select(0)
-    civilian_city_lod.item_selected.connect(_on_city_option)
-    civilian_city_controls.add_child(civilian_city_lod)
-    var views:=HFlowContainer.new()
-    views.name="Ciudades_Camaras_3D"
-    views.add_theme_constant_override("h_separation",4)
-    views.add_theme_constant_override("v_separation",4)
-    civilian_city_controls.add_child(views)
-    for data in [
+const CITY_CAMERA_PRESETS = [
         ["360°",0],["FACHADA",1],["AZOTEA",2],["RUINAS",3],
         ["COSTADO",4],["POSTERIOR",5],
         ["PUERTAS",6],["VENTANAS",7],["TEJADOS",8],
@@ -138,23 +66,163 @@ func _install_city_options() -> void:
         ["V42 VILLA D0",87],["V42 CIUDAD D0",88],
         ["V42 METRO D0",89],["V42 D2",90],
         ["V42 D3",91],["V42 D4",92]
+]
+const CITY_CAMERA_GROUPS = [
+    {"title":"Vistas principales y acabados V1–V26","first":0,"last":18},
+    {"title":"Urbanismo y recorridos V27–V31","first":19,"last":37},
+    {"title":"Materiales, uniones y daños V32–V36","first":38,"last":63},
+    {"title":"Escalas, siluetas y revisión V37–V41","first":64,"last":86},
+    {"title":"Evidencia artística V42","first":87,"last":92}
+]
+
+
+func _ready() -> void:
+    super._ready()
+    if building_picker==null or building_controls==null:
+        push_error("TARVOKA Edificios: no se encontró selector unificado")
+        return
+    if building_picker.item_count!=CITY_BUILDING_INDEX:
+        push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
+        return
+    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V43")
+    building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
+    _install_city_options()
+    _refresh_unified_studio_navigation()
+
+func _install_city_options() -> void:
+    civilian_city_controls=VBoxContainer.new()
+    civilian_city_controls.name="Edificios_Ciudades_Civiles_V31"
+    civilian_city_controls.add_theme_constant_override("separation",6)
+    civilian_city_controls.visible=false
+    building_controls.add_child(civilian_city_controls)
+    # Keep the city controls directly below the building picker, not after
+    # several screens of legacy HQ/base controls in the shared sidebar.
+    building_controls.move_child(civilian_city_controls,2)
+    _title(civilian_city_controls,
+        "CIUDAD CIVIL · V43 · MODELO 3D EN DISEÑO",14)
+    _title(civilian_city_controls,
+        "Elige Villa, Ciudad o Metrópoli; visualiza 5 etapas de daño.",12)
+    civilian_city_tier=OptionButton.new()
+    civilian_city_tier.name="Ciudades_Nivel_Arquitectonico"
+    for title in ["VILLA · terracota y madera",
+            "CIUDAD · piedra y ladrillo",
+            "METRÓPOLI · vidrio y metal"]:
+        civilian_city_tier.add_item(title)
+    civilian_city_tier.select(1)
+    civilian_city_tier.item_selected.connect(_on_city_option)
+    civilian_city_controls.add_child(civilian_city_tier)
+    var tier_shortcuts:=HFlowContainer.new()
+    tier_shortcuts.name="Ciudades_V31_Comparar_Escalas"
+    civilian_city_controls.add_child(tier_shortcuts)
+    for data in [["VILLA",0],["CIUDAD",1],["METRÓPOLI",2]]:
+        var shortcut:=Button.new()
+        shortcut.text=str(data[0])
+        shortcut.custom_minimum_size=Vector2(93,32)
+        shortcut.pressed.connect(
+            Callable(self,"_city_choose_tier").bind(int(data[1])))
+        tier_shortcuts.add_child(shortcut)
+    civilian_city_damage=OptionButton.new()
+    civilian_city_damage.name="Ciudades_Etapas_De_Dano"
+    for label in CityBase.DAMAGE_LABELS:
+        civilian_city_damage.add_item(str(label))
+    civilian_city_damage.select(0)
+    civilian_city_damage.item_selected.connect(_on_city_option)
+    civilian_city_controls.add_child(civilian_city_damage)
+    civilian_city_faction=OptionButton.new()
+    civilian_city_faction.name="Ciudades_Facciones_Y_Neutral"
+    civilian_city_faction.add_item("NEUTRAL")
+    for i in range(CityStyle.FACTIONS.size()):
+        civilian_city_faction.add_item(
+            str(CityStyle.FACTIONS[i]["name"]))
+    civilian_city_faction.select(0)
+    civilian_city_faction.item_selected.connect(_on_city_option)
+    civilian_city_controls.add_child(civilian_city_faction)
+    civilian_city_lod=OptionButton.new()
+    civilian_city_lod.name="Ciudades_Detalle_Geometrico"
+    for title in ["DETALLE COMPLETO", "VISTA TÁCTICA", "SILUETA LEJANA"]:
+        civilian_city_lod.add_item(title)
+    civilian_city_lod.select(0)
+    civilian_city_lod.item_selected.connect(_on_city_option)
+    civilian_city_controls.add_child(civilian_city_lod)
+    _title(civilian_city_controls,
+        "CÁMARA · ACCESOS RÁPIDOS",12)
+    var quick:=HFlowContainer.new()
+    quick.name="Ciudades_Camaras_Acceso_Rapido_V43"
+    quick.add_theme_constant_override("h_separation",4)
+    quick.add_theme_constant_override("v_separation",4)
+    civilian_city_controls.add_child(quick)
+    for data in [
+        ["360°",0],["FACHADA",1],["AZOTEA",2],
+        ["COSTADO",4],["POSTERIOR",5],["RUINAS",3]
     ]:
-        var b:=Button.new()
-        b.text=str(data[0])
-        b.custom_minimum_size=Vector2(90,35)
-        var index: int=int(data[1])
-        b.pressed.connect(Callable(self,"_city_camera_preset").bind(index))
-        views.add_child(b)
+        var camera_button:=Button.new()
+        camera_button.text=str(data[0])
+        camera_button.custom_minimum_size=Vector2(90,34)
+        camera_button.pressed.connect(
+            Callable(self,"_city_camera_preset").bind(int(data[1])))
+        quick.add_child(camera_button)
     for config in [["GIRAR ↶",-45.0],["GIRAR ↷",45.0]]:
         var rotate_button:=Button.new()
         rotate_button.text=str(config[0])
-        rotate_button.custom_minimum_size=Vector2(98,35)
+        rotate_button.custom_minimum_size=Vector2(90,34)
         rotate_button.pressed.connect(
             Callable(self,"_city_orbit").bind(float(config[1])))
-        views.add_child(rotate_button)
+        quick.add_child(rotate_button)
+    _title(civilian_city_controls,
+        "EXPLORAR LAS 93 VISTAS · POR GRUPOS",12)
+    civilian_city_view_group=OptionButton.new()
+    civilian_city_view_group.name="Ciudades_V43_Grupo_De_Camaras"
+    for group in CITY_CAMERA_GROUPS:
+        civilian_city_view_group.add_item(str(group["title"]))
+    civilian_city_view_group.select(0)
+    civilian_city_view_group.item_selected.connect(_on_city_view_group)
+    civilian_city_controls.add_child(civilian_city_view_group)
+    civilian_city_view_preset=OptionButton.new()
+    civilian_city_view_preset.name="Ciudades_V43_Vistas_Del_Grupo"
+    civilian_city_view_preset.item_selected.connect(_on_city_view_preset)
+    civilian_city_controls.add_child(civilian_city_view_preset)
+    _city_fill_view_presets(0)
     civilian_city_hint=_title(civilian_city_controls,
         "ARTE V43 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
     civilian_city_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+
+func _city_fill_view_presets(group_index: int) -> void:
+    if civilian_city_view_preset==null:
+        return
+    civilian_city_view_preset.clear()
+    var group: Dictionary=CITY_CAMERA_GROUPS[
+        clampi(group_index,0,CITY_CAMERA_GROUPS.size()-1)]
+    for i in range(int(group["first"]),int(group["last"])+1):
+        var camera_data: Array=CITY_CAMERA_PRESETS[i]
+        # Stable ID: all 93 original camera presets remain available.
+        civilian_city_view_preset.add_item(
+            str(camera_data[0]),int(camera_data[1]))
+    civilian_city_view_preset.select(0)
+
+func _on_city_view_group(index: int) -> void:
+    _city_fill_view_presets(index)
+    # Show a real preview of the first camera when changing groups.
+    _city_camera_preset(int(CITY_CAMERA_GROUPS[index]["first"]))
+
+func _on_city_view_preset(index: int) -> void:
+    if civilian_city_view_preset==null or index<0:
+        return
+    _city_camera_preset(civilian_city_view_preset.get_item_id(index))
+
+func _city_sync_view_selectors() -> void:
+    if civilian_city_view_group==null or civilian_city_view_preset==null:
+        return
+    for index in range(CITY_CAMERA_GROUPS.size()):
+        var group: Dictionary=CITY_CAMERA_GROUPS[index]
+        if _city_view<int(group["first"]) or _city_view>int(group["last"]):
+            continue
+        if civilian_city_view_group.selected!=index:
+            civilian_city_view_group.select(index)
+            _city_fill_view_presets(index)
+        for candidate in range(civilian_city_view_preset.item_count):
+            if civilian_city_view_preset.get_item_id(candidate)==_city_view:
+                civilian_city_view_preset.select(candidate)
+                return
 
 func _city_choose_tier(index: int) -> void:
     if civilian_city_tier==null:
@@ -222,6 +290,7 @@ func _city_camera_preset(index: int) -> void:
         _zoom=1.45
     elif _city_view in [19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58]:
         _zoom=1.23
+    _city_sync_view_selectors()
     if _role=="civilian_city":
         _display_civilian_city()
 
