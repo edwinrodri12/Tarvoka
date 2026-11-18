@@ -61,6 +61,7 @@ const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -228,7 +229,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V57 · soportes visibles")
     var ew_index: int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V1")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V2")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -539,7 +540,9 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
-                {"group":"G15 V1 · SISTEMAS ELECTRÓNICOS"},
+                {"group":"G15 V2 · SOPORTES 3D Y SISTEMAS ELECTRÓNICOS"},
+                {"title":"V2 · Guardabarros curvos y mástil","action":"g15_v2_on"},
+                {"title":"V2 · Comparar con acabado V1","action":"g15_v2_off"},
                 {"title":"Movimiento 6×6, antena plegada","action":"move"},
                 {"title":"Desplegar mástil articulado","action":"deploy"},
                 {"title":"Barrido direccional","action":"scan"},
@@ -644,6 +647,13 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g15_v2_on","g15_v2_off":
+            if _role=="ew_mobile" and G15SculptV2.show_finish(
+                    model_root,action=="g15_v2_on"):
+                status_label.text=(
+                    "G15 V2: 6 guardabarros curvos 3D y soportes del mástil"
+                    if action=="g15_v2_on" else
+                    "G15 V1: referencia de carrocería con tapas rectangulares")
         "tank_standalone":
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
@@ -791,7 +801,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
-            "ew_mobile": label="G15 · Guerra electrónica · V1 (arte 3D)"
+            "ew_mobile": label="G15 · Guerra electrónica · V2 (arte 3D)"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
