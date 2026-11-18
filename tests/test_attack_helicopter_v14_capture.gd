@@ -11,6 +11,7 @@ const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
+const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -230,6 +231,22 @@ func _run() -> void:
     cam.position=Vector3(0.70,2.30,-0.74)
     cam.look_at(orbit_model.to_global(Vector3(0.106,2.02,-0.42)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_10_pernos_asentados.png"))
+    _check(Roots1411.has_model(orbit_model),
+        "V14.11 authentic four-pivot blade root airfoil lofts installed")
+    cam.position=Vector3(-0.83,2.29,-0.73)
+    cam.look_at(orbit_model.to_global(Vector3(-0.01,2.01,-0.25)),Vector3.UP)
+    _check(Roots1411.set_enabled(orbit_model,false),
+        "V14.11 compare shows real original V3 rectangular blade root")
+    await _save(vp,folder.path_join("hat29_v14_11_comparar_v3.png"))
+    _check(Roots1411.set_enabled(orbit_model,true),
+        "V14.11 restores actual closed six-station sculpt in original V3 pivot")
+    await _save(vp,folder.path_join("hat29_v14_11_comparar_v1411.png"))
+    cam.position=Vector3(-0.71,2.39,-0.49)
+    cam.look_at(orbit_model.to_global(Vector3(-0.01,2.01,-0.24)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_11_raiz_superior.png"))
+    cam.position=Vector3(0.92,2.15,-0.62)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.02,-0.33)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_11_raiz_angulo_bajo.png"))
     orbit_model.queue_free()
     await process_frame
 
@@ -331,10 +348,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==67,"63 previous helicopter frames and 4 new V14.10 bevel/contact comparisons")
+    _check(count==71,"67 previous native helicopter frames and 4 V14.11 real blade root views")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 67 real Godot PNGs including V14.10 reversible actual V14.9 comparison, beveled rotor plates and physically seated bolts")
+        print("PASS HAT29 V14 CAPTURE: 71 real Godot PNGs including V14.11 native aerodynamic blade-root sculpt, V3 same-camera comparison and low angle")
         quit(0)
