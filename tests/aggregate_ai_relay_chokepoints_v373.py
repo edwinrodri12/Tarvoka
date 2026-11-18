@@ -232,7 +232,7 @@ def main():
     output=pathlib.Path("reports")
     output.mkdir(exist_ok=True)
     (output/"ai_v373_chokepoint_relays.json").write_text(
-        json.dumps(report,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+        json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     markdown=[
         "# TARVOKA v3.7.3 — Puentes y relés: ¿qué ubicación reduce el sesgo?",
         "","320 partidas reales Godot 4.3, 64 por variante. Apertura de",
@@ -264,7 +264,7 @@ def main():
        "- 320 juegos reales, 80 contratos de motor, baseline v3.7.2 reproducido.",
        "- Sin cambios en reglas oficiales de IA, economía, relés o guardados.",
        "- Una menor asimetría no autoriza fusión automática o APK.", ""])
-    report_md="\\n".join(markdown)
+    report_md="\n".join(markdown)
     (output/"ai_v373_chokepoint_relays.md").write_text(report_md,encoding="utf-8")
     print("CHOKE373_ALL "+json.dumps(report,ensure_ascii=False,separators=(",",":")))
     print(report_md)
