@@ -64,6 +64,7 @@ const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
+const G15FinishV5=preload("res://scripts/ui/G15AntennaFinishDamageV5.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -231,7 +232,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V57 · soportes visibles")
     var ew_index: int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V4")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V5")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -542,6 +543,14 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
+                {"group":"G15 V5 · ACABADOS DE ANTENA Y DESTRUCCIÓN"},
+                {"title":"V5 · Acabados, juntas y pernos reales","action":"g15_v5_on"},
+                {"title":"V4 · Comparar acabados anteriores","action":"g15_v5_off"},
+                {"title":"V5 · Antena intacta","action":"g15_damage_0"},
+                {"title":"V5 · Daño leve en los paneles","action":"g15_damage_1"},
+                {"title":"V5 · Daño moderado en antena","action":"g15_damage_2"},
+                {"title":"V5 · Antena parcialmente fracturada","action":"g15_damage_3"},
+                {"title":"V5 · Destrucción visual del conjunto","action":"g15_damage_4"},
                 {"group":"G15 V4 · ANTENAS ARTICULADAS Y MECÁNICA REAL"},
                 {"title":"V4 · Matrices electrónicas, mástil hidráulico","action":"g15_v4_on"},
                 {"title":"V3 · Comparar antenas simples anteriores","action":"g15_v4_off"},
@@ -549,7 +558,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"V3 · Cabina y refugio blindados biselados","action":"g15_v3_on"},
                 {"title":"V2 · Comparar con refugio rectangular","action":"g15_v3_off"},
                 {"title":"V1 · Comparar con guardabarros originales","action":"g15_v2_off"},
-                {"title":"V4 · Restaurar última versión","action":"g15_v2_on"},
+                {"title":"V5 · Restaurar última versión","action":"g15_v2_on"},
                 {"title":"Movimiento 6×6, antena plegada","action":"move"},
                 {"title":"Desplegar mástil articulado","action":"deploy"},
                 {"title":"Barrido direccional","action":"scan"},
@@ -654,21 +663,46 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g15_v5_on","g15_v5_off":
+            if _role=="ew_mobile" and model_root!=null:
+                var current_v5:bool=action=="g15_v5_on"
+                if current_v5:
+                    G15AntennaV4.show_finish(model_root,true)
+                if G15FinishV5.show_finish(model_root,current_v5):
+                    status_label.text=(
+                        "G15 V5: pernos, juntas, cableado protegido y acabados físicos"
+                        if current_v5 else "G15 V4: comparación sin microdetalles")
+        "g15_damage_0","g15_damage_1","g15_damage_2","g15_damage_3","g15_damage_4":
+            if _role=="ew_mobile" and model_root!=null:
+                if _g15_tween!=null and _g15_tween.is_running():
+                    _g15_tween.kill()
+                G15AntennaV4.show_finish(model_root,true)
+                G15FinishV5.show_finish(model_root,true)
+                P06Models.restore_model_pose("ew_mobile",model_root)
+                var stage_g15:int=int(action.get_slice("_",2))
+                if G15FinishV5.set_damage(model_root,stage_g15):
+                    status_label.text="G15 V5 · daño visual %d/4 · sin efectos de combate" % stage_g15
         "g15_v4_on","g15_v4_off":
-            if _role=="ew_mobile" and model_root!=null and (
-                    G15AntennaV4.show_finish(model_root,action=="g15_v4_on")):
-                status_label.text=(
-                    "G15 V4: matrices inclinadas, conexión hidráulica real y antena direccional"
-                    if action=="g15_v4_on" else
-                    "G15 V3: comparación con las antenas originales")
+            if _role=="ew_mobile" and model_root!=null:
+                var v4_active:bool=action=="g15_v4_on"
+                if not v4_active:
+                    G15FinishV5.show_finish(model_root,false)
+                if G15AntennaV4.show_finish(model_root,v4_active):
+                    if v4_active:
+                        G15FinishV5.show_finish(model_root,true)
+                    status_label.text=(
+                        "G15 V5: matrices inclinadas, pistones, juntas y carcasa real"
+                        if v4_active else "G15 V3: comparación con las antenas originales")
         "g15_v3_on","g15_v3_off":
             if _role=="ew_mobile" and model_root!=null:
                 var show_v3:bool=action=="g15_v3_on"
                 if not show_v3:
+                    G15FinishV5.show_finish(model_root,false)
                     G15AntennaV4.show_finish(model_root,false)
                 if G15FinishV3.show_finish(model_root,show_v3):
                     if show_v3:
                         G15AntennaV4.show_finish(model_root,true)
+                        G15FinishV5.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: blindaje biselado y conjunto electrónico mejorado"
                         if show_v3 else
@@ -677,12 +711,14 @@ func _studio_run_animation(action: String) -> void:
             if _role=="ew_mobile" and model_root!=null:
                 var show_current:bool=action=="g15_v2_on"
                 if not show_current:
+                    G15FinishV5.show_finish(model_root,false)
                     G15AntennaV4.show_finish(model_root,false)
                     G15FinishV3.show_finish(model_root,false)
                 if G15SculptV2.show_finish(model_root,show_current):
                     if show_current:
                         G15FinishV3.show_finish(model_root,true)
                         G15AntennaV4.show_finish(model_root,true)
+                        G15FinishV5.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: superficies biseladas, pasos curvos y antenas físicas"
                         if show_current else
@@ -834,7 +870,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
-            "ew_mobile": label="G15 · Guerra electrónica · V4 (antena y mástil hidráulico)"
+            "ew_mobile": label="G15 · Guerra electrónica · V5 (detalles mecánicos y daños)"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
