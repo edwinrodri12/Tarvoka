@@ -84,6 +84,7 @@ const G13SeamsV49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G13GlazingV50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G13RoofV51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G13RoofRailsV52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
+const G13RealismV53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -151,6 +152,8 @@ var _heli_frame_reflows: int=0
 var g11_controls: VBoxContainer
 var g13_controls: VBoxContainer
 var _g13_preview_lod:int=13
+var _g13_reflection_saved_v53: Dictionary = {}
+var _g13_rim_light_v53: DirectionalLight3D = null
 var _g13_v25_show_original:bool=false
 var _g13_v26_show_previous:bool=false
 var _g13_v27_show_previous:bool=false
@@ -214,7 +217,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V52 · uniones del techo reforzadas")
+        role_picker.set_item_text(aa_index,"G13 · AA V53 · metal y neumáticos PBR")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.13")
@@ -757,7 +760,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V52 uniones de cubierta"
+            "aa_mobile": label="G13 · Antiaéreo · V53 materiales realistas"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1539,6 +1542,61 @@ func _install_p06_controls() -> void:
     column.move_child(p06_controls,maxi(0,index))
     p06_controls.visible = false
 
+
+# Only the G13 Studio preview receives reflection radiance. A built-in
+# procedural sky lights real metallic StandardMaterial3D surfaces without
+# changing the visible neutral background, any battle scene or other units.
+func _g13_v53_set_reflections(enabled: bool) -> void:
+    if preview==null or hq_environment==null or (
+            hq_environment.environment==null):
+        return
+    var env: Environment = hq_environment.environment
+    if enabled:
+        if _role!="aa_mobile" or model_root==null or (
+                not bool(model_root.get_meta(G13RealismV53.FLAG,false))):
+            return
+        if _g13_reflection_saved_v53.is_empty():
+            _g13_reflection_saved_v53={
+                "sky":env.sky,
+                "source":env.reflected_light_source
+            }
+        var sky:=Sky.new()
+        var gradient:=ProceduralSkyMaterial.new()
+        gradient.sky_top_color=Color("#89acc5")
+        gradient.sky_horizon_color=Color("#e1e9ed")
+        gradient.ground_bottom_color=Color("#29343b")
+        gradient.ground_horizon_color=Color("#9fb2bc")
+        gradient.use_debanding=true
+        sky.sky_material=gradient
+        env.sky=sky
+        env.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
+        if _g13_rim_light_v53==null:
+            _g13_rim_light_v53=DirectionalLight3D.new()
+            _g13_rim_light_v53.name="G13V53_LuzRasantePBR"
+            _g13_rim_light_v53.rotation_degrees=Vector3(-26.0,122.0,0.0)
+            _g13_rim_light_v53.light_color=Color("#c4dce9")
+            _g13_rim_light_v53.light_energy=0.54
+            _g13_rim_light_v53.shadow_enabled=false
+            preview.add_child(_g13_rim_light_v53)
+        _g13_rim_light_v53.visible=true
+    else:
+        if not _g13_reflection_saved_v53.is_empty():
+            env.sky=_g13_reflection_saved_v53["sky"]
+            env.reflected_light_source=_g13_reflection_saved_v53["source"]
+            _g13_reflection_saved_v53.clear()
+        if _g13_rim_light_v53!=null:
+            _g13_rim_light_v53.visible=false
+
+func _g13_v53_show_finish(enabled: bool) -> void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if G13RealismV53.show_finish(model_root,enabled):
+        status_label.text=(
+            "G13 V53 · metal, pintura y caucho PBR real"
+            if enabled else
+            "G13 V52 · comparación con materiales anteriores")
+        _update_details()
+
 func _install_g13_controls() -> void:
     var column:=role_picker.get_parent() as VBoxContainer
     g13_controls=VBoxContainer.new()
@@ -1546,7 +1604,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V52 · JUNTAS DE TECHO REFINADAS · 4×4 · 2 CAÑONES",14)
+        "G13 V53 · METAL PBR Y CAUCHO · 4×4 · 2 CAÑONES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1592,6 +1650,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V53 · Materiales y neumáticos",
+        func(): _g13_v53_show_finish(true),
+        "V53 · Comparar acabado V52",
+        func(): _g13_v53_show_finish(false))
     _add_paired(g13_controls,"V52 · Hombros del techo integrados",
         func(): _g13_v52_compare(true),
         "V52 · Comparar con V51",
@@ -2889,6 +2951,8 @@ func _display_role(role: String) -> void:
         _heli_underbody_restore_floor()
         camera.position=_heli_camera_base
         _heli_focus_local=Vector3.ZERO
+    if not _g13_reflection_saved_v53.is_empty():
+        _g13_v53_set_reflections(false)
     super._display_role(role)
     if role == "tank" and model_root != null:
         # The unified Studio navigation QA expects the approved G09 V31
@@ -3037,6 +3101,8 @@ func _display_role(role: String) -> void:
         _apply_hq_lighting(_hq_light_preset)
         if role=="mlrs":
             _apply_g11_light_v23()
+    if role=="aa_mobile" and model_root!=null:
+        _g13_v53_set_reflections(true)
     if retain_night_v143 and role=="attack_heli":
         _heli_set_night_v143(true)
     _sync_p06_controls()
