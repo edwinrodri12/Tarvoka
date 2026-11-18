@@ -13,6 +13,7 @@ const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
+const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -269,6 +270,56 @@ func _run() -> void:
     orbit_model.queue_free()
     await process_frame
 
+    # V14.13: compare the REAL original V10 open crown against the
+    # machined closed cap with identical physical camera and lighting.
+    # Then capture original V1/V13 rotor rotation and combat transitions.
+    var spin_model: Node3D=Models.build("attack_heli",0,true,14)
+    _check(spin_model!=null and Hub1413.has_model(spin_model),
+        "V14.13 real hero rotor crown exists for native motion captures")
+    if spin_model==null:
+        quit(1)
+        return
+    vp.add_child(spin_model)
+    cam.position=Vector3(0.56,2.58,-0.72)
+    cam.look_at(spin_model.to_global(Vector3(0,2.069,0.08)),Vector3.UP)
+    _check(Hub1413.set_enabled(spin_model,false),
+        "V14.13 original V10 mechanical ring can be viewed directly")
+    await _save(vp,folder.path_join("hat29_v14_13_cabezal_v10.png"))
+    _check(Hub1413.set_enabled(spin_model,true),
+        "V14.13 original ring replaced with actual sealed metal cover")
+    await _save(vp,folder.path_join("hat29_v14_13_cabezal_cerrado.png"))
+    cam.position=Vector3(2.35,3.10,-2.75)
+    cam.look_at(spin_model.to_global(Vector3(0,1.58,0.05)),Vector3.UP)
+    var angles: Array[float]=[0.010416667,0.015625,0.020833333,0.026041667]
+    for index in range(4):
+        _check(V13.pose(spin_model,"hover",angles[index])
+            and FX.pose(spin_model,"idle",0.0),
+            "V14.13 original rotor spins through close sample angle")
+        await _save(vp,folder.path_join(
+            "hat29_v14_13_rotor_giro_%02d.png" % index))
+    _check(V13.pose(spin_model,"hit_bullet",0.37)
+        and FX.pose(spin_model,"hit_bullet",0.37),
+        "V14.13 original spinning hub follows real multiple bullet hit FX")
+    await _save(vp,folder.path_join("hat29_v14_13_rotor_impactos.png"))
+    _check(V13.pose(spin_model,"hit_explosive",0.41)
+        and FX.pose(spin_model,"hit_explosive",0.41),
+        "V14.13 rotor remains rigged during real missile explosion")
+    await _save(vp,folder.path_join("hat29_v14_13_rotor_explosion.png"))
+    _check(V13.pose(spin_model,"hover",0.52)
+        and FX.pose(spin_model,"fire_missiles",0.52),
+        "V14.13 original rotor remains alive during real missile launch")
+    await _save(vp,folder.path_join("hat29_v14_13_rotor_lanzamiento.png"))
+    _check(V13.set_stage(spin_model,4)
+        and V13.pose(spin_model,"destroy",0.85),
+        "V14.13 real V13 destroy hides original rotating hub with the wreck")
+    await _save(vp,folder.path_join("hat29_v14_13_rotor_destruccion.png"))
+    V13.restore(spin_model)
+    _check(V13.set_stage(spin_model,0)
+        and Hub1413.has_model(spin_model),
+        "V14.13 genuine original rotor returns on repair")
+    spin_model.queue_free()
+    await process_frame
+
     # V14.3: three untouched-geometry night exposures. No color materials
     # are edited: only the temporary test world lights and sky are changed.
     var night_model: Node3D=Models.build("attack_heli",0,true,14)
@@ -367,10 +418,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==75,"71 previous native helicopter frames and 4 V14.12 real seam inspection views")
+    _check(count==85,"75 previous real helicopter frames and 10 V14.13 crown/animated rotor inspections")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 75 real Godot PNGs including native V14.12 swept rotor junction and same-camera V14.11 comparison")
+        print("PASS HAT29 V14 CAPTURE: 85 native Godot PNGs including original V10 / V14.13 metal crown, 4 rotor spinning angles and combat damage")
         quit(0)
