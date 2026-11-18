@@ -26,6 +26,7 @@ const V22=preload("res://scripts/ui/CivilianCityCohesionV22.gd")
 const V23=preload("res://scripts/ui/CivilianCitySilhouetteV23.gd")
 const V24=preload("res://scripts/ui/CivilianCityStructuralContactsV24.gd")
 const V25=preload("res://scripts/ui/CivilianCitySurfaceContinuityV25.gd")
+const V26=preload("res://scripts/ui/CivilianCityWeatherFinishV26.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -215,7 +216,9 @@ static func _keep_medium(name: String) -> bool:
         "V25_SoldaduraMetal_","V25_PiezaAnclaje_",
         "V25_SombraBordeRoto_","V25_MorteroAbierto_",
         "V25_AceroCortado_","V25_FibraMaderaRota_",
-        "V25_CristalSueltoCimentacion_"]:
+        "V25_CristalSueltoCimentacion_",
+        # V26 small weathered chips are visible only at close zoom.
+        "V26_DesgasteRemate_","V26_SustratoCantoRoto_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -370,7 +373,12 @@ static func _keep_far(name: String) -> bool:
         "V25_AnclajeCimientoDestruido_",
         "V25_FrisoMunicipalAgrietado",
         "V25_PiezaPortalMunicipalRota",
-        "V25_RestoPlacaMunicipal"]:
+        "V25_RestoPlacaMunicipal",
+        # V26 large enough weathered broken profile remains visible
+        # at battle distance; tiny erosion strips are omitted.
+        "V26_TejaExpuestaRota_",
+        "V26_CantoPisoDescascarado_",
+        "V26_DesgasteRestosBajos_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -478,7 +486,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V25.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",25)
+    if not V26.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",26)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
