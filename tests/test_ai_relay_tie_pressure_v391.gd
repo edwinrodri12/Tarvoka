@@ -42,7 +42,8 @@ static func _eligibility_micro() -> void:
     public["control"]["round_scoring"] = false
     assert(not AI._relay_tie_pressure_eligible(public,0))
     assert(AI._relay_tie_pressure_eligible(unchanged,0))
-    assert(AI._relay_tie_pressure_eligible(unchanged,1) == false)
+    # Both sides can see the enemy-owned node when fog is disabled.
+    assert(AI._relay_tie_pressure_eligible(unchanged,1))
 
     # A truly hidden enemy relay is masked to owner=-2, regardless
     # of the underlying real owner or public scores.
