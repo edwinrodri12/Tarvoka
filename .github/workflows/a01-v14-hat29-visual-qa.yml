@@ -9,6 +9,7 @@ on:
       - 'scripts/ui/AttackHelicopterRotorMountV145.gd'
       - 'scripts/ui/AttackHelicopterRotorDampersV146.gd'
       - 'scripts/ui/AttackHelicopterDamperFinishV147.gd'
+      - 'scripts/ui/AttackHelicopterPitchHingesV148.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_attack_helicopter_v14.gd'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'scripts/ui/AttackHelicopterFactionV14.gd'
       - 'scripts/ui/AttackHelicopterCombatFXV14.gd'
+      - 'scripts/ui/AttackHelicopterPitchHingesV148.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
@@ -57,8 +59,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v14.log; then
             echo "Godot V14 regression failed"; exit 1
           fi
-          grep -F 'PASS HAT29 V14:' /tmp/hat29-v14.log
-      - name: Generate forty-three native HAT-29 orbit, combat and finished damper captures
+          grep -F 'PASS HAT29 V14.8:' /tmp/hat29-v14.log
+      - name: Generate forty-five native HAT-29 orbit, combat, damper and pitch hinge captures
         shell: bash
         run: |
           set -euo pipefail
@@ -74,12 +76,12 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 43
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 45
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-7-godot-43-frames
+          name: tarvoka-hat29-v14-8-godot-45-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
