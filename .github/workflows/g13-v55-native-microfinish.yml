@@ -1,0 +1,96 @@
+name: TARVOKA G13 V55 native rubber sculpt and close-up visual QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/ui/G13ExteriorMicrofinishV55.gd"
+      - "scripts/ui/G13RubberSculptV54.gd"
+      - "scripts/ui/G13MaterialRealismV53.gd"
+      - "scripts/ui/G13InspectionStudio.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "tests/test_g13_v55_microfinish.gd"
+      - "tests/test_g13_v53_material_realism.gd"
+      - "tests/test_g13_v55_visual_capture.gd"
+      - ".github/workflows/g13-v55-native-rubber-visual.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g13-v55-native-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect-real-g13:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Use newest source for native Godot unit and materials
+        uses: actions/checkout@v4
+      - name: Install Godot 4.3 and software GL inspection display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri unzip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Exclude published-only shared Studio subclass from standalone G13 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Main deliberately does not hold CombinedArtStudioWeb.gd, which
+          # is assembled from separately signed-off branches on publication.
+          # This test renders the G13InspectionStudio native scene instead.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g13-v55-published-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g13-v55-published-studio/
+          fi
+      - name: Import all real native 3D G13 resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g13-v55-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g13-v55-import.log; then
+            exit 1
+          fi
+      - name: Verify genuine metal grain, faction paint and 20 physical gasket seams
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g13_v55_microfinish.gd \
+            2>&1 | tee /tmp/g13-v55-real-geometry.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g13-v55-real-geometry.log; then
+            exit 1
+          fi
+          grep -F 'PASS G13 V55 MICROFINISH:' /tmp/g13-v55-real-geometry.log
+      - name: Render eleven native metal/panel closeup frames and V54 comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g13-v55
+          timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g13_v55_visual_capture.gd \
+            2>&1 | tee /tmp/g13-v55-native-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g13-v55-native-capture.log; then
+            exit 1
+          fi
+          grep -F 'PASS G13 V55 NATIVE VISUAL:' /tmp/g13-v55-native-capture.log
+          test "$(find build/qa/g13-v55 -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+      - name: Upload real metal and service panel comparison frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g13-v55-real-metal-inspection
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build/qa/g13-v55/*.png
+            build/qa/g13-v55/g13-v55-manifest.json
