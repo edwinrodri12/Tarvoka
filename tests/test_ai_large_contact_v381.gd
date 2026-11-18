@@ -170,6 +170,33 @@ static func _case(seed: int, fog: bool, first: int) -> Dictionary:
     assert(Mirror.visibility_mismatch(start,reflection) == 0)
     var primary: Dictionary = Study._play(start,false,LIMIT)
     var reflected: Dictionary = Study._play(reflection,true,LIMIT)
+    if primary["frames"] != reflected["frames"]:
+        var details := {"seed":seed,"fog":fog,"first":first,
+            "frames_original":primary["frames"].size(),
+            "frames_mirror":reflected["frames"].size(),
+            "terminal_original":primary["terminal"],
+            "terminal_mirror":reflected["terminal"]}
+        for i in range(mini(primary["frames"].size(),
+                reflected["frames"].size())):
+            var a: Dictionary = primary["frames"][i]
+            var b: Dictionary = reflected["frames"][i]
+            if a != b:
+                details["frame"] = i
+                details["phase"] = a.get("phase",-1)
+                details["order"] = a.get("order",-1)
+                details["tag_a"] = a.get("tag","")
+                details["tag_b"] = b.get("tag","")
+                details["decision_a"] = a.get("decision",{})
+                details["decision_b"] = b.get("decision",{})
+                details["field"] = Study.Semantics.first_changed_key(
+                    a.get("state",{}),b.get("state",{}))
+                details["state_a"] = Study.Semantics.short_state(
+                    a.get("state",{}))
+                details["state_b"] = Study.Semantics.short_state(
+                    b.get("state",{}))
+                break
+        print("CONTACT381_DIVERGENCE " + JSON.stringify(details))
+        push_error("TARVOKA v381 long-game mirrored decision divergence")
     assert(primary["frames"] == reflected["frames"])
     assert(primary["terminal"] == reflected["terminal"])
     assert(primary["end_state"] == reflected["end_state"])
