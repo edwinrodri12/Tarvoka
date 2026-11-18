@@ -20,6 +20,20 @@ static func _parent_is_original_lot(mesh: MeshInstance3D) -> bool:
     var parent: Node=mesh.get_parent()
     return parent!=null and str(parent.name).begins_with("EdificioCivil_")
 
+# City geometry is assembled BEFORE its parent is added to SubViewport.
+# Godot global_transform/global_position on detached nodes emit engine errors
+# and return identity, corrupting V39 ground alignment on web exports.
+# Compose local transforms through the parent chain until the city is attached.
+static func _position_in_scene(node: Node3D) -> Transform3D:
+    if node.is_inside_tree():
+        return node.global_transform
+    var pose: Transform3D=Transform3D.IDENTITY
+    var cursor: Node3D=node
+    while cursor!=null:
+        pose=cursor.transform*pose
+        cursor=cursor.get_parent() as Node3D
+    return pose
+
 static func _ground_top(model: Node3D) -> float:
     # Read the actual upper face of V1's base, rather than assuming
     # a constant height if the baseline plot is ever adjusted.
@@ -30,8 +44,8 @@ static func _ground_top(model: Node3D) -> float:
             var mesh: MeshInstance3D=node as MeshInstance3D
             var box_mesh: BoxMesh=mesh.mesh as BoxMesh
             if box_mesh!=null:
-                return mesh.global_position.y+(
-                    box_mesh.size.y*absf(mesh.global_transform.basis.get_scale().y))*0.5
+                var pose: Transform3D=_position_in_scene(mesh)
+                return pose.origin.y+(box_mesh.size.y*pose.basis.y.length())*0.5
         for child in node.get_children():
             pending.append(child)
     return NAN
@@ -86,12 +100,15 @@ static func _seat_on_plot(mesh: MeshInstance3D,
     # The authored V1 groups have identity transforms. Work in the
     # existing parent's coordinate space so no x/z movement occurs.
     var parent: Node3D=mesh.get_parent() as Node3D
-    if parent==null or not is_equal_approx(parent.global_transform.basis.get_scale().y,1.0):
+    if parent==null:
+        return false
+    var parent_pose: Transform3D=_position_in_scene(parent)
+    if not is_equal_approx(parent_pose.basis.y.length(),1.0):
         return false
     var half_height: float=box_mesh.size.y*absf(mesh.scale.y)*0.5
     var desired_world_y: float=plot_top+half_height+0.002
-    var parent_y: float=parent.global_position.y
-    var previous_bottom: float=mesh.global_position.y-half_height
+    var parent_y: float=parent_pose.origin.y
+    var previous_bottom: float=_position_in_scene(mesh).origin.y-half_height
     var gap: float=previous_bottom-plot_top
     # Only correct clear, small gaps in the existing layout. Avoid moving
     # components already correctly grounded or unusually far from ground.
