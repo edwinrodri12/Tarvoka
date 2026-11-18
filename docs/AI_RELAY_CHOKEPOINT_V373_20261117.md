@@ -43,3 +43,37 @@ Nunca aprobar una ubicación basándose únicamente en los resultados agregados.
 Si ninguna de las variantes mejora **Puentes** sin perjudicar **Bosque**, la siguiente prioridad será estudiar mapas/posiciones iniciales y la IA en cruces, no añadir ayudas artificiales de ingresos, ataques o movimientos. Habrá que repetir las pruebas en mapas aleatorios, ejércitos modernos y juego humano antes de cualquier integración.
 
 **No hay cambios de producción ni decisión automática de merge/APK.**
+
+
+## Hallazgos observados en los 320 registros de Godot
+
+Se completaron los **16 grupos de partidas** (20 registros auténticos cada uno). Se contaron las victorias directamente a partir de los archivos de ejecución, sin suponer que un 50/50 global es justicia. [Ejecutados en Actions #44232343257](https://github.com/edwinrodri12/Tarvoka/actions/runs/44232343257).
+
+| Cuatro relés | Primero gana | Segundo gana | Azul / Rojo | Fases promedio |
+|---|---:|---:|---:|---:|
+| Centro, objetivo 8 | 28/64 | 36/64 | 32 / 32 | 9.81 |
+| Centro, objetivo 10 | 28/64 | 36/64 | 32 / 32 | 11.00 |
+| Accesos, objetivo 8 | 12/64 | 52/64 | 36 / 28 | 8.94 |
+| Accesos, objetivo 10 | 14/64 | 50/64 | 38 / 26 | 10.56 |
+| Laterales, objetivo 8 | 18/64 | 46/64 | 38 / 26 | 13.50 |
+
+### Sesgos por mapa: las dos dimensiones importan
+
+| Mapa | Centros/meta8: primero-segundo | Accesos/meta8: primero-segundo | Laterales/meta8: primero-segundo | Laterales/meta8: azul-rojo |
+|---|---|---|---|---|
+| Campo abierto | 8-8 | 0-16 | 0-16 | 8-8 |
+| Bosque | 14-2 | 8-8 | 4-12 | 4-12 |
+| Puentes | 0-16 | 0-16 | **8-8** | **16-0** |
+| Costa | 6-10 | 4-12 | 6-10 | 10-6 |
+
+**Decisión de diseño:** NO seleccionar los relés laterales de forma universal. Su aparente arreglo de Puentes (iniciativa 8-8) **sustituye el sesgo por uno de color extremo (azul 16-0)**. El resultado agregado de laterales también es peor (primero 18-46). Los accesos equilibran Bosque (8-8 y azul 8-8), pero empeoran Campo abierto y no mejoran Puentes.
+
+**Efecto de la meta:** pasar del objetivo 8 al 10 para relés centrales cambió **cero de 64 ganadores**; aumentó la duración media de 9.81 a 11 fases. En accesos cambió 2/64 ganadores y no resolvió Puentes.
+
+### Siguiente decisión prioritaria
+
+**Investigar la simetría de IA, despliegue de unidades y desempates de rutas bajo reflejo horizontal.** En Puentes, el mismo objetivo de cuatro relés laterales tiene iniciativa equilibrada, pero victoria de azul en **16/16**, aunque el mapa y relés se reflejan en columnas x=3 y x=6. Esta evidencia sugiere que la geometría no es el único factor; hay que aislar bandos, IDs de unidades, orden en arrays, desempates deterministas y rutas propuestas **sin inventar bonificaciones de estadísticas**.
+
+Diseñar un contrato de **metamorfismo** (reflejar mapa, posiciones de las unidades y relés, intercambiar facciones y comparar las acciones legales y las decisiones IA), con pruebas en niebla, ambos niveles y las cuatro clases de mapas. Un sesgo de color no debe «corregirse» mediante una regla especial para un mapa o bando sin descubrir el origen.
+
+**Estado:** hallazgos observados de la salida de los 16 grupos; los checks finales del informe de GitHub son una puerta adicional independiente. No se autoriza fusionar esta investigación ni alterar la APK.
