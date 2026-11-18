@@ -7,7 +7,7 @@ class_name TarvokaCivilianCityStudioAdapter
 # Native Godot meshes; no iframes, external links or screenshot proxies.
 const Cities=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
 const CityBase=preload("res://scripts/ui/CivilianCity3DV1.gd")
-const CityMaterials=preload("res://scripts/ui/CivilianCityVolumeBalanceV38.gd")
+const CityMaterials=preload("res://scripts/ui/CivilianCityFinishAuditV39.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 
 var civilian_city_controls: VBoxContainer
@@ -27,7 +27,7 @@ func _ready() -> void:
     if building_picker.item_count!=CITY_BUILDING_INDEX:
         push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
         return
-    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V38")
+    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V39")
     building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
     _install_city_options()
     _refresh_unified_studio_navigation()
@@ -123,7 +123,9 @@ func _install_city_options() -> void:
         ["V37 D4 RUINA",68],
         ["V38 VILLA VOLUMEN",69],["V38 CIUDAD VOLUMEN",70],
         ["V38 METRO VOLUMEN",71],["V38 D2 SILUETA",72],
-        ["V38 D4 VOLUMEN",73]
+        ["V38 D4 VOLUMEN",73],
+        ["V39 CUBIERTA",74],["V39 CIMIENTO",75],
+        ["V39 ESCOMBROS",76]
     ]:
         var b:=Button.new()
         b.text=str(data[0])
@@ -139,7 +141,7 @@ func _install_city_options() -> void:
             Callable(self,"_city_orbit").bind(float(config[1])))
         views.add_child(rotate_button)
     civilian_city_hint=_title(civilian_city_controls,
-        "ARTE V38 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
+        "ARTE V39 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
     civilian_city_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
 func _city_choose_tier(index: int) -> void:
@@ -156,7 +158,9 @@ func _on_city_option(_index: int) -> void:
 func _city_camera_preset(index: int) -> void:
     if civilian_city_tier==null:
         return
-    _city_view=clampi(index,0,73)
+    _city_view=clampi(index,0,76)
+    if civilian_city_lod!=null and _city_view in [74,75,76]:
+        civilian_city_lod.select(0)
     if _city_view in [69,70,71]:
         civilian_city_tier.select(_city_view-69)
     if civilian_city_lod!=null and _city_view in [69,70,71,72,73]:
@@ -180,11 +184,11 @@ func _city_camera_preset(index: int) -> void:
             civilian_city_damage.select(2)
         elif _city_view in [18,39,60]:
             civilian_city_damage.select(1)
-        elif _city_view in [26,30,31,32,38,43,44,45,48,49,50,51,53,54,55,56,59,69,70,71]:
+        elif _city_view in [26,30,31,32,38,43,44,45,48,49,50,51,53,54,55,56,59,69,70,71,74,75]:
             civilian_city_damage.select(0)
         elif _city_view in [3,11,14,28,41,62]:
             civilian_city_damage.select(3)
-        elif _city_view in [12,15,29,34,42,47,52,58,63,68,73]:
+        elif _city_view in [12,15,29,34,42,47,52,58,63,68,73,76]:
             civilian_city_damage.select(4)
     _yaw=35.0 if _city_view==0 else 0.0
     # Preserve the V31 zoom tiers with ordinary Godot control flow.
@@ -267,7 +271,7 @@ func _display_civilian_city() -> void:
     _update_details()
     _refresh_unified_studio_navigation()
     if studio_overview_label!=null:
-        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V38 · EN DISEÑO"
+        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V39 · EN DISEÑO"
 
 func _update_camera() -> void:
     if _role=="civilian_city":
@@ -301,6 +305,9 @@ func _update_camera() -> void:
             13.4 if _city_view in [67,68] else
             15.6 if _city_view in [69,70,71,72] else
             13.2 if _city_view==73 else
+            12.8 if _city_view==74 else
+            10.8 if _city_view==75 else
+            11.5 if _city_view==76 else
             24.0 if _city_view==35 else
             27.0 if _city_view==36 else
             30.0 if _city_view==37 else
@@ -350,6 +357,9 @@ func _update_camera() -> void:
             135.0 if _city_view==68 else
             -36.0 if _city_view in [69,70,71,72] else
             132.0 if _city_view==73 else
+            -35.0 if _city_view==74 else
+            22.0 if _city_view==75 else
+            133.0 if _city_view==76 else
             128.0 if _city_view==14 else
             90.0 if _city_view==4 else -90.0 if _city_view==9 else 180.0)
         var elevation: float=deg_to_rad(
@@ -390,6 +400,9 @@ func _update_camera() -> void:
             57.0 if _city_view in [69,70,71] else
             59.0 if _city_view==72 else
             38.0 if _city_view==73 else
+            54.0 if _city_view==74 else
+            22.0 if _city_view==75 else
+            34.0 if _city_view==76 else
             43.0 if _city_view==14 else 50.0 if _city_view==15 else
             31.0 if _city_view in [1,4,5,9] else 45.0)
         var distance: float=33.0
@@ -478,6 +491,12 @@ func _update_camera() -> void:
             aim=Vector3(4.63,roof_height*0.90,3.62)
         elif _city_view==73:
             aim=Vector3(4.63,0.19,3.62)
+        elif _city_view==74:
+            aim=Vector3(4.63,roof_height+0.05,3.62)
+        elif _city_view==75:
+            aim=Vector3(4.63,0.12,3.62)
+        elif _city_view==76:
+            aim=Vector3(4.63,0.14,3.62)
         camera.position=aim+Vector3(
             sin(angle)*cos(elevation)*distance,
             sin(elevation)*distance,
@@ -495,11 +514,10 @@ func _update_details() -> void:
             "Piedra y ladrillo" if tier==2 else "Vidrio y aluminio")
         if detail_label!=null:
             detail_label.text=(
-                "CIUDAD CIVIL V38 · %s · %d mallas · %d cubiertas · %d perfiles · D%d" %
+                "CIUDAD CIVIL V39 · %s · %d mallas · %d cubiertas corregidas · %d apoyos asentados · D%d" %
                 [identity,Cities.drawable_count(model_root),
-                    int(model_root.get_meta("city_v38_roof_mass_balanced",0)),
-                    int(model_root.get_meta("city_v38_tier_profiles_balanced",0))
-                        +int(model_root.get_meta("city_v38_damaged_profiles_balanced",0)),
+                    int(model_root.get_meta("city_v39_roof_materials_corrected",0)),
+                    int(model_root.get_meta("city_v39_ground_gaps_corrected",0)),
                     damage])
         if status_label!=null:
             status_label.text=(
