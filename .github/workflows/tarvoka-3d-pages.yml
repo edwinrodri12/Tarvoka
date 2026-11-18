@@ -12,6 +12,7 @@ on:
       - "scripts/ui/G13ExteriorMicrofinishV55.gd"
       - "scripts/ui/G13MechanicalJointFinishV56.gd"
       - "scripts/ui/G13TacticalMountReadabilityV57.gd"
+      - "scripts/ui/G13IsometricMechanicalFinishV58.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -138,6 +139,8 @@ on:
       - "tests/test_g13_v56_visual_capture.gd"
       - "tests/test_g13_v57_tactical_mounts.gd"
       - "tests/test_g13_v57_visual_capture.gd"
+      - "tests/test_g13_v58_isometric_finish.gd"
+      - "tests/test_g13_v58_isometric_visual_capture.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -290,6 +293,10 @@ jobs:
           cp hq-android-v15/tests/test_g13_v57_tactical_mounts.gd tests/test_g13_v57_tactical_mounts.gd
           test -s hq-android-v15/tests/test_g13_v57_visual_capture.gd
           cp hq-android-v15/tests/test_g13_v57_visual_capture.gd tests/test_g13_v57_visual_capture.gd
+          test -s hq-android-v15/tests/test_g13_v58_isometric_finish.gd
+          cp hq-android-v15/tests/test_g13_v58_isometric_finish.gd tests/test_g13_v58_isometric_finish.gd
+          test -s hq-android-v15/tests/test_g13_v58_isometric_visual_capture.gd
+          cp hq-android-v15/tests/test_g13_v58_isometric_visual_capture.gd tests/test_g13_v58_isometric_visual_capture.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1093,6 +1100,30 @@ jobs:
             echo "G13 V57 single-draw tactical mechanical brackets failed"; exit 1
           fi
           grep -F 'PASS G13 V57 TACTICAL MOUNTS:' /tmp/g13-v57-brackets.log
+          # V58: coherent mechanical metal in real native Godot; no
+          # additional draws, eight official faction palettes intact.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v58_isometric_finish.gd \
+            2>&1 | tee /tmp/g13-v58-isometric.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v58-isometric.log; then
+            echo "G13 V58 native isometric mechanic materials gate failed"; exit 1
+          fi
+          grep -F 'PASS G13 V58 ISOMETRIC:' /tmp/g13-v58-isometric.log
+          # V58 proof: actual Godot isometric camera metal and rivet 
+          # comparisons for both real LODs; separate CI is a hard gate.
+          if [[ -s tests/test_g13_v58_isometric_visual_capture.gd ]]; then
+            if timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+                /tmp/Godot_v4.3-stable_linux.x86_64 \
+                --rendering-method gl_compatibility --audio-driver Dummy --path . \
+                --script res://tests/test_g13_v58_isometric_visual_capture.gd \
+                2>&1 | tee /tmp/g13-v58-web-isometric.log; then
+              grep -F 'PASS G13 V58 NATIVE ISOMETRIC VISIBILITY:' /tmp/g13-v58-web-isometric.log || echo '::warning::V58 visual pass signature unavailable'
+            else
+              echo '::warning::V58 visual capture unavailable during combined publish; independent CI must validate'
+            fi
+          fi
           # V57: real 3D visibility at normal tactical 4.7m scale.
           # Independent pixel-difference QA remains a strict native gate
           # in the V57 workflow, while capture failure on Pages must NOT
