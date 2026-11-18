@@ -144,6 +144,16 @@ jobs:
           "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --print-certs build/TARVOKA-debug.apk | grep -E "Signer #1 certificate SHA-256 digest:"
           echo "Debug signing identity mode: ${TARVOKA_SIGNING_MODE}"
 
+      - name: Audit exported APK for forbidden network permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Inspect the actual exported manifest, not just export_presets.cfg.
+          export PATH="${ANDROID_HOME}/build-tools/34.0.0:${PATH}"
+          command -v aapt
+          python3 tests/audit_apk_network_permissions.py --self-test
+          python3 tests/audit_apk_network_permissions.py build/TARVOKA-debug.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
