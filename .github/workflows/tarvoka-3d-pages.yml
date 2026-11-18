@@ -61,6 +61,7 @@ on:
       - "scripts/ui/AttackHelicopterHubCutFinishV1415.gd"
       - "tests/test_bastion_studio_web_ui.gd"
       - "tests/test_unified_studio_navigation.gd"
+      - "tests/test_city_shared_visual_presence.gd"
       - "tests/test_studio_full_animation_inventory.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
