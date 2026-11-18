@@ -187,7 +187,7 @@ static func apply(root: Node3D) -> bool:
         originals[label] = (model_parts[label] as MeshInstance3D).mesh
         sculpted[label] = shapes[i]
 
-    # V44 bright side badges were 9 cm away from the original housing in
+    # V44 bright side badges were several centimetres away from the housing in
     # the real render. Seat their interior edges onto the V48 x=.518
     # armored shoulder; also expose original turret faction plates.
     var paint_before: Dictionary = {}
@@ -197,7 +197,7 @@ static func apply(root: Node3D) -> bool:
         var badge := paint_parts[label] as MeshInstance3D
         paint_before[label] = badge.position
         var moved: Vector3 = badge.position
-        moved.x = float(side) * 0.536
+        moved.x = float(side) * 0.525
         paint_after[label] = moved
     var guard_node := paint_parts[FACTION_GUARD] as MultiMeshInstance3D
     var prior_transforms: Array[Transform3D] = []
@@ -207,7 +207,7 @@ static func apply(root: Node3D) -> bool:
         prior_transforms.append(old)
         var new_transform: Transform3D = old
         new_transform.origin.x = (
-            -0.545 if old.origin.x < 0.0 else 0.545)
+            -0.526 if old.origin.x < 0.0 else 0.526)
         new_transforms.append(new_transform)
 
     root.set_meta(SAVED, {
