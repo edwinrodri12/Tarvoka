@@ -396,6 +396,15 @@ func _run() -> void:
                 "V14.12 real blade root reaches z -0.450 seamlessly")
             _check(root_bounds.end.x>0.153 and root_bounds.position.x< -0.112,
                 "V14.12 asymmetric swept blade shoulder extends in original V3 axes")
+            var right_tip_top: float=-1.0
+            var seam_vertices: PackedVector3Array=(
+                new_root.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                    as PackedVector3Array)
+            for vertex in seam_vertices:
+                if absf(vertex.z+root1411.position.z+0.450)<0.0001 and vertex.x>0.15:
+                    right_tip_top=maxf(right_tip_top,vertex.y)
+            _check(right_tip_top>0.0 and right_tip_top<0.0145,
+                "V14.12 far blade joint falls below pitched V3 skin on +X leading edge")
         _check(Seam1412.has_model(model)
             and bool(model.get_meta(Seam1412.ENABLED,false)),
             "V14.12 four finished original blade roots are enabled for all factions")
