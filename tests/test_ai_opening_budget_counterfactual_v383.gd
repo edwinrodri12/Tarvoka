@@ -31,8 +31,12 @@ const MAX_HALF_TURNS := 32
 const FIRST_RESPONSE_CAP := 3
 
 static func _play_equal_response(start: Dictionary, mirrored: bool,
-        response_cap: int = FIRST_RESPONSE_CAP) -> Dictionary:
+        response_cap: int = FIRST_RESPONSE_CAP,
+        max_half_turns: int = MAX_HALF_TURNS) -> Dictionary:
     assert(response_cap >= 1 and response_cap <= 8)
+    # Opt-in longer forensic horizon only; all prior callers retain
+    # the existing 32-half-turn observation window.
+    assert(max_half_turns >= 2 and max_half_turns <= 96)
     var state: Dictionary = start.duplicate(true)
     var first: int = int(state["faction"])
     var starting_credits: int = int(state["economy"]["credits"][1-first])
@@ -42,7 +46,7 @@ static func _play_equal_response(start: Dictionary, mirrored: bool,
         "completed_half_turns":0}
     var reason := "phase_limit"
     var empty_phases := 0
-    for phase in range(MAX_HALF_TURNS):
+    for phase in range(max_half_turns):
         if int(state["winner"]) != -1:
             reason = "winner"
             break
