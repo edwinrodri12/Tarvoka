@@ -74,6 +74,13 @@ func _create_layout()->void:
     fill.light_energy=0.48
     fill.shadow_enabled=false
     _scene_root.add_child(fill)
+    var specular:=DirectionalLight3D.new()
+    specular.name="G13V53_IndependentStudioSpecular"
+    specular.rotation_degrees=Vector3(-18.0,62.0,0.0)
+    specular.light_color=Color("#fff4e1")
+    specular.light_energy=0.76
+    specular.shadow_enabled=false
+    _scene_root.add_child(specular)
     var world:=WorldEnvironment.new()
     var environment:=Environment.new()
     environment.background_mode=Environment.BG_COLOR
@@ -81,16 +88,12 @@ func _create_layout()->void:
     environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR
     environment.ambient_light_color=Color("#a2b5ca")
     environment.ambient_light_energy=0.75
-    # Neutral visible backdrop, genuine sky radiance for PBR metal/paint.
-    var studio_sky:=Sky.new()
-    var studio_gradient:=ProceduralSkyMaterial.new()
-    studio_gradient.sky_top_color=Color("#89acc5")
-    studio_gradient.sky_horizon_color=Color("#e1e9ed")
-    studio_gradient.ground_bottom_color=Color("#29343b")
-    studio_gradient.ground_horizon_color=Color("#9fb2bc")
-    studio_sky.sky_material=studio_gradient
-    environment.sky=studio_sky
-    environment.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
+    # The isolated inspection viewport uses real direct PBR specular lights.
+    # A procedural sky generated two persistent 256px GL textures in Godot
+    # 4.3's compatibility backend after SubViewport teardown. The MAIN
+    # unified Studio retains genuine sky reflection for V53; this small
+    # auxiliary inspector avoids creating transient sky GPU resources.
+    environment.reflected_light_source=Environment.REFLECTION_SOURCE_DISABLED
     world.environment=environment
     _scene_root.add_child(world)
 
