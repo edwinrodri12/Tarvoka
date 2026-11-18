@@ -15,6 +15,7 @@ const G13V51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G13V52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
 const G13V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const G13V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
+const G13V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -128,6 +129,24 @@ func _run()->void:
             "G13 V53 physically different metal/rubber surfaces installed")
         _check(bool(model.get_meta(G13V55.FLAG,false)),
             "G13 V55 final native PBR microfinish active in shared Studio")
+        _check(bool(model.get_meta(G13V56.FLAG,false)),
+            "G13 V56 suspension and rotating turret joints active on hero")
+        var joint_shocks:=model.find_child(
+            G13V56.BODIES,true,false) as MultiMeshInstance3D
+        var joint_collar:=model.find_child(
+            G13V56.BEARING,true,false) as MeshInstance3D
+        _check(joint_shocks!=null and joint_shocks.visible and
+            joint_shocks.multimesh.instance_count==4 and
+            joint_collar!=null and joint_collar.visible,
+            "actual 4 hydraulic dampers and rotating turret ring in Studio")
+        studio.call("_g13_v56_show_finish",false)
+        _check(joint_shocks!=null and not joint_shocks.visible and
+            joint_collar!=null and not joint_collar.visible,
+            "V56 actual Studio comparison must hide new 3D mechanical parts")
+        studio.call("_g13_v56_show_finish",true)
+        _check(joint_shocks!=null and joint_shocks.visible and
+            joint_collar!=null and joint_collar.visible,
+            "V56 comparison restores physical real 3D mechanical parts")
         var gaskets:=model.find_child(
             G13V55.SEAMS,true,false) as MultiMeshInstance3D
         _check(gaskets!=null and gaskets.visible and (
@@ -404,6 +423,10 @@ func _run()->void:
         not bool(g13_tactical.get_meta(G13V55.FLAG,false)) and
         g13_tactical.find_child(G13V55.SEAMS,true,false)==null,
         "G13 V55 physically detailed gasket/texture only in hero LOD13")
+    _check(g13_tactical!=null and
+        not bool(g13_tactical.get_meta(G13V56.FLAG,false)) and
+        g13_tactical.find_child(G13V56.BEARING,true,false)==null,
+        "G13 V56 extra mechanical GPU batches excluded from Android LOD8")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
