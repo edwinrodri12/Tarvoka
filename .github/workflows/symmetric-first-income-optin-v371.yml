@@ -37,7 +37,12 @@ jobs:
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --script res://tests/test_save_codec.gd \
             2>&1 | tee /tmp/legacy-codec-v371.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/legacy-codec-v371.log; then exit 1; fi
+          # Legacy codec intentionally decodes the string "not json".
+          # Godot emits a benign "ERROR: Parse JSON failed" for this
+          # negative-test case, even though the contract succeeds.
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:' /tmp/legacy-codec-v371.log; then exit 1; fi
+          if grep -E 'ERROR:' /tmp/legacy-codec-v371.log | grep -v 'ERROR: Parse JSON failed'; then exit 1; fi
+          grep -Fq 'PASS save codec: roundtrip, immutability, version, invalid JSON, bounds, IDs' /tmp/legacy-codec-v371.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
