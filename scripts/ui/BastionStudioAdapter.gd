@@ -208,7 +208,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V47 · materiales de cabina y torreta")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.2")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.8")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -790,7 +790,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.7 · ACABADO DE AMORTIGUADORES",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.8 · ARTICULACIONES DEL ROTOR",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -875,6 +875,10 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(40.0,27.0,3.75,Vector3(0.17,2.07,-0.29)),
         "V14.7: fuelles y anclajes",
         func(): _heli_inspect_focus(40.0,58.0,3.68,Vector3(0.18,2.04,-0.34)))
+    _add_paired(heli_controls,"V14.8: horquillas de paso",
+        func(): _heli_inspect_focus(310.0,30.0,3.78,Vector3(-0.16,2.06,-0.29)),
+        "V14.8: pasadores y bieletas",
+        func(): _heli_inspect_focus(315.0,59.0,3.72,Vector3(-0.16,2.07,-0.35)))
     _heli_night_button_v143=_button(heli_controls,
         "V14.4: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
@@ -963,7 +967,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.2")
+        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.8")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
