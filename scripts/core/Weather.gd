@@ -85,7 +85,7 @@ static func valid_cycle(value: Variant) -> bool:
 static func forecast(state: Dictionary) -> Dictionary:
     var current: String = from_state(state)
     var cycle = state.get("weather_cycle",null)
-    if not valid_cycle(cycle):
+    if not valid_cycle(cycle) or not valid(state.get("weather", null)):
         return {"dynamic":false,"current":current,"next":"","remaining":0}
     return {
         "dynamic":true,"current":current,"next":next_weather(current),
