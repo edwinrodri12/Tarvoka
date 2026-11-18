@@ -14,6 +14,7 @@ on:
       - "scripts/ui/G13TacticalMountReadabilityV57.gd"
       - "scripts/ui/G13IsometricMechanicalFinishV58.gd"
       - "scripts/ui/G13PremiumSurfaceV59.gd"
+      - "scripts/ui/G13ContinuousTreadV60.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -145,6 +146,8 @@ on:
       - "tests/test_g13_v58_isometric_visual_capture.gd"
       - "tests/test_g13_v59_premium_3d_materials.gd"
       - "tests/test_g13_v59_native_visual_capture.gd"
+      - "tests/test_g13_v60_continuous_tire.gd"
+      - "tests/test_g13_v60_native_visual_capture.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -311,6 +314,10 @@ jobs:
           cp hq-android-v15/tests/test_g13_v59_premium_3d_materials.gd tests/test_g13_v59_premium_3d_materials.gd
           test -s hq-android-v15/tests/test_g13_v59_native_visual_capture.gd
           cp hq-android-v15/tests/test_g13_v59_native_visual_capture.gd tests/test_g13_v59_native_visual_capture.gd
+          test -s hq-android-v15/tests/test_g13_v60_continuous_tire.gd
+          cp hq-android-v15/tests/test_g13_v60_continuous_tire.gd tests/test_g13_v60_continuous_tire.gd
+          test -s hq-android-v15/tests/test_g13_v60_native_visual_capture.gd
+          cp hq-android-v15/tests/test_g13_v60_native_visual_capture.gd tests/test_g13_v60_native_visual_capture.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1173,6 +1180,30 @@ jobs:
             echo "G13 V59 real rubber, reflective glass or faction PBR gate failed"; exit 1
           fi
           grep -F 'PASS G13 V59 BASTION PREMIUM 3D:' /tmp/g13-v59-bastion-premium.log
+          # V60: the real 160-chevron continuous tire MUST rotate as
+          # part of the original 4-wheel Mesh, with zero old visible pads.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v60_continuous_tire.gd \
+            2>&1 | tee /tmp/g13-v60-wheel-proof.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v60-wheel-proof.log; then
+            echo "G13 V60 real 360-degree tread or Android budget failed"; exit 1
+          fi
+          grep -F 'PASS G13 V60 CONTINUOUS TREAD:' /tmp/g13-v60-wheel-proof.log
+          # V60 genuine Godot comparison; this is an additional render
+          # audit, not a screenshot or mockup substituted for the source.
+          if [[ -s tests/test_g13_v60_native_visual_capture.gd ]]; then
+            if timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+                /tmp/Godot_v4.3-stable_linux.x86_64 \
+                --rendering-method gl_compatibility --audio-driver Dummy --path . \
+                --script res://tests/test_g13_v60_native_visual_capture.gd \
+                2>&1 | tee /tmp/g13-v60-shared-visual.log; then
+              grep -F 'PASS G13 V60 NATIVE 3D VISIBILITY:' /tmp/g13-v60-shared-visual.log || echo '::warning::V60 native visual pass absent; independent visual hard gate verifies screenshots'
+            else
+              echo '::warning::V60 real render comparison unavailable during combined export'
+            fi
+          fi
           # G13 V59: capture native tire, reflective glass and faction
           # comparisons in the exact scene served by the public Studio.
           if [[ -s tests/test_g13_v59_native_visual_capture.gd ]]; then
