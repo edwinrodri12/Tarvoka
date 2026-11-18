@@ -20,6 +20,7 @@ const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 const HubWreck1414=preload("res://scripts/ui/AttackHelicopterHubWreckV1414.gd")
+const Cut1415=preload("res://scripts/ui/AttackHelicopterHubCutFinishV1415.gd")
 var failures: int=0
 var images: int=0
 
@@ -416,6 +417,44 @@ func _run() -> void:
     studio.call("_heli_repair")
     _check(V13.stage(model)==0 and HubWreck1414.has_model(model),
         "V14.14 studio repair safely restores pristine rotor and hides debris")
+    _check(Cut1415.has_model(model),
+        "V14.15 genuine capped exposed metal faces are in the live 3D Studio")
+    var cut_controls: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.15"):
+            cut_controls+=1
+    _check(cut_controls==3,
+        "V14.15 provides both fracture-piece closeups plus reversible comparison")
+    studio.call("_heli_fragment_focus_v1415",0)
+    var wreck1415: Node3D=model.find_child(
+        V13.WRECK,true,false) as Node3D
+    var expected_focus: Vector3=wreck1415.to_global(
+        HubWreck1414.REST_POINTS[0])
+    var camera_focus: Vector3=model.to_global(
+        studio.get("_heli_focus_local") as Vector3)
+    _check(V13.stage(model)==4
+        and bool(studio.get("_heli_wreck_frozen"))
+        and expected_focus.distance_to(camera_focus)<0.0001,
+        "V14.15 camera truly centers grounded actual rotor-head metal")
+    var cut_piece: MeshInstance3D=model.find_child(
+        HubWreck1414.PREFIX+"0",true,false) as MeshInstance3D
+    _check(cut_piece!=null and cut_piece.mesh is ArrayMesh,
+        "live V14.15 camera shows real capped mesh, not a static photo")
+    studio.call("_heli_toggle_v1415")
+    _check(cut_piece.mesh==cut_piece.get_meta(Cut1415.BEFORE)
+        and model.get_instance_id()==intact_model_id,
+        "V14.15 compare restores real pre-finish V14.14 geometry in place")
+    studio.call("_heli_toggle_v1415")
+    _check(cut_piece.mesh==cut_piece.get_meta(Cut1415.AFTER)
+        and model.get_instance_id()==intact_model_id,
+        "V14.15 compare restores real watertight sculpt with no duplicate")
+    studio.call("_heli_fragment_focus_v1415",1)
+    _check(model.to_global(studio.get("_heli_focus_local") as Vector3)
+        .distance_to(wreck1415.to_global(HubWreck1414.REST_POINTS[1]))<0.0001,
+        "V14.15 second closeup focuses the opposite genuinely torn piece")
+    studio.call("_heli_repair")
+    _check(V13.stage(model)==0 and Cut1415.has_model(model),
+        "V14.15 closeup and repair preserve the finished V1 helicopter")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
