@@ -1,4 +1,4 @@
-name: Publish TARVOKA civilian city design preview V42 to shared 3D viewer
+name: Publish TARVOKA civilian city design preview V43 to shared 3D viewer
 
 on:
   # First let the root studio publish the updated NATIVE EDIFICIOS picker.
@@ -71,7 +71,7 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
           cp /tmp/city-templates/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
           printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
-      - name: Select the actual editable 3D art scene V42 for WebGL
+      - name: Select the actual editable 3D art scene V43 for WebGL
         shell: bash
         run: |
           set -euo pipefail
@@ -111,10 +111,11 @@ jobs:
           test -s scripts/ui/CivilianCityFinalFitV40.gd
           test -s scripts/ui/CivilianCityRoofJoinV41.gd
           test -s scripts/ui/CivilianCityArtReviewV42.gd
-          test -s scripts/ui/CivilianCityDesignStudioV42.gd
-          test -s scenes/CivilianCityDesignStudioV42.tscn
-          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV42.tscn"|' project.godot
-          grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV42.tscn"' project.godot
+          test -s scripts/ui/CivilianCityArtEvidenceV43.gd
+          test -s scripts/ui/CivilianCityDesignStudioV43.gd
+          test -s scenes/CivilianCityDesignStudioV43.tscn
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
           cat >> export_presets.cfg <<'PRESET'
 
           [preset.1]
@@ -154,9 +155,9 @@ jobs:
           progressive_web_app/enabled=false
           PRESET
           CITY_ART_SHA=$(git rev-parse --short=10 HEAD)
-          printf 'CIUDADES 3D V42 · DISEÑO EN PROGRESO · %s\n' "$CITY_ART_SHA" > assets/art_studio_revision.txt
+          printf 'CIUDADES 3D V43 · DISEÑO EN PROGRESO · %s\n' "$CITY_ART_SHA" > assets/art_studio_revision.txt
           echo "CITY_ART_SHA=$CITY_ART_SHA" >> "$GITHUB_ENV"
-      - name: Package actual V42 native 3D meshes as a playable browser art scene
+      - name: Package actual V43 native 3D meshes as a playable browser art scene
         shell: bash
         run: |
           set -euo pipefail
@@ -193,7 +194,7 @@ jobs:
                 '<a href="ciudades/" style="display:inline-block;'
                 'padding:12px 14px;border:2px solid #dabb75;border-radius:9px;'
                 'background:#142330;color:#ffe2a0;text-decoration:none">'
-                'CIUDADES 3D V42 · EN DISEÑO</a></nav>')
+                'CIUDADES 3D V43 · EN DISEÑO</a></nav>')
           homepage.write_text(original.replace("</body>",link+"\n</body>"),
                               encoding="utf-8")
           city_html=city.read_text(encoding="utf-8")
@@ -208,7 +209,7 @@ jobs:
                   'z-index:2000;padding:7px 9px;border-radius:7px;'
                   'background:#142330dd;color:#ffe2a0;'
                   'font:600 11px system-ui,Arial,sans-serif;'
-                  'pointer-events:none">MODELO V42 EN DISEÑO · '
+                  'pointer-events:none">MODELO V43 EN DISEÑO · '
                   +html.escape(revision)+'</div>')
           city.write_text(city_html.replace("</body>",header+"\n</body>"),
                           encoding="utf-8")
