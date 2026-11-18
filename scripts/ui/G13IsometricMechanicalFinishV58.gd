@@ -13,7 +13,7 @@ const V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const SAVED:String="tarvoka_g13_v58_materials_and_original_pin_transforms"
 const PIN_RECESS_M:float=0.009
 const METAL_SHADES:Dictionary={
-    "fender_lod8":{"color":"#68787d","metallic":0.46,"roughness":0.66},
+    "fender_lod8":{"color":"#68787d","metallic":0.52,"roughness":0.66},
     "fender_lod13":{"color":"#637278","metallic":0.59,"roughness":0.62},
     "pin_lod13":{"color":"#8a999c","metallic":0.68,"roughness":0.48},
     "shock_body":{"color":"#4e5d62","metallic":0.54,"roughness":0.65},
