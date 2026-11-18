@@ -16,6 +16,7 @@ const G13V52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
 const G13V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const G13V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const G13V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
+const G13V57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -131,6 +132,19 @@ func _run()->void:
             "G13 V55 final native PBR microfinish active in shared Studio")
         _check(bool(model.get_meta(G13V56.FLAG,false)),
             "G13 V56 suspension and rotating turret joints active on hero")
+        _check(bool(model.get_meta(G13V57.FLAG,false)),
+            "G13 V57 exterior supports must improve both 3D detail levels")
+        var outside_mounts:=model.find_child(
+            G13V57.BRACKETS,true,false) as MultiMeshInstance3D
+        _check(outside_mounts!=null and outside_mounts.visible and
+            outside_mounts.multimesh.instance_count==8,
+            "G13 V57 eight real fender braces, ONE GPU batch on hero")
+        studio.call("_g13_v57_show_finish",false)
+        _check(outside_mounts!=null and not outside_mounts.visible,
+            "G13 V57 native Studio comparison hides exterior mounts")
+        studio.call("_g13_v57_show_finish",true)
+        _check(outside_mounts!=null and outside_mounts.visible,
+            "G13 V57 comparison restores external metal brackets")
         var joint_shocks:=model.find_child(
             G13V56.BODIES,true,false) as MultiMeshInstance3D
         var joint_collar:=model.find_child(
@@ -427,6 +441,10 @@ func _run()->void:
         not bool(g13_tactical.get_meta(G13V56.FLAG,false)) and
         g13_tactical.find_child(G13V56.BEARING,true,false)==null,
         "G13 V56 extra mechanical GPU batches excluded from Android LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V57.FLAG,false)) and
+        int(g13_tactical.get_meta("tarvoka_g13_v57_added_draw_nodes",-1))==1,
+        "G13 V57 readable mechanical arch brackets limited to 1 GPU draw on Android LOD8")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
@@ -462,5 +480,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: real G13 V55 factory PBR grain and one 20-gasket hatch GPU batch, reversible historical V53/V54 previews, 8 faction colors, LOD8 preserved, dual guns/radar and signed-off G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: G13 V57 external mechanical arch mounts in both hero and Android LOD8, V56 rotating turret and suspension preserved, real material comparisons, dual guns, radar and approved G11 unchanged")
     quit(0)
