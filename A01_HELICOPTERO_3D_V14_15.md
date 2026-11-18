@@ -38,3 +38,6 @@ En la [ejecución A01 44269771494](https://github.com/edwinrodri12/Tarvoka/actio
 
 **Resultado artístico del rotor/destrucción:** cierre aprobado en pruebas nativas y revisión de los dos pares de capturas. No se añade arte a `art_level<=10`. La disponibilidad pública depende únicamente del resultado del flujo independiente de Pages; no afirmar despliegue por este resultado de Godot.
  El hecho de que el código y la geometría del HAT-29 pasen no suprime las pruebas de G13 ni permite atribuir a HAT-29 fallos de otras unidades.
+
+### Despliegue WebGL confirmado
+El flujo unificado **Publish TARVOKA native 3D art studio**, [ejecución 44270024949](https://github.com/edwinrodri12/Tarvoka/actions/runs/44270024949), terminó **build=SUCCESS y deploy=SUCCESS**. El HAT-29 V14.15 forma parte de los scripts empaquetados en esa compilación y sus controles quedan disponibles en el visor público: **https://edwinrodri12.github.io/Tarvoka/**. Se ha conservado el visor único, junto al resto de unidades y edificios, sin crear una página aislada para el helicóptero.
