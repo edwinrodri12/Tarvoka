@@ -52,9 +52,10 @@ static func _roof_substrate(mesh: MeshInstance3D,level: int) -> bool:
     finish.roughness=lerpf(
         prior.roughness,0.86 if level==1 else 0.84 if level==2 else 0.69,
         0.65)
-    finish.metallic=lerpf(
-        prior.metallic,0.04 if level==1 else 0.03 if level==2 else 0.43,
-        0.72)
+    # V40: ceramic/stone must not inherit V1's metallic roof sheen.
+    finish.metallic=(
+        0.04 if level==1 else 0.03 if level==2 else
+        lerpf(prior.metallic,0.43,0.72))
     mesh.material_override=finish
     mesh.set_meta("city_v39_subroof_finish",
         "ceramic" if level==1 else "stone" if level==2 else "steel")
