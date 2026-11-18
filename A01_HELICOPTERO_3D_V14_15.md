@@ -25,3 +25,10 @@ Archivo `scripts/ui/AttackHelicopterHubCutFinishV1415.gd`.
 
 ## Estado de liberación
 V14.15 está implementada en el repositorio principal. El acabado artístico final debe confirmarse con el resultado de los 93 PNG y el test de manifold. La actualización del visor web se verifica por separado; que el HAT-29 pase su prueba no demuestra automáticamente que el Estudio unificado haya publicado (en las ejecuciones anteriores existían fallos ajenos del G13).
+
+## Resultado de inspección y CI
+Godot 4.3 produjo **93 capturas reales** con los cuatro ángulos adicionales de comparación; se revisaron los PNG originales (dos pares comparables a cámara fija, `hat29_v14_15_corte_0_abierto/soldado.png` y `hat29_v14_15_corte_1_abierto/soldado.png`). Los cortes V14.15 muestran caras metálicas expuestas reconocibles frente a los bordes V14.14 abiertos, y las piezas mantienen posición, tamaño y silueta. No se modificó el rotor en su estado intacto.
+
+En la [ejecución A01 44269771494](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269771494), las pruebas de Godot del HAT-29, los 384 estados animados, los ocho ciclos V14.14 y la nueva **verificación de ambas mallas cerradas en ocho facciones** han superado las etapas respectivas. Las 93 capturas y su publicación como artefacto deben comprobarse como resultados independientes cuando termine el flujo. La [ejecución previa 44269702697](https://github.com/edwinrodri12/Tarvoka/actions/runs/44269702697) generó correctamente 93 imágenes, pero marcó fallo por un contador antiguo que esperaba 89; el workflow actualizado ya usa 93.
+
+**El visor público solo se considera actualizado si el workflow Pages del último commit termina correctamente.** El hecho de que el código y la geometría del HAT-29 pasen no suprime las pruebas de G13 ni permite atribuir a HAT-29 fallos de otras unidades.
