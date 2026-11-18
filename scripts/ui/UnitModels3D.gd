@@ -64,6 +64,7 @@ const G13RealismV53 = preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const G13RubberV54 = preload("res://scripts/ui/G13RubberSculptV54.gd")
 const G13MicroV55 = preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const G13JointV56 = preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
+const G13VisibleV57 = preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1082,6 +1083,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V55 PBR paint grain and panel gaskets failed on hero LOD13")
                 if not G13JointV56.apply(model):
                     push_warning("G13 V56 suspension and turret joints failed on hero LOD13")
+                if not G13VisibleV57.apply(model):
+                    push_warning("G13 V57 visible fender mounts failed on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1141,6 +1144,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V52 roof shoulder integration failed on tactical LOD8")
                 if not G13RealismV53.apply(model):
                     push_warning("G13 V53 real metal/rubber materials failed on tactical LOD8")
+                if not G13VisibleV57.apply(model):
+                    push_warning("G13 V57 single-batch tactical mechanical mounts failed on LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
