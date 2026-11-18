@@ -79,7 +79,9 @@ static func _profiled_root() -> ArrayMesh:
     ]
     var loops: Array[Array]=[]
     for station in stations:
-        loops.append(_octagon(station.y,station.z,station.x,station.w))
+        # The original V3 MeshInstance remains positioned at z=-0.225.
+        # Convert absolute pivot Z to local vertex Z to avoid a double shift.
+        loops.append(_octagon(station.y,station.z,station.x+0.225,station.w))
     var st:=SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     # Each four-vertex side has actual thickness; no two-sided decal.
@@ -91,10 +93,10 @@ static func _profiled_root() -> ArrayMesh:
     for side in range(SIDES):
         var next: int=(side+1)%SIDES
         # Near cap points back toward hub (+Z); far cap points -Z.
-        st.add_vertex(Vector3(0,0,stations[0].x))
+        st.add_vertex(Vector3(0,0,stations[0].x+0.225))
         st.add_vertex(loops[0][next])
         st.add_vertex(loops[0][side])
-        st.add_vertex(Vector3(0,0,stations[RINGS-1].x))
+        st.add_vertex(Vector3(0,0,stations[RINGS-1].x+0.225))
         st.add_vertex(loops[RINGS-1][side])
         st.add_vertex(loops[RINGS-1][next])
     st.generate_normals()
