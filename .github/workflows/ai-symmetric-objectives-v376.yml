@@ -72,15 +72,15 @@ jobs:
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --script res://tests/test_symmetric_objective_contract_v376.gd \
-            2>&1 | tee /tmp/ai-v376-midgame-contract.log
-          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v376-midgame-contract.log; then exit 1; fi
-          grep -Fq 'PASS AI v376 objective contract:' /tmp/ai-v376-midgame-contract.log
-          test "$(grep -c '^MIDGAME375_CONTRACT ' /tmp/ai-v376-midgame-contract.log)" -eq 48
+            2>&1 | tee /tmp/ai-v376-objective-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v376-objective-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI v376 objective contract:' /tmp/ai-v376-objective-contract.log
+          test "$(grep -c '^MISSIONS376_CONTRACT ' /tmp/ai-v376-objective-contract.log)" -eq 48
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ai-v376-midgame-contract
-          path: /tmp/ai-v376-midgame-contract.log
+          name: ai-v376-objective-contract
+          path: /tmp/ai-v376-objective-contract.log
           if-no-files-found: ignore
           retention-days: 30
 
