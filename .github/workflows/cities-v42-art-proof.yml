@@ -1,0 +1,74 @@
+name: TARVOKA V42 — native city art visual proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cities-v42-art-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-civilian-city-art:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Read native V42 art source (not gameplay branch)
+        uses: actions/checkout@v4
+        with:
+          ref: art/cities-v8-rear-facades-rooftops-20261117
+
+      - name: Install software OpenGL display for Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth libgl1-mesa-dri libglu1-mesa
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-v42.zip
+          unzip -qo /tmp/godot-v42.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          mkdir -p build/city-v42-evidence
+          test -s scripts/ui/CivilianCityArtReviewV42.gd
+          test -s scripts/ui/CivilianCityVisualProofV42.gd
+          test -s scripts/ui/CivilianCityDesignStudioV42.gd
+          test -s scenes/CivilianCityDesignStudioV42.tscn
+
+      - name: Import and parse native city 3D resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee build/city-v42-evidence/godot-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+              build/city-v42-evidence/godot-import.log; then
+            exit 1
+          fi
+
+      - name: Render real GL Compatibility viewport and capture all 15 models
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --path . --rendering-method gl_compatibility \
+            --script res://scripts/ui/CivilianCityVisualProofV42.gd \
+            2>&1 | tee build/city-v42-evidence/godot-render.log
+          test "$(find build/city-v42-evidence -maxdepth 1 -name '*.png' | wc -l)" -eq 15
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+              build/city-v42-evidence/godot-render.log; then
+            exit 1
+          fi
+
+      - name: Keep screenshots and diagnostic logs even if rendering fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciudades-v42-evidencia-godot
+          path: build/city-v42-evidence/
+          if-no-files-found: warn
+          retention-days: 14
