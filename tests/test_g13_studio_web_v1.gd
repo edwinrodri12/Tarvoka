@@ -19,6 +19,7 @@ const G13V56=preload("res://scripts/ui/G13MechanicalJointFinishV56.gd")
 const G13V57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const G13V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const G13V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -149,6 +150,10 @@ func _run()->void:
             "G13 V58 coherent metal finish active in shared native 3D Studio")
         _check(bool(model.get_meta(G13V59.FLAG,false)),
             "G13 V59 Bastion-grade physical rubber, glass and fraction active")
+        _check(bool(model.get_meta(G13V60.FLAG,false)) and
+            int(model.get_meta(
+                "tarvoka_g13_v60_lugs_per_wheel",0))==160,
+            "G13 V60 160 physical molded tread blocks ring all 360 degrees")
         var v59_tyre:=model.find_child(
             G13V59.TIRES,true,false) as MultiMeshInstance3D
         var v59_glass:=model.find_child(
@@ -159,6 +164,18 @@ func _run()->void:
                 albedo_texture is Texture2D,
             "real mesh and real reflected glass present in public Studio")
         var current_mesh:Mesh=v59_tyre.multimesh.mesh if v59_tyre!=null else null
+        var old_pads:=model.find_child(
+            G13V60.PADS,true,false) as MultiMeshInstance3D
+        _check(old_pads!=null and not old_pads.visible,
+            "V60 integrated lug belt hides old scattered 8-pad design")
+        studio.call("_g13_v60_show_finish",false)
+        _check(old_pads!=null and old_pads.visible and
+            v59_tyre.multimesh.mesh!=current_mesh,
+            "G13 V60 native Studio exposes real inferior V59 block clusters")
+        studio.call("_g13_v60_show_finish",true)
+        _check(old_pads!=null and not old_pads.visible and
+            v59_tyre.multimesh.mesh==current_mesh,
+            "G13 V60 native Studio restores true continuous molded 3D tread")
         studio.call("_g13_v59_show_finish",false)
         _check(v59_tyre!=null and v59_tyre.multimesh.mesh!=current_mesh,
             "public Studio must reveal original V58 physical wheel")
@@ -496,6 +513,11 @@ func _run()->void:
         g13_tactical.get_meta(G13V59.FLAG,false)) and
         int(g13_tactical.get_meta("tarvoka_g13_v59_pbr_glass_panes",-1))==2,
         "G13 V59 Android LOD8 uses its own efficient 32-section rubber and reflective glass")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V60.FLAG,false)) and
+        int(g13_tactical.get_meta(
+            "tarvoka_g13_v60_lugs_per_wheel",-1))==48,
+        "G13 V60 Android LOD8 physical continuous tread has just 48 closed lugs")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
