@@ -60,6 +60,7 @@ const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
+const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -166,6 +167,7 @@ var _g13_v27_show_previous:bool=false
 var _g13_v28_show_previous:bool=false
 var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
+var _g15_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -224,6 +226,9 @@ func _ready() -> void:
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
         role_picker.set_item_text(aa_index,"G13 · AA V57 · soportes visibles")
+    var ew_index: int=P06Models.ROLES.find("ew_mobile")
+    if ew_index>=0:
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V1")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -532,6 +537,16 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"Cerrar escenario de prueba","action":"g11_battle_close"},
                 {"title":"Detener animación","action":"stop"}
             ]
+        "ew_mobile":
+            return [
+                {"group":"G15 V1 · SISTEMAS ELECTRÓNICOS"},
+                {"title":"Movimiento 6×6, antena plegada","action":"move"},
+                {"title":"Desplegar mástil articulado","action":"deploy"},
+                {"title":"Barrido direccional","action":"scan"},
+                {"title":"Interferencia · efecto visual","action":"jam"},
+                {"title":"Sacudida por impacto","action":"damage"},
+                {"title":"Detener y restaurar","action":"stop"}
+            ]
         "aa_mobile":
             return [
                 {"group":"G13 · MOVIMIENTO, RADAR Y APUNTADO"},
@@ -719,6 +734,11 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
+        "ew_mobile":
+            if kind in ["attack","attack_air","attack_ground"]:
+                status_label.text="G15 no tiene armamento: solo interferencia visual."
+            else:
+                _g15_play("damage" if kind=="hit" else kind)
         "attack_heli":
             _heli_play("hit_bullet" if kind=="hit" else kind)
         "mlrs":
@@ -739,7 +759,11 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="attack_heli":
+    if _role=="ew_mobile":
+        if _g15_tween!=null and _g15_tween.is_running():
+            _g15_tween.kill()
+        P06Models.restore_model_pose("ew_mobile",model_root)
+    elif _role=="attack_heli":
         _heli_stop()
     elif _role=="mlrs":
         _g11_stop()
@@ -767,6 +791,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
+            "ew_mobile": label="G15 · Guerra electrónica · V1 (arte 3D)"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -3075,6 +3100,8 @@ func _display_role(role: String) -> void:
         _g11_turn_tween.kill()
     if _g13_v4_tween!=null and _g13_v4_tween.is_running():
         _g13_v4_tween.kill()
+    if _g15_tween!=null and _g15_tween.is_running():
+        _g15_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
@@ -3087,6 +3114,18 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if role == "ew_mobile":
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("ew_mobile",_faction,true,13)
+        if model_root==null or not G15EW.has_model(model_root):
+            push_error("G15 real native mesh missing from Studio")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        _update_camera()
     if role == "tank" and model_root != null:
         # The unified Studio navigation QA expects the approved G09 V31
         # track geometry by default. UnitArtStudioWeb's base selector starts
@@ -3256,6 +3295,19 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if _role == "ew_mobile":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var old_yaw: float=_yaw
+        var old_zoom: float=_zoom
+        _faction=index
+        _display_role("ew_mobile")
+        _yaw=old_yaw
+        _zoom=old_zoom
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
     if _role == "attack_heli":
         if index < 0 or index >= Factions.FACTIONS.size():
             return
@@ -3993,3 +4045,32 @@ func _update_details() -> void:
         faction_name,P06Stages[_stage_p06()],
         "acabado V25 cargado" if _p06_quality_verified else
         "ERROR: modelo final no cargado"]
+
+# G15 visual-only rig: same shared native 3D viewport as all other units.
+# No BattleSession ability is invoked by these previews.
+func _g15_play(kind: String) -> void:
+    if _role!="ew_mobile" or model_root==null or not G15EW.has_model(model_root):
+        return
+    if kind not in ["move","deploy","scan","jam","damage","idle"]:
+        return
+    if _g15_tween!=null and _g15_tween.is_running():
+        _g15_tween.kill()
+    var art:Node3D=model_root
+    P06Models.restore_model_pose("ew_mobile",art)
+    if kind=="idle":
+        return
+    _g15_tick(0.0,art,kind)
+    _g15_tween=art.create_tween()
+    _g15_tween.tween_method(
+        Callable(self,"_g15_tick").bind(art,kind),0.0,1.0,
+        1.9 if kind in ["deploy","scan"] else 1.2)
+    _g15_tween.tween_callback(Callable(self,"_g15_finish").bind(art))
+    status_label.text="G15 · "+kind+" · demostración visual sin combate"
+
+func _g15_tick(t: float,art: Node3D,kind: String) -> void:
+    if is_instance_valid(art):
+        P06Models.pose_model("ew_mobile",art,kind,t)
+
+func _g15_finish(art: Node3D) -> void:
+    if is_instance_valid(art):
+        P06Models.restore_model_pose("ew_mobile",art)
