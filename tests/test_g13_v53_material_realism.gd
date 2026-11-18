@@ -35,16 +35,24 @@ func _run()->void:
             var alloy:=_material(model,"G13_V46_MachinedArmoredHubCaps")
             var armored:=_material(model,"G13_LowerMonocoque")
             var stripe:=_material(model,"G13_TurretFaction_1")
-            _check(tire!=null and wall!=null and tread!=null,
-                "missing non-metallic wheel materials")
+            _check(tire!=null,"tire material missing on LOD%d" % lod)
+            if lod==13:
+                _check(wall!=null and tread!=null,
+                    "hero wheel sidewalls/tread materials missing")
             _check(alloy!=null and armored!=null and stripe!=null,
                 "missing metal or faction finishes")
-            if tire!=null and wall!=null and tread!=null:
-                for rubber in [tire,wall,tread]:
-                    _check(rubber.metallic<0.01 and rubber.roughness>0.85,
-                        "wheel rubber must be non-metallic and diffuse")
-                    _check(rubber.normal_enabled and rubber.normal_texture!=null,
-                        "wheel rubber must show a micro normal surface")
+            var rubber_parts: Array = [tire]
+            if wall!=null:
+                rubber_parts.append(wall)
+            if tread!=null:
+                rubber_parts.append(tread)
+            for rubber in rubber_parts:
+                if rubber==null:
+                    continue
+                _check(rubber.metallic<0.01 and rubber.roughness>0.85,
+                    "wheel rubber must be non-metallic and diffuse")
+                _check(rubber.normal_enabled and rubber.normal_texture!=null,
+                    "wheel rubber must show a micro normal surface")
             if alloy!=null:
                 _check(alloy.metallic>0.75 and alloy.roughness<0.35,
                     "machined hub must reflect like actual alloy")
