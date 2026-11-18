@@ -13,6 +13,7 @@ const G13V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G13V50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G13V51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G13V52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
+const G13V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -121,25 +122,46 @@ func _run()->void:
         _check(v46_rings!=null and v46_rings.visible,
             "G13 V46 compare must restore native wheel paint")
         _check(bool(model.get_meta(G13V47.FLAG,false)),
-            "G13 V47 individual PBR surfaces installed on LOD13")
+            "G13 V47 remains installed as the historical material layer")
+        _check(bool(model.get_meta(G13V53.FLAG,false)),
+            "G13 V53 physically different metal/rubber surfaces installed")
         var cab_surface:=model.find_child(
             "G13_V10_ChamferedCabShell",true,false) as MeshInstance3D
         _check(cab_surface!=null,
-            "G13 V47 must repaint the visible hero cab shell")
+            "G13 V53 must finish the real hero cab shell")
         if cab_surface!=null:
-            var final_mat:=cab_surface.material_override as StandardMaterial3D
-            _check(final_mat!=null and absf(final_mat.roughness-0.56)<0.002,
-                "G13 V47 correct cab PBR roughness applied")
+            # V53 is now the final exposed PBR finish, not V47.
+            # Verify the older V47 comparison with V53 temporarily off;
+            # re-enable V53 afterwards to guarantee the public Studio
+            # never ends in a stale flat-metal comparison material.
+            var v53_mat:=cab_surface.material_override as StandardMaterial3D
+            _check(v53_mat!=null and
+                absf(v53_mat.roughness-0.48)<0.002 and
+                absf(v53_mat.metallic-0.54)<0.002,
+                "G13 V53 metal finish must be the actual visible cab")
             var original_mesh:Mesh=cab_surface.mesh
+            studio.call("_g13_v53_show_finish",false)
+            var v47_mat:=cab_surface.material_override as StandardMaterial3D
+            _check(v47_mat!=null and absf(v47_mat.roughness-0.56)<0.002,
+                "G13 V53 compare restores historical V47 physical roughness")
             studio.call("_g13_v47_compare",false)
-            var previous_mat:=cab_surface.material_override as StandardMaterial3D
-            _check(previous_mat!=null and absf(previous_mat.roughness-0.56)>0.04,
-                "G13 V47 switch actually restores V46 cab roughness")
+            var v46_mat:=cab_surface.material_override as StandardMaterial3D
+            _check(v46_mat!=null and absf(v46_mat.roughness-0.56)>0.04,
+                "G13 V47 comparison restores original V46 roughness")
             studio.call("_g13_v47_compare",true)
-            _check(cab_surface.material_override==final_mat,
-                "G13 V47 comparison must restore real final PBR material")
+            _check(cab_surface.material_override==v47_mat,
+                "G13 V47 comparison restores its historical final material")
+            studio.call("_g13_v53_show_finish",true)
+            _check(cab_surface.material_override==v53_mat,
+                "G13 V53 must be reapplied to real visible hero cab")
             _check(cab_surface.mesh==original_mesh,
-                "G13 V47 must not replace or duplicate original 3D cab")
+                "G13 material comparisons cannot replace native 3D mesh")
+            var tire:=model.find_child(
+                "G13_Ruedas4x4MultiMesh",true,false) as MultiMeshInstance3D
+            var tire_mat:=tire.material_override as StandardMaterial3D if tire!=null else null
+            _check(tire_mat!=null and tire_mat.metallic<0.01 and
+                tire_mat.roughness>0.85 and tire_mat.normal_enabled,
+                "G13 V53 real tire rubber must stay matte and nonmetallic")
 
         _check(bool(model.get_meta(G13V48.FLAG,false)),
             "G13 V48 must replace three REAL hero shell meshes")
@@ -354,6 +376,9 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V52.FLAG,false)),
         "G13 V52 roof-rail mesh must also be active on tactical LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V53.FLAG,false)),
+        "G13 V53 PBR metal and rubber must be active on tactical LOD8")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
@@ -389,5 +414,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 glazing, V51 integrated roof and V52 roof rails on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44-V52 native geometry and historical material comparisons, V53 physically separated PBR metal and rubber on BOTH LODs, faction colors and original dual-gun/radar controls preserved")
     quit(0)
