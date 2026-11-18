@@ -779,7 +779,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.4 · REFLEJOS DE SUPERFICIE",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.5 · TRANSMISIÓN DEL ROTOR",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -852,6 +852,10 @@ func _install_heli_controls() -> void:
         func(): _heli_inspect_focus(90.0,12.0,2.16,Vector3(0.64,1.61,1.08)),
         "V14.3: sellos de cola",
         func(): _heli_inspect_focus(132.0,8.0,2.18,Vector3(0.18,1.10,1.97)))
+    _add_paired(heli_controls,"V14.5: anclajes fijos del mástil",
+        func(): _heli_inspect_focus(52.0,37.0,2.60,Vector3(0,1.71,0.08)),
+        "V14.5: corona y bisagras del rotor",
+        func(): _heli_inspect_focus(31.0,61.0,2.70,Vector3(0,2.01,0.08)))
     _heli_night_button_v143=_button(heli_controls,
         "V14.4: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
