@@ -57,6 +57,8 @@ func _run() -> void:
     # actually produces pixels. Previous color-diversity QA could pass even
     # when no visible city was projected into the live camera.
     var city_on: Image=studio.preview.get_texture().get_image()
+    assert(city_on.save_png("res://build/qa/city-v43-visible-main-studio.png")==OK,
+        "Cannot save real city Web studio QA screenshot")
     studio.model_root.visible=false
     await _frames(12)
     var city_off: Image=studio.preview.get_texture().get_image()
