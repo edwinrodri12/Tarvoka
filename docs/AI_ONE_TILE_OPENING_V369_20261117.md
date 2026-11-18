@@ -41,3 +41,22 @@ Pruebas:
 El informe permitirá descartar una regla si no se usa, no es legal o genera el mismo desequilibrio. Un resultado prometedor todavía requeriría **pruebas de más mapas, facciones, niebla, jugadores humanos y Android**, además de una implementación opt-in compatible con guardados.
 
 **Estado:** el diseño no queda aprobado automáticamente por una prueba técnica. PR en borrador; no fusionar ni modificar APK, `main` o mecánicas oficiales.
+
+
+## Resultado verificado de v3.6.9
+
+La [ejecución GitHub Actions #44223910827](https://github.com/edwinrodri12/Tarvoka/actions/runs/44223910827) finalizó con **10/10 trabajos aprobados**: 96 partidas reales, 8 contratos de motor, 96 comparaciones de igualdad en las primeras tres decisiones y reproducción de ambas referencias históricas sin discrepancias.
+
+| Apertura | Gana primero | Gana segundo | Azul / Rojo | Movimientos de una casilla usados |
+|---|---:|---:|---:|---:|
+| 3 órdenes oficiales | 8/32 | 24/32 | 16 / 16 | 0/32 |
+| 4 órdenes completas | 24/32 | 8/32 | 20 / 12 | 0/32 |
+| **3 + cuarta orden de una casilla** | **24/32** | **8/32** | **20 / 12** | **32/32** |
+
+El plan alternativo **sí acortó físicamente** la cuarta acción en el motor: azul movió E de (1,5) a **(2,5)** en lugar de (3,5); rojo movió V de (8,5) a **(7,5)** en lugar de (6,5). Las ocho combinaciones del contrato (mapa 0/2, niebla sí/no, inicio azul/rojo) verificaron validez autoritativa, carga y guardado. Ninguna acción reducida fue rechazada.
+
+Sin embargo, en este conjunto la reducción produjo **exactamente el mismo resultado de victorias** que el cuarto movimiento completo (24/32 a favor del primero). No podemos atribuir la ventaja simplemente a haber avanzado dos casillas; **una casilla y una acción adicional ya bastan para reproducirla**. Tampoco se ha demostrado que este sea el único factor causal del desequilibrio: son partidas deterministas de dos mapas prototipo y no se simularon decisiones humanas.
+
+**Decisión:** mantener tres órdenes oficiales; no integrar el movimiento reducido ni modificar `OpeningBalance.gd`.
+
+**Siguiente diagnóstico recomendado:** ampliar la matriz a escenarios de terreno y composición distintos (mapa boscoso, rutas costeras, mapas con semilla, unidades modernas y posiciones de salida alternativas) para evitar seguir ajustando reglas en torno a una cuarta recomendación idéntica en todas las partidas. Instrumentar qué diferencia en ingresos, relés y objetivos ocurre *después* de esa acción y antes del siguiente turno. Solo entonces estudiar una regla de compensación compatible con guardados y UI.
