@@ -13,6 +13,7 @@ const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd"
 const Hinges148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149 = preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
+const Roots1411 = preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -46,6 +47,8 @@ func _run() -> void:
             "V14.9 physical blade seats and links are excluded from battle LOD10")
         _check(not Contact1410.has_model(tactical) and not Contact1410.apply(tactical),
             "V14.10 native bevels and bolt fitting remain hero-only")
+        _check(not Roots1411.has_model(tactical) and not Roots1411.apply(tactical),
+            "V14.11 real blade roots never add mesh cost in battle Android LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -360,6 +363,38 @@ func _run() -> void:
         _check(Contact1410.apply(model)
             and Models.inspect_meshes(model)==count1410,
             "V14.10 in-place surface refinement adds no extra draw nodes")
+        _check(Roots1411.has_model(model)
+            and bool(model.get_meta(Roots1411.ENABLED,false)),
+            "V14.11 finished aerodynamic root fairings present across all 8 factions")
+        var count1411: int=Models.inspect_meshes(model)
+        for i in range(4):
+            var root1411: MeshInstance3D=model.find_child(
+                Roots1411.ROOT+str(i),true,false) as MeshInstance3D
+            _check(root1411!=null and root1411.mesh is ArrayMesh
+                and root1411.get_meta(Roots1411.SOURCE) is BoxMesh,
+                "V14.11 real six-station solid root replaces one V3 box on same pivot")
+            if root1411==null or not (root1411.mesh is ArrayMesh):
+                continue
+            var new_root: ArrayMesh=root1411.mesh as ArrayMesh
+            var root_bounds: AABB=new_root.get_aabb()
+            _check(root_bounds.position.z+root1411.position.z<-0.340
+                and root_bounds.end.z+root1411.position.z>-0.112,
+                "V14.11 aerodynamic fairing aligns real physical blade from z -0.11 to -0.345")
+            _check(new_root.get_surface_count()==1
+                and (new_root.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()==288,
+                "V14.11 watertight eight-face six-station 288-vertex solid loft")
+        _check(Roots1411.set_enabled(model,false),
+            "V14.11 original V3 blade root can be restored on same rotor")
+        var comparison_root: MeshInstance3D=model.find_child(
+            Roots1411.ROOT+"0",true,false) as MeshInstance3D
+        _check(comparison_root!=null and comparison_root.mesh is BoxMesh,
+            "V14.11 reversible compare restores actual original V3 rectangular block")
+        _check(Roots1411.set_enabled(model,true)
+            and comparison_root.mesh is ArrayMesh,
+            "V14.11 restores finished 3D aerodynamic bevel with no rebuild")
+        _check(Roots1411.apply(model)
+            and Models.inspect_meshes(model)==count1411,
+            "V14.11 repeatedly applied sculpt never duplicates a single root")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
@@ -442,5 +477,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14.10: 8 muted factions, 16 real bevelled footplates, 32 seated bolts, reversible V14.9 comparison and intact V13 damage")
+        print("PASS HAT29 V14.11: 8 muted factions, four 6-station blade root lofts, reversible V3 comparison, grounded hardware and V13 damage")
         quit(0)
