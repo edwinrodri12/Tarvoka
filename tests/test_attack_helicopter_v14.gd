@@ -14,6 +14,7 @@ const Hinges148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149 = preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const Roots1411 = preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
+const Seam1412 = preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -49,6 +50,8 @@ func _run() -> void:
             "V14.10 native bevels and bolt fitting remain hero-only")
         _check(not Roots1411.has_model(tactical) and not Roots1411.apply(tactical),
             "V14.11 real blade roots never add mesh cost in battle Android LOD10")
+        _check(not Seam1412.has_model(tactical) and not Seam1412.apply(tactical),
+            "V14.12 root-to-blade smoothing excludes Android battle LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -381,8 +384,38 @@ func _run() -> void:
                 and root_bounds.end.z+root1411.position.z>-0.112,
                 "V14.11 aerodynamic fairing aligns real physical blade from z -0.11 to -0.345")
             _check(new_root.get_surface_count()==1
-                and (new_root.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()==288,
-                "V14.11 watertight eight-face six-station 288-vertex solid loft")
+                and (new_root.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()==384,
+                "V14.12 eight-station swept root has genuine 384-vertex solid mesh")
+            var original1411: ArrayMesh=root1411.get_meta(
+                Seam1412.ORIGINAL_MESH) as ArrayMesh
+            _check(original1411!=null and original1411.get_surface_count()==1
+                and (original1411.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()==288,
+                "V14.12 retains complete original 288-vertex V14.11 model")
+            _check(root_bounds.position.z+root1411.position.z<-0.449
+                and root_bounds.end.z+root1411.position.z>-0.111,
+                "V14.12 real blade root reaches z -0.450 seamlessly")
+            _check(root_bounds.end.x>0.153 and root_bounds.position.x< -0.112,
+                "V14.12 asymmetric swept blade shoulder extends in original V3 axes")
+        _check(Seam1412.has_model(model)
+            and bool(model.get_meta(Seam1412.ENABLED,false)),
+            "V14.12 four finished original blade roots are enabled for all factions")
+        var count1412: int=Models.inspect_meshes(model)
+        _check(Seam1412.set_enabled(model,false),
+            "V14.12 can show original V14.11 actual six-station mesh")
+        var seam_prev: MeshInstance3D=model.find_child(
+            Roots1411.ROOT+"0",true,false) as MeshInstance3D
+        _check(seam_prev!=null and seam_prev.mesh is ArrayMesh
+            and (seam_prev.mesh as ArrayMesh).get_aabb().size.z<0.25,
+            "V14.12 compare actually replaces eight-station sculpt with original V14.11")
+        _check(Seam1412.set_enabled(model,true)
+            and (seam_prev.mesh as ArrayMesh).get_aabb().size.z>0.33
+            and Models.inspect_meshes(model)==count1412,
+            "V14.12 restores swept physical seam with no duplicate draw calls")
+        _check(Seam1412.apply(model)
+            and Models.inspect_meshes(model)==count1412,
+            "V14.12 repeated install is idempotent")
+        _check(Seam1412.set_enabled(model,false),
+            "V14.12 can release its mesh before V3 root comparison")
         _check(Roots1411.set_enabled(model,false),
             "V14.11 original V3 blade root can be restored on same rotor")
         var comparison_root: MeshInstance3D=model.find_child(
@@ -391,10 +424,13 @@ func _run() -> void:
             "V14.11 reversible compare restores actual original V3 rectangular block")
         _check(Roots1411.set_enabled(model,true)
             and comparison_root.mesh is ArrayMesh,
-            "V14.11 restores finished 3D aerodynamic bevel with no rebuild")
-        _check(Roots1411.apply(model)
+            "V14.11 restores its six-station physical bevel without a rebuild")
+        _check(Seam1412.set_enabled(model,true)
             and Models.inspect_meshes(model)==count1411,
-            "V14.11 repeatedly applied sculpt never duplicates a single root")
+            "V14.12 restores seamless blade-root silhouette on the original four pivots")
+        _check(Roots1411.has_model(model)
+            and Seam1412.has_model(model),
+            "V14.11 and V14.12 keep correct nesting and identity after comparisons")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
@@ -477,5 +513,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14.11: 8 muted factions, four 6-station blade root lofts, reversible V3 comparison, grounded hardware and V13 damage")
+        print("PASS HAT29 V14.12: 8 muted factions, four 8-station swept blade root seams, reversible V14.11/V3, grounded rotor and intact damage")
         quit(0)
