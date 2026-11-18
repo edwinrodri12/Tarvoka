@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G13V44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13V45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
+const G13V46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -89,6 +90,30 @@ func _run()->void:
             "G13 V45 Studio comparison restores lower door geometry")
         _check(colored!=null and colored.visible,
             "V44 version compare restores the new 3D faction armor")
+        _check(bool(model.get_meta(G13V46.FLAG,false)),
+            "G13 V46 true rolling wheel hubs must be installed on LOD13")
+        for label in [G13V46.HUBS,G13V46.RINGS,
+                G13V46.BOLTS,G13V46.GROOVES]:
+            var v46_node:=model.find_child(label,true,false) as MultiMeshInstance3D
+            _check(v46_node!=null and v46_node.visible,
+                "G13 V46 actual wheel geometry missing/hidden: "+label)
+        var v46_bolts:=model.find_child(G13V46.BOLTS,true,false) as MultiMeshInstance3D
+        if v46_bolts!=null and v46_bolts.multimesh!=null:
+            _check(v46_bolts.multimesh.instance_count==32,
+                "G13 V46 four wheel hubs must carry 32 spinning bolts")
+            var before:Vector3=v46_bolts.multimesh.get_instance_transform(0).origin
+            studio.call("_g13_demo_v1","move",0.42)
+            var after:Vector3=v46_bolts.multimesh.get_instance_transform(0).origin
+            _check(before.distance_to(after)>0.08,
+                "G13 V46 hub fasteners must rotate with original rolling rig")
+            studio.call("_g13_demo_v1","idle",1.0)
+        studio.call("_g13_v46_compare",false)
+        var v46_rings:=model.find_child(G13V46.RINGS,true,false)
+        _check(v46_rings!=null and not v46_rings.visible,
+            "G13 V46 compare must hide real faction wheel rings")
+        studio.call("_g13_v46_compare",true)
+        _check(v46_rings!=null and v46_rings.visible,
+            "G13 V46 compare must restore native wheel paint")
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
         _check(radar!=null and absf(radar.rotation_degrees.y)>1.0,
@@ -121,6 +146,9 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V45.FLAG,false)),
         "G13 V45 3D cab finish also exists in tactical LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V46.FLAG,false)),
+        "G13 V46 machined wheel finish must also install in LOD8")
     studio.call("_g13_show_tactical_lod",13)
     await process_frame
     studio.call("_display_role","mlrs")
@@ -134,5 +162,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor and V45 cabin finish on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin and spinning V46 4x4 wheels on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
