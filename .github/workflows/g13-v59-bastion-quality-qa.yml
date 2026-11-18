@@ -1,0 +1,100 @@
+name: TARVOKA G13 V59 Bastion tires reflective glazing faction native Godot QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/ui/G13ExteriorMicrofinishV55.gd"
+      - "scripts/ui/G13MechanicalJointFinishV56.gd"
+      - "scripts/ui/G13TacticalMountReadabilityV57.gd"
+      - "scripts/ui/G13IsometricMechanicalFinishV58.gd"
+      - "scripts/ui/G13PremiumSurfaceV59.gd"
+      - "scripts/ui/G13RubberSculptV54.gd"
+      - "scripts/ui/G13MaterialRealismV53.gd"
+      - "scripts/ui/G13InspectionStudio.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "tests/test_g13_v59_premium_3d_materials.gd"
+      - "tests/test_g13_v53_material_realism.gd"
+      - "tests/test_g13_v59_native_visual_capture.gd"
+      - ".github/workflows/g13-v59-bastion-quality-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g13-v59-native-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect-real-g13:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Use newest source for native Godot unit and materials
+        uses: actions/checkout@v4
+      - name: Install Godot 4.3 and software GL inspection display
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri unzip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Exclude published-only shared Studio subclass from standalone G13 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Main deliberately does not hold CombinedArtStudioWeb.gd, which
+          # is assembled from separately signed-off branches on publication.
+          # This test renders the G13InspectionStudio native scene instead.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g13-v59-published-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g13-v59-published-studio/
+          fi
+      - name: Import all real native 3D G13 resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g13-v59-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g13-v59-import.log; then
+            exit 1
+          fi
+      - name: Verify real P06 160 molded tread blocks, shinier glass, 8 faction enamel PBR
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g13_v59_premium_3d_materials.gd \
+            2>&1 | tee /tmp/g13-v59-materials.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g13-v59-materials.log; then
+            exit 1
+          fi
+          grep -F 'PASS G13 V59 BASTION PREMIUM 3D:' /tmp/g13-v59-materials.log
+      - name: Capture 18 real Godot 3D before-after tire, window, faction images for 2 LODs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g13-v59
+          timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g13_v59_native_visual_capture.gd \
+            2>&1 | tee /tmp/g13-v59-native-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g13-v59-native-capture.log; then
+            exit 1
+          fi
+          grep -F 'PASS G13 V59 NATIVE PREMIUM VISUAL:' /tmp/g13-v59-native-capture.log
+          test "$(find build/qa/g13-v59 -maxdepth 1 -name '*.png' | wc -l)" -eq 18
+      - name: Upload genuine G13 V59 tire/glass/faction before-after native Godot frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g13-v59-bastion-tire-glass
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build/qa/g13-v59/*.png
+            build/qa/g13-v59/g13-v59-manifest.json
