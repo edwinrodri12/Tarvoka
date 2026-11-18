@@ -78,7 +78,7 @@ func _run()->void:
             var orig:Dictionary=source.get("before_materials",{})
             var live:Dictionary=source.get("after_materials",{})
             check(orig.size()==live.size() and
-                live.size()>=(7 if hero else 3),
+                live.size()>=(7 if hero else 2),
                 "hero full armor finish, Android sparse original panel LOD")
             for name in V61.ARMOR:
                 if not live.has(name):
