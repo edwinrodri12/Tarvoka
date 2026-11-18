@@ -11,6 +11,20 @@ const Weather = preload("res://scripts/core/Weather.gd")
 # Conservative route-to-base planner. Uses observed terrain, own installations
 # and visible/known cells only. It never reads hidden enemy units or map tiles.
 # No teleportation: the resulting destination is always one legal move away.
+# Deterministic route tie-break in the LOCAL frame of the current side.
+# Previous global x-minimum favored opposite physical directions after
+# horizontal reflection, notably field trucks at 40x30 in coastal fog.
+# Preserve the former Y-first, X-second order for the left-side player.
+static func _prefer_route_tie(cell: Vector2i, current: Vector2i,
+        side: int, width: int) -> bool:
+    if current.x < 0:
+        return true
+    if cell.y != current.y:
+        return cell.y < current.y
+    var x: int = cell.x if side == 0 else width-1-cell.x
+    var prior: int = current.x if side == 0 else width-1-current.x
+    return x < prior
+
 static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> Dictionary:
     var none := {"valid":false}
     var faction: int = int(state.get("faction", -1))
@@ -55,6 +69,7 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
     if move_budget <= 0:
         return none
     var destinations: Dictionary = Rules.reachable(origin, move_budget, observed["terrain"], blocked, domain, Logistics.road_fast(unit), transit_only, Weather.from_state(observed), Weather.traction(unit))
+    var width: int = Rules.map_size(observed["terrain"]).x
     var best := none
     var best_distance := 1000000
     for site in observed["economy"]["sites"]:
@@ -90,7 +105,8 @@ static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> D
             var spent: int = int(destinations[cell])
             if left >= total or (fuel_cap > 0 and spent + left + reserve > current_fuel):
                 continue
-            if left < remainder or (left == remainder and (candidate.x < 0 or cell.y < candidate.y or (cell.y == candidate.y and cell.x < candidate.x))):
+            if left < remainder or (left == remainder and \
+                    _prefer_route_tie(cell,candidate,faction,width)):
                 remainder = left
                 candidate = cell
         if candidate.x >= 0:
@@ -132,6 +148,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
             else:
                 blocked.append(occupant["pos"])
     var reach: Dictionary = Rules.reachable(origin, mini(Logistics.movement_budget(truck), usable_fuel), observed["terrain"], blocked, Domains.GROUND, Logistics.road_fast(truck), transit_only, Weather.from_state(observed), Weather.traction(truck))
+    var width: int = Rules.map_size(observed["terrain"]).x
     var best := none
     var best_cost := 1000000
     for recipient in observed["units"]:
@@ -172,7 +189,8 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
                 var spent: int = int(reach[cell])
                 if left >= whole or spent + left > usable_fuel:
                     continue
-                if left < remaining or (left == remaining and (next_cell.x < 0 or cell.y < next_cell.y or (cell.y == next_cell.y and cell.x < next_cell.x))):
+                if left < remaining or (left == remaining and \
+                        _prefer_route_tie(cell,next_cell,side,width)):
                     remaining = left
                     next_cell = cell
             if next_cell.x >= 0:
