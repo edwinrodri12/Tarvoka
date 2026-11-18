@@ -48,6 +48,7 @@ const G13ProportionsV36 = preload("res://scripts/ui/G13ProportionFinishV36.gd")
 const G13RoofRadarV37 = preload("res://scripts/ui/G13RoofRadarFinishV37.gd")
 const G13JoineryV38 = preload("res://scripts/ui/G13BodyJoineryV38.gd")
 const G13UndersealV39 = preload("res://scripts/ui/G13UndersealFinishV39.gd")
+const G13SilhouetteV40 = preload("res://scripts/ui/G13SilhouetteFinishV40.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1024,6 +1025,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V38 roof cap and side joinery failed on hero LOD13")
                 if not G13UndersealV39.apply(model):
                     push_warning("G13 V39 cab underseal and bumper finish failed on hero LOD13")
+                if not G13SilhouetteV40.apply(model):
+                    push_warning("G13 V40 curved outboard wheel arches failed on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1057,6 +1060,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V38 roof cap and side joinery failed on tactical LOD8")
                 if not G13UndersealV39.apply(model):
                     push_warning("G13 V39 cab underseal and bumper finish failed on tactical LOD8")
+                if not G13SilhouetteV40.apply(model):
+                    push_warning("G13 V40 curved outboard wheel arches failed on tactical LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
