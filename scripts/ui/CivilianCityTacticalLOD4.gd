@@ -30,6 +30,7 @@ const V26=preload("res://scripts/ui/CivilianCityWeatherFinishV26.gd")
 const V27=preload("res://scripts/ui/CivilianCityStreetInterfaceV27.gd")
 const V28=preload("res://scripts/ui/CivilianCityFourElevationV28.gd")
 const V29=preload("res://scripts/ui/CivilianCityArchitecturalPolishV29.gd")
+const V30=preload("res://scripts/ui/CivilianCityTierProportionsV30.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -232,7 +233,11 @@ static func _keep_medium(name: String) -> bool:
         # V29 close-up joinery remains in high detail only.
         "V29_CosturaCubiertaFachada_","V29_NucleoAlfeizar_",
         "V29_JuntaFracturaInferior_",
-        "V29_CantoInteriorExpuesto_"]:
+        "V29_CantoInteriorExpuesto_",
+        # V30 interior/wall section detail at close LOD only.
+        "V30_EntramadoVillaInterior_",
+        "V30_DintelLadrilloInterior_",
+        "V30_SeccionVigaMetalInterior_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -409,7 +414,15 @@ static func _keep_far(name: String) -> bool:
         "V29_FragmentoCimientoAsentado_",
         "V29_FragmentoFrisoAyuntamiento",
         "V29_CantoAccesoMunicipal",
-        "V29_PedazoPlacaCivica"]:
+        "V29_PedazoPlacaCivica",
+        # V30 exposed D2 crowns and grounded D4 tier fragments keep
+        # the three urban sizes distinguishable at battle zoom.
+        "V30_AlfardaVillaExpuesta_",
+        "V30_SillarCornisaCiudadRoto_",
+        "V30_NervioCoronaMetroTorsionado_",
+        "V30_TejaVillaDerruida_",
+        "V30_BloqueCiudadDerruido_",
+        "V30_PerfilMetroCaido_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -525,7 +538,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V29.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",29)
+    if not V30.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",30)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
