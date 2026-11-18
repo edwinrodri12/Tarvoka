@@ -33,9 +33,17 @@ func _ready() -> void:
     if _damage!=null:
         _damage.select(0)
     if _lod!=null:
-        _lod.select(0)
+        # The intact D0 city has >1,700 close-up meshes. Open in the
+        # actual mobile-friendly tactical level, keeping full LOD0 selectable.
+        _lod.select(1)
+    _angle=deg_to_rad(36.0)
+    _elevation=deg_to_rad(29.0)
+    _distance=29.0
     _initial_city_bootstrap=false
     _rebuild()
+    # Parent versions leave their own close-up camera presets behind.
+    # Explicitly frame the full block after the final requested city is built.
+    _orient_camera()
 
 func _install_visible_canvas_and_archive() -> void:
     # V19-V42 added hundreds of camera buttons to ONE HFlowContainer.
