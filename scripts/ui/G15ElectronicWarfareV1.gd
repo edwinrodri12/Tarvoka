@@ -121,7 +121,7 @@ static func build(root: Node3D, faction_color: Color,
     var tire := _mat(Color("#222427"), 0.0, 0.93)
     var glass := _mat(Color("#456c82"), 0.13, 0.16, true)
     var paint := _mat(faction_color, 0.30, 0.43, true)
-    var signal := _mat(Color("#85d9e5"), 0.12, 0.26)
+    var signal_material := _mat(Color("#85d9e5"), 0.12, 0.26)
     var root3 := Node3D.new()
     root3.name = CHASSIS
     root.add_child(root3)
@@ -217,7 +217,7 @@ static func build(root: Node3D, faction_color: Color,
     _sphere(head, "G15_DishFeed", Vector3(0,0.15,0.23),
         Vector3(0.105,0.105,0.095), dark)
     var pulse := _sphere(head, PULSE,Vector3(0,0.15,0.34),
-        Vector3(0.28,0.28,0.045),signal)
+        Vector3(0.28,0.28,0.045),signal_material)
     pulse.visible = false
     # High-level details share the same base geometry; mobile LOD retains
     # unmistakable antenna / rear shelter silhouette.
