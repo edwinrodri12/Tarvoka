@@ -10,6 +10,7 @@ const G13V46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G13V47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const G13V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G13V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
+const G13V50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -209,6 +210,38 @@ func _run()->void:
                 "V49 comparison reopens its genuine shell meshes")
             _check(new_cab.material_override is StandardMaterial3D,
                 "V49 must retain the V47 PBR materials")
+            _check(bool(model.get_meta(G13V50.FLAG,false)),
+                "G13 V50 glazing meshes must be installed in hero LOD13")
+            _check(int(model.get_meta(
+                "tarvoka_g13_v50_new_draw_nodes",-1))==0,
+                "V50 bevelled glazing cannot add render nodes")
+            var front_glass:=model.find_child(
+                "G13_FrontGlass_1",true,false) as MeshInstance3D
+            var side_glass:=model.find_child(
+                "G13_V11_SideWindow_1",true,false) as MeshInstance3D
+            if front_glass!=null and side_glass!=null:
+                var front_v50:Mesh=front_glass.mesh
+                var side_v50:Mesh=side_glass.mesh
+                _check(front_v50 is ArrayMesh and
+                    front_v50.get_faces().size()==44*3,
+                    "V50 windshield uses 3 sealed bevel rings")
+                _check(side_v50 is ArrayMesh and
+                    side_v50.get_faces().size()==28*3,
+                    "V50 cab side-window uses 8-corner closed glazing")
+                var front_pos:Vector3=front_glass.position
+                studio.call("_g13_v50_compare",false)
+                _check(front_glass.mesh is BoxMesh and
+                    front_glass.mesh!=front_v50,
+                    "V50 compare must restore original windshield BoxMesh")
+                _check(side_glass.mesh!=side_v50,
+                    "V50 compare must restore V11 side-window mesh")
+                studio.call("_g13_v50_compare",true)
+                _check(front_glass.mesh==front_v50 and
+                    side_glass.mesh==side_v50,
+                    "V50 compare restores same real native glazing resources")
+                _check(front_glass.position.is_equal_approx(front_pos),
+                    "V50 does not move original windshield/pivot")
+
 
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
@@ -254,6 +287,9 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V49.FLAG,false)),
         "G13 V49 window/turret seamless lofts also active in LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V50.FLAG,false)),
+        "G13 V50 two bevelled front glazing meshes active in LOD8")
     if g13_tactical!=null:
         var tactical_cab:=g13_tactical.find_child(
             "G13_SealedCab",true,false) as MeshInstance3D
@@ -274,5 +310,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 seated glazing on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
