@@ -53,6 +53,30 @@ func _run() -> void:
         for x in range(0,render.get_width(),maxi(1,render.get_width()/21)):
             samples[render.get_pixel(x,y).to_html()]=true
     assert(samples.size()>8,"City viewport is effectively a blank canvas")
+    # Verify that city geometry, not simply the viewport background/ground,
+    # actually produces pixels. Previous color-diversity QA could pass even
+    # when no visible city was projected into the live camera.
+    var city_on: Image=studio.preview.get_texture().get_image()
+    studio.model_root.visible=false
+    await _frames(12)
+    var city_off: Image=studio.preview.get_texture().get_image()
+    assert(city_on.get_size()==city_off.get_size(),
+        "City visual render comparison has mismatched viewport dimensions")
+    var changed_pixels:int=0
+    for py in range(0,city_on.get_height(),7):
+        for px in range(0,city_on.get_width(),7):
+            var before:Color=city_on.get_pixel(px,py)
+            var after:Color=city_off.get_pixel(px,py)
+            if (absf(before.r-after.r)+absf(before.g-after.g)+
+                    absf(before.b-after.b))>0.14:
+                changed_pixels+=1
+    studio.model_root.visible=true
+    await _frames(4)
+    print("CITY V43 real canvas city-vs-empty pixel delta: ",changed_pixels,
+        " viewport=",city_on.get_size(),
+        " meshes=",visible)
+    assert(changed_pixels>150,
+        "Native City V43 geometry produces no visible pixels in the viewport")
     # Camera UX regression: replacing ninety-three buttons must not lose
     # any approved V1-V42 view or alter the original camera/damage behavior.
     assert(studio.civilian_city_view_group!=null and
