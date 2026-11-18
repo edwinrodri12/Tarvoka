@@ -18,6 +18,7 @@ const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
+const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
 const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
@@ -1005,6 +1006,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 push_warning("G15 V2 curved 6x6 wheel arches and mast gussets not installed")
             elif not G15ShellV3.apply(model):
                 push_warning("G15 V3 closed armored EW shelters, roof and bulged tires not installed")
+            elif not G15AntennaV4.apply(model,faction_paint_color(faction)):
+                push_warning("G15 V4 physical antennas, bearings and moving hydraulic actuator not installed")
         "aa_mobile":
             # G13 V1 is an ART preview role only. It is deliberately NOT
             # registered as a playable BattleSession unit yet.
@@ -1376,7 +1379,10 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "aa_mobile":
             return G13AA.pose(model,kind,progress,target_heading)
         "ew_mobile":
-            return G15EW.pose(model,kind,progress,target_heading)
+            var posed:bool=G15EW.pose(model,kind,progress,target_heading)
+            if posed and bool(model.get_meta(G15AntennaV4.FLAG,false)):
+                G15AntennaV4.sync(model)
+            return posed
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
@@ -1401,6 +1407,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             G13AA.restore(model)
         "ew_mobile":
             G15EW.restore(model)
+            if bool(model.get_meta(G15AntennaV4.FLAG,false)):
+                G15AntennaV4.sync(model)
 
 static func inspect_meshes(model: Node) -> int:
     if model == null:
