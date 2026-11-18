@@ -12,6 +12,7 @@ const G13V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G13V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G13V50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G13V51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
+const G13V52=preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -276,6 +277,27 @@ func _run()->void:
             _check(roof_v51.mesh==roof_final and
                 brow_v51.mesh==brow_final,
                 "V51 compare must restore original native node resources")
+        _check(bool(model.get_meta(G13V52.FLAG,false)),
+            "G13 V52 must be installed in the actual LOD13 model")
+        _check(int(model.get_meta(
+            "tarvoka_g13_v52_new_draw_nodes",-1))==0,
+            "G13 V52 reuses existing real roof shoulder draw node")
+        var roof_rails:=model.find_child(
+            G13V52.NAME,true,false) as MeshInstance3D
+        _check(roof_rails!=null and roof_rails.mesh is ArrayMesh,
+            "G13 V52 visible sculpted roof rail remains in existing node")
+        if roof_rails!=null and roof_rails.mesh is ArrayMesh:
+            var final_rails:Mesh=roof_rails.mesh
+            _check(final_rails.get_faces().size()==88*3,
+                "G13 V52 four-station closed steel rails expected")
+            studio.call("_g13_v52_compare",false)
+            _check(roof_rails.mesh!=final_rails and
+                roof_rails.mesh.get_faces().size()==40*3,
+                "G13 V52 comparison restores exact V37/51 original rails")
+            studio.call("_g13_v52_compare",true)
+            _check(roof_rails.mesh==final_rails,
+                "G13 V52 must restore original native mesh and materials")
+
 
 
 
@@ -329,6 +351,16 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V51.FLAG,false)),
         "G13 V51 integrated roof and front brow must load in LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V52.FLAG,false)),
+        "G13 V52 roof-rail mesh must also be active on tactical LOD8")
+    if g13_tactical!=null:
+        var rail_tactical:=g13_tactical.find_child(
+            G13V52.NAME,true,false) as MeshInstance3D
+        _check(rail_tactical!=null and rail_tactical.mesh is ArrayMesh and
+            rail_tactical.mesh.get_faces().size()==88*3,
+            "G13 V52 real tactical roof-rail sculpt has four stations")
+
     if g13_tactical!=null:
         var tactical_roof_v51:=g13_tactical.find_child(
             "G13_CabRoof",true,false) as MeshInstance3D
@@ -357,5 +389,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 glazing and V51 integrated roof on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 glazing, V51 integrated roof and V52 roof rails on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
