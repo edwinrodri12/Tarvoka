@@ -1,0 +1,71 @@
+name: TARVOKA G16 V1 native supply truck art QA
+
+on:
+  push:
+    branches: [feat/g16-logistics-native-3d-v1-20261118]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g16-v1-art-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-g16-native-geometry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out G16 source and preserved production rules
+        uses: actions/checkout@v4
+      - name: Install Godot 4.3 and software OpenGL 3D
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri unzip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Hide publish-only studio adapter from isolated main-source import
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The shared web studio parent exists in its pinned publishing branch,
+          # not this main-based model-art branch.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g16-published-only
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g16-published-only/
+          fi
+      - name: Import all native meshes and validate GDScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g16-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g16-import.log; then
+            exit 1
+          fi
+      - name: Audit G16 native shapes, eight paints, PBR rubber and animations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g16-v1
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g16_native_art_v1.gd \
+            2>&1 | tee /tmp/g16-native-art.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g16-native-art.log; then
+            exit 1
+          fi
+          grep -F 'PASS G16 V1 NATIVE 3D:' /tmp/g16-native-art.log
+          test "$(find build/qa/g16-v1 -maxdepth 1 -name '*.png' | wc -l)" -eq 16
+      - name: Upload 16 authentic Godot angles for human art review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v1-real-3d-16-faction-views
+          if-no-files-found: warn
+          retention-days: 14
+          path: build/qa/g16-v1/*.png
