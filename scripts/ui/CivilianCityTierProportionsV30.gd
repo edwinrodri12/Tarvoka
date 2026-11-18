@@ -187,8 +187,8 @@ static func _tier_signature(stage: Node3D,tag: String,
          "V30_PerfilMetroCaido_")+tag,
         Vector3(sx,0.104,sz),
         Vector3(0.29,0.13,0.23),color,level,damage)
-    chunk.rotation_degrees.y=18.0 if level==1 else
-        -11.0 if level==2 else 28.0
+    chunk.rotation_degrees.y=(18.0 if level==1 else
+        -11.0 if level==2 else 28.0)
 
 static func apply(model: Node3D,level: int,
         faction: int,damage: int) -> bool:
