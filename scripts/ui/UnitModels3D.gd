@@ -20,6 +20,7 @@ const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
 const G15FinishDamageV5 = preload("res://scripts/ui/G15AntennaFinishDamageV5.gd")
+const G15ExteriorV6 = preload("res://scripts/ui/G15ArmoredExteriorV6.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
 const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
@@ -1011,6 +1012,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 push_warning("G15 V4 physical antennas, bearings and moving hydraulic actuator not installed")
             elif not G15FinishDamageV5.apply(model,faction_paint_color(faction)):
                 push_warning("G15 V5 panel surface finish and staged 3D damage are not installed")
+            elif not G15ExteriorV6.apply(model,faction_paint_color(faction)):
+                push_warning("G15 V6 native armored panels, sealed reflective windows and cooling not installed")
         "aa_mobile":
             # G13 V1 is an ART preview role only. It is deliberately NOT
             # registered as a playable BattleSession unit yet.
