@@ -125,8 +125,11 @@ static func _segment(poses: Array[Transform3D],
     var dz:float=b.x-a.x
     var length:float=sqrt(dy*dy+dz*dz)
     var angle:float=atan2(dz,dy)
-    var basis:=Basis(Vector3.RIGHT,angle).scaled(
-        Vector3(0.003, length, 0.005))
+    # Rotate the long Y axis to the actual hatch edge, THEN scale in
+    # LOCAL coordinates. Basis.scaled() would scale world axes instead,
+    # producing hanging spikes in oblique real Godot close-up renders.
+    var basis:=Basis(Vector3.RIGHT,angle).scaled_local(
+        Vector3(0.003,length,0.005))
     poses.append(Transform3D(
         basis,
         Vector3(float(side)*0.727,(a.y+b.y)*0.5,(a.x+b.x)*0.5)))
