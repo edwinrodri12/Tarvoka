@@ -25,6 +25,22 @@ static func _prefer_route_tie(cell: Vector2i, current: Vector2i,
     var prior: int = current.x if side == 0 else width-1-current.x
     return x < prior
 
+# Compare equally short truck delivery plans in the mover's coordinate
+# frame, NOT in the order that orthogonal staging directions or recipients
+# happen to be enumerated. Reflection swaps RIGHT and LEFT, so first-seen
+# tied staging locations are not symmetric on a large coastal map.
+static func _prefer_delivery_tie(candidate: Vector2i, staging: Vector2i,
+        recipient: Vector2i, previous: Vector2i,
+        previous_staging: Vector2i, previous_recipient: Vector2i,
+        side: int, width: int) -> bool:
+    if candidate != previous:
+        return _prefer_route_tie(candidate,previous,side,width)
+    if staging != previous_staging:
+        return _prefer_route_tie(staging,previous_staging,side,width)
+    if recipient != previous_recipient:
+        return _prefer_route_tie(recipient,previous_recipient,side,width)
+    return false
+
 static func plan(state: Dictionary, observed: Dictionary, unit: Dictionary) -> Dictionary:
     var none := {"valid":false}
     var faction: int = int(state.get("faction", -1))
@@ -151,6 +167,9 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
     var width: int = Rules.map_size(observed["terrain"]).x
     var best := none
     var best_cost := 1000000
+    var best_destination := Vector2i(-1,-1)
+    var best_staging := Vector2i(-1,-1)
+    var best_recipient := Vector2i(-1,-1)
     for recipient in observed["units"]:
         if not recipient is Dictionary or str(recipient.get("id","")) == str(truck.get("id","")) or int(recipient.get("hp",0)) <= 0:
             continue
@@ -178,7 +197,7 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
             if not distances.has(origin):
                 continue
             var whole: int = int(distances[origin])
-            if whole > usable_fuel or whole >= best_cost:
+            if whole > usable_fuel or whole > best_cost:
                 continue
             var next_cell := Vector2i(-1,-1)
             var remaining := 1000000
@@ -193,8 +212,15 @@ static func plan_truck_delivery(state: Dictionary, observed: Dictionary, truck: 
                         _prefer_route_tie(cell,next_cell,side,width)):
                     remaining = left
                     next_cell = cell
-            if next_cell.x >= 0:
+            if next_cell.x >= 0 and (not bool(best.get("valid",false)) or
+                    whole < best_cost or (whole == best_cost and
+                    _prefer_delivery_tie(next_cell,staging,needy,
+                    best_destination,best_staging,best_recipient,
+                    side,width))):
                 best_cost = whole
+                best_destination = next_cell
+                best_staging = staging
+                best_recipient = needy
                 best = {"valid":true, "destination":next_cell, "recipient_id":str(recipient["id"]), "total_cost":whole, "remaining_cost":remaining}
     return best
 
