@@ -150,6 +150,10 @@ jobs:
           test -s scripts/ui/CivilianCityArtReviewV42.gd
           test -s scripts/ui/CivilianCityArtEvidenceV43.gd
           test -s scripts/ui/CivilianCityDesignStudioV43.gd
+          # Block stale city exports that put 200 camera buttons over a
+          # zero-height WebGL framebuffer in the public browser studio.
+          grep -F '_install_visible_canvas_and_archive()' scripts/ui/CivilianCityDesignStudioV43.gd
+          grep -F '_v19_toolbar.reparent(_city_advanced_archive)' scripts/ui/CivilianCityDesignStudioV43.gd
           test -s scenes/CivilianCityDesignStudioV43.tscn
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
