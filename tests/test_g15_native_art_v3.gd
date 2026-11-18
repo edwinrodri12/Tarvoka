@@ -141,11 +141,12 @@ func _run()->void:
                 "pure art finish only, no fictional EW combat power")
             check(V3.show_finish(unit,false),
                 "old square shelter remains inspectable for V2 comparison")
-            check(unit.find_child(V3.SHELTER,true,false).visible==false and
-                unit.find_child("G15_ElectronicShelter",true,false).visible,
+            var newer:=unit.find_child(V3.SHELTER,true,false) as MeshInstance3D
+            var original:=unit.find_child("G15_ElectronicShelter",true,false) as MeshInstance3D
+            check(newer!=null and original!=null and not newer.visible and
+                original.visible,
                 "V2 square shelter visible only when V3 hidden")
-            check(V3.show_finish(unit,true) and
-                unit.find_child(V3.SHELTER,true,false).visible,
+            check(V3.show_finish(unit,true) and newer!=null and newer.visible,
                 "V3 is reversibly displayed with all existing physical pivots")
             if faction in [0,3] and hero:
                 stage.add_child(unit)
