@@ -19,9 +19,9 @@ FORBIDDEN = {
     "android.permission.ACCESS_WIFI_STATE",
     "android.permission.CHANGE_WIFI_STATE",
 }
-PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-(?:23|m)):\s+name='([^']+)'", re.MULTILINE)
+PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-(?:23|m)):\s+name='([^'\r\n]+)'\s*$", re.MULTILINE)
 
-PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-(?:23|m))?:", re.MULTILINE)
+PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-[A-Za-z0-9_-]+)?:", re.MULTILINE)
 
 PACKAGE_LINE = re.compile(r"^\s*package:\s+(?:name=)?(?:\x27[^\x27\r\n]+\x27|[A-Za-z_][A-Za-z0-9_.]*)\s*$", re.MULTILINE)
 
@@ -61,6 +61,19 @@ def self_test() -> None:
     assert audit_dump(valid) == set()
     blocked = "package: name='com.example.tarvoka'\nuses-permission-sdk-m: name='android.permission.INTERNET'"
     assert audit_dump(blocked) == {"android.permission.INTERNET"}
+    # SDK-numbered declarations must be audited; unknown SDK suffixes fail closed.
+    assert audit_dump("package: name='com.example.tarvoka'\nuses-permission-sdk-33: name='android.permission.INTERNET'") == {"android.permission.INTERNET"}
+    for malformed_sdk in (
+        "uses-permission-sdk-x: name='android.permission.INTERNET'",
+        "uses-permission-sdk-33: name='android.permission.INTERNET' trailing",
+        "uses-permission-sdk-33: name=android.permission.INTERNET",
+    ):
+        try:
+            audit_dump("package: name='com.example.tarvoka'\n" + malformed_sdk)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Malformed SDK permission accepted: {malformed_sdk!r}")
     for malformed in (
         "uses-permission: name='android.permission.CAMERA'",
         "package: name='com.example.tarvoka'\nuses-permission: name=android.permission.INTERNET",
