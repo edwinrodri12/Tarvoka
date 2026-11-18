@@ -70,24 +70,26 @@ static func _tyre_mesh() -> ArrayMesh:
             var n1 := _normal(rings,row,a1)
             var n2 := _normal(rings,row+1,a1)
             var n3 := _normal(rings,row+1,a0)
-            # Outward winding is opposite the Y-positive ring sweep.
+            # Godot's native clockwise convention: computed face cross
+            # points inward while the stored vertex normal points OUT.
+            # Otherwise the intact rubber carcass is culled from outside.
             _vertex(st,p0,n0,Vector2(float(segment)/24.0,float(row)/10.0))
-            _vertex(st,p2,n2,Vector2(float(segment+1)/24.0,float(row+1)/10.0))
             _vertex(st,p1,n1,Vector2(float(segment+1)/24.0,float(row)/10.0))
-            _vertex(st,p0,n0,Vector2(float(segment)/24.0,float(row)/10.0))
-            _vertex(st,p3,n3,Vector2(float(segment)/24.0,float(row+1)/10.0))
             _vertex(st,p2,n2,Vector2(float(segment+1)/24.0,float(row+1)/10.0))
+            _vertex(st,p0,n0,Vector2(float(segment)/24.0,float(row)/10.0))
+            _vertex(st,p2,n2,Vector2(float(segment+1)/24.0,float(row+1)/10.0))
+            _vertex(st,p3,n3,Vector2(float(segment)/24.0,float(row+1)/10.0))
     # Closed rubber inner faces; original stamped metal V46 hubs remain on top.
     for segment in range(RADIAL_SEGMENTS):
         var a0: float=TAU*float(segment)/float(RADIAL_SEGMENTS)
         var a1: float=TAU*float(segment+1)/float(RADIAL_SEGMENTS)
         var r: float=rings[0].y
         _vertex(st,Vector3(0,-0.120,0),Vector3.DOWN)
-        _vertex(st,Vector3(cos(a0)*r,-0.120,sin(a0)*r),Vector3.DOWN)
         _vertex(st,Vector3(cos(a1)*r,-0.120,sin(a1)*r),Vector3.DOWN)
+        _vertex(st,Vector3(cos(a0)*r,-0.120,sin(a0)*r),Vector3.DOWN)
         _vertex(st,Vector3(0,0.120,0),Vector3.UP)
-        _vertex(st,Vector3(cos(a1)*r,0.120,sin(a1)*r),Vector3.UP)
         _vertex(st,Vector3(cos(a0)*r,0.120,sin(a0)*r),Vector3.UP)
+        _vertex(st,Vector3(cos(a1)*r,0.120,sin(a1)*r),Vector3.UP)
     _tire_cache=st.commit() as ArrayMesh
     return _tire_cache
 
@@ -95,11 +97,11 @@ static func _quad(st: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, d: Vector3) -> void:
     var n: Vector3=(b-a).cross(c-a).normalized()
     _vertex(st,a,n)
+    _vertex(st,c,n)
     _vertex(st,b,n)
-    _vertex(st,c,n)
     _vertex(st,a,n)
-    _vertex(st,c,n)
     _vertex(st,d,n)
+    _vertex(st,c,n)
 
 static func _lug(st: SurfaceTool,center: Vector3) -> void:
     var minp: Vector3 = center-Vector3(0.025,0.006,0.027)
