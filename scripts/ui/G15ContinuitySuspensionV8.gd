@@ -264,10 +264,39 @@ static func apply(root:Node3D,paint:Color)->bool:
                 _rod(suspension,"G15_V8_UpperControlArm_"+suffix,
                     Vector3(s*0.50,0.57,z+0.02),
                     Vector3(s*0.71,0.61,z+0.21),0.026,satin,10)
+                # Close-view readability fix: the inner springs are physically
+                # accurate but entirely screened by the rubber tires.
+                # Expose a SECOND shock mount in the inter-wheel gap, *outside*
+                # each tire's radial shadow, with two chassis-connected rods.
+                # These are genuine compact auxiliary dampers and are never
+                # made children of the rotating wheel or floating objects.
+                var out_top:=Vector3(s*0.995,0.812,z+0.428)
+                var out_bottom:=Vector3(s*1.025,0.486,z+0.442)
+                var out_dir:Vector3=out_bottom-out_top
+                var gap_coil:=_coil_mesh(
+                    out_dir.length()*0.80,0.061,0.012,4,36,8)
+                if gap_coil==null or gap_coil.get_faces().size()!=36*8*6:
+                    return false
+                var gap_spring:=_mesh(suspension,
+                    "G15_V8_VisibleGapCoil_"+suffix,
+                    gap_coil,spring_steel,(out_top+out_bottom)*0.5)
+                gap_spring.quaternion=Quaternion(
+                    Vector3.UP,out_dir.normalized())
+                _rod(suspension,"G15_V8_AuxiliaryDamperCore_"+suffix,
+                    out_top,out_bottom,0.018,dark,10)
+                _rod(suspension,"G15_V8_GapUpperBrace_"+suffix,
+                    Vector3(s*0.790,0.768,z+0.286),
+                    out_top,0.025,steel,10)
+                _rod(suspension,"G15_V8_GapLowerBrace_"+suffix,
+                    Vector3(s*0.785,0.406,z+0.295),
+                    out_bottom,0.026,dark,10)
+                _box(suspension,"G15_V8_GapCoilEndRetainer_"+suffix,
+                    out_top,Vector3(0.118,0.038,0.116),deep)
 
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g15_v8_solid_bridge_triangles",12)
-    root.set_meta("tarvoka_g15_v8_coils",6 if high else 0)
+    root.set_meta("tarvoka_g15_v8_coils",12 if high else 0)
+    root.set_meta("tarvoka_g15_v8_interwheel_coils",6 if high else 0)
     root.set_meta("tarvoka_g15_v8_suspension_pivots_untouched",true)
     root.set_meta("tarvoka_g15_v8_all_visual_only",true)
     root.set_meta("tarvoka_g15_v8_android_lod",not high)
