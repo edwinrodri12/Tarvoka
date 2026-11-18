@@ -1,0 +1,71 @@
+name: TARVOKA v394 bridge first response budget counterfactual
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_bridge_first_response_counterfactual_v394.gd"
+      - "tests/aggregate_ai_bridge_response_budget_v394.py"
+      - ".github/workflows/ai-bridge-response-budget-v394.yml"
+  workflow_dispatch:
+
+jobs:
+  bridge_order_budget:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+    env:
+      TARVOKA_V394_SEED_INDEX: ${{ matrix.seed_index }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Replay official vs cap3 vs cap5 with both starters and exact mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2900s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_bridge_first_response_counterfactual_v394.gd \
+            2>&1 | tee /tmp/bridge-v394.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|BRIDGE394_DIVERGENCE' /tmp/bridge-v394.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v394: isolated first-responder order budget' /tmp/bridge-v394.log
+          test "$(grep -c '^BRIDGE394_RESULT ' /tmp/bridge-v394.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v394-seed${{ matrix.seed_index }}
+          path: /tmp/bridge-v394.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [bridge_order_budget]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v394-seed*
+          path: .ci-v394-logs
+          merge-multiple: false
+      - name: Audit exactly 16 original conditions, 96 mirrors and matched legal opening actions
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_bridge_response_budget_v394.py .ci-v394-logs
+          cat reports/ai_v394_bridge_response_budget.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v394-bridge-response-budget-results
+          path: reports/ai_v394_bridge_response_budget.*
+          if-no-files-found: ignore
+          retention-days: 30
