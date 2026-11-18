@@ -1,0 +1,105 @@
+name: TARVOKA v373 relay bridge/approach chokepoint audit (320 real battles)
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_relay_chokepoints_v373.gd"
+      - "tests/test_relay_chokepoint_contract_v373.gd"
+      - "scripts/core/RelayControl.gd"
+      - "tests/aggregate_ai_relay_chokepoints_v373.py"
+      - ".github/workflows/ai-relay-chokepoints-v373.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run twenty real self-play games comparing four-center, approaches and flanks at 8/10 points
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_chokepoints_v373.gd \
+            2>&1 | tee /tmp/ai-v373-choke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v373-choke.log; then exit 1; fi
+          grep -Fq 'PASS AI choke v373:' /tmp/ai-v373-choke.log
+          test "$(grep -c '^CHOKE373_MATCH ' /tmp/ai-v373-choke.log)" -eq 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v373-choke-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v373-choke.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  relay_round_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify 80 bridge-mouth, center and flank score/tie contracts and SaveCodec
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_relay_chokepoint_contract_v373.gd \
+            2>&1 | tee /tmp/ai-v373-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v373-contract.log; then exit 1; fi
+          grep -Fq 'PASS choke v373 contract:' /tmp/ai-v373-contract.log
+          test "$(grep -c '^CHOKE373_CONTRACT ' /tmp/ai-v373-contract.log)" -eq 80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v373-contract
+          path: /tmp/ai-v373-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, relay_round_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v373-choke-L*
+          path: .ci-v373-logs
+          merge-multiple: false
+      - name: Aggregate 320 real games with map-wise controls and chokepoint position analysis
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_relay_chokepoints_v373.py .ci-v373-logs
+          cat reports/ai_v373_chokepoint_relays.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v373-chokepoint-relay-report
+          path: reports/ai_v373_chokepoint_relays.*
+          if-no-files-found: ignore
+          retention-days: 30
