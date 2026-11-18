@@ -25,3 +25,13 @@ En `Unidades → Helicóptero HAT-29 → Detalles` se añaden:
 - `.github/workflows/a01-v14-hat29-visual-qa.yml` y `.github/workflows/tarvoka-3d-pages.yml` contienen tests y empaquetado de V14.14.
 
 **Estado:** implementada en el código de GitHub. La aprobación V14.14 depende de la ejecución nativa del QA de 89 imágenes y del despliegue del visor web; los resultados verdes de V14.13 no equivalen automáticamente a esos resultados posteriores.
+
+
+## Auditoría visual posterior y ajuste de asentamiento
+La primera ejecución nativa de V14.14 completó las **89 imágenes** y la prueba de ocho ciclos de destrucción/reparación ([run 44263208771](https://github.com/edwinrodri12/Tarvoka/actions/runs/44263208771)). La comparación de capturas originales mostró que la geometría funcionaba, pero las piezas se asentaban demasiado cerca de los bajos del fuselaje y resultaban difíciles de distinguir.
+
+La corrección de diseño mantiene la malla fragmentada, sus dos sectores reales y el movimiento V13, pero coloca los puntos finales en X=+1.36 y X=-1.43, cerca del suelo, **fuera del casco y los patines**. Las rotaciones finales se redujeron para apoyar la cara ancha de los trozos de metal en vez de mostrarlos casi de canto. El material expuesto también se aclaró moderadamente, con la misma rugosidad de acero accidentado.
+
+Las cuatro capturas V14.14 se han reencuadrado con una cámara algo más alta y abierta (siempre idéntica entre antes y después). Se agregó una aserción automática específica para evitar que los dos fragmentos vuelvan a quedar bajo el casco.
+
+**Validación importante:** los 89 PNG de la primera implementación verifican la función y detectaron este ajuste; la versión con posiciones corregidas requiere su propia ejecución posterior de QA y no se debe dar por publicada hasta que la exportación web termine en verde. La publicación puede quedar bloqueada por pruebas independientes del G13; eso no cambia el resultado del modelo del helicóptero.
