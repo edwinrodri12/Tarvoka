@@ -1,9 +1,9 @@
 extends SceneTree
 
 # Real Godot native offscreen 3D frames (not synthesized mockup).
-# Captures identical wheel cameras before/after V55 metal sculpture.
+# Captures identical panel/material cameras before/after actual V55 finish.
 const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
-const V54=preload("res://scripts/ui/G13MaterialRealismV54.gd")
+const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const OUT="res://build/qa/g13-v55"
 var failures:int=0
 var shots:Array[Dictionary]=[]
@@ -77,22 +77,22 @@ func _run()->void:
         quit(1)
         return
     verify(bool(model.get_meta(V54.FLAG,false)),
-        "V54 physically based coating should remain installed")
+        "V54 rounded rubber wheel sculpture must still be present")
     studio.call("_inspect_view","iso")
     await _capture(studio,"hero-isometric","V55")
     studio.call("_inspect_view","left")
     await _capture(studio,"hero-side","V55")
     studio.call("_inspect_view","front")
     await _capture(studio,"hero-front","V55")
-    # Exact physical wheel closeups, no image crop/paint fakery.
+    # Actual service hatch closeups with preserved lighting and camera.
     _camera(studio,Vector3(-2.40,1.05,0.40),
         Vector3(-0.72,0.80,0.06),1.10)
     await _capture(studio,"rear-left-panel-close","V55")
     verify(V55.show_finish(model,false),
         "cannot display V54 panel microfinish for exact reference")
-    await _capture(studio,"rear-left-panel-before-v53","V54")
+    await _capture(studio,"rear-left-panel-before-v54","V54")
     verify(V55.show_finish(model,true),
-        "cannot restore V55 tire mesh after reference")
+        "cannot restore V55 coating and seam geometry after reference")
     await _capture(studio,"rear-left-panel-after-v55","V55")
     _camera(studio,Vector3(-2.40,1.07,-0.60),
         Vector3(-0.72,0.80,-0.15),1.10)
@@ -112,7 +112,7 @@ func _run()->void:
             await process_frame
             model=studio.get("model_root") as Node3D
             verify(model!=null and bool(model.get_meta(V55.FLAG,false)),
-                "faction %d must use identical V55 tire sculpture" % i)
+                "faction %d must use identical V55 panel microfinish" % i)
             studio.call("_inspect_view","iso")
             await _capture(studio,"hero-faction-%d" % i,"V55")
     var manifest:=FileAccess.open(
@@ -120,9 +120,9 @@ func _run()->void:
     verify(manifest!=null,"cannot write native model screenshot manifest")
     if manifest!=null:
         manifest.store_string(JSON.stringify({
-            "model":"G13 V55 native 3D metal sculpt",
+            "model":"G13 V55 native 3D PBR microfinish and physical panel seams",
             "renderer":"Godot 4.3 GL compatibility",
-            "material_version":"V54 physically based metal and metal",
+            "material_version":"V55 fine-grained steel and painted PBR with V54 real tire rubber",
             "hero_only":true,
             "visual_approval_pending":true,
             "shots":shots,
