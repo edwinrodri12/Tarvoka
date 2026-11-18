@@ -19,9 +19,9 @@ FORBIDDEN = {
     "android.permission.ACCESS_WIFI_STATE",
     "android.permission.CHANGE_WIFI_STATE",
 }
-PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-23):\s+name='([^']+)'", re.MULTILINE)
+PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-(?:23|m)):\s+name='([^']+)'", re.MULTILINE)
 
-PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-23)?:", re.MULTILINE)
+PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-(?:23|m))?:", re.MULTILINE)
 
 PACKAGE_LINE = re.compile(r"^\s*package:\s+(?:name=)?(?:\x27[^\x27\r\n]+\x27|[A-Za-z_][A-Za-z0-9_.]*)\s*$", re.MULTILINE)
 
@@ -42,7 +42,7 @@ def self_test() -> None:
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
     assert len(PERMISSION_PREFIX.findall("uses-permission: name=android.permission.INTERNET")) == 1
-    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1
+    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1\n    assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-m: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_LINE.findall("uses-permission: name=android.permission.INTERNET")) == 0
 
 
