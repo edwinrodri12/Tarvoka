@@ -30,6 +30,18 @@ def forbidden_permissions(dump: str) -> set[str]:
     return set(PERMISSION_LINE.findall(dump)) & FORBIDDEN
 
 
+
+def audit_dump(dump: str) -> set[str]:
+    """Validate aapt output before deciding whether the manifest is offline-safe."""
+    if not PACKAGE_LINE.search(dump):
+        raise ValueError("aapt output lacks APK package metadata")
+    declared = PERMISSION_PREFIX.findall(dump)
+    parsed = PERMISSION_LINE.findall(dump)
+    if len(declared) != len(parsed):
+        raise ValueError("unparseable permission declaration in aapt output")
+    return set(parsed) & FORBIDDEN
+
+
 def self_test() -> None:
     assert forbidden_permissions("uses-permission: name='android.permission.INTERNET'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission-sdk-23: name='android.permission.ACCESS_NETWORK_STATE'") == {"android.permission.ACCESS_NETWORK_STATE"}
@@ -45,6 +57,21 @@ def self_test() -> None:
     assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-m: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_LINE.findall("uses-permission: name=android.permission.INTERNET")) == 0
+    valid = "package: name='com.example.tarvoka'\\nuses-permission: name='android.permission.CAMERA'"
+    assert audit_dump(valid) == set()
+    blocked = "package: name='com.example.tarvoka'\\nuses-permission-sdk-m: name='android.permission.INTERNET'"
+    assert audit_dump(blocked) == {"android.permission.INTERNET"}
+    for malformed in (
+        "uses-permission: name='android.permission.CAMERA'",
+        "package: name='com.example.tarvoka'\\nuses-permission: name=android.permission.INTERNET",
+        "package: name='com.example.tarvoka'\\nuses-permission-sdk-m: name=",
+    ):
+        try:
+            audit_dump(malformed)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Malformed manifest was accepted: {malformed!r}")
 
 
 def main(argv: list[str]) -> int:
@@ -72,15 +99,11 @@ def main(argv: list[str]) -> int:
     if result.returncode:
         print(f"FAIL: aapt returned {result.returncode}: {result.stderr.strip()}", file=sys.stderr)
         return 2
-    if not PACKAGE_LINE.search(result.stdout):
-        print("FAIL: aapt output lacks APK package metadata; manifest NOT verified", file=sys.stderr)
+    try:
+        violations = audit_dump(result.stdout)
+    except ValueError as exc:
+        print(f"FAIL: {exc}; manifest NOT verified", file=sys.stderr)
         return 2
-    declared = PERMISSION_PREFIX.findall(result.stdout)
-    parsed = PERMISSION_LINE.findall(result.stdout)
-    if len(declared) != len(parsed):
-        print("FAIL: unparseable permission declaration in aapt output; manifest NOT verified", file=sys.stderr)
-        return 2
-    violations = forbidden_permissions(result.stdout)
     if violations:
         print("FAIL: forbidden APK network permissions: " + ", ".join(sorted(violations)), file=sys.stderr)
         return 1
