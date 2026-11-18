@@ -7,7 +7,7 @@ class_name TarvokaCivilianCityStudioAdapter
 # Native Godot meshes; no iframes, external links or screenshot proxies.
 const Cities=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
 const CityBase=preload("res://scripts/ui/CivilianCity3DV1.gd")
-const CityMaterials=preload("res://scripts/ui/CivilianCityArtReviewV42.gd")
+const CityMaterials=preload("res://scripts/ui/CivilianCityArtEvidenceV43.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 
 var civilian_city_controls: VBoxContainer
@@ -27,7 +27,7 @@ func _ready() -> void:
     if building_picker.item_count!=CITY_BUILDING_INDEX:
         push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
         return
-    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V42")
+    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V43")
     building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
     _install_city_options()
     _refresh_unified_studio_navigation()
@@ -150,7 +150,7 @@ func _install_city_options() -> void:
             Callable(self,"_city_orbit").bind(float(config[1])))
         views.add_child(rotate_button)
     civilian_city_hint=_title(civilian_city_controls,
-        "ARTE V42 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
+        "ARTE V43 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
     civilian_city_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
 func _city_choose_tier(index: int) -> void:
@@ -292,7 +292,7 @@ func _display_civilian_city() -> void:
     _update_details()
     _refresh_unified_studio_navigation()
     if studio_overview_label!=null:
-        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V42 · REVISIÓN VISUAL"
+        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V43 · REVISIÓN CON EVIDENCIA"
 
 func _update_camera() -> void:
     if _role=="civilian_city":
@@ -574,9 +574,10 @@ func _update_details() -> void:
             "Piedra y ladrillo" if tier==2 else "Vidrio y aluminio")
         if detail_label!=null:
             detail_label.text=(
-                "CIUDAD CIVIL V42 · %s · %d mallas · %d avisos geometricos · D%d · RENDER PENDIENTE" %
+                "CIUDAD CIVIL V43 · %s · %d mallas · %d alertas geometricas + %d de material/uniones · D%d · RENDER PENDIENTE" %
                 [identity,Cities.drawable_count(model_root),
                     int(model_root.get_meta("city_v42_warning_count",0)),
+                    int(model_root.get_meta("city_v43_issue_count",0)),
                     damage])
         if status_label!=null:
             status_label.text=(
