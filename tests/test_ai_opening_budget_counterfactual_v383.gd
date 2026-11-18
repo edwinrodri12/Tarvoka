@@ -30,7 +30,9 @@ const SEEDS := [630,631,632,633]
 const MAX_HALF_TURNS := 32
 const FIRST_RESPONSE_CAP := 3
 
-static func _play_equal_response(start: Dictionary, mirrored: bool) -> Dictionary:
+static func _play_equal_response(start: Dictionary, mirrored: bool,
+        response_cap: int = FIRST_RESPONSE_CAP) -> Dictionary:
+    assert(response_cap >= 1 and response_cap <= 8)
     var state: Dictionary = start.duplicate(true)
     var first: int = int(state["faction"])
     var starting_credits: int = int(state["economy"]["credits"][1-first])
@@ -50,7 +52,7 @@ static func _play_equal_response(start: Dictionary, mirrored: bool) -> Dictionar
         for i in range(max_orders+1):
             # Voluntary early finish. The rule engine STILL executes
             # Session.end_turn; no invented order costs or time bonuses.
-            if phase == 1 and orders >= FIRST_RESPONSE_CAP:
+            if phase == 1 and orders >= response_cap:
                 frames.append(Study._record(state,mirrored,
                     phase,orders,"equal_response_cap"))
                 break
@@ -94,7 +96,7 @@ static func _play_equal_response(start: Dictionary, mirrored: bool) -> Dictionar
             assert(orders == 3 and Opening.remaining(state) == 0)
         if phase == 1:
             stats["responder_orders"] = orders
-            assert(orders <= FIRST_RESPONSE_CAP)
+            assert(orders <= response_cap)
         if int(state["winner"]) != -1:
             reason = "winner"
             break
