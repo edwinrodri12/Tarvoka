@@ -26,6 +26,16 @@ jobs:
         with:
           ref: art/cities-v8-rear-facades-rooftops-20261117
 
+      - name: Registrar la revisión exacta de las ciudades (V46)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/city-v44-evidence
+          git rev-parse HEAD | tee build/city-v44-evidence/source-art-commit.txt
+          printf 'source branch: %s\n' "$(git branch --show-current)" >> build/city-v44-evidence/source-art-commit.txt
+          printf 'event: %s\n' "$GITHUB_EVENT_NAME" >> build/city-v44-evidence/source-art-commit.txt
+          echo "ART_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Preparar Godot 4.3 y renderizador Mesa GL
         shell: bash
         run: |
@@ -36,7 +46,7 @@ jobs:
           curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-v44.zip
           unzip -qo /tmp/godot-v44.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
-          mkdir -p build/city-v44-evidence
+          test -x /tmp/Godot_v4.3-stable_linux.x86_64
           test -s scripts/ui/CivilianCityArtReviewV42.gd
           test -s scripts/ui/CivilianCityArtEvidenceV43.gd
           test -s scripts/ui/CivilianCityVisualProofV44.gd
@@ -49,7 +59,7 @@ jobs:
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
             2>&1 | tee build/city-v44-evidence/godot-import.log
-          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:|ERROR:.*(Parse|Script|Resource)' \
               build/city-v44-evidence/godot-import.log; then
             exit 1
           fi
@@ -67,7 +77,7 @@ jobs:
             2>&1 | tee build/city-v44-evidence/godot-render.log
           test "$(find build/city-v44-evidence -maxdepth 1 -name '*.png' | wc -l)" -eq 24
           test -s build/city-v44-evidence/manifest.json
-          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:|ERROR:.*(Parse|Script|Resource)' \
               build/city-v44-evidence/godot-render.log; then
             exit 1
           fi
@@ -140,12 +150,24 @@ jobs:
           import json
           folder=Path("build/city-v44-evidence")
           file=folder/"manifest.json"
-          print("## TARVOKA · Ciudades V44 · Evidencia de Godot 4.3")
+          import os
+          print("## TARVOKA · Ciudades V46 · Evidencia de Godot 4.3")
+          print("")
+          source=folder/"source-art-commit.txt"
+          print("Fuente artística: `"+(source.read_text(encoding="utf-8").splitlines()[0] if source.exists() else "No disponible")+"`")
+          print("Ejecución: `"+os.getenv("GITHUB_RUN_ID","desconocida")+"`")
           print("")
           print("**Estado: pendiente de revisión artística humana, sin aprobación automática.**")
           print("")
           if not file.exists():
               print("No se generó el manifiesto. Revisar godot-import.log y godot-render.log en el artefacto.")
+              for name in ("godot-import.log","godot-render.log"):
+                  log=folder/name
+                  if log.exists():
+                      print("\n### Últimos errores de "+name)
+                      lines=log.read_text(encoding="utf-8",errors="replace").splitlines()
+                      for line in [x for x in lines if any(word in x for word in ("ERROR","Parse Error","SCRIPT ERROR","Failed loading"))][-12:]:
+                          print("- "+line[:300])
           else:
               try:
                   data=json.loads(file.read_text(encoding="utf-8"))
