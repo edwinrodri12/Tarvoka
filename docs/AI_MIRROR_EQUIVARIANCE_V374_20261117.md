@@ -42,3 +42,24 @@ Si hay divergencias, identificar primero su fuente (selección de unidad, objeti
 Si no hay divergencias en estas decisiones iniciales, descartar ese factor para la apertura y estudiar la equivalencia durante capturas, turnos completos, generación de unidades y cambios de propietarios, donde el sesgo también puede surgir.
 
 Esta prueba no autoriza modificar la APK ni implica que las partidas completas sean igual de balanceadas. **PR DRAFT; solo tests, CI y documentación.**
+
+
+## Resultado verificado — v3.7.4
+
+[GitHub Actions #44234207399](https://github.com/edwinrodri12/Tarvoka/actions/runs/44234207399) completó **192 aperturas auténticas y 576 comparaciones** en Godot 4.3; el agregador pasó los controles de matriz exacta y los 48 contratos de estado reflejado.
+
+| Subconjunto | Pares de decisiones | Diferencias por reflejo/cambio de facción | Diferencias por invertir orden de unidades |
+|---|---:|---:|---:|
+| Campo abierto | 144 | 0 | 0 |
+| Bosque | 144 | 0 | 0 |
+| Puentes | 144 | 0 | 0 |
+| Costa | 144 | 0 | 0 |
+| **Total** | **576** | **0** | **0** |
+
+Las tres disposiciones de relés, los dos niveles de IA, ambos jugadores iniciadores y niebla activada/desactivada coinciden en **cada una de las decisiones iniciales observadas**. Tampoco hubo diferencias de visibilidad, reparaciones de exploración ni acciones que faltaran en el estado reflejado.
+
+**Decisión:** no cambiar ahora la selección de movimientos de apertura, la preferencia de unidades ni los desempates iniciales. La auditoría **no ha encontrado un fallo** en esas operaciones. Estas 576 decisiones son solo las **tres primeras órdenes** en 192 estados de apertura; la simetría en ellas no demuestra que las fases posteriores con combate, compras, relés controlados, objetivos persistidos y tropas nuevas sean simétricas.
+
+**Siguiente prioridad v3.7.5:** ejecutar batallas completas en **pares de estados reflejados e intercambiados**, auditando cada acción durante todos los turnos (incluidas compras y unidades creadas), el momento de las capturas, las metas de relé, el ganador, y **la primera transición exacta donde los estados dejan de corresponderse**. Comprobar en particular quién gana en Puentes con relés laterales y en Bosque con relés centrales, separando orientación, facción e iniciativa. Mantener los cambios experimentales y la APK fuera de `main`.
+
+**No fusionar ni activar nuevas reglas de balance como resultado de esta investigación.**
