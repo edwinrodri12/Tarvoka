@@ -12,6 +12,7 @@ const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
+const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 var failures: int=0
 var images: int=0
 
@@ -207,6 +208,26 @@ func _run() -> void:
     _check(bool(studio.get("_heli_mast_view_active_v145"))
         and isolation.visible and pistons.visible,
         "V14.6 fixed rubber isolator inspection uses true side camera")
+    studio.call("_heli_mobile_home")
+    # V14.7 real macro buttons and hardware remain in the SAME live Studio.
+    _check(Finish147.has_model(model),
+        "V14.7 four finished root dampers load inside native unified Studio")
+    var v147_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.7:"):
+            v147_buttons+=1
+    _check(v147_buttons==2,
+        "V14.7 piston and bellows closeups are present in Details")
+    studio.call("_heli_inspect_focus",40.0,27.0,3.75,
+        Vector3(0.17,2.07,-0.29))
+    _check(studio.get("_heli_focus_local")==Vector3(0.17,2.07,-0.29)
+        and model.get_instance_id()==original_id,
+        "V14.7 piston view retains current model and camera controls")
+    studio.call("_heli_inspect_focus",40.0,58.0,3.68,
+        Vector3(0.18,2.04,-0.34))
+    _check(studio.get("_heli_focus_local")==Vector3(0.18,2.04,-0.34)
+        and not bool(studio.get("_heli_mast_view_active_v145")),
+        "V14.7 rubber boot macro uses standard camera without stale mast mode")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
