@@ -55,13 +55,13 @@ func _show_full_district() -> void:
     _view_v19(Vector3.ZERO,40.0,42.0,33.0)
 
 func _show_passageways() -> void:
-    _view_v19(Vector3(2.47,-1.10,-2.90),32.0,46.0,19.0)
+    _view_v19(Vector3(2.47,0.18,-2.90),32.0,46.0,19.0)
 
 func _show_roof_rhythm() -> void:
     _view_v19(Vector3(0.0,2.45,0.0),42.0,67.0,26.0)
 
 func _show_civic_square() -> void:
-    _view_v19(Vector3(0.0,-1.15,2.10),18.0,49.0,18.0)
+    _view_v19(Vector3(0.0,0.18,2.10),18.0,49.0,18.0)
 
 func _show_ruined_district() -> void:
     _set_damage(4)
