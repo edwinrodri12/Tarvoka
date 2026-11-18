@@ -9,6 +9,8 @@ class_name TarvokaCivilianCityDesignStudioV43
 # while opening one browser scene. Defer those inherited startup calls,
 # then assemble the identical final V43 model exactly ONCE.
 var _initial_city_bootstrap: bool=true
+var _city_advanced_archive: ScrollContainer
+var _city_advanced_toggle: Button
 
 func _ready() -> void:
     super._ready()
@@ -22,8 +24,61 @@ func _ready() -> void:
     if _status!=null:
         _status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
         _status.custom_minimum_size=Vector2(0,48)
+    _install_visible_canvas_and_archive()
     _initial_city_bootstrap=false
     _rebuild()
+
+func _install_visible_canvas_and_archive() -> void:
+    # V19-V42 added hundreds of camera buttons to ONE HFlowContainer.
+    # In a 720px browser window that container grows beyond the screen,
+    # steals the SubViewportContainer's height, and creates a zero-size
+    # WebGL framebuffer (INVALID_VALUE texImage2D / status 36054).
+    # Keep every approved camera callable, but move it into a closed,
+    # bounded, scrollable archive below the actual 3D canvas.
+    var layout: VBoxContainer=get_child(1) as VBoxContainer
+    if layout==null or _v19_toolbar==null:
+        push_error("Ciudad V43: missing original 3D layout or camera toolbar")
+        return
+    var canvas: SubViewportContainer=layout.get_child(2) as SubViewportContainer
+    if canvas==null:
+        push_error("Ciudad V43: real SubViewportContainer unavailable")
+        return
+    canvas.custom_minimum_size=Vector2(0,240)
+    canvas.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    canvas.size_flags_vertical=Control.SIZE_EXPAND_FILL
+    canvas.stretch=true
+    if viewport!=null:
+        viewport.size=Vector2i(960,540)
+        viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+    _city_advanced_toggle=Button.new()
+    _city_advanced_toggle.name="CiudadesV43_MostrarCamarasHistoricas"
+    _city_advanced_toggle.text="MÁS CÁMARAS 3D · EXPANDIR V8–V42"
+    _city_advanced_toggle.toggle_mode=true
+    _city_advanced_toggle.button_pressed=false
+    _city_advanced_toggle.custom_minimum_size=Vector2(0,32)
+    layout.add_child(_city_advanced_toggle)
+    layout.move_child(_city_advanced_toggle,4)
+    _city_advanced_archive=ScrollContainer.new()
+    _city_advanced_archive.name="CiudadesV43_ArchivoDeCamarasDesplazable"
+    _city_advanced_archive.custom_minimum_size=Vector2(0,125)
+    _city_advanced_archive.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    _city_advanced_archive.size_flags_vertical=Control.SIZE_SHRINK_BEGIN
+    _city_advanced_archive.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+    _city_advanced_archive.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO
+    layout.add_child(_city_advanced_archive)
+    layout.move_child(_city_advanced_archive,5)
+    _v19_toolbar.reparent(_city_advanced_archive)
+    _v19_toolbar.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    _city_advanced_archive.visible=false
+    _city_advanced_toggle.toggled.connect(_toggle_city_advanced_cameras)
+
+func _toggle_city_advanced_cameras(open: bool) -> void:
+    if _city_advanced_archive!=null:
+        _city_advanced_archive.visible=open
+    if _city_advanced_toggle!=null:
+        _city_advanced_toggle.text=(
+            "MENOS CÁMARAS · OCULTAR V8–V42" if open else
+            "MÁS CÁMARAS 3D · EXPANDIR V8–V42")
 
 func _rebuild() -> void:
     if _initial_city_bootstrap:
