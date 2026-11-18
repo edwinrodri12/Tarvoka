@@ -25,6 +25,7 @@ const V21=preload("res://scripts/ui/CivilianCityArchitecturalDetailV21.gd")
 const V22=preload("res://scripts/ui/CivilianCityCohesionV22.gd")
 const V23=preload("res://scripts/ui/CivilianCitySilhouetteV23.gd")
 const V24=preload("res://scripts/ui/CivilianCityStructuralContactsV24.gd")
+const V25=preload("res://scripts/ui/CivilianCitySurfaceContinuityV25.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -207,7 +208,14 @@ static func _keep_medium(name: String) -> bool:
         "V24_CierreCornisa_","V24_EscuadraMadera_",
         "V24_ClaveMortero_","V24_AnclajeAluminio_",
         "V24_AcaboDespostillado_","V24_ArmaduraDesdeForjado_",
-        "V24_VidrioEnForjadoCaido_"]:
+        "V24_VidrioEnForjadoCaido_",
+        # V25: facade grout, welds and tiny cut-fiber microdetails LOD0.
+        "V25_JuntaCeramica_","V25_CabezaMadera_",
+        "V25_JuntaMortero_","V25_RematePiedra_",
+        "V25_SoldaduraMetal_","V25_PiezaAnclaje_",
+        "V25_SombraBordeRoto_","V25_MorteroAbierto_",
+        "V25_AceroCortado_","V25_FibraMaderaRota_",
+        "V25_CristalSueltoCimentacion_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -356,7 +364,13 @@ static func _keep_far(name: String) -> bool:
         "V24_ZapataCortada_","V24_VigaEntreCascotes_",
         "V24_ApoyoAccesoMunicipalRoto",
         "V24_VigaAccesoMunicipalBaja",
-        "V24_PiedrasPlacaMunicipalCaida"]:
+        "V24_PiedrasPlacaMunicipalCaida",
+        # V25 large-enough broken edges remain visible at game zoom.
+        "V25_SeccionTejaPartida_","V25_CantoForjadoVisible_",
+        "V25_AnclajeCimientoDestruido_",
+        "V25_FrisoMunicipalAgrietado",
+        "V25_PiezaPortalMunicipalRota",
+        "V25_RestoPlacaMunicipal"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -462,7 +476,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V24.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",24)
+    if not V25.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",25)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
