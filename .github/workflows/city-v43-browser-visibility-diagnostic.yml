@@ -1,0 +1,183 @@
+name: TARVOKA V43 real browser city visibility diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/city-v43-browser-visibility-diagnostic.yml"
+permissions:
+  contents: read
+jobs:
+  browser-city-proof:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    steps:
+      - name: Check out native V43 city art only
+        uses: actions/checkout@v4
+        with:
+          ref: art/cities-v8-rear-facades-rooftops-20261117
+      - name: Get Godot 4.3 engine and matching Web templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/diag-godot.zip
+          unzip -oq /tmp/diag-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/diag-templates.tpz
+          mkdir -p /tmp/diag-templates
+          unzip -oq /tmp/diag-templates.tpz -d /tmp/diag-templates
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
+          cp /tmp/diag-templates/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+      - name: Create non-production real city visibility probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scripts/ui/CivilianCityWebVisibilityProbe.gd <<'GDSCRIPT'
+          extends "res://scripts/ui/CivilianCityDesignStudioV43.gd"
+
+          func _ready() -> void:
+              super._ready()
+              _probe.call_deferred()
+
+          func _probe() -> void:
+              await get_tree().create_timer(6.0).timeout
+              if _model==null:
+                  push_error("CITY WEB PROBE: real V43 model is missing")
+                  JavaScriptBridge.eval("window.__cityQaStage='model-missing';")
+                  return
+              print("CITY WEB PROBE model present with meshes: ",_model.get_meta("city_mesh_count",-1))
+              JavaScriptBridge.eval("window.__cityQaStage='visible';")
+              await get_tree().create_timer(6.0).timeout
+              _model.visible=false
+              print("CITY WEB PROBE real model hidden")
+              JavaScriptBridge.eval("window.__cityQaStage='hidden';")
+              await get_tree().create_timer(6.0).timeout
+              _model.visible=true
+              print("CITY WEB PROBE real model restored")
+              JavaScriptBridge.eval("window.__cityQaStage='restored';")
+          GDSCRIPT
+          sed -i 's|res://scripts/ui/CivilianCityDesignStudioV43.gd|res://scripts/ui/CivilianCityWebVisibilityProbe.gd|' scenes/CivilianCityDesignStudioV43.tscn
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
+          grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
+          cat >> export_presets.cfg <<'PRESET'
+
+          [preset.1]
+          name="Web City Diagnostic"
+          platform="Web"
+          runnable=true
+          advanced_options=false
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/city-preview/index.html"
+          patches=PackedStringArray()
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          seed=0
+          encrypt_pck=false
+          encrypt_directory=false
+          script_export_mode=2
+
+          [preset.1.options]
+          custom_template/debug=""
+          custom_template/release=""
+          variant/extensions_support=false
+          variant/thread_support=false
+          vram_texture_compression/for_desktop=true
+          vram_texture_compression/for_mobile=true
+          html/export_icon=false
+          html/custom_html_shell=""
+          html/head_include=""
+          html/canvas_resize_policy=2
+          html/focus_canvas_on_start=true
+          html/experimental_virtual_keyboard=false
+          progressive_web_app/enabled=false
+          PRESET
+      - name: Export actual native city model to WebGL2 browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/city-preview
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/city-qa-import.log
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-release "Web City Diagnostic" build/city-preview/index.html 2>&1 | tee /tmp/city-qa-export.log
+          for part in index.html index.js index.pck index.wasm; do test -s build/city-preview/$part; done
+          if grep -E 'SCRIPT ERROR:|ERROR:|Import failed|Export failed' /tmp/city-qa-import.log /tmp/city-qa-export.log; then
+            exit 1
+          fi
+      - name: Test actual WebGL frame against hidden real city using Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          npm install --no-save playwright-core pngjs
+          python3 -m http.server 8123 --directory build/city-preview > /tmp/city-browser-http.log 2>&1 &
+          sleep 2
+          mkdir -p artifacts
+          cat > /tmp/city-qa-browser.cjs <<'JAVASCRIPT'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          const {PNG}=require(process.cwd()+'/node_modules/pngjs');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await chromium.launch({
+              headless:true,
+              executablePath:'/usr/bin/google-chrome',
+              args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl',
+                '--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']
+            });
+            const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
+            const errors=[];
+            page.on('console',msg=>{
+              const line='BROWSER '+msg.type()+' '+msg.text();
+              if(msg.type()==='error') errors.push(line);
+              console.log(line);
+            });
+            page.on('pageerror',e=>{errors.push(String(e));console.log('BROWSER JS ERROR',String(e));});
+            page.on('requestfailed',req=>{
+              const line='NETWORK FAILED '+req.url()+' '+req.failure()?.errorText;
+              console.log(line);errors.push(line);
+            });
+            await page.goto('http://127.0.0.1:8123/',{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForFunction(()=>window.__cityQaStage==='visible'||window.__cityQaStage==='model-missing',
+              null,{timeout:90000});
+            if(await page.evaluate(()=>window.__cityQaStage)==='model-missing'){
+              throw Error('Godot Web assembled no V43 city model');
+            }
+            await page.waitForTimeout(1100);
+            const withCity=await page.screenshot({path:'artifacts/real-web-city-visible.png'});
+            await page.waitForFunction(()=>window.__cityQaStage==='hidden',null,{timeout:15000});
+            await page.waitForTimeout(1100);
+            const withoutCity=await page.screenshot({path:'artifacts/real-web-city-hidden.png'});
+            const a=PNG.sync.read(withCity),b=PNG.sync.read(withoutCity);
+            if(a.width!==b.width||a.height!==b.height)throw Error('Screenshot size mismatch');
+            let changed=0,spread=0;
+            for(let y=80;y<a.height-55;y+=4)for(let x=100;x<a.width-100;x+=4){
+              const offset=(y*a.width+x)*4;
+              const delta=Math.abs(a.data[offset]-b.data[offset])+
+                Math.abs(a.data[offset+1]-b.data[offset+1])+
+                Math.abs(a.data[offset+2]-b.data[offset+2]);
+              if(delta>40)changed++;
+              if(delta>150)spread++;
+            }
+            console.log('REAL WEB CITY vs HIDDEN delta=',changed,'strong=',spread,'webGL=',await page.evaluate(()=>{
+              const canvas=document.querySelector('canvas');return !!canvas&&!!canvas.getContext('webgl2');
+            }));
+            console.log('BROWSER ERRORS=',errors.slice(-20));
+            await browser.close();
+            if(changed<250||spread<60)throw Error('REAL BROWSER has no visibly rendered V43 city geometry');
+            console.log('PASS REAL WEB V43 CITY pixels: '+changed+' visual pixels and '+spread+' strong changes');
+          })().catch(e=>{console.error(e.stack);process.exit(1)});
+          JAVASCRIPT
+          node /tmp/city-qa-browser.cjs
+      - name: Upload browser screenshots and HTTP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-city-real-webgl-visibility
+          path: |
+            artifacts/
+            /tmp/city-browser-http.log
+          if-no-files-found: warn
