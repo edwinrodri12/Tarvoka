@@ -17,6 +17,7 @@ const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
+const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 var failures: int=0
 var images: int=0
 
@@ -325,7 +326,36 @@ func _run() -> void:
     studio.call("_heli_toggle_v1411")
     _check(root_comparison.mesh is ArrayMesh
         and model.get_instance_id()==original_id,
-        "V14.11 studio restored six-station native sculpt without duplicates")
+        "V14.11 studio restored V14.12 root sculpt without duplicates")
+    _check(Seam1412.has_model(model)
+        and bool(model.get_meta(Seam1412.ENABLED,false))
+        and (root_comparison.mesh as ArrayMesh).get_aabb().size.z>0.33,
+        "V14.11/V3 Studio compare returns intact V14.12 8-station fairing")
+    var v1412_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.12:"):
+            v1412_buttons+=1
+    _check(v1412_buttons==2,
+        "V14.12 has upper and lower real rotor-root inspection cameras")
+    studio.call("_heli_inspect_focus",311.0,17.0,4.28,
+        Vector3(0.014,2.01,-0.33))
+    _check(studio.get("_heli_focus_local")==Vector3(0.014,2.01,-0.33),
+        "V14.12 upper camera inspects swept root-to-blade join")
+    studio.call("_heli_inspect_focus",143.0,-17.0,4.20,
+        Vector3(0.020,2.01,-0.42))
+    _check(studio.get("_heli_focus_local")==Vector3(0.020,2.01,-0.42)
+        and model.get_instance_id()==original_id,
+        "V14.12 low camera keeps original attack helicopter rotor")
+    studio.call("_heli_toggle_v1412")
+    _check(root_comparison.mesh is ArrayMesh
+        and (root_comparison.mesh as ArrayMesh).get_aabb().size.z<0.25
+        and not bool(model.get_meta(Seam1412.ENABLED,false)),
+        "V14.12 Studio compare shows actual old V14.11 6-station sculpt")
+    studio.call("_heli_toggle_v1412")
+    _check(root_comparison.mesh is ArrayMesh
+        and (root_comparison.mesh as ArrayMesh).get_aabb().size.z>0.33
+        and model.get_instance_id()==original_id,
+        "V14.12 Studio compare restores 8-station swept root in place")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
