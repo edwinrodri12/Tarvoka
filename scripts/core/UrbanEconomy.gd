@@ -115,6 +115,13 @@ static func begin_turn(state: Dictionary) -> Dictionary:
     var side: int = int(next.get("faction", -1))
     if side not in [0, 1]:
         return next
+    # Opt-in symmetric initial economy: the first player receives no city
+    # income before their first action, so the responder also receives none
+    # at their first handoff (economy.turn == 1). All later city incomes
+    # remain exactly as before. Absent opt-in means legacy behavior.
+    if bool(next["economy"].get("symmetric_first_income", false)) and \
+            int(next["economy"].get("turn", -1)) == 1:
+        return next
     var income: int = income_for(next["economy"], side)
     next["economy"]["credits"][side] = mini(MAX_CREDITS, int(next["economy"]["credits"][side]) + income)
     return next
@@ -224,6 +231,9 @@ static func valid(economy: Dictionary, terrain: Array) -> bool:
     if not economy.get("sites") is Array or economy["sites"].is_empty() or economy["sites"].size() > MAX_SITES:
         return false
     if economy.has("modern") and not economy["modern"] is bool:
+        return false
+    if economy.has("symmetric_first_income") and \
+            not economy["symmetric_first_income"] is bool:
         return false
     var modern: bool = bool(economy.get("modern", false))
     var unique: Dictionary = {}

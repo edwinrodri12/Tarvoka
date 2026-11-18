@@ -13,7 +13,7 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
-static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false) -> Dictionary:
+static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false, symmetric_first_income: bool = false) -> Dictionary:
     # A malformed faction must never create an unplayable session.
     var faction: int = first_faction if first_faction in [0, 1] else 0
     var state: Dictionary = {"units": Turns.begin_turn(units, faction), "terrain": terrain.duplicate(true), "faction": faction, "winner": Turns.winner(units)}
@@ -33,6 +33,10 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
     if economy_mode:
         var urban: Dictionary = Economy.create(state["terrain"], modern_mode)
         if not urban.is_empty():
+            # New matches may opt in; old saves and all calls that omit the
+            # last optional parameter preserve their exact legacy economy.
+            if symmetric_first_income:
+                urban["symmetric_first_income"] = true
             state["economy"] = urban
     if modern_mode and economy_mode and state.has("economy"):
         state["units"] = Logistics.equip_army(state["units"])
