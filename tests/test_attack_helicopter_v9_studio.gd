@@ -172,14 +172,18 @@ func _run() -> void:
             rotor_buttons+=1
     _check(rotor_buttons==2,
         "V14.5 two specialized mast/crown inspection buttons are in Details")
-    studio.call("_heli_inspect_focus",52.0,37.0,2.60,Vector3(0,1.71,0.08))
-    _check(studio.get("_heli_focus_local")==Vector3(0,1.71,0.08)
+    studio.call("_heli_mast_inspect_v145")
+    var mast_target: Vector3=model.to_global(Vector3(0,1.72,0.08))
+    _check(studio.get("_heli_focus_local")==Vector3(0,1.72,0.08)
+        and bool(studio.get("_heli_mast_view_active_v145"))
+        and camera.position.y<mast_target.y
         and model.get_instance_id()==original_id,
-        "V14.5 mast macro aims at true fuselage mounting without swapping meshes")
+        "V14.5 mast macro uses actual side-below-rotor camera without swapping meshes")
     studio.call("_heli_inspect_focus",31.0,61.0,2.70,Vector3(0,2.01,0.08))
     _check(studio.get("_heli_focus_local")==Vector3(0,2.01,0.08)
-        and spinning_mast.visible,
-        "V14.5 rotor crown macro uses the actual original spinning assembly")
+        and spinning_mast.visible and not bool(
+            studio.get("_heli_mast_view_active_v145")),
+        "V14.5 rotor crown macro restores ordinary upper camera")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
