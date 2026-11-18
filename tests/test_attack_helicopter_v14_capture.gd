@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
+const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -146,6 +147,25 @@ func _run() -> void:
         "V14.5 rotating collar follows V1 rotor while fixed struts do not")
     await _save(vp,folder.path_join("hat29_v14_5_buje_girando.png"))
     V1.restore(orbit_model)
+    # V14.6 macros share the 3D scene and rotor and show genuine sculpted
+    # rubber isolators / pistons from four useful camera perspectives.
+    _check(Dampers.has_model(orbit_model),
+        "V14.6 all four rotor-root hydraulic dampers installed in real model")
+    cam.position=Vector3(1.02,2.14,-0.82)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.02,-0.25)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_6_amortiguador_lateral.png"))
+    cam.position=Vector3(0.46,3.11,-1.01)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.01,-0.24)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_6_amortiguador_superior.png"))
+    cam.position=Vector3(-1.18,1.48,0.78)
+    cam.look_at(orbit_model.to_global(Vector3(0,1.54,0.08)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_6_aisladores_mastil.png"))
+    _check(V1.pose(orbit_model,"hover",0.37),
+        "V14.6 piston damper inherits original rotating rotor animation")
+    cam.position=Vector3(-0.96,2.25,-0.90)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.02,-0.23)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_6_amortiguador_girando.png"))
+    V1.restore(orbit_model)
     orbit_model.queue_free()
     await process_frame
 
@@ -247,10 +267,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==35,"8 faction, 6 combat, 11 orbit/belly, 6 paired night and 4 native rotor-transmission frames")
+    _check(count==39,"8 faction, 6 combat, 11 orbit/belly, 6 paired night, 4 rotor transmission and 4 damper macros")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 35 native Godot PNGs, eight armies, six effects, 11 orbit/belly, six night and four V14.5 fixed/rotating mast views")
+        print("PASS HAT29 V14 CAPTURE: 39 native Godot PNGs with eight factions, six combat FX, 11 orbit/belly, six night, four mast and four V14.6 damper macros")
         quit(0)

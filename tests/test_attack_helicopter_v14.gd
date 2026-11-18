@@ -8,6 +8,7 @@ const Coat = preload("res://scripts/ui/AttackHelicopterFactionV14.gd")
 const FX = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
+const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -31,6 +32,8 @@ func _run() -> void:
             "V14.4 night studio lamps never attach to Android combat LOD10")
         _check(not Mount.has_model(tactical) and not Mount.apply(tactical),
             "V14.5 fixed mast and rotating hinge meshes are excluded from Android LOD10")
+        _check(not Dampers.has_model(tactical) and not Dampers.apply(tactical),
+            "V14.6 rubber mast isolators and hydraulic damper meshes excluded from LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -161,8 +164,58 @@ func _run() -> void:
                 and fixed.rotation_degrees.is_equal_approx(Vector3.ZERO),
                 "V14.5 rotor turns while the aircraft mounting remains stationary")
             V1.restore(model)
-        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3",
-            "V14.5 preserves precisely the V14.3 approved faction paint")
+        # V14.6: isolated rubber pads remain fixed on the fuselage; the
+        # hydraulic blade dampers inherit each genuine V1/V3 rotor-arm pivot.
+        var pads: Node3D=model.find_child(Dampers.FIXED,true,false) as Node3D
+        var damping: Node3D=model.find_child(Dampers.SPINNING,true,false) as Node3D
+        _check(Dampers.has_model(model) and pads!=null and damping!=null,
+            "V14.6 rubber isolators and four hydraulic dampers exist for each faction")
+        if pads!=null and damping!=null and body!=null and original_rotor!=null:
+            _check(pads.get_parent()==body and damping.get_parent()==original_rotor,
+                "V14.6 mast mounts stay fixed and retaining rods follow rotor")
+            for i in range(4):
+                var pivot: Node3D=model.find_child(
+                    V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+                var damper: Node3D=model.find_child(
+                    Dampers.DAMPER+str(i),true,false) as Node3D
+                var barrel: MeshInstance3D=model.find_child(
+                    "A01V146_CuerpoHidraulico_%d" % i,true,false) as MeshInstance3D
+                var piston: MeshInstance3D=model.find_child(
+                    "A01V146_VarillaCromada_%d" % i,true,false) as MeshInstance3D
+                var boot: MeshInstance3D=model.find_child(
+                    "A01V146_FuelleGoma_%d" % i,true,false) as MeshInstance3D
+                _check(pivot!=null and damper!=null
+                    and damper.get_parent()==pivot
+                    and barrel!=null and barrel.mesh is CylinderMesh
+                    and piston!=null and piston.mesh is CylinderMesh
+                    and boot!=null and boot.mesh is CylinderMesh,
+                    "V14.6 each of four rotor arms carries a true metal/rubber damper")
+                if boot!=null:
+                    var rubber: StandardMaterial3D=boot.material_override as StandardMaterial3D
+                    _check(rubber!=null and rubber.metallic<0.05
+                        and rubber.roughness>0.90,
+                        "V14.6 rubber bellows are non-emissive matte physical materials")
+            for side in [-1,1]:
+                for fore in [-1,1]:
+                    var block: MeshInstance3D=model.find_child(
+                        "A01V146_BloqueElastomero_%d_%d" % [side,fore],
+                        true,false) as MeshInstance3D
+                    _check(block!=null and block.mesh is BoxMesh
+                        and block.get_parent()==pads,
+                        "V14.6 four mast base isolators mount on the existing chassis")
+            var before_damper_meshes: int=Models.inspect_meshes(model)
+            _check(Dampers.apply(model)
+                and Models.inspect_meshes(model)==before_damper_meshes,
+                "V14.6 repeat apply cannot duplicate hydraulic hardware")
+            _check(V1.pose(model,"move",0.37)
+                and absf(original_rotor.rotation_degrees.y)>30.0
+                and pads.rotation_degrees.is_equal_approx(Vector3.ZERO),
+                "V14.6 dampers rotate with original hub while isolators stay fixed")
+            V1.restore(model)
+        _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
+            and main_color.is_equal_approx(
+                (hull.material_override as StandardMaterial3D).albedo_color),
+            "V14.6 retains original muted faction enamel on all eight hulls")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
@@ -226,7 +279,7 @@ func _run() -> void:
         V13.set_stage(model,4)
         _check(V13.pose(model,"destroy",1.0) and V13.stage(model)==4
             and original_rotor!=null and not original_rotor.visible,
-            "V14.5 spinning mount disappears with authentic V13 broken rotor")
+            "V14.6 spinning damping hardware vanishes with authentic V13 broken rotor")
         V13.restore(model)
         _check(V13.set_stage(model,0) and V13.stage(model)==0,
             "wreck is completely repairable after V14 effect playback")
