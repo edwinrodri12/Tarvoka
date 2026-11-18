@@ -49,11 +49,11 @@ func _v29_fractured_roof() -> void:
 
 func _v29_inner_floor() -> void:
     _set_damage(3)
-    _view_v19(Vector3(4.63,-2.80,3.62),126.0,49.0,16.8)
+    _view_v19(Vector3(4.63,0.70,3.62),126.0,49.0,16.8)
 
 func _v29_rubble() -> void:
     _set_damage(4)
-    _view_v19(Vector3(4.63,-3.09,3.62),-118.0,39.0,17.0)
+    _view_v19(Vector3(4.63,0.16,3.62),-118.0,39.0,17.0)
 
 func _v29_overview() -> void:
     _view_v19(Vector3(0.0,0.0,0.0),38.0,44.0,33.0)
