@@ -8,6 +8,7 @@ on:
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/G13MobileAirDefenseV1.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
+      - "scripts/ui/G13RubberSculptV54.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -127,6 +128,7 @@ on:
       - "tests/test_g13_v43_visual_capture.gd"
       - "tests/test_g13_v52_visual_capture.gd"
       - "tests/test_g13_v53_material_realism.gd"
+      - "tests/test_g13_v54_rubber_sculpt.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -239,6 +241,13 @@ jobs:
           # newest sculpt/rig modules (such as G13SilhouetteV10.gd) missing
           # after UnitModels3D.gd from main references them. Overlay every
           # versioned G13 native script from the exact same main snapshot.
+          # Import ALL current A01 components as a cohesive set. A fixed
+          # v14.13 list caused missing preloads when later hub parts landed
+          # in main, breaking every combined G13 Studio test on web export.
+          for heli_source in hq-android-v15/scripts/ui/AttackHelicopter*.gd; do
+            test -s "$heli_source"
+            cp "$heli_source" scripts/ui/
+          done
           for g13_source in hq-android-v15/scripts/ui/G13*.gd; do
             test -s "$g13_source"
             cp "$g13_source" scripts/ui/
@@ -258,6 +267,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_v52_visual_capture.gd tests/test_g13_v52_visual_capture.gd
           test -s hq-android-v15/tests/test_g13_v53_material_realism.gd
           cp hq-android-v15/tests/test_g13_v53_material_realism.gd tests/test_g13_v53_material_realism.gd
+          test -s hq-android-v15/tests/test_g13_v54_rubber_sculpt.gd
+          cp hq-android-v15/tests/test_g13_v54_rubber_sculpt.gd tests/test_g13_v54_rubber_sculpt.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1019,6 +1030,16 @@ jobs:
             echo "G13 V53 native material test failed"; exit 1
           fi
           grep -F 'PASS G13 V53 PBR METAL RUBBER:' /tmp/g13-v53-materials.log
+          # Native V54 tire sculpture and rolling/tactical-LOD invariants.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v54_rubber_sculpt.gd \
+            2>&1 | tee /tmp/g13-v54-rubber.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v54-rubber.log; then
+            echo "G13 V54 real tire sculpt test failed"; exit 1
+          fi
+          grep -F 'PASS G13 V54 RUBBER:' /tmp/g13-v54-rubber.log
           # ART INSPECTION V52: attempt genuine 360 G13 screenshots early,
           # before unrelated full-animation gates can abort the export.
           # Capture failure must not change existing web publishing behavior.
