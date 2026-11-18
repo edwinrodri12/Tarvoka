@@ -11,3 +11,7 @@ Status: test source committed; Godot 4.3 headless **NO EJECUTADO**; Android phys
 ## Extensión de regresión: pronóstico público
 
 Se añadieron 12 escenarios (3 climas × contadores 1–4) para comprobar que `Weather.forecast` anuncia el clima siguiente correcto y el contador exacto, que `advance_after_turn` coincide con ese pronóstico al llegar a 1 y que ninguna operación modifica el estado de origen ni el turno. También se verifica que una partida legacy sin ciclo muestra pronóstico fijo sin siguiente clima. El CI previo del commit `770c1227` pasó en [run 44365359249](https://github.com/edwinrodri12/Tarvoka/actions/runs/44365359249), pero **no valida** esta extensión. Nuevo commit: CI pendiente; Android físico: NO EJECUTADO EN DISPOSITIVO.
+
+## Regresión de tres ciclos completos (2026-11-18)
+
+La suite ahora recorre 12 turnos de facción y exige tres transiciones completas CLEAR → RAIN → SNOW → CLEAR, con cuenta regresiva 4/3/2/1, conservación del número de turno e inmutabilidad del estado de entrada en cada paso. No cambia la lógica de producción. Commit `c2d3308e24f6a9192cba891f96fd77286bdef16c`. Estado: fuente registrada; ejecución del nuevo commit en CI **NO CONFIRMADA**; Android físico **NO EJECUTADO EN DISPOSITIVO**.
