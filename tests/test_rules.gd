@@ -50,5 +50,29 @@ func _initialize() -> void:
     assert(best[Vector2i(2, 0)] == 4)
     assert(best[Vector2i(2, 1)] == 3)
     assert(best[Vector2i(1, 1)] == 2)
+    # Regression: both approved large-map sizes must preserve weighted routing,
+    # blocked water, and occupied endpoints without changing the 10x8 rules.
+    for dimensions in [Vector2i(24, 18), Vector2i(40, 30)]:
+        var large: Array = []
+        for y in range(dimensions.y):
+            var row: Array = []
+            for x in range(dimensions.x):
+                row.append("plain")
+            large.append(row)
+        large[0][1] = "water"
+        large[1][0] = "road"
+        large[1][1] = "road"
+        large[1][2] = "road"
+        var occupied: Array[Vector2i] = [Vector2i(1, 1)]
+        var large_reach: Dictionary = rules.reachable(Vector2i(0, 0), 3, large, occupied)
+        assert(large_reach.has(Vector2i(0, 0)))
+        assert(not large_reach.has(Vector2i(1, 0)))
+        assert(not large_reach.has(Vector2i(1, 1)))
+        assert(large_reach.has(Vector2i(0, 1)))
+        assert(not large_reach.has(Vector2i(dimensions.x, 0)))
+        assert(rules.inside(Vector2i(dimensions.x - 1, dimensions.y - 1), large))
+        var broken_large: Array = large.duplicate(true)
+        broken_large[dimensions.y - 1].pop_back()
+        assert(rules.reachable(Vector2i(0, 0), 3, broken_large, no_blocked).is_empty())
     print("PASS: movement rules and terrain integrity")
     quit()
