@@ -15,10 +15,12 @@ func _initialize() -> void:
         var state := {"weather":mode,"weather_cycle":{"remaining":4},"turn":9}
         var original: Dictionary = state.duplicate(true)
         for remaining in [3,2,1]:
+            var before_step: Dictionary = state.duplicate(true)
             var next_state: Dictionary = Weather.advance_after_turn(state)
             assert(next_state["weather"] == mode)
             assert(next_state["weather_cycle"]["remaining"] == remaining)
-            assert(state == original if remaining == 3 else true)
+            assert(state == before_step)
+            assert(next_state["turn"] == original["turn"])
             state = next_state
         var switched: Dictionary = Weather.advance_after_turn(state)
         assert(switched["weather"] == Weather.next_weather(mode))
