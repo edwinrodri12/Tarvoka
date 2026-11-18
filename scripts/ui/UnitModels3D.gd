@@ -61,6 +61,7 @@ const G13GlazingV50 = preload("res://scripts/ui/G13GlazingFitV50.gd")
 const G13RoofV51 = preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G13RoofRailsV52 = preload("res://scripts/ui/G13RoofShoulderFitV52.gd")
 const G13RealismV53 = preload("res://scripts/ui/G13MaterialRealismV53.gd")
+const G13RubberV54 = preload("res://scripts/ui/G13RubberSculptV54.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1073,6 +1074,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V52 roof shoulder integration failed on hero LOD13")
                 if not G13RealismV53.apply(model):
                     push_warning("G13 V53 real metal/rubber materials failed on hero LOD13")
+                if not G13RubberV54.apply(model):
+                    push_warning("G13 V54 rounded rubber tires failed on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
