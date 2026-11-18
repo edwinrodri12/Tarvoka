@@ -29,6 +29,7 @@ const V25=preload("res://scripts/ui/CivilianCitySurfaceContinuityV25.gd")
 const V26=preload("res://scripts/ui/CivilianCityWeatherFinishV26.gd")
 const V27=preload("res://scripts/ui/CivilianCityStreetInterfaceV27.gd")
 const V28=preload("res://scripts/ui/CivilianCityFourElevationV28.gd")
+const V29=preload("res://scripts/ui/CivilianCityArchitecturalPolishV29.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -227,7 +228,11 @@ static func _keep_medium(name: String) -> bool:
         "V27_JuntaRampaMunicipal_","V27_AdoquinDesportillado_",
         "V27_MordidaZocalo_",
         # V28 small facade base reveals stay in architectural closeup.
-        "V28_ZocaloNorteSur_"]:
+        "V28_ZocaloNorteSur_",
+        # V29 close-up joinery remains in high detail only.
+        "V29_CosturaCubiertaFachada_","V29_NucleoAlfeizar_",
+        "V29_JuntaFracturaInferior_",
+        "V29_CantoInteriorExpuesto_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -398,7 +403,13 @@ static func _keep_far(name: String) -> bool:
         "V28_EnlaceEsquinaLateral_",
         "V28_RemateEsquinaSuperior_",
         "V28_RetornoCantoRoto_",
-        "V28_EncuentroBajoRuina_"]:
+        "V28_EncuentroBajoRuina_",
+        # Large D2 roof break and low D4 rubble survive mobile zoom.
+        "V29_TerminacionCubiertaPartida_",
+        "V29_FragmentoCimientoAsentado_",
+        "V29_FragmentoFrisoAyuntamiento",
+        "V29_CantoAccesoMunicipal",
+        "V29_PedazoPlacaCivica"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -512,7 +523,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V28.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",28)
+    if not V29.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",29)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
