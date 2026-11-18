@@ -1,0 +1,74 @@
+name: TARVOKA v393 double bridge official initiative audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_bridge_initiative_forensic_v393.gd"
+      - "tests/aggregate_ai_bridge_initiative_v393.py"
+      - ".github/workflows/ai-double-bridge-initiative-v393.yml"
+      - "scripts/core/Scenarios.gd"
+  workflow_dispatch:
+
+jobs:
+  bridge_forensic:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V393_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V393_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify real rules and per-phase bridge battles with exact mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2900s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_bridge_initiative_forensic_v393.gd \
+            2>&1 | tee /tmp/bridge-v393.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|BRIDGE393_DIVERGENCE' /tmp/bridge-v393.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v393: real double-bridge' /tmp/bridge-v393.log
+          test "$(grep -c '^BRIDGE393_RESULT ' /tmp/bridge-v393.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v393-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/bridge-v393.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [bridge_forensic]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v393-seed*
+          path: .ci-v393-logs
+          merge-multiple: false
+      - name: Aggregate 24 unseen and 8 reference conditions
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_bridge_initiative_v393.py .ci-v393-logs
+          cat reports/ai_v393_double_bridge_forensic.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v393-double-bridge-forensic
+          path: reports/ai_v393_double_bridge_forensic.*
+          if-no-files-found: ignore
+          retention-days: 30
