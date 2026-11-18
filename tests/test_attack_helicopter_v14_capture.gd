@@ -12,6 +12,7 @@ const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
+const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -235,6 +236,8 @@ func _run() -> void:
         "V14.11 authentic four-pivot blade root airfoil lofts installed")
     cam.position=Vector3(-0.83,2.29,-0.73)
     cam.look_at(orbit_model.to_global(Vector3(-0.01,2.01,-0.25)),Vector3.UP)
+    _check(Seam1412.set_enabled(orbit_model,false),
+        "V14.12 release makes V14.11 root available for genuine V3 comparison")
     _check(Roots1411.set_enabled(orbit_model,false),
         "V14.11 compare shows real original V3 rectangular blade root")
     await _save(vp,folder.path_join("hat29_v14_11_comparar_v3.png"))
@@ -247,6 +250,22 @@ func _run() -> void:
     cam.position=Vector3(0.92,2.15,-0.62)
     cam.look_at(orbit_model.to_global(Vector3(0,2.02,-0.33)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_11_raiz_angulo_bajo.png"))
+    _check(Seam1412.has_model(orbit_model),
+        "V14.12 actual 8-station blade-root join is built on all 4 pivots")
+    cam.position=Vector3(0.71,2.20,-0.66)
+    cam.look_at(orbit_model.to_global(Vector3(0.024,2.00,-0.357)),Vector3.UP)
+    # SAME physical rotor, same camera, same paint/light. Only 6 vs 8
+    # station geometry changes; this is not a screenshot overlay.
+    await _save(vp,folder.path_join("hat29_v14_12_comparar_v1411.png"))
+    _check(Seam1412.set_enabled(orbit_model,true),
+        "V14.12 native 8-station swept root replaces V14.11 existing mesh")
+    await _save(vp,folder.path_join("hat29_v14_12_comparar_v1412.png"))
+    cam.position=Vector3(-0.56,2.35,-0.67)
+    cam.look_at(orbit_model.to_global(Vector3(0.013,2.01,-0.332)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_12_continuidad_superior.png"))
+    cam.position=Vector3(0.73,1.84,-0.72)
+    cam.look_at(orbit_model.to_global(Vector3(0.019,1.98,-0.40)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_12_continuidad_inferior.png"))
     orbit_model.queue_free()
     await process_frame
 
@@ -348,10 +367,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==71,"67 previous native helicopter frames and 4 V14.11 real blade root views")
+    _check(count==75,"71 previous native helicopter frames and 4 V14.12 real seam inspection views")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 71 real Godot PNGs including V14.11 native aerodynamic blade-root sculpt, V3 same-camera comparison and low angle")
+        print("PASS HAT29 V14 CAPTURE: 75 real Godot PNGs including native V14.12 swept rotor junction and same-camera V14.11 comparison")
         quit(0)
