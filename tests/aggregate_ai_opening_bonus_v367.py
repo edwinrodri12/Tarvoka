@@ -70,7 +70,10 @@ def verify(games):
                          f"missing={sorted(expected-set(observed))}")
 
     trace_matches = 0
-    for (level, terrain, fog, first, policy, _) in expected:
+    groups = {(level, terrain, fog, first, policy)
+              for (level, terrain, fog, first, policy, cap) in expected}
+    assert len(groups) == 32
+    for (level, terrain, fog, first, policy) in sorted(groups):
         bas = observed[(level, terrain, fog, first, policy, "3")]["opening_trace"]
         for other in CAPS:
             row = observed[(level, terrain, fog, first, policy, other)]
