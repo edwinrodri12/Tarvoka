@@ -7,6 +7,7 @@ const V13=preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
+const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -166,6 +167,24 @@ func _run() -> void:
     cam.look_at(orbit_model.to_global(Vector3(0,2.02,-0.23)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_6_amortiguador_girando.png"))
     V1.restore(orbit_model)
+    # V14.7 actual short-focus Godot macro images, not stretched 2D crops.
+    _check(Finish147.has_model(orbit_model),
+        "V14.7 finished rotor-damper sculpture renders in real Godot")
+    cam.position=Vector3(0.76,2.30,-0.78)
+    cam.look_at(orbit_model.to_global(Vector3(0.19,2.06,-0.30)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_7_cilindro_cercano.png"))
+    cam.position=Vector3(0.45,2.79,-0.78)
+    cam.look_at(orbit_model.to_global(Vector3(0.19,2.06,-0.31)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_7_fuelle_superior.png"))
+    cam.position=Vector3(-0.76,2.17,0.72)
+    cam.look_at(orbit_model.to_global(Vector3(-0.19,2.06,0.30)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_7_horquilla_posterior.png"))
+    _check(V1.pose(orbit_model,"move",0.37),
+        "V14.7 outboard piston is still carried by original V1 rotor spin")
+    cam.position=Vector3(0.84,2.37,0.73)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.04,0.13)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_7_amortiguadores_girando.png"))
+    V1.restore(orbit_model)
     orbit_model.queue_free()
     await process_frame
 
@@ -267,10 +286,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==39,"8 faction, 6 combat, 11 orbit/belly, 6 paired night, 4 rotor transmission and 4 damper macros")
+    _check(count==43,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers and 4 new V14.7 macro frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 39 native Godot PNGs with eight factions, six combat FX, 11 orbit/belly, six night, four mast and four V14.6 damper macros")
+        print("PASS HAT29 V14 CAPTURE: 43 native Godot PNGs with 8 factions, 6 combat FX, 11 orbit/belly, 6 night, 4 mast, 4 V14.6 dampers and 4 V14.7 closeups")
         quit(0)
