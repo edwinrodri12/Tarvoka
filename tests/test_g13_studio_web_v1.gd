@@ -107,8 +107,17 @@ func _run()->void:
         for label in [G13V46.HUBS,G13V46.RINGS,
                 G13V46.BOLTS,G13V46.GROOVES]:
             var v46_node:=model.find_child(label,true,false) as MultiMeshInstance3D
-            _check(v46_node!=null and v46_node.visible,
-                "G13 V46 actual wheel geometry missing/hidden: "+label)
+            var v59_replaced:bool=(label==G13V46.GROOVES and
+                bool(model.get_meta(G13V59.FLAG,false)) and
+                int(model.get_meta(
+                    "tarvoka_g13_v59_integrated_sidewall_ribs",0))>=40)
+            # The V46 long rectangular sidewall bars are deliberately
+            # retired in V59; verify real molded rib geometry replaced
+            # them in the EXISTING rotating tire mesh rather than showing
+            # both versions as overlapping surface artifacts.
+            _check(v46_node!=null and (
+                v46_node.visible or (v59_replaced and not v46_node.visible)),
+                "G13 V46 original hubs remain, V59 replaces crude rubber bars: "+label)
         var v46_bolts:=model.find_child(G13V46.BOLTS,true,false) as MultiMeshInstance3D
         if v46_bolts!=null and v46_bolts.multimesh!=null:
             _check(v46_bolts.multimesh.instance_count==32,
