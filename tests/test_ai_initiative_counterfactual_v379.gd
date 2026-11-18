@@ -8,6 +8,8 @@ extends SceneTree
 # Small boards can finish; large boards have honest, capped observation windows.
 const Session = preload("res://scripts/core/BattleSession.gd")
 const AI = preload("res://scripts/core/BasicAI.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
+const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
@@ -180,6 +182,32 @@ static func _pair(size: Vector2i, seed: int, fog: bool,
                 first_delta["tag_b"] = b.get("tag","")
                 first_delta["decision_a"] = a.get("decision",{})
                 first_delta["decision_b"] = b.get("decision",{})
+                if i > 0:
+                    var prior_a: Dictionary = game["frames"][i-1]["state"]
+                    var prior_b: Dictionary = Mirror.reflect(
+                        replay["frames"][i-1]["state"])
+                    var next_a: Dictionary = AI.step(prior_a,_configuration())
+                    var next_b: Dictionary = AI.step(prior_b,_configuration())
+                    first_delta["reason_a"] = next_a.get("reason","")
+                    first_delta["reason_b"] = next_b.get("reason","")
+                    var look_a: Dictionary = Visibility.observed_state(
+                        prior_a,int(prior_a["faction"]))
+                    var look_b: Dictionary = Visibility.observed_state(
+                        prior_b,int(prior_b["faction"]))
+                    var volley_a: Dictionary = FireTeam.propose(look_a,
+                        int(prior_a["faction"]),3)
+                    var volley_b: Dictionary = FireTeam.propose(look_b,
+                        int(prior_b["faction"]),3)
+                    first_delta["volley_a"] = volley_a
+                    first_delta["volley_b"] = volley_b
+                    first_delta["attackers"] = []
+                    for u in prior_a["units"]:
+                        if str(u.get("id","")) in ["C","Z","N1"]:
+                            first_delta["attackers"].append({
+                                "id":u["id"],"role":u.get("role",""),
+                                "pos":str(u["pos"]),"hp":u.get("hp",0),
+                                "acted":u.get("acted",false),
+                                "faction":u.get("faction",-1)})
                 first_delta["field"] = Semantics.first_changed_key(
                     a.get("state",{}),b.get("state",{}))
                 first_delta["summary_a"] = Semantics.short_state(a["state"])
