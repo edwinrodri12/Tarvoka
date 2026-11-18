@@ -48,7 +48,7 @@ static func _closest_hostile(state: Dictionary) -> int:
     return closest
 
 static func _sighted_hostile(state: Dictionary) -> bool:
-    if not bool(state.get("fog",false)):
+    if not Visibility.enabled(state):
         return false # "sighting" has meaning only with fog enabled.
     for side in [0,1]:
         var visible: Dictionary = Visibility.visible_cells(state,side)
