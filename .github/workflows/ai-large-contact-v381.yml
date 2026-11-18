@@ -11,6 +11,7 @@ on:
       - "scripts/core/RelayControl.gd"
       - "scripts/core/UrbanEconomy.gd"
       - "scripts/core/Visibility.gd"
+      - "scripts/core/SupplyNavigation.gd"
   workflow_dispatch:
 
 jobs:
