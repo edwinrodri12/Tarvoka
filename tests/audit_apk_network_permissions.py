@@ -23,7 +23,7 @@ PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-23):\s
 
 PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-23)?:", re.MULTILINE)
 
-PACKAGE_LINE = re.compile(r"^\s*package:\s+name='[^']+'", re.MULTILINE)
+PACKAGE_LINE = re.compile(r"^\s*package:\s+(?:name=)?(?:\x27[^\x27\r\n]+\x27|[A-Za-z_][A-Za-z0-9_.]*)\s*$", re.MULTILINE)
 
 
 def forbidden_permissions(dump: str) -> set[str]:
@@ -36,6 +36,8 @@ def self_test() -> None:
     assert forbidden_permissions("uses-permission: name='android.permission.CAMERA'") == set()
     assert forbidden_permissions("package: name='android.permission.INTERNET'") == set()
     assert PACKAGE_LINE.search("package: name='com.example.tarvoka'")
+    assert PACKAGE_LINE.search("package: com.example.tarvoka")
+    assert not PACKAGE_LINE.search("package: ")
     assert not PACKAGE_LINE.search("garbled output")
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
