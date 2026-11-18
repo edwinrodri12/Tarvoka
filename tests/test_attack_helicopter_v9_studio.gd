@@ -13,6 +13,7 @@ const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 var failures: int=0
 var images: int=0
 
@@ -228,6 +229,25 @@ func _run() -> void:
     _check(studio.get("_heli_focus_local")==Vector3(0.18,2.04,-0.34)
         and not bool(studio.get("_heli_mast_view_active_v145")),
         "V14.7 rubber boot macro uses standard camera without stale mast mode")
+    studio.call("_heli_mobile_home")
+    _check(Hinges148.has_model(model),
+        "V14.8 four authentic pitch-control hinge groups are visible in Studio")
+    var v148_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.8:"):
+            v148_buttons+=1
+    _check(v148_buttons==2,
+        "V14.8 two macro inspections appear in existing Details menu")
+    studio.call("_heli_inspect_focus",310.0,30.0,3.78,
+        Vector3(-0.16,2.06,-0.29))
+    _check(studio.get("_heli_focus_local")==Vector3(-0.16,2.06,-0.29)
+        and model.get_instance_id()==original_id,
+        "V14.8 root clevis camera keeps original live helicopter")
+    studio.call("_heli_inspect_focus",315.0,59.0,3.72,
+        Vector3(-0.16,2.07,-0.35))
+    _check(studio.get("_heli_focus_local")==Vector3(-0.16,2.07,-0.35)
+        and not bool(studio.get("_heli_mast_view_active_v145")),
+        "V14.8 link/pin macro returns normal camera mode")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
