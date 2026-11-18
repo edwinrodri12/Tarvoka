@@ -139,16 +139,16 @@ static func apply(root:Node3D,faction_color:Color)->bool:
         var id:String=str(side)
         _solid(underside,"G15_V7_ClosedLongitudinalFrame_"+id,
             0.205,0.190,3.415,0.030,gunmetal,
-            Vector3(s*0.560,0.510,0.035),Vector3(90,0,0))
+            Vector3(s*0.560,0.510,0.035))
         _box(underside,"G15_V7_RailOuterWeld_"+id,
             Vector3(s*0.680,0.521,0.08),
             Vector3(0.026,0.075,2.95),edge)
         _solid(underside,"G15_V7_FrontChassisNose_"+id,
             0.230,0.20,0.30,0.036,steel,
-            Vector3(s*0.545,0.545,-1.60),Vector3(90,0,0))
+            Vector3(s*0.545,0.545,-1.60))
         _solid(underside,"G15_V7_RearArmoredFrameEnd_"+id,
             0.24,0.22,0.28,0.03,steel,
-            Vector3(s*0.555,0.52,1.66),Vector3(90,0,0))
+            Vector3(s*0.555,0.52,1.66))
     for i in range(4):
         var z:float=-1.46+0.97*float(i)
         _solid(underside,"G15_V7_BoxCrossmember_%d" % i,
@@ -240,7 +240,7 @@ static func apply(root:Node3D,faction_color:Color)->bool:
             Vector3(0.013,0.042,0.176),paint)
         _solid(shelter,"G15_V7_FenderShoulderReinforcement_"+id,
             0.178,0.13,0.775,0.023,gunmetal,
-            Vector3(s*0.814,0.994,-0.030),Vector3(90,0,0))
+            Vector3(s*0.814,0.994,-0.030))
         if hero:
             for i in range(4):
                 _box(shelter,"G15_V7_HatchLockBolt_%s_%d" % [id,i],
