@@ -10,6 +10,7 @@ const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
+const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -213,6 +214,22 @@ func _run() -> void:
     cam.position=Vector3(0.74,2.34,-0.70)
     cam.look_at(orbit_model.to_global(Vector3(0.108,2.02,-0.42)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_9_asiento_amortiguador.png"))
+    _check(Contact1410.has_model(orbit_model),
+        "V14.10 authentic bevelled rotor footplates are active on original HAT-29")
+    cam.position=Vector3(-0.72,2.23,-0.56)
+    cam.look_at(orbit_model.to_global(Vector3(-0.095,2.01,-0.23)),Vector3.UP)
+    _check(Contact1410.set_enabled(orbit_model,false),
+        "V14.10 compare mode can show the unmodified V14.9 true BoxMesh")
+    await _save(vp,folder.path_join("hat29_v14_10_comparar_v149.png"))
+    _check(Contact1410.set_enabled(orbit_model,true),
+        "V14.10 retains true 3D airframe while returning real chamfer mesh")
+    await _save(vp,folder.path_join("hat29_v14_10_comparar_v1410.png"))
+    cam.position=Vector3(-0.66,2.27,-0.69)
+    cam.look_at(orbit_model.to_global(Vector3(-0.094,2.02,-0.28)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_10_placas_biseladas.png"))
+    cam.position=Vector3(0.70,2.30,-0.74)
+    cam.look_at(orbit_model.to_global(Vector3(0.106,2.02,-0.42)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_10_pernos_asentados.png"))
     orbit_model.queue_free()
     await process_frame
 
@@ -314,10 +331,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==63,"45 previous helicopter frames and 18 V14.9 rotor inspection captures")
+    _check(count==67,"63 previous helicopter frames and 4 new V14.10 bevel/contact comparisons")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 63 native Godot PNGs including 360-degree V14.9 rotor views at 2 elevations and both anchored footplate macros")
+        print("PASS HAT29 V14 CAPTURE: 67 real Godot PNGs including V14.10 reversible actual V14.9 comparison, beveled rotor plates and physically seated bolts")
         quit(0)
