@@ -65,16 +65,17 @@ static func _sided_closed_plate(shape: Array[Vector2],
 
 static func _side_armor() -> ArrayMesh:
     # Flank plating is ABOVE the wheel tops and BELOW the V2 upper stripe.
-    # The 24-mm outside step makes a visible edge, not a flat texture decal.
+    # Back edge intersects original hull at Y=.862; the flared outer face
+    # creates a visible bevel and cannot float above the chassis.
     var contour: Array[Vector2] = [
         Vector2(-0.310, 0.999),
         Vector2(-0.233, 1.091),
         Vector2(0.417, 1.091),
         Vector2(0.540, 1.001),
-        Vector2(0.478, 0.920),
-        Vector2(-0.242, 0.920)
+        Vector2(0.478, 0.862),
+        Vector2(-0.242, 0.862)
     ]
-    return _sided_closed_plate(contour, 0.696, 0.732)
+    return _sided_closed_plate(contour, 0.660, 0.732)
 
 static func _side_faction() -> ArrayMesh:
     # Raised five-facet paint insert follows the shield contour and keeps a
@@ -93,13 +94,13 @@ static func _fender_section(side: int, angle: float) -> Array[Vector3]:
     var sn: float = sin(angle)
     var cs: float = cos(angle)
     # G13 V42 outer arch follows R=0.427 around axle Y=.33 and X~1.005.
-    # This 8-mm-high enamel ribbon overlaps that armor, NOT the wheel.
-    var inner: float = 0.427
+    # This 15-mm-deep enamel ribbon embeds into V42's arch, not the wheel.
+    var inner: float = 0.422
     var outer: float = 0.437
     return [
         Vector3(s * 0.979, 0.33 + inner * sn, inner * cs),
-        Vector3(s * 1.011, 0.33 + inner * sn, inner * cs),
-        Vector3(s * 1.011, 0.33 + outer * sn, outer * cs),
+        Vector3(s * 1.004, 0.33 + inner * sn, inner * cs),
+        Vector3(s * 1.004, 0.33 + outer * sn, outer * cs),
         Vector3(s * 0.979, 0.33 + outer * sn, outer * cs)
     ]
 
@@ -170,18 +171,19 @@ static func _turret_faction_guards() -> Array[Transform3D]:
         for z in [-0.105, 0.252]:
             poses.append(Transform3D(
                 Basis.IDENTITY.scaled(Vector3(0.017, 0.103, 0.151)),
-                Vector3(float(side) * 0.637, 0.305, float(z))))
+                Vector3(float(side) * 0.612, 0.305, float(z))))
     return poses
 
 static func _engine_vents() -> Array[Transform3D]:
-    # 8 raised physically shaped heat-exchanger louvers on the aft deck.
+    # 8 raised physically shaped heat-exchanger louvers on the aft deck;
+    # bottom Y=1.1175 embeds 2.5 mm into the 1.120-m engine lid.
     # Clear of V37 ribs near X=+/-0.485, and of the moving turret.
     var poses: Array[Transform3D] = []
     for side in [-1, 1]:
         for z in [0.530, 0.652, 0.774, 0.896]:
             poses.append(Transform3D(
                 Basis.IDENTITY.scaled(Vector3(0.157, 0.021, 0.043)),
-                Vector3(float(side) * 0.285, 1.136, float(z))))
+                Vector3(float(side) * 0.285, 1.128, float(z))))
     return poses
 
 static func apply(root: Node3D) -> bool:
