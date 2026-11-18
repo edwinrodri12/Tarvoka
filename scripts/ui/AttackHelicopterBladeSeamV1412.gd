@@ -75,8 +75,10 @@ static func _fairing() -> ArrayMesh:
     # Compare actual V3 planform:
     # z=-0.35 x left≈-0.106 right≈+0.141; V3 surface Y±0.0185
     # z=-0.45 x left≈-0.110 right≈+0.155; V3 surface Y±0.0185.
-    # The last two stations dive just INSIDE the unchanged V3 mesh,
-    # avoiding z-fighting while closing the previously abrupt shoulder.
+    # The last two stations dive just INSIDE the unchanged V3 mesh.
+    # V3 blade has a -1.5 deg Z pitch: at +X=0.15 the actual upper
+    # surface sits near y=0.0145, not y=0.0185. Keep the tips below it
+    # to avoid z-fighting along the swept positive-X leading edge.
     var stations: Array=[
         [-0.110,0.000,0.095,0.026,0.007],
         [-0.158,0.000,0.110,0.032,0.008],
@@ -84,8 +86,8 @@ static func _fairing() -> ArrayMesh:
         [-0.272,0.006,0.116,0.032,0.007],
         [-0.315,0.011,0.121,0.026,0.006],
         [-0.350,0.016,0.123,0.020,0.004],
-        [-0.380,0.019,0.126,0.016,0.003],
-        [-0.450,0.025,0.129,0.015,0.002]
+        [-0.380,0.019,0.126,0.014,0.003],
+        [-0.450,0.025,0.129,0.0135,0.002]
     ]
     var rings: Array=[]
     for entry in stations:
