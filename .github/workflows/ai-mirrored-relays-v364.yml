@@ -1,0 +1,104 @@
+name: TARVOKA v364 mirrored two-relay bias and initiative audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_mirrored_relays_v364.gd"
+      - "tests/test_ai_mirrored_relays_contract_v364.gd"
+      - "tests/aggregate_ai_mirrored_relays_v364.py"
+      - ".github/workflows/ai-mirrored-relays-v364.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,2]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Execute eight same-policy mirrored-lane battles
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_mirrored_relays_v364.gd \
+            2>&1 | tee /tmp/ai-v364-mirrored.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v364-mirrored.log; then exit 1; fi
+          grep -Fq 'PASS AI v364 mirrored relays:' /tmp/ai-v364-mirrored.log
+          test "$(grep -c '^MIRROR_LAYOUT_V364 ' /tmp/ai-v364-mirrored.log)" -eq 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v364-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v364-mirrored.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  geometry_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Check mirrored sites, passable terrain, unmodified economy and save integrity
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_mirrored_relays_contract_v364.gd \
+            2>&1 | tee /tmp/ai-v364-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v364-contract.log; then exit 1; fi
+          grep -Fq 'PASS mirrored relay v364 contract:' /tmp/ai-v364-contract.log
+          test "$(grep -c '^MIRROR_CONTRACT_V364 ' /tmp/ai-v364-contract.log)" -eq 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v364-contract
+          path: /tmp/ai-v364-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, geometry_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v364-L*
+          path: .ci-v364-logs
+          merge-multiple: false
+      - name: Verify 64 unique real matches and separate first/blue advantage
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_mirrored_relays_v364.py .ci-v364-logs
+          cat reports/ai_v364_mirrored_relay_control.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v364-relay-geometry-report
+          path: reports/ai_v364_mirrored_relay_control.*
+          if-no-files-found: ignore
+          retention-days: 30
