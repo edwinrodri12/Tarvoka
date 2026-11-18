@@ -150,7 +150,7 @@ static func apply(root:Node3D,faction_color:Color)->bool:
             0.24,0.22,0.28,0.03,steel,
             Vector3(s*0.555,0.52,1.66),Vector3(90,0,0))
     for i in range(4):
-        z:float=-1.46+0.97*float(i)
+        var z:float=-1.46+0.97*float(i)
         _solid(underside,"G15_V7_BoxCrossmember_%d" % i,
             1.22,0.12,0.17,0.022,patina,
             Vector3(0,0.527,z),Vector3.ZERO)
@@ -244,7 +244,7 @@ static func apply(root:Node3D,faction_color:Color)->bool:
         if hero:
             for i in range(4):
                 _box(shelter,"G15_V7_HatchLockBolt_%s_%d" % [id,i],
-                    Vector3(s*0.904,1.393+float(i//2)*0.178,
+                    Vector3(s*0.904,1.393+float(floori(float(i)/2.0))*0.178,
                         0.652+float(i%2)*0.170),
                     Vector3(0.018,0.025,0.028),edge)
             _rod(shelter,"G15_V7_CableServiceHandle_"+id,
