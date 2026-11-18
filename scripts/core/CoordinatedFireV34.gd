@@ -53,6 +53,18 @@ static func _candidate_key(unit: Dictionary, side: int,
     return "%s|%04d|%04d|%s" % [
         str(unit.get("role","")),x,int(unit["pos"].y),str(unit["id"])]
 
+# Production target IDs are assigned by deployment/purchase chronology.
+# Selecting the first MAX_VISIBLE_TARGETS by raw ID is not reflection-safe:
+# a mirrored starter switches A..F <-> U..Z while produced N1.. IDs do not.
+# Rank known targets by their public cell in the ATTACKING side's local
+# coordinate system instead.  Role and ID are only deterministic fallbacks
+# (living units cannot share both a layer, role and cell).
+static func _target_key(foe: Dictionary, side: int, width: int) -> String:
+    var pos: Vector2i = foe["pos"]
+    var x: int = pos.x if side == 0 else width-1-pos.x
+    return "%04d|%04d|%s|%s" % [
+        x,int(pos.y),str(foe.get("role","")),str(foe.get("id",""))]
+
 static func _shooters(knowledge: Dictionary, side: int,
         target: Dictionary) -> Array:
     var candidates: Array = []
@@ -134,8 +146,11 @@ static func propose(knowledge: Dictionary, side: int,
                 (only_target_id.is_empty() or \
                 str(foe.get("id","")) == only_target_id):
             candidates.append(foe)
+    # Canonical side-relative ordering is essential BEFORE capping the
+    # observed threat list. No faction-ID-dependent selection at 9+ targets.
+    var width: int = Rules.map_size(knowledge["terrain"]).x
     candidates.sort_custom(func(a,b):
-        return str(a["id"]) < str(b["id"]))
+        return _target_key(a,side,width) < _target_key(b,side,width))
     if candidates.size() > MAX_VISIBLE_TARGETS:
         candidates.resize(MAX_VISIBLE_TARGETS)
     var best: Dictionary = {}
