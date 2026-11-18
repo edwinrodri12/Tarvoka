@@ -153,6 +153,22 @@ func _run()->void:
                     var mobile:=model.find_child(
                         "G15_V8_MobileSpringSleeve_"+suffix,
                         true,false) as MeshInstance3D
+                    var gap_spring:=model.find_child(
+                        "G15_V8_VisibleGapCoil_"+suffix,
+                        true,false) as MeshInstance3D
+                    var upper_brace:=model.find_child(
+                        "G15_V8_GapUpperBrace_"+suffix,
+                        true,false) as MeshInstance3D
+                    check((gap_spring!=null)==hero and
+                        (upper_brace!=null)==hero,
+                        "six external auxiliary suspension coils require braces")
+                    if gap_spring!=null:
+                        check(gap_spring.mesh is ArrayMesh and
+                            gap_spring.mesh.get_faces().size()==36*8*6,
+                            "interwheel coil has actual 3D helix wire volume")
+                        check(absf(gap_spring.position.x)>0.96 and
+                            gap_spring.position.z>float(V7.AXLES[axle])+0.38,
+                            "hero coil outside tire silhouette and anchored in wheel gap")
                     check(core!=null and core.mesh is CylinderMesh,
                         "real metallic shock absorbers for each wheel")
                     check((spring!=null)==hero and (mobile!=null)!=hero,
@@ -210,7 +226,8 @@ func _run()->void:
         manifest.store_string(JSON.stringify({
             "model":"G15 EW 6x6 native 3D","version":"V8",
             "closed_armor_transition_per_side":true,
-            "hero_springs":6,"spring_turns":5,"mobile_sleeves":6,
+            "hero_internal_coils":6,"hero_auxiliary_gap_coils":6,
+            "spring_turns":5,"mobile_sleeves":6,
             "factions":8,"lods":[8,13],
             "images":screenshots,
             "gameplay_changes":false,
@@ -221,7 +238,7 @@ func _run()->void:
     scene.queue_free()
     await process_frame
     if findings==0:
-        print("PASS G15 V8 NATIVE 3D: closed cab-shelter transitional armor, satin metal, 6 visible 3D coils, 8 factions, 2 Android LODs, 12 authentic Godot renders")
+        print("PASS G15 V8 NATIVE 3D: closed cab-shelter armor, satin metal, six braced gap coils plus six internal coils, eight factions, two Android LODs, 12 Godot renders")
     else:
         print("FAIL G15 V8 NATIVE 3D: %d conditions" % findings)
     quit(1 if findings>0 else 0)
