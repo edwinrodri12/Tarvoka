@@ -135,8 +135,15 @@ static func _nodes(root: Node3D, high: bool) -> Dictionary:
             return {}
         if high and not part.mesh is ArrayMesh:
             return {}
-        if not high and not part.mesh is BoxMesh:
-            return {}
+        if not high:
+            # Tactical V26 already replaces the cab and turret BoxMesh with
+            # real closed ArrayMesh shells. Requiring BoxMesh here rejected
+            # the entire V48/V49 tactical pipeline and blocked publication.
+            if i < 2 and not part.mesh is ArrayMesh:
+                return {}
+            if i == 2 and not (
+                    part.mesh is BoxMesh or part.mesh is ArrayMesh):
+                return {}
         out[label] = part
     return out
 
