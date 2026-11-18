@@ -52,6 +52,7 @@ const HeliCombatV14 = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const HeliRotorContactV1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const HeliBladeRootsV1411 = preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const HeliBladeSeamV1412 = preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
+const HeliHubCrownV1413 = preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 const HeliNightV144 = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const G11ContextV25 = preload("res://scripts/ui/G11BattleContextV25.gd")
 const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
@@ -216,7 +217,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V52 · uniones del techo reforzadas")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
-        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.12")
+        role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.13")
     var idx: int = P06Models.ROLES.find("apc")
     if idx >= 0:
         role_picker.set_item_text(idx,"Bastión P06 · V25")
@@ -798,7 +799,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.12 · CONTINUIDAD PALA-RAÍZ",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.13 · CABEZAL ROTOR MECANIZADO",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
@@ -906,6 +907,11 @@ func _install_heli_controls() -> void:
         "V14.12: perfil desde abajo",
         func(): _heli_inspect_focus(143.0,-17.0,4.20,Vector3(0.020,2.01,-0.42)))
     _button(heli_controls,"Comparar unión V14.11 / V14.12",_heli_toggle_v1412)
+    _add_paired(heli_controls,"V14.13: cubierta superior",
+        func(): _heli_inspect_focus(30.0,62.0,4.10,Vector3(0,2.07,0.08)),
+        "V14.13: perfil de buje",
+        func(): _heli_inspect_focus(140.0,14.0,4.06,Vector3(0,2.05,0.08)))
+    _button(heli_controls,"Comparar corona V10 / V14.13",_heli_toggle_v1413)
     _heli_night_button_v143=_button(heli_controls,
         "V14.4: activar noche táctica",_heli_toggle_night_v143)
     _heli_v12_button=_button(heli_controls,
@@ -994,7 +1000,7 @@ func _heli_limit_sidebar_width(compact: bool) -> void:
         return
     var role_index: int=P06Models.ROLES.find("attack_heli")
     if role_index>=0:
-        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.12")
+        role_picker.set_item_text(role_index,"Helicóptero A01 HAT-29 · V14.13")
     # Godot Button.clip_text participates in minimum-size computation.
     # Keep buttons touch-friendly (44px high) instead of truncating canvas.
     for node in column.find_children("*","Button",true,false):
@@ -1201,6 +1207,15 @@ func _heli_toggle_v10() -> void:
     HeliV11.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled)
     HeliV12.set_enabled(model_root,_heli_v2_enabled and _heli_v10_enabled and _heli_v11_enabled and _heli_v12_enabled)
     _sync_p06_controls()
+    _update_details()
+    _update_camera()
+
+func _heli_toggle_v1413() -> void:
+    if _role!="attack_heli" or model_root==null or not HeliHubCrownV1413.has_model(model_root):
+        return
+    _heli_stop()
+    var polished: bool=bool(model_root.get_meta(HeliHubCrownV1413.ENABLED,true))
+    HeliHubCrownV1413.set_enabled(model_root,not polished)
     _update_details()
     _update_camera()
 
