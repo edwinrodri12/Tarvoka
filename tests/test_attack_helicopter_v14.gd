@@ -7,6 +7,9 @@ const V13 = preload("res://scripts/ui/AttackHelicopterDamageV13.gd")
 const Coat = preload("res://scripts/ui/AttackHelicopterFactionV14.gd")
 const FX = preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
+const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
+const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
+const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
 
 func _check(condition: bool,reason: String) -> void:
@@ -26,6 +29,8 @@ func _run() -> void:
     if tactical!=null:
         _check(not Night.install(tactical) and not Night.has_lights(tactical),
             "V14.4 night studio lamps never attach to Android combat LOD10")
+        _check(not Mount.has_model(tactical) and not Mount.apply(tactical),
+            "V14.5 fixed mast and rotating hinge meshes are excluded from Android LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -121,8 +126,43 @@ func _run() -> void:
                     and hm.roughness<0.50 and sm.metallic<0.10
                     and sm.roughness>0.85,
                     "V14.3 brushed alloy versus matte rubber physically distinct")
+        # V14.5: mast braces stay mounted on the body, while collars/links
+        # inherit the actual rotating V1 rotor. No duplicate V3 swashplate.
+        var body: Node3D=model.find_child(V1.ROOT,true,false) as Node3D
+        var original_rotor: Node3D=model.find_child(V1.MAIN_ROTOR,true,false) as Node3D
+        var fixed: Node3D=model.find_child(Mount.FIXED,true,false) as Node3D
+        var spinning: Node3D=model.find_child(Mount.SPINNING,true,false) as Node3D
+        _check(Mount.has_model(model) and body!=null and original_rotor!=null
+            and fixed!=null and spinning!=null,
+            "V14.5 real rotor mount installed on all eight official HAT-29 heroes")
+        if fixed!=null and spinning!=null and original_rotor!=null and body!=null:
+            _check(fixed.get_parent()==body and spinning.get_parent()==original_rotor,
+                "V14.5 airframe stays fixed while the new hub components spin")
+            _check(fixed.find_child("A01V145_CollarFijo_1",true,false)!=null
+                and original_rotor.find_child("A01V3_PlatilloCiclico",true,false)!=null,
+                "V14.5 retains V3 original swashplate; new collars do not replace it")
+            for i in range(4):
+                var strut: MeshInstance3D=model.find_child(
+                    "A01V145_RiostraMastil_%d_%d" % [
+                    -1 if i<2 else 1,-1 if i%2==0 else 1],
+                    true,false) as MeshInstance3D
+                var blade_hinge: Node3D=model.find_child(
+                    Mount.ARM_PIN+str(i),true,false) as Node3D
+                var blade_pivot: Node3D=model.find_child(
+                    V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+                _check(strut!=null and strut.mesh is CylinderMesh
+                    and blade_hinge!=null and blade_hinge.get_parent()==blade_pivot,
+                    "V14.5 four structural braces and four original blade-root hinges")
+            var mesh_count: int=Models.inspect_meshes(model)
+            _check(Mount.apply(model) and Models.inspect_meshes(model)==mesh_count,
+                "V14.5 rotor articulation applies idempotently without duplicate geometry")
+            _check(V1.pose(model,"move",0.39)
+                and absf(original_rotor.rotation_degrees.y)>30.0
+                and fixed.rotation_degrees.is_equal_approx(Vector3.ZERO),
+                "V14.5 rotor turns while the aircraft mounting remains stationary")
+            V1.restore(model)
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3",
-            "V14.3 retains all eight approved muted-faction finishes")
+            "V14.5 preserves precisely the V14.3 approved faction paint")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")
@@ -184,8 +224,9 @@ func _run() -> void:
         _check(V13.set_stage(model,3) and V13.stage(model)==3,
             "old V13 critical engine fire persists")
         V13.set_stage(model,4)
-        _check(V13.pose(model,"destroy",1.0) and V13.stage(model)==4,
-            "old rotor break and airborne crash remain intact")
+        _check(V13.pose(model,"destroy",1.0) and V13.stage(model)==4
+            and original_rotor!=null and not original_rotor.visible,
+            "V14.5 spinning mount disappears with authentic V13 broken rotor")
         V13.restore(model)
         _check(V13.set_stage(model,0) and V13.stage(model)==0,
             "wreck is completely repairable after V14 effect playback")
