@@ -7,6 +7,7 @@ const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 var failures:int=0
 
 func check(ok:bool, reason:String)->void:
@@ -25,6 +26,9 @@ func _run()->void:
             continue
         # Restore exact old V54 geometry before auditing its 6 lugs/pad.
         # The live V59 intentionally has 20 lugs/pad instead.
+        if bool(hero.get_meta(V60.FLAG,false)):
+            check(V60.show_finish(hero,false),
+                "reveal V59 before historical V54 proof")
         if bool(hero.get_meta(V59.FLAG,false)):
             check(V59.show_finish(hero,false),
                 "historic V54 must first remove newer V59 meshes and shaders")
@@ -77,12 +81,18 @@ func _run()->void:
         if bool(hero.get_meta(V59.FLAG,false)):
             check(V59.show_finish(hero,true),
                 "restore premium V59 after historical V54 inspection")
+        if bool(hero.get_meta(V60.FLAG,false)):
+            check(V60.show_finish(hero,true),
+                "restore V60 after V54")
         hero.free()
         var light:=Models.build("aa_mobile",faction,true,8)
         check(light!=null,"LOD8 must still build")
         if light!=null:
             # A live V59 tactical wheel is intentionally no longer a flat
             # cylinder; temporarily expose V54-era Android reference.
+            if bool(light.get_meta(V60.FLAG,false)):
+                check(V60.show_finish(light,false),
+                    "V60 Android hidden during V54 comparison")
             if bool(light.get_meta(V59.FLAG,false)):
                 check(V59.show_finish(light,false),
                     "restore exact old tactical tire for V54 era inspection")
@@ -95,6 +105,9 @@ func _run()->void:
             if bool(light.get_meta(V59.FLAG,false)):
                 check(V59.show_finish(light,true),
                     "reapply V59 superior tactical tire after V54 audit")
+            if bool(light.get_meta(V60.FLAG,false)):
+                check(V60.show_finish(light,true),
+                    "restore V60 tactical surface")
             light.free()
     if failures==0:
         print("PASS G13 V54 RUBBER: 3 hero factions, 4 rounded wheels, 192 authentic tread lugs, reversible V53 comparison, rolling and LOD8 unchanged")
