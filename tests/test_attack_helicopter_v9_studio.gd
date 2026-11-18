@@ -16,6 +16,7 @@ const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
+const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 var failures: int=0
 var images: int=0
 
@@ -297,6 +298,34 @@ func _run() -> void:
     _check(comparison_plate.mesh is ArrayMesh
         and model.get_instance_id()==original_id,
         "V14.10 Studio comparison restores true bevelled plate, not screenshot")
+    studio.call("_heli_mobile_home")
+    _check(Roots1411.has_model(model),
+        "V14.11 real six-station blade root sculpt is available in live 3D Studio")
+    var v1411_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.11:"):
+            v1411_buttons+=1
+    _check(v1411_buttons==2,
+        "V14.11 two new actual root sculpt camera macros exist in Details")
+    studio.call("_heli_inspect_focus",305.0,36.0,4.06,
+        Vector3(-0.01,2.01,-0.24))
+    _check(studio.get("_heli_focus_local")==Vector3(-0.01,2.01,-0.24)
+        and model.get_instance_id()==original_id,
+        "V14.11 first camera keeps original spinning model instance")
+    studio.call("_heli_inspect_focus",125.0,13.0,4.12,
+        Vector3(0,2.02,-0.33))
+    _check(studio.get("_heli_focus_local")==Vector3(0,2.02,-0.33),
+        "V14.11 profile camera focuses blade transition, not rotor duplicate")
+    studio.call("_heli_toggle_v1411")
+    var root_comparison: MeshInstance3D=model.find_child(
+        Roots1411.ROOT+"0",true,false) as MeshInstance3D
+    _check(root_comparison!=null and root_comparison.mesh is BoxMesh
+        and model.get_instance_id()==original_id,
+        "V14.11 V3 comparison swaps authentic root mesh inside live helicopter")
+    studio.call("_heli_toggle_v1411")
+    _check(root_comparison.mesh is ArrayMesh
+        and model.get_instance_id()==original_id,
+        "V14.11 studio restored six-station native sculpt without duplicates")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
