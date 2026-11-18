@@ -55,6 +55,7 @@ const G13ExteriorV44 = preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13CabV45 = preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G13WheelV46 = preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G13SurfaceV47 = preload("res://scripts/ui/G13MaterialFinishV47.gd")
+const G13SculptV48 = preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1048,6 +1049,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V46 machined four-wheel sculpt failed on hero LOD13")
                 if not G13SurfaceV47.apply(model):
                     push_warning("G13 V47 individual PBR surface finish failed on hero LOD13")
+                if not G13SculptV48.apply(model):
+                    push_warning("G13 V48 major closed cab/turret/roof sculpt failed on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1095,6 +1098,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V46 machined four-wheel sculpt failed on tactical LOD8")
                 if not G13SurfaceV47.apply(model):
                     push_warning("G13 V47 individual PBR surface finish failed on tactical LOD8")
+                if not G13SculptV48.apply(model):
+                    push_warning("G13 V48 major closed cab/turret/roof sculpt failed on tactical LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
