@@ -30,6 +30,7 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
           cp /tmp/diag-templates/templates/web_*.zip "$HOME/.local/share/godot/export_templates/4.3.stable/"
           printf '4.3.stable\n' > "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+      # Probe stable city D0 overview, with explicit camera framing and LOD1.
       # Final V43 regression: quick camera controls stay available, the
       # full city is visible and full historical tools are scroll archived.
       # Verify V43's scrollable camera archive keeps a real WebGL canvas
