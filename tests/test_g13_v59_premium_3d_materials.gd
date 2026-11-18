@@ -7,6 +7,7 @@ const P06=preload("res://scripts/ui/APCTireFinishV23.gd")
 const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 var errors:int=0
 var official:Dictionary={}
 
@@ -33,6 +34,9 @@ func _run()->void:
             check(model!=null,"faction %d LOD%d G13 builds" % [faction,lod])
             if model==null:
                 continue
+            if bool(model.get_meta(V60.FLAG,false)):
+                check(V60.show_finish(model,false),
+                    "V59 wheel test must expose true historical V59 mesh")
             check(bool(model.get_meta(V58.FLAG,false)) and
                 bool(model.get_meta(V59.FLAG,false)),
                 "V59 finishes the live V58 3D unit")
@@ -170,6 +174,9 @@ func _run()->void:
                 check(tyre.multimesh.mesh==new_mesh[V59.TIRES] and
                     tyre.material_override==after[V59.TIRES],
                     "new real P06-level wheel installed on same 4 pivots")
+            if bool(model.get_meta(V60.FLAG,false)):
+                check(V60.show_finish(model,true),
+                    "restore V60 continuous tread after historical V59")
             model.free()
     check(official.size()==8,"ALL 8 official faction tints still distinct")
     if errors==0:
