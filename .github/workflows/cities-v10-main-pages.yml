@@ -153,7 +153,11 @@ jobs:
           # Block stale city exports that put 200 camera buttons over a
           # zero-height WebGL framebuffer in the public browser studio.
           grep -F '_install_visible_canvas_and_archive()' scripts/ui/CivilianCityDesignStudioV43.gd
-          grep -F '_v19_toolbar.reparent(_city_advanced_archive)' scripts/ui/CivilianCityDesignStudioV43.gd
+          # Final V43 scroll contains BOTH V9-V18 and V19-V42 controls;
+          # the six original quick cameras stay in front of the visible city.
+          grep -F 'early_controls.reparent(scroll_contents)' scripts/ui/CivilianCityDesignStudioV43.gd
+          grep -F '_v19_toolbar.reparent(scroll_contents)' scripts/ui/CivilianCityDesignStudioV43.gd
+          grep -F '_compact_city_visible_status()' scripts/ui/CivilianCityDesignStudioV43.gd
           test -s scenes/CivilianCityDesignStudioV43.tscn
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
