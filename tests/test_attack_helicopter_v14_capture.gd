@@ -319,8 +319,8 @@ func _run() -> void:
     # then reveal them on the exact native V13 debris trajectories.
     _check(HubWreck1414.has_model(spin_model),
         "V14.14 real machined crown is cut into two V13-bound wreck parts")
-    cam.position=Vector3(1.58,1.21,-1.30)
-    cam.look_at(spin_model.to_global(Vector3(0,0.19,-0.32)),Vector3.UP)
+    cam.position=Vector3(3.15,2.15,-3.05)
+    cam.look_at(spin_model.to_global(Vector3(0,0.18,-0.19)),Vector3.UP)
     _check(HubWreck1414.set_enabled(spin_model,false),
         "V14.14 compare first renders original V13 wreck with no hub metal")
     await _save(vp,folder.path_join("hat29_v14_14_comparar_restos_v13.png"))
@@ -329,13 +329,13 @@ func _run() -> void:
     await _save(vp,folder.path_join("hat29_v14_14_comparar_restos_v1414.png"))
     _check(V13.pose(spin_model,"destroy",0.40),
         "V14.14 original wreck FX moves cut metal sectors into ballistic fall")
-    cam.position=Vector3(1.52,2.62,-1.46)
-    cam.look_at(spin_model.to_global(Vector3(0,1.65,0.08)),Vector3.UP)
+    cam.position=Vector3(2.80,3.24,-2.74)
+    cam.look_at(spin_model.to_global(Vector3(0,1.58,0.08)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_14_fragmentos_en_vuelo.png"))
     _check(V13.pose(spin_model,"destroy",1.0),
         "V14.14 original V13 wreck leaves jagged crown fragments on ground")
-    cam.position=Vector3(1.58,1.21,-1.30)
-    cam.look_at(spin_model.to_global(Vector3(0,0.19,-0.32)),Vector3.UP)
+    cam.position=Vector3(3.15,2.15,-3.05)
+    cam.look_at(spin_model.to_global(Vector3(0,0.18,-0.19)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_14_fragmentos_en_suelo.png"))
     V13.restore(spin_model)
     _check(V13.set_stage(spin_model,0)
