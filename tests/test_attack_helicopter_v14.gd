@@ -10,6 +10,7 @@ const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Hinges148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -37,6 +38,8 @@ func _run() -> void:
             "V14.6 rubber mast isolators and hydraulic damper meshes excluded from LOD10")
         _check(not Finish147.has_model(tactical) and not Finish147.apply(tactical),
             "V14.7 blade damper finishing never changes battle Android LOD10")
+        _check(not Hinges148.has_model(tactical) and not Hinges148.apply(tactical),
+            "V14.8 mechanical pitch hinges are never built on Android battle LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -257,6 +260,31 @@ func _run() -> void:
         var count147: int=Models.inspect_meshes(model)
         _check(Finish147.apply(model) and Models.inspect_meshes(model)==count147,
             "V14.7 is idempotent and keeps the approved existing rotor pivot")
+        _check(Hinges148.has_model(model),
+            "V14.8 four pivot-native pitch-control hinge assemblies exist for every faction")
+        for i in range(4):
+            var pivot148: Node3D=model.find_child(
+                V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+            var hinge148: Node3D=model.find_child(
+                Hinges148.ROOT+str(i),true,false) as Node3D
+            var rod148: MeshInstance3D=model.find_child(
+                "A01V148_BieletaControlPaso_%d" % i,true,false) as MeshInstance3D
+            var pin148: MeshInstance3D=model.find_child(
+                "A01V148_Pasador_%d_0" % i,true,false) as MeshInstance3D
+            var guard148: MeshInstance3D=model.find_child(
+                "A01V148_FundaProteccion_%d" % i,true,false) as MeshInstance3D
+            _check(hinge148!=null and hinge148.get_parent()==pivot148,
+                "V14.8 hinge is an actual child of each original animated rotor pivot")
+            _check(rod148!=null and rod148.mesh is CylinderMesh
+                and rod148.position.x<0.0 and pin148!=null
+                and pin148.mesh is CylinderMesh,
+                "V14.8 functional rod, clevis pin and negative-X clearance from V14.7")
+            _check(guard148!=null and guard148.mesh is CylinderMesh
+                and (guard148.material_override as StandardMaterial3D).metallic<0.05,
+                "V14.8 physical rubber dust cover retains nonmetallic PBR")
+        var count148: int=Models.inspect_meshes(model)
+        _check(Hinges148.apply(model) and Models.inspect_meshes(model)==count148,
+            "V14.8 articulation install is idempotent on all eight factions")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
@@ -339,5 +367,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14: 8 muted factions and sculpted hardware; bullets, missile blast, dual flying rockets, unchanged mobile LOD and reversible V13 destruction")
+        print("PASS HAT29 V14.8: 8 muted factions, rotor pitch hinges, existing hydraulic dampers and V13 damage; no battle LOD changes")
         quit(0)
