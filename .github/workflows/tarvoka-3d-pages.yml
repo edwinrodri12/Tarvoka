@@ -267,6 +267,12 @@ jobs:
             test -s "$g13_source"
             cp "$g13_source" scripts/ui/
           done
+          # The main repository holds the genuine G13 inspection scene.
+          # Copy it into the assembled native Web Studio checkout so
+          # the release visual captures run instead of warning about
+          # a missing scene. This does NOT replace the unified entrypoint.
+          test -s hq-android-v15/scenes/G13InspectionStudio.tscn
+          cp hq-android-v15/scenes/G13InspectionStudio.tscn scenes/
           test -s scripts/ui/G13SilhouetteV10.gd
           test -s scripts/ui/G13CabRearFinishV11.gd
           test -s scripts/ui/G13BodyFinishV11.gd
