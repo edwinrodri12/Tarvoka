@@ -45,6 +45,21 @@ func _initialize() -> void:
             assert(source == snapshot)
             assert(advanced["turn"] == 13)
 
+    # Three complete cycles must remain deterministic and independent of
+    # the source dictionary, including the CLEAR -> RAIN -> SNOW -> CLEAR wrap.
+    var marathon := {"weather":Weather.CLEAR,"weather_cycle":{"remaining":4},"turn":21}
+    var expected_modes := [Weather.RAIN, Weather.SNOW, Weather.CLEAR]
+    for expected_mode in expected_modes:
+        for step in range(4):
+            var untouched: Dictionary = marathon.duplicate(true)
+            var next_marathon: Dictionary = Weather.advance_after_turn(marathon)
+            assert(marathon == untouched)
+            assert(next_marathon["weather_cycle"]["remaining"] == (4 if step == 3 else 3 - step))
+            assert(next_marathon["weather"] == (expected_mode if step == 3 else untouched["weather"]))
+            assert(next_marathon["turn"] == 21)
+            marathon = next_marathon
+    assert(marathon["weather"] == Weather.CLEAR)
+
     # Legacy forecasts remain fixed and never advertise a future transition.
     var fixed_forecast: Dictionary = Weather.forecast(legacy)
     assert(fixed_forecast["dynamic"] == false)
