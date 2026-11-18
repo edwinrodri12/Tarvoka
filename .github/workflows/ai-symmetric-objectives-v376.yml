@@ -1,0 +1,109 @@
+name: TARVOKA v376 symmetric mission test-fork (384 real battles)
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_mirrored_full_battles_v376.gd"
+      - "tests/ExperimentalObjectivesV376.gd"
+      - "tests/ExperimentalBasicAIV376.gd"
+      - "tests/MirrorSemanticsV375.gd"
+      - "tests/test_symmetric_objective_contract_v376.gd"
+      - "tests/test_symmetric_objective_contract_v376.gd"
+      - "scripts/core/BasicAI.gd"
+      - "tests/aggregate_ai_full_mirror_v376.py"
+      - ".github/workflows/ai-symmetric-objectives-v376.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Play 12 original/reflected full-battle pairs with side-normalized mission planner
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_mirrored_full_battles_v376.gd \
+            2>&1 | tee /tmp/ai-v376-full.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v376-full.log; then exit 1; fi
+          grep -Fq 'PASS AI symmetric objectives v376:' /tmp/ai-v376-full.log
+          test "$(grep -c '^BATTLE376_MATCH ' /tmp/ai-v376-full.log)" -eq 12
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v376-full-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v376-full.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  objective_state_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare 48 openings and 144 original/experimental mirrored objective plans
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_symmetric_objective_contract_v376.gd \
+            2>&1 | tee /tmp/ai-v376-midgame-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v376-midgame-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI v376 objective contract:' /tmp/ai-v376-midgame-contract.log
+          test "$(grep -c '^MIDGAME375_CONTRACT ' /tmp/ai-v376-midgame-contract.log)" -eq 48
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v376-midgame-contract
+          path: /tmp/ai-v376-midgame-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, objective_state_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v376-full-L*
+          path: .ci-v376-logs
+          merge-multiple: false
+      - name: Aggregate 192 genuine test-fork mirrored battle pairs against v375 reference
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_full_mirror_v376.py .ci-v376-logs
+          cat reports/ai_v376_full_battle_mirror.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v376-full-battle-report
+          path: reports/ai_v376_full_battle_mirror.*
+          if-no-files-found: ignore
+          retention-days: 30
