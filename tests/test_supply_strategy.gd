@@ -40,7 +40,13 @@ func _initialize() -> void:
     var dispatch: Dictionary = AI.step(return_state)
     assert(dispatch["valid"] and dispatch["action"] == "move" and dispatch["reason"] == "field_supply")
     assert(dispatch["unit_id"] == str(built["units"].back()["id"]))
-    assert(dispatch["destination"] == Vector2i(1,2))
+    # A truck may choose either equal-cost adjacent staging tile after
+    # side-relative tie breaking (v3.8.6). Protect delivery semantics,
+    # not a world-coordinate chosen by the former enumeration order.
+    var adjacent_to_tank: Vector2i = dispatch["destination"] - tank["pos"]
+    assert(absi(adjacent_to_tank.x) + absi(adjacent_to_tank.y) == 1)
+    assert(dispatch["state"]["units"][0]["pos"] == tank["pos"])
+    assert(dispatch["state"]["units"].back()["pos"] == dispatch["destination"])
     var supplied: Dictionary = AI.step(dispatch["state"])
     assert(supplied["valid"] and supplied["action"] == "resupply" and supplied["cost"] == 0)
     assert(supplied["unit_id"] == "T" and supplied["source_kind"] == "truck")
