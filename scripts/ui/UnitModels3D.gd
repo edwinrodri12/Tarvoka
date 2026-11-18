@@ -51,6 +51,7 @@ const G13UndersealV39 = preload("res://scripts/ui/G13UndersealFinishV39.gd")
 const G13SilhouetteV40 = preload("res://scripts/ui/G13SilhouetteFinishV40.gd")
 const G13ContourV41 = preload("res://scripts/ui/G13ContourPolishV41.gd")
 const G13ArcEndsV42 = preload("res://scripts/ui/G13ArcTerminationV42.gd")
+const G13ExteriorV44 = preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1035,6 +1036,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V41 sculpted wheel contours failed on hero LOD13")
                 if not G13ArcEndsV42.apply(model):
                     push_warning("G13 V42 wheel-arch termination failed on hero LOD13")
+                if not G13ExteriorV44.apply(model):
+                    push_warning("G13 V44 real 3D exterior/faction detailing failed on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1074,6 +1077,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V41 sculpted wheel contours failed on tactical LOD8")
                 if not G13ArcEndsV42.apply(model):
                     push_warning("G13 V42 wheel-arch termination failed on tactical LOD8")
+                if not G13ExteriorV44.apply(model):
+                    push_warning("G13 V44 real 3D exterior/faction detailing failed on tactical LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
