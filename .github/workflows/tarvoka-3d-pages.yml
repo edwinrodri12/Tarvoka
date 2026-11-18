@@ -236,6 +236,10 @@ jobs:
           cp hq-android-v15/tests/test_bastion_studio_web_ui.gd tests/test_bastion_studio_web_ui.gd
           test -s hq-android-v15/tests/test_g13_studio_web_v1.gd
           cp hq-android-v15/tests/test_g13_studio_web_v1.gd tests/test_g13_studio_web_v1.gd
+          # V43 captures must be copied from MAIN just like the G13 model
+          # sources; otherwise the Godot checkout has only older QA tests.
+          test -s hq-android-v15/tests/test_g13_v43_visual_capture.gd
+          cp hq-android-v15/tests/test_g13_v43_visual_capture.gd tests/test_g13_v43_visual_capture.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
