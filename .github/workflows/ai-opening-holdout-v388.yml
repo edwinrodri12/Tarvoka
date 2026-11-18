@@ -1,0 +1,104 @@
+name: TARVOKA v388 unseen-seed opening holdout and logistics smoke
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_holdout_v388.gd"
+      - "tests/aggregate_ai_opening_holdout_v388.py"
+      - "tests/test_supply_strategy.gd"
+      - ".github/workflows/ai-opening-holdout-v388.yml"
+      - "scripts/core/SupplyNavigation.gd"
+  workflow_dispatch:
+
+jobs:
+  supply_smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Assert truck arrives adjacent and refills legal tank
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_supply_strategy.gd \
+            2>&1 | tee /tmp/supply-v388.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/supply-v388.log; then exit 1; fi
+          grep -Fq 'PASS supply strategy: critical demand' /tmp/supply-v388.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v388-supply-smoke
+          path: /tmp/supply-v388.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  holdout:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V388_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V388_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare official versus cap5 on fresh seeds with two starters and two mirrors each
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2850s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_holdout_v388.gd \
+            2>&1 | tee /tmp/hold-v388.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|HOLD388_DIVERGENCE ' /tmp/hold-v388.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v388: two starters' /tmp/hold-v388.log
+          test "$(grep -c '^HOLD388_RESULT ' /tmp/hold-v388.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v388-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/hold-v388.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [supply_smoke,holdout]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v388-seed*
+          path: .ci-v388-logs
+          merge-multiple: false
+      - name: Verify 32 paired new-seed conditions without invented results
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_opening_holdout_v388.py .ci-v388-logs
+          cat reports/ai_v388_holdout.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v388-opening-holdout
+          path: reports/ai_v388_holdout.*
+          if-no-files-found: ignore
+          retention-days: 30
