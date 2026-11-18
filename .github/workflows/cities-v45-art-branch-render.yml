@@ -306,6 +306,25 @@ jobs:
           images=[x for x in manifest.get("screenshots",[]) if isinstance(x,dict)]
           good=[x for x in images if x.get("nonempty") is True]
           errors=manifest.get("errors")
+          native_files=list(source.glob("Villa_D?.png"))+list(source.glob("Ciudad_D?.png"))+list(source.glob("Metropoli_D?.png"))
+          native_files+=list(source.glob("Villa_D?_reverse.png"))+list(source.glob("Ciudad_D?_reverse.png"))+list(source.glob("Metropoli_D?_reverse.png"))
+          import_log=source/"godot-import.log"
+          render_log=source/"godot-render.log"
+          missing_resources=source/"v49-missing-resources.txt"
+          if missing_resources.is_file():
+              failure_stage="missing_city_dependencies"
+          elif not import_log.is_file():
+              failure_stage="before_godot_import"
+          elif not render_log.is_file():
+              failure_stage="godot_import_failed"
+          elif not manifest:
+              failure_stage="render_failed_before_manifest"
+          elif len(native_files)!=24:
+              failure_stage="incomplete_captures"
+          elif errors not in (0,None):
+              failure_stage="art_or_geometry_issues"
+          else:
+              failure_stage="none"
           fully_rendered=(
               len(images)==24 and len(good)==24 and errors==0
               and all((source/x.get("png","")).is_file() for x in images)
@@ -322,7 +341,9 @@ jobs:
                   +"/actions/runs/"+os.getenv("GITHUB_RUN_ID","")
               ),
               "capture_count":len(images),
+              "native_png_count":len(native_files),
               "nonempty_count":len(good),
+              "failure_stage":failure_stage,
               "reported_errors":errors,
               "fully_rendered":fully_rendered,
               "artistically_approved":False,
@@ -340,6 +361,8 @@ jobs:
               f"- Commit artístico: `{report['source_commit']}`",
               f"- Ejecución: {report['actions_run_url']}",
               f"- Capturas válidas: {len(good)}/24",
+              f"- PNG reales encontrados: {len(native_files)}/24",
+              f"- Fase del fallo: {failure_stage}",
               f"- Errores registrados: {errors if errors is not None else 'sin manifest'}",
               f"- Render completo: {'sí' if fully_rendered else 'no (revisar logs)'}",
               "",
@@ -356,6 +379,11 @@ jobs:
               "",
               "Si falta una imagen, consultar los registros, el inventario "
               "del sandbox y el artefacto de GitHub Actions.",
+              "",
+              "## Estado de importación y render",
+              "",
+              "En [status.json](./status.json), la clave failure_stage "
+              "indica si el bloqueo fue de dependencias, importación o capturas.",
           ])
           (target/"README.md").write_text("\n".join(lines)+"\n",
                                           encoding="utf-8")
