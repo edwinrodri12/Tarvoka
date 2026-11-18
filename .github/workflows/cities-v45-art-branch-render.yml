@@ -1,4 +1,4 @@
-name: TARVOKA V48 - Render de ciudades y evidencia visible
+name: TARVOKA V49 - Ciudad 3D independiente
 
 on:
   push:
@@ -46,11 +46,20 @@ jobs:
           test -s scenes/CivilianCityDesignStudioV43.tscn
           echo "Source SHA: $GITHUB_SHA" | tee build/city-v44-evidence/source-commit.txt
 
+      - name: Preparar proyecto Godot de ciudades sin estudio militar
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/civilian_city_render_sandbox_v49.py
+          test -s build/city-v49-sandbox/project.godot
+          test ! -e build/city-v49-sandbox/scripts/ui/BastionStudioAdapter.gd
+          echo "CITY_REVIEW_PROJECT=$PWD/build/city-v49-sandbox" >> "$GITHUB_ENV"
+
       - name: Importar y validar recursos Godot
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path "$CITY_REVIEW_PROJECT" --import --quit \
             2>&1 | tee build/city-v44-evidence/godot-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
               build/city-v44-evidence/godot-import.log; then
