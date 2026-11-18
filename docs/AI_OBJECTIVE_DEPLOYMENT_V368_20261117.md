@@ -39,3 +39,24 @@ La decisión sobre la cuarta orden consulta **solo las posiciones públicas de l
 Un movimiento que no ocupa una ciudad o relé **puede influir en capturas posteriores o en ataques**, por lo que «defensivo» es solo una clasificación experimental. No es seguro asumir que negar el acceso inmediato a relés y ciudades asegure balance. Tampoco es representativo de todos los mapas, partidas humanas, unidades navales/aéreas o rendimiento Android.
 
 **No se aprueba fusión ni APK.** Si el criterio se aplica demasiado poco (o demasiado), se inspeccionarán los destinos y razones de la IA y se investigará una variante más fina antes de tocar reglas jugables.
+
+
+## Resultado del experimento (verificado en GitHub)
+
+[GitHub Actions v3.6.8 #44221500225](https://github.com/edwinrodri12/Tarvoka/actions/runs/44221500225): **128 partidas reales**, 32 por variante, 128 verificaciones de primeras tres decisiones idénticas, controles cap3/cap4 reproducidos y contrato Godot aprobado. Las partidas terminaron sin empates ni interrupciones.
+
+| Variante | Gana primero | Gana segundo | Azul / Rojo | Cuarta orden ejecutada |
+|---|---:|---:|---:|---:|
+| `3` | 8 | 24 | 16 / 16 | 0/32 |
+| `4` | 24 | 8 | 20 / 12 | 32/32 |
+| `3plus_no_objective` | 24 | 8 | 20 / 12 | 32/32 |
+| `3plus_defensive` | 8 | 24 | 16 / 16 | 0/32 |
+
+**Hallazgo geométrico:** la cuarta acción que quiere realizar la IA es idéntica en todos los entornos evaluados: mover una unidad a **(3,5)** para azul o **(6,5)** para rojo, con motivo `relay`. Son casillas **adyacentes** a los relés, no ocupan ninguna fábrica, ciudad o relé, y reducen en **dos casillas** la distancia mínima al relé más cercano. Por ello:
+
+- El filtro `3plus_no_objective` permite las 32 acciones y reproduce cap4 íntegramente.
+- El filtro `3plus_defensive` rechaza las 32 por `approaches_relay`, reproduciendo cap3 íntegramente.
+- Ninguno de los dos filtros produjo una solución intermedia. **No fusionar estas reglas en el juego.**
+
+**Siguiente hipótesis:** estudiar una cuarta acción de *despliegue limitado* que reduzca la distancia máxima o el avance hacia el relé, en lugar de autorizar o denegar un movimiento completo de dos casillas. Cualquier modificación del destino debe ser **simétrica, determinista y ejecutada con `BattleSession.move`**, verificando costes de terreno, rango, casillas ocupadas, visibilidad y que nunca replique la acción original completa a escondidas. Es una fase nueva de investigación, no una regla aprobada.
+
