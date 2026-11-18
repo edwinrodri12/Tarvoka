@@ -16,3 +16,10 @@ Crear una escena de inspección independiente con un Node3D, adjuntar el script,
 
 ## Alcance
 Prototipo reversible para inspección y futura reutilización, no una función ya integrada al visor. Sin cambios a IA, reglas, facciones, guardados, exportación o escenas existentes. No se entrega APK.
+
+## Incremento de escena aislada y smoke test (2026-11-18)
+- `scenes/tools/AssetInspectionSmoke.tscn`: escena independiente con esfera original de referencia, luz direccional y `OrbitRig` habilitado para mouse. No se conecta a la UI táctica ni al visor web.
+- `tests/test_asset_orbit_camera.gd`: prueba automatizada de carga de escena, creación de Camera3D, zoom mínimo/máximo, límites angulares y enfoque en otro objetivo.
+- Ejecutar desde raíz del proyecto con Godot 4.3: `godot --headless --path . --script res://tests/test_asset_orbit_camera.gd`.
+- **NO EJECUTADO** en Godot local al registrar el cambio. El CI general puede pasar sin ejecutar este script específico. **NO EJECUTADO EN DISPOSITIVO**. **PENDIENTE DE REVISIÓN VISUAL**.
+- La escena es deliberadamente reversible y no contiene modelos finales de facciones; reemplazar la esfera solo tras confirmar controles y encuadre.
