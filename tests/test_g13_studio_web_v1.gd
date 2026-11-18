@@ -4,6 +4,7 @@ extends SceneTree
 # scene shell. Ensures the user sees G13 in the picker and its controls work.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
+const G13V44=preload("res://scripts/ui/G13ExteriorFinishV44.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -55,6 +56,21 @@ func _run()->void:
     if model!=null:
         _check(bool(model.get_meta("tarvoka_g13_v1_high_detail",false)),
             "Studio selects real hero-quality G13 mesh rather than a proxy")
+        _check(bool(model.get_meta(G13V44.FLAG,false)),
+            "G13 V44 actual native hard-surface/paint finish must be installed")
+        for label in [G13V44.BODY_ARMOR,G13V44.BODY_PAINT,G13V44.FENDER_PAINT,
+                G13V44.TURRET_JOINT,G13V44.TURRET_PAINT,G13V44.REAR_VENTS]:
+            var piece:=model.find_child(label,true,false) as VisualInstance3D
+            _check(piece!=null and piece.visible,
+                "G13 V44 missing/hidden native 3D geometry: "+label)
+        _check(bool(studio.call("_g13_v44_compare",false))==false,
+            "V44 uses a void display callback")
+        var colored:=model.find_child(G13V44.BODY_PAINT,true,false)
+        _check(colored!=null and not colored.visible,
+            "V44 version compare really hides new 3D faction panels")
+        studio.call("_g13_v44_compare",true)
+        _check(colored!=null and colored.visible,
+            "V44 version compare restores the new 3D faction armor")
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
         _check(radar!=null and absf(radar.rotation_degrees.y)>1.0,
@@ -78,6 +94,14 @@ func _run()->void:
         studio.call("_g13_demo_v1","idle",1.0)
         _check(gun!=null and absf(gun.rotation_degrees.x-12.0)<0.01,
             "interrupting either studio firing tween restores neutral pose")
+    studio.call("_g13_show_tactical_lod",8)
+    await process_frame
+    var g13_tactical:=studio.get("model_root") as Node3D
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V44.FLAG,false)),
+        "G13 V44 faction/armor sculpt is present in tactical LOD8")
+    studio.call("_g13_show_tactical_lod",13)
+    await process_frame
     studio.call("_display_role","mlrs")
     await process_frame
     var g11:=studio.get("model_root") as Node3D
@@ -89,5 +113,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, visual radar/dual-gun controls work, G11 V33 approved hero returns unchanged")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 native faction armor on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
