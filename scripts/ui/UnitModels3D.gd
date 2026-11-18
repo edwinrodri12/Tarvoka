@@ -78,6 +78,7 @@ const AttackHelicopterRotorDampersV146 = preload("res://scripts/ui/AttackHelicop
 const AttackHelicopterDamperFinishV147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const AttackHelicopterPitchHingesV148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const AttackHelicopterRotorAnchorsV149 = preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
+const AttackHelicopterRotorContactV1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 # Original production P06 sculpt: V1 sealed troop bay, V2 sculpted armored
 # running gear, V3 wear/damage and V5 integrated roof/optical finish.
 const APCArtV1 = preload("res://scripts/ui/APCArtV1.gd")
@@ -1156,6 +1157,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                                                             push_warning("A01 V14.8 mechanical blade pitch hinges did not build")
                                                         if not AttackHelicopterRotorAnchorsV149.apply(model):
                                                             push_warning("A01 V14.9 grounded rotor root seats did not build")
+                                                        if not AttackHelicopterRotorContactV1410.apply(model):
+                                                            push_warning("A01 V14.10 bevel/contact pass did not build")
     # Studio-quality P06 is the actual sculpted V5 source, never the
     # simplified P06 procedural prototype shown in the previous web release.
     # Battle map LOD (art_level <= 10) stays lightweight by default.
