@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Realism=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
+const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 var problems:int=0
 
 func _check(ok:bool,description:String)->void:
@@ -27,8 +28,14 @@ func _run()->void:
                 continue
             _check(bool(model.get_meta(Realism.FLAG,false)),
                 "V53 missing LOD%d faction %d" % [lod,faction])
-            # V55 is the final live hero coating. For historical V53
-            # assertions, temporarily reveal the exact V53 material layer.
+            # V59 is newer than V55 and intentionally boosts official enamel
+            # hues. Verify old V53 on its own original 3D material snapshot:
+            # remove the V59 overlay FIRST, never weaken the old QA rules.
+            if bool(model.get_meta(V59.FLAG,false)):
+                _check(V59.show_finish(model,false),
+                    "cannot restore historical V58 before native V53 QA")
+            # V55 is the later hero PBR layer; reveal the historic V53
+            # materials before checking exact original faction hue.
             if lod==13 and bool(model.get_meta(V55.FLAG,false)):
                 _check(V55.show_finish(model,false),
                     "cannot expose historical V53 material for comparison")
@@ -80,6 +87,9 @@ func _run()->void:
             if lod==13 and bool(model.get_meta(V55.FLAG,false)):
                 _check(V55.show_finish(model,true),
                     "V55 final coating must be restored after V53 audit")
+            if bool(model.get_meta(V59.FLAG,false)):
+                _check(V59.show_finish(model,true),
+                    "G13 V59 real tire/glass/faction finish must restore after V53 QA")
             model.free()
     if problems==0:
         print("PASS G13 V53 PBR METAL RUBBER: 6 real native variants")
