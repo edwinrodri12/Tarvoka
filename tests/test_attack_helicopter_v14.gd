@@ -12,6 +12,7 @@ const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149 = preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
+const Contact1410 = preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -43,6 +44,8 @@ func _run() -> void:
             "V14.8 mechanical pitch hinges are never built on Android battle LOD10")
         _check(not Anchors149.has_model(tactical) and not Anchors149.apply(tactical),
             "V14.9 physical blade seats and links are excluded from battle LOD10")
+        _check(not Contact1410.has_model(tactical) and not Contact1410.apply(tactical),
+            "V14.10 native bevels and bolt fitting remain hero-only")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -303,18 +306,60 @@ func _run() -> void:
                 "A01V149_AsientoHidraulicoExterior_%d" % i,true,false) as MeshInstance3D
             var link149: MeshInstance3D=model.find_child(
                 "A01V149_PuenteHidraulicoInterior_%d" % i,true,false) as MeshInstance3D
-            _check(interior149!=null and interior149.mesh is BoxMesh
+            _check(interior149!=null and interior149.mesh is ArrayMesh
+                and interior149.get_meta(Contact1410.ORIGINAL_MESH) is BoxMesh
                 and absf(interior149.position.y-0.038)<0.001,
-                "V14.9 inboard footplate intersects real V3 blade root at y 0.035")
-            _check(far149!=null and far149.mesh is BoxMesh
+                "V14.10 chamfer is genuine ArrayMesh replacing V14.9 rooted BoxMesh")
+            _check(far149!=null and far149.mesh is ArrayMesh
                 and far149.position.y<0.030,
-                "V14.9 far hydraulic footplate intersects 0.037 thick rotor blade")
+                "V14.10 far hydraulic chamfer remains seated into 0.037 blade")
             _check(link149!=null and link149.mesh is CylinderMesh
                 and link149.get_parent()==root149,
                 "V14.9 bridge is actual 3D geometry fixed to original pivot")
         var count149: int=Models.inspect_meshes(model)
         _check(Anchors149.apply(model) and Models.inspect_meshes(model)==count149,
             "V14.9 anchoring is idempotent and does not duplicate hardware")
+        _check(Contact1410.has_model(model)
+            and bool(model.get_meta(Contact1410.ENABLED,false)),
+            "V14.10 installed with true beveled V14.9 plate meshes")
+        var count1410: int=Models.inspect_meshes(model)
+        for i in range(4):
+            for foot in range(4):
+                var plate: MeshInstance3D=model.find_child(
+                    Contact1410.SEATS[foot]+str(i),true,false) as MeshInstance3D
+                _check(plate!=null and plate.mesh is ArrayMesh
+                    and (plate.mesh as ArrayMesh).get_surface_count()==1,
+                    "V14.10 four bevelled solid surfaces on each rotor pivot")
+                if plate==null:
+                    continue
+                var original: BoxMesh=plate.get_meta(Contact1410.ORIGINAL_MESH) as BoxMesh
+                _check(original!=null,
+                    "V14.10 stores authentic V14.9 plate geometry for comparison")
+                if original==null:
+                    continue
+                var y_top: float=plate.position.y+original.size.y*0.5
+                for end in range(2):
+                    var bolt: MeshInstance3D=model.find_child(
+                        "A01V149_PernoPie_%d_%d_%d" % [i,foot,end],
+                        true,false) as MeshInstance3D
+                    if bolt!=null and bolt.mesh is CylinderMesh:
+                        var bolt_bottom: float=bolt.position.y-(bolt.mesh as CylinderMesh).height*0.5
+                        _check(absf((y_top-bolt_bottom)-Contact1410.CONTACT_PENETRATION)<0.0001,
+                            "V14.10 physically fixes 0.0015 free-floating bolt gap")
+                    else:
+                        _check(false,"V14.10 retained original real bolt mesh")
+        _check(Contact1410.set_enabled(model,false),
+            "V14.10 can restore real V14.9 original mesh without duplicate")
+        var old_plate: MeshInstance3D=model.find_child(
+            "A01V149_AsientoPasoInterior_0",true,false) as MeshInstance3D
+        _check(old_plate!=null and old_plate.mesh is BoxMesh,
+            "V14.10 V14.9 reversible comparison really restores old geometry")
+        _check(Contact1410.set_enabled(model,true)
+            and old_plate.mesh is ArrayMesh,
+            "V14.10 comparison returns bevelled mesh in the same scene")
+        _check(Contact1410.apply(model)
+            and Models.inspect_meshes(model)==count1410,
+            "V14.10 in-place surface refinement adds no extra draw nodes")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
@@ -397,5 +442,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14.9: 8 muted factions, blade-root seats, native rotor pitch hinges and V13 damage; no battle LOD changes")
+        print("PASS HAT29 V14.10: 8 muted factions, 16 real bevelled footplates, 32 seated bolts, reversible V14.9 comparison and intact V13 damage")
         quit(0)
