@@ -1,0 +1,48 @@
+name: Offline runtime network guard
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'scenes/**'
+      - 'tests/test_offline_network_guard.gd'
+      - 'tests/test_android_network_permissions.py'
+      - 'tests/audit_apk_network_permissions.py'
+      - 'export_presets.cfg'
+      - '.github/workflows/offline-runtime-guard.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  offline-guard:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject explicitly enabled Android network permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_android_network_permissions.py
+      - name: Validate APK manifest parser without exporting an APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/audit_apk_network_permissions.py --self-test
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Reject direct network constructors in offline runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_offline_network_guard.gd 2>&1 | tee /tmp/offline-guard.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/offline-guard.log; then
+            echo 'Offline guard emitted an engine error'; exit 1
+          fi
+          grep -F 'PASS: offline runtime network-constructor guard' /tmp/offline-guard.log
