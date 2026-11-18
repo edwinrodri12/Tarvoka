@@ -1,0 +1,75 @@
+name: TARVOKA v387 intermediate first-response caps 4 vs 5
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_intermediate_opening_budget_v387.gd"
+      - "tests/test_ai_opening_budget_counterfactual_v383.gd"
+      - "tests/aggregate_ai_intermediate_opening_v387.py"
+      - ".github/workflows/ai-intermediate-opening-v387.yml"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SupplyNavigation.gd"
+  workflow_dispatch:
+
+jobs:
+  opening_sensitivity:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V387_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V387_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare 4 and 5 opening response orders using mirrored authoritative AI
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3200s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_intermediate_opening_budget_v387.gd \
+            2>&1 | tee /tmp/open-v387.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|BUDGET387_DIVERGENCE ' /tmp/open-v387.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v387: paired 4- and 5-order responder openings' /tmp/open-v387.log
+          test "$(grep -c '^BUDGET387_RESULT ' /tmp/open-v387.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v387-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/open-v387.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [opening_sensitivity]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v387-seed*
+          path: .ci-v387-logs
+          merge-multiple: false
+      - name: Enforce complete 16-condition paired 4-vs-5 response sweep
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_intermediate_opening_v387.py .ci-v387-logs
+          cat reports/ai_v387_opening_sensitivity.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v387-opening-sensitivity
+          path: reports/ai_v387_opening_sensitivity.*
+          if-no-files-found: ignore
+          retention-days: 30
