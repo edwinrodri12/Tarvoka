@@ -8,6 +8,7 @@ const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -185,6 +186,14 @@ func _run() -> void:
     cam.look_at(orbit_model.to_global(Vector3(0,2.04,0.13)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_7_amortiguadores_girando.png"))
     V1.restore(orbit_model)
+    _check(Hinges148.has_model(orbit_model),
+        "V14.8 pitch control hinges share original blade pivots with V14.7 dampers")
+    cam.position=Vector3(-0.80,2.35,-0.76)
+    cam.look_at(orbit_model.to_global(Vector3(-0.16,2.07,-0.30)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_bieletas_lateral.png"))
+    cam.position=Vector3(-0.56,2.80,-0.72)
+    cam.look_at(orbit_model.to_global(Vector3(-0.16,2.07,-0.36)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_pasadores_superior.png"))
     orbit_model.queue_free()
     await process_frame
 
@@ -286,10 +295,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==43,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers and 4 new V14.7 macro frames")
+    _check(count==45,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers, 4 V14.7 and 2 V14.8 macro frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 43 native Godot PNGs with 8 factions, 6 combat FX, 11 orbit/belly, 6 night, 4 mast, 4 V14.6 dampers and 4 V14.7 closeups")
+        print("PASS HAT29 V14 CAPTURE: 45 native Godot PNGs including two V14.8 blade pitch-control hinge closeups")
         quit(0)
