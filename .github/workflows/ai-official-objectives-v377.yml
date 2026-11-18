@@ -8,9 +8,8 @@ on:
       - "scripts/core/BasicAI.gd"
       - "tests/MirrorSemanticsV375.gd"
       - "tests/test_symmetric_objective_contract_v377.gd"
-      - "scripts/core/BasicAI.gd"
       - "tests/aggregate_ai_full_mirror_v377.py"
-      - ".github/workflows/ai-symmetric-objectives-v377.yml"
+      - ".github/workflows/ai-official-objectives-v377.yml"
   workflow_dispatch:
 
 jobs:
