@@ -42,3 +42,19 @@ Si quitar el pago inicial reduce de manera consistente la ventaja del segundo y 
 Ningún resultado de dos IA contra sí mismas en mapas 10x8 autoriza por sí solo fusionar o lanzar una APK nueva; faltan pruebas humanas, mapas grandes y partidas modernas.
 
 **PR DRAFT. Solo tests/docs/workflow.**
+
+
+## Resultado observado — auditoría completa
+
+La [ejecución #44226290001](https://github.com/edwinrodri12/Tarvoka/actions/runs/44226290001) terminó con **18 trabajos en verde** (16 grupos de 16 partidas, contrato y agregación). Se validaron **256 partidas reales**, 128 parejas de `keep` vs `skip` y 256 comprobaciones de las primeras tres decisiones.
+
+| Apertura | Ingreso inicial adicional del segundo | Partidas | Primero gana | Segundo gana | Azul / Rojo |
+|---|---|---:|---:|---:|---:|
+| 3 órdenes | Sí (+100) | 64 | 22 | 42 | 30 / 34 |
+| 3 órdenes | No | 64 | 22 | 42 | 30 / 34 |
+| 4 órdenes (laboratorio) | Sí (+100) | 64 | 32 | 32 | 36 / 28 |
+| 4 órdenes (laboratorio) | No | 64 | 32 | 32 | 36 / 28 |
+
+**Eliminación del primer pago:** cero cambios de ganador en **128 parejas** de escenarios. Cuatro parejas tuvieron cambios en compras del segundo jugador, por un saldo agregado de **cuatro compras menos** en el grupo sin ingreso; cero parejas modificaron las capturas del segundo. Ambas referencias anteriores de los mapas 0 y 2 se reprodujeron exactamente. El estudio confirma que el **desfase económico existe**, pero **no respalda que sea la causa de la ventaja de iniciativa** en estos mapas y estas dos políticas de IA.
+
+Se preparó además la [implementación opcional de prueba PR #573](https://github.com/edwinrodri12/Tarvoka/pull/573), desactivada por defecto y separada de la APK oficial. No se fusionó automáticamente con la rama principal.
