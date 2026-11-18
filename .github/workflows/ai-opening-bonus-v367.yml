@@ -1,0 +1,105 @@
+name: TARVOKA v367 conditional noncombat 4th order audit (128 real battles)
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_bonus_v367.gd"
+      - "tests/test_ai_opening_bonus_contract_v367.gd"
+      - "tests/OpeningBonusPolicyV367.gd"
+      - "tests/aggregate_ai_opening_bonus_v367.py"
+      - ".github/workflows/ai-opening-bonus-v367.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,2]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Run sixteen games with cap3, cap4, optional move or optional support
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_bonus_v367.gd \
+            2>&1 | tee /tmp/ai-v367-noncombat.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v367-noncombat.log; then exit 1; fi
+          grep -Fq 'PASS AI opening v367:' /tmp/ai-v367-noncombat.log
+          test "$(grep -c '^BONUS367_MATCH ' /tmp/ai-v367-noncombat.log)" -eq 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v367-bonus-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v367-noncombat.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  opening_budget_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify original opening rule and fourth nonattack eligibility, no engine edits
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_bonus_contract_v367.gd \
+            2>&1 | tee /tmp/ai-v367-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v367-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI opening v367 contract:' /tmp/ai-v367-contract.log
+          test "$(grep -c '^BONUS367_CONTRACT ' /tmp/ai-v367-contract.log)" -eq 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v367-contract
+          path: /tmp/ai-v367-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, opening_budget_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v367-bonus-L*
+          path: .ci-v367-logs
+          merge-multiple: false
+      - name: Verify 128 genuine matches, first-three decisions and cap3/cap4 controls
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_opening_bonus_v367.py .ci-v367-logs
+          cat reports/ai_v367_opening_noncombat.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v367-noncombat-bonus-report
+          path: reports/ai_v367_opening_noncombat.*
+          if-no-files-found: ignore
+          retention-days: 30
