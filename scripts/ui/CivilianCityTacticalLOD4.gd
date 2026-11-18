@@ -28,6 +28,7 @@ const V24=preload("res://scripts/ui/CivilianCityStructuralContactsV24.gd")
 const V25=preload("res://scripts/ui/CivilianCitySurfaceContinuityV25.gd")
 const V26=preload("res://scripts/ui/CivilianCityWeatherFinishV26.gd")
 const V27=preload("res://scripts/ui/CivilianCityStreetInterfaceV27.gd")
+const V28=preload("res://scripts/ui/CivilianCityFourElevationV28.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -224,7 +225,9 @@ static func _keep_medium(name: String) -> bool:
         "V27_JuntaDilatacionUmbral_","V27_UnionLosetaAcera_",
         "V27_EncuentroAdoquinPasaje_","V27_LosetaCierrePlaza_",
         "V27_JuntaRampaMunicipal_","V27_AdoquinDesportillado_",
-        "V27_MordidaZocalo_"]:
+        "V27_MordidaZocalo_",
+        # V28 small facade base reveals stay in architectural closeup.
+        "V28_ZocaloNorteSur_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -389,7 +392,13 @@ static func _keep_far(name: String) -> bool:
         "V27_EmpalmeAccesoColapsado_",
         "V27_JuntaPasajeColapsado_",
         "V27_BordePlazaQuebrado_",
-        "V27_AristaAccesoMunicipalRota_"]:
+        "V27_AristaAccesoMunicipalRota_",
+        # V28 side elevation silhouette: corners survive far/mobile
+        # LOD; tiny zocalos are close-only.
+        "V28_EnlaceEsquinaLateral_",
+        "V28_RemateEsquinaSuperior_",
+        "V28_RetornoCantoRoto_",
+        "V28_EncuentroBajoRuina_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -501,7 +510,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V27.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",27)
+    if not V28.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",28)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
