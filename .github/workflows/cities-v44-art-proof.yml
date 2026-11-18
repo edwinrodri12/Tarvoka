@@ -1,0 +1,137 @@
+name: TARVOKA V44 — revisión de arte 3D con capturas reales
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cities-v44-art-proof.yml"
+  workflow_run:
+    workflows:
+      - Publish TARVOKA native 3D art studio
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture-native-city-art:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Leer modelos 3D nativos de la rama de arte
+        uses: actions/checkout@v4
+        with:
+          ref: art/cities-v8-rear-facades-rooftops-20261117
+
+      - name: Preparar Godot 4.3 y renderizador Mesa GL
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth libgl1-mesa-dri libglu1-mesa
+          BASE=https://github.com/godotengine/godot/releases/download/4.3-stable
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-v44.zip
+          unzip -qo /tmp/godot-v44.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          mkdir -p build/city-v44-evidence
+          test -s scripts/ui/CivilianCityArtReviewV42.gd
+          test -s scripts/ui/CivilianCityArtEvidenceV43.gd
+          test -s scripts/ui/CivilianCityVisualProofV44.gd
+          test -s scripts/ui/CivilianCityDesignStudioV43.gd
+          test -s scenes/CivilianCityDesignStudioV43.tscn
+
+      - name: Comprobar importación y compilación de scripts de Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee build/city-v44-evidence/godot-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+              build/city-v44-evidence/godot-import.log; then
+            exit 1
+          fi
+
+      - name: Capturar Villa Ciudad y Metrópoli D0-D4 (no jugabilidad)
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --path . --rendering-method gl_compatibility \
+            --script res://scripts/ui/CivilianCityVisualProofV44.gd \
+            2>&1 | tee build/city-v44-evidence/godot-render.log
+          test "$(find build/city-v44-evidence -maxdepth 1 -name '*.png' | wc -l)" -eq 24
+          test -s build/city-v44-evidence/manifest.json
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed loading resource:' \
+              build/city-v44-evidence/godot-render.log; then
+            exit 1
+          fi
+
+      - name: Preparar galería para revisión humana, incluso con fallos
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import html
+          import json
+
+          folder=Path("build/city-v44-evidence")
+          folder.mkdir(parents=True, exist_ok=True)
+          manifest=folder/"manifest.json"
+          data={}
+          if manifest.exists():
+              try:
+                  data=json.loads(manifest.read_text(encoding="utf-8"))
+              except (ValueError, OSError):
+                  pass
+          items={(str(i.get("tier")),int(i.get("damage",-1))):i
+                 for i in data.get("screenshots",[])
+                 if isinstance(i,dict)}
+          cards=[]
+          for tier in ("Villa","Ciudad","Metropoli"):
+              for damage in range(5):
+                  cameras=[("","Vista táctica")]
+                  if damage in (0,2,4):
+                      cameras.append(("_reverse","Vista posterior"))
+                  for suffix,label in cameras:
+                      png=f"{tier}_D{damage}{suffix}.png"
+                      entry=next((i for i in data.get("screenshots",[])
+                                  if i.get("png")==png),{})
+                      if not (folder/png).exists():
+                          cards.append(f'<section><h2>{tier} D{damage}: {label}</h2><p>Sin captura — revisar registros</p></section>')
+                          continue
+                      metrics=(f'Cobertura: {float(entry.get("coverage",0)):.2%} · '
+                               f'Varianza: {float(entry.get("variance",0)):.5f} · '
+                               f'Alertas: {entry.get("v42_geometry_findings","?")} / '
+                               f'{entry.get("v43_art_findings","?")}')
+                      cards.append(f'<section><h2>{tier} D{damage} · {label}</h2>'
+                                   f'<img alt="{tier} D{damage} {label}" src="{png}">'
+                                   f'<p>{html.escape(metrics)}</p></section>')
+          page=('<html lang="es"><meta charset="utf-8"><meta name="viewport" '
+                'content="width=device-width,initial-scale=1"><title>TARVOKA V44</title>'
+                '<style>body{font:15px system-ui;background:#13202a;color:#eef3f5;'
+                'padding:20px}main{display:grid;grid-template-columns:'
+                'repeat(auto-fit,minmax(280px,1fr));gap:16px}'
+                'section{padding:12px;background:#223744;border-radius:10px}'
+                'img{width:100%;border-radius:6px}p{font-size:13px}</style>'
+                '<h1>TARVOKA · CIUDADES V44 · EVIDENCIA VISUAL</h1>'
+                '<p>Capturas reales de Godot, sin aprobación artística automática. '
+                'Revisar las 24 imágenes antes de finalizar los modelos.</p><main>'
+                +''.join(cards)+'</main></html>')
+          (folder/"index.html").write_text(page,encoding="utf-8")
+          PY
+
+      - name: Guardar capturas, galería, manifest y registros aunque haya fallos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciudades-v44-godot-capturas-arte
+          path: build/city-v44-evidence/
+          if-no-files-found: warn
+          retention-days: 14
