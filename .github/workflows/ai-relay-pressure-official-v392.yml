@@ -1,0 +1,75 @@
+name: TARVOKA v392 official opening relay pressure holdout
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_initiative_counterfactual_v379.gd"
+      - "tests/test_ai_relay_pressure_official_holdout_v392.gd"
+      - "tests/aggregate_ai_relay_pressure_official_v392.py"
+      - "scripts/core/BasicAI.gd"
+      - ".github/workflows/ai-relay-pressure-official-v392.yml"
+  workflow_dispatch:
+
+jobs:
+  official_holdout:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 58
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V392_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V392_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Play default and opt-in AI with OFFICIAL first response and exact mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3300s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_pressure_official_holdout_v392.gd \
+            2>&1 | tee /tmp/official-v392.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|OFF392_MIRROR_MISMATCH|OFF392_EARLY_CHANGE' /tmp/official-v392.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v392: official-opening control' /tmp/official-v392.log
+          test "$(grep -c '^OFF392_RESULT ' /tmp/official-v392.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v392-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/official-v392.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [official_holdout]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v392-seed*
+          path: .ci-v392-logs
+          merge-multiple: false
+      - name: Check full 32-case exact mirrors and publish result table
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_relay_pressure_official_v392.py .ci-v392-logs
+          cat reports/ai_v392_official_pressure_holdout.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v392-official-pressure-holdout
+          path: reports/ai_v392_official_pressure_holdout.*
+          if-no-files-found: ignore
+          retention-days: 30
