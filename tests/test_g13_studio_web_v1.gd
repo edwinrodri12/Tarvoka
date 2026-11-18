@@ -20,6 +20,7 @@ const G13V57=preload("res://scripts/ui/G13TacticalMountReadabilityV57.gd")
 const G13V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const G13V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const G13V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
+const G13V61=preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -154,6 +155,23 @@ func _run()->void:
             int(model.get_meta(
                 "tarvoka_g13_v60_lugs_per_wheel",0))==160,
             "G13 V60 160 physical molded tread blocks ring all 360 degrees")
+        _check(bool(model.get_meta(G13V61.FLAG,false)) and
+            int(model.get_meta("tarvoka_g13_v61_true_open_spokes",0))==8,
+            "G13 V61 original flat wheel centers replaced with 8 open steel spokes")
+        var g13_open_hub:=model.find_child(
+            G13V61.HUB,true,false) as MultiMeshInstance3D
+        _check(g13_open_hub!=null and
+            g13_open_hub.multimesh.mesh is ArrayMesh,
+            "V61 exact 4-wheel original instanced hub now true open ArrayMesh")
+        var g13_v61_mesh:Mesh=g13_open_hub.multimesh.mesh if g13_open_hub!=null else null
+        studio.call("_g13_v61_show_finish",false)
+        _check(g13_open_hub!=null and
+            g13_open_hub.multimesh.mesh is CylinderMesh,
+            "V61 Studio before/after reveals historic flat V60 wheel center")
+        studio.call("_g13_v61_show_finish",true)
+        _check(g13_open_hub!=null and
+            g13_open_hub.multimesh.mesh==g13_v61_mesh,
+            "V61 Studio comparison restores actual eight-spoke wheel geometry")
         var v59_tyre:=model.find_child(
             G13V59.TIRES,true,false) as MultiMeshInstance3D
         var v59_glass:=model.find_child(
@@ -518,6 +536,11 @@ func _run()->void:
         int(g13_tactical.get_meta(
             "tarvoka_g13_v60_lugs_per_wheel",-1))==48,
         "G13 V60 Android LOD8 physical continuous tread has just 48 closed lugs")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V61.FLAG,false)) and
+        int(g13_tactical.get_meta(
+            "tarvoka_g13_v61_extra_draw_nodes",-1))==0,
+        "G13 V61 new 8-spoke machined hub replaces existing Android mesh with zero draws")
     if g13_tactical!=null:
         var rail_tactical:=g13_tactical.find_child(
             G13V52.NAME,true,false) as MeshInstance3D
