@@ -24,4 +24,12 @@ Los controles alternan mallas reales, no imágenes. El botón anterior `Comparar
 - `tests/test_attack_helicopter_v14_capture.gd`: **75 capturas nativas previstas**. Las 71 existentes y cuatro nuevas: dos de ángulo y un par V14.11/V14.12 con cámara/luz/pintura idénticas.
 - Workflows A01 y Pages actualizados para incorporar el módulo a Godot y al empaquetado Web del visor unificado.
 
-**Estado:** V14.12 implementada en GitHub, sujeto a ejecución y revisión de los artefactos Godot 4.3. La aprobación artística final permanece pendiente.
+**Estado:** versión base V14.12 validada en Godot con 75 imágenes; corrección final de piel inclinada pendiente de su propio CI. La aprobación artística definitiva permanece pendiente.
+
+## Resultado real de revisión visual (Godot 4.3)
+La ejecución [44257452719](https://github.com/edwinrodri12/Tarvoka/actions/runs/44257452719) resultó **exitosa** y archivó [75 capturas reales](https://github.com/edwinrodri12/Tarvoka/actions/runs/44257452719/artifacts/14406299125). Se inspeccionaron las cuatro nuevas tomas: comparadores desde cámara idéntica, unión superior y ángulo inferior. La V14.12 mejora el barrido longitudinal sin capas flotantes; el cambio es intencionadamente sutil porque conserva el perfil V3.
+
+Una revisión geométrica posterior detectó que la rotación `Z=-1.5°` de la pala V3 baja su piel superior en el lado positivo de X. El acabado final ajustó las dos últimas estaciones a semiespesores **0.014 y 0.0135** para garantizar que el extremo de unión quede bajo la superficie de V3. Se agregó una prueba de la altura del borde `+X` (`y < 0.0145`) y se solicitó una ejecución CI nueva. La última corrección exacta queda pendiente del resultado de esa ejecución, y no debe confundirse con el artefacto verde anterior.
+
+El desplegado público del **Estudio 3D unificado** se comprueba por separado del QA de modelos: tener capturas verdes NO prueba por sí solo que GitHub Pages ya sirva la misma versión.
+
