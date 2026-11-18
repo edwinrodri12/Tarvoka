@@ -197,7 +197,10 @@ static func apply(model:Node3D)->bool:
     var high:bool=bool(model.get_meta(
         "tarvoka_g13_v1_high_detail",false))
     var parts:Dictionary=_parts(model)
-    if parts.size()<7:
+    # Android LOD8 deliberately omits many hero armor panels. The
+    # production eight-spoke wheel itself is REQUIRED on both levels;
+    # additional armor material upgrades are opportunistic per LOD.
+    if parts.size()<3:
         return false
     var hubs:=parts.get(HUB,null) as MultiMeshInstance3D
     if hubs==null or not hubs.multimesh.mesh is CylinderMesh:
