@@ -1,1 +1,0 @@
-V50: Godot produced no native PNG images; the blank contact sheet was intentionally omitted. Check sandbox inventory and Godot import/render logs.

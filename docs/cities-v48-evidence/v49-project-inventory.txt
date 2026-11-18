@@ -76,7 +76,7 @@ scripts/ui/CivilianCityTacticalLOD4.gd
 scripts/ui/CivilianCityTacticalReadabilityV31.gd
 scripts/ui/CivilianCityTierProportionsV30.gd
 scripts/ui/CivilianCityUrbanCohesionV19.gd
-scripts/ui/CivilianCityVisualProofV44.gd
+scripts/ui/CivilianCityVisualProofV50.gd
 scripts/ui/CivilianCityVolumeBalanceV38.gd
 scripts/ui/CivilianCityWeatherFinishV26.gd
 scripts/ui/VisualStyle.gd

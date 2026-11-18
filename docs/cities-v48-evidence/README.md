@@ -2,15 +2,19 @@
 
 Capturas Godot reales del modelo V43. **Nunca indican aprobación automática.**
 
-- Commit artístico: `4b38ba943818ffe45140db271b83f4fe00224cc2`
-- Ejecución: https://github.com/edwinrodri12/Tarvoka/actions/runs/44360725925
-- Capturas válidas: 0/24
-- PNG reales encontrados: 0/24
-- Fase del fallo: incomplete_captures
-- Errores registrados: 15
-- Render completo: no (revisar logs)
+- Commit artístico: `c548f9ae7d9d61c9cb0637468c7b00ef1b59f283`
+- Ejecución: https://github.com/edwinrodri12/Tarvoka/actions/runs/44374650298
+- Capturas válidas: 24/24
+- PNG reales encontrados: 24/24
+- Fase del fallo: none
+- Errores registrados: 0
+- Render completo: sí
 
 ## Comparativas disponibles
+- [comparativa-24-vistas.png](./comparativa-24-vistas.png)
+- [comparativa-villa.png](./comparativa-villa.png)
+- [comparativa-ciudad.png](./comparativa-ciudad.png)
+- [comparativa-metropoli.png](./comparativa-metropoli.png)
 
 Diagnósticos: [status.json](./status.json) y [manifest.json](./manifest.json), si existe.
 
