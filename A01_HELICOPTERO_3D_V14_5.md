@@ -21,6 +21,7 @@ Todo el metal se mantiene en grafito y acero desaturado. **No se cambia la pintu
 ## Integración y límites
 - `UnitModels3D.build("attack_heli",...,true,14)` aplica V14.5 después del arte V14.4, únicamente para el modelo de alta fidelidad (art_level ≥13). Las unidades de combate con nivel ≤10 conservan el modelo ligero original.
 - El Estudio unificado añade dos vistas: **anclajes fijos del mástil** y **corona/bisagras del rotor**. Sin visores paralelos y sin cambiar los otros menús.
+- La vista de anclajes usa una cámara verdaderamente lateral, por debajo del disco de palas, porque la cámara alta anterior escondía las nuevas riostras. Al volver a vista general o elegir otra inspección se recupera automáticamente la cámara normal.
 - Al destruirse el helicóptero, el mismo nodo rotor V1 queda oculto y se llevan con él los nuevos herrajes móviles; los anclajes del fuselaje permanecen con la carrocería accidentada.
 
 ## Validación
