@@ -1620,8 +1620,10 @@ func _install_g13_controls() -> void:
         "V43 · 3/4 trasero",func(): _g13_v41_view(145.0))
     _add_paired(g13_controls,"V43 · Parte trasera",func(): _g13_v41_view(180.0),
         "V43 · Costado derecho",func(): _g13_v41_view(270.0))
-    _add_paired(g13_controls,"V43 · Ver techo",func(): _g13_v41_view(42.0,-55.0),
-        "V43 · Ver bajos",func(): _g13_v41_view(132.0,58.0))
+    # Verified against V51 native PNGs: the old tilt signs were reversed,
+    # showing the undercarriage under "Ver techo" and vice versa.
+    _add_paired(g13_controls,"V52 · Ver techo",func(): _g13_v41_view(42.0,58.0),
+        "V52 · Ver bajos",func(): _g13_v41_view(132.0,-55.0))
     _add_paired(g13_controls,"V40 · Guardabarros curvos",
         func(): _g13_v40_compare(true),
         "V40 · Comparar con V39",
