@@ -112,6 +112,8 @@ var _heli_focus_local: Vector3=Vector3.ZERO
 # True inspection camera beneath the native A01, not a tilted top view.
 # Plane meshes hidden for the inspection are restored on every exit path.
 var _heli_underbody_view_active: bool=false
+# Side-on mechanical microscope for the fixed transmission below the blades.
+var _heli_mast_view_active_v145: bool=false
 var _heli_hidden_floor_meshes: Array[MeshInstance3D]=[]
 var _heli_compare_button: Button
 var _heli_animation: String=""
@@ -853,7 +855,7 @@ func _install_heli_controls() -> void:
         "V14.3: sellos de cola",
         func(): _heli_inspect_focus(132.0,8.0,2.18,Vector3(0.18,1.10,1.97)))
     _add_paired(heli_controls,"V14.5: anclajes fijos del mástil",
-        func(): _heli_inspect_focus(52.0,37.0,2.60,Vector3(0,1.71,0.08)),
+        _heli_mast_inspect_v145,
         "V14.5: corona y bisagras del rotor",
         func(): _heli_inspect_focus(31.0,61.0,2.70,Vector3(0,2.01,0.08)))
     _heli_night_button_v143=_button(heli_controls,
@@ -1126,6 +1128,14 @@ func _heli_underbody_inspect() -> void:
                 plane.visible=false
     _update_camera()
 
+func _heli_mast_inspect_v145() -> void:
+    if _role!="attack_heli" or model_root==null or camera==null:
+        return
+    _heli_inspect(50.0,0.0,2.67)
+    _heli_focus_local=Vector3(0,1.72,0.08)
+    _heli_mast_view_active_v145=true
+    _update_camera()
+
 func _heli_inspect_focus(yaw: float,tilt: float,zoom_level: float,
         local_point: Vector3) -> void:
     _heli_inspect(yaw,tilt,zoom_level)
@@ -1171,6 +1181,7 @@ func _heli_inspect(yaw: float,tilt: float,zoom_level: float) -> void:
     if _role!="attack_heli" or model_root==null:
         return
     _heli_underbody_restore_floor()
+    _heli_mast_view_active_v145=false
     _heli_stop()
     _heli_focus_local=Vector3.ZERO
     _yaw=yaw
@@ -1223,6 +1234,7 @@ func _heli_toggle_v8() -> void:
 func _heli_view(yaw: float) -> void:
     if _role!="attack_heli" or model_root==null:
         return
+    _heli_mast_view_active_v145=false
     _heli_underbody_restore_floor()
     _heli_stop()
     _yaw=yaw
@@ -1234,6 +1246,7 @@ func _heli_view(yaw: float) -> void:
 func _heli_top_view() -> void:
     if _role!="attack_heli" or model_root==null:
         return
+    _heli_mast_view_active_v145=false
     _heli_underbody_restore_floor()
     _heli_stop()
     _yaw=38.0
@@ -2404,6 +2417,11 @@ func _update_camera() -> void:
         if _heli_underbody_view_active:
             camera.position=target+Vector3(2.45,-2.65,-2.65)
             camera.look_at(target,Vector3.UP)
+        elif _heli_mast_view_active_v145:
+            # The original elevated camera hides the new fixed tie rods
+            # behind the rotating V1 blades. This is a real SIDE camera.
+            camera.position=target+Vector3(1.75,-0.11,-2.25)
+            camera.look_at(target,Vector3.UP)
     if _role=="apc" and _p06_fleet!=null and camera!=null:
         # Orthographic view needs size rather than moving the camera closer.
         var full: float=13.4 if _p06_fleet_count<=8 else (
@@ -2506,6 +2524,7 @@ func _display_role(role: String) -> void:
     if _p06_fleet!=null:
         _hide_p06_fleet()
     if role!="attack_heli" and _role=="attack_heli" and camera!=null:
+        _heli_mast_view_active_v145=false
         _heli_underbody_restore_floor()
         camera.position=_heli_camera_base
         _heli_focus_local=Vector3.ZERO
@@ -2664,6 +2683,8 @@ func _display_role(role: String) -> void:
     _refresh_unified_studio_navigation()
 
 func _switch_category(index: int) -> void:
+    if index!=0:
+        _heli_mast_view_active_v145=false
     if index!=0 and _heli_night_enabled_v143:
         _heli_set_night_v143(false)
     super._switch_category(index)
