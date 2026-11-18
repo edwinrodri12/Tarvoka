@@ -66,6 +66,7 @@ const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
 const G15FinishV5=preload("res://scripts/ui/G15AntennaFinishDamageV5.gd")
 const G15ExteriorV6=preload("res://scripts/ui/G15ArmoredExteriorV6.gd")
+const G15MechanicalV7=preload("res://scripts/ui/G15MechanicalExteriorV7.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -233,7 +234,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V57 · soportes visibles")
     var ew_index: int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V6")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V7")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -544,6 +545,9 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
+                {"group":"G15 V7 · MECÁNICA Y UNIONES DE BLINDAJE"},
+                {"title":"V7 · Ejes, bajos y juntas mecánicas","action":"g15_v7_on"},
+                {"title":"V6 · Comparar sin detalles mecánicos","action":"g15_v7_off"},
                 {"group":"G15 V6 · BLINDAJE Y CRISTALES"},
                 {"title":"V6 · Acabados exteriores PBR","action":"g15_v6_on"},
                 {"title":"V5 · Comparar carrocería anterior","action":"g15_v6_off"},
@@ -562,7 +566,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"V3 · Cabina y refugio blindados biselados","action":"g15_v3_on"},
                 {"title":"V2 · Comparar con refugio rectangular","action":"g15_v3_off"},
                 {"title":"V1 · Comparar con guardabarros originales","action":"g15_v2_off"},
-                {"title":"V6 · Restaurar última versión","action":"g15_v2_on"},
+                {"title":"V7 · Restaurar última versión","action":"g15_v2_on"},
                 {"title":"Movimiento 6×6, antena plegada","action":"move"},
                 {"title":"Desplegar mástil articulado","action":"deploy"},
                 {"title":"Barrido direccional","action":"scan"},
@@ -667,9 +671,18 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g15_v7_on","g15_v7_off":
+            if _role=="ew_mobile" and model_root!=null and G15MechanicalV7.show_finish(model_root,action=="g15_v7_on"):
+                status_label.text=("G15 V7 · seis ejes, bajos y juntas 3D" if action=="g15_v7_on" else "G15 V6 · comparación sin acabado mecánico")
         "g15_v6_on","g15_v6_off":
-            if _role=="ew_mobile" and model_root!=null and G15ExteriorV6.show_finish(model_root,action=="g15_v6_on"):
-                status_label.text=("G15 V6 · acero biselado y cristales sellados" if action=="g15_v6_on" else "G15 V5 · exterior anterior")
+            if _role=="ew_mobile" and model_root!=null:
+                var current_v6:bool=action=="g15_v6_on"
+                if not current_v6:
+                    G15MechanicalV7.show_finish(model_root,false)
+                if G15ExteriorV6.show_finish(model_root,current_v6):
+                    if current_v6:
+                        G15MechanicalV7.show_finish(model_root,true)
+                    status_label.text=("G15 V7 · carrocería, acero y uniones" if current_v6 else "G15 V5 · comparación anterior")
         "g15_v5_on","g15_v5_off":
             if _role=="ew_mobile" and model_root!=null:
                 var current_v5:bool=action=="g15_v5_on"
@@ -704,6 +717,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="ew_mobile" and model_root!=null:
                 var show_v3:bool=action=="g15_v3_on"
                 if not show_v3:
+                    G15MechanicalV7.show_finish(model_root,false)
                     G15ExteriorV6.show_finish(model_root,false)
                     G15FinishV5.show_finish(model_root,false)
                     G15AntennaV4.show_finish(model_root,false)
@@ -712,6 +726,7 @@ func _studio_run_animation(action: String) -> void:
                         G15AntennaV4.show_finish(model_root,true)
                         G15FinishV5.show_finish(model_root,true)
                         G15ExteriorV6.show_finish(model_root,true)
+                        G15MechanicalV7.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: blindaje biselado y conjunto electrónico mejorado"
                         if show_v3 else
@@ -720,6 +735,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="ew_mobile" and model_root!=null:
                 var show_current:bool=action=="g15_v2_on"
                 if not show_current:
+                    G15MechanicalV7.show_finish(model_root,false)
                     G15ExteriorV6.show_finish(model_root,false)
                     G15FinishV5.show_finish(model_root,false)
                     G15AntennaV4.show_finish(model_root,false)
@@ -730,6 +746,7 @@ func _studio_run_animation(action: String) -> void:
                         G15AntennaV4.show_finish(model_root,true)
                         G15FinishV5.show_finish(model_root,true)
                         G15ExteriorV6.show_finish(model_root,true)
+                        G15MechanicalV7.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: superficies biseladas, pasos curvos y antenas físicas"
                         if show_current else
@@ -881,7 +898,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
-            "ew_mobile": label="G15 · Guerra electrónica · V6 (exterior PBR y daños)"
+            "ew_mobile": label="G15 · Guerra electrónica · V7 (chasis 6×6 y juntas)"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
