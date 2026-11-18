@@ -6,6 +6,7 @@ class_name TarvokaG13ContourPolishV41
 # its two reusable mesh resources without adding any draw nodes, changing
 # a rig, animating a wheel, modifying faction tint or adding weapons.
 # All V40 geometry stays stored for exact same-scene comparison.
+const V40 = preload("res://scripts/ui/G13SilhouetteFinishV40.gd")
 const FLAG := "tarvoka_g13_v41_curved_contour_polish"
 const REQUIRES := "tarvoka_g13_v40_curved_silhouette_finish"
 const FENDERS := "G13_V40_CurvedOuterFenders"
@@ -179,6 +180,10 @@ static func show_finish(root: Node3D, enabled: bool) -> bool:
     for label in ["v40_fender", "v40_weld", "v41_fender", "v41_weld"]:
         if not saved.has(label) or not saved[label] is Mesh:
             return false
+    # V40 may have been hidden with the older version comparison controls.
+    # Keep the existing curved fenders visible for both V41 and V40 views.
+    if not V40.show_finish(root, true):
+        return false
     var fender := parts["fenders"] as MultiMeshInstance3D
     var weld := parts["welds"] as MultiMeshInstance3D
     fender.multimesh.mesh = (
