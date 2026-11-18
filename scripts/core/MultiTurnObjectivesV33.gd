@@ -65,14 +65,46 @@ static func _known_objectives(knowledge: Dictionary, side: int) -> Array:
         out.append({"kind":str(site["kind"]),"pos":cell})
     return out
 
+# X is measured in the direction of advance. The mirrored right-side
+# player has the same local coordinates as the left-side player.
+static func _local_x(cell: Vector2i, side: int, width: int) -> int:
+    return cell.x if side == 0 else width-1-cell.x
+
+static func _unit_before(a: Dictionary, b: Dictionary, side: int,
+        width: int) -> bool:
+    var ap: Vector2i = a["pos"]
+    var bp: Vector2i = b["pos"]
+    if ap.y != bp.y:
+        return ap.y < bp.y
+    var ax: int = _local_x(ap,side,width)
+    var bx: int = _local_x(bp,side,width)
+    if ax != bx:
+        return ax < bx
+    if str(a.get("role","")) != str(b.get("role","")):
+        return str(a.get("role","")) < str(b.get("role",""))
+    return str(a["id"]) < str(b["id"])
+
+static func _prefer_equal_score_cell(candidate: Vector2i,
+        incumbent: Vector2i, side: int, width: int) -> bool:
+    if incumbent.x < 0:
+        return true
+    var a: int = _local_x(candidate,side,width)
+    var b: int = _local_x(incumbent,side,width)
+    if a != b:
+        return a < b
+    return candidate.y < incumbent.y
+
 static func _alive_allies(knowledge: Dictionary, side: int) -> Array:
     var result: Array = []
     for u in knowledge.get("units",[]):
         if u is Dictionary and int(u.get("faction",-1)) == side and \
                 int(u.get("hp",0)) > 0:
             result.append(u)
+    # Stable ordering from each faction's local perspective.
+    # IDs are a final fallback only when position/role cannot distinguish units.
+    var width: int = Rules.map_size(knowledge["terrain"]).x
     result.sort_custom(func(a,b):
-        return str(a["id"]) < str(b["id"]))
+        return _unit_before(a,b,side,width))
     return result
 
 static func _visible_hostiles(knowledge: Dictionary, side: int) -> Array:
@@ -133,6 +165,7 @@ static func refresh(knowledge: Dictionary, side: int,
     var candidates: Array = _known_objectives(knowledge,side)
     var chosen: Dictionary = {}
     var route_cache: Dictionary = {} # bounded by current friendly units
+    var width: int = Rules.map_size(knowledge["terrain"]).x
     var assigned_ids: Dictionary = {}
     var tasks: Array = []
     var capturers: Array = []
@@ -173,8 +206,8 @@ static func refresh(knowledge: Dictionary, side: int,
                     str(site["kind"]) == "city":
                 score += 400
             if score > best_score or (score == best_score and \
-                    (best.is_empty() or cell.x < int(best["pos"].x) or \
-                     (cell.x == int(best["pos"].x) and cell.y < int(best["pos"].y)))):
+                    (best.is_empty() or _prefer_equal_score_cell(
+                        cell,best["pos"],side,width))):
                 best = site
                 best_score = score
         if best.is_empty():
