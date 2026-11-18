@@ -7,6 +7,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
+const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 var errors:int=0
 var faction_paints:Dictionary={}
 
@@ -28,6 +29,11 @@ func _run()->void:
         assert_ok(hero!=null,"hero build failed for faction %d" % faction)
         if hero==null:
             continue
+        # V59 purposefully boosts enamel and sculpted rubber, so remove
+        # its live layer before checking that V55 was color-preserving.
+        if bool(hero.get_meta(V59.FLAG,false)):
+            assert_ok(V59.show_finish(hero,false),
+                "must expose historic V55 under current V59 PBR finish")
         assert_ok(bool(hero.get_meta(V54.FLAG,false)) and
             bool(hero.get_meta(V55.FLAG,false)),
             "V55 on V54 sculpt absent for faction %d" % faction)
@@ -130,6 +136,9 @@ func _run()->void:
         assert_ok(wheels_after!=null and
             wheels_after.multimesh.mesh==tiremesh,
             "V54 rolling tire mesh must not be replaced by surface pass")
+        if bool(hero.get_meta(V59.FLAG,false)):
+            assert_ok(V59.show_finish(hero,true),
+                "V59 premium rubber and glass must be restored after V55 QA")
         hero.free()
         var tactical:=Models.build("aa_mobile",faction,true,8)
         assert_ok(tactical!=null,"LOD8 must still build")
