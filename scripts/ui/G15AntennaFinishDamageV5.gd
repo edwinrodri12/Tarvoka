@@ -203,33 +203,64 @@ static func set_damage(root:Node3D,stage:int)->bool:
     arr.position=Vector3.ZERO
     arr.rotation=Vector3.ZERO
     head.rotation_degrees.z=0.0
+    # Each original V4 antenna panel has its own real Node3D rotation.
+    # Damage should NOT just tilt the entire rig: one side tears outward
+    # and the other sags, while the emissive face is still solid geometry.
+    var left:=arr.find_child("G15_V4_CantedPanel_-1",
+        true,false) as Node3D
+    var right:=arr.find_child("G15_V4_CantedPanel_1",
+        true,false) as Node3D
+    if left==null or right==null:
+        return false
+    left.rotation_degrees=Vector3(0,0,8.0)
+    right.rotation_degrees=Vector3(0,0,-8.0)
+    left.position=Vector3(-0.545,0.115,-0.055)
+    right.position=Vector3(0.545,0.115,-0.055)
+    if stage==1:
+        left.rotation_degrees.z=4.0
+        arr.rotation_degrees.z=2.5
+    elif stage==2:
+        left.rotation_degrees.z=-9.0
+        right.rotation_degrees.z=-1.0
+        arr.rotation_degrees.z=-7.0
+        arr.position=Vector3(0,-0.035,0.018)
+    elif stage==3:
+        left.rotation_degrees.z=-25.0
+        right.rotation_degrees.z=12.0
+        left.position.y=0.048
+        arr.rotation_degrees.z=-18.0
+        arr.rotation_degrees.x=8.0
+        arr.position=Vector3(0,-0.10,0.060)
+        head.rotation_degrees.z=3.0
+    elif stage==4:
+        # Broken V4 yokes fail asymmetrically. Both panel mounts visibly
+        # misalign without scattering simulated gameplay objects.
+        left.rotation_degrees.z=-53.0
+        right.rotation_degrees.z=31.0
+        left.position.y=-0.06
+        right.position.y=0.02
+        arr.rotation_degrees.z=-33.0
+        arr.rotation_degrees.x=16.0
+        arr.position=Vector3(0,-0.20,0.115)
+        head.rotation_degrees.z=7.0
     for child in pieces.get_children():
         if not child is MeshInstance3D:
             continue
         var label:String=str(child.name)
         if label.begins_with(IMPACT):
             var n:int=int(label.trim_prefix(IMPACT))
-            (child as MeshInstance3D).visible=stage>=1 and (
-                stage>=2 or n==0)
+            var panel:Node3D=left if n%2==0 else right
+            # Stick visible scorch scars to the tilted *physical* antenna
+            # rather than drawing them behind the shell or in mid-air.
+            var offset:=Vector3(
+                -0.060 if n<2 else 0.060,
+                0.07 if n<2 else -0.12,-0.146)
+            var impact:=child as MeshInstance3D
+            impact.position=panel.position+panel.basis*offset
+            impact.rotation=panel.rotation
+            impact.visible=stage>=1 and (stage>=2 or n==0)
         elif label.begins_with(FRAGMENT):
             (child as MeshInstance3D).visible=stage>=3
-    if stage==1:
-        arr.rotation_degrees.z=2.5
-    elif stage==2:
-        arr.rotation_degrees.z=-6.0
-        arr.position=Vector3(0,-0.025,0.018)
-    elif stage==3:
-        arr.rotation_degrees.z=-17.0
-        arr.rotation_degrees.x=8.0
-        arr.position=Vector3(0,-0.09,0.060)
-        head.rotation_degrees.z=3.0
-    elif stage==4:
-        # Visual destruction: array partly hangs from its damaged central
-        # coupling, no game-space detached objects or collision mutations.
-        arr.rotation_degrees.z=-37.0
-        arr.rotation_degrees.x=16.0
-        arr.position=Vector3(0,-0.19,0.115)
-        head.rotation_degrees.z=7.0
     root.set_meta("tarvoka_g15_v5_visual_damage",stage)
     return true
 
