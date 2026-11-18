@@ -6,6 +6,7 @@ on:
       - "tests/test_ai_coastal_matched_forensic_v386.gd"
       - ".github/workflows/ai-coastal-forensic-v386.yml"
       - "scripts/core/BasicAI.gd"
+      - "scripts/core/SupplyNavigation.gd"
   workflow_dispatch:
 
 jobs:
@@ -16,8 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         fog: ["false","true"]
+        first: [0,1]
     env:
       TARVOKA_V386_FOG: ${{ matrix.fog }}
+      TARVOKA_V386_FIRST: ${{ matrix.first }}
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Godot 4.3
@@ -27,7 +30,7 @@ jobs:
             https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
-      - name: Record first mirrored AI movement divergence under equal responder budget
+      - name: Require exact mirrored coastal games with 3-order opening for both factions
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=10s 1000s \
@@ -36,11 +39,11 @@ jobs:
             2>&1 | tee /tmp/coast-v386.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/coast-v386.log; then exit 1; fi
           grep -Fq 'PASS TARVOKA v386:' /tmp/coast-v386.log
-          test "$(grep -c '^COAST386_CAUSE ' /tmp/coast-v386.log)" -eq 1
+          test "$(grep -c '^COAST386_RESULT ' /tmp/coast-v386.log)" -eq 1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ai-v386-coast-fog${{ matrix.fog }}
+          name: ai-v386-coast-fog${{ matrix.fog }}-first${{ matrix.first }}
           path: /tmp/coast-v386.log
           if-no-files-found: ignore
           retention-days: 30
