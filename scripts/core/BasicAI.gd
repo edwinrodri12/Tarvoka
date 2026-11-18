@@ -306,6 +306,20 @@ static func _decide(state: Dictionary,
                     ally["moved"] = true
                     break
 
+    # Opt-in research only (v3.9.1): if BOTH factions have reached the
+    # relay score target but are still tied, a visible ENEMY-owned relay is
+    # a direct way to resolve the tie. Try one legal movement toward it
+    # BEFORE an unrelated city capture or a new recruitment, but AFTER
+    # lethal strikes, retreats, rearming and an immediate relay defense.
+    # Current game defaults NEVER enable this branch.
+    if bool(options.get("_ab_relay_tie_pressure_v391",false)) and \
+            _relay_tie_pressure_eligible(knowledge,faction):
+        var urgency: Dictionary = _advance_relay(state,knowledge,
+            friends,occupied,true)
+        if bool(urgency.get("valid",false)):
+            urgency["reason"] = "relay_tie_pressure"
+            return urgency
+
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
     var urban_action: Dictionary = _capture_urban_site(state, knowledge,
@@ -908,10 +922,34 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
     moved["destination"] = best_cell
     return moved
 
+# Research-only tie condition. Scores are public; relay OWNERS are
+# potentially fog-masked in observed_state. Never turn a hidden owner=-2
+# into a known enemy or change actual combat/scoring under the hood.
+static func _relay_tie_pressure_eligible(knowledge: Dictionary,
+        faction: int) -> bool:
+    if faction not in [0,1] or not knowledge.get("control") is Dictionary:
+        return false
+    var control: Dictionary = knowledge["control"]
+    if not bool(control.get("round_scoring",false)):
+        return false
+    if not control.get("scores") is Array or control["scores"].size() != 2:
+        return false
+    var scores: Array = control["scores"]
+    var target: int = int(control.get("target",5))
+    if int(scores[0]) != int(scores[1]) or int(scores[0]) < target:
+        return false
+    for relay in control.get("nodes",[]):
+        if relay is Dictionary and int(relay.get("owner",-2)) == 1-faction:
+            return true
+    return false
+
 # Objective AI: non-omniscient weighted path to the exact relay tile.
 # The world map outside explored vision is masked in `knowledge`, and
 # enemy-held nodes outside line-of-sight carry owner=-2 (unknown).
-static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Array, occupied: Array[Vector2i]) -> Dictionary:
+# only_known_enemy=True is opted in ONLY by the tied-score pressure trial.
+static func _advance_relay(state: Dictionary, knowledge: Dictionary,
+        friends: Array, occupied: Array[Vector2i],
+        only_known_enemy: bool = false) -> Dictionary:
     var idle := {"valid": false}
     if not knowledge.get("control") is Dictionary:
         return idle
@@ -923,10 +961,22 @@ static func _advance_relay(state: Dictionary, knowledge: Dictionary, friends: Ar
     for unit in friends:
         if bool(unit.get("moved", false)) or Domains.domain(unit) != Domains.GROUND:
             continue
+        if only_known_enemy:
+            # A hard-won friendly relay must not be abandoned to break
+            # a stalemate elsewhere. Urgency may use another ground unit.
+            var holding := false
+            for owned in knowledge["control"]["nodes"]:
+                if int(owned.get("owner",-2)) == faction and \
+                        owned["pos"] == unit["pos"]:
+                    holding = true
+                    break
+            if holding:
+                continue
         var blocked: Array[Vector2i] = _blocked_for(knowledge, unit)
         var reachable: Dictionary = _reachable_for(knowledge, unit)
         for relay in knowledge["control"]["nodes"]:
-            if int(relay["owner"]) == faction:
+            if int(relay["owner"]) == faction or \
+                    (only_known_enemy and int(relay["owner"]) != 1-faction):
                 continue
             var target: Vector2i = relay["pos"]
             if target in blocked:
