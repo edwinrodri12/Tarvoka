@@ -8,6 +8,7 @@ const V53=preload("res://scripts/ui/G13MaterialRealismV53.gd")
 const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const V55=preload("res://scripts/ui/G13ExteriorMicrofinishV55.gd")
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 var errors:int=0
 var faction_paints:Dictionary={}
 
@@ -31,6 +32,9 @@ func _run()->void:
             continue
         # V59 purposefully boosts enamel and sculpted rubber, so remove
         # its live layer before checking that V55 was color-preserving.
+        if bool(hero.get_meta(V60.FLAG,false)):
+            assert_ok(V60.show_finish(hero,false),
+                "V60 hidden during historical V55 QA")
         if bool(hero.get_meta(V59.FLAG,false)):
             assert_ok(V59.show_finish(hero,false),
                 "must expose historic V55 under current V59 PBR finish")
@@ -139,6 +143,9 @@ func _run()->void:
         if bool(hero.get_meta(V59.FLAG,false)):
             assert_ok(V59.show_finish(hero,true),
                 "V59 premium rubber and glass must be restored after V55 QA")
+        if bool(hero.get_meta(V60.FLAG,false)):
+            assert_ok(V60.show_finish(hero,true),
+                "restore V60 after V55 history")
         hero.free()
         var tactical:=Models.build("aa_mobile",faction,true,8)
         assert_ok(tactical!=null,"LOD8 must still build")
