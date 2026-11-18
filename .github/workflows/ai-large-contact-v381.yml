@@ -1,0 +1,79 @@
+name: TARVOKA v381 40x30 prolonged contact and city capture
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_large_contact_v381.gd"
+      - "tests/aggregate_ai_large_contact_v381.py"
+      - ".github/workflows/ai-large-contact-v381.yml"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/CoordinatedFireV34.gd"
+      - "scripts/core/RelayControl.gd"
+      - "scripts/core/UrbanEconomy.gd"
+      - "scripts/core/Visibility.gd"
+  workflow_dispatch:
+
+jobs:
+  long_large_map:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 48
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V381_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V381_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify 24 real half-turns for two starters and both reflected mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2750s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_large_contact_v381.gd \
+            2>&1 | tee /tmp/large-contact-v381.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|ORDER379_DIVERGENCE ' /tmp/large-contact-v381.log; then
+            exit 1
+          fi
+          grep -Fq 'PASS TARVOKA v381: 24-half-turn 40x30 contact progression' /tmp/large-contact-v381.log
+          test "$(grep -c '^CONTACT381_RESULT ' /tmp/large-contact-v381.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v381-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/large-contact-v381.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [long_large_map]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v381-seed*
+          path: .ci-v381-logs
+          merge-multiple: false
+      - name: Require 8 complete terrain/fog shards, 16 original sessions and 16 mirrors
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_large_contact_v381.py .ci-v381-logs
+          cat reports/ai_v381_large_contact.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v381-contact-analysis
+          path: reports/ai_v381_large_contact.*
+          if-no-files-found: ignore
+          retention-days: 30
