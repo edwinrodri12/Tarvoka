@@ -11,6 +11,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+  # City art fixes can be published independently of unrelated unfinished
+  # unit QA. The working public Studio is restored without alteration.
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cities-v10-main-pages.yml
 
 # This is a MANUAL ART PREVIEW WEB EXPORT, not gameplay QA, stress test,
 # APK build, model approval or an upload of a mockup/image.
@@ -40,7 +47,7 @@ jobs:
           name: github-pages
           path: previous-pages
           repository: edwinrodri12/Tarvoka
-          run-id: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || 44155601190 }}
+          run-id: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || 44369773660 }}
           github-token: ${{ github.token }}
       - name: Expand existing published site without losing other 3D viewers
         shell: bash
