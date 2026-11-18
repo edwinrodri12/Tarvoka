@@ -144,7 +144,7 @@ def main():
     }
     out = pathlib.Path("reports")
     out.mkdir(exist_ok=True)
-    (out/"ai_v366_opening_limits.json").write_text(
+    (out/"ai_v366_opening_budgets.json").write_text(
         json.dumps(summary,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     md = ["# TARVOKA — límite de apertura con relés simétricos al sur",
           "",
@@ -177,7 +177,7 @@ def main():
        "- El orden del cribado es exploratorio; depende de mapas y escenarios utilizados.",
        ""])
     report = "\n".join(md)
-    (out/"ai_v366_opening_limits.md").write_text(report,encoding="utf-8")
+    (out/"ai_v366_opening_budgets.md").write_text(report,encoding="utf-8")
     print("OPEN366_ALL "+json.dumps(summary,separators=(",",":"),ensure_ascii=False))
     print(report)
     print("PASS AI opening v366 aggregate: 128 unique games and cap3/unlimited controls reproduced")
