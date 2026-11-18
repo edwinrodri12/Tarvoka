@@ -1,4 +1,4 @@
-"""Build an isolated Godot 4.3 project with only civilian city art resources.
+"""Build an isolated Godot 4.3 project with native direct-viewport city art.
 
 The unified military studio uses a separately assembled super-class and cannot
 be imported directly from the raw art branch. This is for visual review only.
@@ -11,7 +11,7 @@ repo = Path.cwd()
 sandbox = repo / "build" / "city-v49-sandbox"
 sandbox.mkdir(parents=True, exist_ok=True)
 queue = [
-    "scripts/ui/CivilianCityVisualProofV44.gd",
+    "scripts/ui/CivilianCityVisualProofV50.gd",
     "scenes/CivilianCityDesignStudioV43.tscn",
 ]
 reference = re.compile(r"res://([A-Za-z0-9_./@-]+\.(?:gd|tscn|tres|gdshader|png|jpg|jpeg|svg|webp))")
