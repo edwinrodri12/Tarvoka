@@ -7,7 +7,7 @@ class_name TarvokaCivilianCityStudioAdapter
 # Native Godot meshes; no iframes, external links or screenshot proxies.
 const Cities=preload("res://scripts/ui/CivilianCityTacticalLOD4.gd")
 const CityBase=preload("res://scripts/ui/CivilianCity3DV1.gd")
-const CityMaterials=preload("res://scripts/ui/CivilianCityArchitecturalPolishV29.gd")
+const CityMaterials=preload("res://scripts/ui/CivilianCityTierProportionsV30.gd")
 const CityStyle=preload("res://scripts/ui/VisualStyle.gd")
 
 var civilian_city_controls: VBoxContainer
@@ -27,19 +27,19 @@ func _ready() -> void:
     if building_picker.item_count!=CITY_BUILDING_INDEX:
         push_error("TARVOKA Edificios: cambió el catálogo, evitar sobrescritura")
         return
-    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V29")
+    building_picker.add_item("Ciudades civiles · Villa / Ciudad / Metrópoli · V30")
     building_picker.set_item_metadata(CITY_BUILDING_INDEX,"civilian_city")
     _install_city_options()
     _refresh_unified_studio_navigation()
 
 func _install_city_options() -> void:
     civilian_city_controls=VBoxContainer.new()
-    civilian_city_controls.name="Edificios_Ciudades_Civiles_V29"
+    civilian_city_controls.name="Edificios_Ciudades_Civiles_V30"
     civilian_city_controls.add_theme_constant_override("separation",6)
     civilian_city_controls.visible=false
     building_controls.add_child(civilian_city_controls)
     _title(civilian_city_controls,
-        "CIUDAD CIVIL · V29 · MODELO 3D EN DISEÑO",14)
+        "CIUDAD CIVIL · V30 · MODELO 3D EN DISEÑO",14)
     _title(civilian_city_controls,
         "Elige Villa, Ciudad o Metrópoli; visualiza 5 etapas de daño.",12)
     civilian_city_tier=OptionButton.new()
@@ -52,7 +52,7 @@ func _install_city_options() -> void:
     civilian_city_tier.item_selected.connect(_on_city_option)
     civilian_city_controls.add_child(civilian_city_tier)
     var tier_shortcuts:=HFlowContainer.new()
-    tier_shortcuts.name="Ciudades_V29_Comparar_Escalas"
+    tier_shortcuts.name="Ciudades_V30_Comparar_Escalas"
     civilian_city_controls.add_child(tier_shortcuts)
     for data in [["VILLA",0],["CIUDAD",1],["METRÓPOLI",2]]:
         var shortcut:=Button.new()
@@ -99,7 +99,9 @@ func _install_city_options() -> void:
         ["V27 PORTALES",19],["V27 PASAJES",20],["V27 PLAZA",21],
         ["V28 NORTE",22],["V28 SUR",23],["V28 ESTE",24],["V28 OESTE",25],
         ["V29 UNIONES",26],["V29 D2 CUBIERTA",27],
-        ["V29 D3 INTERIOR",28],["V29 D4 RESTOS",29]
+        ["V29 D3 INTERIOR",28],["V29 D4 RESTOS",29],
+        ["V30 VILLA",30],["V30 CIUDAD",31],["V30 METRO",32],
+        ["V30 D2",33],["V30 D4",34]
     ]:
         var b:=Button.new()
         b.text=str(data[0])
@@ -115,7 +117,7 @@ func _install_city_options() -> void:
             Callable(self,"_city_orbit").bind(float(config[1])))
         views.add_child(rotate_button)
     civilian_city_hint=_title(civilian_city_controls,
-        "ARTE V29 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
+        "ARTE V30 · SOLO VISUAL · Sin modificaciones de jugabilidad",12)
     civilian_city_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
 func _city_choose_tier(index: int) -> void:
@@ -132,20 +134,22 @@ func _on_city_option(_index: int) -> void:
 func _city_camera_preset(index: int) -> void:
     if civilian_city_tier==null:
         return
-    _city_view=clampi(index,0,29)
+    _city_view=clampi(index,0,34)
+    if _city_view in [30,31,32]:
+        civilian_city_tier.select(_city_view-30)
     if civilian_city_damage!=null:
-        if _city_view in [10,13,16,27]:
+        if _city_view in [10,13,16,27,33]:
             civilian_city_damage.select(2)
         elif _city_view==18:
             civilian_city_damage.select(1)
-        elif _city_view==26:
+        elif _city_view in [26,30,31,32]:
             civilian_city_damage.select(0)
         elif _city_view in [3,11,14,28]:
             civilian_city_damage.select(3)
-        elif _city_view in [12,15,29]:
+        elif _city_view in [12,15,29,34]:
             civilian_city_damage.select(4)
     _yaw=35.0 if _city_view==0 else 0.0
-    _zoom=1.45 if _city_view in [1,4,5,9] else 1.23 if _city_view in [19,20,21,22,23,24,25,26,27,28,29] else 1.05
+    _zoom=1.45 if _city_view in [1,4,5,9] else 1.23 if _city_view in [19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34] else 1.05
     if _role=="civilian_city":
         _display_civilian_city()
 
@@ -201,10 +205,10 @@ func _display_civilian_city() -> void:
     var lod: int=civilian_city_lod.selected
     model_root=Cities.build_tactical(level,faction,damage,lod)
     if model_root==null:
-        push_error("Ciudad V29: no fue posible construir mallas de Godot")
+        push_error("Ciudad V30: no fue posible construir mallas de Godot")
         return
     preview.add_child(model_root)
-    model_root.name="EDIFICIO_CIUDAD_CIVIL_V29_N%d_D%d" % [level,damage]
+    model_root.name="EDIFICIO_CIUDAD_CIVIL_V30_N%d_D%d" % [level,damage]
     model_root.rotation_degrees.y=_yaw
     if hq_ground!=null:
         hq_ground.visible=false
@@ -219,7 +223,7 @@ func _display_civilian_city() -> void:
     _update_details()
     _refresh_unified_studio_navigation()
     if studio_overview_label!=null:
-        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V29 · EN DISEÑO"
+        studio_overview_label.text="EDIFICIOS · CIUDAD CIVIL V30 · EN DISEÑO"
 
 func _update_camera() -> void:
     if _role=="civilian_city":
@@ -236,6 +240,8 @@ func _update_camera() -> void:
             11.9 if _city_view in [22,23,24,25] else
             9.6 if _city_view in [26,27] else
             10.5 if _city_view in [28,29] else
+            14.5 if _city_view in [30,31,32] else
+            10.8 if _city_view in [33,34] else
             10.0 if _city_view in [14,15] else
             8.2 if _city_view==6 else 10.0 if _city_view==7 else
             13.0 if _city_view==8 else 24.0)
@@ -255,6 +261,9 @@ func _update_camera() -> void:
             47.0 if _city_view==27 else
             130.0 if _city_view==28 else
             -117.0 if _city_view==29 else
+            36.0 if _city_view in [30,31,32] else
+            -33.0 if _city_view==33 else
+            133.0 if _city_view==34 else
             128.0 if _city_view==14 else
             90.0 if _city_view==4 else -90.0 if _city_view==9 else 180.0)
         var elevation: float=deg_to_rad(
@@ -270,6 +279,9 @@ func _update_camera() -> void:
             56.0 if _city_view==27 else
             48.0 if _city_view==28 else
             36.0 if _city_view==29 else
+            51.0 if _city_view in [30,31,32] else
+            58.0 if _city_view==33 else
+            36.0 if _city_view==34 else
             43.0 if _city_view==14 else 50.0 if _city_view==15 else
             31.0 if _city_view in [1,4,5,9] else 45.0)
         var distance: float=33.0
@@ -309,6 +321,12 @@ func _update_camera() -> void:
             aim=Vector3(4.63,0.80,3.62)
         elif _city_view==29:
             aim=Vector3(4.63,0.18,3.62)
+        elif _city_view in [30,31,32]:
+            aim=Vector3(4.63,roof_height*0.74,3.62)
+        elif _city_view==33:
+            aim=Vector3(4.63,roof_height*0.85,3.62)
+        elif _city_view==34:
+            aim=Vector3(4.63,0.18,3.62)
         camera.position=aim+Vector3(
             sin(angle)*cos(elevation)*distance,
             sin(elevation)*distance,
@@ -326,9 +344,9 @@ func _update_details() -> void:
             "Piedra y ladrillo" if tier==2 else "Vidrio y aluminio")
         if detail_label!=null:
             detail_label.text=(
-                "CIUDAD CIVIL V29 · %s · %d mallas · %d remates pulidos" %
+                "CIUDAD CIVIL V30 · %s · %d mallas · %d perfiles ajustados" %
                 [identity,Cities.drawable_count(model_root),
-                    int(model_root.get_meta("city_v29_polished_meshes",0))])
+                    int(model_root.get_meta("city_v30_tuned_silhouette_meshes",0))])
         if status_label!=null:
             status_label.text=(
                 "%s · daño %d/4 · facción %s · ARTE EN DISEÑO" %
