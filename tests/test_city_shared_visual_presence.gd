@@ -118,6 +118,13 @@ func _run() -> void:
         "Quick-view camera did not synchronize the grouped selectors")
     assert(studio.model_root!=null and studio.camera.current,
         "City camera switching lost the live Godot viewport")
+    var same_model: Node3D=studio.model_root
+    studio._city_camera_preset(4)
+    assert(studio.model_root==same_model,
+        "Camera-only city preset must not rebuild entire V43 model in browser")
+    studio._city_camera_preset(5)
+    assert(studio.model_root==same_model,
+        "Rear camera must reuse real procedural city meshes")
     for tier in [0,1,2]:
         studio.civilian_city_tier.select(tier)
         studio.civilian_city_tier.item_selected.emit(tier)
