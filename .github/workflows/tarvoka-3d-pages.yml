@@ -452,19 +452,19 @@ jobs:
       # into this one Web export (never commit the unfinished model to main).
       # Add cities to the REAL EDIFICIOS OptionButton inside Godot, not to a
       # floating HTML link that opens a separate site.
-      - name: Check out editable V25 civilian city sculpture for unified buildings panel
+      - name: Check out editable V26 civilian city sculpture for unified buildings panel
         uses: actions/checkout@v4
         with:
           ref: art/cities-v8-rear-facades-rooftops-20261117
-          path: city-v25-unified-source
+          path: city-v26-unified-source
           persist-credentials: false
-      - name: Add V25 native city to the existing unified EDIFICIOS picker
+      - name: Add V26 native city to the existing unified EDIFICIOS picker
         shell: bash
         run: |
           set -euo pipefail
-          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityArchitectureV8 CivilianCityFinishV9 CivilianCityGroundFrontV10 CivilianCityStructuralRuinsV11 CivilianCityDamageFinishV12 CivilianCityCohesionV13 CivilianCitySilhouetteV14 CivilianCityIdentityV15 CivilianCityMaterialJointsV16 CivilianCityRearFinishV17 CivilianCitySideJointsV18 CivilianCityUrbanCohesionV19 CivilianCityExteriorFinishV20 CivilianCityArchitecturalDetailV21 CivilianCityCohesionV22 CivilianCitySilhouetteV23 CivilianCityStructuralContactsV24 CivilianCitySurfaceContinuityV25 CivilianCityStudioAdapter; do
-            test -s "city-v25-unified-source/scripts/ui/$name.gd"
-            cp "city-v25-unified-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityArchitectureV8 CivilianCityFinishV9 CivilianCityGroundFrontV10 CivilianCityStructuralRuinsV11 CivilianCityDamageFinishV12 CivilianCityCohesionV13 CivilianCitySilhouetteV14 CivilianCityIdentityV15 CivilianCityMaterialJointsV16 CivilianCityRearFinishV17 CivilianCitySideJointsV18 CivilianCityUrbanCohesionV19 CivilianCityExteriorFinishV20 CivilianCityArchitecturalDetailV21 CivilianCityCohesionV22 CivilianCitySilhouetteV23 CivilianCityStructuralContactsV24 CivilianCitySurfaceContinuityV25 CivilianCityWeatherFinishV26 CivilianCityStudioAdapter; do
+            test -s "city-v26-unified-source/scripts/ui/$name.gd"
+            cp "city-v26-unified-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
           test -s scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/CivilianCityStudioAdapter.gd
@@ -505,7 +505,7 @@ jobs:
           tank.write_text(source,encoding="utf-8")
           print("Default unified G09 selection uses approved V31/V32 model")
           PY
-          rm -rf city-v25-unified-source
+          rm -rf city-v26-unified-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
