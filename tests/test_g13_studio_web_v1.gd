@@ -9,6 +9,7 @@ const G13V45=preload("res://scripts/ui/G13CabServiceFinishV45.gd")
 const G13V46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G13V47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const G13V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
+const G13V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -151,6 +152,28 @@ func _run()->void:
         _check(new_cab!=null and new_turret!=null and new_roof!=null,
             "G13 V48 closed cab/turret/roof shapes remain real 3D nodes")
         if new_cab!=null and new_turret!=null and new_roof!=null:
+            _check(bool(model.get_meta(G13V49.FLAG,false)),
+                "G13 V49 six-to-eight-ring visual refinement installed")
+            _check(int(model.get_meta(
+                "tarvoka_g13_v49_new_draw_nodes",-1))==0,
+                "V49 must reshape native meshes with zero extra draw calls")
+            var v49_cab:Mesh=new_cab.mesh
+            var v49_turret:Mesh=new_turret.mesh
+            var v49_roof:Mesh=new_roof.mesh
+            _check(v49_cab is ArrayMesh and
+                v49_cab.get_faces().size()==128*3,
+                "V49 window shoulder loft has eight complete rings")
+            _check(v49_turret is ArrayMesh and
+                v49_turret.get_faces().size()==128*3,
+                "V49 turret waist has eight complete rings")
+            _check(v49_roof is ArrayMesh and
+                v49_roof.get_faces().size()==80*3,
+                "V49 roof has five sealed structural rings")
+            studio.call("_g13_v49_compare",false)
+            _check(new_cab.mesh!=v49_cab and
+                new_turret.mesh!=v49_turret and
+                new_roof.mesh!=v49_roof,
+                "V49 compare swaps real cab, turret, roof to V48")
             var revised_cab:Mesh=new_cab.mesh
             var revised_turret:Mesh=new_turret.mesh
             var revised_roof:Mesh=new_roof.mesh
@@ -179,6 +202,14 @@ func _run()->void:
                 "V48 comparison restores genuine sculpt without duplicates")
             _check(badge!=null and absf(badge.position.x-0.525)<0.001,
                 "V48 compare restores faction badge position")
+            studio.call("_g13_v49_compare",true)
+            _check(new_cab.mesh==v49_cab and
+                new_turret.mesh==v49_turret and
+                new_roof.mesh==v49_roof,
+                "V49 comparison reopens its genuine shell meshes")
+            _check(new_cab.material_override is StandardMaterial3D,
+                "V49 must retain the V47 PBR materials")
+
         studio.call("_g13_demo_v1","scan",0.80)
         var radar:=model.find_child(G13.RADAR,true,false) as Node3D
         _check(radar!=null and absf(radar.rotation_degrees.y)>1.0,
@@ -220,11 +251,15 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V48.FLAG,false)),
         "G13 V48 sculpt must also replace tactical cab and turret volumes")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V49.FLAG,false)),
+        "G13 V49 window/turret seamless lofts also active in LOD8")
     if g13_tactical!=null:
         var tactical_cab:=g13_tactical.find_child(
             "G13_SealedCab",true,false) as MeshInstance3D
-        _check(tactical_cab!=null and tactical_cab.mesh is ArrayMesh,
-            "G13 V48 tactical cab has actual closed beveled mesh")
+        _check(tactical_cab!=null and tactical_cab.mesh is ArrayMesh and
+            tactical_cab.mesh.get_faces().size()==128*3,
+            "G13 V49 tactical cab has eight-ring closed beveled mesh")
 
     studio.call("_g13_show_tactical_lod",13)
     await process_frame
@@ -239,5 +274,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR and V48 major cab/turret sculpt on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
