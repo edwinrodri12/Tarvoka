@@ -11,6 +11,7 @@ on:
       - "scripts/ui/G13RubberSculptV54.gd"
       - "scripts/ui/G13ExteriorMicrofinishV55.gd"
       - "scripts/ui/G13MechanicalJointFinishV56.gd"
+      - "scripts/ui/G13TacticalMountReadabilityV57.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -135,6 +136,8 @@ on:
       - "tests/test_g13_v55_visual_capture.gd"
       - "tests/test_g13_v56_mechanical_joints.gd"
       - "tests/test_g13_v56_visual_capture.gd"
+      - "tests/test_g13_v57_tactical_mounts.gd"
+      - "tests/test_g13_v57_visual_capture.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -283,6 +286,10 @@ jobs:
           cp hq-android-v15/tests/test_g13_v56_mechanical_joints.gd tests/test_g13_v56_mechanical_joints.gd
           test -s hq-android-v15/tests/test_g13_v56_visual_capture.gd
           cp hq-android-v15/tests/test_g13_v56_visual_capture.gd tests/test_g13_v56_visual_capture.gd
+          test -s hq-android-v15/tests/test_g13_v57_tactical_mounts.gd
+          cp hq-android-v15/tests/test_g13_v57_tactical_mounts.gd tests/test_g13_v57_tactical_mounts.gd
+          test -s hq-android-v15/tests/test_g13_v57_visual_capture.gd
+          cp hq-android-v15/tests/test_g13_v57_visual_capture.gd tests/test_g13_v57_visual_capture.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1075,6 +1082,32 @@ jobs:
             echo "G13 V56 real suspension and turret coupling failed"; exit 1
           fi
           grep -F 'PASS G13 V56 MECHANICAL JOINTS:' /tmp/g13-v56-joints.log
+          # V57 real structural anchoring with measurable tactical
+          # readability at cost of ONE instanced LOD8 GPU draw.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v57_tactical_mounts.gd \
+            2>&1 | tee /tmp/g13-v57-brackets.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v57-brackets.log; then
+            echo "G13 V57 single-draw tactical mechanical brackets failed"; exit 1
+          fi
+          grep -F 'PASS G13 V57 TACTICAL MOUNTS:' /tmp/g13-v57-brackets.log
+          # V57: real 3D visibility at normal tactical 4.7m scale.
+          # Independent pixel-difference QA remains a strict native gate
+          # in the V57 workflow, while capture failure on Pages must NOT
+          # bypass other units' unrelated signed-off release gates.
+          if [[ -s tests/test_g13_v57_visual_capture.gd ]]; then
+            if timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+                /tmp/Godot_v4.3-stable_linux.x86_64 \
+                --rendering-method gl_compatibility --audio-driver Dummy --path . \
+                --script res://tests/test_g13_v57_visual_capture.gd \
+                2>&1 | tee /tmp/g13-v57-pages-screenshot.log; then
+              grep -F 'PASS G13 V57 REAL TACTICAL VISIBILITY:' /tmp/g13-v57-pages-screenshot.log || echo '::warning::G13 V57 tactical visual comparison missing pass signature'
+            else
+              echo '::warning::V57 native tactical screenshot validation unavailable during combined publish'
+            fi
+          fi
           # V56: native 12-frame suspension and turret connection proof.
           if [[ -s tests/test_g13_v56_visual_capture.gd ]]; then
             if timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
