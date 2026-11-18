@@ -786,7 +786,7 @@ func _install_heli_controls() -> void:
     heli_controls.name="A01_HelicopteroAtaque_V2_Studio"
     heli_controls.add_theme_constant_override("separation",8)
     column.add_child(heli_controls)
-    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.8 · HERROJES DE RAÍZ DE PALA",14)
+    _title(heli_controls,"HELICÓPTERO HAT-29 · V14.8 · HERRAJES DE RAÍZ DE PALA",14)
     _add_paired(heli_controls,"Vuelo y rotores",func(): _heli_play("move"),
         "Ráfaga frontal",func(): _heli_play("attack"))
     _add_paired(heli_controls,"Impactos de bala",func(): _heli_play("hit_bullet"),
