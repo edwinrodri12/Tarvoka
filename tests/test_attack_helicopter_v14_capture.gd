@@ -9,6 +9,7 @@ const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
+const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -194,6 +195,24 @@ func _run() -> void:
     cam.position=Vector3(-0.56,2.80,-0.72)
     cam.look_at(orbit_model.to_global(Vector3(-0.16,2.07,-0.36)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_8_pasadores_superior.png"))
+    _check(Anchors149.has_model(orbit_model),
+        "V14.9 ground-contact blade anchors available on original rotor")
+    # 360-degree technical inspection: eight azimuths at two distinct
+    # elevations on the SAME live native model and existing V1 rotor rig.
+    for elevation in range(2):
+        for azimuth in range(8):
+            var theta: float=TAU*float(azimuth)/8.0
+            var height: float=2.17 if elevation==0 else 2.88
+            cam.position=Vector3(1.55*sin(theta),height,1.55*cos(theta))
+            cam.look_at(orbit_model.to_global(Vector3(0,2.01,-0.14)),Vector3.UP)
+            await _save(vp,folder.path_join(
+                "hat29_v14_9_rotor_360_e%d_a%02d.png" % [elevation,azimuth]))
+    cam.position=Vector3(-0.74,2.34,-0.65)
+    cam.look_at(orbit_model.to_global(Vector3(-0.098,2.01,-0.23)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_9_asiento_bieleta.png"))
+    cam.position=Vector3(0.74,2.34,-0.70)
+    cam.look_at(orbit_model.to_global(Vector3(0.108,2.02,-0.42)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_9_asiento_amortiguador.png"))
     orbit_model.queue_free()
     await process_frame
 
@@ -295,10 +314,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==45,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers, 4 V14.7 and 2 V14.8 macro frames")
+    _check(count==63,"45 previous helicopter frames and 18 V14.9 rotor inspection captures")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 45 native Godot PNGs including two V14.8 blade pitch-control hinge closeups")
+        print("PASS HAT29 V14 CAPTURE: 63 native Godot PNGs including 360-degree V14.9 rotor views at 2 elevations and both anchored footplate macros")
         quit(0)
