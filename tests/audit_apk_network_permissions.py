@@ -51,20 +51,20 @@ def self_test() -> None:
     assert PACKAGE_LINE.search("package: com.example.tarvoka")
     assert not PACKAGE_LINE.search("package: ")
     assert not PACKAGE_LINE.search("garbled output")
-    assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
+    assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET\'\nuses-permission: name=\'android.permission.CAMERA\'") == {"android.permission.INTERNET"}
     assert forbidden_permissions("uses-permission: name=\'android.permission.INTERNET_EXTRA\'") == set()
     assert len(PERMISSION_PREFIX.findall("uses-permission: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-23: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_PREFIX.findall("  uses-permission-sdk-m: name=android.permission.INTERNET")) == 1
     assert len(PERMISSION_LINE.findall("uses-permission: name=android.permission.INTERNET")) == 0
-    valid = "package: name='com.example.tarvoka'\\nuses-permission: name='android.permission.CAMERA'"
+    valid = "package: name='com.example.tarvoka'\nuses-permission: name='android.permission.CAMERA'"
     assert audit_dump(valid) == set()
-    blocked = "package: name='com.example.tarvoka'\\nuses-permission-sdk-m: name='android.permission.INTERNET'"
+    blocked = "package: name='com.example.tarvoka'\nuses-permission-sdk-m: name='android.permission.INTERNET'"
     assert audit_dump(blocked) == {"android.permission.INTERNET"}
     for malformed in (
         "uses-permission: name='android.permission.CAMERA'",
-        "package: name='com.example.tarvoka'\\nuses-permission: name=android.permission.INTERNET",
-        "package: name='com.example.tarvoka'\\nuses-permission-sdk-m: name=",
+        "package: name='com.example.tarvoka'\nuses-permission: name=android.permission.INTERNET",
+        "package: name='com.example.tarvoka'\nuses-permission-sdk-m: name=",
     ):
         try:
             audit_dump(malformed)
