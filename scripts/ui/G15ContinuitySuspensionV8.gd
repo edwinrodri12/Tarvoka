@@ -286,7 +286,7 @@ static func apply(root:Node3D,paint:Color)->bool:
                     out_top,out_bottom,0.018,dark,10)
                 _rod(suspension,"G15_V8_GapUpperBrace_"+suffix,
                     Vector3(s*0.790,0.768,z+0.286),
-                    out_top,0.025,steel,10)
+                    out_top,0.025,satin,10)
                 _rod(suspension,"G15_V8_GapLowerBrace_"+suffix,
                     Vector3(s*0.785,0.406,z+0.295),
                     out_bottom,0.026,dark,10)
