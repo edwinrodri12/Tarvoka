@@ -15,6 +15,7 @@ const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
 const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
+const Contact1410=preload("res://scripts/ui/AttackHelicopterRotorContactV1410.gd")
 var failures: int=0
 var images: int=0
 
@@ -268,6 +269,34 @@ func _run() -> void:
     _check(studio.get("_heli_focus_local")==Vector3(0.108,2.02,-0.42)
         and not bool(studio.get("_heli_mast_view_active_v145")),
         "V14.9 hydraulic footplate macro uses unchanged studio camera rig")
+    studio.call("_heli_mobile_home")
+    _check(Contact1410.has_model(model),
+        "V14.10 native bevel surfaces are in the same live Studio model")
+    var v1410_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.10:"):
+            v1410_buttons+=1
+    _check(v1410_buttons==2,
+        "V14.10 closeup controls appear in existing advanced Details tab")
+    studio.call("_heli_inspect_focus",307.0,20.0,4.35,
+        Vector3(-0.094,2.02,-0.28))
+    _check(studio.get("_heli_focus_local")==Vector3(-0.094,2.02,-0.28)
+        and model.get_instance_id()==original_id,
+        "V14.10 bevelled seat macro does not rebuild aircraft")
+    studio.call("_heli_inspect_focus",53.0,22.0,4.28,
+        Vector3(0.106,2.02,-0.42))
+    _check(studio.get("_heli_focus_local")==Vector3(0.106,2.02,-0.42),
+        "V14.10 bolt contact camera targets real right-side blade seat")
+    studio.call("_heli_toggle_v1410")
+    var comparison_plate: MeshInstance3D=model.find_child(
+        "A01V149_AsientoPasoInterior_0",true,false) as MeshInstance3D
+    _check(comparison_plate!=null and comparison_plate.mesh is BoxMesh
+        and model.get_instance_id()==original_id,
+        "V14.10 Studio compare shows genuine V14.9 BoxMesh with same live pivot")
+    studio.call("_heli_toggle_v1410")
+    _check(comparison_plate.mesh is ArrayMesh
+        and model.get_instance_id()==original_id,
+        "V14.10 Studio comparison restores true bevelled plate, not screenshot")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
