@@ -59,12 +59,12 @@ func _inspect_model(studio: Control, lod: int) -> bool:
     if lod == 13:
         var turret := model.find_child(
             "G13_V10_ChamferedTurretShell", true, false) as MeshInstance3D
-        var roof := model.find_child(
-            "G13_V11_ArmoredRoof", true, false) as MeshInstance3D
-        _check(turret != null and turret.mesh.get_faces().size() == 128 * 3,
+        _check(turret != null and turret.mesh is ArrayMesh and
+            turret.mesh.get_faces().size() == 128 * 3,
             "V51 real turret eight-ring silhouette unavailable")
-        _check(roof != null and roof.mesh.get_faces().size() == 80 * 3,
-            "V51 real five-ring roof silhouette unavailable")
+        _check(roof != null and roof.mesh is ArrayMesh and
+            roof.mesh.get_faces().size() == 112 * 3,
+            "V51 actual seven-ring native roof unavailable")
     _check(bool(model.get_meta("tarvoka_g13_v1_high_detail", lod == 13)) ==
         (lod == 13), "incorrect G13 detail tier")
     var mesh := model.find_child(FENDER, true, false) as MultiMeshInstance3D
