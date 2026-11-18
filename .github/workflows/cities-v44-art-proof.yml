@@ -141,6 +141,76 @@ jobs:
           (folder/"index.html").write_text(page,encoding="utf-8")
           PY
 
+      - name: Montar comparativas 3D con las capturas reales disponibles
+        if: always()
+        shell: bash
+        run: |
+          python3 -m pip install -q --disable-pip-version-check Pillow || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("build/city-v44-evidence")
+          root.mkdir(parents=True,exist_ok=True)
+          try:
+              from PIL import Image, ImageDraw
+          except ImportError:
+              (root/"contact-sheet-status.txt").write_text(
+                  "Pillow unavailable: individual PNG files and index.html remain available",
+                  encoding="utf-8")
+              raise SystemExit(0)
+          entries=[]
+          for tier in ("Villa","Ciudad","Metropoli"):
+              for damage in range(5):
+                  for suffix in (("",) if damage not in (0,2,4) else ("","_reverse")):
+                      entries.append((tier,damage,suffix))
+          # Contact sheet is an arrangement of genuine engine screenshots,
+          # never an illustration or a synthetic model preview.
+          cell_w,cell_h=390,250
+          sheet=Image.new("RGB",(cell_w*4,cell_h*6),(18,30,40))
+          draw=ImageDraw.Draw(sheet)
+          for i,(tier,damage,suffix) in enumerate(entries):
+              x=(i%4)*cell_w
+              y=(i//4)*cell_h
+              filename=f"{tier}_D{damage}{suffix}.png"
+              draw.text((x+10,y+5),f"{tier} | D{damage} | {'POSTERIOR' if suffix else 'PRINCIPAL'}",
+                        fill=(245,220,163))
+              path=root/filename
+              if not path.exists():
+                  draw.text((x+14,y+70),"SIN CAPTURA - REVISAR LOGS",fill=(239,140,122))
+                  continue
+              try:
+                  with Image.open(path) as frame:
+                      frame=frame.convert("RGB")
+                      frame.thumbnail((cell_w-18,cell_h-40))
+                      sheet.paste(frame,(x+(cell_w-frame.width)//2,y+25))
+              except (OSError,ValueError):
+                  draw.text((x+14,y+70),"PNG INVALIDO",fill=(239,140,122))
+          sheet.save(root/"comparativa-24-vistas.png")
+          # Three level-specific sheets, easier to inspect at full size.
+          for tindex,tier in enumerate(("Villa","Ciudad","Metropoli")):
+              out=Image.new("RGB",(cell_w*3,cell_h*3),(18,30,40))
+              d=ImageDraw.Draw(out)
+              group=[(dd,ss) for name,dd,ss in entries if name==tier]
+              for k,(damage,suffix) in enumerate(group):
+                  x=(k%3)*cell_w
+                  y=(k//3)*cell_h
+                  d.text((x+10,y+5),f"{tier} D{damage} {'POSTERIOR' if suffix else 'PRINCIPAL'}",
+                         fill=(245,220,163))
+                  pic=root/f"{tier}_D{damage}{suffix}.png"
+                  if pic.is_file():
+                      try:
+                          with Image.open(pic) as frame:
+                              frame=frame.convert("RGB")
+                              frame.thumbnail((cell_w-18,cell_h-40))
+                              out.paste(frame,(x+(cell_w-frame.width)//2,y+25))
+                      except (OSError,ValueError):
+                          d.text((x+14,y+70),"PNG INVALIDO",fill=(239,140,122))
+                  else:
+                      d.text((x+14,y+70),"SIN CAPTURA",fill=(239,140,122))
+              out.save(root/f"comparativa-{tier.lower()}.png")
+          print("V47: montage created from actual Godot images; no artificial rendering")
+          PY
+
       - name: Mostrar resumen de 24 vistas y errores en GitHub Actions
         if: always()
         shell: bash
@@ -179,6 +249,8 @@ jobs:
                   print("| Modelo | Daño | Cámara | Imagen válida | Alertas geométricas | Alertas artísticas |")
                   print("|---|---|---|---|---:|---:|")
                   for img in data.get("screenshots",[]):
+                      if img.get("framing_warning"):
+                          print(f'**POSIBLE ERROR DE ENCUADRE:** {img.get("tier")} D{img.get("damage")} / {img.get("camera")} (centro {float(img.get("center_coverage",0)):.1%})')
                       print(f'| {img.get("tier","?")} | D{img.get("damage","?")} | '
                             f'{img.get("camera","?")} | '
                             f'{"Sí" if img.get("nonempty") else "No"} | '
