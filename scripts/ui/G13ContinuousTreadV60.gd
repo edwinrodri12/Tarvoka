@@ -157,7 +157,11 @@ static func apply(model:Node3D)->bool:
     if tire==null or tire.multimesh==null or (
             tire.multimesh.instance_count!=4):
         return false
-    if pads==null or pads.multimesh==null or (
+    # The lightweight LOD8 has no legacy V7 pad node at all: its
+    # continuous 48-lug band is baked directly into the rotating tire.
+    if high and pads==null:
+        return false
+    if pads!=null and (pads.multimesh==null or
             pads.multimesh.instance_count!=32):
         return false
     var old_mesh:Mesh=tire.multimesh.mesh
@@ -169,17 +173,19 @@ static func apply(model:Node3D)->bool:
     model.set_meta(SAVED,{
         "old_mesh":old_mesh,
         "new_mesh":real_mesh,
-        "pads_visible":pads.visible
+        "pads_visible":(pads.visible if pads!=null else false)
     })
     tire.multimesh.mesh=real_mesh
-    pads.visible=false
+    if pads!=null:
+        pads.visible=false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_g13_v60_lugs_per_wheel",
         HERO_LUGS if high else MOBILE_LUGS)
     model.set_meta("tarvoka_g13_v60_closed_smooth_sidewall_ribs",
         2*(SIDE_RIBS_HERO if high else SIDE_RIBS_MOBILE))
     model.set_meta("tarvoka_g13_v60_original_wheel_instances",4)
-    model.set_meta("tarvoka_g13_v60_saved_visible_gpu_batch",1)
+    model.set_meta("tarvoka_g13_v60_saved_visible_gpu_batch",
+        1 if pads!=null else 0)
     model.set_meta("tarvoka_g13_v60_added_draw_nodes",DRAW_NODES_ADDED)
     model.set_meta("tarvoka_g13_v60_faction_glass_unchanged",true)
     model.set_meta("tarvoka_g13_v60_no_gameplay_changes",true)
@@ -193,10 +199,11 @@ static func show_finish(model:Node3D,enabled:bool)->bool:
         return false
     var tire:=model.find_child(TIRES,true,false) as MultiMeshInstance3D
     var pads:=model.find_child(PADS,true,false) as MultiMeshInstance3D
-    if tire==null or tire.multimesh==null or pads==null:
+    if tire==null or tire.multimesh==null:
         return false
     tire.multimesh.mesh=saved["new_mesh"] if enabled else saved["old_mesh"]
-    pads.visible=false if enabled else bool(
-        saved.get("pads_visible",true))
+    if pads!=null:
+        pads.visible=false if enabled else bool(
+            saved.get("pads_visible",true))
     model.set_meta("tarvoka_g13_v60_preview_enabled",enabled)
     return true
