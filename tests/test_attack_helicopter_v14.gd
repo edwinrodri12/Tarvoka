@@ -11,6 +11,7 @@ const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148 = preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
+const Anchors149 = preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -40,6 +41,8 @@ func _run() -> void:
             "V14.7 blade damper finishing never changes battle Android LOD10")
         _check(not Hinges148.has_model(tactical) and not Hinges148.apply(tactical),
             "V14.8 mechanical pitch hinges are never built on Android battle LOD10")
+        _check(not Anchors149.has_model(tactical) and not Anchors149.apply(tactical),
+            "V14.9 physical blade seats and links are excluded from battle LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -285,6 +288,33 @@ func _run() -> void:
         var count148: int=Models.inspect_meshes(model)
         _check(Hinges148.apply(model) and Models.inspect_meshes(model)==count148,
             "V14.8 articulation install is idempotent on all eight factions")
+        _check(Anchors149.has_model(model),
+            "V14.9 root braces are present in each of eight HAT-29 liveries")
+        for i in range(4):
+            var pivot149: Node3D=model.find_child(
+                V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+            var root149: Node3D=model.find_child(
+                Anchors149.ROOT+str(i),true,false) as Node3D
+            _check(root149!=null and root149.get_parent()==pivot149,
+                "V14.9 all footplates are children of moving original rotor pivot")
+            var interior149: MeshInstance3D=model.find_child(
+                "A01V149_AsientoPasoInterior_%d" % i,true,false) as MeshInstance3D
+            var far149: MeshInstance3D=model.find_child(
+                "A01V149_AsientoHidraulicoExterior_%d" % i,true,false) as MeshInstance3D
+            var link149: MeshInstance3D=model.find_child(
+                "A01V149_PuenteHidraulicoInterior_%d" % i,true,false) as MeshInstance3D
+            _check(interior149!=null and interior149.mesh is BoxMesh
+                and absf(interior149.position.y-0.038)<0.001,
+                "V14.9 inboard footplate intersects real V3 blade root at y 0.035")
+            _check(far149!=null and far149.mesh is BoxMesh
+                and far149.position.y<0.030,
+                "V14.9 far hydraulic footplate intersects 0.037 thick rotor blade")
+            _check(link149!=null and link149.mesh is CylinderMesh
+                and link149.get_parent()==root149,
+                "V14.9 bridge is actual 3D geometry fixed to original pivot")
+        var count149: int=Models.inspect_meshes(model)
+        _check(Anchors149.apply(model) and Models.inspect_meshes(model)==count149,
+            "V14.9 anchoring is idempotent and does not duplicate hardware")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
@@ -367,5 +397,5 @@ func _run() -> void:
         push_error("HAT29 V14: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14.8: 8 muted factions, rotor pitch hinges, existing hydraulic dampers and V13 damage; no battle LOD changes")
+        print("PASS HAT29 V14.9: 8 muted factions, blade-root seats, native rotor pitch hinges and V13 damage; no battle LOD changes")
         quit(0)
