@@ -38,6 +38,16 @@ func _capture_all() -> void:
             studio._lod.select(0)
             studio._faction.select(0)
             studio._rebuild()
+            # Match the camera to the tier/ruin height. Otherwise the
+            # inherited camera can frame the sky instead of the city.
+            var max_height: float=(
+                2.31 if tier==0 else 6.51 if tier==1 else 10.71)
+            var focus_height: float=(
+                max_height*0.42 if damage<=2 else 0.85)
+            var visual_distance: float=(
+                29.0 if tier==0 else 33.0 if tier==1 else 38.0)
+            studio._view_v19(Vector3(0.0,focus_height,0.0),
+                38.0,46.0,visual_distance)
             await process_frame
             await RenderingServer.frame_post_draw
             await process_frame
