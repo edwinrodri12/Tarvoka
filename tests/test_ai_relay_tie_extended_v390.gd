@@ -112,7 +112,7 @@ static func _inspect(frames: Array, first: int) -> Dictionary:
         if phase % 2 == 1:
             assert(int(state["winner"]) == Relay.score_winner(state["control"]) or
                 int(state["winner"]) in [0,1]) # Combat may also win.
-            var tied: bool = int(scores[0]) >= control_target and
+            var tied: bool = int(scores[0]) >= control_target and \
                 int(scores[0]) == int(scores[1])
             if tied:
                 if first_tied_at_target < 0:
@@ -123,7 +123,7 @@ static func _inspect(frames: Array, first: int) -> Dictionary:
                 current_streak_tie = 0
             var ahead: int = 0 if int(scores[0]) > int(scores[1]) else (
                 1 if int(scores[1]) > int(scores[0]) else -1)
-            if first_solo_above_target < 0 and ahead != -1 and
+            if first_solo_above_target < 0 and ahead != -1 and \
                     int(scores[ahead]) >= control_target:
                 first_solo_above_target = round
             for side in [0,1]:
@@ -155,8 +155,6 @@ static func _inspect(frames: Array, first: int) -> Dictionary:
     assert(not at_horizon_32.is_empty())
     assert(at_horizon_32["relay_scores"] == [9,9])
     assert(int(at_horizon_32["winner"]) == -1)
-    assert(at_horizon_32["relay_holdings"] == _holdings(
-        frames[0]["state"]["control"]["nodes"]) or true)
     assert(rounds.size() == int(steps.size() / 2))
     assert(steps.size() % 2 == 0)
     assert(rounds.size() >= 16)
