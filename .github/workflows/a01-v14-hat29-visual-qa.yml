@@ -7,6 +7,7 @@ on:
       - 'scripts/ui/AttackHelicopterCombatFXV14.gd'
       - 'scripts/ui/AttackHelicopterNightStudioV144.gd'
       - 'scripts/ui/AttackHelicopterRotorMountV145.gd'
+      - 'scripts/ui/AttackHelicopterRotorDampersV146.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_attack_helicopter_v14.gd'
@@ -56,7 +57,7 @@ jobs:
             echo "Godot V14 regression failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14:' /tmp/hat29-v14.log
-      - name: Generate thirty-five native HAT-29 orbit, night, combat and rotor macro captures
+      - name: Generate thirty-nine native HAT-29 orbit, combat and rotor damping captures
         shell: bash
         run: |
           set -euo pipefail
@@ -72,12 +73,12 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 35
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 39
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-5-godot-35-frames
+          name: tarvoka-hat29-v14-6-godot-39-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
