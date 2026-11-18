@@ -15,6 +15,7 @@ const Roots1411=preload("res://scripts/ui/AttackHelicopterBladeRootsV1411.gd")
 const Seam1412=preload("res://scripts/ui/AttackHelicopterBladeSeamV1412.gd")
 const Hub1413=preload("res://scripts/ui/AttackHelicopterHubCrownV1413.gd")
 const HubWreck1414=preload("res://scripts/ui/AttackHelicopterHubWreckV1414.gd")
+const HubCut1415=preload("res://scripts/ui/AttackHelicopterHubCutFinishV1415.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -337,6 +338,26 @@ func _run() -> void:
     cam.position=Vector3(3.15,2.15,-3.05)
     cam.look_at(spin_model.to_global(Vector3(0,0.18,-0.19)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_14_fragmentos_en_suelo.png"))
+    # V14.15: two physically identical close-up comparison pairs,
+    # on the real V13 world-space wreck. Only the actual ArrayMesh
+    # fracture closure changes; light/camera and parent nodes stay fixed.
+    var wreck_group: Node3D=spin_model.find_child(
+        V13.WRECK,true,false) as Node3D
+    _check(wreck_group!=null and HubCut1415.has_model(spin_model),
+        "V14.15 two native metallic fracture caps exist on the V13 wreck")
+    for fragment_index in range(2):
+        var focus: Vector3=wreck_group.to_global(
+            HubWreck1414.REST_POINTS[fragment_index])
+        cam.position=focus+Vector3(0.58,0.51,-0.68)
+        cam.look_at(focus+Vector3(0,0.015,0),Vector3.UP)
+        _check(HubCut1415.set_enabled(spin_model,false),
+            "V14.15 comparison uses original open-edged V14.14 ArrayMesh")
+        await _save(vp,folder.path_join(
+            "hat29_v14_15_corte_%d_abierto.png" % fragment_index))
+        _check(HubCut1415.set_enabled(spin_model,true),
+            "V14.15 comparison closes actual exposed metallic end faces")
+        await _save(vp,folder.path_join(
+            "hat29_v14_15_corte_%d_soldado.png" % fragment_index))
     V13.restore(spin_model)
     _check(V13.set_stage(spin_model,0)
         and Hub1413.has_model(spin_model),
@@ -442,10 +463,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==89,"85 previous actual Godot frames plus 4 V14.14 broken-hub crash comparisons")
+    _check(count==93,"89 native earlier frames plus four V14.15 real open/closed rotor-hub cut comparisons")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 89 native Godot PNGs including V14.14 authentic two-sector broken hub, same-camera V13 wreck comparison and crash/ground")
+        print("PASS HAT29 V14 CAPTURE: 93 native Godot PNGs including V14.15 sealed metallic fracture faces in 4 same-camera native V14.14 comparisons")
         quit(0)
