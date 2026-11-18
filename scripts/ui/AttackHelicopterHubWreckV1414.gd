@@ -12,12 +12,12 @@ const FLAG="tarvoka_a01_hub_wreck_v1414"
 const ENABLED="tarvoka_a01_hub_wreck_v1414_enabled"
 const PREFIX="A01V1414_FragmentoCoronaRotor_"
 const REST_POINTS=[
-    Vector3(0.49,0.130,-0.42),
-    Vector3(-0.58,0.138,-0.36)
+    Vector3(1.36,0.132,-0.25),
+    Vector3(-1.43,0.135,-0.11)
 ]
 const REST_ROTATIONS=[
-    Vector3(69.0,22.0,-17.0),
-    Vector3(-62.0,108.0,28.0)
+    Vector3(14.0,22.0,-11.0),
+    Vector3(27.0,108.0,18.0)
 ]
 const CUT_SECTORS=[
     Vector2(0.05,2.65),
@@ -25,8 +25,8 @@ const CUT_SECTORS=[
 ]
 const LAUNCH=Vector3(0,2.068,0.08)
 const BEFORE_TRIANGLES=616
-const COLOR_DARK=Color("#434c51")
-const COLOR_EXPOSED=Color("#69747a")
+const COLOR_DARK=Color("#5a656a")
+const COLOR_EXPOSED=Color("#828a8a")
 
 static func _node(parent: Node3D,name: String) -> Node3D:
     return parent.find_child(name,true,false) as Node3D
