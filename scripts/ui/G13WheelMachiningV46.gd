@@ -151,7 +151,7 @@ static func pose(root: Node3D, wheel_angle: float) -> bool:
             for i in range(GROOVES_PER_WHEEL):
                 var a: float = (
                     wheel_angle + TAU * float(i) / float(GROOVES_PER_WHEEL))
-                var position := c + Vector3(sign * 0.139,
+                var position := c + Vector3(sign * 0.122,
                     cos(a) * 0.266, sin(a) * 0.266)
                 var orientation := Basis(Vector3.RIGHT, a)
                 grooves.multimesh.set_instance_transform(
