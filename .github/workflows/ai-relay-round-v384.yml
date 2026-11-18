@@ -1,0 +1,40 @@
+name: TARVOKA v384 relay settlement neutrality
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_relay_round_parity_v384.gd"
+      - ".github/workflows/ai-relay-round-v384.yml"
+      - "scripts/core/RelayControl.gd"
+  workflow_dispatch:
+
+jobs:
+  relay_scoring_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare four fixed ownership patterns with either opening player on four terrain templates
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 420s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_round_parity_v384.gd \
+            2>&1 | tee /tmp/relay-v384.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/relay-v384.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v384:' /tmp/relay-v384.log
+          test "$(grep -c '^RELAY384_RESULT ' /tmp/relay-v384.log)" -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v384-relay-neutrality
+          path: /tmp/relay-v384.log
+          if-no-files-found: ignore
+          retention-days: 30
