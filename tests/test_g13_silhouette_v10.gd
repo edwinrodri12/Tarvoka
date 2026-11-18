@@ -4,6 +4,8 @@ extends SceneTree
 # all 8 official faction colors and dual-domain visual attacks.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Finish=preload("res://scripts/ui/G13SilhouetteV10.gd")
+const V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
+const V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G13=preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 var errors:=0
 
@@ -24,6 +26,14 @@ func _run()->void:
             continue
         check(bool(model.get_meta(Finish.FLAG,false)),
             "V10 shell finishing installed")
+        # The default hero mesh was remodeled again by V48/V49/V51.
+        # Restore V10's own stored ArrayMesh for the 2026 V10 contour
+        # regression; checking the current V49 shape against V10 vertices
+        # falsely reports narrowed shoulders on every approved faction.
+        check(V49.show_finish(model,false),
+            "V49 historical comparison must load V48 shell first")
+        check(V48.show_finish(model,false),
+            "V48 comparison must restore the actual V10 silhouette")
         var cab:=model.find_child("G13_SealedCab",true,false) as MeshInstance3D
         var turret:=model.find_child("G13_RemoteWeaponHousing",true,false) as MeshInstance3D
         var cab_shell:=model.find_child(Finish.CAB,true,false) as MeshInstance3D
@@ -87,6 +97,9 @@ func _run()->void:
                     mid_x=maxf(mid_x,absf(v.x))
             check(top_x<mid_x-0.04,
                 "upper cabin narrowed relative to its shoulders")
+        # Restore all current geometry before verifying animation and LOD.
+        check(V49.show_finish(model,true),
+            "restore latest V49+ silhouette after V10 geometry inspection")
         var enamel:=model.find_child("G13_SideEnamel_1",true,false) as MeshInstance3D
         check(enamel!=null,"G13 retains exterior faction enamel")
         if enamel!=null:
