@@ -128,7 +128,8 @@ jobs:
           screenshots=list(folder.glob('*.png'))
           print('## TARVOKA V45 — Arte de ciudades')
           print('')
-          print(f'Commit: `{str("${{ github.sha }}")}`')
+          import os
+          print(f'Commit: `{os.environ.get("GITHUB_SHA","desconocido")}`')
           print(f'Capturas encontradas: **{len(screenshots)}/24**.')
           try:
               data=json.loads((folder/'manifest.json').read_text(encoding='utf-8'))
