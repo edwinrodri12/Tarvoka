@@ -19,7 +19,7 @@ FORBIDDEN = {
     "android.permission.ACCESS_WIFI_STATE",
     "android.permission.CHANGE_WIFI_STATE",
 }
-PERMISSION_LINE = re.compile(r"^\s*(?:uses-permission|uses-permission-sdk-(?:23|m)):\s+name='([^'\r\n]+)'\s*$", re.MULTILINE)
+PERMISSION_LINE = re.compile(r"^\s*uses-permission(?:-sdk-(?:[0-9]+|m)):\s+name='([^'\r\n]+)'\s*$", re.MULTILINE)
 
 PERMISSION_PREFIX = re.compile(r"^\s*uses-permission(?:-sdk-[A-Za-z0-9_-]+)?:", re.MULTILINE)
 
