@@ -37,6 +37,17 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Exclude published-only shared Studio subclass from standalone G13 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Main deliberately does not hold CombinedArtStudioWeb.gd, which
+          # is assembled from separately signed-off branches on publication.
+          # This test renders the G13InspectionStudio native scene instead.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g13-v54-published-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g13-v54-published-studio/
+          fi
       - name: Import all real native 3D G13 resources
         shell: bash
         run: |
