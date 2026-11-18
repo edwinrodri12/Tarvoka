@@ -27,6 +27,31 @@ func _initialize() -> void:
         assert(switched["weather_cycle"]["remaining"] == 4)
         assert(switched["turn"] == 9)
 
+    # Forecast must match the public countdown, including rollover, without
+    # modifying the authoritative state or exposing a different next mode.
+    for mode in Weather.TYPES:
+        for ticks in [1, 2, 3, 4]:
+            var source := {"weather":mode,"weather_cycle":{"remaining":ticks},"turn":13}
+            var snapshot: Dictionary = source.duplicate(true)
+            var forecast: Dictionary = Weather.forecast(source)
+            assert(forecast["dynamic"] == true)
+            assert(forecast["current"] == mode)
+            assert(forecast["next"] == Weather.next_weather(mode))
+            assert(forecast["remaining"] == ticks)
+            assert(source == snapshot)
+            var advanced: Dictionary = Weather.advance_after_turn(source)
+            assert(advanced["weather"] == (Weather.next_weather(mode) if ticks == 1 else mode))
+            assert(advanced["weather_cycle"]["remaining"] == (4 if ticks == 1 else ticks - 1))
+            assert(source == snapshot)
+            assert(advanced["turn"] == 13)
+
+    # Legacy forecasts remain fixed and never advertise a future transition.
+    var fixed_forecast: Dictionary = Weather.forecast(legacy)
+    assert(fixed_forecast["dynamic"] == false)
+    assert(fixed_forecast["current"] == "rain")
+    assert(fixed_forecast["next"] == "")
+    assert(fixed_forecast["remaining"] == 0)
+
     # Malformed cycles must not mutate or advance weather.
     for invalid in [null, {}, {"remaining":0}, {"remaining":5}, {"remaining":"2"}, {"remaining":2,"extra":true}]:
         var state := {"weather":"snow","weather_cycle":invalid}
