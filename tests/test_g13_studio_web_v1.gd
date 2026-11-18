@@ -11,6 +11,7 @@ const G13V47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const G13V48=preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G13V49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
 const G13V50=preload("res://scripts/ui/G13GlazingFitV50.gd")
+const G13V51=preload("res://scripts/ui/G13CabRoofIntegrationV51.gd")
 const G11Audit=preload("res://scripts/ui/G11FinalAuditV33.gd")
 var errors: int=0
 
@@ -241,6 +242,35 @@ func _run()->void:
                     "V50 compare restores same real native glazing resources")
                 _check(front_glass.position.is_equal_approx(front_pos),
                     "V50 does not move original windshield/pivot")
+        _check(bool(model.get_meta(G13V51.FLAG,false)),
+            "G13 V51 must install in hero Godot 3D model")
+        _check(int(model.get_meta(
+            "tarvoka_g13_v51_new_draw_nodes",-1))==0,
+            "G13 V51 should reuse existing roof and brow draw nodes")
+        var roof_v51:=model.find_child(
+            "G13_V11_ArmoredRoof",true,false) as MeshInstance3D
+        var brow_v51:=model.find_child(
+            G13V51.BROW,true,false) as MeshInstance3D
+        _check(roof_v51!=null and brow_v51!=null,
+            "G13 V51 real roof and armored eyebrow must exist")
+        if roof_v51!=null and brow_v51!=null:
+            var roof_final:Mesh=roof_v51.mesh
+            var brow_final:Mesh=brow_v51.mesh
+            _check(roof_final is ArrayMesh and
+                roof_final.get_faces().size()==112*3,
+                "V51 roof must have seven fully closed structural rings")
+            _check(brow_final is ArrayMesh and
+                brow_final.get_faces().size()==32*3,
+                "V51 windshield eyebrow must remain fully closed")
+            studio.call("_g13_v51_compare",false)
+            _check(roof_v51.mesh!=roof_final and
+                brow_v51.mesh!=brow_final,
+                "V51 same-camera compare restores V50 roof and brow")
+            studio.call("_g13_v51_compare",true)
+            _check(roof_v51.mesh==roof_final and
+                brow_v51.mesh==brow_final,
+                "V51 compare must restore original native node resources")
+
 
 
         studio.call("_g13_demo_v1","scan",0.80)
@@ -290,6 +320,17 @@ func _run()->void:
     _check(g13_tactical!=null and bool(
         g13_tactical.get_meta(G13V50.FLAG,false)),
         "G13 V50 two bevelled front glazing meshes active in LOD8")
+    _check(g13_tactical!=null and bool(
+        g13_tactical.get_meta(G13V51.FLAG,false)),
+        "G13 V51 integrated roof and front brow must load in LOD8")
+    if g13_tactical!=null:
+        var tactical_roof_v51:=g13_tactical.find_child(
+            "G13_CabRoof",true,false) as MeshInstance3D
+        _check(tactical_roof_v51!=null and
+            tactical_roof_v51.mesh is ArrayMesh and
+            tactical_roof_v51.mesh.get_faces().size()==112*3,
+            "G13 V51 tactical roof uses native seven-ring 3D sculpt")
+
     if g13_tactical!=null:
         var tactical_cab:=g13_tactical.find_child(
             "G13_SealedCab",true,false) as MeshInstance3D
@@ -310,5 +351,5 @@ func _run()->void:
         push_error("G13 actual shared Studio UI regression FAILED: %d" % errors)
         quit(1)
         return
-    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 seated glazing on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
+    print("PASS G13 V1 LIVE STUDIO: ninth real model selectable, V44 faction armor, V45 cabin, spinning V46 4x4 wheels and V47 PBR, V48 major silhouette and V49 integrated glazing/turret lofts and V50 glazing and V51 integrated roof on both LODs, radar/dual-gun controls and approved G11 V33 preserved")
     quit(0)
