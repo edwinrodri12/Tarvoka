@@ -159,6 +159,9 @@ func _run()->void:
             _check(int(model.get_meta(
                 "tarvoka_g13_v49_new_draw_nodes",-1))==0,
                 "V49 must reshape native meshes with zero extra draw calls")
+            # The currently selected V51 roof must be restored to its
+            # precise V50/V49 resource before any historical V49/48 test.
+            studio.call("_g13_v51_compare",false)
             var v49_cab:Mesh=new_cab.mesh
             var v49_turret:Mesh=new_turret.mesh
             var v49_roof:Mesh=new_roof.mesh
@@ -254,6 +257,9 @@ func _run()->void:
         _check(roof_v51!=null and brow_v51!=null,
             "G13 V51 real roof and armored eyebrow must exist")
         if roof_v51!=null and brow_v51!=null:
+            # Earlier tests deliberately switched V51 off; restore it
+            # before testing its final seven-ring closed roof.
+            studio.call("_g13_v51_compare",true)
             var roof_final:Mesh=roof_v51.mesh
             var brow_final:Mesh=brow_v51.mesh
             _check(roof_final is ArrayMesh and
