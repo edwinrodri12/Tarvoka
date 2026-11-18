@@ -152,8 +152,13 @@ func _city_camera_preset(index: int) -> void:
         elif _city_view in [12,15,29,34]:
             civilian_city_damage.select(4)
     _yaw=35.0 if _city_view==0 else 0.0
-    _zoom=1.45 if _city_view in [1,4,5,9] else 1.23 if _city_view in [19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34] else
-        1.05 if _city_view in [35,36,37] else 1.05
+    # Preserve the V31 zoom tiers with ordinary Godot control flow.
+    # The previous multiline ternary ended after 'else' and failed to parse.
+    _zoom=1.05
+    if _city_view in [1,4,5,9]:
+        _zoom=1.45
+    elif _city_view in [19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34]:
+        _zoom=1.23
     if _role=="civilian_city":
         _display_civilian_city()
 
