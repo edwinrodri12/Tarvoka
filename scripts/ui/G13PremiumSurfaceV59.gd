@@ -231,7 +231,7 @@ static func _rubber_coat(source:StandardMaterial3D,
     coat.albedo_color=Color(
         "#24292a" if kind=="casing" else (
         "#292e30" if kind=="tread" else "#222628"))
-    coat.metallic=0.015
+    coat.metallic=0.0
     coat.roughness=(0.94 if kind=="tread" else 0.965)
     coat.clearcoat_enabled=false
     # The actual 3D lugs/ribs carry the shape; no glossy fake relief.
