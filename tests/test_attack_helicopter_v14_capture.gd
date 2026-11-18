@@ -133,10 +133,10 @@ func _run() -> void:
     # plus upper rotating crown at rest and in an actual rotor animation pose.
     _check(Mount.has_model(orbit_model),
         "V14.5 true rotor-transmission sculpture included in all hero captures")
-    cam.position=Vector3(1.35,2.44,-0.82)
+    cam.position=Vector3(1.18,1.56,-0.90)
     cam.look_at(orbit_model.to_global(Vector3(0,1.74,0.08)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_5_mastil_lateral.png"))
-    cam.position=Vector3(-1.32,2.40,1.05)
+    cam.position=Vector3(-1.35,1.51,0.92)
     cam.look_at(orbit_model.to_global(Vector3(0,1.74,0.08)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_5_mastil_posterior.png"))
     cam.position=Vector3(0.72,3.10,-0.52)
