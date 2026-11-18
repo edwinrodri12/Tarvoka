@@ -166,6 +166,10 @@ jobs:
           # actions/runs/44390576327; this code opens D0 in LOD1 and centers it.
           grep -F '_lod.select(1)' scripts/ui/CivilianCityDesignStudioV43.gd
           grep -F '_orient_camera()' scripts/ui/CivilianCityDesignStudioV43.gd
+          # Godot 4.3 WebGL single-threaded rendering bug: >1000
+          # MeshInstance3D objects cause a blank scene if threaded culling
+          # activates. Do not publish full LOD0 or metropolis without fix.
+          grep -Fx 'limits/spatial_indexer/threaded_cull_minimum_instances=1000000' project.godot
           test -s scenes/CivilianCityDesignStudioV43.tscn
           sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"|' project.godot
           grep -q 'run/main_scene="res://scenes/CivilianCityDesignStudioV43.tscn"' project.godot
