@@ -166,6 +166,29 @@ static func _pair(size: Vector2i, seed: int, fog: bool,
     # objectives, fog, position, ammo, costs, saves and relay scoring.
     var same: bool = game["frames"] == replay["frames"]
     if not same:
+        var first_delta: Dictionary = {"size":str(size),"seed":seed,
+            "first":first,"fog":fog,"count_original":game["frames"].size(),
+            "count_mirror":replay["frames"].size()}
+        for i in range(mini(game["frames"].size(),replay["frames"].size())):
+            var a: Dictionary = game["frames"][i]
+            var b: Dictionary = replay["frames"][i]
+            if a != b:
+                first_delta["frame"] = i
+                first_delta["phase"] = a.get("phase",-1)
+                first_delta["order"] = a.get("order",-1)
+                first_delta["tag_a"] = a.get("tag","")
+                first_delta["tag_b"] = b.get("tag","")
+                first_delta["decision_a"] = a.get("decision",{})
+                first_delta["decision_b"] = b.get("decision",{})
+                first_delta["field"] = Semantics.first_changed_key(
+                    a.get("state",{}),b.get("state",{}))
+                first_delta["summary_a"] = Semantics.short_state(a["state"])
+                first_delta["summary_b"] = Semantics.short_state(b["state"])
+                if first_delta["field"] == "ai_objectives":
+                    first_delta["objectives_a"] = a["state"].get("ai_objectives",{})
+                    first_delta["objectives_b"] = b["state"].get("ai_objectives",{})
+                break
+        print("ORDER379_DIVERGENCE " + JSON.stringify(first_delta))
         push_error("v379 mirrored action-state mismatch: %s seed %d first %d fog %s" %
             [str(size),seed,first,str(fog)])
     assert(same)
