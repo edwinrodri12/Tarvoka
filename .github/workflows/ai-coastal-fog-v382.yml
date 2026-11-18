@@ -1,0 +1,41 @@
+name: TARVOKA v382 coastal fog first divergence forensic
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_coastal_fog_forensic_v382.gd"
+      - ".github/workflows/ai-coastal-fog-v382.yml"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/SupplyNavigation.gd"
+  workflow_dispatch:
+
+jobs:
+  forensic_seed631:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Require both starter orders mirrored for all 24 half-turns on seed631 coastal fog
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1100s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_coastal_fog_forensic_v382.gd \
+            2>&1 | tee /tmp/coast-v382.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/coast-v382.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v382: seed631 40x30 fog two first-player orders' /tmp/coast-v382.log
+          test "$(grep -c '^COAST382_RESULT ' /tmp/coast-v382.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v382-forensic
+          path: /tmp/coast-v382.log
+          if-no-files-found: ignore
+          retention-days: 30
