@@ -31,6 +31,22 @@ func _capture(file_name:String)->void:
         check(pic.save_png(output)==OK,"saved actual frame "+file_name)
         images+=1
 
+func _pixel_difference(a_name:String,b_name:String)->int:
+    var a:Image=Image.load_from_file(ProjectSettings.globalize_path(
+        OUT.path_join(a_name+".png")))
+    var b:Image=Image.load_from_file(ProjectSettings.globalize_path(
+        OUT.path_join(b_name+".png")))
+    if a==null or b==null or a.get_size()!=b.get_size():
+        return -1
+    var differences:int=0
+    for y in range(0,a.get_height(),3):
+        for x in range(0,a.get_width(),3):
+            var p:Color=a.get_pixel(x,y)
+            var q:Color=b.get_pixel(x,y)
+            if absf(p.r-q.r)+absf(p.g-q.g)+absf(p.b-q.b)>0.13:
+                differences+=1
+    return differences
+
 func _run()->void:
     root.size=Vector2i(1024,768)
     check(DirAccess.make_dir_recursive_absolute(
@@ -147,6 +163,11 @@ func _run()->void:
                             "native destruction stage before capture")
                         await _capture("g15-f%02d-a%d-damage%d" % [
                             faction,view,stage])
+                    var stamp:String="g15-f%02d-a%d-damage" % [faction,view]
+                    check(_pixel_difference(stamp+"0",stamp+"2")>40,
+                        "moderate damage MUST be visible in real Godot pixels")
+                    check(_pixel_difference(stamp+"0",stamp+"4")>150,
+                        "catastrophic antenna failure MUST differ visibly")
                 world.remove_child(model)
                 model.free()
             else:
