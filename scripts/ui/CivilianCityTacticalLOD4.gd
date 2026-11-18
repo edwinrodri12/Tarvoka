@@ -27,6 +27,7 @@ const V23=preload("res://scripts/ui/CivilianCitySilhouetteV23.gd")
 const V24=preload("res://scripts/ui/CivilianCityStructuralContactsV24.gd")
 const V25=preload("res://scripts/ui/CivilianCitySurfaceContinuityV25.gd")
 const V26=preload("res://scripts/ui/CivilianCityWeatherFinishV26.gd")
+const V27=preload("res://scripts/ui/CivilianCityStreetInterfaceV27.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -218,7 +219,12 @@ static func _keep_medium(name: String) -> bool:
         "V25_AceroCortado_","V25_FibraMaderaRota_",
         "V25_CristalSueltoCimentacion_",
         # V26 small weathered chips are visible only at close zoom.
-        "V26_DesgasteRemate_","V26_SustratoCantoRoto_"]:
+        "V26_DesgasteRemate_","V26_SustratoCantoRoto_",
+        # V27 sidewalk expansion joints and surface chips close only.
+        "V27_JuntaDilatacionUmbral_","V27_UnionLosetaAcera_",
+        "V27_EncuentroAdoquinPasaje_","V27_LosetaCierrePlaza_",
+        "V27_JuntaRampaMunicipal_","V27_AdoquinDesportillado_",
+        "V27_MordidaZocalo_"]:
         if name.begins_with(prefix):
             return false
     return true
@@ -378,7 +384,12 @@ static func _keep_far(name: String) -> bool:
         # at battle distance; tiny erosion strips are omitted.
         "V26_TejaExpuestaRota_",
         "V26_CantoPisoDescascarado_",
-        "V26_DesgasteRestosBajos_"]:
+        "V26_DesgasteRestosBajos_",
+        # V27 large damaged street edges, not fine sidewalk grout.
+        "V27_EmpalmeAccesoColapsado_",
+        "V27_JuntaPasajeColapsado_",
+        "V27_BordePlazaQuebrado_",
+        "V27_AristaAccesoMunicipalRota_"]:
         if name.begins_with(prefix):
             return true
     return false
@@ -488,7 +499,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V26.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",26)
+    if not V27.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",27)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
