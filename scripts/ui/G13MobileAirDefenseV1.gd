@@ -8,6 +8,7 @@ const FLAG := "tarvoka_g13_mobile_aa_visual_v1"
 const V4 = preload("res://scripts/ui/G13GroundAirFinishV4.gd")
 const RadarFoldV29=preload("res://scripts/ui/G13FoldingRadarV29.gd")
 const WheelV7 = preload("res://scripts/ui/G13WheelFinishV7.gd")
+const WheelV46 = preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const BODY := "G13_Casco4x4"
 const TURRET := "G13_TorretaAzimut"
 const GUNS := "G13_ElevacionCanones"
@@ -103,6 +104,8 @@ static func _wheels_pose(root: Node3D,progress: float)->bool:
             n+=1
     if bool(root.get_meta(WheelV7.FLAG,false)):
         WheelV7.pose(root,spin)
+    if bool(root.get_meta(WheelV46.FLAG,false)):
+        WheelV46.pose(root,spin)
     return true
 
 static func build(root: Node3D,enamel: Color,high_detail: bool=true)->bool:
