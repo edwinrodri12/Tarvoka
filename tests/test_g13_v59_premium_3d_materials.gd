@@ -8,6 +8,7 @@ const V54=preload("res://scripts/ui/G13RubberSculptV54.gd")
 const V58=preload("res://scripts/ui/G13IsometricMechanicalFinishV58.gd")
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
+const V61=preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 var errors:int=0
 var official:Dictionary={}
 
@@ -34,6 +35,9 @@ func _run()->void:
             check(model!=null,"faction %d LOD%d G13 builds" % [faction,lod])
             if model==null:
                 continue
+            if bool(model.get_meta(V61.FLAG,false)):
+                check(V61.show_finish(model,false),
+                    "G13 V61 new hub must hide for historical V59 machined material")
             if bool(model.get_meta(V60.FLAG,false)):
                 check(V60.show_finish(model,false),
                     "V59 wheel test must expose true historical V59 mesh")
@@ -177,6 +181,9 @@ func _run()->void:
             if bool(model.get_meta(V60.FLAG,false)):
                 check(V60.show_finish(model,true),
                     "restore V60 continuous tread after historical V59")
+            if bool(model.get_meta(V61.FLAG,false)):
+                check(V61.show_finish(model,true),
+                    "G13 V61 open steel finish restored after V59 reference")
             model.free()
     check(official.size()==8,"ALL 8 official faction tints still distinct")
     if errors==0:
