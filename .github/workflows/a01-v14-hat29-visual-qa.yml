@@ -13,6 +13,7 @@ on:
       - 'scripts/ui/AttackHelicopterRotorAnchorsV149.gd'
       - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
+      - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_attack_helicopter_v9_studio.gd'
@@ -28,6 +29,7 @@ on:
       - 'scripts/ui/AttackHelicopterRotorAnchorsV149.gd'
       - 'scripts/ui/AttackHelicopterRotorContactV1410.gd'
       - 'scripts/ui/AttackHelicopterBladeRootsV1411.gd'
+      - 'scripts/ui/AttackHelicopterBladeSeamV1412.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_attack_helicopter_v14.gd'
       - 'tests/test_attack_helicopter_v14_capture.gd'
@@ -66,8 +68,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error|Assertion failed' /tmp/hat29-v14.log; then
             echo "Godot V14 regression failed"; exit 1
           fi
-          grep -F 'PASS HAT29 V14.11:' /tmp/hat29-v14.log
-      - name: Generate 71 real HAT-29 frames including V14.11 root sculpt and V3 comparison
+          grep -F 'PASS HAT29 V14.12:' /tmp/hat29-v14.log
+      - name: Generate 75 actual HAT-29 frames with swept V14.12 junction compare
         shell: bash
         run: |
           set -euo pipefail
@@ -83,12 +85,12 @@ jobs:
             echo "Godot V14 image capture failed"; exit 1
           fi
           grep -F 'PASS HAT29 V14 CAPTURE:' /tmp/hat29-v14-capture.log
-          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 71
+          test "$(find /tmp/hat29-v14-images -maxdepth 1 -name '*.png' | wc -l)" -eq 75
       - name: Upload actual Godot 3D screenshots of all factions and animation states
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-hat29-v14-11-godot-71-frames
+          name: tarvoka-hat29-v14-12-godot-75-frames
           path: |
             /tmp/hat29-v14-images/*.png
             /tmp/hat29-v14.log
