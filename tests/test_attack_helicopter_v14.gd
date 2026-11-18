@@ -10,6 +10,7 @@ const Night = preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 const Mount = preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers = preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147 = preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Root148 = preload("res://scripts/ui/AttackHelicopterBladeRootFinishV148.gd")
 const V1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const V3 = preload("res://scripts/ui/AttackHelicopterRotorV3.gd")
 var failures: int=0
@@ -37,6 +38,8 @@ func _run() -> void:
             "V14.6 rubber mast isolators and hydraulic damper meshes excluded from LOD10")
         _check(not Finish147.has_model(tactical) and not Finish147.apply(tactical),
             "V14.7 blade damper finishing never changes battle Android LOD10")
+        _check(not Root148.has_model(tactical) and not Root148.apply(tactical),
+            "V14.8 four blade-root hinge fastener sets are excluded from Android LOD10")
         tactical.free()
     var colors: Array[Color]=[]
     for faction in range(8):
@@ -257,10 +260,51 @@ func _run() -> void:
         var count147: int=Models.inspect_meshes(model)
         _check(Finish147.apply(model) and Models.inspect_meshes(model)==count147,
             "V14.7 is idempotent and keeps the approved existing rotor pivot")
+        # V14.8: all new plates, bolts and bands are physically attached
+        # to the ORIGINAL V3 four rotating blade pivots.
+        _check(Root148.has_model(model),"V14.8 blade-root fasteners installed for faction")
+        for i in range(4):
+            var original_arm: Node3D=model.find_child(
+                V3.LEGACY_ROTOR+str(i),true,false) as Node3D
+            var root148: Node3D=model.find_child(
+                Root148.ROOT+str(i),true,false) as Node3D
+            _check(root148!=null and original_arm!=null
+                and root148.get_parent()==original_arm,
+                "V14.8 four real hinge-plate groups follow original blade pivots")
+            var pin148: MeshInstance3D=model.find_child(
+                Root148.PIN+str(i),true,false) as MeshInstance3D
+            _check(pin148!=null and pin148.mesh is CylinderMesh
+                and (pin148.mesh as CylinderMesh).radial_segments==12,
+                "V14.8 transverse rotor hinge pins are real cylindrical mesh")
+            for side in [-1,1]:
+                var plate: MeshInstance3D=model.find_child(
+                    Root148.CHEEK+str(i)+"_"+str(side),true,false) as MeshInstance3D
+                var nut: MeshInstance3D=model.find_child(
+                    Root148.NUT+str(i)+"_"+str(side),true,false) as MeshInstance3D
+                _check(plate!=null and plate.mesh is BoxMesh
+                    and nut!=null and nut.mesh is CylinderMesh
+                    and (nut.mesh as CylinderMesh).radial_segments==6,
+                    "V14.8 twin yoke plates and two physical hexagonal retaining nuts")
+            for strap in range(2):
+                var band: MeshInstance3D=model.find_child(
+                    Root148.BAND+str(i)+"_"+str(strap),true,false) as MeshInstance3D
+                _check(band!=null and band.mesh is BoxMesh
+                    and band.get_parent()==root148,
+                    "V14.8 two alloy clamps stay attached to original airfoil root")
+            var older_pin: Node3D=model.find_child(
+                "A01V3_BisagraPaso_"+str(i),true,false) as Node3D
+            var damper: Node3D=model.find_child(
+                Dampers.DAMPER+str(i),true,false) as Node3D
+            _check(older_pin!=null and damper!=null
+                and damper.get_parent()==original_arm,
+                "V14.8 keeps V3 real hinge and V14.7 amortiguador unchanged")
+        var count148: int=Models.inspect_meshes(model)
+        _check(Root148.apply(model) and Models.inspect_meshes(model)==count148,
+            "V14.8 idempotence: no duplicate root hardware")
         _check(str(model.get_meta("a01_v14_coat_revision",""))=="muted_tactical_v14_3"
             and main_color.is_equal_approx(
                 (hull.material_override as StandardMaterial3D).albedo_color),
-            "V14.7 preserves original muted faction paint on every hull")
+            "V14.8 eight original muted-faction coats remain exactly unchanged")
         _check(Coat.apply(model,Models.faction_paint_color(faction))
             and FX.apply(model),
             "V14 coating and effect builders are idempotent")

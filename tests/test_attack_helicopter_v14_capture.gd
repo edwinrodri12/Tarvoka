@@ -8,6 +8,7 @@ const FX=preload("res://scripts/ui/AttackHelicopterCombatFXV14.gd")
 const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
+const Root148=preload("res://scripts/ui/AttackHelicopterBladeRootFinishV148.gd")
 const V1=preload("res://scripts/ui/AttackHelicopterV1.gd")
 const Night=preload("res://scripts/ui/AttackHelicopterNightStudioV144.gd")
 var count: int=0
@@ -185,6 +186,25 @@ func _run() -> void:
     cam.look_at(orbit_model.to_global(Vector3(0,2.04,0.13)),Vector3.UP)
     await _save(vp,folder.path_join("hat29_v14_7_amortiguadores_girando.png"))
     V1.restore(orbit_model)
+    # V14.8: four true Godot closeups of the actual rotating blade pivots,
+    # including fastener heads, clamps and crosspin without any added rotor.
+    _check(Root148.has_model(orbit_model),
+        "V14.8 four native blade-root fork/hardware groups are rendered")
+    cam.position=Vector3(0.76,2.36,-0.67)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.08,-0.16)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_articulacion_cruzada.png"))
+    cam.position=Vector3(0.34,2.79,-0.68)
+    cam.look_at(orbit_model.to_global(Vector3(0.03,2.06,-0.37)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_abrazaderas_superiores.png"))
+    cam.position=Vector3(-0.81,2.22,0.65)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.04,0.20)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_herrajes_opuestos.png"))
+    _check(V1.pose(orbit_model,"hover",0.38),
+        "V14.8 blade retaining nuts inherit original rotor V1 animation")
+    cam.position=Vector3(0.82,2.48,0.67)
+    cam.look_at(orbit_model.to_global(Vector3(0,2.05,0.06)),Vector3.UP)
+    await _save(vp,folder.path_join("hat29_v14_8_pasadores_girando.png"))
+    V1.restore(orbit_model)
     orbit_model.queue_free()
     await process_frame
 
@@ -286,10 +306,10 @@ func _run() -> void:
     V13.set_stage(model,0)
     FX.pose(model,"idle",0.0)
     await _save(vp,folder.path_join("hat29_v14_reparado.png"))
-    _check(count==43,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers and 4 new V14.7 macro frames")
+    _check(count==47,"8 faction, 6 combat, 11 orbit/belly, 6 night, 4 transmission, 4 dampers, 4 V14.7 and 4 V14.8 macro frames")
     if failures>0:
         push_error("HAT29 V14 CAPTURE: "+str(failures)+" failures")
         quit(1)
     else:
-        print("PASS HAT29 V14 CAPTURE: 43 native Godot PNGs with 8 factions, 6 combat FX, 11 orbit/belly, 6 night, 4 mast, 4 V14.6 dampers and 4 V14.7 closeups")
+        print("PASS HAT29 V14 CAPTURE: 47 native Godot PNGs with eight armies, six FX, 11 orbit/belly, six night, four mast, four dampers, four V14.7 and four V14.8 root macros")
         quit(0)
