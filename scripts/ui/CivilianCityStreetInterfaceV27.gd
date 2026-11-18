@@ -136,7 +136,7 @@ static func _building_threshold(stage: Node3D,tag: String,
     # Centered existing path remains open; a narrow, ground-level
     # material transition touches sidewalk but does not cross into road.
     _part(path,"V27_UnionLosetaAcera_"+tag,
-        Vector3(x,0.156,sidewalk+sign*0.065),
+        Vector3(x,0.111,sidewalk+sign*0.065),
         Vector3(0.72,0.025,0.075),
         CLAY if level==1 else MORTAR if level==2 else METAL,
         level,damage,"steel" if level==3 else "stone")
@@ -187,19 +187,19 @@ static func _civic_square_edge(stage: Node3D,
         var x: float=float(side)*1.45
         if damage>=3:
             _part(square,"V27_BordePlazaQuebrado_%d" % side,
-                Vector3(x,0.09,3.01),
+                Vector3(x,0.09,2.92),
                 Vector3(0.24,0.12,0.21),
                 RUBBLE if side==-1 else DUST,level,damage)
             continue
         for i in range(2):
             _part(square,
                 "V27_LosetaCierrePlaza_%d_%d" % [side,i],
-                Vector3(x+float(side)*0.045,0.121,
-                    2.92+float(i)*0.17),
+                Vector3(x+float(side)*0.045,0.090,
+                    2.77+float(i)*0.15),
                 Vector3(0.19,0.028,0.11),_stone(level),level,damage)
         if damage==2:
             _part(square,"V27_AdoquinDesportillado_%d" % side,
-                Vector3(x,0.132,3.06),
+                Vector3(x,0.106,2.94),
                 Vector3(0.21,0.045,0.19),
                 DUST,level,damage)
     square.set_meta("keeps_monument_clear",true)
@@ -218,7 +218,7 @@ static func _town_hall_approach(stage: Node3D,
                 Vector3(0.23,0.11,0.27),RUBBLE,level,damage)
             continue
         _part(hall,"V27_JuntaRampaMunicipal_%d" % side,
-            Vector3(sx,0.143,-1.39),
+            Vector3(sx,0.116,-1.39),
             Vector3(0.16,0.024,0.085),
             CLAY if level==1 else LIMESTONE if level==2 else PAVEMENT,
             level,damage)
