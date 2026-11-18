@@ -1,0 +1,88 @@
+name: TARVOKA v380 symmetric coordinated-fire target cap
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/CoordinatedFireV34.gd"
+      - "tests/test_symmetric_fire_target_cap_v380.gd"
+      - "tests/test_ai_initiative_counterfactual_v379.gd"
+      - ".github/workflows/ai-target-cap-v380.yml"
+  workflow_dispatch:
+
+jobs:
+  cap_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Require 11-enemy mirror-cap equality and a legal coordinated volley
+        run: |
+          set -euo pipefail
+          timeout 600s /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --path . \
+            --script res://tests/test_symmetric_fire_target_cap_v380.gd \
+            2>&1 | tee /tmp/cap-v380.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/cap-v380.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v380: mirror-safe high-population fire-team target cap' /tmp/cap-v380.log
+          test "$(grep -c '^FIRE380_RESULT ' /tmp/cap-v380.log)" -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v380-cap-contract
+          path: /tmp/cap-v380.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  reproduce_phase10:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - size: "24x18"
+            seed_index: "0"
+            fog: "false"
+          - size: "24x18"
+            seed_index: "0"
+            fog: "true"
+          - size: "10x8"
+            seed_index: "0"
+            fog: "false"
+    env:
+      TARVOKA_V379_SIZE: ${{ matrix.size }}
+      TARVOKA_V379_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V379_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Re-run 2 starter orders and their mirrors using official BasicAI
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1650s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_initiative_counterfactual_v379.gd \
+            2>&1 | tee /tmp/initiative-v380.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|ORDER379_DIVERGENCE ' /tmp/initiative-v380.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v379 initiative counterfactual:' /tmp/initiative-v380.log
+          test "$(grep -c '^ORDER379_RESULT ' /tmp/initiative-v380.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v380-initiative-${{ matrix.size }}-fog${{ matrix.fog }}
+          path: /tmp/initiative-v380.log
+          if-no-files-found: ignore
+          retention-days: 30
