@@ -14,6 +14,7 @@ const Mount=preload("res://scripts/ui/AttackHelicopterRotorMountV145.gd")
 const Dampers=preload("res://scripts/ui/AttackHelicopterRotorDampersV146.gd")
 const Finish147=preload("res://scripts/ui/AttackHelicopterDamperFinishV147.gd")
 const Hinges148=preload("res://scripts/ui/AttackHelicopterPitchHingesV148.gd")
+const Anchors149=preload("res://scripts/ui/AttackHelicopterRotorAnchorsV149.gd")
 var failures: int=0
 var images: int=0
 
@@ -248,6 +249,25 @@ func _run() -> void:
     _check(studio.get("_heli_focus_local")==Vector3(-0.16,2.07,-0.35)
         and not bool(studio.get("_heli_mast_view_active_v145")),
         "V14.8 link/pin macro returns normal camera mode")
+    studio.call("_heli_mobile_home")
+    _check(Anchors149.has_model(model),
+        "V14.9 real root saddles are built on the inspected HAT-29")
+    var v149_buttons: int=0
+    for option in advanced.find_children("*","Button",true,false):
+        if (option as Button).text.contains("V14.9:"):
+            v149_buttons+=1
+    _check(v149_buttons==2,
+        "V14.9 two footplate and hydraulic anchoring cameras in Details")
+    studio.call("_heli_inspect_focus",306.0,18.0,4.14,
+        Vector3(-0.098,2.01,-0.23))
+    _check(studio.get("_heli_focus_local")==Vector3(-0.098,2.01,-0.23)
+        and model.get_instance_id()==original_id,
+        "V14.9 left root seat macro retains current model instance")
+    studio.call("_heli_inspect_focus",50.0,18.0,4.12,
+        Vector3(0.108,2.02,-0.42))
+    _check(studio.get("_heli_focus_local")==Vector3(0.108,2.02,-0.42)
+        and not bool(studio.get("_heli_mast_view_active_v145")),
+        "V14.9 hydraulic footplate macro uses unchanged studio camera rig")
     studio.call("_heli_mobile_home")
     # V14.3 night mode controls the actual shared scene illumination,
     # never the faction materials, and restores all daylight values.
