@@ -32,12 +32,15 @@ const FIRST_RESPONSE_CAP := 3
 
 static func _play_equal_response(start: Dictionary, mirrored: bool,
         response_cap: int = FIRST_RESPONSE_CAP,
-        max_half_turns: int = MAX_HALF_TURNS) -> Dictionary:
+        max_half_turns: int = MAX_HALF_TURNS,
+        experimental_options: Dictionary = {}) -> Dictionary:
     assert(response_cap >= 1 and response_cap <= 8)
     # Opt-in longer forensic horizon only; all prior callers retain
     # the existing 32-half-turn observation window.
     assert(max_half_turns >= 2 and max_half_turns <= 96)
     var state: Dictionary = start.duplicate(true)
+    var ai_options: Dictionary = Study._configuration()
+    ai_options.merge(experimental_options,true)
     var first: int = int(state["faction"])
     var starting_credits: int = int(state["economy"]["credits"][1-first])
     var frames: Array = [Study._record(state,mirrored,-1,-1,"initial")]
@@ -61,7 +64,7 @@ static func _play_equal_response(start: Dictionary, mirrored: bool,
                     phase,orders,"equal_response_cap"))
                 break
             var original: Dictionary = state.duplicate(true)
-            var decision: Dictionary = AI.step(state,Study._configuration())
+            var decision: Dictionary = AI.step(state,ai_options)
             assert(state == original)
             if not bool(decision.get("valid",false)):
                 frames.append(Study._record(state,mirrored,phase,orders,"no_action"))
