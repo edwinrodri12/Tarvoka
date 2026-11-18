@@ -28,7 +28,10 @@ permissions:
   id-token: write
 
 concurrency:
-  group: tarvoka-public-studio-pages
+  # Protect the user-visible repaired V43 city release from the frequent
+  # automatic Studio builds that otherwise evict pending Pages deploys.
+  group: >-
+    ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release(city-v43):') && 'tarvoka-city-v43-fixed-webgl-release' || 'tarvoka-public-studio-pages' }}
   cancel-in-progress: false
 
 jobs:
