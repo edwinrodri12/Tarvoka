@@ -16,6 +16,7 @@ const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
 const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
@@ -999,6 +1000,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             if not G15EW.build(model,faction_paint_color(faction),
                     finish_enabled and art_level>=13):
                 return null
+            if not G15SculptV2.apply(model):
+                push_warning("G15 V2 curved 6x6 wheel arches and mast gussets not installed")
         "aa_mobile":
             # G13 V1 is an ART preview role only. It is deliberately NOT
             # registered as a playable BattleSession unit yet.
