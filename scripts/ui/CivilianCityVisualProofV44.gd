@@ -106,6 +106,10 @@ func _capture_all() -> void:
             var optics: Dictionary=_image_diagnostics(result)
             var review_v43: int=int(studio._model.get_meta(
                 "city_v43_issue_count",-1))
+            var geometry_messages: PackedStringArray=studio._model.get_meta(
+                "city_v42_visual_warnings",PackedStringArray())
+            var art_messages: PackedStringArray=studio._model.get_meta(
+                "city_v43_art_issues",PackedStringArray())
             var record: Dictionary={
                 "tier":variant,"damage":damage,
                 "png":"%s_D%d.png" % [variant,damage],
@@ -116,6 +120,8 @@ func _capture_all() -> void:
                 "nonempty":bool(optics["nonempty"]),
                 "v42_geometry_findings":material_warnings,
                 "v43_art_findings":review_v43,
+                "geometry_messages":"; ".join(geometry_messages),
+                "art_messages":"; ".join(art_messages),
                 "approved":false
             }
             records.append(record)
@@ -164,6 +170,8 @@ func _capture_all() -> void:
                             "nonempty":bool(secondary["nonempty"]),
                             "v42_geometry_findings":material_warnings,
                             "v43_art_findings":review_v43,
+                            "geometry_messages":"; ".join(geometry_messages),
+                            "art_messages":"; ".join(art_messages),
                             "approved":false
                         })
                         if not bool(secondary["nonempty"]):
