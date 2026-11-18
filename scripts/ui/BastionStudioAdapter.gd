@@ -77,6 +77,7 @@ const G13WheelV46=preload("res://scripts/ui/G13WheelMachiningV46.gd")
 const G13SurfaceV47=preload("res://scripts/ui/G13MaterialFinishV47.gd")
 const G13SculptV48=preload("res://scripts/ui/G13SculptFinishV48.gd")
 const G13SeamsV49=preload("res://scripts/ui/G13SeamlessSilhouetteV49.gd")
+const G13GlazingV50=preload("res://scripts/ui/G13GlazingFitV50.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -207,7 +208,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V49 · uniones de cabina y torreta")
+        role_picker.set_item_text(aa_index,"G13 · AA V50 · cristales biselados y uniones integradas")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.9")
@@ -750,7 +751,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "aa_mobile": label="G13 · Antiaéreo · V49 acabado de uniones 3D"
+            "aa_mobile": label="G13 · Antiaéreo · V50 cerramiento de cristales"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -1470,7 +1471,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V49 · TRANSICIONES ESCULPIDAS · 4×4 · 2 CAÑONES",14)
+        "G13 V50 · CRISTALES 3D Y ACABADO CABINA · 4×4 · 2 CAÑONES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -1492,7 +1493,7 @@ func _install_g13_controls() -> void:
         func(): _g13_v24_show_intake(),
         "V24 · Comparar frontal V23",
         func(): _g13_v23_show_lights(false))
-    _add_paired(g13_controls,"V49 · Ver modelo táctico LOD8",
+    _add_paired(g13_controls,"V50 · Ver modelo táctico LOD8",
         func(): _g13_show_tactical_lod(8),
         "V24 · Volver al detalle LOD13",
         func(): _g13_show_tactical_lod(13))
@@ -1516,6 +1517,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V50 · Cristales integrados 3D",
+        func(): _g13_v50_compare(true),
+        "V50 · Comparar con V49",
+        func(): _g13_v50_compare(false))
     _add_paired(g13_controls,"V49 · Contornos integrados 3D",
         func(): _g13_v49_compare(true),
         "V49 · Comparar con V48",
@@ -1623,10 +1628,10 @@ func _g13_show_tactical_lod(art_level:int)->void:
     _display_role("aa_mobile")
     if status_label!=null:
         status_label.text=(
-            "G13 V49 LOD8: cabina, torreta y techo unidos con perfiles nuevos. "
+            "G13 V50 LOD8: parabrisas sellados y biselados en 3D. "
             + "Capturas reales pendientes de verificar."
             if art_level==8 else
-            "G13 V49 LOD13: perfiles a ventanas, torreta y techo refinados.")
+            "G13 V50 LOD13: 4 cristales 3D encajados con la cabina.")
 
 func _g13_v25_compare(show_v1:bool)->void:
     if _role!="aa_mobile" or model_root==null:
@@ -1728,6 +1733,19 @@ func _g13_v41_view(yaw:float, tilt:float=0.0)->void:
     _update_camera()
     if status_label!=null:
         status_label.text="G13 V43: vista %.0f° / inclinación %.0f°; inspección manual." % [yaw,tilt]
+
+func _g13_v50_compare(show_v50:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        if status_label!=null:
+            status_label.text="G13 V50: selecciona primero el vehículo antiaéreo."
+        return
+    var ok:bool=G13GlazingV50.show_finish(model_root,show_v50)
+    if status_label!=null:
+        status_label.text=(
+            ("G13 V50: cristales cerrados con biseles y juntas de cabina."
+            if show_v50 else
+            "G13 V49: cristales originales restaurados en la misma escena.")
+            if ok else "G13 V50: acabado no disponible en este modelo.")
 
 func _g13_v49_compare(show_v49:bool)->void:
     if _role!="aa_mobile" or model_root==null:
