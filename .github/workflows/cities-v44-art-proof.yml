@@ -131,6 +131,41 @@ jobs:
           (folder/"index.html").write_text(page,encoding="utf-8")
           PY
 
+      - name: Mostrar resumen de 24 vistas y errores en GitHub Actions
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          from pathlib import Path
+          import json
+          folder=Path("build/city-v44-evidence")
+          file=folder/"manifest.json"
+          print("## TARVOKA · Ciudades V44 · Evidencia de Godot 4.3")
+          print("")
+          print("**Estado: pendiente de revisión artística humana, sin aprobación automática.**")
+          print("")
+          if not file.exists():
+              print("No se generó el manifiesto. Revisar godot-import.log y godot-render.log en el artefacto.")
+          else:
+              try:
+                  data=json.loads(file.read_text(encoding="utf-8"))
+              except (ValueError,OSError) as exc:
+                  print("Manifiesto ilegible:",str(exc))
+              else:
+                  print(f'Capturas: {data.get("count",0)} / 24 · Errores: {data.get("errors","?")}')
+                  print("")
+                  print("| Modelo | Daño | Cámara | Imagen válida | Alertas geométricas | Alertas artísticas |")
+                  print("|---|---|---|---|---:|---:|")
+                  for img in data.get("screenshots",[]):
+                      print(f'| {img.get("tier","?")} | D{img.get("damage","?")} | '
+                            f'{img.get("camera","?")} | '
+                            f'{"Sí" if img.get("nonempty") else "No"} | '
+                            f'{img.get("v42_geometry_findings","?")} | '
+                            f'{img.get("v43_art_findings","?")} |')
+          print("")
+          print("Las capturas y la galería index.html están en el artefacto ciudades-v44-godot-capturas-arte.")
+          PY
+
       - name: Guardar capturas, galería, manifest y registros aunque haya fallos
         if: always()
         uses: actions/upload-artifact@v4
