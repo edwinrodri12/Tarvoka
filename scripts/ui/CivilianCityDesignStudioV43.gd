@@ -4,6 +4,12 @@ class_name TarvokaCivilianCityDesignStudioV43
 # No more decorative buttons: inherit V42's 15 native tier/damage
 # inspection selections, and show the real PBR/joint inspection results.
 # A clear static check is not a substituted visual/render approval.
+# Every V8–V42 parent _ready() calls _rebuild(). On V43, virtual
+# dispatch previously rebuilt the full 43-stage city dozens of times
+# while opening one browser scene. Defer those inherited startup calls,
+# then assemble the identical final V43 model exactly ONCE.
+var _initial_city_bootstrap: bool=true
+
 func _ready() -> void:
     super._ready()
     name="TARVOKA_EstudioCiudadesV43Evidencia"
@@ -16,9 +22,12 @@ func _ready() -> void:
     if _status!=null:
         _status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
         _status.custom_minimum_size=Vector2(0,48)
+    _initial_city_bootstrap=false
     _rebuild()
 
 func _rebuild() -> void:
+    if _initial_city_bootstrap:
+        return
     super._rebuild()
     if _status==null or _model==null or not is_instance_valid(_model):
         return
