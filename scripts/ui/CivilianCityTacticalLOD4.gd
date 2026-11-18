@@ -38,6 +38,7 @@ const V34=preload("res://scripts/ui/CivilianCityPublicRealmV34.gd")
 const V35=preload("res://scripts/ui/CivilianCityFourSideFinishV35.gd")
 const V36=preload("res://scripts/ui/CivilianCityDamageContinuityV36.gd")
 const V37=preload("res://scripts/ui/CivilianCityTacticalFinishV37.gd")
+const V38=preload("res://scripts/ui/CivilianCityVolumeBalanceV38.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -563,7 +564,9 @@ static func apply(model: Node3D,level: int,
         return false
     if not V37.apply(model,level,faction,damage):
         return false
-    model.set_meta("city_art_work_in_progress",37)
+    if not V38.apply(model,level,faction,damage):
+        return false
+    model.set_meta("city_art_work_in_progress",38)
     return set_detail(model,0)
 
 # Native runtime option for dense city maps, reducing BOTH visible drawcalls
