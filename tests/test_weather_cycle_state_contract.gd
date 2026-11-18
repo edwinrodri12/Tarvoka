@@ -52,6 +52,18 @@ func _initialize() -> void:
     assert(fixed_forecast["next"] == "")
     assert(fixed_forecast["remaining"] == 0)
 
+    # A corrupt weather value must not promise a cycle that the engine rejects.
+    # Keep the displayed fallback clear while disabling the dynamic forecast.
+    var corrupt_weather := {"weather":"storm","weather_cycle":{"remaining":1}}
+    var corrupt_snapshot: Dictionary = corrupt_weather.duplicate(true)
+    var corrupt_forecast: Dictionary = Weather.forecast(corrupt_weather)
+    assert(corrupt_forecast["dynamic"] == false)
+    assert(corrupt_forecast["current"] == Weather.CLEAR)
+    assert(corrupt_forecast["next"] == "")
+    assert(corrupt_forecast["remaining"] == 0)
+    assert(Weather.advance_after_turn(corrupt_weather) == corrupt_snapshot)
+    assert(corrupt_weather == corrupt_snapshot)
+
     # Malformed cycles must not mutate or advance weather.
     for invalid in [null, {}, {"remaining":0}, {"remaining":5}, {"remaining":"2"}, {"remaining":2,"extra":true}]:
         var state := {"weather":"snow","weather_cycle":invalid}
