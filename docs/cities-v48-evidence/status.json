@@ -1,27 +1,29 @@
 {
-  "version": "V48",
+  "version": "V50",
   "model_stage": "V43",
   "godot_engine": "4.3",
-  "source_commit": "62d69acc8863ca76c75f8d5663412a98aac729ae",
-  "actions_run_id": "44355890139",
-  "actions_run_url": "https://github.com/edwinrodri12/Tarvoka/actions/runs/44355890139",
+  "source_commit": "403d24fa6a39a280408714d3450792e04f07d254",
+  "actions_run_id": "44359739000",
+  "actions_run_url": "https://github.com/edwinrodri12/Tarvoka/actions/runs/44359739000",
   "capture_count": 0,
   "nonempty_count": 0,
-  "reported_errors": null,
+  "reported_errors": 15,
   "fully_rendered": false,
   "artistically_approved": false,
   "copied_files": [
-    "source-commit.txt",
-    "comparativa-24-vistas.png",
-    "comparativa-villa.png",
-    "comparativa-ciudad.png",
-    "comparativa-metropoli.png"
-  ],
-  "missing_files": [
     "manifest.json",
     "review-log.txt",
     "godot-import.log",
     "godot-render.log",
+    "source-commit.txt",
+    "v49-project-inventory.txt",
     "contact-sheet-status.txt"
+  ],
+  "missing_files": [
+    "v49-missing-resources.txt",
+    "comparativa-24-vistas.png",
+    "comparativa-villa.png",
+    "comparativa-ciudad.png",
+    "comparativa-metropoli.png"
   ]
 }
