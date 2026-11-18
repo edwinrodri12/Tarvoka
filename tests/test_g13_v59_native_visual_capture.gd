@@ -4,6 +4,7 @@ extends SceneTree
 # Physical tire comparison (160 rubber lugs), glass specular and 8-faction
 # finishes. Hero LOD13 + native Android LOD8. Not a generated illustration.
 const V59=preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
+const V60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 const OUT="res://build/qa/g13-v59"
 var errors:int=0
 var frames:Array[Dictionary]=[]
@@ -106,6 +107,9 @@ func _run()->void:
             studio.queue_free()
             quit(1)
             return
+        if bool(model.get_meta(V60.FLAG,false)):
+            check(V60.show_finish(model,false),
+                "historical V59 screenshots compare the correct V59 wheels")
         studio.call("_inspect_view","iso")
         await _pair(studio,model,"isometric",lod)
         _view(studio,Vector3(-3.7,1.44,-0.30),
