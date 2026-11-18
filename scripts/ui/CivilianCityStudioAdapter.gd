@@ -38,6 +38,9 @@ func _install_city_options() -> void:
     civilian_city_controls.add_theme_constant_override("separation",6)
     civilian_city_controls.visible=false
     building_controls.add_child(civilian_city_controls)
+    # Keep the city controls directly below the building picker, not after
+    # several screens of legacy HQ/base controls in the shared sidebar.
+    building_controls.move_child(civilian_city_controls,2)
     _title(civilian_city_controls,
         "CIUDAD CIVIL · V31 · MODELO 3D EN DISEÑO",14)
     _title(civilian_city_controls,
@@ -274,8 +277,24 @@ func _display_civilian_city() -> void:
     var lod: int=civilian_city_lod.selected
     model_root=Cities.build_tactical(level,faction,damage,lod)
     if model_root==null:
-        push_error("Ciudad V31: no fue posible construir mallas de Godot")
+        push_error("Ciudad V43: no fue posible construir mallas de Godot")
+        if civilian_city_hint!=null:
+            civilian_city_hint.text="ERROR: no se pudo construir la ciudad. Selecciona otra escala o abre /ciudades/."
+        if status_label!=null:
+            status_label.text="Ciudad 3D no disponible: falló la creación de geometría"
         return
+    var visible_meshes: int=Cities.drawable_count(model_root)
+    if visible_meshes<=0:
+        push_error("Ciudad V43: modelo generado sin mallas visibles")
+        if civilian_city_hint!=null:
+            civilian_city_hint.text="ERROR: la ciudad no contiene mallas 3D visibles."
+        if status_label!=null:
+            status_label.text="Ciudad V43: no hay mallas visibles; revisa el nivel de detalle"
+        model_root.free()
+        model_root=null
+        return
+    if civilian_city_hint!=null:
+        civilian_city_hint.text="CIUDAD V43 · %d MALLAS VISIBLES · ARTE EN DESARROLLO" % visible_meshes
     preview.add_child(model_root)
     model_root.name="EDIFICIO_CIUDAD_CIVIL_V31_N%d_D%d" % [level,damage]
     model_root.rotation_degrees.y=_yaw
