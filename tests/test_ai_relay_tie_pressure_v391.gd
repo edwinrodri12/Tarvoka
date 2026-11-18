@@ -145,10 +145,15 @@ static func _pair(start: Dictionary, flag: bool) -> Dictionary:
     }
 
 func _initialize() -> void:
-    var first: int = int(OS.get_environment("TARVOKA_V391_FIRST"))
-    assert(first in [0,1])
     _eligibility_micro()
     _micro_real_move()
+    if OS.get_environment("TARVOKA_V391_MICRO_ONLY") == "true":
+        print("PASS TARVOKA v391 micro: score tie, fog masking and "
+            + "real legal relay capture path validated")
+        quit(0)
+        return
+    var first: int = int(OS.get_environment("TARVOKA_V391_FIRST"))
+    assert(first in [0,1])
     var start: Dictionary = Study._initial(SIZE,SEED,true,first)
     var control: Dictionary = _pair(start,false)
     var candidate: Dictionary = _pair(start,true)
