@@ -1,0 +1,104 @@
+name: TARVOKA v365 opening order cap fairness (96 matched self-play games)
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_limits_v365.gd"
+      - "tests/test_ai_opening_limits_contract_v365.gd"
+      - "tests/aggregate_ai_opening_limits_v365.py"
+      - ".github/workflows/ai-opening-limits-v365.yml"
+  workflow_dispatch:
+
+jobs:
+  self_mirrors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [10,12]
+        map: [0,2]
+        fog: ["false","true"]
+    env:
+      TARVOKA_AB_LEVEL: ${{ matrix.level }}
+      TARVOKA_AB_MAP: ${{ matrix.map }}
+      TARVOKA_AB_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Execute twelve same-policy opening cap battles
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 1500s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_limits_v365.gd \
+            2>&1 | tee /tmp/ai-v365-opening.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v365-opening.log; then exit 1; fi
+          grep -Fq 'PASS AI opening v365:' /tmp/ai-v365-opening.log
+          test "$(grep -c '^OPEN365_MATCH ' /tmp/ai-v365-opening.log)" -eq 12
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v365-cap-L${{ matrix.level }}-map${{ matrix.map }}-fog${{ matrix.fog }}
+          path: /tmp/ai-v365-opening.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  geometry_contract:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify legal cap 2, cap 3 and unlimited starts and saved games
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_limits_contract_v365.gd \
+            2>&1 | tee /tmp/ai-v365-contract.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/ai-v365-contract.log; then exit 1; fi
+          grep -Fq 'PASS AI opening v365 contract:' /tmp/ai-v365-contract.log
+          test "$(grep -c '^OPEN365_CONTRACT ' /tmp/ai-v365-contract.log)" -eq 6
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v365-contract
+          path: /tmp/ai-v365-contract.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [self_mirrors, geometry_contract]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v365-cap-L*
+          path: .ci-v365-logs
+          merge-multiple: false
+      - name: Verify all 96 self-play matches and reproduce previous south cap3 control
+        run: |
+          set -euo pipefail
+          python3 tests/aggregate_ai_opening_limits_v365.py .ci-v365-logs
+          cat reports/ai_v365_opening_limits.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v365-opening-limit-report
+          path: reports/ai_v365_opening_limits.*
+          if-no-files-found: ignore
+          retention-days: 30
