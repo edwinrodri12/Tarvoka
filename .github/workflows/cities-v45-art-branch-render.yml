@@ -165,7 +165,6 @@ jobs:
           # Three level-specific sheets, easier to inspect at full size.
           for tindex,tier in enumerate(("Villa","Ciudad","Metropoli")):
               out=Image.new("RGB",(cell_w*3,cell_h*3),(18,30,40))
-              out.paste(sheet.crop((0,0,cell_w*4,cell_h*6)),(0,0)) if False else None
               d=ImageDraw.Draw(out)
               group=[(dd,ss) for name,dd,ss in entries if name==tier]
               for k,(damage,suffix) in enumerate(group):
@@ -205,6 +204,12 @@ jobs:
           try:
               data=json.loads((folder/'manifest.json').read_text(encoding='utf-8'))
               print(f'Avisos detectados: **{data.get("errors","?")}**.')
+              framing=[p for p in data.get('screenshots',[]) if p.get('framing_warning')]
+              print(f'Perspectivas con posible problema de encuadre: **{len(framing)}**.')
+              for shot in framing:
+                  print(f'- {shot.get("tier","?")} D{shot.get("damage","?")} '
+                        f'({shot.get("camera","?")}): contenido central '
+                        f'{float(shot.get("center_coverage",0)):.1%}')
           except (OSError,ValueError):
               print('Manifest no disponible: revisar godot-import.log y godot-render.log.')
           print('La aprobación artística final continúa pendiente de inspección humana.')
