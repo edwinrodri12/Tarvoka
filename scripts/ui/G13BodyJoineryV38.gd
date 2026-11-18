@@ -112,7 +112,8 @@ static func _fixings() -> Array[Transform3D]:
         for y in [0.937, 1.066]:
             for z in [-0.260, -0.172]:
                 result.append(Transform3D(
-                    side_basis, Vector3(s * 0.698, float(y), float(z))))
+                    side_basis, Vector3(s * (0.681 if y < 1.0 else 0.654),
+                        float(y), float(z))))
     # Four small rear bumper fasteners, lower than the service insignia.
     for x in [-0.420, -0.250, 0.250, 0.420]:
         result.append(Transform3D(rear_basis,
