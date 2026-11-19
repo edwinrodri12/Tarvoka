@@ -680,6 +680,37 @@ jobs:
           # The native power-plant model uses the same approved VisualStyle.
           test -s scripts/ui/VisualStyle.gd
           rm -rf power-v1-source
+      # Append new fixed armored workshop as entry #7 after power-plant V2.
+      # No new permanent supply building: logistics stays with deployable
+      # support units and temporary resupply camps.
+      - name: Check out native V1 armored workshop art
+        uses: actions/checkout@v4
+        with:
+          ref: art/armored-workshop-v1-20261119
+          path: workshop-v1-source
+          persist-credentials: false
+      - name: Add armored workshop to the SAME shared native EDIFICIOS viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ArmoredWorkshop3DV1 ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
+            test -s "workshop-v1-source/scripts/ui/$name.gd"
+            cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          test -s workshop-v1-source/scenes/ArmoredWorkshopDesignStudioV1.tscn
+          cp workshop-v1-source/scenes/ArmoredWorkshopDesignStudioV1.tscn scenes/
+          test -s workshop-v1-source/tests/test_armored_workshop_v1_native.gd
+          cp workshop-v1-source/tests/test_armored_workshop_v1_native.gd tests/
+          grep -F 'extends "res://scripts/ui/PowerPlantStudioAdapterV1.gd"' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'building_picker.add_item("Taller de Blindados' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          sed -i 's|res://scripts/ui/PowerPlantStudioAdapterV1.gd|res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          # Preserve all existing 6 buildings, do not modify supply rules.
+          test -s scripts/ui/CivilianCity3DV1.gd
+          test -s scripts/ui/PowerPlant3DV2.gd
+          test -s scripts/ui/InfantryBarracks3DV1.gd
+          rm -rf workshop-v1-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
