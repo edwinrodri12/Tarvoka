@@ -725,11 +725,12 @@ func _confirm_3d_order() -> void:
     if str(order.get("kind","")) in ["move","attack"]:
         for item in _state_snapshot.get("units",[]):
             if item is Dictionary and str(item.get("id",""))==command_id and (
-                    str(item.get("role",""))=="mlrs") and (
+                    str(item.get("role","")) in ["mlrs","mobile_aa"]) and (
                     int(item.get("faction",-1))==_viewing_side) and (
                     int(item.get("hp",0))>0):
                 visual={
                     "unit_id":command_id,
+                    "role":str(item.get("role","")),
                     "kind":str(order.get("kind","")),
                     "before":item.get("pos",Vector2i.ZERO),
                     "from_world":Terrain.world_at(item["pos"])+Vector3(
@@ -760,14 +761,16 @@ func _confirm_3d_order() -> void:
                 if str(visual["kind"])=="move" and (
                         item.get("pos")!=visual["target"]):
                     break
-                var actions:=_scene.find_child(
-                    "G11V29_AccionesBatalla",true,false) as G11ActionsV29
+                var action_name: String = (
+                    "G13V70_AccionesBatalla" if str(visual["role"])=="mobile_aa"
+                    else "G11V29_AccionesBatalla")
+                var actions: Node = _scene.find_child(action_name,true,false)
                 if actions!=null:
                     var origin: Vector2i=visual["before"]
                     var target: Vector2i=visual["target"]
                     var start_at: Vector3=visual["from_world"]
-                    actions.play(str(visual["unit_id"]),str(visual["kind"]),
-                        start_at,target-origin)
+                    actions.call("play",str(visual["unit_id"]),
+                        str(visual["kind"]),start_at,target-origin)
                 break
     else:
         _order_note.text = "Orden no ejecutada: el estado cambió o dejó de ser válida."
