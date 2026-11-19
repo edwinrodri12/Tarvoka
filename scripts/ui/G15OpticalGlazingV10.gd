@@ -156,8 +156,8 @@ static func _sky_mesh(detail:int)->ArrayMesh:
         var b:=_front_pt(u0,vlow0+upper*0.13,0.528,0.293)
         var c:=_front_pt(u1,vlow1,0.528,0.293)
         var d:=_front_pt(u1,vlow1+upper*0.13,0.528,0.293)
-        for p in [a,b,c,d]:
-            p.z-=0.001
+        # The parent highlight has a 2 mm outboard offset, preserving a
+        # small air gap to the convex windshield without Z-fighting.
         _facet(st,a,b,c)
         _facet(st,b,d,c)
     st.generate_normals()
