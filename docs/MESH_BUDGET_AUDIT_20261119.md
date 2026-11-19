@@ -47,3 +47,7 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - Regresión adicional: tres auditorías sucesivas de la misma escena empaquetada deben producir 12 triángulos, una instancia, cero alertas al umbral 12 y ninguna alteración de los hijos del árbol de prueba.
 - Commit de prueba `f477a8b3b928e9fdeb2464f300ea651491a764da`. Estado Godot 4.3 de este commit: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO; revisión visual: PENDIENTE DE REVISIÓN VISUAL.
 - Próximo paso: medir una escena real y registrar ruta, SHA y recuentos, sin atribuir FPS a la métrica geométrica.
+
+
+## 2026-11-19 — Identificación del mayor contribuyente
+`inspect()` y `inspect_packed_scene()` devuelven ahora `largest_mesh_triangles` y `largest_mesh_path` (nombre del nodo si no está dentro del SceneTree). El recuento incluye multiplicidad visible de MultiMesh; no es una medición de GPU/FPS. Empates conservan el primer nodo visitado. Regresiones añadidas para BoxMesh, MultiMesh×3 y cero instancias visibles. Godot/CI del commit nuevo: pendiente; Android físico: NO EJECUTADO EN DISPOSITIVO. No alterar presupuestos de producción sin medir escenas reales.
