@@ -1873,6 +1873,10 @@ func _g13_v61_show_finish(enabled: bool) -> void:
             status_label.text="G13 V61: rines mecanizados no cargados."
         return
     if G13WheelArmorV61.show_finish(model_root,enabled):
+        # Preserve the later faceted V64 armor treatment when comparing
+        # the older V61 rotating hubs in the shared studio.
+        if bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+            G13EdgesV64.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V61 · ocho radios realmente abiertos, 32 pernos y blindaje PBR"
@@ -1900,6 +1904,9 @@ func _g13_v59_show_finish(enabled: bool) -> void:
         if status_label!=null:
             status_label.text="G13 V59: neumáticos y cristales no cargados."
         return
+    # V64 owns the latest V44/V45 steel geometry, coatings and fittings.
+    if not enabled and bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+        G13EdgesV64.show_finish(model_root,false)
     # V63 owns V32/V44/V45 existing enamel surfaces and badge positions.
     if not enabled and bool(model_root.get_meta(G13FactionV63.FLAG,false)):
         G13FactionV63.show_finish(model_root,false)
@@ -1923,6 +1930,8 @@ func _g13_v59_show_finish(enabled: bool) -> void:
             G13GlassV62.show_finish(model_root,true)
         if enabled and bool(model_root.get_meta(G13FactionV63.FLAG,false)):
             G13FactionV63.show_finish(model_root,true)
+        if enabled and bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+            G13EdgesV64.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V59 · neumáticos esculpidos, cristales reflectantes y facción"
