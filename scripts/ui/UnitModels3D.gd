@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","sam_mobile","ew_mobile"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -15,6 +15,10 @@ const G11Art = preload("res://scripts/ui/G11Art3D.gd")
 const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
+const G14SAM = preload("res://scripts/ui/G14MobileSAMV1.gd")
+const G14ExteriorV2 = preload("res://scripts/ui/G14MobileSAMExteriorV2.gd")
+const G14LauncherV3 = preload("res://scripts/ui/G14MobileSAMLauncherV3.gd")
+const G14DamageV4 = preload("res://scripts/ui/G14MobileSAMDamageV4.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
@@ -157,7 +161,7 @@ const TANK_BARREL_PIVOT := "ElevacionCanon"
 const PREVIEW_FRAME := {
     "line":3.05,"scout":3.05,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
-    "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45
+    "aa_mobile":3.85,"mobile_aa":3.85,"sam_mobile":5.35,"ew_mobile":4.45
 }
 
 # G13 art-only LOD selection. Public to studio/stress harnesses, not combat.
@@ -1040,6 +1044,19 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 push_warning("G15 V10 physical curved glazing, seals and EW rear service art not installed")
             elif not G15DetailV11.apply(model,faction_paint_color(faction)):
                 push_warning("G15 V11 360 wheel shoulders and true cab wipers not installed")
+        "sam_mobile":
+            # G14 V1 is Studio-only until native art is approved. Do not
+            # alias to the playable SAM role or change its battle state yet.
+            if not G14SAM.build(model,faction_paint_color(faction),
+                    finish_enabled and art_level>=13):
+                return null
+            if finish_enabled and art_level>=8:
+                if not G14ExteriorV2.apply(model,faction_paint_color(faction)):
+                    push_warning("G14 V2 sealed armor, opaque windows and 8 treaded wheels missing")
+                elif not G14LauncherV3.apply(model,faction_paint_color(faction)):
+                    push_warning("G14 V3 four hinged SAM pods and real actuator joints missing")
+                elif not G14DamageV4.apply(model,faction_paint_color(faction)):
+                    push_warning("G14 V4 genuine 3D progressive damage stages missing")
         "aa_mobile", "mobile_aa":
             # G13 V69 now serves Studio aa_mobile and the existing playable
             # BattleSession mobile_aa role without changing combat rules.
@@ -1251,6 +1268,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     elif role=="ew_mobile":
         model.scale=Vector3.ONE*0.83
         model.position.y=0.0
+    elif role=="sam_mobile":
+        # Grounded 8x8 wheel carrier; preserve real wheel-base clearance.
+        model.scale=Vector3.ONE*0.83
+        model.position.y=0.0
     elif role in ["aa_mobile","mobile_aa"]:
         # Grounded four-wheel AA chassis: its 0.33m wheel centers must NOT
         # inherit the -0.27m offset used by old tracked 3D proxies.
@@ -1451,6 +1472,18 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "sam_mobile":
+            # "damage" is an additional art-only pose layered over V1 hit;
+            # tactical HP, attack results and underlying animations are intact.
+            var g14_kind:String="hit" if kind=="damage" else kind
+            var g14_posed:bool=G14SAM.pose(model,g14_kind,progress,target_heading)
+            if g14_posed and G14ExteriorV2.has_model(model):
+                G14ExteriorV2.sync(model,g14_kind,progress)
+            if g14_posed and G14LauncherV3.has_model(model):
+                G14LauncherV3.sync(model,g14_kind,progress)
+            if g14_posed and G14DamageV4.has_model(model):
+                G14DamageV4.sync(model,kind,progress)
+            return g14_posed
         "aa_mobile", "mobile_aa":
             return G13AA.pose(model,kind,progress,target_heading)
         "ew_mobile":
@@ -1480,6 +1513,14 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "sam_mobile":
+            G14SAM.restore(model)
+            if G14ExteriorV2.has_model(model):
+                G14ExteriorV2.sync(model,"idle",0.0)
+            if G14LauncherV3.has_model(model):
+                G14LauncherV3.restore(model)
+            if G14DamageV4.has_model(model):
+                G14DamageV4.sync(model,"idle",0.0)
         "aa_mobile", "mobile_aa":
             G13AA.restore(model)
         "ew_mobile":
