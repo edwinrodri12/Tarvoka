@@ -66,3 +66,10 @@ Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y
 - **Prueba previa:** Actions run 44494235014, job orbit-smoke, SUCCESS en commit a3289d10 (no valida estos nuevos commits).
 - **Nueva regresión:** NO CONFIRMADA hasta ejecución CI sobre e37b1a5a. **Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.**
 - El modelo de producción todavía no está enlazado; la escena permanece aislada. No modificar estadísticas, materiales ni entradas táctiles.
+
+## 2026-11-19 — carga reversible de escenas de modelos
+- `AssetInspectionPreview.load_asset_scene(PackedScene)` permite instanciar modelos 3D originales en la escena aislada y encuadrarlos con la cámara orbital, sin tocar el tablero ni los controles de batalla.
+- Se rechazan escenas nulas, raíces que no sean `Node3D` y jerarquías sin mallas. En estos casos se conserva la selección anterior.
+- Al cargar una segunda escena válida, se libera el modelo dinámico anterior; los hijos preexistentes del inspector no se eliminan.
+- Regresiones añadidas a `tests/test_asset_orbit_camera.gd`: carga, encuadre, rechazo, conservación del modelo y sustitución.
+- **CI del nuevo commit: NO CONFIRMADO** hasta ejecución de Actions. **Android: NO EJECUTADO EN DISPOSITIVO**. **Arte: PENDIENTE DE REVISIÓN VISUAL**. Esta capacidad todavía no enlaza automáticamente el catálogo real del estudio web.
