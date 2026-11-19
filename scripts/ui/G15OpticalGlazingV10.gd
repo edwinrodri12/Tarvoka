@@ -322,5 +322,20 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
             for detail in pivot_node.get_children():
                 if str(detail.name).begins_with("G15_V11_"):
                     (detail as Node3D).visible=enabled
+    # Keep historical V9/V10 screenshots faithful: V11's double-sided
+    # opaque armor fix must follow the same toggle, including on the six
+    # moving-wheel material sets. Avoid cyclic preload of V11 into V10.
+    var old_coats:Dictionary=root.get_meta(
+        "tarvoka_g15_v11_before_opaque_wall",{})
+    var new_coats:Dictionary=root.get_meta(
+        "tarvoka_g15_v11_double_sided_opaque_wall",{})
+    if not old_coats.is_empty():
+        for wall_name in old_coats:
+            var surface:=root.find_child(str(wall_name),
+                true,false) as MeshInstance3D
+            if surface!=null:
+                surface.material_override=(
+                    new_coats.get(wall_name,old_coats[wall_name])
+                    if enabled else old_coats[wall_name]) as Material
     root.set_meta("tarvoka_g15_v10_preview_enabled",enabled)
     return true
