@@ -113,7 +113,7 @@ static func _summary(game: Dictionary, first: int) -> Dictionary:
             if str(sites[i].get("kind","")) != "city":
                 continue
             var owner: int = int(sites[i]["owner"])
-            if owner in [0,1] and \\
+            if owner in [0,1] and \
                     owner != int(previous_sites[i]["owner"]) and \
                     first_city[owner] == -1:
                 first_city[owner] = phase
