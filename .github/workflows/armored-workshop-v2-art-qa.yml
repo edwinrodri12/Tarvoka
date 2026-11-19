@@ -34,6 +34,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The public studio is assembled on Pages from several branches.
+          # Its missing parent scripts here are unrelated to isolated V2 meshes.
+          # Validate the adapter by source before isolating the native art test.
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          rm -f scripts/ui/ArmoredWorkshopStudioAdapterV1.gd scripts/ui/BastionStudioAdapter.gd
           /tmp/Godot_v4.3-stable_linux.x86_64 \
             --headless --editor --path . --import --quit \
             2>&1 | tee /tmp/workshop-v2-import.log
