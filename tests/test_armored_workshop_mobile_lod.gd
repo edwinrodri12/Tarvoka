@@ -63,6 +63,11 @@ func _verify() -> void:
                         var mm:MultiMesh=draw.multimesh
                         assert(mm!=null and mm.mesh!=null)
                         assert(mm.instance_count>0)
+                        var visible_bounds:AABB=mm.custom_aabb
+                        assert(visible_bounds.size.x>0.0 and
+                            visible_bounds.size.y>0.0 and
+                            visible_bounds.size.z>0.0,
+                            "GPU instanced geometry has an empty visibility AABB")
                         assert(draw.material_override is StandardMaterial3D)
                         var mat:StandardMaterial3D=draw.material_override as StandardMaterial3D
                         assert(mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED)
@@ -72,6 +77,15 @@ func _verify() -> void:
                             var transform:Transform3D=mm.get_instance_transform(i)
                             assert(transform.basis.determinant()>0.0001,
                                 "Collapsed or inverted mobile box")
+                            # All 8 physical corners of every instanced cube
+                            # must be contained in the GPU visibility volume.
+                            for sx in [-0.5,0.5]:
+                                for sy in [-0.5,0.5]:
+                                    for sz in [-0.5,0.5]:
+                                        var corner:Vector3=transform*Vector3(
+                                            sx,sy,sz)
+                                        assert(visible_bounds.has_point(corner),
+                                            "Camera culling AABB clips an instance")
                     assert(batches_found==draw_calls and boxes_found==instances)
                     var faction_batch:MultiMeshInstance3D=mobile.find_child(
                         "Lote_faction",true,false) as MultiMeshInstance3D
