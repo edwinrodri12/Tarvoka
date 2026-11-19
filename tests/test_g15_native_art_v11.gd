@@ -204,6 +204,19 @@ func _run()->void:
                     false,false) as Node3D
                 check(part!=null and not part.visible,
                     "V11 wheel shoulder hides for previous comparison")
+            # Regression: turning V10 glazing ON must NOT silently enable
+            # V11 repaired armor when user intentionally selected V11 OFF.
+            check(V10.show_finish(model,true),
+                "V10 glazing restored while user keeps V11 OFF")
+            check(not (assembly as Node3D).visible,
+                "V11 cab details remain hidden in explicit V10 comparison")
+            for label in wall_names:
+                var old_after_toggle:=model.find_child(
+                    str(label),true,false) as MeshInstance3D
+                check(old_after_toggle!=null and
+                    old_after_toggle.material_override==previous[label],
+                    "explicit V11-off persists when switching V10 optics "+
+                    str(label))
             check(V11.show_finish(model,true),"V11 restored")
             for label in wall_names:
                 var latest_wall:=model.find_child(str(label),true,false) as MeshInstance3D
