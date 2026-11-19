@@ -58,14 +58,20 @@ static func _record_piercer(frames: Array, responder: int) -> Dictionary:
         var phase: int = int(f["phase"])
         var tag: String = str(f["tag"])
         var d: Dictionary = f["decision"]
-        if tag == "action" and str(d.get("action","")) == "produce" and \
+        # Track ONLY the fourth response (phase 1, order index 3):
+        # later cap3 games may recruit a different N3 for the STARTER.
+        # Mistaking that separate unit for the responder's fourth-order
+        # Piercer caused invalid assertions and a 45-minute CI timeout.
+        if tag == "action" and phase == 1 and int(f["order"]) == 3 and \
+                str(d.get("action","")) == "produce" and \
                 str(d.get("unit","")) == "N3":
             assert(born_phase == -1)
             born_phase = phase
             born_order = int(f["order"])
             born_cost = int(d["cost"])
             birth_cell = str(d["destination"])
-        if tag == "action" and str(d.get("unit","")) == "N3":
+        if tag == "action" and born_phase >= 0 and \
+                str(d.get("unit","")) == "N3":
             actions.append({
                 "phase":phase,"order":int(f["order"]),
                 "type":str(d.get("action","")),
@@ -80,7 +86,8 @@ static func _record_piercer(frames: Array, responder: int) -> Dictionary:
         var cell := ""
         var role := ""
         for unit in f["state"]["units"]:
-            if str(unit["id"]) == "N3" and int(unit["faction"]) == responder:
+            if born_phase >= 0 and str(unit["id"]) == "N3" and \
+                    int(unit["faction"]) == responder:
                 seen = true
                 hp = int(unit["hp"])
                 cell = str(unit["pos"])
