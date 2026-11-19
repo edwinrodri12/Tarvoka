@@ -41,6 +41,21 @@ func _is_watertight(mesh:Mesh)->bool:
             return false
     return edges.size()>0
 
+# Inspect actual Godot pixels: an intentionally saturated magenta probe sits
+# INSIDE the EW shelter. No exterior angle should reveal that marker if
+# the cab, side panels, roof and rear are truly opaque.
+func _leaking_probe_pixels()->int:
+    var image:Image=root.get_texture().get_image()
+    if image==null:
+        return -1
+    var exposed:int=0
+    for y in range(0,image.get_height(),2):
+        for x in range(0,image.get_width(),2):
+            var color:Color=image.get_pixel(x,y)
+            if color.r>0.76 and color.b>0.52 and color.g<0.22:
+                exposed+=1
+    return exposed
+
 func _initialize()->void:
     call_deferred("_run")
 
@@ -222,6 +237,20 @@ func _run()->void:
             Models.restore_model_pose("ew_mobile",model)
             if hero and faction in [0,3]:
                 stage.add_child(model)
+                # This high-chroma reference is geometrically inside the
+                # original V3 closed EW housing, not in its wall surfaces.
+                var leak_probe:=MeshInstance3D.new()
+                leak_probe.name="G15_QA_INTERNAL_ONLY_MAGENTA_PROBE"
+                var sphere:=SphereMesh.new()
+                sphere.radius=0.30
+                sphere.height=0.60
+                leak_probe.mesh=sphere
+                var marker:=StandardMaterial3D.new()
+                marker.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+                marker.albedo_color=Color(1.0,0.0,0.70)
+                leak_probe.material_override=marker
+                leak_probe.position=Vector3(0.0,1.49,0.62)
+                model.add_child(leak_probe)
                 # Genuine full 360° orbit: 8 headings at 45° increments.
                 for view in range(8):
                     var theta:float=TAU*float(view)/8.0
@@ -235,6 +264,8 @@ func _run()->void:
                     check(V11.show_finish(model,true),
                         "capture refined 360 finish")
                     await _capture(key+"-v11")
+                    check(_leaking_probe_pixels()==0,
+                        "solid walls fully occlude interior probe from 360° "+key)
                     var changed:int=_difference(key+"-v10",key+"-v11")
                     check(changed>=0,"both real 3D captures exist "+key)
                     if view in [1,2,6,7]:
