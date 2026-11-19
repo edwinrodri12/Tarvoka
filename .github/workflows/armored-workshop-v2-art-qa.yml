@@ -8,6 +8,7 @@ on:
       - "scripts/ui/ArmoredWorkshopStudioAdapterV1.gd"
       - "scripts/ui/ArmoredWorkshopDesignStudioV1.gd"
       - "tests/test_armored_workshop_v2_native.gd"
+      - "tests/capture_armored_workshop_v2_cameras.gd"
       - ".github/workflows/armored-workshop-v2-art-qa.yml"
   workflow_dispatch:
 permissions:
@@ -63,3 +64,32 @@ jobs:
             exit 1
           fi
           grep -F 'PASS WORKSHOP V2 native:' /tmp/workshop-v2-art.log
+      - name: Render real 3D evidence from all six cameras and damage stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s tests/capture_armored_workshop_v2_cameras.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_v2_cameras.gd \
+            2>&1 | tee /tmp/workshop-v2-visual.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-v2-visual.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP V2 VISUAL:' /tmp/workshop-v2-visual.log
+          test "$(find qa_artifacts/armored_workshop_v2 -name '*.png' | wc -l)" -eq 24
+          test -s qa_artifacts/armored_workshop_v2/manifest.json
+      - name: Preserve camera screenshots and native QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: armored-workshop-v2-six-camera-evidence
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            qa_artifacts/armored_workshop_v2/
+            /tmp/workshop-v2-art.log
+            /tmp/workshop-v2-visual.log
