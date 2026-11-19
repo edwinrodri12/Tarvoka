@@ -233,6 +233,25 @@ func _run() -> void:
         push_error("Previous dynamically loaded model was not released")
         quit(1)
         return
+    # Unloading restores the original reference and releases only the dynamic asset.
+    var replacement: Node3D = scene.get_node(scene.asset_path)
+    if not scene.unload_asset_scene():
+        push_error("Dynamic asset could not be unloaded")
+        quit(1)
+        return
+    if scene.asset_path != ^"SampleAsset" or not rig.target.is_equal_approx(preview_asset.global_position):
+        push_error("Unloading did not restore reference asset framing")
+        quit(1)
+        return
+    await process_frame
+    if is_instance_valid(replacement) or not is_instance_valid(preview_asset):
+        push_error("Unloading leaked dynamic model or removed reference asset")
+        quit(1)
+        return
+    if scene.unload_asset_scene():
+        push_error("Second unload incorrectly succeeded")
+        quit(1)
+        return
     # Let the rendering server release mesh RIDs before SceneTree shutdown.
     # Godot 4.3 dummy renderer can otherwise report mesh_get_surface_count(null)
     # after a successful assertion run, causing CI to fail on engine errors.
