@@ -313,15 +313,20 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
             visibility.get(old.name,true)))
     # Future V11 enhancements are optional but must follow V10 historical
     # comparisons. Moving tyres stay under their original wheel pivots.
+    # Preserve an explicit V11-off comparison even when V10 is toggled
+    # back on. Otherwise restoring old glazing accidentally reactivates
+    # repaired V11 walls/tyres while the UI still says "V10".
+    var v11_visible:bool=enabled and bool(root.get_meta(
+        "tarvoka_g15_v11_preview_enabled",true))
     var v11_body:=root.find_child("G15_V11_360ExteriorSculpt",true,false) as Node3D
     if v11_body!=null:
-        v11_body.visible=enabled
+        v11_body.visible=v11_visible
     var wheels:=root.find_child(V1.WHEEL_GROUP,true,false) as Node3D
     if wheels!=null:
         for pivot_node in wheels.get_children():
             for detail in pivot_node.get_children():
                 if str(detail.name).begins_with("G15_V11_"):
-                    (detail as Node3D).visible=enabled
+                    (detail as Node3D).visible=v11_visible
     # Keep historical V9/V10 screenshots faithful: V11's double-sided
     # opaque armor fix must follow the same toggle, including on the six
     # moving-wheel material sets. Avoid cyclic preload of V11 into V10.
@@ -336,6 +341,6 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
             if surface!=null:
                 surface.material_override=(
                     new_coats.get(wall_name,old_coats[wall_name])
-                    if enabled else old_coats[wall_name]) as Material
+                    if v11_visible else old_coats[wall_name]) as Material
     root.set_meta("tarvoka_g15_v10_preview_enabled",enabled)
     return true
