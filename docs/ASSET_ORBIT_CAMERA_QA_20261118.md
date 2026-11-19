@@ -46,3 +46,9 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - Run [44463098593](https://github.com/edwinrodri12/Tarvoka/actions/runs/44463098593): **FALLÓ** en Godot 4.3 headless. `AssetInspectionPreview.gd:5` no resolvía el tipo global `AssetOrbitCamera` al ejecutar directamente `--script tests/test_asset_orbit_camera.gd`; después falló el encuadre porque el controlador no cargó.
 - Corrección: usar referencia de nodo inferida `@onready var orbit_rig = $OrbitRig` en la escena aislada. El script del nodo sigue siendo `AssetOrbitCamera.gd`, sin modificar controles del juego ni su comportamiento.
 - Validación de la corrección: **NO CONFIRMADA** hasta recibir nuevo resultado del workflow. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE**.
+
+## 2026-11-19 — CI teardown de mallas
+- Run [44469598701](https://github.com/edwinrodri12/Tarvoka/actions/runs/44469598701): **FALLÓ** pese a imprimir `PASS: isolated asset orbit camera smoke`; Godot 4.3 dummy renderer emitió `ERROR: Parameter "m" is null` en `mesh_get_surface_count` durante cierre de escena.
+- Cambio acotado: tras `scene.queue_free()`, esperar dos `process_frame` antes de imprimir PASS y llamar `quit(0)` para dar tiempo a liberar recursos. Es una hipótesis de corrección de teardown, **no una prueba aprobada** hasta CI del commit nuevo.
+- Si persiste, inspeccionar el orden de liberación de `MeshInstance3D` y evaluar ejecutar este smoke con renderizador OpenGL/Xvfb; no suprimir indiscriminadamente errores de Godot.
+- Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE**. No se cambió el motor táctico ni la escena Android.
