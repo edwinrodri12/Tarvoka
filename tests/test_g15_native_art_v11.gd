@@ -132,8 +132,14 @@ func _run()->void:
             check(V10.show_finish(model,false),
                 "V10 old glazing comparator still operates")
             var shield:=model.find_child(V11.ASSEMBLY,true,false) as Node3D
-            check(shield!=null and not shield.is_visible_in_tree(),
+            check(shield!=null and not shield.visible,
                 "historical V10 comparison hides added V11 cab")
+            for wheel in wheels.get_children():
+                var token:String=str(wheel.name).trim_prefix("G15_Wheel_")
+                var shoulder:=wheel.find_child(V11.TIRE+token,
+                    false,false) as Node3D
+                check(shoulder!=null and not shoulder.visible,
+                    "V10 historical comparator hides newer V11 tyre shoulder")
             check(V10.show_finish(model,true),
                 "new optical geometry restored without losing 6x6")
             check(Models.pose_model("ew_mobile",model,"move",0.52),
