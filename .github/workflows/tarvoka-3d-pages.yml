@@ -303,6 +303,10 @@ jobs:
           test -s scripts/ui/G14MobileSAMV1.gd
           test -s scripts/ui/G14MobileSAMExteriorV2.gd
           test -s scripts/ui/G14MobileSAMLauncherV3.gd
+          test -s scripts/ui/G14MobileSAMDamageV4.gd
+          grep -q 'G14DamageV4.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'g14_damage_4' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'g14_orbit_360' scripts/ui/BastionStudioAdapter.gd
           grep -q 'G14LauncherV3.apply' scripts/ui/UnitModels3D.gd
           grep -q 'g14_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'sam_mobile' scripts/ui/UnitModels3D.gd
@@ -489,7 +493,7 @@ jobs:
           assert current.count(tank_anchor) == 1, 'Duplicate G09 build stages remain'
           for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
                             'const G14SAM = preload(', 'const G14ExteriorV2 = preload(',
-                            'const G14LauncherV3 = preload(',
+                            'const G14LauncherV3 = preload(', 'const G14DamageV4 = preload(',
                             'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
                             'G11Art.build', 'APCClosedTiresV25.apply',
                             'static func pose_model(', 'static func restore_model_pose(']:
