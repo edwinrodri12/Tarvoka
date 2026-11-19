@@ -236,7 +236,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -300,10 +300,18 @@ jobs:
           done
           test -s scripts/ui/G15ProductionSurfaceV9.gd
           test -s scripts/ui/G15OpticalGlazingV10.gd
+          test -s scripts/ui/G15Detail360V11.gd
           test -s scripts/ui/G15ElectronicWarfareV1.gd
           grep -q 'ew_mobile' scripts/ui/UnitModels3D.gd
           grep -q 'g15_v9_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'g15_v10_on' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'g15_v11_on' scripts/ui/BastionStudioAdapter.gd
+          # Verify this same assembled Web Studio uses V11's real opaque
+          # meshes; do not accept a standalone screenshot as web coverage.
+          test -s hq-android-v15/tests/test_g15_native_art_v11.gd
+          cp hq-android-v15/tests/test_g15_native_art_v11.gd tests/test_g15_native_art_v11.gd
+          grep -q 'G15DetailV11.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'tarvoka_g15_v11_before_opaque_wall' scripts/ui/G15Detail360V11.gd
           # The main repository holds the genuine G13 inspection scene.
           # Copy it into the assembled native Web Studio checkout so
           # the release visual captures run instead of warning about
@@ -1184,6 +1192,22 @@ jobs:
             exit 1
           fi
           test -d .godot/imported
+          # G15 360 opaque-wall gate runs INSIDE the exact assembled public
+          # Godot Studio checkout, not only standalone model CI. A high-chroma
+          # interior marker must be hidden by 11 opaque native armor walls
+          # at every angle, faction and LOD. 32 genuine pre/post Godot frames.
+          mkdir -p build/qa/g15-v11
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g15_native_art_v11.gd \
+            2>&1 | tee /tmp/g15-v11-assembled-opaque-wall-360.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g15-v11-assembled-opaque-wall-360.log; then
+            echo '::error::G15 V11 transparent wall regression in assembled Web Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G15 V11 360 NATIVE:' /tmp/g15-v11-assembled-opaque-wall-360.log
+          test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 32
+          test -s build/qa/g15-v11/g15-v11-manifest.json
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.

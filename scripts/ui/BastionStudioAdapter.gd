@@ -70,6 +70,7 @@ const G15MechanicalV7=preload("res://scripts/ui/G15MechanicalExteriorV7.gd")
 const G15ContinuityV8=preload("res://scripts/ui/G15ContinuitySuspensionV8.gd")
 const G15SurfaceV9=preload("res://scripts/ui/G15ProductionSurfaceV9.gd")
 const G15OpticalV10=preload("res://scripts/ui/G15OpticalGlazingV10.gd")
+const G15DetailV11=preload("res://scripts/ui/G15Detail360V11.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -249,7 +250,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -560,6 +561,9 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
+                {"group":"G15 V11 · NEUMÁTICOS 3D Y CABINA 360°"},
+                {"title":"V11 · Caucho lateral y limpiaparabrisas 3D","action":"g15_v11_on"},
+                {"title":"V10 · Comparar sin los nuevos detalles","action":"g15_v11_off"},
                 {"group":"G15 V10 · CRISTALES CURVOS Y SERVICIO ELECTRÓNICO"},
                 {"title":"V10 · Cristales PBR curvos y acabados posteriores","action":"g15_v10_on"},
                 {"title":"V9 · Comparar cristales anteriores","action":"g15_v10_off"},
@@ -695,9 +699,16 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g15_v11_on","g15_v11_off":
+            if _role=="ew_mobile" and model_root!=null:
+                var latest:bool=action=="g15_v11_on"
+                if latest:
+                    G15OpticalV10.show_finish(model_root,true)
+                if G15DetailV11.show_finish(model_root,latest):
+                    status_label.text=("G15 V11 · hombros de neumáticos y limpiaparabrisas físicos" if latest else "G15 V10 · comparación sin acabado V11")
         "g15_v10_on","g15_v10_off":
             if _role=="ew_mobile" and model_root!=null and G15OpticalV10.show_finish(model_root,action=="g15_v10_on"):
-                status_label.text=("G15 V10 · cristales curvos PBR y paneles de electrónica" if action=="g15_v10_on" else "G15 V9 · cristales de comparación")
+                status_label.text=("G15 V11 · acabados de cabina y neumáticos restaurados" if action=="g15_v10_on" else "G15 V9 · cristales de comparación")
         "g15_v9_on","g15_v9_off":
             if _role=="ew_mobile" and model_root!=null:
                 var v9_active:bool=action=="g15_v9_on"
@@ -976,7 +987,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "ew_mobile": label="G15 · Guerra electrónica · V10 (cristales y electrónica 3D)"
+            "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
@@ -4406,9 +4417,9 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="ew_mobile" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready:bool=bool(model_root.get_meta(G15OpticalV10.FLAG,false))
-        detail_label.text="G15 V10 · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
-        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V10 acabado óptico 3D cargado" if ready else "acabado incompleto"]
+        var ready:bool=bool(model_root.get_meta(G15DetailV11.FLAG,false))
+        detail_label.text="G15 V11 · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V11 360° neumáticos y óptica 3D cargados" if ready else "acabado incompleto"]
         return
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:
