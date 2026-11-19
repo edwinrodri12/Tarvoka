@@ -22,3 +22,8 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - Corrección en la misma PR: consultar `surface_get_primitive_type()` exclusivamente para `ArrayMesh`; `PrimitiveMesh` como `BoxMesh` proporciona triángulos y se contabiliza mediante sus arrays. Prueba adversarial añadida con `ArrayMesh` de líneas para asegurar que no infla el recuento.
 - CI de los commits correctivos: **NO CONFIRMADO** al registrar este documento. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE DE REVISIÓN VISUAL**.
 - Pendiente: comprobar el nuevo workflow, corregir cualquier error restante y ejecutar auditoría sobre un activo de producción real. No fusionar sin CI verde.
+
+## 2026-11-19 — regresión de geometría indexada
+- `tests/test_mesh_budget_audit.gd` comprueba un quad indexado (4 vértices, 6 índices): exactamente 2 triángulos, no 1; verifica el umbral inclusivo (26 sin alerta, 25 con alerta) junto a mallas primitivas y líneas.
+- Commit de prueba: `533ea79380148cbeb6a8c1b929477ac8102ea85a`. La ejecución CI de este commit está pendiente de confirmación; el CI verde del commit anterior no lo valida.
+- Android físico: NO EJECUTADO EN DISPOSITIVO. Inspección visual: PENDIENTE DE REVISIÓN VISUAL. No se modifica geometría de producción ni reglas tácticas.
