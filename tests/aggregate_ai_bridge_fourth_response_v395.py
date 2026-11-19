@@ -50,7 +50,8 @@ def load(folder):
                 assert len(g["response_first_three"])==3
                 assert len(g["response_first_five"])==min(count,5)
                 assert g["actions"]>=0 and g["attacks"]>=0 and g["purchases"]>=0
-                assert len(g["relay"]["starter_first_capture_phase"].__str__())>0
+                assert isinstance(g["relay"]["starter_first_capture_phase"],int)
+                assert isinstance(g["relay"]["responder_first_capture_phase"],int)
                 assert len(g["city_first_phase"])==2
                 assert isinstance(g["first_captures"],list)
             original=row["official"]
@@ -83,8 +84,7 @@ def group(rows,policy):
         "starter_first_relay":sum(g["relay"]["starter_first"] for g in games),
         "responder_first_relay":sum(g["relay"]["responder_first"] for g in games),
         "starter_ever_captures":sum(g["relay"]["starter_first_capture_phase"]>=0 for g in games),
-        "responder_ever_captures":sum(g["relay"]["responder_first_capture_phase"]>=0 for g in games),
-        "fourth_order_type_counts":{} if policy=="cap3" else None
+        "responder_ever_captures":sum(g["relay"]["responder_first_capture_phase"]>=0 for g in games)
     }
 
 def main(folder):
@@ -146,7 +146,7 @@ def main(folder):
         "# TARVOKA v3.9.5 — Localizar el cambio entre la cuarta y quinta orden",
         "",
         "Mapa de doble puente 40×30 sin niebla. **16 situaciones originales por política**, "
-        "96? No: **128 partidas reales incluyendo reflejos**, que no se cuentan como "
+        "**128 partidas reales incluyendo reflejos**, que no se cuentan como "
         "muestras independientes. La primera respuesta se interrumpe SOLO en pruebas.",
         "",
         "| Primera respuesta | Gana primero | Gana segundo | Censuras | Primero captura primer relé | Medios turnos promedio |",
