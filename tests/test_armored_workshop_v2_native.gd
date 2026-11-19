@@ -65,6 +65,16 @@ func _run() -> void:
                             assert(_mesh(model,
                                 "JuntaLateralSellada_%d_%d" % [side,seam])!=null,
                                 "Sidewall has an unsealed vertical seam")
+                        for end_side in [-1,1]:
+                            var end_cap:MeshInstance3D=_mesh(model,
+                                "RemateEsquinaLateral_%d_%d" % [side,end_side])
+                            assert(end_cap!=null,
+                                "Side wall front/rear corners must be enclosed")
+                            var cap:BoxMesh=end_cap.mesh as BoxMesh
+                            assert(cap!=null and
+                                absf(end_cap.position.z)+cap.size.z*0.5>=
+                                    (6.0 if level==1 else 7.5 if level==2 else 9.0),
+                                "Side-wall end cap does not reach the corner")
                     assert(_mesh(model,"PrensaTravesano")!=null or damage==2)
                 if damage<=1:
                     assert(_mesh(model,"BandaFaccionSuperiorV2")!=null)
