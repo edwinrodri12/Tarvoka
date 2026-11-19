@@ -38,6 +38,36 @@ func frame_world_bounds(bounds: AABB) -> void:
     var radius: float = bounds.size.length() * 0.5
     set_inspection_target(bounds.get_center(), maxf(radius, 0.01))
 
+## Frame all MeshInstance3D descendants of an asset, including rotated parts.
+## Returns false without changing camera state if no renderable mesh exists.
+func frame_asset(asset: Node3D) -> bool:
+    if asset == null:
+        return false
+    var pending: Array[Node] = [asset]
+    var found: bool = false
+    var bounds: AABB = AABB()
+    while not pending.is_empty():
+        var node: Node = pending.pop_back()
+        if node is MeshInstance3D:
+            var mesh_node: MeshInstance3D = node as MeshInstance3D
+            if mesh_node.mesh != null:
+                var local_bounds: AABB = mesh_node.get_aabb()
+                for x in [0, 1]:
+                    for y in [0, 1]:
+                        for z in [0, 1]:
+                            var corner := local_bounds.position + local_bounds.size * Vector3(x, y, z)
+                            var point: Vector3 = mesh_node.global_transform * corner
+                            if not found:
+                                bounds = AABB(point, Vector3.ZERO)
+                                found = true
+                            else:
+                                bounds = bounds.expand(point)
+        for child in node.get_children():
+            pending.append(child)
+    if found:
+        frame_world_bounds(bounds)
+    return found
+
 func orbit(delta_yaw: float, delta_pitch: float) -> void:
     yaw = wrapf(yaw + delta_yaw, -PI, PI)
     pitch = clampf(pitch + delta_pitch, -1.4, 1.4)
