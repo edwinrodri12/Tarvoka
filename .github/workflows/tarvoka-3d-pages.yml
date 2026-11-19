@@ -302,6 +302,9 @@ jobs:
           done
           test -s scripts/ui/G14MobileSAMV1.gd
           test -s scripts/ui/G14MobileSAMExteriorV2.gd
+          test -s scripts/ui/G14MobileSAMLauncherV3.gd
+          grep -q 'G14LauncherV3.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'g14_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'sam_mobile' scripts/ui/UnitModels3D.gd
           grep -q 'G14ExteriorV2.apply' scripts/ui/UnitModels3D.gd
           grep -q 'g14_v2_on' scripts/ui/BastionStudioAdapter.gd
