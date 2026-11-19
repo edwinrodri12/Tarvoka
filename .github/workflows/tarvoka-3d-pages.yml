@@ -680,6 +680,34 @@ jobs:
           # The native power-plant model uses the same approved VisualStyle.
           test -s scripts/ui/VisualStyle.gd
           rm -rf power-v1-source
+      # Build seventh native 3D building from the isolated workshop art branch.
+      # This is an additive VISUAL stage: mobile supply camps remain separate.
+      - name: Retrieve Taller de Blindados V2 art
+        uses: actions/checkout@v4
+        with:
+          ref: art/armored-workshop-v1-20261119
+          path: workshop-v2-source
+          persist-credentials: false
+      - name: Add Taller de Blindados as seventh EDIFICIOS 3D entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopStudioAdapterV1 ArmoredWorkshopDesignStudioV1; do
+            test -s "workshop-v2-source/scripts/ui/$name.gd"
+            cp "workshop-v2-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          test -s workshop-v2-source/scenes/ArmoredWorkshopDesignStudioV1.tscn
+          cp workshop-v2-source/scenes/ArmoredWorkshopDesignStudioV1.tscn scenes/
+          test -s workshop-v2-source/tests/test_armored_workshop_v2_native.gd
+          cp workshop-v2-source/tests/test_armored_workshop_v2_native.gd tests/
+          grep -F 'extends "res://scripts/ui/PowerPlantStudioAdapterV1.gd"' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          sed -i 's|res://scripts/ui/PowerPlantStudioAdapterV1.gd|res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd|' scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          test -s scripts/ui/VisualStyle.gd
+          rm -rf workshop-v2-source
       - name: Download Godot 4.3 and Web export templates
         shell: bash
         run: |
