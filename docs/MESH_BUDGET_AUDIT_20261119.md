@@ -37,3 +37,8 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - CI [44594854796](https://github.com/edwinrodri12/Tarvoka/actions/runs/44594854796): **FALLÓ** pese a imprimir `MESH_BUDGET_AUDIT_PASS`: el backend `--headless`/dummy de Godot 4.3 registró `ERROR: Parameter "m" is null` en `mesh_get_surface_count` al trabajar con MultiMesh. El workflow detectó correctamente el error y salió con código 1; el marcador PASS aislado no certifica éxito.
 - El workflow ahora usa `xvfb-run` con `--rendering-driver opengl3`, igual que las pruebas GPU de terreno; conserva timeout, detección estricta de errores y marcador de salida. **CI del commit correctivo: NO CONFIRMADO** hasta observar ejecución nueva. No se modificaron conteos ni reglas de juego.
 - Android físico: **NO EJECUTADO EN DISPOSITIVO**; revisión visual: **PENDIENTE DE REVISIÓN VISUAL**. Siguiente: verificar CI nuevo y medir un modelo real del catálogo.
+
+## 2026-11-19 — auditoría directa de escenas PackedScene
+- Nueva API `MeshBudgetAudit.inspect_packed_scene(scene, triangle_warning)` instancia temporalmente la escena sin añadirla al árbol de juego, contabiliza la geometría con `inspect` y libera la instancia. Permite auditar escenas de producción cuando se confirme su ruta, sin interferir con gameplay.
+- Regresión en `tests/test_mesh_budget_audit.gd`: escena empaquetada con BoxMesh (12 triángulos), alerta con umbral 11, árbol activo sin alteración y escena nula con aviso.
+- Commits `87641cbb9ec0e5a1975edb92307c5828e86123a7` y `e81169df4e74e75ab43e79f9ba0179ee465d061b`. CI del cambio: NO CONFIRMADO al registrar. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE DE REVISIÓN VISUAL.
