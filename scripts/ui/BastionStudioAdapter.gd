@@ -1847,7 +1847,14 @@ func _g13_v66_show_mount(enabled:bool)->void:
         if status_label!=null:
             status_label.text="G13 V66: soportes de cañones no cargados."
         return
+    # V67 shares the original Android moving cheek with V66.
+    # Compare the historical mount only after removing that later overlay;
+    # restore the newest feed cover on top when re-enabling V66.
+    if bool(model_root.get_meta(G13FeedV67.FLAG,false)):
+        G13FeedV67.show_finish(model_root,false)
     if G13MountV66.show_finish(model_root,enabled):
+        if enabled and bool(model_root.get_meta(G13FeedV67.FLAG,false)):
+            G13FeedV67.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V66 · rodamientos abiertos y collares de acero mecanizado"
