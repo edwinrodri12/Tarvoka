@@ -32,3 +32,29 @@ func select_asset(new_path: NodePath) -> bool:
         return false
     asset_path = new_path
     return true
+
+## Load a PackedScene in the isolated preview without changing the battle scene.
+## The previous loaded model is retained when the replacement has no meshes.
+## Existing scene children (including SampleAsset) are never deleted.
+var _loaded_asset: Node3D
+
+func load_asset_scene(packed: PackedScene) -> bool:
+    if packed == null:
+        return false
+    var candidate: Node = packed.instantiate()
+    if not candidate is Node3D:
+        candidate.free()
+        return false
+    var model: Node3D = candidate as Node3D
+    model.name = "InspectionLoadedAsset"
+    add_child(model)
+    if not orbit_rig.frame_asset(model):
+        remove_child(model)
+        model.free()
+        return false
+    if _loaded_asset != null and is_instance_valid(_loaded_asset):
+        remove_child(_loaded_asset)
+        _loaded_asset.queue_free()
+    _loaded_asset = model
+    asset_path = get_path_to(model)
+    return true
