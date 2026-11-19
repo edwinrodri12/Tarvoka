@@ -44,6 +44,7 @@ const V40=preload("res://scripts/ui/CivilianCityFinalFitV40.gd")
 const V41=preload("res://scripts/ui/CivilianCityRoofJoinV41.gd")
 const V42=preload("res://scripts/ui/CivilianCityArtReviewV42.gd")
 const V43=preload("res://scripts/ui/CivilianCityArtEvidenceV43.gd")
+const V44=preload("res://scripts/ui/CivilianCityFactionIdentityV44.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const STAGE_NAME="CiudadCivilV4SiluetaTacticaLOD"
 const LEVELS=["Cercano · detalle completo",
@@ -51,7 +52,7 @@ const LEVELS=["Cercano · detalle completo",
     "Móvil · silueta esencial"]
 const DARK=Color("#29424c")
 const LIGHT=Color("#c6bca4")
-const NEUTRAL=Color("#c9a657")
+const NEUTRAL=V1.NEUTRAL_ACCENT
 const DAMAGE=Color("#655e57")
 
 static func _part(root: Node3D,label: String,
@@ -256,6 +257,9 @@ static func _keep_medium(name: String) -> bool:
     return true
 
 static func _keep_far(name: String) -> bool:
+    # Keep every new 3D faction identity mark at tactical far zoom.
+    if name.begins_with(V44.PREFIX):
+        return true
     # Keep geometry essential for silhouette, urban base and faction cue.
     # Deliberately no thousands of windows, benches, shrubs or railings.
     for prefix in [
@@ -580,6 +584,9 @@ static func apply(model: Node3D,level: int,
     if not V42.apply(model,level,faction,damage):
         return false
     if not V43.apply(model,level,faction,damage):
+        return false
+    # Add V44 physically modeled faction marks after the finished V43 audit.
+    if not V44.apply(model,level,faction,damage):
         return false
     model.set_meta("city_art_work_in_progress",43)
     return set_detail(model,0)
