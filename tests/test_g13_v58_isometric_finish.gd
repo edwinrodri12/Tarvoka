@@ -41,6 +41,13 @@ func _run()->void:
             check(latest.size()==(6 if high else 1),
                 "must finish exact number of real mechanical surfaces")
             check(old.size()==latest.size(),"each new PBR coat has original")
+            # Later G13 versions (V59+) deliberately apply their own live
+            # coatings to shared geometry, including the turret bearing.
+            # Re-enable the historical V58 finish on this disposable test
+            # model before asserting exact material identity. Do not change
+            # the production G13 V68 render or weaken the V58 comparison.
+            check(V58.show_finish(model,true),
+                "historical V58 coat can be restored after newer finishes")
             var parts:Dictionary=V58._parts(model,high)
             check(parts.size()==latest.size(),
                 "same mechanically-linked Godot nodes remain")
