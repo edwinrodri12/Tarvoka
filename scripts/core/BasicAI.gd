@@ -320,6 +320,19 @@ static func _decide(state: Dictionary,
             urgency["reason"] = "relay_tie_pressure"
             return urgency
 
+    # Optional v3.9.8 research planner: a two-sided, observed-only race
+    # forecast. Before investing in a new factory unit, consider whether
+    # an enemy that is actually VISIBLE can contest a neutral relay sooner
+    # than we can. Same move legality as a human player; NO bonuses,
+    # hidden-unit peeking, automatic changes to game defaults or AI saves.
+    if bool(options.get("_ab_relay_race_forecast_v398",false)) and \
+            knowledge.get("control") is Dictionary and \
+            int(knowledge["control"].get("turns",99)) <= 12:
+        var race: Dictionary = _forecast_relay_race_v398(
+            state,knowledge,friends,enemies)
+        if bool(race.get("valid",false)):
+            return race
+
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
     var urban_action: Dictionary = _capture_urban_site(state, knowledge,
@@ -920,6 +933,141 @@ static func _defend_relay(state: Dictionary, knowledge: Dictionary, friends: Arr
     moved["reason"] = "defend_relay"
     moved["unit_id"] = best_id
     moved["destination"] = best_cell
+    return moved
+
+# V3.9.8 / opt-in strategic forecast: rank a threatened neutral relay
+# using ONLY faction-observed terrain, visible enemy positions and each
+# unit's *public* movement characteristics. This is NOT an enemy-turn
+# simulator and never uses unseen units or enemy private resources.
+# The model estimates turn distance with a weighted terrain route and then
+# commits exactly one normal Session.move. Legal action checks are unchanged.
+static func _forecast_relay_race_v398(state: Dictionary,
+        knowledge: Dictionary, friends: Array, enemies: Array) -> Dictionary:
+    var idle := {"valid":false}
+    if not knowledge.get("control") is Dictionary or enemies.is_empty():
+        return idle
+    var faction: int = int(state.get("faction",-1))
+    if faction not in [0,1]:
+        return idle
+    var visible: Dictionary = Visibility.visible_cells(state,faction) \
+        if Visibility.enabled(state) else {}
+    var weather: String = Weather.from_state(knowledge)
+    var best_score := -999999999
+    var best_id := ""
+    var best_cell := Vector2i(-1,-1)
+    var best_target := Vector2i(-1,-1)
+    var best_enemy_eta := -1
+    var best_own_eta := -1
+    # Cache one route per mobility/traction profile and public relay.
+    # Modern vehicles cross roads at half cost; infantry does not.
+    # A common infantry route falsely overstates vehicle arrival times.
+    # Unknown terrain is already masked in knowledge, never revealed.
+    for relay in knowledge["control"].get("nodes",[]):
+        if not relay is Dictionary or int(relay.get("owner",-2)) != -1 or \
+                not relay.get("pos") is Vector2i:
+            continue
+        var target: Vector2i = relay["pos"]
+        if _ground_occupied(knowledge,target):
+            continue
+        var route_cache: Dictionary = {}
+        var enemy_eta := 999999
+        for enemy in enemies:
+            if Domains.domain(enemy) != Domains.GROUND:
+                continue
+            var budget: int = Logistics.movement_budget(enemy)
+            if budget <= 0:
+                continue
+            var profile: String = str(Logistics.road_fast(enemy)) + ":" + \
+                Weather.traction(enemy)
+            if not route_cache.has(profile):
+                route_cache[profile] = _route_to_relay(
+                    knowledge["terrain"],target,[],weather,
+                    Weather.traction(enemy),Logistics.road_fast(enemy))
+            var enemy_route: Dictionary = route_cache[profile]
+            if not enemy_route.has(enemy["pos"]):
+                continue
+            # _route_to_relay already returns whole movement-cost units.
+            # Multiplying cost by 2 here would falsely double ETA.
+            var cost: int = int(enemy_route[enemy["pos"]])
+            enemy_eta = mini(enemy_eta,ceili(float(cost)/float(budget)))
+        # Only a known, genuinely contestable relay qualifies. Do not
+        # invent a future enemy in fog or chase an unreachable opponent.
+        if enemy_eta > 8:
+            continue
+        for ally in friends:
+            if bool(ally.get("moved",false)) or \
+                    Domains.domain(ally) != Domains.GROUND:
+                continue
+            var own_budget: int = Logistics.movement_budget(ally)
+            if own_budget <= 0:
+                continue
+            var ally_profile: String = str(Logistics.road_fast(ally)) + ":" + \
+                Weather.traction(ally)
+            if not route_cache.has(ally_profile):
+                route_cache[ally_profile] = _route_to_relay(
+                    knowledge["terrain"],target,[],weather,
+                    Weather.traction(ally),Logistics.road_fast(ally))
+            var route: Dictionary = route_cache[ally_profile]
+            if not route.has(ally["pos"]):
+                continue
+            # Preserve occupied relays and cities that would be captured
+            # automatically by ending this turn.
+            var committed := false
+            for owned in knowledge["control"]["nodes"]:
+                if owned["pos"] == ally["pos"] and \
+                        int(owned.get("owner",-2)) == faction:
+                    committed = true
+                    break
+            for site in knowledge.get("economy",{}).get("sites",[]):
+                if site["pos"] == ally["pos"] and \
+                        int(site.get("owner",-2)) != faction and \
+                        Economy.can_capture(ally):
+                    committed = true
+                    break
+            if committed:
+                continue
+            var current_cost: int = int(route[ally["pos"]])
+            if current_cost <= 0:
+                continue
+            var own_eta: int = ceili(float(current_cost)/float(own_budget))
+            if own_eta > enemy_eta + 2 or own_eta > 10:
+                continue
+            var reachable: Dictionary = _reachable_for(knowledge,ally)
+            for destination in reachable:
+                if destination == ally["pos"] or \
+                        not route.has(destination) or \
+                        int(route[destination]) >= current_cost or \
+                        _ground_occupied(knowledge,destination) or \
+                        (Visibility.enabled(state) and not visible.has(destination)):
+                    continue
+                var after: int = int(route[destination])
+                # A close enemy makes a race urgent. Favor legal immediate
+                # relay capture, otherwise choose largest route progress.
+                # Stable tie breaking uses the faction-relative cell order.
+                var score: int = 250000 - enemy_eta*900 - \
+                    own_eta*120 - after*160 - int(reachable[destination])*2
+                if destination == target:
+                    score += 20000
+                if score > best_score or (score == best_score and \
+                        _prefer_cell(destination,best_cell,faction)):
+                    best_score = score
+                    best_id = str(ally["id"])
+                    best_cell = destination
+                    best_target = target
+                    best_enemy_eta = enemy_eta
+                    best_own_eta = own_eta
+    if best_id.is_empty():
+        return idle
+    var moved: Dictionary = Session.move(state,best_id,best_cell)
+    if not bool(moved.get("valid",false)):
+        return idle
+    moved["action"] = "move"
+    moved["reason"] = "observed_relay_race_forecast_v398"
+    moved["unit_id"] = best_id
+    moved["destination"] = best_cell
+    moved["target_relay"] = best_target
+    moved["visible_enemy_eta"] = best_enemy_eta
+    moved["own_eta"] = best_own_eta
     return moved
 
 # Research-only tie condition. Scores are public; relay OWNERS are
