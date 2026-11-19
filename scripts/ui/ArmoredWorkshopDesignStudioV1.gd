@@ -3,7 +3,8 @@ class_name TarvokaArmoredWorkshopDesignStudioV1
 
 # Standalone native Godot 4.3 viewer for the SAME workshop model used in
 # TARVOKA's shared EDIFICIOS 3D panel. No HTML proxy or image substitute.
-const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
+const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
+const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
 var _model:Node3D
@@ -11,6 +12,7 @@ var _stage:Node3D
 var _camera:Camera3D
 var _viewport:SubViewport
 var _canvas:SubViewportContainer
+var _version:OptionButton
 var _level:OptionButton
 var _damage:OptionButton
 var _faction:OptionButton
@@ -20,7 +22,7 @@ var _elevation:float=39.0
 var _zoom:float=1.0
 
 func _ready() -> void:
-    name="TARVOKA_TallerBlindadosEstudio3DV1"
+    name="TARVOKA_TallerBlindadosEstudio3DV2"
     var page:=HSplitContainer.new()
     page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     page.split_offset=284
@@ -30,13 +32,15 @@ func _ready() -> void:
     column.add_theme_constant_override("separation",7)
     page.add_child(column)
     var title:=Label.new()
-    title.text="TARVOKA · TALLER DE BLINDADOS V1"
+    title.text="TARVOKA · TALLER DE BLINDADOS V2"
     title.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     column.add_child(title)
     var subtitle:=Label.new()
     subtitle.text="Instalacion fija · diseño 3D nativo · no es un deposito ni un campamento desplegable"
     subtitle.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     column.add_child(subtitle)
+    _version=_select(column,"ACABADO",["V1 · original","V2 · industrial refinado"])
+    _version.select(1)
     _level=_select(column,"ARQUITECTURA",Workshop.LEVEL_NAMES)
     _level.select(1)
     _damage=_select(column,"ESTADO DE DAÑO",Workshop.DAMAGE_NAMES)
@@ -44,7 +48,7 @@ func _ready() -> void:
     for info in Style.FACTIONS:
         _faction.add_item(str(info["name"]))
     _faction.select(0)
-    for selection in [_level,_damage,_faction]:
+    for selection in [_version,_level,_damage,_faction]:
         selection.item_selected.connect(_on_change)
     var cameras:=HFlowContainer.new()
     column.add_child(_label("INSPECCION 3D"))
@@ -162,13 +166,13 @@ func _rebuild() -> void:
     var level:int=_level.selected+1
     var damage:int=_damage.selected
     var faction:int=_faction.selected-1
-    _model=Workshop.build(level,faction,damage)
+    _model=WorkshopV1.build(level,faction,damage) if _version.selected==0 else Workshop.build(level,faction,damage)
     if _model==null:
         _status.text="ERROR: geometria 3D no disponible"
         return
     _stage.add_child(_model)
-    _status.text="%s · D%d · %d bahia(s) · %d mallas 3D · ARTE V1, PENDIENTE REVISION" % [
-        Workshop.LEVEL_NAMES[level-1],damage,
+    _status.text="V%d · %s · D%d · %d bahía(s) · %d mallas 3D · ARTE EN REVISIÓN" % [
+        int(_model.get_meta("workshop_art_version",1)),Workshop.LEVEL_NAMES[level-1],damage,
         int(_model.get_meta("workshop_bays",0)),Workshop.mesh_count(_model)]
     _update_camera()
 
