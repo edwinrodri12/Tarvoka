@@ -5,6 +5,7 @@ class_name TarvokaArmoredWorkshopDesignStudioV1
 # TARVOKA's shared EDIFICIOS 3D panel. No HTML proxy or image substitute.
 const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
+const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
 var _model:Node3D
@@ -39,7 +40,9 @@ func _ready() -> void:
     subtitle.text="Instalacion fija · diseño 3D nativo · no es un deposito ni un campamento desplegable"
     subtitle.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     column.add_child(subtitle)
-    _version=_select(column,"ACABADO",["V1 · original","V2 · industrial refinado"])
+    _version=_select(column,"ACABADO",[
+        "V1 · original","V2 · industrial refinado",
+        "Android · táctico","Android · distante"])
     _version.select(1)
     _level=_select(column,"ARQUITECTURA",Workshop.LEVEL_NAMES)
     _level.select(1)
@@ -166,14 +169,29 @@ func _rebuild() -> void:
     var level:int=_level.selected+1
     var damage:int=_damage.selected
     var faction:int=_faction.selected-1
-    _model=WorkshopV1.build(level,faction,damage) if _version.selected==0 else Workshop.build(level,faction,damage)
+    match _version.selected:
+        0:
+            _model=WorkshopV1.build(level,faction,damage)
+        1:
+            _model=Workshop.build(level,faction,damage)
+        2:
+            _model=WorkshopMobile.build(level,faction,damage,
+                WorkshopMobile.PROFILE_TACTICAL)
+        _:
+            _model=WorkshopMobile.build(level,faction,damage,
+                WorkshopMobile.PROFILE_DISTANT)
     if _model==null:
         _status.text="ERROR: geometria 3D no disponible"
         return
     _stage.add_child(_model)
-    _status.text="V%d · %s · D%d · %d bahía(s) · %d mallas 3D · ARTE EN REVISIÓN" % [
-        int(_model.get_meta("workshop_art_version",1)),Workshop.LEVEL_NAMES[level-1],damage,
-        int(_model.get_meta("workshop_bays",0)),Workshop.mesh_count(_model)]
+    var mobile_profile:int=int(_model.get_meta("workshop_lod_profile",0))
+    var detail:String="%d lotes GPU / %d cajas" % [
+        int(_model.get_meta("workshop_batches",0)),
+        int(_model.get_meta("workshop_instances",0))
+    ] if mobile_profile>0 else "%d mallas 3D" % Workshop.mesh_count(_model)
+    _status.text="V%d · %s · D%d · %d bahía(s) · %s · ARTE EN REVISIÓN" % [
+        int(_model.get_meta("workshop_art_version",1)),Workshop.LEVEL_NAMES[level-1],
+        damage,int(_model.get_meta("workshop_bays",0)),detail]
     _update_camera()
 
 func _update_camera() -> void:
