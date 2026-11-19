@@ -34,3 +34,10 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - `frame_asset(asset: Node3D) -> bool` recorre MeshInstance3D hijos, calcula ocho esquinas por malla con transformación global y encuadra el AABB combinado. Permite piezas rotadas o desplazadas sin alterar sus transformaciones. Devuelve false sin cambiar cámara si no hay mallas.
 - Regresión añadida: pieza BoxMesh desplazada/rotada y jerarquía vacía.
 - PASÓ: commits en rama PR #602. **NO CONFIRMADO:** Godot/CI de estos nuevos commits. **NO EJECUTADO EN DISPOSITIVO**; **PENDIENTE DE REVISIÓN VISUAL**. No modifica visor web ni escenas tácticas.
+
+
+## 2026-11-19 — Escena de inspección con encuadre automático
+- `scripts/tools/AssetInspectionPreview.gd` conecta `SampleAsset` con `OrbitRig.frame_asset()` tras entrar en el árbol. Se mantiene aislada de la batalla y de la UI táctil.
+- `scenes/tools/AssetInspectionSmoke.tscn` usa ese controlador: al sustituir `SampleAsset` por un modelo 3D, la cámara centra sus mallas automáticamente.
+- `tests/test_asset_orbit_camera.gd` comprueba centro y distancia calculada desde el AABB de la esfera antes de probar el control manual.
+- **Godot CI para este commit: NO CONFIRMADO. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.**
