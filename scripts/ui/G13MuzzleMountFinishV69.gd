@@ -29,7 +29,7 @@ static var _muzzles:Dictionary={}
 static var _hub:ArrayMesh
 
 static func _point(y:float,r:float,a:float)->Vector3:
-    return Vector3(cosf(a)*r,y,sinf(a)*r)
+    return Vector3(cos(a)*r,y,sin(a)*r)
 
 static func _tri(st:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
         shade:float)->void:
