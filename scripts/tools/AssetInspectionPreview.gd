@@ -2,7 +2,7 @@ extends Node3D
 ## Isolated preview scene: automatically frame the asset on scene load.
 ## Replace SampleAsset with a production model without touching battle input.
 
-@onready var orbit_rig: AssetOrbitCamera = $OrbitRig
+@onready var orbit_rig = $OrbitRig
 @onready var sample_asset: Node3D = $SampleAsset
 
 func _ready() -> void:
