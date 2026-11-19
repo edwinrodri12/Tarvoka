@@ -889,8 +889,13 @@ func _studio_run_animation(action: String) -> void:
             _g11_close_context_v25()
         "g14_v3_on","g14_v3_off":
             if _role=="sam_mobile" and model_root!=null:
-                if G14LauncherV3.show_finish(model_root,action=="g14_v3_on"):
-                    status_label.text=("G14 V3 · 4 bocas SAM, cierres y cilindros hidráulicos" if action=="g14_v3_on" else "G14 V2 · comparación del lanzador anterior")
+                var show_v3:bool=action=="g14_v3_on"
+                if show_v3:
+                    # Always restore the V2 underlying armor before
+                    # displaying the current V3 launcher on top of it.
+                    G14ExteriorV2.show_finish(model_root,true)
+                if G14LauncherV3.show_finish(model_root,show_v3):
+                    status_label.text=("G14 V3 · 4 bocas SAM, cierres y cilindros hidráulicos" if show_v3 else "G14 V2 · comparación del lanzador anterior")
         "g14_v2_on","g14_v2_off":
             if _role=="sam_mobile" and model_root!=null:
                 var enabled_g14:bool=action=="g14_v2_on"
