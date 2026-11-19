@@ -958,9 +958,10 @@ static func _forecast_relay_race_v398(state: Dictionary,
     var best_target := Vector2i(-1,-1)
     var best_enemy_eta := -1
     var best_own_eta := -1
-    # Compute route to each of at most four public relay sites once,
-    # reusing it for both sides. Unexplored tiles are already masked in
-    # knowledge; they do not reveal a hidden bridge or secret opponent.
+    # Cache one route per mobility/traction profile and public relay.
+    # Modern vehicles cross roads at half cost; infantry does not.
+    # A common infantry route falsely overstates vehicle arrival times.
+    # Unknown terrain is already masked in knowledge, never revealed.
     for relay in knowledge["control"].get("nodes",[]):
         if not relay is Dictionary or int(relay.get("owner",-2)) != -1 or \
                 not relay.get("pos") is Vector2i:
@@ -968,26 +969,46 @@ static func _forecast_relay_race_v398(state: Dictionary,
         var target: Vector2i = relay["pos"]
         if _ground_occupied(knowledge,target):
             continue
-        var route: Dictionary = _route_to_relay(
-            knowledge["terrain"],target,[],weather)
-        if route.is_empty():
-            continue
+        var route_cache: Dictionary = {}
         var enemy_eta := 999999
         for enemy in enemies:
-            if Domains.domain(enemy) != Domains.GROUND or \
-                    not route.has(enemy["pos"]):
+            if Domains.domain(enemy) != Domains.GROUND:
                 continue
-            var budget: int = maxi(1,Logistics.movement_budget(enemy))
-            var cost: int = int(route[enemy["pos"]])
-            enemy_eta = mini(enemy_eta,ceili(float(cost*2)/float(budget)))
+            var budget: int = Logistics.movement_budget(enemy)
+            if budget <= 0:
+                continue
+            var profile: String = str(Logistics.road_fast(enemy)) + ":" + \
+                Weather.traction(enemy)
+            if not route_cache.has(profile):
+                route_cache[profile] = _route_to_relay(
+                    knowledge["terrain"],target,[],weather,
+                    Weather.traction(enemy),Logistics.road_fast(enemy))
+            var enemy_route: Dictionary = route_cache[profile]
+            if not enemy_route.has(enemy["pos"]):
+                continue
+            # _route_to_relay already returns whole movement-cost units.
+            # Multiplying cost by 2 here would falsely double ETA.
+            var cost: int = int(enemy_route[enemy["pos"]])
+            enemy_eta = mini(enemy_eta,ceili(float(cost)/float(budget)))
         # Only a known, genuinely contestable relay qualifies. Do not
         # invent a future enemy in fog or chase an unreachable opponent.
         if enemy_eta > 8:
             continue
         for ally in friends:
             if bool(ally.get("moved",false)) or \
-                    Domains.domain(ally) != Domains.GROUND or \
-                    not route.has(ally["pos"]):
+                    Domains.domain(ally) != Domains.GROUND:
+                continue
+            var own_budget: int = Logistics.movement_budget(ally)
+            if own_budget <= 0:
+                continue
+            var ally_profile: String = str(Logistics.road_fast(ally)) + ":" + \
+                Weather.traction(ally)
+            if not route_cache.has(ally_profile):
+                route_cache[ally_profile] = _route_to_relay(
+                    knowledge["terrain"],target,[],weather,
+                    Weather.traction(ally),Logistics.road_fast(ally))
+            var route: Dictionary = route_cache[ally_profile]
+            if not route.has(ally["pos"]):
                 continue
             # Preserve occupied relays and cities that would be captured
             # automatically by ending this turn.
@@ -1008,8 +1029,7 @@ static func _forecast_relay_race_v398(state: Dictionary,
             var current_cost: int = int(route[ally["pos"]])
             if current_cost <= 0:
                 continue
-            var own_budget: int = maxi(1,Logistics.movement_budget(ally))
-            var own_eta: int = ceili(float(current_cost*2)/float(own_budget))
+            var own_eta: int = ceili(float(current_cost)/float(own_budget))
             if own_eta > enemy_eta + 2 or own_eta > 10:
                 continue
             var reachable: Dictionary = _reachable_for(knowledge,ally)
