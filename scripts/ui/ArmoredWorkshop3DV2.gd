@@ -163,7 +163,7 @@ static func _portal(parent:Node3D,width:float,depth:float,
                     Vector3.ZERO,true)
 
 static func _wall_enclosure(parent:Node3D,width:float,depth:float,
-        height:float,damage:int,accent:Color) -> void:
+        height:float,bays:int,damage:int,accent:Color) -> void:
     # D3/D4 deliberately have NO complete full-height siding:
     # shattered pillars and ground-based debris belong to V1 wreckage.
     if damage>=3:
@@ -446,7 +446,7 @@ static func build(level:int=1,faction:int=-1,damage:int=0) -> Node3D:
                 unsupported.free()
     var stage:Node3D=_node(base_root,FINISH_STAGE)
     _portal(stage,width,depth,height,bays,damage,accent)
-    _wall_enclosure(stage,width,depth,height,damage,accent)
+    _wall_enclosure(stage,width,depth,height,bays,damage,accent)
     _roof_finish(stage,width,depth,height,bays,damage)
     _machinery(stage,width,depth,height,bays,damage)
     _wear(stage,width,depth,damage,accent)
