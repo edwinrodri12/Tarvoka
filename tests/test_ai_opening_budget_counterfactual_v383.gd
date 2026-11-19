@@ -129,6 +129,16 @@ static func _play_equal_response(start: Dictionary, mirrored: bool,
             assert(removed == 1)
             state = state.duplicate(true)
             state["units"] = surviving
+            # The optional persistent AI goals cannot reference a unit
+            # which exists ONLY before this laboratory ablation. Purge
+            # N3's assignment while preserving every unrelated goal.
+            # Otherwise SaveCodec correctly rejects a dangling unit_id.
+            if state.has("ai_objectives"):
+                var preserved_goals: Array = []
+                for goal in state["ai_objectives"].get("assignments",[]):
+                    if str(goal.get("unit_id","")) != "N3":
+                        preserved_goals.append(goal)
+                state["ai_objectives"]["assignments"] = preserved_goals
             assert(Economy.valid(state["economy"],state["terrain"]))
             assert(Relays.valid(state["control"],state["terrain"]))
             assert(not Codec.encode(state).is_empty())
