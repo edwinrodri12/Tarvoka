@@ -19,6 +19,11 @@ on:
       - "tests/test_g13_v53_material_realism.gd"
       - "tests/test_g13_v61_real_bastion_comparison.gd"
       - ".github/workflows/g13-v61-bastion-wheel-comparison.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/ui/G13ProductionWheelArmorV61.gd"
+      - ".github/workflows/g13-v61-bastion-wheel-comparison.yml"
   workflow_dispatch:
 
 permissions:
