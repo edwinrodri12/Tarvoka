@@ -35,7 +35,7 @@ static func _add_mesh(mesh: Mesh, count: int, report: Dictionary) -> void:
 	report["instances"] += count
 	for surface in range(mesh.get_surface_count()):
 		report["surfaces"] += count
-		if mesh.surface_get_primitive_type(surface) != Mesh.PRIMITIVE_TRIANGLES:
+		if mesh is ArrayMesh and (mesh as ArrayMesh).surface_get_primitive_type(surface) != Mesh.PRIMITIVE_TRIANGLES:
 			continue
 		var indices := mesh.surface_get_arrays(surface)[Mesh.ARRAY_INDEX] as PackedInt32Array
 		var vertices := mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX] as PackedVector3Array
