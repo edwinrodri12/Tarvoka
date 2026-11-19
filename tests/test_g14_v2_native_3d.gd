@@ -14,6 +14,32 @@ func check(ok:bool,reason:String)->void:
         failures+=1
         push_error("G14 V2 NATIVE QA: "+reason)
 
+# Detect empty/black-only captures, not just successful PNG writes.
+# Material/lighting may exist in the scene tree but be culled in the viewport.
+func _has_lit_geometry(picture:Image)->bool:
+    if picture==null or picture.is_empty():
+        return false
+    var lit:int=0
+    for y in range(80,picture.get_height()-60,25):
+        for x in range(150,picture.get_width()-130,25):
+            if picture.get_pixel(x,y).get_luminance()>0.34:
+                lit+=1
+                if lit>=12:
+                    return true
+    return false
+
+func _frame_difference(before:Image,after:Image)->int:
+    if before==null or after==null or before.is_empty() or after.is_empty():
+        return 0
+    var count:int=0
+    for y in range(70,after.get_height()-65,18):
+        for x in range(140,after.get_width()-120,18):
+            var a:Color=before.get_pixel(x,y)
+            var b:Color=after.get_pixel(x,y)
+            if absf(a.r-b.r)+absf(a.g-b.g)+absf(a.b-b.b)>0.30:
+                count+=1
+    return count
+
 func _initialize()->void:
     call_deferred("_run")
 
@@ -86,13 +112,18 @@ func _run()->void:
                     "watertight six faces: exactly twelve triangles")
                 var cab_center:=Vector3(0,1.34,-1.25)
                 var normals_ok:bool=true
+                var clockwise_ok:bool=true
                 for triangle in range(int(vertices.size()/3)):
                     var k:int=triangle*3
                     var mid:Vector3=(vertices[k]+vertices[k+1]+vertices[k+2])/3.0
                     if normals[k].dot(mid-cab_center)<=0.01:
                         normals_ok=false
-                        break
+                    var crossed:Vector3=(vertices[k+1]-vertices[k]).cross(
+                        vertices[k+2]-vertices[k])
+                    if crossed.dot(normals[k])>=0.0:
+                        clockwise_ok=false
                 check(normals_ok,"all 12 cab triangles have outward normals")
+                check(clockwise_ok,"all exterior faces use Godot 4.3 clockwise winding")
             for side in [-1,1]:
                 var front:=model.find_child(
                     V2.GLASS_FRONT+str(side),true,false) as MeshInstance3D
@@ -136,6 +167,7 @@ func _run()->void:
                     "G14_Parabrisas_%d" % side,true,false) as MeshInstance3D
                 check(old_glass!=null and old_glass.visible,
                     "both V1 windscreens restored for comparison")
+            var previous_frame:Image=null
             if lod==13:
                 model.rotation_degrees.y=32.0
                 await process_frame
@@ -146,6 +178,9 @@ func _run()->void:
                     picture.save_png("%s/g14_v1_faction_%02d.png" % [
                         OUT_DIR,faction])==OK,
                     "V1 true Godot comparison capture")
+                check(_has_lit_geometry(picture),
+                    "the V1 screenshot actually displays illuminated model geometry")
+                previous_frame=picture
                 shots+=1
             check(V2.show_finish(model,true),"reactivate real V2 panels")
             check(marker!=null and marker.visible,"V2 overlay restored")
@@ -180,6 +215,10 @@ func _run()->void:
                     capture.save_png("%s/g14_v2_faction_%02d.png" % [
                         OUT_DIR,faction])==OK,
                     "V2 true Godot 8-faction inspection capture")
+                check(_has_lit_geometry(capture),
+                    "the V2 screenshot actually displays the full 3D vehicle")
+                check(_frame_difference(previous_frame,capture)>16,
+                    "G14 V2 really changes the viewport, not only invisible metadata")
                 shots+=1
             viewport.remove_child(model)
             model.free()
