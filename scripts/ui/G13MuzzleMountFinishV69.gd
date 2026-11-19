@@ -64,18 +64,20 @@ static func _muzzle_mesh(high:bool)->ArrayMesh:
     if _muzzles.has(key):
         return _muzzles[key] as ArrayMesh
     var n:int=HERO_SECTORS if high else ANDROID_SECTORS
-    # Axial positions deliberately retain the 0.085 m original muzzle
-    # length and its existing Y-to-Z rotation; the muzzle-flash anchor at
-    # z=-1.29 stays completely untouched.
+    # HERO V12 has an existing 0.096m sculpted muzzle while LOD8 still
+    # uses the compact original 0.085m CylinderMesh. Keep each ORIGINAL
+    # axial envelope and the same local-Y to world-Z rotation/flash.
+    var front:float=-0.050 if high else -0.0425
+    var rear:float=0.046 if high else 0.0425
     var profile:Array[Vector2]=[
-        Vector2(-0.0425,0.068),
+        Vector2(front,0.068),
         Vector2(-0.0360,0.073),
         Vector2(-0.0250,0.072),
         Vector2(-0.0090,0.066),
         Vector2(0.0090,0.066),
         Vector2(0.0240,0.072),
         Vector2(0.0360,0.072),
-        Vector2(0.0425,0.065)
+        Vector2(rear,0.065)
     ]
     var st:=SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -299,8 +301,9 @@ static func apply(model:Node3D)->bool:
             muzzle_name,true,false) as MeshInstance3D
         if gun==null or mouth==null or (
                 gun.get_parent()!=pitch or mouth.get_parent()!=pitch) or (
-                not gun.mesh is CylinderMesh or
-                not mouth.mesh is ArrayMesh) or (
+                not gun.mesh is CylinderMesh or (
+                high and not mouth.mesh is ArrayMesh) or (
+                not high and not mouth.mesh is CylinderMesh)) or (
                 gun.rotation_degrees.distance_to(Vector3(90,0,0))>0.1 or
                 mouth.rotation_degrees.distance_to(Vector3(90,0,0))>0.1):
             return false
