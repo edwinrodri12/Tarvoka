@@ -1,0 +1,90 @@
+name: TARVOKA G16 V1 native logistics 6x6 and camp 3D QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/G16ArmoredLogisticsV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g16_v1_native_3d.gd'
+      - '.github/workflows/g16-v1-native-logistics-qa.yml'
+  push:
+    branches: [main, feat/g16-v1-armored-logistics-studio-20261119]
+    paths:
+      - 'scripts/ui/G16ArmoredLogisticsV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g16_v1_native_3d.gd'
+      - '.github/workflows/g16-v1-native-logistics-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  g16-authentic-native-model:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get exact Godot 4.3 native engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify G16 really belongs to original shared TARVOKA Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '"logistics_mobile"' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16LogisticsV1.build' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16LogisticsV1.pose' scripts/ui/UnitModels3D.gd
+          grep -Fq 'P06Models.build("logistics_mobile",_faction,true,13)' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq '"g16_camp"' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'func _g16_play(' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'tarvoka_g16_v1_camp_is_visual_only' scripts/ui/G16ArmoredLogisticsV1.gd
+          if grep -R -E 'static func (refill|supply_units|camp_supply)\(' scripts/ui/G16ArmoredLogisticsV1.gd; then
+            echo '::error::Art-only G16 must never duplicate tactical supply rules'
+            exit 1
+          fi
+      - name: Import project Godot scripts (web parent supplied in Pages export)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g16-art-viewer
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g16-art-viewer/
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/g16-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g16-import.log; then
+            exit 1
+          fi
+      - name: Validate Godot 6x6 supply art, all 8 colors and cargo/camp mechanics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g16-v1
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v1_native_3d.gd \
+            2>&1 | tee /tmp/g16-v1-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g16-v1-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS G16 V1 NATIVE 3D:' /tmp/g16-v1-native.log
+          test "$(find build/qa/g16-v1 -name 'g16_faction_*.png' | wc -l)" -eq 16
+      - name: Publish sixteen true Godot rendered faction and camp preview images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v1-native-6x6-supplies-camp-eight-factions
+          path: build/qa/g16-v1/*.png
+          retention-days: 14
