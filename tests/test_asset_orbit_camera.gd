@@ -154,6 +154,41 @@ func _run() -> void:
         push_error("Multipart assembly failed with transformed camera rig")
         quit(1)
         return
+    # Runtime studio selection: switch from reference sphere to multipart asset.
+    # The camera must frame the new geometry without moving it.
+    assembly.name = "ProductionAssembly"
+    var previous_position: Vector3 = assembly.global_position
+    if not scene.select_asset(^"ProductionAssembly"):
+        push_error("Runtime asset selection rejected a valid multipart model")
+        quit(1)
+        return
+    if scene.asset_path != ^"ProductionAssembly" or not rig.target.is_equal_approx(previous_position):
+        push_error("Runtime asset selection did not update framing and path")
+        quit(1)
+        return
+    if not assembly.global_position.is_equal_approx(previous_position):
+        push_error("Runtime asset selection moved the model")
+        quit(1)
+        return
+    var selected_target: Vector3 = rig.target
+    var selected_distance: float = rig.distance
+    if scene.select_asset(^"MissingModel") or scene.asset_path != ^"ProductionAssembly":
+        push_error("Invalid runtime selection replaced the active model")
+        quit(1)
+        return
+    empty_asset.name = "EmptyModel"
+    if scene.select_asset(^"EmptyModel"):
+        push_error("Invalid empty model selection was accepted")
+        quit(1)
+        return
+    if not rig.target.is_equal_approx(selected_target) or not is_equal_approx(rig.distance, selected_distance):
+        push_error("Failed asset selection changed the camera")
+        quit(1)
+        return
+    if not scene.frame_selected_asset():
+        push_error("Selected asset could not be reframed")
+        quit(1)
+        return
     # Let the rendering server release mesh RIDs before SceneTree shutdown.
     # Godot 4.3 dummy renderer can otherwise report mesh_get_surface_count(null)
     # after a successful assertion run, causing CI to fail on engine errors.
