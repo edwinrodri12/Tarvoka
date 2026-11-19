@@ -70,7 +70,8 @@ static func _cyl(parent:Node3D,label:String,center:Vector3,
     return n
 
 static func _torus(parent:Node3D,label:String,pos:Vector3,
-        inner:float,outer:float,mat:Material,hero:bool)->MeshInstance3D:
+        inner:float,outer:float,mat:Material,hero:bool,
+        orientation:Vector3=Vector3(0,0,90))->MeshInstance3D:
     var n:=MeshInstance3D.new()
     n.name=label
     var mesh:=TorusMesh.new()
@@ -81,7 +82,7 @@ static func _torus(parent:Node3D,label:String,pos:Vector3,
     n.mesh=mesh
     n.material_override=mat
     n.position=pos
-    n.rotation_degrees.z=90.0
+    n.rotation_degrees=orientation
     parent.add_child(n)
     return n
 
@@ -232,7 +233,8 @@ static func build(root:Node3D,paint:Color,hero:bool=true)->bool:
             Vector3(-0.45,1.47,z),0.283,0.81,fuel,
             Vector3(90,0,0),20 if hero else 12)
         _torus(chassis,"G16_V1_FuelClamp_%d" % i,
-            Vector3(-0.45,1.47,z-0.32),0.28,0.317,frame,hero)
+            Vector3(-0.45,1.47,z-0.32),0.28,0.317,frame,hero,
+            Vector3(90,0,0))
         _box(chassis,"G16_V1_TankMount_%d" % i,
             Vector3(-0.45,1.161,z),
             Vector3(0.37,0.064,0.72),steel)
