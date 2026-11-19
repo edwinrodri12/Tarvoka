@@ -20,6 +20,7 @@ on:
       - "scripts/ui/G13ProductionWheelArmorV61.gd"
       - "scripts/ui/G13OpticalGlazingV62.gd"
       - "scripts/ui/G13FactionReadabilityV63.gd"
+      - "scripts/ui/G13ArmorEdgeFinishV64.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -157,6 +158,7 @@ on:
       - "tests/test_g13_v61_real_bastion_comparison.gd"
       - "tests/test_g13_v62_optical_glazing.gd"
       - "tests/test_g13_v63_faction_readability.gd"
+      - "tests/test_g13_v64_armor_edge_finish.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -345,6 +347,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_v62_optical_glazing.gd tests/test_g13_v62_optical_glazing.gd
           test -s hq-android-v15/tests/test_g13_v63_faction_readability.gd
           cp hq-android-v15/tests/test_g13_v63_faction_readability.gd tests/test_g13_v63_faction_readability.gd
+          test -s hq-android-v15/tests/test_g13_v64_armor_edge_finish.gd
+          cp hq-android-v15/tests/test_g13_v64_armor_edge_finish.gd tests/test_g13_v64_armor_edge_finish.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1275,6 +1279,17 @@ jobs:
             echo "G13 V63 real faction-colored plates failed"; exit 1
           fi
           grep -F 'PASS G13 V63 FACTION READABILITY:' /tmp/g13-v63-faction-color.log
+          # V64 genuinely extrudes old side shield and hatch facets without
+          # new draw nodes; verify LOD8, LOD13 and eight faction identities.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v64_armor_edge_finish.gd \
+            2>&1 | tee /tmp/g13-v64-faceted-steel.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v64-faceted-steel.log; then
+            echo "G13 V64 real beveled steel edge geometry failed"; exit 1
+          fi
+          grep -F 'PASS G13 V64 STEEL EDGE FINISH:' /tmp/g13-v64-faceted-steel.log
           # V61 actual P06/G13 identical-light and wheel-size studio proof.
           # The V61 standalone workflow hard-gates all nine screenshots.
           if [[ -s tests/test_g13_v61_real_bastion_comparison.gd ]]; then
