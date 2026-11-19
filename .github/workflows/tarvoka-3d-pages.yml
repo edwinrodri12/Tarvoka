@@ -236,7 +236,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
