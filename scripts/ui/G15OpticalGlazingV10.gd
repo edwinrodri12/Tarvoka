@@ -118,12 +118,15 @@ static func _side_mesh(side:int,detail:int)->ArrayMesh:
             var b:=_side_pt(side,u1,v0)
             var c:=_side_pt(side,u0,v1)
             var d:=_side_pt(side,u1,v1)
+            # Outward-facing normals matter for one-sided PBR shading even
+            # with CULL_DISABLED: positive X on the right, negative on left.
+            # u increases towards +Z, v towards +Y, so Z cross Y = -X.
             if side==1:
-                _facet(st,a,b,c)
-                _facet(st,b,d,c)
-            else:
                 _facet(st,a,c,b)
                 _facet(st,b,c,d)
+            else:
+                _facet(st,a,b,c)
+                _facet(st,b,d,c)
     st.generate_normals()
     return st.commit() as ArrayMesh
 
