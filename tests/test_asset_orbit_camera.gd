@@ -122,6 +122,38 @@ func _run() -> void:
         push_error("Empty asset changed camera framing")
         quit(1)
         return
+    # Regression: frame the union of multiple off-center mesh parts, not only the last part.
+    var assembly := Node3D.new()
+    scene.add_child(assembly)
+    assembly.position = Vector3(-4.0, 1.0, 2.0)
+    var left_part := MeshInstance3D.new()
+    left_part.mesh = BoxMesh.new()
+    left_part.mesh.size = Vector3(2.0, 2.0, 2.0)
+    left_part.position = Vector3(-5.0, 0.0, 0.0)
+    assembly.add_child(left_part)
+    var right_part := MeshInstance3D.new()
+    right_part.mesh = BoxMesh.new()
+    right_part.mesh.size = Vector3(2.0, 2.0, 2.0)
+    right_part.position = Vector3(5.0, 0.0, 0.0)
+    assembly.add_child(right_part)
+    if not rig.frame_asset(assembly):
+        push_error("Multipart assembly could not be framed")
+        quit(1)
+        return
+    if not rig.target.is_equal_approx(assembly.global_position):
+        push_error("Multipart assembly did not frame the union of its meshes")
+        quit(1)
+        return
+    var assembly_span := Vector3(12.0, 2.0, 2.0)
+    var assembly_distance := clampf(assembly_span.length() * 1.5, rig.min_distance, rig.max_distance)
+    if not is_equal_approx(rig.distance, assembly_distance):
+        push_error("Multipart assembly camera distance ignored an outer mesh")
+        quit(1)
+        return
+    if not is_equal_approx(camera.global_position.distance_to(rig.target), rig.distance):
+        push_error("Multipart assembly failed with transformed camera rig")
+        quit(1)
+        return
     scene.queue_free()
     print("PASS: isolated asset orbit camera smoke")
     quit(0)
