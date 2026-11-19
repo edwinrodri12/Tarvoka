@@ -63,6 +63,28 @@ func _run() -> void:
         push_error("Transformed rig camera does not face target")
         quit(1)
         return
+    # Framing uses the world-space AABB center and diagonal, including off-origin models.
+    var bounds := AABB(Vector3(-4.0, 1.0, 2.0), Vector3(4.0, 6.0, 8.0))
+    rig.frame_world_bounds(bounds)
+    if not rig.target.is_equal_approx(bounds.get_center()):
+        push_error("World bounds framing used an incorrect center")
+        quit(1)
+        return
+    var expected_distance: float = clampf(bounds.size.length() * 1.5, rig.min_distance, rig.max_distance)
+    if not is_equal_approx(rig.distance, expected_distance):
+        push_error("World bounds framing used an incorrect radius")
+        quit(1)
+        return
+    if not is_equal_approx(camera.global_position.distance_to(rig.target), rig.distance):
+        push_error("World bounds framing failed on transformed rig")
+        quit(1)
+        return
+    # Empty bounds must remain finite and respect minimum distance.
+    rig.frame_world_bounds(AABB(Vector3(1.0, 2.0, 3.0), Vector3.ZERO))
+    if not rig.target.is_equal_approx(Vector3(1.0, 2.0, 3.0)) or not is_equal_approx(rig.distance, rig.min_distance):
+        push_error("Degenerate model bounds framing failed")
+        quit(1)
+        return
     scene.queue_free()
     print("PASS: isolated asset orbit camera smoke")
     quit(0)
