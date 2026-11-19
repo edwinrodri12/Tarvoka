@@ -19,6 +19,8 @@ const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
 const G11BattleLOD = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11Tactical = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
+const G13ActionsV70 = preload("res://scripts/ui/G13BattleActionsV70.gd")
+const FactionIdentity = preload("res://scripts/ui/FactionIdentity.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
@@ -560,6 +562,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var detailed := 0
     var apc_lod := 0
     var g11_lod := 0
+    var g13_visible := 0
+    var g13_lod8 := 0
     var hidden_enemies := 0
     var player: int = viewer
     for unit in state.get("units",[]):
@@ -582,6 +586,23 @@ static func _make_units(parent: Node3D,state: Dictionary,
             model = Models.build("apc",faction,false,8)
             if model!=null:
                 apc_lod+=1
+        elif role=="mobile_aa":
+            # The playable G13 shares the approved V69 studio sculpt.
+            # Convert the logical team to one of eight selected art factions.
+            var art_faction: int = FactionIdentity.index_for(
+                FactionIdentity.key_for(state,faction))
+            if art_faction < 0:
+                art_faction = faction
+            # Eight premium Android LOD8 models per battle; further G13s
+            # retain their authentic four-wheel LOD6 chassis.
+            var g13_level: int = 8 if g13_lod8 < MAX_DETAILED_UNITS else 6
+            model = Models.build(role,art_faction,true,g13_level)
+            if model != null:
+                model.set_meta("tarvoka_g13_game_role","mobile_aa")
+                model.set_meta("tarvoka_g13_visual_faction",art_faction)
+                g13_visible += 1
+                if g13_level == 8:
+                    g13_lod8 += 1
         elif role=="mlrs":
             # V25: the actual 3D battle camera must use the corrected V24
             # rounded tracks rather than a legacy G11 LOD6 box silhouette.
@@ -622,6 +643,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         visible_count += 1
     return {"visible":visible_count,"detailed":detailed,
         "apc_lod":apc_lod,"g11_lod":g11_lod,
+        "g13_visible":g13_visible,"g13_lod8":g13_lod8,
         "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
@@ -707,6 +729,14 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         counters["g11_camera_lod"]=false
         counters["g11_v29_visual_actions"]=false
+    if int(counters["units"].get("g13_visible",0))>0:
+        # Visual-only playback on visible models; never touches combat rules.
+        var g13_actions: Node = G13ActionsV70.new()
+        g13_actions.name = "G13V70_AccionesBatalla"
+        scene.add_child(g13_actions)
+        counters["g13_v70_visual_actions"] = true
+    else:
+        counters["g13_v70_visual_actions"] = false
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.
