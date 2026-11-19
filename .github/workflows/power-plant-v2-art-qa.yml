@@ -41,7 +41,13 @@ jobs:
           rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd scripts/ui/PowerPlantStudioAdapterV1.gd
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
             2>&1 | tee /tmp/power-v2-import.log
-          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+          # A real OpenGL renderer is required for mesh RID surface counts.
+          # Godot --headless uses DummyRenderingServer which generates
+          # false-positive "Parameter m is null" for 3D mesh allocations.
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
             --script res://tests/test_power_plant_v2_native.gd \
             2>&1 | tee /tmp/power-v2-model.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
