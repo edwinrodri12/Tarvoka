@@ -646,10 +646,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in PowerPlant3DV1 PowerPlantStudioAdapterV1 PowerPlantDesignStudioV1; do
+          for name in PowerPlant3DV1 PowerPlant3DV2 PowerPlantStudioAdapterV1 PowerPlantDesignStudioV1; do
             test -s "power-v1-source/scripts/ui/$name.gd"
             cp "power-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
+          # V2 is an additive geometry pass selected by both existing studio
+          # interfaces. The V1 native base is preserved for comparison.
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantStudioAdapterV1.gd
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantDesignStudioV1.gd
+          test -s power-v1-source/tests/test_power_plant_v2_native.gd
+          cp power-v1-source/tests/test_power_plant_v2_native.gd tests/
           test -s power-v1-source/scenes/PowerPlantDesignStudioV1.tscn
           cp power-v1-source/scenes/PowerPlantDesignStudioV1.tscn scenes/
           grep -F 'extends "res://scripts/ui/CivilianCityStudioAdapter.gd"' scripts/ui/PowerPlantStudioAdapterV1.gd
