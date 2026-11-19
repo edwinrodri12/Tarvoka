@@ -19,6 +19,18 @@ func _run() -> void:
         push_error("Orbit rig did not create active camera")
         quit(1)
         return
+    # Preview controller must frame the scene asset automatically, before manual input.
+    await process_frame
+    var preview_asset: MeshInstance3D = scene.get_node("SampleAsset")
+    if not rig.target.is_equal_approx(preview_asset.global_position):
+        push_error("Preview did not automatically frame SampleAsset")
+        quit(1)
+        return
+    if not is_equal_approx(rig.distance, rig.min_distance):
+        push_error("Preview did not derive distance from SampleAsset bounds")
+        quit(1)
+        return
+    rig.set_inspection_target(rig.target, 2.0)
     var original_distance: float = rig.distance
     rig.zoom(1.0)
     if not rig.distance < original_distance:
