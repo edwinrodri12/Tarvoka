@@ -58,3 +58,11 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 El run [44476712293](https://github.com/edwinrodri12/Tarvoka/actions/runs/44476712293) imprimió `PASS: isolated asset orbit camera smoke`, pero también `ERROR: Parameter "m" is null` en `mesh_get_surface_count` del renderizador dummy (antes y después del PASS). Por tanto **FALLÓ CI**: las aserciones no justifican ignorar errores del motor.
 
 Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y `--rendering-method gl_compatibility`, usando Mesa software en Linux, en vez de `--headless` (dummy). Mantiene `pipefail`, timeout y rechazo explícito de errores. Si falla por contexto gráfico, revisar logs y revertir o corregir el entorno; no marcar como PASÓ sin run verde. Esto **no es** prueba Android física ni aprobación visual del modelo.
+
+## 2026-11-19 — selección reversible de modelos en el inspector
+- `AssetInspectionPreview.gd` admite `asset_path: NodePath` (predeterminado `SampleAsset`), `frame_selected_asset()` y `select_asset(new_path)`. Permite sustituir el modelo de referencia por una jerarquía real sin alterar la batalla ni sus gestos.
+- `select_asset` solo confirma la nueva ruta si existe un `Node3D` con mallas. Ante una ruta inexistente o jerarquía vacía devuelve `false` y preserva el modelo activo y el encuadre anterior.
+- `tests/test_asset_orbit_camera.gd` incorpora regresión para elegir una jerarquía de dos piezas, comprobar centro, conservación de posición, rechazo de rutas inválidas y reencuadre repetido.
+- **Prueba previa:** Actions run 44494235014, job orbit-smoke, SUCCESS en commit a3289d10 (no valida estos nuevos commits).
+- **Nueva regresión:** NO CONFIRMADA hasta ejecución CI sobre e37b1a5a. **Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.**
+- El modelo de producción todavía no está enlazado; la escena permanece aislada. No modificar estadísticas, materiales ni entradas táctiles.
