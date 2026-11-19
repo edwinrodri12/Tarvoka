@@ -178,7 +178,9 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
             var z:float=-depth*0.31+float(segment)*depth*0.31
             _box(parent,"PanelLateralCerrado_%d_%d" % [side,segment],
                 Vector3(x,1.76+wall_h*0.5,z),
-                Vector3(0.20,wall_h-0.11,depth*0.306),
+                # Overlap V1 lower concrete plinth and upper steel lintel:
+                # no ten-centimeter see-through horizontal seam.
+                Vector3(0.20,wall_h+0.18,depth*0.306),
                 CONCRETE if segment%2==0 else ARMOR,0.30,0.69)
             if damage<=2:
                 _box(parent,"VentanaMarco_%d_%d" % [side,segment],
@@ -200,7 +202,7 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
             var join_z:float=-depth*0.155+float(seam)*depth*0.31
             _box(parent,"JuntaLateralSellada_%d_%d" % [side,seam],
                 Vector3(x+float(side)*0.155,1.76+wall_h*0.5,join_z),
-                Vector3(0.105,wall_h+0.02,0.145),ARMOR_DARK,0.71,0.51)
+                Vector3(0.105,wall_h+0.20,0.145),ARMOR_DARK,0.71,0.51)
         if damage<=2:
             _box(parent,"ZunchoLateralFaccion_%d" % side,
                 Vector3(x+float(side)*0.145,upper-0.19,0),
