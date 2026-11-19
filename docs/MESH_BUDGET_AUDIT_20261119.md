@@ -32,3 +32,8 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - Regresión nueva: `visible_instance_count = 0` excluye los tres cubos del MultiMesh del total (quedan 14 triángulos, tres instancias y tres nodos con malla); evita sobrecontar vegetación completamente oculta.
 - Regresión nueva: `Node3D` contenedor con `MeshInstance3D` hijo debe contar 12 triángulos y una instancia; verifica recorrido de jerarquías sin exigir malla en raíz.
 - Commit de pruebas: `3124387b506f077e919ad5c9c7529feff0796a5b`. Godot 4.3/CI del nuevo commit: NO CONFIRMADO al escribir. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE DE REVISIÓN VISUAL.
+
+## 2026-11-19 — corrección del entorno de CI
+- CI [44594854796](https://github.com/edwinrodri12/Tarvoka/actions/runs/44594854796): **FALLÓ** pese a imprimir `MESH_BUDGET_AUDIT_PASS`: el backend `--headless`/dummy de Godot 4.3 registró `ERROR: Parameter "m" is null` en `mesh_get_surface_count` al trabajar con MultiMesh. El workflow detectó correctamente el error y salió con código 1; el marcador PASS aislado no certifica éxito.
+- El workflow ahora usa `xvfb-run` con `--rendering-driver opengl3`, igual que las pruebas GPU de terreno; conserva timeout, detección estricta de errores y marcador de salida. **CI del commit correctivo: NO CONFIRMADO** hasta observar ejecución nueva. No se modificaron conteos ni reglas de juego.
+- Android físico: **NO EJECUTADO EN DISPOSITIVO**; revisión visual: **PENDIENTE DE REVISIÓN VISUAL**. Siguiente: verificar CI nuevo y medir un modelo real del catálogo.
