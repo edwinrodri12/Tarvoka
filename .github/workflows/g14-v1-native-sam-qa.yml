@@ -1,0 +1,83 @@
+name: TARVOKA G14 V1 authentic native 3D SAM art QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/G14MobileSAMV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g14_v1_native_sam.gd'
+      - '.github/workflows/g14-v1-native-sam-qa.yml'
+  push:
+    branches: [main, feat/g14-v1-native-sam-studio-20261119]
+    paths:
+      - 'scripts/ui/G14MobileSAMV1.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BastionStudioAdapter.gd'
+      - 'tests/test_g14_v1_native_sam.gd'
+      - '.github/workflows/g14-v1-native-sam-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  g14-native-3d:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and OpenGL software renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Confirm unified Studio connects new G14 art and animation menu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'G14 · Batería SAM 8×8' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'P06Models.build("sam_mobile",_faction,true,13)' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq '"g14_launch"' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'G14SAM.pose' scripts/ui/UnitModels3D.gd
+      - name: Import all standalone models (published parent adapter excluded)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g14-standalone-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g14-standalone-studio/
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/g14-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g14-import.log; then
+            exit 1
+          fi
+      - name: Validate native 8x8 SAM in 8 factions and render 8 real Godot images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g14-v1
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g14_v1_native_sam.gd \
+            2>&1 | tee /tmp/g14-v1-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g14-v1-test.log; then
+            exit 1
+          fi
+          grep -F 'PASS G14 V1 NATIVE 3D:' /tmp/g14-v1-test.log
+          test "$(find build/qa/g14-v1 -name 'g14_faction_*.png' | wc -l)" -eq 8
+      - name: Publish 8 native 3D G14 V1 review images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g14-v1-eight-faction-real-3d-review
+          path: build/qa/g14-v1/*.png
+          retention-days: 14
