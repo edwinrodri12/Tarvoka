@@ -4,10 +4,12 @@ class_name TarvokaArmoredWorkshopStudioAdapterV1
 # Append the armored workshop to the existing EDIFICIOS 3D picker.
 # Preserve HQ, Air Base, Naval Base, Infantry Barracks, civilian cities
 # and Central Electrica. No replacement of prior approved model sources.
-const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
+const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
+const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopStyle=preload("res://scripts/ui/VisualStyle.gd")
 const WORKSHOP_BUILDING_INDEX:int=6
 var workshop_controls:VBoxContainer
+var workshop_version:OptionButton
 var workshop_level:OptionButton
 var workshop_faction:OptionButton
 var workshop_damage:OptionButton
@@ -22,7 +24,7 @@ func _ready() -> void:
     if building_picker.item_count!=WORKSHOP_BUILDING_INDEX:
         push_error("TARVOKA: preserve six previous building entries")
         return
-    building_picker.add_item("Taller de Blindados · V1 (diseño 3D)")
+    building_picker.add_item("Taller de Blindados · V2 (diseño 3D)")
     building_picker.set_item_metadata(WORKSHOP_BUILDING_INDEX,"armored_workshop")
     _install_workshop_controls()
 
@@ -33,13 +35,18 @@ func _install_workshop_controls() -> void:
     workshop_controls.add_theme_constant_override("separation",5)
     building_controls.add_child(workshop_controls)
     var heading:=Label.new()
-    heading.text="TALLER DE BLINDADOS V1 · MODELO 3D NATIVO"
+    heading.text="TALLER DE BLINDADOS · DISEÑO NATIVO 3D"
     heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     workshop_controls.add_child(heading)
     var description:=Label.new()
     description.text="Instalacion fija; no reemplaza a unidades logisticas ni campamentos."
     description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     workshop_controls.add_child(description)
+    workshop_version=OptionButton.new()
+    workshop_version.add_item("V1 · geometría original")
+    workshop_version.add_item("V2 · acabados industriales")
+    workshop_version.select(1)
+    workshop_controls.add_child(workshop_version)
     workshop_level=OptionButton.new()
     for title in Workshop.LEVEL_NAMES:
         workshop_level.add_item(str(title))
@@ -56,7 +63,7 @@ func _install_workshop_controls() -> void:
         workshop_faction.add_item(str(info["name"]))
     workshop_faction.select(0)
     workshop_controls.add_child(workshop_faction)
-    for selector in [workshop_level,workshop_damage,workshop_faction]:
+    for selector in [workshop_version,workshop_level,workshop_damage,workshop_faction]:
         selector.item_selected.connect(_on_workshop_change)
     var camera_row:=HFlowContainer.new()
     workshop_controls.add_child(camera_row)
@@ -119,7 +126,7 @@ func _display_workshop() -> void:
     var level:int=workshop_level.selected+1
     var faction:int=workshop_faction.selected-1
     var damage:int=workshop_damage.selected
-    model_root=Workshop.build(level,faction,damage)
+    model_root=WorkshopV1.build(level,faction,damage) if workshop_version.selected==0 else Workshop.build(level,faction,damage)
     if model_root==null:
         push_error("TARVOKA: workshop native 3D geometry failed")
         return
@@ -140,7 +147,8 @@ func _display_workshop() -> void:
     _update_camera()
     _update_details()
     _refresh_unified_studio_navigation()
-    workshop_info.text="%s · D%d · %d bahías · %d mallas 3D · pendiente revisión artística" % [
+    workshop_info.text="V%d · %s · D%d · %d bahías · %d mallas 3D · arte pendiente de aprobación" % [
+        int(model_root.get_meta("workshop_art_version",1)),
         Workshop.LEVEL_NAMES[level-1],damage,int(model_root.get_meta("workshop_bays",0)),
         Workshop.mesh_count(model_root)]
 
@@ -164,7 +172,7 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="armored_workshop":
         if studio_overview_label!=null:
-            studio_overview_label.text="EDIFICIOS · TALLER DE BLINDADOS V1 EN DISEÑO"
+            studio_overview_label.text="EDIFICIOS · TALLER DE BLINDADOS V1 / V2 EN DISEÑO"
         if status_label!=null and workshop_level!=null:
             status_label.text="%s · D%d · arte 3D; logistica movil independiente" % [
                 Workshop.LEVEL_NAMES[workshop_level.selected],workshop_damage.selected]
