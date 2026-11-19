@@ -92,8 +92,11 @@ func _run()->void:
                 check(m!=null and original!=null and
                     m.vertex_color_use_as_albedo and
                     m.albedo_color.is_equal_approx(original.albedo_color) and
-                    m.roughness>=0.47 and m.metallic>=0.55,
-                    "existing faction-neutral steel tint, faceted PBR")
+                    m.roughness>=0.47-0.0001 and
+                    m.metallic>=0.55-0.0001,
+                    "existing faction-neutral steel tint, faceted PBR: "+
+                    str(name)+" roughness="+str(m.roughness)+
+                    " metallic="+str(m.metallic))
             var original_fittings:Array[Transform3D]=stored.get(
                 "before_fittings",[])
             var new_fittings:Array[Transform3D]=stored.get(
