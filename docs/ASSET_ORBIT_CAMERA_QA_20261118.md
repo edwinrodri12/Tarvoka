@@ -23,3 +23,9 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - Ejecutar desde raíz del proyecto con Godot 4.3: `godot --headless --path . --script res://tests/test_asset_orbit_camera.gd`.
 - **NO EJECUTADO** en Godot local al registrar el cambio. El CI general puede pasar sin ejecutar este script específico. **NO EJECUTADO EN DISPOSITIVO**. **PENDIENTE DE REVISIÓN VISUAL**.
 - La escena es deliberadamente reversible y no contiene modelos finales de facciones; reemplazar la esfera solo tras confirmar controles y encuadre.
+
+## CI aislado incorporado (2026-11-18)
+- Workflow: `.github/workflows/asset-orbit-camera.yml`; se activa por PR/push al modificar escena, cámara, prueba o workflow; también admite ejecución manual.
+- Descarga Godot 4.3 oficial en Ubuntu 22.04, ejecuta `tests/test_asset_orbit_camera.gd` con límite de 80 s y exige la marca `PASS: isolated asset orbit camera smoke` sin errores del motor.
+- **PASÓ:** creación del workflow y commit en rama de PR #602. **NO CONFIRMADO:** resultado de Actions para este commit hasta revisar la ejecución. **NO EJECUTADO EN DISPOSITIVO**; **PENDIENTE DE REVISIÓN VISUAL**.
+- Esta comprobación no demuestra calidad visual ni controles táctiles Android y no altera el juego.
