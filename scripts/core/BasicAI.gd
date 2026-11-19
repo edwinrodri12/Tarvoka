@@ -20,6 +20,7 @@ const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
 const Threats = preload("res://scripts/core/NextTurnThreatV36.gd")
 const Opportunities = preload("res://scripts/core/OpportunityCostV400.gd")
+const Budget = preload("res://scripts/core/RecruitReserveV403.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -99,6 +100,13 @@ static func _decide(state: Dictionary,
     if friends.is_empty():
         var only_recruits: Dictionary = _produce_reinforcements(state,
             knowledge,enemies,plan)
+        # There may be no units left with free orders, but factories
+        # can still produce. Apply the SAME experimental reserve gate
+        # here or an expensive purchase would bypass v403 entirely.
+        if bool(options.get("_ab_recruit_reserve_v403",false)) and \
+                bool(Budget.assess(state,knowledge,
+                    only_recruits).get("defer",false)):
+            return idle
         return only_recruits if only_recruits.get("valid",false) else idle
     # Compare equivalent unit roles and side-normalized positions, not the
     # artificial A..F vs U..Z names assigned to mirrored starting rosters.
@@ -352,7 +360,25 @@ static func _decide(state: Dictionary,
                         chosen = reinforce_choice
                     "race":
                         chosen = race
+                # v403 is intentionally opt-in; the v400 policy and
+                # every existing official action remain unchanged when
+                # this option is absent. Reconsider an expensive legal
+                # recruit only when its actual payment would breach
+                # liquidity before either side's third turn.
+                var deferred: Dictionary = {}
+                if str(selection.get("choice","")) == "recruit" and \
+                        bool(options.get("_ab_recruit_reserve_v403",false)):
+                    deferred = Budget.assess(state,knowledge,chosen)
+                    if bool(deferred.get("defer",false)):
+                        chosen = urban_choice if bool(
+                            urban_choice.get("valid",false)) else race
                 if bool(chosen.get("valid",false)):
+                    if bool(deferred.get("defer",false)):
+                        chosen["recruit_deferred_v403"] = true
+                        chosen["reserve_reason_v403"] = str(
+                            deferred.get("reason",""))
+                        chosen["reserve_floor_v403"] = int(
+                            deferred.get("reserve",0))
                     chosen["opportunity_reason_v400"] = str(
                         selection.get("reason",""))
                     chosen["opportunity_city_credits_v400"] = int(
@@ -372,7 +398,15 @@ static func _decide(state: Dictionary,
     var reinforcement: Dictionary = _produce_reinforcements(state,
         knowledge,enemies,plan)
     if reinforcement.get("valid", false):
-        return reinforcement
+        if bool(options.get("_ab_recruit_reserve_v403",false)) and \
+                bool(Budget.assess(state,knowledge,
+                    reinforcement).get("defer",false)):
+            # Do not immediately buy the very same expensive unit
+            # after choosing to save resources in the early arbiter.
+            # Continue to the ordinary relay/positional actions.
+            pass
+        else:
+            return reinforcement
 
     # A signal-relay match offers an alternative strategic objective.
     # Prioritize reaching a neutral or opposing relay after immediate combat.
