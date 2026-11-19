@@ -1,0 +1,105 @@
+name: TARVOKA v401 true AI head-to-head cross-play
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_initiative_counterfactual_v379.gd"
+      - "tests/test_ai_opportunity_head_micro_v401.gd"
+      - "tests/test_ai_opportunity_head_to_head_v401.gd"
+      - "tests/aggregate_ai_opportunity_head_to_head_v401.py"
+      - ".github/workflows/ai-opportunity-head-to-head-v401.yml"
+  workflow_dispatch:
+
+jobs:
+  micro:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Prove default helper unchanged and mirrored assignment of different AI policies
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 610s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opportunity_head_micro_v401.gd \
+            2>&1 | tee /tmp/head401-micro.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/head401-micro.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v401 micro:' /tmp/head401-micro.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v401-micro
+          path: /tmp/head401-micro.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  crossplay:
+    needs: [micro]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 58
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V401_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V401_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Match candidate v400 vs official AI with side and first-player swap and exact mirror
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3370s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opportunity_head_to_head_v401.gd \
+            2>&1 | tee /tmp/head401.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|HEAD401_MIRROR_FAILURE' /tmp/head401.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v401: four true head-to-head candidate' /tmp/head401.log
+          test "$(grep -c '^HEAD401_RESULT ' /tmp/head401.log)" -eq 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v401-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/head401.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  aggregate:
+    needs: [crossplay]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v401-seed*
+          path: .ci-v401-logs
+      - name: Validate complete 64-condition cross-play matrix and output scorecard
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/aggregate_ai_opportunity_head_to_head_v401.py
+          python3 tests/aggregate_ai_opportunity_head_to_head_v401.py .ci-v401-logs
+          cat reports/ai_v401_head_to_head.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v401-true-cross-play-scorecard
+          path: reports/ai_v401_head_to_head.*
+          if-no-files-found: ignore
+          retention-days: 30
