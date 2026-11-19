@@ -232,6 +232,26 @@ func _run() -> void:
         push_error("Rejected PackedScene destroyed or reframed active asset")
         quit(1)
         return
+    # A packed UI scene is not a 3D asset. Reject it without touching the active model.
+    var ui_packed := PackedScene.new()
+    var ui_root := Control.new()
+    if ui_packed.pack(ui_root) != OK:
+        push_error("Could not create non-3D packed test scene")
+        quit(1)
+        return
+    ui_root.free()
+    if scene.load_asset_scene(ui_packed):
+        push_error("Non-3D PackedScene was incorrectly accepted")
+        quit(1)
+        return
+    if scene.asset_path != loaded_path or not is_instance_valid(loaded_node):
+        push_error("Non-3D rejection destroyed the selected model")
+        quit(1)
+        return
+    if preview_asset.visible or not rig.target.is_equal_approx(loaded_node.global_position):
+        push_error("Non-3D rejection altered reference visibility or framing")
+        quit(1)
+        return
     if not scene.load_asset_scene(packed_model):
         push_error("Replacement PackedScene failed to load")
         quit(1)
