@@ -13,6 +13,18 @@ static func inspect(root: Node, triangle_warning: int = DEFAULT_TRIANGLE_WARNING
 		report["warnings"].append("Triangle budget exceeded: %d > %d" % [report["triangles"], triangle_warning])
 	return report
 
+## Audits a PackedScene without attaching it to the active game tree.
+## The temporary instance is always released after inspection.
+static func inspect_packed_scene(scene: PackedScene, triangle_warning: int = DEFAULT_TRIANGLE_WARNING) -> Dictionary:
+	if scene == null:
+		return inspect(null, triangle_warning)
+	var instance := scene.instantiate()
+	if instance == null:
+		return inspect(null, triangle_warning)
+	var report := inspect(instance, triangle_warning)
+	instance.free()
+	return report
+
 static func _visit(node: Node, report: Dictionary) -> void:
 	if node is MeshInstance3D:
 		var mesh_node := node as MeshInstance3D
