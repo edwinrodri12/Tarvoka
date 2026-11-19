@@ -66,7 +66,7 @@ func _ready() -> void:
     _faction.name="ColorDeFaccion"
     _faction.add_item("NEUTRAL")
     for i in range(Style.FACTIONS.size()):
-        _faction.add_item("FACCIÓN %d" % (i+1))
+        _faction.add_item(str(Style.FACTIONS[i]["name"]))
     _faction.select(0)
     _faction.item_selected.connect(func(_index:int): _rebuild())
     inputs.add_child(_faction)
