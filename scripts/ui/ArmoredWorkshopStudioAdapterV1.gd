@@ -12,7 +12,7 @@ var workshop_level:OptionButton
 var workshop_faction:OptionButton
 var workshop_damage:OptionButton
 var workshop_info:Label
-var _workshop_yaw:float=37.0
+var _workshop_yaw:float=145.0
 
 func _ready() -> void:
     super._ready()
@@ -61,7 +61,7 @@ func _install_workshop_controls() -> void:
     var camera_row:=HFlowContainer.new()
     workshop_controls.add_child(camera_row)
     for preset in [
-            ["ISOMÉTRICA",37.0],["FRENTE",0.0],["LATERAL",90.0],
+            ["ISOMÉTRICA",145.0],["FRENTE",0.0],["LATERAL",90.0],
             ["POSTERIOR",180.0],["OTRO LADO",270.0],["AZOTEA",45.0]]:
         var button:=Button.new()
         button.text=str(preset[0])
