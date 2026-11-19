@@ -19,6 +19,7 @@ const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
 const Threats = preload("res://scripts/core/NextTurnThreatV36.gd")
+const Opportunities = preload("res://scripts/core/OpportunityCostV400.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -325,13 +326,42 @@ static func _decide(state: Dictionary,
     # an enemy that is actually VISIBLE can contest a neutral relay sooner
     # than we can. Same move legality as a human player; NO bonuses,
     # hidden-unit peeking, automatic changes to game defaults or AI saves.
-    if bool(options.get("_ab_relay_race_forecast_v398",false)) and \
+    if (bool(options.get("_ab_relay_race_forecast_v398",false)) or \
+            bool(options.get("_ab_economic_arbitration_v400",false))) and \
             knowledge.get("control") is Dictionary and \
             int(knowledge["control"].get("turns",99)) <= 12:
         var race: Dictionary = _forecast_relay_race_v398(
             state,knowledge,friends,enemies)
         if bool(race.get("valid",false)):
-            return race
+            if bool(options.get("_ab_economic_arbitration_v400",false)):
+                # Generate alternatives through the SAME legal, real
+                # city and purchase APIs used by the existing AI. They
+                # operate on copies and never modify the input game.
+                var urban_choice: Dictionary = _capture_urban_site(
+                    state,knowledge,friends,occupied,plan,
+                    options.get("_goals_v33",{}))
+                var reinforce_choice: Dictionary = _produce_reinforcements(
+                    state,knowledge,enemies,plan)
+                var selection: Dictionary = Opportunities.decide(
+                    knowledge,faction,race,urban_choice,reinforce_choice)
+                var chosen: Dictionary = {}
+                match str(selection.get("choice","none")):
+                    "city":
+                        chosen = urban_choice
+                    "recruit":
+                        chosen = reinforce_choice
+                    "race":
+                        chosen = race
+                if bool(chosen.get("valid",false)):
+                    chosen["opportunity_reason_v400"] = str(
+                        selection.get("reason",""))
+                    chosen["opportunity_city_credits_v400"] = int(
+                        selection.get("known_city_three_round_income",0))
+                    chosen["opportunity_enemy_eta_v400"] = int(
+                        selection.get("rival_eta",999999))
+                    return chosen
+            else:
+                return race
 
     # Cities are a longer-term source of reinforcements. Only guards/scouts
     # may occupy and capture an urban site; never infer unseen defenders.
