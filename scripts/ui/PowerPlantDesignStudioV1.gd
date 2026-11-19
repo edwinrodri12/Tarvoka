@@ -3,7 +3,7 @@ class_name TarvokaPowerPlantDesignStudioV1
 
 # Dedicated Godot 4.3 editor/web scene for the genuine native power-plant
 # geometry. Does not use screenshots, iframes or battle mechanics.
-const Power=preload("res://scripts/ui/PowerPlant3DV1.gd")
+const Power=preload("res://scripts/ui/PowerPlant3DV2.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
 var _stage: Node3D
@@ -18,7 +18,7 @@ var _yaw: float=37.0
 var _view: int=0
 
 func _ready() -> void:
-    name="TARVOKA_CentralElectricaEstudio3DV1"
+    name="TARVOKA_CentralElectricaEstudio3DV2"
     var split:=HSplitContainer.new()
     split.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     add_child(split)
@@ -27,7 +27,7 @@ func _ready() -> void:
     controls.add_theme_constant_override("separation",9)
     split.add_child(controls)
     var heading:=Label.new()
-    heading.text="TARVOKA · CENTRAL ELÉCTRICA V1"
+    heading.text="TARVOKA · CENTRAL ELÉCTRICA V2"
     heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     controls.add_child(heading)
     var caption:=Label.new()
