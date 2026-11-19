@@ -148,6 +148,15 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
         Vector3(width+0.37,0.22,depth+0.42))
     _put(g,"dark_steel",Vector3(0,height-0.28,front-0.30),
         Vector3(width-0.15,0.55,0.38))
+    # Branding remains legible from the 3D top-down map without making
+    # entire metal walls the faction color.
+    for side in [-1,1]:
+        _put(g,"faction",
+            Vector3(float(side)*(width*0.5+0.235),
+                height*0.73,-depth*0.12),
+            Vector3(0.037,height*0.07,depth*0.24))
+    _put(g,"faction",Vector3(0,height*0.81,back+0.225),
+        Vector3(width*0.63,height*0.075,0.043))
     if tactical and damage<=1:
         for side in [-1,1]:
             for i in range(3):
@@ -181,6 +190,27 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                     Vector3(0.24,0.94,0.23))
         _put(g,"faction",Vector3(center_x,height-0.16,front-0.54),
             Vector3(bw*0.60,0.17,0.09))
+        # Three recognizable service bays, even at distant mobile LOD:
+        # an opaque dark workshop recess behind two articulated metal bars.
+        # Keep the hero/tactical versions open to reveal machinery.
+        if not tactical:
+            _put(g,"dark_steel",
+                Vector3(center_x,height*0.43,front-0.16),
+                Vector3(bw*0.76,height*0.69,0.075))
+            for stripe in range(2):
+                _put(g,"steel",
+                    Vector3(center_x,
+                        height*(0.30+float(stripe)*0.19),
+                        front-0.235),
+                    Vector3(bw*0.70,0.065,0.046))
+            # Roof identification is visible in the overhead battlefield
+            # camera without requiring high-poly insignia or new materials.
+            _put(g,"faction",
+                Vector3(center_x,height+0.235,front+depth*0.24),
+                Vector3(bw*0.44,0.035,depth*0.09))
+            _put(g,"dark_steel",
+                Vector3(center_x,height+0.42,depth*0.29),
+                Vector3(bw*0.19,0.39,0.62))
         if tactical and damage<=1:
             for slat in range(3):
                 _put(g,"steel",
