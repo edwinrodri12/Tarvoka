@@ -116,8 +116,9 @@ func _run()->void:
                     muzzle.mesh==after.get(mouth_name),
                     "same native moving gun nodes draw new 3D geometry")
                 check(before.get(gun_name) is CylinderMesh and
-                    before.get(mouth_name) is ArrayMesh,
-                    "the previous real V68 barrel and muzzle meshes saved")
+                    ((high and before.get(mouth_name) is ArrayMesh) or
+                    (not high and before.get(mouth_name) is CylinderMesh)),
+                    "original HERO V12 open muzzle and Android cylinder saved")
                 check(barrel.transform.is_equal_approx(poses[gun_name]) and
                     muzzle.transform.is_equal_approx(poses[mouth_name]),
                     "actual barrel/muzzle rotation and muzzle-flash alignment")
@@ -132,9 +133,11 @@ func _run()->void:
                 check(absf(_min_y(barrel.mesh)+0.55)<0.0001 and
                     absf(_max_axis(barrel.mesh,1)-0.55)<0.0001,
                     "original full 1.10m barrel length stays unchanged")
-                check(absf(_min_y(muzzle.mesh)+0.0425)<0.0001 and
-                    absf(_max_axis(muzzle.mesh,1)-0.0425)<0.0001,
-                    "original 0.085m muzzle length and barrel overlap")
+                var muzzle_front:float=-0.050 if high else -0.0425
+                var muzzle_rear:float=0.046 if high else 0.0425
+                check(absf(_min_y(muzzle.mesh)-muzzle_front)<0.0001 and
+                    absf(_max_axis(muzzle.mesh,1)-muzzle_rear)<0.0001,
+                    "original 0.096m HERO / 0.085m Android muzzle envelope")
                 check(_has_real_colors(barrel.mesh) and
                     _has_real_colors(muzzle.mesh),
                     "physical bore / exterior directional PBR face shading")
