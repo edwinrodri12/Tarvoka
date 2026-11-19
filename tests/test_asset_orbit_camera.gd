@@ -26,7 +26,7 @@ func _run() -> void:
         push_error("Preview did not automatically frame SampleAsset")
         quit(1)
         return
-    if not is_equal_approx(rig.distance, rig.min_distance):
+    if not is_equal_approx(rig.distance, clampf(preview_asset.get_aabb().size.length() * 1.5, rig.min_distance, rig.max_distance)):
         push_error("Preview did not derive distance from SampleAsset bounds")
         quit(1)
         return
