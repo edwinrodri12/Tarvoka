@@ -134,7 +134,32 @@ func _capture_view(viewport:SubViewport,camera:Camera3D,
     var captured:Image=viewport.get_texture().get_image()
     assert(captured!=null and captured.get_width()==960 and
         captured.get_height()==720,"Invalid GPU camera image")
+    # Detect an apparently successful export that is actually an empty,
+    # transparent or fully cleared render; this also catches camera drift.
+    var background:Color=captured.get_pixel(2,2)
+    var foreground_samples:int=0
+    var min_x:int=960
+    var max_x:int=0
+    var min_y:int=720
+    var max_y:int=0
+    for py in range(32,688,8):
+        for px in range(32,928,8):
+            var pixel:Color=captured.get_pixel(px,py)
+            var difference:float=absf(pixel.r-background.r)+\
+                absf(pixel.g-background.g)+absf(pixel.b-background.b)
+            if difference>0.14 and pixel.a>0.7:
+                foreground_samples+=1
+                min_x=mini(min_x,px)
+                max_x=maxi(max_x,px)
+                min_y=mini(min_y,py)
+                max_y=maxi(max_y,py)
+    assert(foreground_samples>12,
+        "Blank, fully clipped or missing 3D geometry in "+filename)
     var output:String=OUTPUT+"/"+filename
     var saved:Error=captured.save_png(output)
     assert(saved==OK,"Could not save "+filename)
-    return {"file":filename,"view":str(shot[0]),"level":level}
+    return {
+        "file":filename,"view":str(shot[0]),"level":level,
+        "foreground_sample_count":foreground_samples,
+        "foreground_bounds_sampled":[min_x,min_y,max_x,max_y]
+    }
