@@ -154,6 +154,11 @@ func _run() -> void:
         push_error("Multipart assembly failed with transformed camera rig")
         quit(1)
         return
+    # Let the rendering server release mesh RIDs before SceneTree shutdown.
+    # Godot 4.3 dummy renderer can otherwise report mesh_get_surface_count(null)
+    # after a successful assertion run, causing CI to fail on engine errors.
     scene.queue_free()
+    await process_frame
+    await process_frame
     print("PASS: isolated asset orbit camera smoke")
     quit(0)
