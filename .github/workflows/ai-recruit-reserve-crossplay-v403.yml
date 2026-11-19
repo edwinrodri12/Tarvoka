@@ -27,8 +27,8 @@ jobs:
       - name: Check actual 650-credit SPG, budget from city income, threat exemption, default OFF and exact mirrors
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 900s \
-            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+          timeout --signal=TERM --kill-after=10s 300s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --quit-after 180 \
             --script res://tests/test_ai_recruit_reserve_micro_v403.gd \
             2>&1 | tee /tmp/reserve-v403-micro.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/reserve-v403-micro.log; then exit 1; fi
@@ -67,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=10s 3480s \
-            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --quit-after 180 \
             --script res://tests/test_ai_recruit_reserve_crossplay_v403.gd \
             2>&1 | tee /tmp/reserve-v403-crossplay.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|RESERVE403_MIRROR_FAILURE' /tmp/reserve-v403-crossplay.log; then exit 1; fi
