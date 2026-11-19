@@ -18,6 +18,7 @@ on:
       - "scripts/ui/G13PremiumSurfaceV59.gd"
       - "scripts/ui/G13ContinuousTreadV60.gd"
       - "scripts/ui/G13ProductionWheelArmorV61.gd"
+      - "scripts/ui/G13OpticalGlazingV62.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -153,6 +154,7 @@ on:
       - "tests/test_g13_v60_native_visual_capture.gd"
       - "tests/test_g13_v61_open_hub_armor.gd"
       - "tests/test_g13_v61_real_bastion_comparison.gd"
+      - "tests/test_g13_v62_optical_glazing.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -337,6 +339,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_v61_open_hub_armor.gd tests/test_g13_v61_open_hub_armor.gd
           test -s hq-android-v15/tests/test_g13_v61_real_bastion_comparison.gd
           cp hq-android-v15/tests/test_g13_v61_real_bastion_comparison.gd tests/test_g13_v61_real_bastion_comparison.gd
+          test -s hq-android-v15/tests/test_g13_v62_optical_glazing.gd
+          cp hq-android-v15/tests/test_g13_v62_optical_glazing.gd tests/test_g13_v62_optical_glazing.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1245,6 +1249,17 @@ jobs:
             echo "G13 V61 open spoke/rims PBR gate failed"; exit 1
           fi
           grep -F 'PASS G13 V61 BASTION WHEEL AND PBR:' /tmp/g13-v61-machined-wheel.log
+          # V62 glazing must be a real reflective material on the native
+          # G13 (8 official factions and both tactical Android and hero LOD).
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v62_optical_glazing.gd \
+            2>&1 | tee /tmp/g13-v62-optical-glass.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v62-optical-glass.log; then
+            echo "G13 V62 real reflective cab glass failed"; exit 1
+          fi
+          grep -F 'PASS G13 V62 OPTICAL GLAZING:' /tmp/g13-v62-optical-glass.log
           # V61 actual P06/G13 identical-light and wheel-size studio proof.
           # The V61 standalone workflow hard-gates all nine screenshots.
           if [[ -s tests/test_g13_v61_real_bastion_comparison.gd ]]; then
