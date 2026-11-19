@@ -311,5 +311,16 @@ static func show_finish(root:Node3D,enabled:bool)->bool:
     for old in previous:
         old.visible=(false if enabled else bool(
             visibility.get(old.name,true)))
+    # Future V11 enhancements are optional but must follow V10 historical
+    # comparisons. Moving tyres stay under their original wheel pivots.
+    var v11_body:=root.find_child("G15_V11_360ExteriorSculpt",true,false) as Node3D
+    if v11_body!=null:
+        v11_body.visible=enabled
+    var wheels:=root.find_child(V1.WHEEL_GROUP,true,false) as Node3D
+    if wheels!=null:
+        for pivot_node in wheels.get_children():
+            for detail in pivot_node.get_children():
+                if str(detail.name).begins_with("G15_V11_"):
+                    (detail as Node3D).visible=enabled
     root.set_meta("tarvoka_g15_v10_preview_enabled",enabled)
     return true
