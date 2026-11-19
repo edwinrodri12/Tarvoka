@@ -1,0 +1,226 @@
+name: TARVOKA G15 V1-V9 native 3D premium PBR and tire QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/G15ElectronicWarfareV1.gd"
+      - "scripts/ui/G15ChassisAndMastFinishV2.gd"
+      - "scripts/ui/G15ShelterCabFinishV3.gd"
+      - "scripts/ui/G15AntennaMechanicsV4.gd"
+      - "scripts/ui/G15AntennaFinishDamageV5.gd"
+      - "scripts/ui/G15ArmoredExteriorV6.gd"
+      - "scripts/ui/G15MechanicalExteriorV7.gd"
+      - "scripts/ui/G15ContinuitySuspensionV8.gd"
+      - "scripts/ui/G15ProductionSurfaceV9.gd"
+      - "tests/test_g15_native_art_v2.gd"
+      - "tests/test_g15_native_art_v3.gd"
+      - "tests/test_g15_native_art_v4.gd"
+      - "tests/test_g15_native_art_v5.gd"
+      - "tests/test_g15_native_art_v6.gd"
+      - "tests/test_g15_native_art_v7.gd"
+      - "tests/test_g15_native_art_v8.gd"
+      - "tests/test_g15_native_art_v9.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/BastionStudioAdapter.gd"
+      - "tests/test_g15_native_art_v1.gd"
+      - ".github/workflows/g15-native-art-qa.yml"
+  push:
+    branches:
+      - "feat/g15-electronic-warfare-native-3d-v1-20261118"
+      - "feat/g15-v9-unified-3d-studio-integration-20261118"
+      - "main"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g15-v1-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect-g15:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Check out exact proposed G15 art
+        uses: actions/checkout@v4
+      - name: Install Godot 4.3 plus software OpenGL renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri unzip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Exclude publish-only Studio adapter from main-source standalone import
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The unified Studio parent is assembled by the separate Pages workflow.
+          # Avoid importing a subclass with a nonexistent parent in main.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/g15-published-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/g15-published-studio/
+          fi
+      - name: Import native 3D and check GDScript parsing
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/g15-v1-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/g15-v1-import.log; then
+            exit 1
+          fi
+      - name: Validate six-wheel G15 geometry, 8 factions, animations and 16 native renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v1
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v1.gd \
+            2>&1 | tee /tmp/g15-v1-art-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v1-art-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V1 NATIVE 3D:' /tmp/g15-v1-art-qa.log
+          test "$(find build/qa/g15-v1 -maxdepth 1 -name '*.png' | wc -l)" -eq 16
+      - name: Validate real V2 wheel arches, mast-to-roof supports and capture ten native comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v2
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v2.gd \
+            2>&1 | tee /tmp/g15-v2-sculpt-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v2-sculpt-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V2 NATIVE 3D:' /tmp/g15-v2-sculpt-qa.log
+          test "$(find build/qa/g15-v2 -maxdepth 1 -name '*.png' | wc -l)" -eq 10
+      - name: Validate true V3 closed chamfered armor shells and capture eight native before/after views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v3
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v3.gd \
+            2>&1 | tee /tmp/g15-v3-sculpt-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v3-sculpt-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V3 NATIVE 3D:' /tmp/g15-v3-sculpt-qa.log
+          test "$(find build/qa/g15-v3 -maxdepth 1 -name '*.png' | wc -l)" -eq 8
+      - name: Test G15 V4 true canted antenna arrays and animated hydraulic mount
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v4
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v4.gd \
+            2>&1 | tee /tmp/g15-v4-mechanics-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v4-mechanics-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V4 NATIVE 3D:' /tmp/g15-v4-mechanics-qa.log
+          test "$(find build/qa/g15-v4 -maxdepth 1 -name '*.png' | wc -l)" -eq 10
+      - name: Validate G15 V5 antenna surface details and five-stage physical damage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v5
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v5.gd \
+            2>&1 | tee /tmp/g15-v5-damage-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v5-damage-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V5 NATIVE 3D:' /tmp/g15-v5-damage-qa.log
+          test "$(find build/qa/g15-v5 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Validate G15 V6 solid exterior steel, PBR glazing and 12 native comparison renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v6
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v6.gd \
+            2>&1 | tee /tmp/g15-v6-material-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v6-material-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V6 NATIVE 3D:' /tmp/g15-v6-material-qa.log
+          test "$(find build/qa/g15-v6 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Validate G15 V7 real 6x6 drivetrain, sealed steel rails and Godot V6 V7 comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v7
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v7.gd \
+            2>&1 | tee /tmp/g15-v7-underbody-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v7-underbody-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V7 NATIVE 3D:' /tmp/g15-v7-underbody-qa.log
+          test "$(find build/qa/g15-v7 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Validate G15 V8 continuous armor and six true 3D suspension coils
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v8
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v8.gd \
+            2>&1 | tee /tmp/g15-v8-armor-and-springs-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v8-armor-and-springs-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V8 NATIVE 3D:' /tmp/g15-v8-armor-and-springs-qa.log
+          test "$(find build/qa/g15-v8 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Validate G15 V9 satin PBR steel and 12 native rubber tread renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g15-v9
+          timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g15_native_art_v9.gd \
+            2>&1 | tee /tmp/g15-v9-premium-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g15-v9-premium-qa.log; then
+            exit 1
+          fi
+          grep -F 'PASS G15 V9 NATIVE 3D:' /tmp/g15-v9-premium-qa.log
+          test "$(find build/qa/g15-v9 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+      - name: Upload authentic Godot multi-angle G15 artwork
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g15-v1-v2-v3-v4-v5-v6-v7-v8-v9-godot-3d-render-comparisons
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build/qa/g15-v1/*.png
+            build/qa/g15-v2/*.png
+            build/qa/g15-v2/g15-v2-manifest.json
+            build/qa/g15-v3/*.png
+            build/qa/g15-v3/g15-v3-manifest.json
+            build/qa/g15-v4/*.png
+            build/qa/g15-v4/g15-v4-manifest.json
+            build/qa/g15-v5/*.png
+            build/qa/g15-v5/g15-v5-manifest.json
+            build/qa/g15-v6/*.png
+            build/qa/g15-v6/g15-v6-manifest.json
+            build/qa/g15-v7/*.png
+            build/qa/g15-v7/g15-v7-manifest.json
+            build/qa/g15-v8/*.png
+            build/qa/g15-v8/g15-v8-manifest.json
+            build/qa/g15-v9/*.png
+            build/qa/g15-v9/g15-v9-manifest.json
