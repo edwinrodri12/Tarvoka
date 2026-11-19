@@ -5,6 +5,7 @@ extends SceneTree
 # added, same fixed yaw vs gun-elevation hierarchy, and exact restore.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
+const V67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const V65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const V64=preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const V63=preload("res://scripts/ui/G13FactionReadabilityV63.gd")
@@ -47,6 +48,11 @@ func _run()->void:
                 faction,lod])
             if model==null:
                 continue
+            # V67 layers onto Android V66 moving cheeks; disable only
+            # that later pass to inspect the original V66 finish exactly.
+            if bool(model.get_meta(V67.FLAG,false)):
+                check(V67.show_finish(model,false),
+                    "V67 comparison isolates the genuine V66 gun mount")
             for flag in [V61.FLAG,V62.FLAG,V63.FLAG,V64.FLAG,
                     V65.FLAG,V66.FLAG]:
                 check(bool(model.get_meta(flag,false)),
@@ -175,6 +181,9 @@ func _run()->void:
                     "historic original primitive or V19 mesh restored")
             check(V66.show_finish(model,true),
                 "new true 3D machined hollow joints restored")
+            if bool(model.get_meta(V67.FLAG,false)):
+                check(V67.show_finish(model,true),
+                    "latest V67 cheek details restored after V66 history check")
             model.free()
     check(factions.size()==8,"all eight official faction paints preserved")
     if failures==0:
