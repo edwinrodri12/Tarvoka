@@ -14,8 +14,11 @@ func _initialize()->void:
     call_deferred("_run")
 
 func _run()->void:
-    check(Models.ROLES.size()==9 and Models.ROLES[8]=="aa_mobile",
-        "V2 does not change studio picker ordering")
+    # G13 stays in position nine even as G15 becomes the tenth art-only
+    # preview in the same Studio. Preserve existing eight original roles.
+    check(Models.ROLES.size()>=9 and Models.ROLES[8]=="aa_mobile" and
+        Models.ROLES.count("aa_mobile")==1,
+        "V2 preserves G13 studio position when later units are added")
     for faction in range(8):
         var detailed:=Models.build("aa_mobile",faction,true,13)
         check(detailed!=null,"hero model builds for faction "+str(faction))
