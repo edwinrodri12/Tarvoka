@@ -45,6 +45,12 @@ func _run() -> void:
                             assert(wall_mat!=null and
                                 wall_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                                 "Side siding must not disappear")
+                            var slab:BoxMesh=siding.mesh as BoxMesh
+                            assert(slab!=null and
+                                siding.position.y-slab.size.y*0.5<=1.70 and
+                                siding.position.y+slab.size.y*0.5>=
+                                    (4.90 if level==1 else 6.10 if level==2 else 7.20)-0.86,
+                                "Closed sidewall MUST overlap lower plinth and upper lintel")
                             assert(_mesh(model,
                                 "VentanaVidrioPBR_%d_%d" % [side,segment])!=null,
                                 "Actual PBR tinted glass missing")
