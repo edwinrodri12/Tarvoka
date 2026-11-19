@@ -69,6 +69,7 @@ const G15ExteriorV6=preload("res://scripts/ui/G15ArmoredExteriorV6.gd")
 const G15MechanicalV7=preload("res://scripts/ui/G15MechanicalExteriorV7.gd")
 const G15ContinuityV8=preload("res://scripts/ui/G15ContinuitySuspensionV8.gd")
 const G15SurfaceV9=preload("res://scripts/ui/G15ProductionSurfaceV9.gd")
+const G15OpticalV10=preload("res://scripts/ui/G15OpticalGlazingV10.gd")
 const G13TacticalV25=preload("res://scripts/ui/G13TacticalSilhouetteV25.gd")
 const G13ArmorV26=preload("res://scripts/ui/G13TacticalArmorV26.gd")
 const G13RadarV27=preload("res://scripts/ui/G13ElevatedRadarV27.gd")
@@ -247,7 +248,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V68 · expulsión y cañones mecanizados")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V9")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -558,6 +559,9 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
+                {"group":"G15 V10 · CRISTALES CURVOS Y SERVICIO ELECTRÓNICO"},
+                {"title":"V10 · Cristales PBR curvos y acabados posteriores","action":"g15_v10_on"},
+                {"title":"V9 · Comparar cristales anteriores","action":"g15_v10_off"},
                 {"group":"G15 V9 · SUPERFICIES PBR Y CAUCHO"},
                 {"title":"V9 · Acero satinado y neumáticos labrados","action":"g15_v9_on"},
                 {"title":"V8 · Comparar acabado anterior","action":"g15_v9_off"},
@@ -585,7 +589,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"V3 · Cabina y refugio blindados biselados","action":"g15_v3_on"},
                 {"title":"V2 · Comparar con refugio rectangular","action":"g15_v3_off"},
                 {"title":"V1 · Comparar con guardabarros originales","action":"g15_v2_off"},
-                {"title":"V9 · Restaurar última versión","action":"g15_v2_on"},
+                {"title":"V10 · Restaurar última versión","action":"g15_v2_on"},
                 {"title":"Movimiento 6×6, antena plegada","action":"move"},
                 {"title":"Desplegar mástil articulado","action":"deploy"},
                 {"title":"Barrido direccional","action":"scan"},
@@ -690,9 +694,18 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g15_v10_on","g15_v10_off":
+            if _role=="ew_mobile" and model_root!=null and G15OpticalV10.show_finish(model_root,action=="g15_v10_on"):
+                status_label.text=("G15 V10 · cristales curvos PBR y paneles de electrónica" if action=="g15_v10_on" else "G15 V9 · cristales de comparación")
         "g15_v9_on","g15_v9_off":
-            if _role=="ew_mobile" and model_root!=null and G15SurfaceV9.show_finish(model_root,action=="g15_v9_on"):
-                status_label.text=("G15 V9 · acero PBR, caucho y llantas mecanizadas" if action=="g15_v9_on" else "G15 V8 · acabados anteriores")
+            if _role=="ew_mobile" and model_root!=null:
+                var v9_active:bool=action=="g15_v9_on"
+                if not v9_active:
+                    G15OpticalV10.show_finish(model_root,false)
+                if G15SurfaceV9.show_finish(model_root,v9_active):
+                    if v9_active:
+                        G15OpticalV10.show_finish(model_root,true)
+                    status_label.text=("G15 V9 · acero PBR, caucho y llantas mecanizadas" if action=="g15_v9_on" else "G15 V8 · acabados anteriores")
         "g15_v8_on","g15_v8_off":
             if _role=="ew_mobile" and model_root!=null:
                 var v8_active:bool=action=="g15_v8_on"
@@ -700,26 +713,31 @@ func _studio_run_animation(action: String) -> void:
                     G15ExteriorV6.show_finish(model_root,true)
                     G15MechanicalV7.show_finish(model_root,true)
                 if not v8_active:
+                    G15OpticalV10.show_finish(model_root,false)
                     G15SurfaceV9.show_finish(model_root,false)
                 if G15ContinuityV8.show_finish(model_root,v8_active):
                     if v8_active:
                         G15SurfaceV9.show_finish(model_root,true)
+                        G15OpticalV10.show_finish(model_root,true)
                     status_label.text=("G15 V8 · acero continuo, biseles y seis muelles" if v8_active else "G15 V7 · comparativa sin refinamiento continuo")
         "g15_v7_on","g15_v7_off":
             if _role=="ew_mobile" and model_root!=null:
                 var v7_active:bool=action=="g15_v7_on"
                 if not v7_active:
+                    G15OpticalV10.show_finish(model_root,false)
                     G15SurfaceV9.show_finish(model_root,false)
                     G15ContinuityV8.show_finish(model_root,false)
                 if G15MechanicalV7.show_finish(model_root,v7_active):
                     if v7_active:
                         G15ContinuityV8.show_finish(model_root,true)
                         G15SurfaceV9.show_finish(model_root,true)
+                        G15OpticalV10.show_finish(model_root,true)
                     status_label.text=("G15 V8 · ejes, bajos, resortes y uniones" if v7_active else "G15 V6 · comparación sin detalles mecánicos")
         "g15_v6_on","g15_v6_off":
             if _role=="ew_mobile" and model_root!=null:
                 var current_v6:bool=action=="g15_v6_on"
                 if not current_v6:
+                    G15OpticalV10.show_finish(model_root,false)
                     G15SurfaceV9.show_finish(model_root,false)
                     G15ContinuityV8.show_finish(model_root,false)
                     G15MechanicalV7.show_finish(model_root,false)
@@ -728,6 +746,7 @@ func _studio_run_animation(action: String) -> void:
                         G15MechanicalV7.show_finish(model_root,true)
                         G15ContinuityV8.show_finish(model_root,true)
                         G15SurfaceV9.show_finish(model_root,true)
+                        G15OpticalV10.show_finish(model_root,true)
                     status_label.text=("G15 V7 · carrocería, acero y uniones" if current_v6 else "G15 V5 · comparación anterior")
         "g15_v5_on","g15_v5_off":
             if _role=="ew_mobile" and model_root!=null:
@@ -763,6 +782,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="ew_mobile" and model_root!=null:
                 var show_v3:bool=action=="g15_v3_on"
                 if not show_v3:
+                    G15OpticalV10.show_finish(model_root,false)
                     G15SurfaceV9.show_finish(model_root,false)
                     G15ContinuityV8.show_finish(model_root,false)
                     G15MechanicalV7.show_finish(model_root,false)
@@ -777,6 +797,7 @@ func _studio_run_animation(action: String) -> void:
                         G15MechanicalV7.show_finish(model_root,true)
                         G15ContinuityV8.show_finish(model_root,true)
                         G15SurfaceV9.show_finish(model_root,true)
+                        G15OpticalV10.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: blindaje biselado y conjunto electrónico mejorado"
                         if show_v3 else
@@ -785,6 +806,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="ew_mobile" and model_root!=null:
                 var show_current:bool=action=="g15_v2_on"
                 if not show_current:
+                    G15OpticalV10.show_finish(model_root,false)
                     G15SurfaceV9.show_finish(model_root,false)
                     G15ContinuityV8.show_finish(model_root,false)
                     G15MechanicalV7.show_finish(model_root,false)
@@ -801,6 +823,7 @@ func _studio_run_animation(action: String) -> void:
                         G15MechanicalV7.show_finish(model_root,true)
                         G15ContinuityV8.show_finish(model_root,true)
                         G15SurfaceV9.show_finish(model_root,true)
+                        G15OpticalV10.show_finish(model_root,true)
                     status_label.text=(
                         "G15 V4: superficies biseladas, pasos curvos y antenas físicas"
                         if show_current else
@@ -952,7 +975,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "ew_mobile": label="G15 · Guerra electrónica · V9 (blindaje y ruedas)"
+            "ew_mobile": label="G15 · Guerra electrónica · V10 (cristales y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
     studio_overview_label.text=label
@@ -4349,9 +4372,9 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="ew_mobile" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready:bool=bool(model_root.get_meta(G15SurfaceV9.FLAG,false))
-        detail_label.text="G15 · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
-        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V9 acabado completo" if ready else "acabado incompleto"]
+        var ready:bool=bool(model_root.get_meta(G15OpticalV10.FLAG,false))
+        detail_label.text="G15 V10 · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V10 acabado óptico 3D cargado" if ready else "acabado incompleto"]
         return
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:

@@ -24,6 +24,7 @@ const G15ExteriorV6 = preload("res://scripts/ui/G15ArmoredExteriorV6.gd")
 const G15MechanicalV7 = preload("res://scripts/ui/G15MechanicalExteriorV7.gd")
 const G15ContinuityV8 = preload("res://scripts/ui/G15ContinuitySuspensionV8.gd")
 const G15SurfaceV9 = preload("res://scripts/ui/G15ProductionSurfaceV9.gd")
+const G15OpticalV10 = preload("res://scripts/ui/G15OpticalGlazingV10.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
 const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
@@ -1033,6 +1034,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 push_warning("G15 V8 closed armor bridges, satin metal and native 6x6 coil springs not installed")
             elif not G15SurfaceV9.apply(model,faction_paint_color(faction)):
                 push_warning("G15 V9 PBR armor and rubber tread wheel machining not installed")
+            elif not G15OpticalV10.apply(model,faction_paint_color(faction)):
+                push_warning("G15 V10 physical curved glazing, seals and EW rear service art not installed")
         "aa_mobile":
             # G13 V1 is an ART preview role only. It is deliberately NOT
             # registered as a playable BattleSession unit yet.

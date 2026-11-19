@@ -297,9 +297,11 @@ jobs:
             cp "$g15_source" scripts/ui/
           done
           test -s scripts/ui/G15ProductionSurfaceV9.gd
+          test -s scripts/ui/G15OpticalGlazingV10.gd
           test -s scripts/ui/G15ElectronicWarfareV1.gd
           grep -q 'ew_mobile' scripts/ui/UnitModels3D.gd
           grep -q 'g15_v9_on' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'g15_v10_on' scripts/ui/BastionStudioAdapter.gd
           # The main repository holds the genuine G13 inspection scene.
           # Copy it into the assembled native Web Studio checkout so
           # the release visual captures run instead of warning about
