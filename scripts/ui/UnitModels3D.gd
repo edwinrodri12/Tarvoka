@@ -29,6 +29,7 @@ const G15MechanicalV7 = preload("res://scripts/ui/G15MechanicalExteriorV7.gd")
 const G15ContinuityV8 = preload("res://scripts/ui/G15ContinuitySuspensionV8.gd")
 const G15SurfaceV9 = preload("res://scripts/ui/G15ProductionSurfaceV9.gd")
 const G15OpticalV10 = preload("res://scripts/ui/G15OpticalGlazingV10.gd")
+const G15DetailV11 = preload("res://scripts/ui/G15Detail360V11.gd")
 const G13DetailV2 = preload("res://scripts/ui/G13DetailV2.gd")
 const G13UndercarriageV6 = preload("res://scripts/ui/G13UndercarriageV6.gd")
 const G13SurfaceV8 = preload("res://scripts/ui/G13SurfaceFinishV8.gd")
@@ -1041,6 +1042,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 push_warning("G15 V9 PBR armor and rubber tread wheel machining not installed")
             elif not G15OpticalV10.apply(model,faction_paint_color(faction)):
                 push_warning("G15 V10 physical curved glazing, seals and EW rear service art not installed")
+            elif not G15DetailV11.apply(model,faction_paint_color(faction)):
+                push_warning("G15 V11 360 wheel shoulders and true cab wipers not installed")
         "sam_mobile":
             # G14 V1 is Studio-only until native art is approved. Do not
             # alias to the playable SAM role or change its battle state yet.
