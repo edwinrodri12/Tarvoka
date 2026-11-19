@@ -5,9 +5,11 @@ on:
       - art/armored-workshop-v1-20261119
     paths:
       - "scripts/ui/ArmoredWorkshop3DV2.gd"
+      - "scripts/ui/ArmoredWorkshopMobileLOD3D.gd"
       - "scripts/ui/ArmoredWorkshopStudioAdapterV1.gd"
       - "scripts/ui/ArmoredWorkshopDesignStudioV1.gd"
       - "tests/test_armored_workshop_v2_native.gd"
+      - "tests/test_armored_workshop_mobile_lod.gd"
       - "tests/capture_armored_workshop_v2_cameras.gd"
       - ".github/workflows/armored-workshop-v2-art-qa.yml"
   workflow_dispatch:
@@ -64,6 +66,23 @@ jobs:
             exit 1
           fi
           grep -F 'PASS WORKSHOP V2 native:' /tmp/workshop-v2-art.log
+      - name: Verify 270 Android LOD variants and GPU instancing budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopMobileLOD3D.gd
+          test -s tests/test_armored_workshop_mobile_lod.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_mobile_lod.gd \
+            2>&1 | tee /tmp/workshop-mobile-lod.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-mobile-lod.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP MOBILE LOD:' /tmp/workshop-mobile-lod.log
       - name: Render real 3D evidence from all six cameras and damage stages
         shell: bash
         run: |
@@ -80,16 +99,17 @@ jobs:
             exit 1
           fi
           grep -F 'PASS WORKSHOP V2 VISUAL:' /tmp/workshop-v2-visual.log
-          test "$(find qa_artifacts/armored_workshop_v2 -name '*.png' | wc -l)" -eq 24
+          test "$(find qa_artifacts/armored_workshop_v2 -name '*.png' | wc -l)" -eq 36
           test -s qa_artifacts/armored_workshop_v2/manifest.json
       - name: Preserve camera screenshots and native QA logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: armored-workshop-v2-six-camera-evidence
+          name: armored-workshop-v2-hero-and-android-36-camera-evidence
           if-no-files-found: warn
           retention-days: 14
           path: |
             qa_artifacts/armored_workshop_v2/
             /tmp/workshop-v2-art.log
+            /tmp/workshop-mobile-lod.log
             /tmp/workshop-v2-visual.log
