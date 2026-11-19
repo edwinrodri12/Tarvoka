@@ -73,3 +73,8 @@ Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y
 - Al cargar una segunda escena válida, se libera el modelo dinámico anterior; los hijos preexistentes del inspector no se eliminan.
 - Regresiones añadidas a `tests/test_asset_orbit_camera.gd`: carga, encuadre, rechazo, conservación del modelo y sustitución.
 - **CI del nuevo commit: NO CONFIRMADO** hasta ejecución de Actions. **Android: NO EJECUTADO EN DISPOSITIVO**. **Arte: PENDIENTE DE REVISIÓN VISUAL**. Esta capacidad todavía no enlaza automáticamente el catálogo real del estudio web.
+
+## 2026-11-19 — retorno seguro al modelo de referencia
+- `AssetInspectionPreview.unload_asset_scene()` devuelve el inspector a `SampleAsset` y libera exclusivamente la instancia dinámica. Devuelve `false` sin alterar el modelo cargado si falta la referencia o no tiene mallas; una segunda descarga no produce cambios.
+- Regresión `tests/test_asset_orbit_camera.gd`: tras reemplazar una escena dinámica, descargar, comprobar encuadre restaurado, referencia conservada, instancia antigua liberada y descarga repetida rechazada.
+- Commits de código/prueba en PR #602. CI de estos commits: **NO CONFIRMADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**; estética: **PENDIENTE DE REVISIÓN VISUAL**. No se ha integrado en main ni en visor web.
