@@ -84,3 +84,10 @@ Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y
 - `AssetInspectionPreview.gd`: tras aceptar y encuadrar un `PackedScene` válido, `SampleAsset.visible=false` para impedir que la esfera de referencia se superponga al modelo real; `unload_asset_scene()` restaura su visibilidad. Una carga rechazada no modifica visibilidad ni selección.
 - `tests/test_asset_orbit_camera.gd`: comprueba ocultación al cargar, persistencia tras reemplazo rechazado y restauración al descargar.
 - Estado: cambios registrados en rama de PR #602; CI del commit nuevo pendiente de confirmar. Android físico **NO EJECUTADO EN DISPOSITIVO**; calidad visual **PENDIENTE DE REVISIÓN VISUAL**. No hay merge a `main`.
+
+
+### 2026-11-19 — Non-3D PackedScene rejection regression
+- Added a `Control`-root PackedScene case to `tests/test_asset_orbit_camera.gd`.
+- Expected: `load_asset_scene()` returns false; active 3D model, framing, and hidden reference remain unchanged.
+- Godot 4.3 CI: **NO EJECUTADO for this commit** until the new workflow completes. Android physical: **NO EJECUTADO EN DISPOSITIVO**. Visual QA: **PENDIENTE DE REVISIÓN VISUAL**.
+- This is a test-only change; it does not alter tactical gameplay or the model loader.
