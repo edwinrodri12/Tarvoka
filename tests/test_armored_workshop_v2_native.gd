@@ -102,6 +102,13 @@ func _run() -> void:
                         "Full-height floating siding at D3")
                     assert(_mesh(model,"BandaFaccionSuperiorV2")==null)
                     assert(_mesh(model,"FocoAcceso_0_1")==null)
+                    for bay in range(level):
+                        assert(_mesh(model,
+                            "NervioCubierta_%d_0" % bay)==null,
+                            "D3 must never retain unsupported high roof ribs")
+                        assert(_mesh(model,
+                            "ConductoVentilacion_%d" % bay)==null,
+                            "No floating industrial vents above D3 wreckage")
                 if damage==4:
                     assert(_mesh(model,"CartelCaidoV2")!=null)
                     assert(_mesh(model,"PanelLateralCerrado_-1_0")==null)
