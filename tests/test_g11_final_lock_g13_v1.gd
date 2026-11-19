@@ -21,8 +21,11 @@ func _initialize()->void:
 func _run()->void:
     _check(Models.ROLES.slice(0,8)==EXPECTED_ROLES,
         "old eight visual roles and picker indices untouched")
-    _check(Models.ROLES.size()==9 and Models.ROLES[8]=="aa_mobile",
-        "G13 is a ninth visual preview only")
+    # G13 remains the ninth original preview. Newer art-only vehicles,
+    # including G15, may extend the Studio catalog without changing G13.
+    _check(Models.ROLES.size()>=9 and Models.ROLES[8]=="aa_mobile" and
+        Models.ROLES.count("aa_mobile")==1,
+        "G13 is the ninth preview; later art-only units are allowed")
     _check(G13.INNER_CLEARANCE>=0.040,
         "all four wheels have measured clearance from chassis sides")
     var paints: Dictionary={}
