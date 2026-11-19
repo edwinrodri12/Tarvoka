@@ -49,6 +49,20 @@ func _run() -> void:
         push_error("Camera position is invalid")
         quit(1)
         return
+    # Regression: world-space target must remain correct if the rig is moved/rotated.
+    rig.position = Vector3(7.0, 2.0, -4.0)
+    rig.rotation_degrees = Vector3(0.0, 45.0, 0.0)
+    rig.set_inspection_target(Vector3(-2.0, 3.0, 5.0), 2.0)
+    if not is_equal_approx(camera.global_position.distance_to(rig.target), rig.distance):
+        push_error("Transformed rig incorrectly offsets world-space target")
+        quit(1)
+        return
+    var camera_forward: Vector3 = -camera.global_transform.basis.z.normalized()
+    var target_direction: Vector3 = (rig.target - camera.global_position).normalized()
+    if camera_forward.dot(target_direction) < 0.999:
+        push_error("Transformed rig camera does not face target")
+        quit(1)
+        return
     scene.queue_free()
     print("PASS: isolated asset orbit camera smoke")
     quit(0)
