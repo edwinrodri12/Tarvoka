@@ -1,0 +1,70 @@
+name: TARVOKA v396 fourth-order piercer lifecycle
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_bridge_piercer_lifecycle_v396.gd"
+      - "tests/aggregate_ai_bridge_piercer_v396.py"
+      - ".github/workflows/ai-bridge-piercer-lifecycle-v396.yml"
+  workflow_dispatch:
+
+jobs:
+  piercer_ledger:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 48
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0,1,2]
+    env:
+      TARVOKA_V396_SEED_INDEX: ${{ matrix.seed_index }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare the same first three orders then record fourth Piercer's every action
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2700s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_bridge_piercer_lifecycle_v396.gd \
+            2>&1 | tee /tmp/piercer-v396.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|PIERCER396_MIRROR_ERROR' /tmp/piercer-v396.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v396: fourth-order piercer lifecycle' /tmp/piercer-v396.log
+          test "$(grep -c '^PIERCER396_RESULT ' /tmp/piercer-v396.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v396-seed${{ matrix.seed_index }}
+          path: /tmp/piercer-v396.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  aggregate:
+    needs: [piercer_ledger]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v396-seed*
+          path: .ci-v396-logs
+      - name: Audit six real unit lifecycles
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/aggregate_ai_bridge_piercer_v396.py
+          python3 tests/aggregate_ai_bridge_piercer_v396.py .ci-v396-logs
+          cat reports/ai_v396_piercer_lifecycle.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v396-piercer-lifecycle-report
+          path: reports/ai_v396_piercer_lifecycle.*
+          retention-days: 30
+          if-no-files-found: ignore
