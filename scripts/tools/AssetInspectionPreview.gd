@@ -58,3 +58,19 @@ func load_asset_scene(packed: PackedScene) -> bool:
     _loaded_asset = model
     asset_path = get_path_to(model)
     return true
+
+## Restore the original reference asset after inspecting a dynamically loaded model.
+## This is reversible and never removes pre-existing scene children.
+## If the reference is missing or has no meshes, preserve the loaded model.
+func unload_asset_scene() -> bool:
+    if _loaded_asset == null or not is_instance_valid(_loaded_asset):
+        return false
+    var reference: Node3D = get_node_or_null(^"SampleAsset") as Node3D
+    if reference == null or not orbit_rig.frame_asset(reference):
+        return false
+    var previous: Node3D = _loaded_asset
+    _loaded_asset = null
+    asset_path = ^"SampleAsset"
+    remove_child(previous)
+    previous.queue_free()
+    return true
