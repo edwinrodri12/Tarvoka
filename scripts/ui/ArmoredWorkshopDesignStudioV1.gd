@@ -15,7 +15,7 @@ var _level:OptionButton
 var _damage:OptionButton
 var _faction:OptionButton
 var _status:Label
-var _yaw:float=37.0
+var _yaw:float=145.0
 var _elevation:float=39.0
 var _zoom:float=1.0
 
@@ -49,7 +49,7 @@ func _ready() -> void:
     var cameras:=HFlowContainer.new()
     column.add_child(_label("INSPECCION 3D"))
     column.add_child(cameras)
-    for preset in [["ISOMETRICA",37.0,39.0],["FRENTE",180.0,19.0],
+    for preset in [["ISOMETRICA",145.0,39.0],["FRENTE",180.0,19.0],
             ["POSTERIOR",0.0,19.0],["LATERAL",90.0,22.0],
             ["COSTADO",270.0,22.0],["TECHO",37.0,78.0]]:
         var b:=Button.new()
@@ -121,7 +121,7 @@ static func _label(text:String) -> Label:
     return result
 
 static func _select(parent:VBoxContainer,title:String,
-        choices:Array[String]) -> OptionButton:
+        choices:Array) -> OptionButton:
     parent.add_child(_label(title))
     var field:=OptionButton.new()
     for choice in choices:
