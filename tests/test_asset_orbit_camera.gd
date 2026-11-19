@@ -203,6 +203,10 @@ func _run() -> void:
         push_error("Valid PackedScene failed to load")
         quit(1)
         return
+    if preview_asset.visible:
+        push_error("Reference asset remains visible over the loaded production model")
+        quit(1)
+        return
     var loaded_path: NodePath = scene.asset_path
     var loaded_node: Node3D = scene.get_node(loaded_path)
     if loaded_node == null or not rig.target.is_equal_approx(loaded_node.global_position):
@@ -218,6 +222,10 @@ func _run() -> void:
     empty_root.free()
     if scene.load_asset_scene(empty_packed) or scene.asset_path != loaded_path:
         push_error("Empty PackedScene replaced a valid selection")
+        quit(1)
+        return
+    if preview_asset.visible:
+        push_error("Rejected replacement unexpectedly revealed reference asset")
         quit(1)
         return
     if not is_instance_valid(loaded_node) or not rig.target.is_equal_approx(loaded_node.global_position):
@@ -244,6 +252,10 @@ func _run() -> void:
         quit(1)
         return
     await process_frame
+    if not preview_asset.visible:
+        push_error("Unloading failed to restore reference asset visibility")
+        quit(1)
+        return
     if is_instance_valid(replacement) or not is_instance_valid(preview_asset):
         push_error("Unloading leaked dynamic model or removed reference asset")
         quit(1)
