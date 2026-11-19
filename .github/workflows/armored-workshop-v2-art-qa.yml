@@ -17,6 +17,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Only the most recent edit needs a 36-image visual review; cancel obsolete
+# art-branch QA submissions so they cannot block current progress.
+concurrency:
+  group: armored-workshop-art-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   native-art:
     runs-on: ubuntu-22.04
