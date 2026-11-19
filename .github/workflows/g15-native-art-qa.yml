@@ -232,7 +232,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS G15 V11 360 NATIVE:' /tmp/g15-v11-360-qa.log
-          test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 12
+          test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 32
       - name: Upload authentic Godot multi-angle G15 artwork
         if: always()
         uses: actions/upload-artifact@v4
