@@ -6,6 +6,7 @@ extends SceneTree
 const Budget = preload("res://scripts/core/RecruitReserveV403.gd")
 const Study = preload("res://tests/test_ai_initiative_counterfactual_v379.gd")
 const AI = preload("res://scripts/core/BasicAI.gd")
+const Session = preload("res://scripts/core/BattleSession.gd")
 const Mirror = preload("res://tests/MirrorBattleV374.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
@@ -30,6 +31,42 @@ static func _stub(side: int) -> Dictionary:
              "pos":Vector2i(4,4)}
         ]
     }
+
+# Reconstruct the ACTUAL authoritative sequence, not the normalized
+# mirror-comparison frame. Semantic frame normalization sorts units,
+# sites and relays for parity; sorting those arrays can alter heuristic
+# tie-breaking when fed back into BasicAI. A post-normalization replay
+# state is NOT a valid stand-in for the next live AI decision.
+static func _phase2_after_piercer(start: Dictionary) -> Dictionary:
+    var state: Dictionary = start.duplicate(true)
+    for phase in range(3):
+        var side: int = int(state["faction"])
+        var opts: Dictionary = Study._configuration()
+        if side == 0:
+            opts.merge(V400,true)
+        var budget: int = state["units"].size()*2 + \
+            state["economy"]["sites"].size()
+        var orders := 0
+        for _i in range(budget+1):
+            var decision: Dictionary = AI.step(state,opts)
+            if not bool(decision.get("valid",false)):
+                break
+            assert(str(decision["action"]) in [
+                "move","attack","produce","resupply"])
+            state = decision["state"]
+            orders += 1
+            if phase == 2 and str(decision["action"]) == "produce" and \
+                    int(decision.get("cost",0)) == 300:
+                assert(int(state["economy"]["credits"][0]) == 2200)
+                return state.duplicate(true)
+        if phase == 0:
+            assert(orders == 3)
+        assert(phase < 2)
+        var ended: Dictionary = Session.end_turn(state)
+        assert(bool(ended.get("valid",false)))
+        state = ended["state"]
+    assert(false)
+    return {}
 
 func _initialize() -> void:
     var heavy := {"valid":true,"action":"produce",
@@ -74,13 +111,7 @@ func _initialize() -> void:
     # reserve changes THAT legal next action, not opening/credits.
     var start: Dictionary = Study._initial(Vector2i(40,30),698,
         false,0)
-    var battle: Dictionary = Study._play(start,false,3,{},{"0":V400})
-    var after_piercer: Dictionary = {}
-    for frame in battle["frames"]:
-        if int(frame["phase"]) == 2 and \
-                int(frame["order"]) == 0 and \
-                str(frame["tag"]) == "action":
-            after_piercer = frame["state"]
+    var after_piercer: Dictionary = _phase2_after_piercer(start)
     assert(not after_piercer.is_empty())
     assert(int(after_piercer["economy"]["turn"]) == 2)
     assert(int(after_piercer["economy"]["credits"][0]) == 2200)
@@ -94,6 +125,14 @@ func _initialize() -> void:
     var off: Dictionary = baseline_opts.duplicate(true)
     off["_ab_recruit_reserve_v403"] = false
     var disabled: Dictionary = AI.step(after_piercer,off)
+    print("RESERVE403_LIVE_FIRST " + JSON.stringify({
+        "baseline_action":str(baseline.get("action","none")),
+        "baseline_cost":int(baseline.get("cost",-1)),
+        "guarded_action":str(saved.get("action","none")),
+        "guarded_cost":int(saved.get("cost",-1)),
+        "phase":int(after_piercer["economy"]["turn"]),
+        "cash":int(after_piercer["economy"]["credits"][0])
+    }))
     assert(baseline["valid"] and saved["valid"] and disabled["valid"])
     assert(baseline["state"] == disabled["state"])
     assert(baseline["action"] == "produce")
