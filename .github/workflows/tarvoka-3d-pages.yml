@@ -7,6 +7,7 @@ on:
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/G15*.gd"
+      - "scripts/ui/G16*.gd"
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/G13MobileAirDefenseV1.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
@@ -292,6 +293,17 @@ jobs:
             test -s "$g13_source"
             cp "$g13_source" scripts/ui/
           done
+          # G16 supply art must be shipped alongside the current model
+          # factory/Studio adapter. Keep the regular unified inspector.
+          for g16_source in hq-android-v15/scripts/ui/G16*.gd; do
+            test -s "$g16_source"
+            cp "$g16_source" scripts/ui/
+          done
+          test -s scripts/ui/G16ArmoredLogisticsV1.gd
+          grep -q '"logistics_mobile"' scripts/ui/UnitModels3D.gd
+          grep -q 'G16LogisticsV1.build' scripts/ui/UnitModels3D.gd
+          grep -q 'g16_camp' scripts/ui/BastionStudioAdapter.gd
+          grep -q '_g16_play' scripts/ui/BastionStudioAdapter.gd
           # G15 V9: ship the tenth native unit in the SAME original Godot
           # viewer. Do not overwrite civilian cities or other unit sources.
           for g15_source in hq-android-v15/scripts/ui/G15*.gd; do
@@ -480,6 +492,7 @@ jobs:
           current = current[:start] + approved_tank + apc_tail + current[end:]
           assert current.count(tank_anchor) == 1, 'Duplicate G09 build stages remain'
           for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
+                            'const G16LogisticsV1 = preload(',
                             'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
                             'G11Art.build', 'APCClosedTiresV25.apply',
                             'static func pose_model(', 'static func restore_model_pose(']:
