@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'scripts/tools/AssetOrbitCamera.gd'
+      - 'scripts/tools/AssetInspectionPreview.gd'
+      - 'scripts/tools/AssetInspectionPreview.gd'
       - 'scenes/tools/AssetInspectionSmoke.tscn'
       - 'tests/test_asset_orbit_camera.gd'
       - '.github/workflows/asset-orbit-camera.yml'
@@ -42,7 +44,7 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 80s \
             xvfb-run -a -s '-screen 0 1280x720x24' \
-            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --path . \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --audio-driver Dummy --rendering-method gl_compatibility --path . \
             --script res://tests/test_asset_orbit_camera.gd 2>&1 | tee /tmp/asset-orbit.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/asset-orbit.log; then
             echo 'Orbit smoke emitted engine errors'; exit 1
