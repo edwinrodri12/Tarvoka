@@ -50,9 +50,23 @@ func _run() -> void:
                                 "Actual PBR tinted glass missing")
                     assert(_mesh(model,"PanelPosteriorAlto")!=null)
                     assert(_mesh(model,"FrontispicioBlindadoV2")!=null)
+                    for window in range(4):
+                        assert(_mesh(model,
+                            "CristalPosteriorPBR_%d" % window)!=null,
+                            "Rear face upper glazing was buried")
+                    for side in [-1,1]:
+                        for seam in range(2):
+                            assert(_mesh(model,
+                                "JuntaLateralSellada_%d_%d" % [side,seam])!=null,
+                                "Sidewall has an unsealed vertical seam")
                     assert(_mesh(model,"PrensaTravesano")!=null or damage==2)
                 if damage<=1:
                     assert(_mesh(model,"BandaFaccionSuperiorV2")!=null)
+                    for bay in range(level):
+                        for seam in range(2):
+                            assert(_mesh(model,
+                                "JuntaCubiertaSellada_%d_%d" % [bay,seam])!=null,
+                                "Roof panel gaps were left open")
                     var band:MeshInstance3D=_mesh(model,"PlacaIdentidad_0")
                     assert(band!=null)
                     var material:StandardMaterial3D=band.material_override as StandardMaterial3D
@@ -72,6 +86,14 @@ func _run() -> void:
                     assert(_mesh(model,"TamborPersiana_0")==null)
                 if damage==3:
                     assert(_mesh(model,"ArmaduraHundidaV2_0")!=null)
+                    assert(_mesh(model,"FragmentoFrontispicioCaido_0")!=null)
+                    assert(_mesh(model,"FragmentoFrontispicioCaido_1")!=null)
+                    assert(_mesh(model,"FrontispicioBlindadoV2")==null,
+                        "Unbroken floating facade in critical destruction")
+                    assert(_mesh(model,"PanelLateralCerrado_-1_0")==null,
+                        "Full-height floating siding at D3")
+                    assert(_mesh(model,"PanelLateralCerrado_1_0")==null,
+                        "Full-height floating siding at D3")
                     assert(_mesh(model,"BandaFaccionSuperiorV2")==null)
                     assert(_mesh(model,"FocoAcceso_0_1")==null)
                 if damage==4:
