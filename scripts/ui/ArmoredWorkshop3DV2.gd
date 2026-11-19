@@ -396,6 +396,15 @@ static func build(level:int=1,faction:int=-1,damage:int=0) -> Node3D:
     var bays:int=level
     var accent:Color=Style.faction_color(faction) if faction>=0 else NEUTRAL
     var base_root:Node3D=model.get_node(STAGE) as Node3D
+    # The inherited V1 D3 still kept an elevated roof over its middle bay
+    # and an orphaned detached front beam. Remove those ONLY in V2, not in
+    # the preserved V1 comparison source; V2 generates fallen fragments.
+    if damage==3:
+        for legacy_piece in ["CubiertaIndustrial","VigaFrontalDesprendida"]:
+            var unsupported:Node=base_root.get_node_or_null(legacy_piece)
+            if unsupported!=null:
+                base_root.remove_child(unsupported)
+                unsupported.free()
     var stage:Node3D=_node(base_root,FINISH_STAGE)
     _portal(stage,width,depth,height,bays,damage,accent)
     _wall_enclosure(stage,width,depth,height,damage,accent)
