@@ -23,7 +23,7 @@ const GARDEN=Color("#568466")
 const TRUNK=Color("#775f4c")
 const RUIN=Color("#686260")
 const CHAR=Color("#353d40")
-const NEUTRAL_ACCENT=Color("#c9a657")
+const NEUTRAL_ACCENT=Color("#70838B") # Cool slate; visually distinct from Solar yellow
 const LABELS=[
     "Villa · edificios bajos y plaza municipal",
     "Ciudad · manzanas medianas y comercio",
