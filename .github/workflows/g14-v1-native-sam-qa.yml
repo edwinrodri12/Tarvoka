@@ -1,24 +1,28 @@
-name: TARVOKA G14 V1-V2 native armored SAM and wheel QA
+name: TARVOKA G14 V1-V3 native SAM mechanics and armored 8x8 QA
 
 on:
   pull_request:
     paths:
       - 'scripts/ui/G14MobileSAMV1.gd'
       - 'scripts/ui/G14MobileSAMExteriorV2.gd'
+      - 'scripts/ui/G14MobileSAMLauncherV3.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g14_v1_native_sam.gd'
       - 'tests/test_g14_v2_native_3d.gd'
+      - 'tests/test_g14_v3_launcher_hydraulics.gd'
       - '.github/workflows/g14-v1-native-sam-qa.yml'
   push:
     branches: [main, feat/g14-v1-native-sam-studio-20261119]
     paths:
       - 'scripts/ui/G14MobileSAMV1.gd'
       - 'scripts/ui/G14MobileSAMExteriorV2.gd'
+      - 'scripts/ui/G14MobileSAMLauncherV3.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g14_v1_native_sam.gd'
       - 'tests/test_g14_v2_native_3d.gd'
+      - 'tests/test_g14_v3_launcher_hydraulics.gd'
       - '.github/workflows/g14-v1-native-sam-qa.yml'
   workflow_dispatch:
 
@@ -50,6 +54,8 @@ jobs:
           grep -Fq 'G14SAM.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'g14_v2_on' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G14ExteriorV2.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G14LauncherV3.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'g14_v3_on' scripts/ui/BastionStudioAdapter.gd
       - name: Import all standalone models (published parent adapter excluded)
         shell: bash
         run: |
@@ -97,6 +103,23 @@ jobs:
           fi
           grep -F 'PASS G14 V2 NATIVE 3D:' /tmp/g14-v2-test.log
           test "$(find build/qa/g14-v2 -name '*.png' | wc -l)" -eq 16
+      - name: Verify real V3 SAM hydraulics, four independent hatches and 16 Godot 3D comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g14-v3
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g14_v3_launcher_hydraulics.gd \
+            2>&1 | tee /tmp/g14-v3-test.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g14-v3-test.log; then
+            exit 1
+          fi
+          grep -F 'PASS G14 V3 NATIVE 3D:' /tmp/g14-v3-test.log
+          test "$(find build/qa/g14-v3 -name '*.png' | wc -l)" -eq 16
       - name: Publish 8 native 3D G14 V1 review images
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,4 +134,12 @@ jobs:
         with:
           name: tarvoka-g14-v2-native-closed-hull-optical-tread-comparisons
           path: build/qa/g14-v2/*.png
+          retention-days: 14
+
+      - name: Publish 16 native Godot G14 V2/V3 launcher comparisons
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g14-v3-real-3d-hydraulic-four-sam-mouths
+          path: build/qa/g14-v3/*.png
           retention-days: 14
