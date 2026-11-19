@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -16,6 +16,7 @@ const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -157,7 +158,8 @@ const TANK_BARREL_PIVOT := "ElevacionCanon"
 const PREVIEW_FRAME := {
     "line":3.05,"scout":3.05,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
-    "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45
+    "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45,
+    "logistics_mobile":5.0
 }
 
 # G13 art-only LOD selection. Public to studio/stress harnesses, not combat.
@@ -1015,6 +1017,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             _fighter(model)
         "destroyer":
             _destroyer(model)
+        "logistics_mobile":
+            # G16 V1: visual-only 6x6 logistics art. Tactical 'logistics'
+            # remains unchanged until the model is reviewed and approved.
+            if not G16LogisticsV1.build(model,
+                    faction_paint_color(faction),finish_enabled and art_level>=13):
+                return null
         "ew_mobile":
             # G15 is an art-only communications carrier; not a tactical class.
             if not G15EW.build(model,faction_paint_color(faction),
@@ -1248,7 +1256,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     elif role in ["attack_heli","fighter","destroyer"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
-    elif role=="ew_mobile":
+    elif role=="ew_mobile" or role=="logistics_mobile":
         model.scale=Vector3.ONE*0.83
         model.position.y=0.0
     elif role in ["aa_mobile","mobile_aa"]:
@@ -1451,6 +1459,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "logistics_mobile":
+            return G16LogisticsV1.pose(model,kind,progress,target_heading)
         "aa_mobile", "mobile_aa":
             return G13AA.pose(model,kind,progress,target_heading)
         "ew_mobile":
@@ -1480,6 +1490,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "logistics_mobile":
+            G16LogisticsV1.restore(model)
         "aa_mobile", "mobile_aa":
             G13AA.restore(model)
         "ew_mobile":
