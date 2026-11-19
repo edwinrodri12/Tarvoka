@@ -34,3 +34,15 @@ La ejecución exitosa de una revisión anterior **no aprueba** automáticamente 
 5. Las 36 capturas de Godot ahora incluyen verificación de primer plano no vacío, encuadre y límites de la geometría visible. Cada imagen registra `foreground_sample_count` y `foreground_bounds_sampled` en el manifiesto para auditar cuadros negros o exportaciones aparentemente satisfactorias pero vacías.
 
 **Estado:** scripts y pruebas guardados en la rama de arte. Esto **no confirma** que las últimas capturas hayan corrido ni que el Android alcance un FPS objetivo; se precisa un resultado real de CI y revisión de las capturas para aprobar.
+
+## Prioridad posterior: integridad de visibilidad GPU y encuadre
+
+**Defecto preventivo corregido:** cada `MultiMesh` Android ahora calcula su `custom_aabb` a partir de las coordenadas y semiextensiones transformadas de todas las cajas, incluida la rotación y el escalado. Es indispensable porque Godot agrupa por lote para visibilidad; un límite demasiado pequeño puede hacer desaparecer una fachada completa durante zoom o giro.
+
+Las **270 combinaciones** verifican además que cada uno de los ocho vértices reales de cada caja queda dentro de su AABB GPU. Es una prueba estructural y no sustituye la revisión de imágenes.
+
+**Modelo HERO:** se añadieron cuatro remates de muro para unir físicamente los tres paneles laterales con los extremos frontal/posterior en los tres tamaños, cerrando unas aberturas de 3.7 % de la longitud por lado. Los tests de los 135 casos comprueban que cada tapa llega a la esquina.
+
+**Capturas:** la prueba ahora escanea el fotograma completo de 960×720 px, rechaza escenas vacías y exige al menos 24 px de margen visible respecto a cada borde. El resultado de cada una de las 36 imágenes conserva límites aproximados en el manifiesto.
+
+**Ejecuciones:** la rama incluye concurrencia de CI que cancela revisiones anteriores al publicar un cambio más reciente, sin tocar el flujo de despliegue general ni otros proyectos. La ejecución correcta y las capturas aún deben verificarse. El PR sigue siendo borrador.
