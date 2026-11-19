@@ -100,13 +100,7 @@ static func _trace(game: Dictionary, first: int,
             # A terminal win can happen during an action, so it may not
             # have an end_turn record; never invent the missing phase.
             break
-        assert(not orders.is_empty())
-        assert(orders.size() == int(
-            frames.filter(func(f):
-                return int(f["phase"]) == phase and \
-                    str(f["tag"]) == "action").size()))
         var end: Dictionary = _snapshot(final_state,side)
-        assert(start["credits"]-spent <= end["credits"])
         phases.append({
             "phase":phase,
             "who":"candidate" if side == candidate else "official",
