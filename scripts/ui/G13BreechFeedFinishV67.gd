@@ -54,7 +54,7 @@ static func _tri(st:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
     st.add_vertex(c)
 
 static func _shell(st:SurfaceTool,levels:Array,
-        brightness:Array[float])->void:
+        brightness:Array)->void:
     for layer in range(levels.size()-1):
         var lower:Array[Vector3]=levels[layer]
         var upper:Array[Vector3]=levels[layer+1]
@@ -77,13 +77,13 @@ static func _hero_cover(axis:String,side:int)->ArrayMesh:
     if axis=="x" and _side_cache.has(key):
         return _side_cache[key] as ArrayMesh
     var d:float=float(side)
-    var depth:Array[float]=(
+    var depth:Array=(
         [-0.012,0.008,0.021,0.017] if axis=="y" else
         [-0.011,0.010,0.023,0.017])
     var half_a:float=0.058 if axis=="y" else 0.038
     var half_b:float=0.083 if axis=="y" else 0.074
     var levels:Array=[]
-    var scales:Array[float]=[0.86,1.04,0.88,0.64]
+    var scales:Array=[0.86,1.04,0.88,0.64]
     for i in range(PROFILE_LEVELS):
         levels.append(_profile(axis,
             depth[i]*d if axis=="x" else depth[i],
