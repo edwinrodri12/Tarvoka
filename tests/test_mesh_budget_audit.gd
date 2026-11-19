@@ -54,6 +54,23 @@ func _initialize() -> void:
 	assert(report["warnings"].is_empty())
 	report = Audit.inspect(root, 25)
 	assert(report["warnings"].size() == 1)
+	# A MultiMesh with zero visible instances must contribute no geometry.
+	mm.visible_instance_count = 0
+	report = Audit.inspect(root, 14)
+	assert(report["triangles"] == 14)
+	assert(report["instances"] == 3)
+	assert(report["mesh_nodes"] == 3)
+	assert(report["warnings"].is_empty())
+	# Nested scene roots must be traversed without requiring a MeshInstance root.
+	var wrapper := Node3D.new()
+	var nested := MeshInstance3D.new()
+	nested.mesh = BoxMesh.new()
+	wrapper.add_child(nested)
+	report = Audit.inspect(wrapper, 12)
+	assert(report["triangles"] == 12)
+	assert(report["instances"] == 1)
+	assert(report["warnings"].is_empty())
+	wrapper.free()
 	assert(Audit.inspect(null)["warnings"].size() == 1)
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
