@@ -79,7 +79,10 @@ static func _tri(tool: SurfaceTool, a: Vector3, b: Vector3,
         cc=b
         normal=(bb-a).cross(cc-a)
     normal=normal.normalized()
-    for v in [a,bb,cc]:
+    # SurfaceTool's exterior front faces are CLOCKWISE in Godot 4.3.
+    # Flip the vertex sequence but keep the explicitly outward PBR normal.
+    # Otherwise the hull renders only from the inside (apparent missing walls).
+    for v in [a,cc,bb]:
         tool.set_normal(normal)
         tool.add_vertex(v)
 
@@ -190,6 +193,9 @@ static func apply(root:Node3D, faction:Color)->bool:
     var hero:bool=bool(root.get_meta("tarvoka_g14_v1_high_detail",false))
     var alloy:=_mat(Color("#8497a0"),0.78,0.31)
     var armor:=_mat(Color("#556975"),0.56,0.48)
+    # Extra protection if a mirrored paint/faction root flips face winding:
+    # never allow the closed hull to disappear when viewed from the outside.
+    armor.cull_mode=BaseMaterial3D.CULL_DISABLED
     var rubber:=_mat(Color("#22262a"),0.0,0.91)
     var trims:=_mat(Color("#1e252b"),0.16,0.78)
     var gaskets:=_mat(Color("#19252d"),0.10,0.92)
