@@ -29,3 +29,8 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - Descarga Godot 4.3 oficial en Ubuntu 22.04, ejecuta `tests/test_asset_orbit_camera.gd` con límite de 80 s y exige la marca `PASS: isolated asset orbit camera smoke` sin errores del motor.
 - **PASÓ:** creación del workflow y commit en rama de PR #602. **NO CONFIRMADO:** resultado de Actions para este commit hasta revisar la ejecución. **NO EJECUTADO EN DISPOSITIVO**; **PENDIENTE DE REVISIÓN VISUAL**.
 - Esta comprobación no demuestra calidad visual ni controles táctiles Android y no altera el juego.
+
+## 2026-11-18 — encuadre de jerarquías reales
+- `frame_asset(asset: Node3D) -> bool` recorre MeshInstance3D hijos, calcula ocho esquinas por malla con transformación global y encuadra el AABB combinado. Permite piezas rotadas o desplazadas sin alterar sus transformaciones. Devuelve false sin cambiar cámara si no hay mallas.
+- Regresión añadida: pieza BoxMesh desplazada/rotada y jerarquía vacía.
+- PASÓ: commits en rama PR #602. **NO CONFIRMADO:** Godot/CI de estos nuevos commits. **NO EJECUTADO EN DISPOSITIVO**; **PENDIENTE DE REVISIÓN VISUAL**. No modifica visor web ni escenas tácticas.
