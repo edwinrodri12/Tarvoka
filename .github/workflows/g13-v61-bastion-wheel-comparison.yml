@@ -16,6 +16,7 @@ on:
       - "scripts/ui/G13ArmorEdgeFinishV64.gd"
       - "scripts/ui/G13TurretRingFinishV65.gd"
       - "scripts/ui/G13CannonMountFinishV66.gd"
+      - "scripts/ui/G13BreechFeedFinishV67.gd"
       - "scripts/ui/G13RubberSculptV54.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
       - "scripts/ui/G13InspectionStudio.gd"
@@ -28,6 +29,7 @@ on:
       - "tests/test_g13_v64_armor_edge_finish.gd"
       - "tests/test_g13_v65_turret_ring_finish.gd"
       - "tests/test_g13_v66_cannon_mount_finish.gd"
+      - "tests/test_g13_v67_breech_feed_finish.gd"
       - ".github/workflows/g13-v61-bastion-wheel-comparison.yml"
   pull_request:
     branches: [main]
@@ -38,6 +40,7 @@ on:
       - "scripts/ui/G13ArmorEdgeFinishV64.gd"
       - "scripts/ui/G13TurretRingFinishV65.gd"
       - "scripts/ui/G13CannonMountFinishV66.gd"
+      - "scripts/ui/G13BreechFeedFinishV67.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/BastionStudioAdapter.gd"
       - "tests/test_g13_v62_optical_glazing.gd"
@@ -45,6 +48,7 @@ on:
       - "tests/test_g13_v64_armor_edge_finish.gd"
       - "tests/test_g13_v65_turret_ring_finish.gd"
       - "tests/test_g13_v66_cannon_mount_finish.gd"
+      - "tests/test_g13_v67_breech_feed_finish.gd"
       - ".github/workflows/g13-v61-bastion-wheel-comparison.yml"
   workflow_dispatch:
 
@@ -163,6 +167,18 @@ jobs:
             exit 1
           fi
           grep -F 'PASS G13 V66 REAL GUN MOUNTS:' /tmp/g13-v66-articulated-guns.log
+      - name: Verify G13 V67 real closed breech/feed panels and Android moving cheek
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility \
+            --audio-driver Dummy --path . --script res://tests/test_g13_v67_breech_feed_finish.gd \
+            2>&1 | tee /tmp/g13-v67-breech-feed.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g13-v67-breech-feed.log; then
+            exit 1
+          fi
+          grep -F 'PASS G13 V67 REAL BREECH AND FEED:' /tmp/g13-v67-breech-feed.log
       - name: Capture 9 true Godot P06 Bastion and G13 same-light iso and wheel-macro frames
         shell: bash
         run: |
