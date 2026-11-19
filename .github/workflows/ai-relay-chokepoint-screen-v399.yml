@@ -1,0 +1,106 @@
+name: TARVOKA v399 observed chokepoint screen study
+
+on:
+  pull_request:
+    paths:
+      - "scripts/core/RelayScreensV399.gd"
+      - "scripts/core/BasicAI.gd"
+      - "tests/test_ai_relay_chokepoint_screen_v399.gd"
+      - "tests/test_ai_relay_chokepoint_holdout_v399.gd"
+      - "tests/aggregate_ai_relay_chokepoint_v399.py"
+      - ".github/workflows/ai-relay-chokepoint-screen-v399.yml"
+  workflow_dispatch:
+
+jobs:
+  micro:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3 stable
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Confirm default OFF, actual bridge-block, fog safety and exact mirror
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_chokepoint_screen_v399.gd \
+            2>&1 | tee /tmp/screen399-micro.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/screen399-micro.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v399 micro:' /tmp/screen399-micro.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v399-micro-diagnostic
+          path: /tmp/screen399-micro.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  pair:
+    needs: [micro]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        seed_index: [0,1,2,3]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V399_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V399_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare official AI vs default-OFF screen experiment with exact mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 3000s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_relay_chokepoint_holdout_v399.gd \
+            2>&1 | tee /tmp/screen399.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|SCREEN399_MIRROR_FAILURE' /tmp/screen399.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v399: official-opening bridge/forest AI' /tmp/screen399.log
+          test "$(grep -c '^SCREEN399_RESULT ' /tmp/screen399.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v399-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/screen399.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  aggregate:
+    needs: [pair]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v399-seed*
+          path: .ci-v399-logs
+      - name: Audit 16 independent paired outcomes and mirrored parity
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/aggregate_ai_relay_chokepoint_v399.py
+          python3 tests/aggregate_ai_relay_chokepoint_v399.py .ci-v399-logs
+          cat reports/ai_v399_relay_chokepoint_screen.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v399-reports
+          path: reports/ai_v399_relay_chokepoint_screen.*
+          retention-days: 30
+          if-no-files-found: ignore

@@ -19,6 +19,7 @@ const Missions = preload("res://scripts/core/MultiTurnObjectivesV33.gd")
 const FireTeam = preload("res://scripts/core/CoordinatedFireV34.gd")
 const Positioning = preload("res://scripts/core/CoordinatedPositioningV35.gd")
 const Threats = preload("res://scripts/core/NextTurnThreatV36.gd")
+const Screens = preload("res://scripts/core/RelayScreensV399.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
 # Never changes the input state. One legal action at most per call.
@@ -291,6 +292,25 @@ static func _decide(state: Dictionary,
     var defense: Dictionary = _defend_relay(state, knowledge, friends, enemies, occupied)
     if defense.get("valid", false):
         return defense
+
+    # Research v3.9.9 (OFF by default): a support unit can occupy a
+    # genuine narrow crossing to delay a VISIBLE enemy advancing toward
+    # an ALREADY GUARDED, friendly-owned relay. No hidden threats, no
+    # free moves, and never abandon the garrison or a city ready to cap.
+    if bool(options.get("_ab_relay_screen_v399",false)):
+        var screen: Dictionary = Screens.propose(knowledge,faction)
+        if not screen.is_empty():
+            var screened: Dictionary = Session.move(state,
+                str(screen["unit_id"]),screen["destination"])
+            if bool(screened.get("valid",false)):
+                screened["action"] = "move"
+                screened["reason"] = "relay_narrow_screen_v399"
+                screened["unit_id"] = str(screen["unit_id"])
+                screened["destination"] = screen["destination"]
+                screened["protected_relay"] = screen["protected_relay"]
+                screened["public_path_delay"] = int(screen["public_path_delay"])
+                screened["visible_enemy_eta"] = int(screen["visible_enemy_eta"])
+                return screened
 
     # Preserve a guard/scout that is ALREADY occupying an unclaimed site:
     # it will capture at phase end. This is a planner-only 'moved' marker
