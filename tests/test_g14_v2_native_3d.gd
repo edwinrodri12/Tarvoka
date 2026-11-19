@@ -86,7 +86,7 @@ func _run()->void:
                     "watertight six faces: exactly twelve triangles")
                 var cab_center:=Vector3(0,1.34,-1.25)
                 var normals_ok:bool=true
-                for triangle in range(vertices.size()/3):
+                for triangle in range(int(vertices.size()/3)):
                     var k:int=triangle*3
                     var mid:Vector3=(vertices[k]+vertices[k+1]+vertices[k+2])/3.0
                     if normals[k].dot(mid-cab_center)<=0.01:
@@ -116,9 +116,9 @@ func _run()->void:
                     check(wheel!=null,
                         "real wheel pivot %s in LOD%d" % [key,lod])
                     if wheel!=null:
-                        var tread:=wheel.find_child(
-                            "G14_V2_RealRubberTread_"+key,false,false)
-                            as MultiMeshInstance3D
+                        var tread:MultiMeshInstance3D=wheel.find_child(
+                            "G14_V2_RealRubberTread_"+key,false,false
+                        ) as MultiMeshInstance3D
                         check(tread!=null and tread.multimesh!=null,
                             "each wheel has actual tread geometry "+key)
                         if tread!=null:
