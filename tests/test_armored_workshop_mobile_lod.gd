@@ -104,6 +104,17 @@ func _verify() -> void:
                     if profile==Mobile.PROFILE_DISTANT:
                         assert(mobile.find_child("Lote_pit",true,false)==null)
                         assert(mobile.find_child("Lote_light",true,false)==null)
+                        if damage<=2:
+                            var dark:MultiMeshInstance3D=mobile.find_child(
+                                "Lote_dark_steel",true,false) as MultiMeshInstance3D
+                            var steel:MultiMeshInstance3D=mobile.find_child(
+                                "Lote_steel",true,false) as MultiMeshInstance3D
+                            assert(dark!=null and steel!=null,
+                                "Distant workshop needs legible garage openings")
+                            assert(dark.multimesh.instance_count>=1+level*2,
+                                "Missing large dark garage apertures or vents")
+                            assert(faction_batch.multimesh.instance_count>=3+level*2,
+                                "At distance faction roof/side branding disappeared")
                     max_batches=maxi(max_batches,draw_calls)
                     max_primitives=maxi(max_primitives,instances)
                     max_reduction=maxf(max_reduction,
