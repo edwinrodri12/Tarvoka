@@ -109,6 +109,7 @@ const G13FactionV63=preload("res://scripts/ui/G13FactionReadabilityV63.gd")
 const G13EdgesV64=preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const G13RingV65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const G13MountV66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
+const G13FeedV67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -242,7 +243,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V66 · soportes articulados de cañones")
+        role_picker.set_item_text(aa_index,"G13 · AA V67 · recámara y accesos de alimentación")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V9")
@@ -1825,6 +1826,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v67_show_feed(enabled:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13FeedV67.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V67: recámara y tapas de alimentación sin cargar."
+        return
+    if G13FeedV67.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V67 · recámara y registros de alimentación biselados"
+                if enabled else
+                "G13 V66 · comparar tapas y registros de alimentación anteriores")
+
 func _g13_v66_show_mount(enabled:bool)->void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -2071,7 +2086,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V66 · SOPORTES ARTICULADOS DE CAÑONES",14)
+        "G13 V67 · RECÁMARA Y ALIMENTACIÓN",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -2117,6 +2132,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V67 · Tapas y acceso de recámara",
+        func(): _g13_v67_show_feed(true),
+        "V67 · Comparar con recámara anterior",
+        func(): _g13_v67_show_feed(false))
     _add_paired(g13_controls,"V66 · Soportes de cañones mecanizados",
         func(): _g13_v66_show_mount(true),
         "V66 · Comparar soportes anteriores",
