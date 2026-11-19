@@ -79,6 +79,7 @@ const G13PremiumV59 = preload("res://scripts/ui/G13PremiumSurfaceV59.gd")
 const G13TreadV60 = preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 const G13WheelArmorV61 = preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 const G13GlassV62 = preload("res://scripts/ui/G13OpticalGlazingV62.gd")
+const G13FactionV63 = preload("res://scripts/ui/G13FactionReadabilityV63.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1130,6 +1131,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V61 P06-grade open machined spokes and armor PBR missing LOD13")
                 if not G13GlassV62.apply(model):
                     push_warning("G13 V62 optical cab glass reflection missing on hero LOD13")
+                if not G13FactionV63.apply(model):
+                    push_warning("G13 V63 visible physical faction identification missing on hero LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1201,6 +1204,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V61 optimized open machined spokes and armor PBR missing LOD8")
                 if not G13GlassV62.apply(model):
                     push_warning("G13 V62 tactical cab glass reflection missing on LOD8")
+                if not G13FactionV63.apply(model):
+                    push_warning("G13 V63 faction recognition badges missing on Android LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
