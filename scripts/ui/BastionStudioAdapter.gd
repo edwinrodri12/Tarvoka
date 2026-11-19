@@ -905,9 +905,7 @@ func _studio_run_animation(action: String) -> void:
                 G14ExteriorV2.show_finish(model_root,true)
                 G14LauncherV3.show_finish(model_root,true)
                 G14DamageV4.show_finish(model_root,true)
-                var stage_g14:int=action.to_int()
-                # to_int() on "g14_damage_3" is zero: parse only suffix.
-                stage_g14=int(action.trim_prefix("g14_damage_"))
+                var stage_g14:int=int(action.trim_prefix("g14_damage_"))
                 if G14DamageV4.set_damage(model_root,stage_g14):
                     status_label.text="G14 V4 · daño visual %d/4 · inspección 3D sin alterar batalla" % stage_g14
         "g14_v3_on","g14_v3_off":
