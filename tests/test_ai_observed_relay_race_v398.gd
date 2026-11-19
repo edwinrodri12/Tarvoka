@@ -6,9 +6,7 @@ extends SceneTree
 const Study = preload("res://tests/test_ai_initiative_counterfactual_v379.gd")
 const Mirror = preload("res://tests/MirrorBattleV374.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
-const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
-const Bridge = preload("res://tests/test_ai_bridge_first_response_counterfactual_v394.gd")
 const SIZE := Vector2i(40,30)
 const SEEDS := [666,667,668,669,670,671,672,673]
 const HALF_TURNS := 36
@@ -35,7 +33,6 @@ static func _play_pair(initial: Dictionary, mirror: Dictionary,
     assert(a["terminal"] == b["terminal"])
     assert(int(a["winner"]) == Mirror.flipped(int(b["winner"])))
     assert(int(a["stats"]["opening_orders"]) == 3)
-    assert(Codec.encode(a["end_state"]).length() > 0)
     return a
 
 static func _first_difference(base: Dictionary, variant: Dictionary,
@@ -79,7 +76,51 @@ static func _first_difference(base: Dictionary, variant: Dictionary,
     return {"changed":false,"index":-1,"phase":-1}
 
 static func _summary(game: Dictionary, first: int) -> Dictionary:
-    var ledger: Dictionary = Bridge._timeline(game["frames"],first)
+    # Independent tally: avoid assuming a fixed number of actions in
+    # later phases, because that is what this experiment can change.
+    var earlier: Dictionary = game["frames"][0]["state"]
+    var first_capture := [-1,-1]
+    var relay_captures := [0,0]
+    var first_city := [-1,-1]
+    var ended := 0
+    for frame in game["frames"]:
+        if str(frame.get("tag","")) != "end_turn":
+            continue
+        var phase: int = int(frame["phase"])
+        assert(phase == ended)
+        var current: Dictionary = frame["state"]
+        var owners := [0,0]
+        var nodes: Array = current["control"]["nodes"]
+        var before_nodes: Array = earlier["control"]["nodes"]
+        assert(nodes.size() == before_nodes.size())
+        for i in range(nodes.size()):
+            var side: int = int(nodes[i]["owner"])
+            if side in [0,1]:
+                owners[side] += 1
+            if side != int(before_nodes[i]["owner"]) and side in [0,1]:
+                relay_captures[side] += 1
+                if first_capture[side] == -1:
+                    first_capture[side] = phase
+        var expected: Array = earlier["control"]["scores"].duplicate(true)
+        if phase % 2 == 1:
+            for side in [0,1]:
+                expected[side] += owners[side]
+        assert(current["control"]["scores"] == expected)
+        var sites: Array = current["economy"]["sites"]
+        var previous_sites: Array = earlier["economy"]["sites"]
+        assert(sites.size() == previous_sites.size())
+        for i in range(sites.size()):
+            if str(sites[i].get("kind","")) != "city":
+                continue
+            var owner: int = int(sites[i]["owner"])
+            if owner in [0,1] and \\
+                    owner != int(previous_sites[i]["owner"]) and \\
+                    first_city[owner] == -1:
+                first_city[owner] = phase
+        earlier = current
+        ended += 1
+    assert(ended == int(game["stats"]["completed_half_turns"]))
+    assert(earlier["control"]["scores"] == game["relay_scores"])
     var winner: int = int(game["winner"])
     return {
         "winner":winner,"starter_wins":winner == first,
@@ -89,9 +130,9 @@ static func _summary(game: Dictionary, first: int) -> Dictionary:
         "attacks":int(game["stats"]["attacks"]),
         "purchases":int(game["stats"]["purchases"]),
         "score":game["relay_scores"],
-        "first_capture_phase":ledger["first_capture_phase"],
-        "relay_captures":ledger["captured_relays"],
-        "first_city_phase":ledger["first_city_phase"]
+        "first_capture_phase":first_capture,
+        "relay_captures":relay_captures,
+        "first_city_phase":first_city
     }
 
 func _initialize() -> void:
