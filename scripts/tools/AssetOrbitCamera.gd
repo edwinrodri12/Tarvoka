@@ -60,5 +60,7 @@ func _refresh_camera() -> void:
         return
     var horizontal: float = cos(pitch) * distance
     var offset := Vector3(sin(yaw) * horizontal, -sin(pitch) * distance, cos(yaw) * horizontal)
-    _camera.position = target + offset
+    # target is a world-space point; the rig may be translated or rotated.
+    # Camera3D.position is local to the rig, so convert explicitly.
+    _camera.position = to_local(target + offset)
     _camera.look_at(target, Vector3.UP)
