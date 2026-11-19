@@ -7,6 +7,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const V67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const V68=preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
+const V69=preload("res://scripts/ui/G13MuzzleMountFinishV69.gd")
 const V65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const V64=preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const V63=preload("res://scripts/ui/G13FactionReadabilityV63.gd")
@@ -49,6 +50,11 @@ func _run()->void:
                 faction,lod])
             if model==null:
                 continue
+            # V69 updates real gun meshes and moving outer hubs. Undo it
+            # first to compare the genuine historical V66 materials.
+            if bool(model.get_meta(V69.FLAG,false)):
+                check(V69.show_finish(model,false),
+                    "historical V66 mount independent of new V69 gun steel")
             # V68 overlays V67's feed/receiver PBR: remove first
             # to compare the true historical V66 materials and geometry.
             if bool(model.get_meta(V68.FLAG,false)):
@@ -193,6 +199,9 @@ func _run()->void:
             if bool(model.get_meta(V68.FLAG,false)):
                 check(V68.show_finish(model,true),
                     "V68 ejection details restored after V66 history check")
+            if bool(model.get_meta(V69.FLAG,false)):
+                check(V69.show_finish(model,true),
+                    "reapply V69 twin ported cannon and outer hub after QA")
             model.free()
     check(factions.size()==8,"all eight official faction paints preserved")
     if failures==0:
