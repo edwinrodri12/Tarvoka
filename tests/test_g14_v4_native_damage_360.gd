@@ -106,6 +106,28 @@ func _run()->void:
             check(int(model.get_meta("tarvoka_g14_v4_stages",-1))==4 and
                 bool(model.get_meta("tarvoka_g14_v4_native_opaque_hull",false)),
                 "four real mesh stages, chassis remains closed and opaque")
+            var sealed:=model.find_child(V2.CAB,true,false) as MeshInstance3D
+            check(sealed!=null and sealed.mesh is ArrayMesh and sealed.visible,
+                "V4 never deletes or hides the V2 fully enclosed cabin volume")
+            if sealed!=null and sealed.mesh is ArrayMesh:
+                var face_data:Array=(sealed.mesh as ArrayMesh).surface_get_arrays(0)
+                check((face_data[Mesh.ARRAY_VERTEX] as PackedVector3Array
+                    ).size()==36,"twelve closed convex shell faces persist in wreck")
+                var cab_mat:=sealed.material_override as StandardMaterial3D
+                check(cab_mat!=null and
+                    cab_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "the original armor remains genuinely opaque at all levels")
+            for side in [-1,1]:
+                for prefix in [V2.GLASS_FRONT,V2.GLASS_SIDE]:
+                    var pane:=model.find_child(prefix+str(side),true,false
+                        ) as MeshInstance3D
+                    check(pane!=null and pane.visible,
+                        "all four solid windows survive wreck without missing parts")
+                    if pane!=null:
+                        var optical:=pane.material_override as StandardMaterial3D
+                        check(optical!=null and
+                            optical.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                            "every V4 glazing surface remains nontransparent")
             check(V4.stage(model)==0,"new G14 starts pristine")
             for step in range(1,5):
                 check(V4.set_damage(model,step),"set G14 damage stage %d" % step)
