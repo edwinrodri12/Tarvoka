@@ -69,12 +69,26 @@ static func _surgical_delta(full: Dictionary,
             kept.append(unit)
     assert(not removed.is_empty())
     expected["units"] = kept
-    assert(expected == after) # Verifies ALL other fields byte-equal.
+    # Removing the laboratory Piercer also requires deleting any
+    # persistent mission assigned to that now-nonexistent unit; this
+    # minimal referential-integrity cleanup is the ONLY other permitted
+    # state change. No other faction goals or resources may differ.
+    var removed_goals := 0
+    if expected.has("ai_objectives"):
+        var keep_assignments: Array = []
+        for goal in expected["ai_objectives"].get("assignments",[]):
+            if str(goal.get("unit_id","")) == "N3":
+                removed_goals += 1
+            else:
+                keep_assignments.append(goal)
+        expected["ai_objectives"]["assignments"] = keep_assignments
+    assert(expected == after) # Every OTHER state field byte-equal.
     assert(int(before["economy"]["credits"][responder]) ==
         int(after["economy"]["credits"][responder]))
     assert(before["economy"]["sites"] == after["economy"]["sites"])
     return {
-        "only_difference_one_removed_piercer":true,
+        "only_difference_one_removed_piercer_plus_orphan_goal_cleanup":true,
+        "removed_orphan_mission_count":removed_goals,
         "removed_unit_id":str(removed["id"]),
         "removed_unit_hp":int(removed["hp"]),
         "removed_unit_role":str(removed["role"]),
