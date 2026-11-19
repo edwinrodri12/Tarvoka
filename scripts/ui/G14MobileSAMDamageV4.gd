@@ -126,7 +126,7 @@ static func apply(root:Node3D,paint:Color)->bool:
     _box(minor,"G14_V4_L1_BumperScuff",
         Vector3(-0.31,0.668,-2.036),Vector3(0.34,0.043,0.020),scratch)
     # 2: battered side armor and webbed opaque glazing, no perforated shell.
-    moderate:=_stage(body,2)
+    var moderate:=_stage(body,2)
     for side in [-1,1]:
         var s2:float=float(side)
         var id2:String=str(side)
@@ -150,7 +150,7 @@ static func apply(root:Node3D,paint:Color)->bool:
             Vector3(0,s2*11,s2*10))
     # 3: the damaged launcher and radar have overlays PARENTED to their
     # moving pivots. Therefore they follow any yaw, pitch and radar scan.
-    severe:=_stage(body,3)
+    var severe:=_stage(body,3)
     _sphere(severe,"G14_V4_L3_ArmorBlastMark",
         Vector3(0.36,1.28,1.72),
         Vector3(0.48,0.034,0.32),char,hero)
@@ -180,7 +180,7 @@ static func apply(root:Node3D,paint:Color)->bool:
         Vector3(0.041,0.311,0.022),edge,Vector3(0,0,28))
     # 4: complete visual wreck, but chassis remains watertight. Opaque smoke
     # volumes, blackened exterior panels and physical misaligned antenna.
-    destroyed:=_stage(body,4)
+    var destroyed:=_stage(body,4)
     for side in [-1,1]:
         var s4:float=float(side)
         var sid:String=str(side)
@@ -281,6 +281,8 @@ static func reset_damage(root:Node3D)->bool:
 static func sync(root:Node3D,kind:String,progress:float)->bool:
     if not has_model(root):
         return false
+    if not bool(root.get_meta("tarvoka_g14_v4_preview_enabled",true)):
+        return true
     var level:int=stage(root)
     if not set_damage(root,level):
         return false
