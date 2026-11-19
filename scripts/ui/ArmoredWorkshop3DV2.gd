@@ -98,11 +98,18 @@ static func _portal(parent:Node3D,width:float,depth:float,
         return
     var front:float=-depth*0.5
     var bw:float=width/float(bays)
-    var steel:Color=ARMOR_DARK if damage<=2 else RUST
-    _box(parent,"FrontispicioBlindadoV2",Vector3(0,height-0.33,front-0.42),
-        Vector3(width-0.35,0.68,0.24),steel,0.72,0.49)
+    # D3 must not keep the intact full-height front lintel suspended.
     if damage>=3:
+        for fragment in range(2):
+            _box(parent,"FragmentoFrontispicioCaido_%d" % fragment,
+                Vector3(width*(-0.19 if fragment==0 else 0.22),
+                    0.19,front-0.53+float(fragment)*0.35),
+                Vector3(width*0.31,0.20,0.38),RUST,0.51,0.79,
+                Vector3(0,19.0 if fragment==0 else -13.0,
+                    -13.0 if fragment==0 else 8.0))
         return
+    _box(parent,"FrontispicioBlindadoV2",Vector3(0,height-0.33,front-0.42),
+        Vector3(width-0.35,0.68,0.24),ARMOR_DARK,0.72,0.49)
     _box(parent,"BandaFaccionSuperiorV2",
         Vector3(0,height+0.025,front-0.46),
         Vector3(width*0.76,0.15,0.13),accent,0.44,0.34)
@@ -157,7 +164,9 @@ static func _portal(parent:Node3D,width:float,depth:float,
 
 static func _wall_enclosure(parent:Node3D,width:float,depth:float,
         height:float,damage:int,accent:Color) -> void:
-    if damage>=4:
+    # D3/D4 deliberately have NO complete full-height siding:
+    # shattered pillars and ground-based debris belong to V1 wreckage.
+    if damage>=3:
         return
     var upper:float=height-0.86
     var wall_h:float=upper-1.76
@@ -166,8 +175,6 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
     for side in [-1,1]:
         var x:float=float(side)*(width*0.5+0.11)
         for segment in range(3):
-            if damage>=3 and segment==1:
-                continue
             var z:float=-depth*0.31+float(segment)*depth*0.31
             _box(parent,"PanelLateralCerrado_%d_%d" % [side,segment],
                 Vector3(x,1.76+wall_h*0.5,z),
@@ -188,6 +195,12 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
                         Vector3(x+float(side)*0.12,1.76+wall_h*0.5,
                             z+float(seam)*depth*0.148),
                         Vector3(0.07,wall_h-0.07,0.055),ARMOR_DARK,0.76,0.49)
+        # Physical vertical joint seals bridge all three panels.
+        for seam in range(2):
+            var join_z:float=-depth*0.155+float(seam)*depth*0.31
+            _box(parent,"JuntaLateralSellada_%d_%d" % [side,seam],
+                Vector3(x+float(side)*0.155,1.76+wall_h*0.5,join_z),
+                Vector3(0.105,wall_h+0.02,0.145),ARMOR_DARK,0.71,0.51)
         if damage<=2:
             _box(parent,"ZunchoLateralFaccion_%d" % side,
                 Vector3(x+float(side)*0.145,upper-0.19,0),
@@ -202,6 +215,19 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
             _box(parent,"CostillaPosterior_%d" % i,
                 Vector3(x,height*0.69,depth*0.5+0.116),
                 Vector3(0.075,height*0.38,0.08),GALVANIZED,0.74,0.45)
+        # The V1 high rear windows were buried behind opaque upper cladding.
+        # V2 places visible, framed opaque-glass inlays on the exterior face.
+        for pane in range(4):
+            var wx:float=-width*0.35+float(pane)*width*0.2333
+            _box(parent,"MarcoVentanaPosterior_%d" % pane,
+                Vector3(wx,height-1.00,depth*0.5+0.145),
+                Vector3(width*0.145,0.52,0.10),ARMOR_DARK,0.69,0.46)
+            _box(parent,"CristalPosteriorPBR_%d" % pane,
+                Vector3(wx,height-1.00,depth*0.5+0.200),
+                Vector3(width*0.119,0.390,0.025),GLASS_OPAQUE,0.26,0.13)
+            _box(parent,"ReflejoCristalPosterior_%d" % pane,
+                Vector3(wx-width*0.025,height-0.93,depth*0.5+0.219),
+                Vector3(width*0.012,0.24,0.007),BRIGHT_STEEL,0.33,0.18)
 
 static func _roof_finish(parent:Node3D,width:float,depth:float,height:float,
         bays:int,damage:int) -> void:
@@ -218,6 +244,15 @@ static func _roof_finish(parent:Node3D,width:float,depth:float,height:float,
             _box(parent,"NervioCubierta_%d_%d" % [bay,ridge],
                 Vector3(x,height+0.259,0),
                 Vector3(0.055,0.07,depth*0.91),GALVANIZED,0.72,0.53)
+        # V1 roofing has 0.03*depth open seams between its three panels.
+        # Full opaque metal flashings overlap both sides, eliminating holes.
+        if damage<=1:
+            for seam in range(2):
+                _box(parent,"JuntaCubiertaSellada_%d_%d" % [bay,seam],
+                    Vector3(cx,height+0.176,
+                        depth*(-0.17 if seam==0 else 0.17)),
+                    Vector3(bw-0.25,0.115,depth*0.067),
+                    GALVANIZED,0.65,0.54)
         if damage<=2:
             _box(parent,"ConductoVentilacion_%d" % bay,
                 Vector3(cx,height+0.54,depth*0.27),
@@ -340,7 +375,7 @@ static func _wear(parent:Node3D,width:float,depth:float,
         for i in range(4):
             _box(group,"ArmaduraHundidaV2_%d" % i,
                 Vector3(-width*0.23+float(i)*width*0.14,
-                    0.20,-depth*0.24+float(i%2)*depth*0.24),
+                    0.16,-depth*0.24+float(i%2)*depth*0.24),
                 Vector3(0.15,0.18,depth*0.29),ARMOR_DARK,0.70,0.78,
                 Vector3(0,float(i*23),-10.0))
         _box(group,"CartelCaidoV2",
