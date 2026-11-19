@@ -85,6 +85,31 @@ func _run() -> void:
         push_error("Degenerate model bounds framing failed")
         quit(1)
         return
+    # A real asset may contain rotated, translated mesh descendants.
+    var asset := Node3D.new()
+    scene.add_child(asset)
+    var part := MeshInstance3D.new()
+    part.mesh = BoxMesh.new()
+    part.mesh.size = Vector3(2.0, 4.0, 6.0)
+    part.position = Vector3(9.0, 3.0, -5.0)
+    part.rotation_degrees.y = 45.0
+    asset.add_child(part)
+    if not rig.frame_asset(asset):
+        push_error("Asset hierarchy framing rejected a valid mesh")
+        quit(1)
+        return
+    if not rig.target.is_equal_approx(part.global_position):
+        push_error("Rotated mesh world bounds center was incorrect")
+        quit(1)
+        return
+    var prior_target: Vector3 = rig.target
+    var prior_distance: float = rig.distance
+    var empty_asset := Node3D.new()
+    scene.add_child(empty_asset)
+    if rig.frame_asset(empty_asset) or not rig.target.is_equal_approx(prior_target) or not is_equal_approx(rig.distance, prior_distance):
+        push_error("Empty asset changed camera framing")
+        quit(1)
+        return
     scene.queue_free()
     print("PASS: isolated asset orbit camera smoke")
     quit(0)
