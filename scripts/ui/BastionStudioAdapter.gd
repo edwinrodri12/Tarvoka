@@ -61,6 +61,7 @@ const G11LODDriverV25 = preload("res://scripts/ui/G11BattleLODControllerV25.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const G14SAM=preload("res://scripts/ui/G14MobileSAMV1.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -189,6 +190,7 @@ var _g13_v28_show_previous:bool=false
 var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g15_tween: Tween
+var _g14_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -247,6 +249,9 @@ func _ready() -> void:
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
+    var sam_index:int=P06Models.ROLES.find("sam_mobile")
+    if sam_index>=0:
+        role_picker.set_item_text(sam_index,"G14 · Batería SAM 8×8 · V1 en desarrollo")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
@@ -598,6 +603,18 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"Sacudida por impacto","action":"damage"},
                 {"title":"Detener y restaurar","action":"stop"}
             ]
+        "sam_mobile":
+            return [
+                {"group":"G14 V1 · BATERÍA SAM 8×8 · MODELO INICIAL"},
+                {"title":"Rodaje 8×8 y suspensiones","action":"g14_move"},
+                {"title":"Desplegar batería y estabilizadores","action":"g14_deploy"},
+                {"title":"Barrido del radar de búsqueda","action":"g14_scan"},
+                {"title":"Apuntar cuatro tubos SAM","action":"g14_aim"},
+                {"title":"Secuencia de lanzamiento visual","action":"g14_launch"},
+                {"title":"Plegar lanzadores y radar","action":"g14_stow"},
+                {"title":"Sacudida de impacto","action":"g14_hit"},
+                {"title":"Restaurar y detener","action":"stop"}
+            ]
         "aa_mobile":
             return [
                 {"group":"G13 · MOVIMIENTO, RADAR Y APUNTADO"},
@@ -862,6 +879,8 @@ func _studio_run_animation(action: String) -> void:
                 "move" if action=="g11_battle_move" else "attack")
         "g11_battle_close":
             _g11_close_context_v25()
+        "g14_move","g14_deploy","g14_scan","g14_aim","g14_launch","g14_stow","g14_hit":
+            _studio_g14_animate(action.trim_prefix("g14_"))
         "g13_scan","g13_aim_air","g13_aim_ground","g13_aim_legacy":
             var pose_kind: String=(
                 "scan" if action=="g13_scan" else
@@ -873,6 +892,38 @@ func _studio_run_animation(action: String) -> void:
                 "attack_air" if action=="g13_attack_air" else "attack_ground")
         _:
             _studio_quick_action(action)
+
+func _studio_g14_animate(kind: String) -> void:
+    if _role!="sam_mobile" or model_root==null or not G14SAM.has_model(model_root):
+        return
+    if kind not in ["move","deploy","scan","aim","launch","stow","hit"]:
+        return
+    if _g14_tween!=null and _g14_tween.is_running():
+        _g14_tween.kill()
+    var art:Node3D=model_root
+    P06Models.restore_model_pose("sam_mobile",art)
+    P06Models.pose_model("sam_mobile",art,kind,0.02,Vector2i(1,-1))
+    _g14_tween=art.create_tween()
+    var duration:float=2.5 if kind=="launch" else (
+        1.8 if kind=="scan" else 1.2)
+    _g14_tween.tween_method(
+        Callable(self,"_studio_g14_tick").bind(art,kind),
+        0.02,0.98,duration)
+    _g14_tween.tween_callback(
+        Callable(self,"_studio_g14_done").bind(art,kind))
+    status_label.text="G14 V1 · "+kind+" · inspección 3D (sin cambios en combate)"
+
+func _studio_g14_tick(t:float,art:Node3D,kind:String)->void:
+    if is_instance_valid(art):
+        P06Models.pose_model("sam_mobile",art,kind,t,Vector2i(1,-1))
+
+func _studio_g14_done(art:Node3D,kind:String)->void:
+    if not is_instance_valid(art):
+        return
+    if kind in ["deploy","aim"]:
+        P06Models.pose_model("sam_mobile",art,kind,1.0,Vector2i(1,-1))
+    else:
+        P06Models.restore_model_pose("sam_mobile",art)
 
 func _studio_g13_animated_pose(kind: String) -> void:
     if _role!="aa_mobile" or model_root==null:
@@ -919,6 +970,9 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
+        "sam_mobile":
+            _studio_g14_animate("launch" if kind=="attack" else (
+                "hit" if kind=="hit" else kind))
         "ew_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="G15 tiene interferencia visual, sin armamento."
@@ -944,7 +998,12 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="ew_mobile":
+    if _role=="sam_mobile":
+        if _g14_tween!=null and _g14_tween.is_running():
+            _g14_tween.kill()
+        if model_root!=null:
+            P06Models.restore_model_pose("sam_mobile",model_root)
+    elif _role=="ew_mobile":
         if _g15_tween!=null and _g15_tween.is_running():
             _g15_tween.kill()
         if model_root!=null:
@@ -976,6 +1035,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
+            "sam_mobile": label="G14 · Batería SAM 8×8 · V1 (arte en desarrollo)"
             "ew_mobile": label="G15 · Guerra electrónica · V10 (cristales y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -3574,6 +3634,8 @@ func _display_role(role: String) -> void:
         _g13_v4_tween.kill()
     if _g15_tween!=null and _g15_tween.is_running():
         _g15_tween.kill()
+    if _g14_tween!=null and _g14_tween.is_running():
+        _g14_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
@@ -3586,6 +3648,18 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if role=="sam_mobile":
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("sam_mobile",_faction,true,13)
+        if model_root==null or not G14SAM.has_model(model_root):
+            push_error("G14 V1 native 8x8 model missing in shared 3D Studio")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        _update_camera()
     if role=="ew_mobile":
         if model_root!=null:
             preview.remove_child(model_root)
@@ -3767,6 +3841,19 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if _role=="sam_mobile":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var old_yaw_g14:float=_yaw
+        var old_zoom_g14:float=_zoom
+        _faction=index
+        _display_role("sam_mobile")
+        _yaw=old_yaw_g14
+        _zoom=old_zoom_g14
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
     if _role=="ew_mobile":
         if index<0 or index>=Factions.FACTIONS.size():
             return
