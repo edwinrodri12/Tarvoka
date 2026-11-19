@@ -56,6 +56,11 @@ func load_asset_scene(packed: PackedScene) -> bool:
         remove_child(_loaded_asset)
         _loaded_asset.queue_free()
     _loaded_asset = model
+    # Keep the reference sphere from appearing inside the production model.
+    # Only change visibility after the replacement has passed framing validation.
+    var reference: Node3D = get_node_or_null(^"SampleAsset") as Node3D
+    if reference != null:
+        reference.visible = false
     asset_path = get_path_to(model)
     return true
 
@@ -71,6 +76,7 @@ func unload_asset_scene() -> bool:
     var previous: Node3D = _loaded_asset
     _loaded_asset = null
     asset_path = ^"SampleAsset"
+    reference.visible = true
     remove_child(previous)
     previous.queue_free()
     return true
