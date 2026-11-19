@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/tarvoka-3d-pages.yml"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/G15*.gd"
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/G13MobileAirDefenseV1.gd"
       - "scripts/ui/G13MaterialRealismV53.gd"
@@ -235,7 +237,7 @@ jobs:
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
           path: hq-android-v15
           persist-credentials: false
       - name: Include V15 source PNGs in the HQ 3D showroom before import
@@ -274,6 +276,16 @@ jobs:
             test -s "$g13_source"
             cp "$g13_source" scripts/ui/
           done
+          # G15 V9: ship the tenth native unit in the SAME original Godot
+          # viewer. Do not overwrite civilian cities or other unit sources.
+          for g15_source in hq-android-v15/scripts/ui/G15*.gd; do
+            test -s "$g15_source"
+            cp "$g15_source" scripts/ui/
+          done
+          test -s scripts/ui/G15ProductionSurfaceV9.gd
+          test -s scripts/ui/G15ElectronicWarfareV1.gd
+          grep -q 'ew_mobile' scripts/ui/UnitModels3D.gd
+          grep -q 'g15_v9_on' scripts/ui/BastionStudioAdapter.gd
           # The main repository holds the genuine G13 inspection scene.
           # Copy it into the assembled native Web Studio checkout so
           # the release visual captures run instead of warning about
