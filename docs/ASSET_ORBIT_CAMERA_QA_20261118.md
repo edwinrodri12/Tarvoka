@@ -78,3 +78,9 @@ Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y
 - `AssetInspectionPreview.unload_asset_scene()` devuelve el inspector a `SampleAsset` y libera exclusivamente la instancia dinámica. Devuelve `false` sin alterar el modelo cargado si falta la referencia o no tiene mallas; una segunda descarga no produce cambios.
 - Regresión `tests/test_asset_orbit_camera.gd`: tras reemplazar una escena dinámica, descargar, comprobar encuadre restaurado, referencia conservada, instancia antigua liberada y descarga repetida rechazada.
 - Commits de código/prueba en PR #602. CI de estos commits: **NO CONFIRMADO**; Android físico: **NO EJECUTADO EN DISPOSITIVO**; estética: **PENDIENTE DE REVISIÓN VISUAL**. No se ha integrado en main ni en visor web.
+
+
+## 2026-11-19 — Ocultación de referencia durante inspección dinámica
+- `AssetInspectionPreview.gd`: tras aceptar y encuadrar un `PackedScene` válido, `SampleAsset.visible=false` para impedir que la esfera de referencia se superponga al modelo real; `unload_asset_scene()` restaura su visibilidad. Una carga rechazada no modifica visibilidad ni selección.
+- `tests/test_asset_orbit_camera.gd`: comprueba ocultación al cargar, persistencia tras reemplazo rechazado y restauración al descargar.
+- Estado: cambios registrados en rama de PR #602; CI del commit nuevo pendiente de confirmar. Android físico **NO EJECUTADO EN DISPOSITIVO**; calidad visual **PENDIENTE DE REVISIÓN VISUAL**. No hay merge a `main`.
