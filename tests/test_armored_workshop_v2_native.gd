@@ -55,6 +55,24 @@ func _run() -> void:
                                 "VentanaVidrioPBR_%d_%d" % [side,segment])!=null,
                                 "Actual PBR tinted glass missing")
                     assert(_mesh(model,"PanelPosteriorAlto")!=null)
+                    var rear:MeshInstance3D=_mesh(model,
+                        "PanelPosteriorInferiorSelladoV2")
+                    assert(rear!=null and rear.mesh is BoxMesh,
+                        "Lower rear facade must be a continuous solid wall")
+                    var rear_mat:StandardMaterial3D=rear.material_override as StandardMaterial3D
+                    assert(rear_mat!=null and rear_mat.transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED,
+                        "Lower rear facade must not contain bright false holes")
+                    var rear_box:BoxMesh=rear.mesh as BoxMesh
+                    assert(rear_box.size.x>=
+                        (9.5 if level==1 else 15.0 if level==2 else 20.5)-0.20)
+                    assert(rear_box.size.y>=3.10)
+                    assert(_mesh(model,"BandaFaccionPosteriorV2")!=null)
+                    for hatch in range(level+1):
+                        assert(_mesh(model,
+                            "PortillaTecnicaPosterior_%d" % hatch)!=null)
+                        assert(_mesh(model,
+                            "PortillaPanelPosterior_%d" % hatch)!=null)
                     assert(_mesh(model,"FrontispicioBlindadoV2")!=null)
                     for window in range(4):
                         assert(_mesh(model,
