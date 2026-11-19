@@ -88,6 +88,13 @@ func _initialize() -> void:
 	assert(packed_report["warnings"].size() == 1)
 	assert(root.get_child_count() == before_children)
 	assert(Audit.inspect_packed_scene(null)["warnings"].size() == 1)
+	# Repeated packed-scene audits must be deterministic and never retain an instance.
+	for audit_iteration in range(3):
+		var repeat_report: Dictionary = Audit.inspect_packed_scene(packed, 12)
+		assert(repeat_report["triangles"] == 12)
+		assert(repeat_report["instances"] == 1)
+		assert(repeat_report["warnings"].is_empty())
+		assert(root.get_child_count() == before_children)
 	packed_root.free()
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
