@@ -6,6 +6,7 @@ class_name TarvokaArmoredWorkshopStudioAdapterV1
 # and Central Electrica. No replacement of prior approved model sources.
 const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
+const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const WorkshopStyle=preload("res://scripts/ui/VisualStyle.gd")
 const WORKSHOP_BUILDING_INDEX:int=6
 var workshop_controls:VBoxContainer
@@ -47,6 +48,8 @@ func _install_workshop_controls() -> void:
     workshop_version=OptionButton.new()
     workshop_version.add_item("V1 · geometría original")
     workshop_version.add_item("V2 · acabados industriales")
+    workshop_version.add_item("Android · táctico agrupado")
+    workshop_version.add_item("Android · distante agrupado")
     workshop_version.select(1)
     workshop_controls.add_child(workshop_version)
     workshop_level=OptionButton.new()
@@ -146,7 +149,17 @@ func _display_workshop() -> void:
     var level:int=workshop_level.selected+1
     var faction:int=workshop_faction.selected-1
     var damage:int=workshop_damage.selected
-    model_root=WorkshopV1.build(level,faction,damage) if workshop_version.selected==0 else Workshop.build(level,faction,damage)
+    match workshop_version.selected:
+        0:
+            model_root=WorkshopV1.build(level,faction,damage)
+        1:
+            model_root=Workshop.build(level,faction,damage)
+        2:
+            model_root=WorkshopMobile.build(level,faction,damage,
+                WorkshopMobile.PROFILE_TACTICAL)
+        _:
+            model_root=WorkshopMobile.build(level,faction,damage,
+                WorkshopMobile.PROFILE_DISTANT)
     if model_root==null:
         push_error("TARVOKA: workshop native 3D geometry failed")
         return
@@ -167,10 +180,15 @@ func _display_workshop() -> void:
     _update_camera()
     _update_details()
     _refresh_unified_studio_navigation()
-    workshop_info.text="V%d · %s · D%d · %d bahías · %d mallas 3D · arte pendiente de aprobación" % [
+    var mobile_profile:int=int(model_root.get_meta("workshop_lod_profile",0))
+    var geometry_info:String="%d lotes GPU · %d cajas agrupadas" % [
+        int(model_root.get_meta("workshop_batches",0)),
+        int(model_root.get_meta("workshop_instances",0))
+    ] if mobile_profile>0 else "%d mallas 3D HERO" % Workshop.mesh_count(model_root)
+    workshop_info.text="V%d · %s · D%d · %d bahías · %s · arte pendiente de aprobación" % [
         int(model_root.get_meta("workshop_art_version",1)),
-        Workshop.LEVEL_NAMES[level-1],damage,int(model_root.get_meta("workshop_bays",0)),
-        Workshop.mesh_count(model_root)]
+        Workshop.LEVEL_NAMES[level-1],damage,
+        int(model_root.get_meta("workshop_bays",0)),geometry_info]
 
 func _update_camera() -> void:
     if _role=="armored_workshop" and camera!=null and workshop_level!=null:
