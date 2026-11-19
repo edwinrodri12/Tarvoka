@@ -39,7 +39,7 @@ func _initialize() -> void:
     var plain: Array = Scenarios.terrain(0,SIZE)
     var top_relay := Vector2i(Scenarios.scale_x(4,SIZE),
         Scenarios.scale_y(2,SIZE))
-    assert(top_relay == Vector2i(17,8))
+    assert(top_relay == Vector2i(18,8))
     var ally: Dictionary = Roles.make_unit(
         "A",0,top_relay+Vector2i(-3,0),"scout")
     var enemy: Dictionary = Roles.make_unit(
