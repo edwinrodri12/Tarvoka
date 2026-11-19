@@ -32,7 +32,8 @@ def load(directory):
             assert row["original_samples_per_policy"]==1
             assert row["mirror_validation_per_policy"]==1
             delta=row["at_first_response_end"]
-            assert delta["only_difference_one_removed_piercer"] is True
+            assert delta["only_difference_one_removed_piercer_plus_orphan_goal_cleanup"] is True
+            assert 0 <= delta["removed_orphan_mission_count"] <= 1
             assert delta["removed_unit_id"]=="N3"
             assert delta["removed_unit_role"]=="piercer"
             assert delta["removed_unit_hp"]>0
@@ -100,6 +101,7 @@ def main(folder):
         "mirrors_are_not_independent":True,
         "test_only_ablation_after_authoritative_purchase":True,
         "credit_and_factory_state_identical_pre_round_end":True,
+        "only_other_change_cleanup_orphan_N3_mission":True,
         "gameplay_production_modifications":False,
         "by_policy":{p:stats(rows,p) for p in POLICIES},
         "by_seed":{
@@ -112,7 +114,7 @@ def main(folder):
             r["cap3"]["winner"]!=r["ablated"]["winner"] for r in rows),
         "notes":[
             "This is a hypothetical removal of a paid unit, NOT a legal TARVOKA action.",
-            "All prior actions and the 300-credit expense remain identical to cap4; only a single N3 unit is removed immediately before end_turn.",
+            "All prior actions and the 300-credit expense remain identical to cap4; a single N3 unit plus any necessary now-orphaned N3 mission are removed before end_turn.",
             "This isolates unit presence plus downstream AI interactions; it does not distinguish combat impact, path blocking or AI targeting.",
             "The city/factory production flag remains as after purchase; cap3 differs from this experiment in both cash and factory history.",
             "These three seeds were previously studied and should NOT be called new out-of-sample observations.",
