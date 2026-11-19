@@ -218,10 +218,10 @@ static func apply(root:Node3D, faction:Color)->bool:
         var s:float=float(side)
         var id:String=str(side)
         _box(armor_assembly,GLASS_FRONT+id,
-            Vector3(s*0.371,1.433,-1.897),
+            Vector3(s*0.371,1.433,-1.858),
             Vector3(0.598,0.291,0.064),glazing,Vector3(-8,0,0))
         _box(armor_assembly,"G14_V2_WindshieldSealLower_"+id,
-            Vector3(s*0.371,1.275,-1.934),
+            Vector3(s*0.371,1.275,-1.887),
             Vector3(0.627,0.032,0.039),gaskets,Vector3(-8,0,0))
         _box(armor_assembly,"G14_V2_WindshieldBrow_"+id,
             Vector3(s*0.371,1.613,-1.82),
