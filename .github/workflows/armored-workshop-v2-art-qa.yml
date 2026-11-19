@@ -48,9 +48,10 @@ jobs:
           set -euo pipefail
           test -s scripts/ui/ArmoredWorkshop3DV1.gd
           test -s scripts/ui/ArmoredWorkshop3DV2.gd
-          test -s scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          # The multi-branch adapter was source-checked in the import step.
+          test -s scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           test -s tests/test_armored_workshop_v2_native.gd
-          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           xvfb-run -a -s '-screen 0 1280x720x24' \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
