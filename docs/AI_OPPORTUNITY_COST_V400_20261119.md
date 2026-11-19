@@ -44,6 +44,8 @@ Fuera de esa emergencia, si hay ciudad capturable ahora, elegir ciudad; si hay r
 
 Se ejecuta cada juego y su reflejo horizontal exacto: **32 × 3 × 2 = 192 partidas reales**, pero los espejos sirven como comprobación y **no incrementan las 32 condiciones originales**. Horizonte 36 medios turnos, censuras explícitas, controles de apertura de tres órdenes, guardados, economía, misma visibilidad, simetría y reporte JSON/Markdown.
 
+**Limitación metodológica crucial:** las tres políticas se juegan en **autopartidas simétricas** (la misma política controla a los dos bandos durante una partida), por lo que cambiar la proporción de victorias del iniciador indica **balance de iniciativa**, pero **NO demuestra que una IA sea más fuerte que otra**. Para afirmar superioridad estratégica se requerirán partidos cruzados *v400 contra IA actual* con ambas asignaciones de bando, primeras órdenes oficiales, mapas nunca vistos y espejos. Este PR responde primero si la nueva política evita los daños observados en v398 y cambia decisiones sin favorecer arbitrariamente una facción.
+
 **Criterio:** no aprobar por microtest ni cambio de acción. Debe mostrar ganadores mejores o menos sesgados que la IA oficial y v398, sin degradar sistemáticamente ningún tipo de mapa o niebla ni añadir información oculta. Si los beneficios son marginales o ambiguos, mantener la opción desactivada y estudiar errores de estrategia más específicos antes de fusionar.
 
 ## Alcance
