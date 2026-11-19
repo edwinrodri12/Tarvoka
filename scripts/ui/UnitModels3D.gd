@@ -17,6 +17,7 @@ const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G14SAM = preload("res://scripts/ui/G14MobileSAMV1.gd")
 const G14ExteriorV2 = preload("res://scripts/ui/G14MobileSAMExteriorV2.gd")
+const G14LauncherV3 = preload("res://scripts/ui/G14MobileSAMLauncherV3.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
@@ -1048,6 +1049,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             if finish_enabled and art_level>=8:
                 if not G14ExteriorV2.apply(model,faction_paint_color(faction)):
                     push_warning("G14 V2 sealed armor, opaque windows and 8 treaded wheels missing")
+                elif not G14LauncherV3.apply(model,faction_paint_color(faction)):
+                    push_warning("G14 V3 four hinged SAM pods and real actuator joints missing")
         "aa_mobile", "mobile_aa":
             # G13 V69 now serves Studio aa_mobile and the existing playable
             # BattleSession mobile_aa role without changing combat rules.
@@ -1467,6 +1470,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             var g14_posed:bool=G14SAM.pose(model,kind,progress,target_heading)
             if g14_posed and G14ExteriorV2.has_model(model):
                 G14ExteriorV2.sync(model,kind,progress)
+            if g14_posed and G14LauncherV3.has_model(model):
+                G14LauncherV3.sync(model,kind,progress)
             return g14_posed
         "aa_mobile", "mobile_aa":
             return G13AA.pose(model,kind,progress,target_heading)
@@ -1501,6 +1506,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             G14SAM.restore(model)
             if G14ExteriorV2.has_model(model):
                 G14ExteriorV2.sync(model,"idle",0.0)
+            if G14LauncherV3.has_model(model):
+                G14LauncherV3.restore(model)
         "aa_mobile", "mobile_aa":
             G13AA.restore(model)
         "ew_mobile":
