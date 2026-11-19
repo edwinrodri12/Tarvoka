@@ -111,6 +111,25 @@ func _initialize() -> void:
     var visible: Dictionary = Visibility.observed_state(
         after_piercer,0)
     assert(Budget.assess(after_piercer,visible,baseline)["defer"])
+    # If ALL friendly soldiers have acted, _decide uses its separate
+    # production-only fallback. The reserve MUST gate that pathway too.
+    var no_free: Dictionary = after_piercer.duplicate(true)
+    for unit in no_free["units"]:
+        if int(unit.get("faction",-1)) == 0:
+            unit["acted"] = true
+    var no_free_copy: Dictionary = no_free.duplicate(true)
+    var without_reserve: Dictionary = AI.step(no_free,baseline_opts)
+    assert(bool(without_reserve.get("valid",false)))
+    assert(str(without_reserve.get("action","")) == "produce")
+    assert(int(without_reserve.get("cost",0)) == 650)
+    var gated: Dictionary = AI.step(no_free,reserve_opts)
+    assert(not bool(gated.get("valid",false)))
+    assert(no_free == no_free_copy)
+    assert(not Codec.encode(gated["state"]).is_empty())
+    var no_free_mirror: Dictionary = Mirror.reflect(no_free)
+    var gated_mirror: Dictionary = AI.step(no_free_mirror,reserve_opts)
+    assert(not bool(gated_mirror.get("valid",false)))
+    assert(Mirror.reflect(gated_mirror["state"]) == gated["state"])
     print("RESERVE403_MICRO " + JSON.stringify({
         "side_symmetry_samples":examined,
         "phase2_real_spg_prevented":true,
@@ -118,6 +137,7 @@ func _initialize() -> void:
         "no_rebate_or_bonus":true,
         "threat_waiver":true,
         "default_v400_bit_identical":true,
+        "no_available_friendly_action_production_gate":true,
         "mirror_exact":true
     }))
     print("PASS TARVOKA v403 micro: real phase2 SPG deferred, "
