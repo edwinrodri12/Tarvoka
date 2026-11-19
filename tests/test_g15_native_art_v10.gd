@@ -119,6 +119,12 @@ func _run()->void:
                     check(sideglass.mesh is ArrayMesh and
                         sideglass.mesh.get_aabb().size.x>0.005,
                         "side window has real outboard curved geometry")
+                    if sideglass.mesh is ArrayMesh:
+                        var arrays:Array=sideglass.mesh.surface_get_arrays(0)
+                        var normals:PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+                        check(normals.size()>0 and
+                            normals[0].x*float(side)>0.80,
+                            "side glass PBR normals face outward on both sides")
                 var old:=model.find_child(
                     "G15_V6_SpecularGlass_"+side_id,true,false
                     ) as MeshInstance3D
