@@ -3,6 +3,7 @@ extends SceneTree
 # TARVOKA actual OpenGL camera inspection of the same native V2 mesh used
 # by the Web 3D studio. No proxy images and no fake preview geometry.
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
+const Mobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const OUTPUT="res://qa_artifacts/armored_workshop_v2"
 
 func _initialize() -> void:
@@ -82,17 +83,35 @@ func _capture_all() -> void:
             image_count+=1
         viewport.remove_child(model)
         model.free()
-    assert(image_count==24,"Not all six-view workshop cameras rendered")
+    # Direct visual comparison against identical six-angle HERO N3 views.
+    for profile in [Mobile.PROFILE_TACTICAL,Mobile.PROFILE_DISTANT]:
+        var model:Node3D=Mobile.build(3,3,0,profile)
+        assert(model!=null)
+        viewport.add_child(model)
+        for shot in views:
+            var filename:String="N3_F3_D0_M%d_%s.png" % [
+                profile,str(shot[0])]
+            var result:Dictionary=await _capture_view(
+                viewport,camera,3,shot,filename)
+            result["mobile_lod"]=profile
+            manifest.append(result)
+            image_count+=1
+        viewport.remove_child(model)
+        model.free()
+    assert(image_count==36,
+        "Not all six-view HERO / Android camera profiles rendered")
     var file:=FileAccess.open(OUTPUT+"/manifest.json",FileAccess.WRITE)
     assert(file!=null,"No manifest")
     file.store_string(JSON.stringify({
         "artifact":"TARVOKA Taller de Blindados V2",
         "real_engine":"Godot 4.3 OpenGL",
-        "cameras":6,"rendered_images":image_count,"captures":manifest
+        "cameras":6,"hero_images":24,"mobile_images":12,
+        "rendered_images":image_count,"captures":manifest
     }, "\t"))
     file.close()
     print("PASS WORKSHOP V2 VISUAL: ",image_count,
-        " real OpenGL image captures, six cameras, three sizes and D2-D4")
+        " real OpenGL images, six cameras, three sizes, D2-D4, ",
+        "tactical and distant mobile LOD")
     viewport.queue_free()
     quit(0)
 
