@@ -10,6 +10,8 @@ func _initialize() -> void:
 	assert(report["mesh_nodes"] == 1)
 	assert(report["instances"] == 1)
 	assert(report["triangles"] == 12)
+	assert(report["largest_mesh_triangles"] == 12)
+	assert(report["largest_mesh_path"] == str(box.name))
 	assert(report["warnings"].size() == 1)
 	var multi := MultiMeshInstance3D.new()
 	var mm := MultiMesh.new()
@@ -20,6 +22,8 @@ func _initialize() -> void:
 	root.add_child(multi)
 	report = Audit.inspect(root, 48)
 	assert(report["triangles"] == 48)
+	assert(report["largest_mesh_triangles"] == 36)
+	assert(report["largest_mesh_path"] == str(multi.name))
 	assert(report["instances"] == 4)
 	assert(report["warnings"].is_empty())
 	mm.visible_instance_count = 1
@@ -58,6 +62,7 @@ func _initialize() -> void:
 	mm.visible_instance_count = 0
 	report = Audit.inspect(root, 14)
 	assert(report["triangles"] == 14)
+	assert(report["largest_mesh_triangles"] == 12)
 	assert(report["instances"] == 3)
 	assert(report["mesh_nodes"] == 3)
 	assert(report["warnings"].is_empty())
