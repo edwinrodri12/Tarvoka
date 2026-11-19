@@ -1,0 +1,73 @@
+name: TARVOKA v395 fourth responder order bridge audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_bridge_fourth_response_v395.gd"
+      - "tests/aggregate_ai_bridge_fourth_response_v395.py"
+      - ".github/workflows/ai-bridge-fourth-response-v395.yml"
+      - "tests/test_ai_bridge_first_response_counterfactual_v394.gd"
+  workflow_dispatch:
+
+jobs:
+  fourth_order:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 52
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+    env:
+      TARVOKA_V395_SEED_INDEX: ${{ matrix.seed_index }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Compare official, 3, 4 and 5 first responder orders with exact mirrors
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2900s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_bridge_fourth_response_v395.gd \
+            2>&1 | tee /tmp/bridge-v395.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:|BRIDGE395_DIVERGENCE' /tmp/bridge-v395.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v395: fourth responder action isolated' /tmp/bridge-v395.log
+          test "$(grep -c '^BRIDGE395_RESULT ' /tmp/bridge-v395.log)" -eq 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v395-seed${{ matrix.seed_index }}
+          path: /tmp/bridge-v395.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [fourth_order]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v395-seed*
+          path: .ci-v395-logs
+          merge-multiple: false
+      - name: Strictly aggregate four policies and 16 original conditions
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/aggregate_ai_bridge_fourth_response_v395.py
+          python3 tests/aggregate_ai_bridge_fourth_response_v395.py .ci-v395-logs
+          cat reports/ai_v395_fourth_order_bridge.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v395-fourth-responder-bridge
+          path: reports/ai_v395_fourth_order_bridge.*
+          if-no-files-found: ignore
+          retention-days: 30
