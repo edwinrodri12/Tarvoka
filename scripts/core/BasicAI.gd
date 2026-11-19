@@ -100,6 +100,13 @@ static func _decide(state: Dictionary,
     if friends.is_empty():
         var only_recruits: Dictionary = _produce_reinforcements(state,
             knowledge,enemies,plan)
+        # There may be no units left with free orders, but factories
+        # can still produce. Apply the SAME experimental reserve gate
+        # here or an expensive purchase would bypass v403 entirely.
+        if bool(options.get("_ab_recruit_reserve_v403",false)) and \
+                bool(Budget.assess(state,knowledge,
+                    only_recruits).get("defer",false)):
+            return idle
         return only_recruits if only_recruits.get("valid",false) else idle
     # Compare equivalent unit roles and side-normalized positions, not the
     # artificial A..F vs U..Z names assigned to mirrored starting rosters.
