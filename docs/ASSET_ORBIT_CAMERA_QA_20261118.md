@@ -52,3 +52,9 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - Cambio acotado: tras `scene.queue_free()`, esperar dos `process_frame` antes de imprimir PASS y llamar `quit(0)` para dar tiempo a liberar recursos. Es una hipótesis de corrección de teardown, **no una prueba aprobada** hasta CI del commit nuevo.
 - Si persiste, inspeccionar el orden de liberación de `MeshInstance3D` y evaluar ejecutar este smoke con renderizador OpenGL/Xvfb; no suprimir indiscriminadamente errores de Godot.
 - Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE**. No se cambió el motor táctico ni la escena Android.
+
+## CI 2026-11-19: renderizador virtual
+
+El run [44476712293](https://github.com/edwinrodri12/Tarvoka/actions/runs/44476712293) imprimió `PASS: isolated asset orbit camera smoke`, pero también `ERROR: Parameter "m" is null` en `mesh_get_surface_count` del renderizador dummy (antes y después del PASS). Por tanto **FALLÓ CI**: las aserciones no justifican ignorar errores del motor.
+
+Cambio reversible: el workflow ejecuta la escena bajo `xvfb-run` con Godot 4.3 y `--rendering-method gl_compatibility`, usando Mesa software en Linux, en vez de `--headless` (dummy). Mantiene `pipefail`, timeout y rechazo explícito de errores. Si falla por contexto gráfico, revisar logs y revertir o corregir el entorno; no marcar como PASÓ sin run verde. Esto **no es** prueba Android física ni aprobación visual del modelo.
