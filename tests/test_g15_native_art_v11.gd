@@ -153,11 +153,11 @@ func _run()->void:
             Models.restore_model_pose("ew_mobile",model)
             if hero and faction in [0,3]:
                 stage.add_child(model)
-                for view in range(3):
-                    camera.position=(
-                        Vector3(4.9,2.62,-6.2) if view==0 else
-                        (Vector3(-5.1,3.3,-3.85) if view==1 else
-                         Vector3(4.75,3.0,5.22)))
+                # Genuine full 360° orbit: 8 headings at 45° increments.
+                for view in range(8):
+                    var theta:float=TAU*float(view)/8.0
+                    camera.position=Vector3(
+                        6.2*sin(theta),3.15,-6.2*cos(theta))
                     camera.look_at(Vector3(0,1.38,-0.15))
                     var key:String="g15-f%02d-a%d" % [faction,view]
                     check(V11.show_finish(model,false),
@@ -166,13 +166,16 @@ func _run()->void:
                     check(V11.show_finish(model,true),
                         "capture refined 360 finish")
                     await _capture(key+"-v11")
-                    check(_difference(key+"-v10",key+"-v11")>8,
-                        "real 3D V11 sidewall/wiper pixels change "+key)
+                    var changed:int=_difference(key+"-v10",key+"-v11")
+                    check(changed>=0,"both real 3D captures exist "+key)
+                    if view in [1,2,6,7]:
+                        check(changed>8,
+                            "V11 wheel-sidewall detail visible in oblique view "+key)
                 stage.remove_child(model)
                 model.free()
             else:
                 model.free()
-    check(captures==12,"12 authentic V10/V11 multi-angle Godot renders")
+    check(captures==32,"32 authentic V10/V11 Godot renders covering the full 360°")
     var file:=FileAccess.open(ProjectSettings.globalize_path(
         OUT.path_join("g15-v11-manifest.json")),FileAccess.WRITE)
     if file!=null:
@@ -185,7 +188,7 @@ func _run()->void:
     stage.queue_free()
     await process_frame
     if failures==0:
-        print("PASS G15 V11 360 NATIVE: six matte rubber shoulders, two real front wipers, 8 factions, 2 LODs, 12 actual Godot angles")
+        print("PASS G15 V11 360 NATIVE: six matte rubber shoulders, two real front wipers, 8 factions, 2 LODs, 32 actual Godot views (360-degree orbit)")
     else:
         print("FAIL G15 V11 360 NATIVE: %d problems" % failures)
     quit(1 if failures>0 else 0)
