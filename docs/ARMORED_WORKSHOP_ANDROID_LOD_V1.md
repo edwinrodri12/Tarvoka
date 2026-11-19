@@ -24,3 +24,13 @@ D0–D2 conservan estructura, cubierta, bahías, paredes sólidas y franjas de f
 - \`.github/workflows/armored-workshop-v2-art-qa.yml\`: pruebas y artefactos descargables en GitHub Actions, sin reemplazar el modelo de producción.
 
 La ejecución exitosa de una revisión anterior **no aprueba** automáticamente estas nuevas variantes. Rendimiento real en hardware Android (ms de render, memoria, temperatura, Android WebGL y compatibilidad) **no está medido**. Mantener PR en borrador hasta una corrida SUCCESS de los dos módulos y comparación humana de las 36 imágenes; no integrar con juego/Android APK antes.
+
+## Auditoría de vistas, derrumbe y selección LOD (siguiente prioridad)
+
+1. Se encontró que la V2 heredaba de V1 una cubierta central todavía elevada en daño D3 y una viga frontal desprendida flotando. Ahora V2 retira esas dos geometrías del modelo ensamblado **sin cambiar V1**. Los trozos de fachada caídos del nuevo acabado V2 permanecen.
+2. `tests/test_armored_workshop_v2_native.gd` comprueba la ausencia de cerchas altas, extractores, techo de V1 y viga frontal sin soporte en D3; comprueba además que V1 conserva su propia pieza original como referencia reversible.
+3. `scripts/ui/ArmoredWorkshopLODPolicy.gd` elige TÁCTICO si el ancho en pantalla alcanza **152 px** y DISTANTE cuando baja a **112 px**. Dentro de la franja de 40 px conserva el perfil anterior para evitar parpadeo al pellizcar el zoom.
+4. `tests/test_armored_workshop_lod_policy.gd` cubre **840 selecciones** de escala/nivel/perfil, umbrales y estabilidad al variar zoom, sin activar nunca el perfil HERO automáticamente en Android.
+5. Las 36 capturas de Godot ahora incluyen verificación de primer plano no vacío, encuadre y límites de la geometría visible. Cada imagen registra `foreground_sample_count` y `foreground_bounds_sampled` en el manifiesto para auditar cuadros negros o exportaciones aparentemente satisfactorias pero vacías.
+
+**Estado:** scripts y pruebas guardados en la rama de arte. Esto **no confirma** que las últimas capturas hayan corrido ni que el Android alcance un FPS objetivo; se precisa un resultado real de CI y revisión de las capturas para aprobar.
