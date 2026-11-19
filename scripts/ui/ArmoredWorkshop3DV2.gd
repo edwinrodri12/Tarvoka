@@ -233,12 +233,12 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
 
 static func _roof_finish(parent:Node3D,width:float,depth:float,height:float,
         bays:int,damage:int) -> void:
-    if damage>=4:
+    # D3 and D4 have no continuous roofing: even a single full-length rib
+    # would appear to float above the ruined workshop without a supporting wall.
+    if damage>=3:
         return
     # Fine metal crests, real housings, shutters and mechanical ventilation.
     for bay in range(bays):
-        if damage==3 and bay%2==0:
-            continue
         var bw:float=width/float(bays)
         var cx:float=-width*0.5+bw*(float(bay)+0.5)
         for ridge in range(4):
