@@ -106,6 +106,7 @@ const G13TreadV60=preload("res://scripts/ui/G13ContinuousTreadV60.gd")
 const G13WheelArmorV61=preload("res://scripts/ui/G13ProductionWheelArmorV61.gd")
 const G13GlassV62=preload("res://scripts/ui/G13OpticalGlazingV62.gd")
 const G13FactionV63=preload("res://scripts/ui/G13FactionReadabilityV63.gd")
+const G13EdgesV64=preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -239,7 +240,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V63 · facciones y cristal óptico")
+        role_picker.set_item_text(aa_index,"G13 · AA V64 · cantos y juntas de acero")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V9")
@@ -1822,6 +1823,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v64_show_edges(enabled:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V64: juntas blindadas no cargadas."
+        return
+    if G13EdgesV64.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V64 · biseles reales en placas y escotillas, pernos asentados"
+                if enabled else
+                "G13 V63 · comparación antes del remate de bordes")
+
 func _g13_v63_show_faction(enabled:bool)->void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -1858,6 +1873,10 @@ func _g13_v61_show_finish(enabled: bool) -> void:
             status_label.text="G13 V61: rines mecanizados no cargados."
         return
     if G13WheelArmorV61.show_finish(model_root,enabled):
+        # Preserve the later faceted V64 armor treatment when comparing
+        # the older V61 rotating hubs in the shared studio.
+        if bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+            G13EdgesV64.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V61 · ocho radios realmente abiertos, 32 pernos y blindaje PBR"
@@ -1885,6 +1904,9 @@ func _g13_v59_show_finish(enabled: bool) -> void:
         if status_label!=null:
             status_label.text="G13 V59: neumáticos y cristales no cargados."
         return
+    # V64 owns the latest V44/V45 steel geometry, coatings and fittings.
+    if not enabled and bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+        G13EdgesV64.show_finish(model_root,false)
     # V63 owns V32/V44/V45 existing enamel surfaces and badge positions.
     if not enabled and bool(model_root.get_meta(G13FactionV63.FLAG,false)):
         G13FactionV63.show_finish(model_root,false)
@@ -1908,6 +1930,8 @@ func _g13_v59_show_finish(enabled: bool) -> void:
             G13GlassV62.show_finish(model_root,true)
         if enabled and bool(model_root.get_meta(G13FactionV63.FLAG,false)):
             G13FactionV63.show_finish(model_root,true)
+        if enabled and bool(model_root.get_meta(G13EdgesV64.FLAG,false)):
+            G13EdgesV64.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V59 · neumáticos esculpidos, cristales reflectantes y facción"
@@ -2009,7 +2033,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V63 · IDENTIDAD DE FACCIÓN Y VIDRIOS ÓPTICOS",14)
+        "G13 V64 · BLINDAJE BISELADO Y JUNTAS",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -2055,6 +2079,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V64 · Juntas y biseles de acero",
+        func(): _g13_v64_show_edges(true),
+        "V64 · Comparar blindaje anterior",
+        func(): _g13_v64_show_edges(false))
     _add_paired(g13_controls,"V63 · Placas de facción visibles",
         func(): _g13_v63_show_faction(true),
         "V63 · Comparar identificación anterior",
