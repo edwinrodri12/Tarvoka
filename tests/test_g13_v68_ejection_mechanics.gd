@@ -4,6 +4,7 @@ extends SceneTree
 # details, using the actual existing 3D nodes in all 8 factions x 2 LODs.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V68=preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
+const V69=preload("res://scripts/ui/G13MuzzleMountFinishV69.gd")
 const V67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const V66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const V18=preload("res://scripts/ui/G13AutocannonSculptV18.gd")
@@ -33,6 +34,8 @@ func _run()->void:
             check(model!=null,"G13 unit spawn per faction and LOD")
             if model==null:
                 continue
+            check(V69.show_finish(model,false),
+                "disable V69 gun mesh/PBR overlay before checking exact V68")
             check(bool(model.get_meta(V66.FLAG,false)) and
                 bool(model.get_meta(V67.FLAG,false)) and
                 bool(model.get_meta(V68.FLAG,false)),
@@ -177,6 +180,8 @@ func _run()->void:
                     ) as GeometryInstance3D
                 check(part.material_override==new_coats[name],
                     "full newest appearance restored")
+            check(V69.show_finish(model,true),
+                "restore V69 after historical V68 materials and geometry test")
             model.free()
     check(faction_colors.size()==8,
         "eight official faction paint colors remain distinct")
