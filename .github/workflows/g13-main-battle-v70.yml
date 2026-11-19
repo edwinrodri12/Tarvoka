@@ -1,0 +1,50 @@
+name: TARVOKA G13 V70 main-game native integration QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'scripts/ui/G13BattleActionsV70.gd'
+      - 'tests/test_g13_main_battle_v70.gd'
+      - '.github/workflows/g13-main-battle-v70.yml'
+  pull_request:
+    paths:
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'scripts/ui/G13BattleActionsV70.gd'
+      - 'tests/test_g13_main_battle_v70.gd'
+      - '.github/workflows/g13-main-battle-v70.yml'
+  workflow_dispatch:
+
+jobs:
+  g13-final-production-integration:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify G13 V69 in BattleTerrain3D with playable rules intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_main_battle_v70.gd 2>&1 | tee /tmp/g13-main-game.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/g13-main-game.log; then
+            echo 'G13 V70 native integration regression'; exit 1
+          fi
+          grep -F 'PASS G13 V70:' /tmp/g13-main-game.log
