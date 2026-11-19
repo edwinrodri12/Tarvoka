@@ -1,0 +1,116 @@
+name: TARVOKA v402 forensic opening audit v400 versus official
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_ai_opening_decision_forensics_v402.gd"
+      - "tests/test_ai_opening_forensics_micro_v402.gd"
+      - "tests/aggregate_ai_opening_forensics_v402.py"
+      - ".github/workflows/ai-opening-decision-audit-v402.yml"
+      - "tests/test_ai_initiative_counterfactual_v379.gd"
+  workflow_dispatch:
+
+jobs:
+  micro:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Check old mixed-policy simulator micro contract
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 650s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opportunity_head_micro_v401.gd \
+            2>&1 | tee /tmp/v401-base-micro.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v401-base-micro.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v401 micro:' /tmp/v401-base-micro.log
+      - name: Check all opening telemetry is read-only and exactly mirrored
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 650s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_forensics_micro_v402.gd \
+            2>&1 | tee /tmp/v402-micro.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/v402-micro.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v402 micro:' /tmp/v402-micro.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v402-micro
+          path: |
+            /tmp/v401-base-micro.log
+            /tmp/v402-micro.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  cases:
+    needs: [micro]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        seed_index: [0,1,2,3,4,5,6,7]
+        fog: ["false","true"]
+    env:
+      TARVOKA_V402_SEED_INDEX: ${{ matrix.seed_index }}
+      TARVOKA_V402_FOG: ${{ matrix.fog }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit first four rounds, response, income, relay and credits for both policy assignments
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 2600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_opening_decision_forensics_v402.gd \
+            2>&1 | tee /tmp/open-v402.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/open-v402.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v402: four true mixed-policy opening' /tmp/open-v402.log
+          test "$(grep -c '^OPEN402_RESULT ' /tmp/open-v402.log)" -eq 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v402-seed${{ matrix.seed_index }}-fog${{ matrix.fog }}
+          path: /tmp/open-v402.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  aggregate:
+    needs: [cases]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-v402-seed*
+          path: .ci-v402-logs
+      - name: Audit exactly 64 original mixed-policy opening conditions and 32 assignment contrasts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/aggregate_ai_opening_forensics_v402.py
+          python3 tests/aggregate_ai_opening_forensics_v402.py .ci-v402-logs
+          cat reports/ai_v402_opening_forensics.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-v402-opening-decision-diagnostic
+          path: reports/ai_v402_opening_forensics.*
+          if-no-files-found: ignore
+          retention-days: 30
