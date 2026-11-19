@@ -68,6 +68,11 @@ static func _batch(root:Node3D,groups:Dictionary,accent:Color) -> Dictionary:
         mm.transform_format=MultiMesh.TRANSFORM_3D
         mm.mesh=_box_mesh()
         mm.instance_count=entries.size()
+        # MultiMesh is culled as ONE object. Explicit bounds cover every
+        # rotated and scaled instance, not just the shared unit BoxMesh.
+        # Without this the entire workshop can vanish when orbiting the camera.
+        var bounds_low:=Vector3(1000000.0,1000000.0,1000000.0)
+        var bounds_high:=Vector3(-1000000.0,-1000000.0,-1000000.0)
         for i in range(entries.size()):
             var info:Dictionary=entries[i]
             var position:Vector3=info["pos"]
@@ -75,6 +80,13 @@ static func _batch(root:Node3D,groups:Dictionary,accent:Color) -> Dictionary:
             var angles:Vector3=info["angles"]
             var basis:Basis=Basis.from_euler(angles).scaled(size)
             mm.set_instance_transform(i,Transform3D(basis,position))
+            # Each column is an oriented, scaled half-extent of unit cube.
+            var radius:Vector3=(basis.x.abs()+basis.y.abs()+basis.z.abs())*0.5
+            bounds_low=bounds_low.min(position-radius)
+            bounds_high=bounds_high.max(position+radius)
+        var margin:=Vector3(0.08,0.08,0.08)
+        mm.custom_aabb=AABB(bounds_low-margin,
+            bounds_high-bounds_low+margin*2.0)
         var piece:=MultiMeshInstance3D.new()
         piece.name="Lote_"+key
         piece.multimesh=mm
