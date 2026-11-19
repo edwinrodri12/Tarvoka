@@ -64,6 +64,7 @@ const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G14SAM=preload("res://scripts/ui/G14MobileSAMV1.gd")
 const G14ExteriorV2=preload("res://scripts/ui/G14MobileSAMExteriorV2.gd")
 const G14LauncherV3=preload("res://scripts/ui/G14MobileSAMLauncherV3.gd")
+const G14DamageV4=preload("res://scripts/ui/G14MobileSAMDamageV4.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -253,7 +254,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var sam_index:int=P06Models.ROLES.find("sam_mobile")
     if sam_index>=0:
-        role_picker.set_item_text(sam_index,"G14 · Batería SAM 8×8 · V3 lanzadores hidráulicos")
+        role_picker.set_item_text(sam_index,"G14 · Batería SAM 8×8 · V4 daños físicos y giro 360°")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
@@ -607,6 +608,13 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "sam_mobile":
             return [
+                {"group":"G14 V4 · DAÑO PROGRESIVO Y AUDITORÍA 360°"},
+                {"title":"V4 · Estado intacto / restaurar daño","action":"g14_damage_0"},
+                {"title":"V4 · Daño leve (rayones y abolladuras)","action":"g14_damage_1"},
+                {"title":"V4 · Daño moderado (blindaje y cristales)","action":"g14_damage_2"},
+                {"title":"V4 · Daño grave (radar y lanzadores)","action":"g14_damage_3"},
+                {"title":"V4 · Destrucción visual (casco quemado)","action":"g14_damage_4"},
+                {"title":"V4 · Rotación completa 360°","action":"g14_orbit_360"},
                 {"group":"G14 V3 · CUATRO TUBOS SAM Y SOPORTES ARTICULADOS"},
                 {"title":"V3 · Mostrar actuadores hidráulicos y cierres SAM","action":"g14_v3_on"},
                 {"title":"V2 · Comparar lanzadores anteriores","action":"g14_v3_off"},
@@ -887,6 +895,21 @@ func _studio_run_animation(action: String) -> void:
                 "move" if action=="g11_battle_move" else "attack")
         "g11_battle_close":
             _g11_close_context_v25()
+        "g14_orbit_360":
+            _studio_g14_orbit_360()
+        "g14_damage_0","g14_damage_1","g14_damage_2","g14_damage_3","g14_damage_4":
+            if _role=="sam_mobile" and model_root!=null and G14DamageV4.has_model(model_root):
+                if _g14_tween!=null and _g14_tween.is_running():
+                    _g14_tween.kill()
+                P06Models.restore_model_pose("sam_mobile",model_root)
+                G14ExteriorV2.show_finish(model_root,true)
+                G14LauncherV3.show_finish(model_root,true)
+                G14DamageV4.show_finish(model_root,true)
+                var stage_g14:int=action.to_int()
+                # to_int() on "g14_damage_3" is zero: parse only suffix.
+                stage_g14=int(action.trim_prefix("g14_damage_"))
+                if G14DamageV4.set_damage(model_root,stage_g14):
+                    status_label.text="G14 V4 · daño visual %d/4 · inspección 3D sin alterar batalla" % stage_g14
         "g14_v3_on","g14_v3_off":
             if _role=="sam_mobile" and model_root!=null:
                 var show_v3:bool=action=="g14_v3_on"
@@ -894,18 +917,24 @@ func _studio_run_animation(action: String) -> void:
                     # Always restore the V2 underlying armor before
                     # displaying the current V3 launcher on top of it.
                     G14ExteriorV2.show_finish(model_root,true)
+                else:
+                    G14DamageV4.show_finish(model_root,false)
                 if G14LauncherV3.show_finish(model_root,show_v3):
-                    status_label.text=("G14 V3 · 4 bocas SAM, cierres y cilindros hidráulicos" if show_v3 else "G14 V2 · comparación del lanzador anterior")
+                    if show_v3:
+                        G14DamageV4.show_finish(model_root,true)
+                    status_label.text=("G14 V4 · 4 bocas SAM y deformaciones" if show_v3 else "G14 V2 · comparación de lanzadores anteriores")
         "g14_v2_on","g14_v2_off":
             if _role=="sam_mobile" and model_root!=null:
                 var enabled_g14:bool=action=="g14_v2_on"
                 # The V1 comparison must also hide V3 launcher additions.
                 if not enabled_g14:
+                    G14DamageV4.show_finish(model_root,false)
                     G14LauncherV3.show_finish(model_root,false)
                 if G14ExteriorV2.show_finish(model_root,enabled_g14):
                     if enabled_g14:
                         G14LauncherV3.show_finish(model_root,true)
-                    status_label.text=("G14 V3 · carrocería y montaje completo" if enabled_g14 else "G14 V1 · comparación de cabina y lanzadores")
+                        G14DamageV4.show_finish(model_root,true)
+                    status_label.text=("G14 V4 · carrocería y montaje completo" if enabled_g14 else "G14 V1 · comparación de cabina y lanzadores")
         "g14_move","g14_deploy","g14_scan","g14_aim","g14_launch","g14_stow","g14_hit":
             _studio_g14_animate(action.trim_prefix("g14_"))
         "g13_scan","g13_aim_air","g13_aim_ground","g13_aim_legacy":
@@ -919,6 +948,29 @@ func _studio_run_animation(action: String) -> void:
                 "attack_air" if action=="g13_attack_air" else "attack_ground")
         _:
             _studio_quick_action(action)
+
+func _studio_g14_orbit_360() -> void:
+    if _role!="sam_mobile" or model_root==null:
+        return
+    if _g14_tween!=null and _g14_tween.is_running():
+        _g14_tween.kill()
+    var start:float=_yaw
+    _g14_tween=create_tween()
+    _g14_tween.tween_method(Callable(self,"_studio_g14_orbit_tick"),
+        start,start+360.0,6.0)
+    _g14_tween.tween_callback(
+        Callable(self,"_studio_g14_orbit_done").bind(start))
+    status_label.text="G14 V4 · rotación 360° para comprobar todos los paneles 3D"
+
+func _studio_g14_orbit_tick(angle:float)->void:
+    if _role!="sam_mobile" or model_root==null:
+        return
+    _yaw=angle
+    model_root.rotation_degrees.y=angle
+    _update_camera()
+
+func _studio_g14_orbit_done(start:float)->void:
+    _studio_g14_orbit_tick(start)
 
 func _studio_g14_animate(kind: String) -> void:
     if _role!="sam_mobile" or model_root==null or not G14SAM.has_model(model_root):
@@ -938,7 +990,7 @@ func _studio_g14_animate(kind: String) -> void:
         0.02,0.98,duration)
     _g14_tween.tween_callback(
         Callable(self,"_studio_g14_done").bind(art,kind))
-    status_label.text="G14 V3 · "+kind+" · rig mecánico 3D (sin cambios en combate)"
+    status_label.text="G14 V4 · "+kind+" · animación 3D (sin cambios en combate)"
 
 func _studio_g14_tick(t:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
@@ -1062,7 +1114,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "sam_mobile": label="G14 · Batería SAM 8×8 · V3 (hidráulicos y cierres en revisión)"
+            "sam_mobile": label="G14 · Batería SAM 8×8 · V4 (daños nativos y revisión 360°)"
             "ew_mobile": label="G15 · Guerra electrónica · V10 (cristales y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -3680,8 +3732,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("sam_mobile",_faction,true,13)
-        if model_root==null or not G14SAM.has_model(model_root) or not G14ExteriorV2.has_model(model_root) or not G14LauncherV3.has_model(model_root):
-            push_error("G14 V3 launcher or underlying native 8x8 modules missing in shared 3D Studio")
+        if model_root==null or not G14SAM.has_model(model_root) or not G14ExteriorV2.has_model(model_root) or not G14LauncherV3.has_model(model_root) or not G14DamageV4.has_model(model_root):
+            push_error("G14 V4 damage or underlying native 8x8 modules missing in shared 3D Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
