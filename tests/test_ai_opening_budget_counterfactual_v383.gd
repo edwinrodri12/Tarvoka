@@ -33,7 +33,8 @@ const FIRST_RESPONSE_CAP := 3
 static func _play_equal_response(start: Dictionary, mirrored: bool,
         response_cap: int = FIRST_RESPONSE_CAP,
         max_half_turns: int = MAX_HALF_TURNS,
-        experimental_options: Dictionary = {}) -> Dictionary:
+        experimental_options: Dictionary = {},
+        ablate_response_piercer_v397: bool = false) -> Dictionary:
     assert(response_cap >= 1 and response_cap <= 8)
     # Opt-in longer forensic horizon only; all prior callers retain
     # the existing 32-half-turn observation window.
@@ -107,6 +108,42 @@ static func _play_equal_response(start: Dictionary, mirrored: bool,
         if int(state["winner"]) != -1:
             reason = "winner"
             break
+        # Research-only ablation: after the responder has LEGALLY bought
+        # a 300-credit Piercer as its fourth action, remove that unit once
+        # before end_turn. Credits, factory production and all previous
+        # authoritative actions remain as in the actual cap4 game.
+        # This is an explicitly impossible GAME intervention: useful only
+        # for distinguishing the physical unit from the cash expense.
+        # Disabled for every existing caller and normal gameplay.
+        if phase == 1 and ablate_response_piercer_v397:
+            assert(response_cap == 4)
+            var surviving: Array = []
+            var removed := 0
+            for member in state["units"]:
+                if str(member["id"]) == "N3" and \
+                        int(member["faction"]) == side:
+                    assert(str(member.get("role","")) == "piercer")
+                    removed += 1
+                else:
+                    surviving.append(member)
+            assert(removed == 1)
+            state = state.duplicate(true)
+            state["units"] = surviving
+            # The optional persistent AI goals cannot reference a unit
+            # which exists ONLY before this laboratory ablation. Purge
+            # N3's assignment while preserving every unrelated goal.
+            # Otherwise SaveCodec correctly rejects a dangling unit_id.
+            if state.has("ai_objectives"):
+                var preserved_goals: Array = []
+                for goal in state["ai_objectives"].get("assignments",[]):
+                    if str(goal.get("unit_id","")) != "N3":
+                        preserved_goals.append(goal)
+                state["ai_objectives"]["assignments"] = preserved_goals
+            assert(Economy.valid(state["economy"],state["terrain"]))
+            assert(Relays.valid(state["control"],state["terrain"]))
+            assert(not Codec.encode(state).is_empty())
+            frames.append(Study._record(state,mirrored,
+                phase,orders,"research_ablate_piercer_v397"))
         if orders == 0:
             empty_phases += 1
         else:
