@@ -4,6 +4,7 @@ extends SceneTree
 # original 6x6 pivots, PBR nonmetal rubber, reversible optical trim.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V1=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const V3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const V10=preload("res://scripts/ui/G15OpticalGlazingV10.gd")
 const V11=preload("res://scripts/ui/G15Detail360V11.gd")
 const OUT="res://build/qa/g15-v11"
@@ -14,6 +15,31 @@ func check(ok:bool,why:String)->void:
     if not ok:
         failures+=1
         push_error("G15 V11 360 REAL 3D QA: "+why)
+
+# A real closed mesh must use every undirected triangle edge exactly twice.
+# Culling is separately checked because Godot WebGL can discard a correctly
+# manifold rear-facing surface when a material is accidentally CULL_BACK.
+func _is_watertight(mesh:Mesh)->bool:
+    if not mesh is ArrayMesh:
+        return false
+    var faces:PackedVector3Array=mesh.get_faces()
+    if faces.size()!=84:
+        return false
+    var edges:Dictionary={}
+    for n in range(0,faces.size(),3):
+        var v:Array[String]=[
+            str(faces[n].snapped(Vector3.ONE*0.00001)),
+            str(faces[n+1].snapped(Vector3.ONE*0.00001)),
+            str(faces[n+2].snapped(Vector3.ONE*0.00001))]
+        for k in range(3):
+            var a:String=v[k]
+            var b:String=v[(k+1)%3]
+            var key:String=(a+"|"+b) if a<b else (b+"|"+a)
+            edges[key]=int(edges.get(key,0))+1
+    for amount in edges.values():
+        if int(amount)!=2:
+            return false
+    return edges.size()>0
 
 func _initialize()->void:
     call_deferred("_run")
@@ -87,6 +113,37 @@ func _run()->void:
                 bool(model.get_meta(V11.FLAG,false)) and
                 bool(model.get_meta("tarvoka_g15_v11_no_gameplay_changes",false)),
                 "V10 intact plus native V11 solely visual")
+            # Structural hull QA: closed physical shells, opaque double-sided
+            # materials on 11 existing exterior panels, zero transparent
+            # steel, independent of faction color or mobile HERO quality.
+            var wall_names:Array=V11.HULL_LIST
+            check(wall_names.size()==11,
+                "eleven physical armored walls defined in 360 closure")
+            var previous:Dictionary=model.get_meta(V11.HULL_MATERIAL_OLD,{})
+            var current:Dictionary=model.get_meta(V11.HULL_MATERIAL_NEW,{})
+            check(previous.size()==11 and current.size()==11,
+                "exact historic wall PBR materials saved for comparison")
+            for label in wall_names:
+                var wall:=model.find_child(str(label),true,false) as MeshInstance3D
+                check(wall!=null,"original physical wall "+str(label))
+                if wall==null:
+                    continue
+                var mat:=wall.material_override as StandardMaterial3D
+                check(mat!=null and
+                    mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                    mat.cull_mode==BaseMaterial3D.CULL_DISABLED and
+                    is_equal_approx(mat.albedo_color.a,1.0),
+                    "opaque double-sided no-see-through PBR wall "+str(label))
+                check(wall.mesh.get_faces().size()>=12,
+                    "real solid triangulated wall not a transparent decal "+str(label))
+                if str(label) in [V3.SHELTER,V3.CAB,V3.ROOF]:
+                    check(_is_watertight(wall.mesh),
+                        "closed manifold front/rear/roof octagonal shell "+str(label))
+            for name in ["G15_V11_CabShelterSealedBulkhead",
+                    "G15_V11_UpperCabSeamBridge"]:
+                var seal:=model.find_child(name,true,false) as MeshInstance3D
+                check(seal!=null and seal.mesh is BoxMesh,
+                    "closed physical thickness bridging 8cm cab gap "+name)
             var assembly:=model.find_child(V11.ASSEMBLY,true,false) as Node3D
             var wheels:=model.find_child(V1.WHEEL_GROUP,true,false) as Node3D
             check(assembly!=null,"front cab sculpt is native node")
@@ -122,6 +179,10 @@ func _run()->void:
                         "LOD-aware shoulder embossed marks "+token)
             check(ring_count==6,"six complete 3D tyre shoulder rigs")
             check(V11.show_finish(model,false),"V11 reversible old finish")
+            for label in wall_names:
+                var old_wall:=model.find_child(str(label),true,false) as MeshInstance3D
+                check(old_wall!=null and old_wall.material_override==previous[label],
+                    "V10 historic wall original material preserved "+str(label))
             for wheel in wheels.get_children():
                 var token:String=str(wheel.name).trim_prefix("G15_Wheel_")
                 var part:=wheel.find_child(V11.TIRE+token,
@@ -129,6 +190,10 @@ func _run()->void:
                 check(part!=null and not part.visible,
                     "V11 wheel shoulder hides for previous comparison")
             check(V11.show_finish(model,true),"V11 restored")
+            for label in wall_names:
+                var latest_wall:=model.find_child(str(label),true,false) as MeshInstance3D
+                check(latest_wall!=null and latest_wall.material_override==current[label],
+                    "V11 repaired opaque material restored "+str(label))
             check(V10.show_finish(model,false),
                 "V10 old glazing comparator still operates")
             var shield:=model.find_child(V11.ASSEMBLY,true,false) as Node3D
@@ -142,6 +207,10 @@ func _run()->void:
                     "V10 historical comparator hides newer V11 tyre shoulder")
             check(V10.show_finish(model,true),
                 "new optical geometry restored without losing 6x6")
+            for label in wall_names:
+                var restored_wall:=model.find_child(str(label),true,false) as MeshInstance3D
+                check(restored_wall!=null and restored_wall.material_override==current[label],
+                    "V10 toggle restores all eleven solid V11 walls "+str(label))
             check(Models.pose_model("ew_mobile",model,"move",0.52),
                 "six wheels still move")
             check(Models.pose_model("ew_mobile",model,"deploy",0.5),
@@ -188,7 +257,7 @@ func _run()->void:
     stage.queue_free()
     await process_frame
     if failures==0:
-        print("PASS G15 V11 360 NATIVE: six matte rubber shoulders, two real front wipers, 8 factions, 2 LODs, 32 actual Godot views (360-degree orbit)")
+        print("PASS G15 V11 360 NATIVE: eleven opaque double-sided armor walls, three watertight octagons, solid cab bulkheads, six matte rubber shoulders, two real front wipers, 8 factions, 2 LODs, 32 Godot views")
     else:
         print("FAIL G15 V11 360 NATIVE: %d problems" % failures)
     quit(1 if failures>0 else 0)
