@@ -4,6 +4,7 @@ extends SceneTree
 # Eight OFFICIAL faction palettes x true HERO13 / Android8 model instances.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
+const V68=preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
 const V66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const V65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const V18=preload("res://scripts/ui/G13AutocannonSculptV18.gd")
@@ -30,6 +31,8 @@ func _run()->void:
             check(model!=null,"existing G13 physical model spawns")
             if model==null:
                 continue
+            check(V68.show_finish(model,false),
+                "V68 ejection overlay temporarily disabled for exact V67 QA")
             check(bool(model.get_meta(V65.FLAG,false)) and
                 bool(model.get_meta(V66.FLAG,false)) and
                 bool(model.get_meta(V67.FLAG,false)),
@@ -142,6 +145,8 @@ func _run()->void:
                 check(part.mesh==after_meshes[name] and
                     part.material_override==new_coats[name],
                     "same instance renders new machined breech again")
+            check(V68.show_finish(model,true),
+                "latest V68 real ejection and cooling details restored")
             model.free()
     check(faction_colors.size()==8,
         "original eight canonical faction colors distinct")
