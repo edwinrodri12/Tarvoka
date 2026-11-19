@@ -4,7 +4,6 @@ on:
     paths:
       - 'scripts/tools/AssetOrbitCamera.gd'
       - 'scripts/tools/AssetInspectionPreview.gd'
-      - 'scripts/tools/AssetInspectionPreview.gd'
       - 'scenes/tools/AssetInspectionSmoke.tscn'
       - 'tests/test_asset_orbit_camera.gd'
       - '.github/workflows/asset-orbit-camera.yml'
@@ -12,6 +11,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/tools/AssetOrbitCamera.gd'
+      - 'scripts/tools/AssetInspectionPreview.gd'
       - 'scenes/tools/AssetInspectionSmoke.tscn'
       - 'tests/test_asset_orbit_camera.gd'
       - '.github/workflows/asset-orbit-camera.yml'
