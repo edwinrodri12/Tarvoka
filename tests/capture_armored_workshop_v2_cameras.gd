@@ -142,8 +142,8 @@ func _capture_view(viewport:SubViewport,camera:Camera3D,
     var max_x:int=0
     var min_y:int=720
     var max_y:int=0
-    for py in range(32,688,8):
-        for px in range(32,928,8):
+    for py in range(0,720,8):
+        for px in range(0,960,8):
             var pixel:Color=captured.get_pixel(px,py)
             var difference:float=absf(pixel.r-background.r)+\
                 absf(pixel.g-background.g)+absf(pixel.b-background.b)
@@ -155,6 +155,10 @@ func _capture_view(viewport:SubViewport,camera:Camera3D,
                 max_y=maxi(max_y,py)
     assert(foreground_samples>12,
         "Blank, fully clipped or missing 3D geometry in "+filename)
+    # Check actual outer 24px frame, not just center of the PNG.
+    # A forgotten camera orientation or an overlarge LOD must fail QA.
+    assert(min_x>=24 and max_x<=936 and min_y>=24 and max_y<=696,
+        "Workshop model is clipped by the camera in "+filename)
     var output:String=OUTPUT+"/"+filename
     var saved:Error=captured.save_png(output)
     assert(saved==OK,"Could not save "+filename)
