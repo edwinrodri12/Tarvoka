@@ -64,7 +64,7 @@ func _verify() -> void:
                         assert(mm!=null and mm.mesh!=null)
                         assert(mm.instance_count>0)
                         assert(draw.material_override is StandardMaterial3D)
-                        var mat:StandardMaterial3D=draw.material_override
+                        var mat:StandardMaterial3D=draw.material_override as StandardMaterial3D
                         assert(mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED)
                         batches_found+=1
                         boxes_found+=mm.instance_count
@@ -77,8 +77,7 @@ func _verify() -> void:
                         "Lote_faction",true,false) as MultiMeshInstance3D
                     assert(faction_batch!=null,
                         "Faction plate missing at mobile distance")
-                    var faction_mat:StandardMaterial3D=\
-                        faction_batch.material_override as StandardMaterial3D
+                    var faction_mat:StandardMaterial3D=faction_batch.material_override as StandardMaterial3D
                     var expected:Color=Style.faction_color(faction) if faction>=0 else Hero.NEUTRAL
                     assert(faction_mat.albedo_color.is_equal_approx(expected))
                     if damage==4:
