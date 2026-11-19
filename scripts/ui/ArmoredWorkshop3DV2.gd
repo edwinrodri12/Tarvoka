@@ -197,6 +197,16 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
                         Vector3(x+float(side)*0.12,1.76+wall_h*0.5,
                             z+float(seam)*depth*0.148),
                         Vector3(0.07,wall_h-0.07,0.055),ARMOR_DARK,0.76,0.49)
+        # End caps close the last 3.7% of depth near front/rear corners.
+        # Without these the three siding panels only span 92.6% of the wall,
+        # leaving narrow sightlines behind the structural pillars.
+        for end_side in [-1,1]:
+            _box(parent,
+                "RemateEsquinaLateral_%d_%d" % [side,end_side],
+                Vector3(x,1.76+wall_h*0.5,
+                    float(end_side)*depth*0.467),
+                Vector3(0.20,wall_h+0.18,depth*0.082),
+                ARMOR_DARK,0.61,0.59)
         # Physical vertical joint seals bridge all three panels.
         for seam in range(2):
             var join_z:float=-depth*0.155+float(seam)*depth*0.31
