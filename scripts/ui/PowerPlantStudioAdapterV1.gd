@@ -3,7 +3,7 @@ class_name TarvokaPowerPlantStudioAdapterV1
 
 # Preserve the four established military building models and civil cities.
 # Add one new independent selectable native Power Plant, ART ONLY.
-const Plant=preload("res://scripts/ui/PowerPlant3DV1.gd")
+const Plant=preload("res://scripts/ui/PowerPlant3DV2.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const POWER_BUILDING_INDEX: int=5
 var plant_controls: VBoxContainer
@@ -20,7 +20,7 @@ func _ready() -> void:
     if building_picker.item_count!=POWER_BUILDING_INDEX:
         push_error("TARVOKA Central: building picker changed; preserve approved entries")
         return
-    building_picker.add_item("Central eléctrica · V1 (diseño 3D)")
+    building_picker.add_item("Central eléctrica · V2 (diseño 3D)")
     building_picker.set_item_metadata(POWER_BUILDING_INDEX,"power_plant")
     _install_plant_controls()
 
@@ -31,7 +31,7 @@ func _install_plant_controls() -> void:
     plant_controls.add_theme_constant_override("separation",6)
     building_controls.add_child(plant_controls)
     var heading:=Label.new()
-    heading.text="CENTRAL ELÉCTRICA V1 · ARTE NATIVO EN DESARROLLO"
+    heading.text="CENTRAL ELÉCTRICA V2 · CONEXIONES INDUSTRIALES 3D"
     heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     plant_controls.add_child(heading)
     plant_level=OptionButton.new()
@@ -128,10 +128,10 @@ func _display_power_plant() -> void:
     _update_camera()
     _update_details()
     _refresh_unified_studio_navigation()
-    plant_info.text="N%d · D%d · %d mallas · diseño V1, pendiente acabado final" % [
+    plant_info.text="N%d · D%d · %d mallas · diseño V2, pendiente acabado final" % [
         level,damage,Plant.mesh_count(model_root)]
     if studio_overview_label!=null:
-        studio_overview_label.text="EDIFICIOS · CENTRAL ELÉCTRICA V1 EN DISEÑO"
+        studio_overview_label.text="EDIFICIOS · CENTRAL ELÉCTRICA V2 EN DISEÑO"
 
 func _update_camera() -> void:
     if _role=="power_plant" and camera!=null and plant_level!=null:
@@ -154,7 +154,7 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="power_plant":
         if studio_overview_label!=null:
-            studio_overview_label.text="CENTRAL ELÉCTRICA · V1 · EDIFICIO EN DISEÑO"
+            studio_overview_label.text="CENTRAL ELÉCTRICA · V2 · EDIFICIO EN DISEÑO"
         if status_label!=null and plant_level!=null:
             status_label.text="Central eléctrica N%d · D%d · arte 3D, sin energía programada" % [
                 plant_level.selected+1,plant_damage.selected]
