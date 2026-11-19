@@ -83,6 +83,21 @@ jobs:
                   JavaScriptBridge.eval("window.__cityQaStage='hidden-%s';" % key)
                   await get_tree().create_timer(3.0).timeout
                   _model.visible=true
+              # Same metropolis geometry, three visibly distinct identities.
+              for faction in [-1,3,7]:
+                  var key: String="color-%d" % faction
+                  _tier.select(2)
+                  _damage.select(0)
+                  _lod.select(2)
+                  _faction.select(faction+1)
+                  _rebuild()
+                  _orient_camera()
+                  if _model==null:
+                      push_error("V44 COLOR BROWSER: missing metropolis "+key)
+                      return
+                  await get_tree().create_timer(2.0).timeout
+                  JavaScriptBridge.eval("window.__cityQaStage='%s';" % key)
+                  await get_tree().create_timer(3.0).timeout
               JavaScriptBridge.eval("window.__cityQaStage='done';")
           GDSCRIPT
           sed -i 's|res://scripts/ui/CivilianCityDesignStudioV43.gd|res://scripts/ui/CivilianCityWebVisibilityProbe.gd|' scenes/CivilianCityDesignStudioV43.tscn
@@ -124,6 +139,18 @@ jobs:
           html/experimental_virtual_keyboard=false
           progressive_web_app/enabled=false
           PRESET
+      - name: Verify V44 neutral slate and all 8 faction palettes in native Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s tests/test_city_faction_identity_v44.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_city_faction_identity_v44.gd \
+            2>&1 | tee /tmp/city-faction-v44-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/city-faction-v44-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS CITY V44 FACTION IDENTITY:' /tmp/city-faction-v44-native.log
       - name: Export actual native city model to WebGL2 browser
         shell: bash
         run: |
@@ -189,6 +216,33 @@ jobs:
               }
               results.push({tier,lod,changed,strong});
               console.log('CITY CHROME ACTUAL PIXELS',JSON.stringify(results[results.length-1]));
+            }
+            const palettes={};
+            for (const faction of [-1,3,7]){
+              const key='color-'+faction;
+              await page.waitForFunction(key=>window.__cityQaStage===key,key,{timeout:20000});
+              await page.waitForTimeout(450);
+              palettes[faction]=PNG.sync.read(await page.screenshot({
+                path:'artifacts/city-v44-metropolis-faction-'+faction+'.png'}));
+            }
+            const diff=(left,right)=>{
+              let differing=0,red=0,blue=0,green=0;
+              const a=palettes[left],b=palettes[right];
+              for(let y=110;y<a.height-75;y+=3)for(let x=140;x<a.width-140;x+=3){
+                const o=(y*a.width+x)*4;
+                const dr=Math.abs(a.data[o]-b.data[o]);
+                const dg=Math.abs(a.data[o+1]-b.data[o+1]);
+                const db=Math.abs(a.data[o+2]-b.data[o+2]);
+                if(dr+dg+db>28)differing++;
+                red+=dr;green+=dg;blue+=db;
+              }
+              return {differing,red,green,blue};
+            };
+            const neutralVsYellow=diff(-1,3),neutralVsOnyx=diff(-1,7);
+            console.log('CITY V44 CHROME COLOR NEUTRAL VS YELLOW',JSON.stringify(neutralVsYellow));
+            console.log('CITY V44 CHROME COLOR NEUTRAL VS ONYX',JSON.stringify(neutralVsOnyx));
+            if(neutralVsYellow.differing<50 || neutralVsOnyx.differing<50){
+              throw Error('V44 neutral is not visibly distinct from Solar/Onyx');
             }
             await browser.close();
             const blank=results.filter(r=>r.changed<250||r.strong<60);

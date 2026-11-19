@@ -152,6 +152,11 @@ jobs:
           test -s scripts/ui/CivilianCityRoofJoinV41.gd
           test -s scripts/ui/CivilianCityArtReviewV42.gd
           test -s scripts/ui/CivilianCityArtEvidenceV43.gd
+          # The nine city palettes retain approved faction IDs and the
+          # revised cool slate neutral; no official gameplay color is edited.
+          test -s scripts/ui/CivilianCityFactionIdentityV44.gd
+          test -s tests/test_city_faction_identity_v44.gd
+          grep -F 'NEUTRAL_SLATE=Color("#70838B")' scripts/ui/CivilianCityFactionIdentityV44.gd
           test -s scripts/ui/CivilianCityDesignStudioV43.gd
           # Block stale city exports that put 200 camera buttons over a
           # zero-height WebGL framebuffer in the public browser studio.
@@ -219,6 +224,15 @@ jobs:
         run: |
           set -euo pipefail
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit
+          # Hard-gate all faction materials at 3 city tiers + 3 LOD levels
+          # before publishing the new V44 identity enhancement.
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_city_faction_identity_v44.gd \
+            2>&1 | tee /tmp/city-color-v44-release.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/city-color-v44-release.log; then
+            echo "V44 city faction palette regression failed"; exit 1
+          fi
+          grep -F 'PASS CITY V44 FACTION IDENTITY:' /tmp/city-color-v44-release.log
           mkdir -p build/city-preview
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
             --export-release 'Web Studio' build/city-preview/index.html

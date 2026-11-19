@@ -19,6 +19,11 @@ on:
       - "scripts/ui/G13ContinuousTreadV60.gd"
       - "scripts/ui/G13ProductionWheelArmorV61.gd"
       - "scripts/ui/G13OpticalGlazingV62.gd"
+      - "scripts/ui/G13FactionReadabilityV63.gd"
+      - "scripts/ui/G13ArmorEdgeFinishV64.gd"
+      - "scripts/ui/G13TurretRingFinishV65.gd"
+      - "scripts/ui/G13CannonMountFinishV66.gd"
+      - "scripts/ui/G13BreechFeedFinishV67.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -155,6 +160,11 @@ on:
       - "tests/test_g13_v61_open_hub_armor.gd"
       - "tests/test_g13_v61_real_bastion_comparison.gd"
       - "tests/test_g13_v62_optical_glazing.gd"
+      - "tests/test_g13_v63_faction_readability.gd"
+      - "tests/test_g13_v64_armor_edge_finish.gd"
+      - "tests/test_g13_v65_turret_ring_finish.gd"
+      - "tests/test_g13_v66_cannon_mount_finish.gd"
+      - "tests/test_g13_v67_breech_feed_finish.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -343,6 +353,16 @@ jobs:
           cp hq-android-v15/tests/test_g13_v61_real_bastion_comparison.gd tests/test_g13_v61_real_bastion_comparison.gd
           test -s hq-android-v15/tests/test_g13_v62_optical_glazing.gd
           cp hq-android-v15/tests/test_g13_v62_optical_glazing.gd tests/test_g13_v62_optical_glazing.gd
+          test -s hq-android-v15/tests/test_g13_v63_faction_readability.gd
+          cp hq-android-v15/tests/test_g13_v63_faction_readability.gd tests/test_g13_v63_faction_readability.gd
+          test -s hq-android-v15/tests/test_g13_v64_armor_edge_finish.gd
+          cp hq-android-v15/tests/test_g13_v64_armor_edge_finish.gd tests/test_g13_v64_armor_edge_finish.gd
+          test -s hq-android-v15/tests/test_g13_v65_turret_ring_finish.gd
+          cp hq-android-v15/tests/test_g13_v65_turret_ring_finish.gd tests/test_g13_v65_turret_ring_finish.gd
+          test -s hq-android-v15/tests/test_g13_v66_cannon_mount_finish.gd
+          cp hq-android-v15/tests/test_g13_v66_cannon_mount_finish.gd tests/test_g13_v66_cannon_mount_finish.gd
+          test -s hq-android-v15/tests/test_g13_v67_breech_feed_finish.gd
+          cp hq-android-v15/tests/test_g13_v67_breech_feed_finish.gd tests/test_g13_v67_breech_feed_finish.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -578,7 +598,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityArchitectureV8 CivilianCityFinishV9 CivilianCityGroundFrontV10 CivilianCityStructuralRuinsV11 CivilianCityDamageFinishV12 CivilianCityCohesionV13 CivilianCitySilhouetteV14 CivilianCityIdentityV15 CivilianCityMaterialJointsV16 CivilianCityRearFinishV17 CivilianCitySideJointsV18 CivilianCityUrbanCohesionV19 CivilianCityExteriorFinishV20 CivilianCityArchitecturalDetailV21 CivilianCityCohesionV22 CivilianCitySilhouetteV23 CivilianCityStructuralContactsV24 CivilianCitySurfaceContinuityV25 CivilianCityWeatherFinishV26 CivilianCityStreetInterfaceV27 CivilianCityFourElevationV28 CivilianCityArchitecturalPolishV29 CivilianCityTierProportionsV30 CivilianCityTacticalReadabilityV31 CivilianCitySurfaceReviewV32 CivilianCityMaterialContinuityV33 CivilianCityPublicRealmV34 CivilianCityFourSideFinishV35 CivilianCityDamageContinuityV36 CivilianCityTacticalFinishV37 CivilianCityVolumeBalanceV38 CivilianCityFinishAuditV39 CivilianCityFinalFitV40 CivilianCityRoofJoinV41 CivilianCityArtReviewV42 CivilianCityArtEvidenceV43 CivilianCityStudioAdapter; do
+          for name in CivilianCity3DV1 CivilianCityFacadeV2 CivilianCityPublicSpaceV3 CivilianCityTacticalLOD4 CivilianCityArchitectureV8 CivilianCityFinishV9 CivilianCityGroundFrontV10 CivilianCityStructuralRuinsV11 CivilianCityDamageFinishV12 CivilianCityCohesionV13 CivilianCitySilhouetteV14 CivilianCityIdentityV15 CivilianCityMaterialJointsV16 CivilianCityRearFinishV17 CivilianCitySideJointsV18 CivilianCityUrbanCohesionV19 CivilianCityExteriorFinishV20 CivilianCityArchitecturalDetailV21 CivilianCityCohesionV22 CivilianCitySilhouetteV23 CivilianCityStructuralContactsV24 CivilianCitySurfaceContinuityV25 CivilianCityWeatherFinishV26 CivilianCityStreetInterfaceV27 CivilianCityFourElevationV28 CivilianCityArchitecturalPolishV29 CivilianCityTierProportionsV30 CivilianCityTacticalReadabilityV31 CivilianCitySurfaceReviewV32 CivilianCityMaterialContinuityV33 CivilianCityPublicRealmV34 CivilianCityFourSideFinishV35 CivilianCityDamageContinuityV36 CivilianCityTacticalFinishV37 CivilianCityVolumeBalanceV38 CivilianCityFinishAuditV39 CivilianCityFinalFitV40 CivilianCityRoofJoinV41 CivilianCityArtReviewV42 CivilianCityArtEvidenceV43 CivilianCityFactionIdentityV44 CivilianCityStudioAdapter; do
             test -s "city-v43-unified-source/scripts/ui/$name.gd"
             cp "city-v43-unified-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
@@ -632,10 +652,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in PowerPlant3DV1 PowerPlantStudioAdapterV1 PowerPlantDesignStudioV1; do
+          for name in PowerPlant3DV1 PowerPlant3DV2 PowerPlantStudioAdapterV1 PowerPlantDesignStudioV1; do
             test -s "power-v1-source/scripts/ui/$name.gd"
             cp "power-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
+          # V2 is an additive geometry pass selected by both existing studio
+          # interfaces. The V1 native base is preserved for comparison.
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantStudioAdapterV1.gd
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantDesignStudioV1.gd
+          test -s power-v1-source/tests/test_power_plant_v2_native.gd
+          cp power-v1-source/tests/test_power_plant_v2_native.gd tests/
           test -s power-v1-source/scenes/PowerPlantDesignStudioV1.tscn
           cp power-v1-source/scenes/PowerPlantDesignStudioV1.tscn scenes/
           grep -F 'extends "res://scripts/ui/CivilianCityStudioAdapter.gd"' scripts/ui/PowerPlantStudioAdapterV1.gd
@@ -1262,6 +1288,61 @@ jobs:
             echo "G13 V62 real reflective cab glass failed"; exit 1
           fi
           grep -F 'PASS G13 V62 OPTICAL GLAZING:' /tmp/g13-v62-optical-glass.log
+          # V63 restores visibility of four physically obscured side badges
+          # and sharpens official faction enamel without increasing draw calls.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v63_faction_readability.gd \
+            2>&1 | tee /tmp/g13-v63-faction-color.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v63-faction-color.log; then
+            echo "G13 V63 real faction-colored plates failed"; exit 1
+          fi
+          grep -F 'PASS G13 V63 FACTION READABILITY:' /tmp/g13-v63-faction-color.log
+          # V64 genuinely extrudes old side shield and hatch facets without
+          # new draw nodes; verify LOD8, LOD13 and eight faction identities.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v64_armor_edge_finish.gd \
+            2>&1 | tee /tmp/g13-v64-faceted-steel.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v64-faceted-steel.log; then
+            echo "G13 V64 real beveled steel edge geometry failed"; exit 1
+          fi
+          grep -F 'PASS G13 V64 STEEL EDGE FINISH:' /tmp/g13-v64-faceted-steel.log
+          # V65 uses the exact V44 rotating joint GPU batch, now with 60
+          # real closed bevel triangles per 12-segment ring, no new nodes.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v65_turret_ring_finish.gd \
+            2>&1 | tee /tmp/g13-v65-turret-ring.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v65-turret-ring.log; then
+            echo "G13 V65 real rotating turret ring geometry failed"; exit 1
+          fi
+          grep -F 'PASS G13 V65 TURRET RING:' /tmp/g13-v65-turret-ring.log
+          # V66: truly hollow trunnion collars, real barrel sleeve
+          # bevels, preserved two gun pitch mounts; no new draw nodes.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v66_cannon_mount_finish.gd \
+            2>&1 | tee /tmp/g13-v66-articulated-guns.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v66-articulated-guns.log; then
+            echo "G13 V66 articulated hollow cannon mounts failed"; exit 1
+          fi
+          grep -F 'PASS G13 V66 REAL GUN MOUNTS:' /tmp/g13-v66-articulated-guns.log
+          # V67 is true closed/recessed breech and ammunition-feed metalwork
+          # inside the existing V18 hero or V31 tactical pitch-pivot meshes.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v67_breech_feed_finish.gd \
+            2>&1 | tee /tmp/g13-v67-breech-feed.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v67-breech-feed.log; then
+            echo "G13 V67 real breech/feed plate art validation failed"; exit 1
+          fi
+          grep -F 'PASS G13 V67 REAL BREECH AND FEED:' /tmp/g13-v67-breech-feed.log
           # V61 actual P06/G13 identical-light and wheel-size studio proof.
           # The V61 standalone workflow hard-gates all nine screenshots.
           if [[ -s tests/test_g13_v61_real_bastion_comparison.gd ]]; then

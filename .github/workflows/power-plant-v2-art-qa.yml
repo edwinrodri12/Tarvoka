@@ -1,0 +1,57 @@
+name: TARVOKA Central Electrica V2 native art
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/power-plant-v2-art-qa.yml
+permissions:
+  contents: read
+jobs:
+  native-art:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out isolated power plant art
+        uses: actions/checkout@v4
+        with:
+          ref: feat/power-plant-native-3d-v1-20261118
+      - name: Install Godot 4.3 native engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/power-godot.zip
+          unzip -oq /tmp/power-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Validate genuine 3D V2 model and 135 native scene combinations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/PowerPlant3DV1.gd
+          test -s scripts/ui/PowerPlant3DV2.gd
+          test -s scripts/ui/PowerPlantStudioAdapterV1.gd
+          test -s scenes/PowerPlantDesignStudioV1.tscn
+          test -s tests/test_power_plant_v2_native.gd
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantStudioAdapterV1.gd
+          grep -F 'PowerPlant3DV2.gd' scripts/ui/PowerPlantDesignStudioV1.gd
+          # The art-only test does not require legacy studio inheritance.
+          # Omit legacy adapters from this disposable checkout so unrelated
+          # Godot script errors cannot mask V2 geometry assertions.
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd scripts/ui/PowerPlantStudioAdapterV1.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/power-v2-import.log
+          # A real OpenGL renderer is required for mesh RID surface counts.
+          # Godot --headless uses DummyRenderingServer which generates
+          # false-positive "Parameter m is null" for 3D mesh allocations.
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_power_plant_v2_native.gd \
+            2>&1 | tee /tmp/power-v2-model.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/power-v2-model.log; then
+            exit 1
+          fi
+          grep -F 'PASS POWER PLANT V2:' /tmp/power-v2-model.log
