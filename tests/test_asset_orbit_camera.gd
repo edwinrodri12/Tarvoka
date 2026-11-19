@@ -189,6 +189,50 @@ func _run() -> void:
         push_error("Selected asset could not be reframed")
         quit(1)
         return
+    # Runtime PackedScene loading supports production assets without APK rebuild.
+    var packed_model := PackedScene.new()
+    var packed_root := MeshInstance3D.new()
+    packed_root.mesh = BoxMesh.new()
+    packed_root.mesh.size = Vector3(3.0, 2.0, 5.0)
+    if packed_model.pack(packed_root) != OK:
+        push_error("Could not create a packed test model")
+        quit(1)
+        return
+    packed_root.free()
+    if not scene.load_asset_scene(packed_model):
+        push_error("Valid PackedScene failed to load")
+        quit(1)
+        return
+    var loaded_path: NodePath = scene.asset_path
+    var loaded_node: Node3D = scene.get_node(loaded_path)
+    if loaded_node == null or not rig.target.is_equal_approx(loaded_node.global_position):
+        push_error("Loaded PackedScene was not framed")
+        quit(1)
+        return
+    var empty_packed := PackedScene.new()
+    var empty_root := Node3D.new()
+    if empty_packed.pack(empty_root) != OK:
+        push_error("Could not create empty packed test scene")
+        quit(1)
+        return
+    empty_root.free()
+    if scene.load_asset_scene(empty_packed) or scene.asset_path != loaded_path:
+        push_error("Empty PackedScene replaced a valid selection")
+        quit(1)
+        return
+    if not is_instance_valid(loaded_node) or not rig.target.is_equal_approx(loaded_node.global_position):
+        push_error("Rejected PackedScene destroyed or reframed active asset")
+        quit(1)
+        return
+    if not scene.load_asset_scene(packed_model):
+        push_error("Replacement PackedScene failed to load")
+        quit(1)
+        return
+    await process_frame
+    if is_instance_valid(loaded_node):
+        push_error("Previous dynamically loaded model was not released")
+        quit(1)
+        return
     # Let the rendering server release mesh RIDs before SceneTree shutdown.
     # Godot 4.3 dummy renderer can otherwise report mesh_get_surface_count(null)
     # after a successful assertion run, causing CI to fail on engine errors.
