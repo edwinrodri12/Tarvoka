@@ -1,0 +1,54 @@
+name: TARVOKA Armored Workshop V1 native art
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/armored-workshop-v1-art-qa.yml
+permissions:
+  contents: read
+jobs:
+  armored-workshop-3d:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out fixed armored workshop art branch
+        uses: actions/checkout@v4
+        with:
+          ref: art/armored-workshop-v1-20261119
+          persist-credentials: false
+      - name: Install native Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" \
+            -o /tmp/workshop-godot.zip
+          unzip -oq /tmp/workshop-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Verify 135 native 3D workshop variants and mobile camp isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshop3DV1.gd
+          test -s scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          test -s scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          test -s scenes/ArmoredWorkshopDesignStudioV1.tscn
+          test -s tests/test_armored_workshop_v1_native.gd
+          grep -F 'is_mobile_camp",false' scripts/ui/ArmoredWorkshop3DV1.gd
+          grep -F 'is_supply_depot",false' scripts/ui/ArmoredWorkshop3DV1.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/workshop-godot-import.log
+          # Godot's headless dummy mesh renderer reports false null mesh RIDs;
+          # run the real OpenGL compatibility renderer under virtual X.
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_v1_native.gd \
+            2>&1 | tee /tmp/workshop-native-3d.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-native-3d.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP V1 native 3D:' /tmp/workshop-native-3d.log
