@@ -38,6 +38,22 @@ func _initialize() -> void:
 	report = Audit.inspect(root, 48)
 	assert(report["triangles"] == 24)
 	assert(report["mesh_nodes"] == 3)
+	# Indexed geometry must count index triangles, not the vertex buffer size.
+	var indexed_mesh := ArrayMesh.new()
+	var indexed_arrays := []
+	indexed_arrays.resize(Mesh.ARRAY_MAX)
+	indexed_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3.RIGHT, Vector3(1, 1, 0), Vector3.UP])
+	indexed_arrays[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 0, 2, 3])
+	indexed_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, indexed_arrays)
+	var indexed_node := MeshInstance3D.new()
+	indexed_node.mesh = indexed_mesh
+	root.add_child(indexed_node)
+	report = Audit.inspect(root, 26)
+	assert(report["triangles"] == 26)
+	assert(report["instances"] == 4)
+	assert(report["warnings"].is_empty())
+	report = Audit.inspect(root, 25)
+	assert(report["warnings"].size() == 1)
 	assert(Audit.inspect(null)["warnings"].size() == 1)
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
