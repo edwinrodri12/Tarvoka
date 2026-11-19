@@ -15,6 +15,8 @@ var workshop_faction:OptionButton
 var workshop_damage:OptionButton
 var workshop_info:Label
 var _workshop_yaw:float=145.0
+var _workshop_elevation:float=39.0
+var _workshop_zoom:float=1.0
 
 func _ready() -> void:
     super._ready()
@@ -67,13 +69,24 @@ func _install_workshop_controls() -> void:
         selector.item_selected.connect(_on_workshop_change)
     var camera_row:=HFlowContainer.new()
     workshop_controls.add_child(camera_row)
+    # Same world-space convention as the standalone camera: front = -Z.
     for preset in [
-            ["ISOMÉTRICA",145.0],["FRENTE",0.0],["LATERAL",90.0],
-            ["POSTERIOR",180.0],["OTRO LADO",270.0],["AZOTEA",45.0]]:
+            ["ISOMÉTRICA",145.0,39.0],["FRENTE",180.0,19.0],
+            ["POSTERIOR",0.0,19.0],["LATERAL",90.0,22.0],
+            ["COSTADO",270.0,22.0],["TECHO",37.0,78.0]]:
         var button:=Button.new()
         button.text=str(preset[0])
-        button.pressed.connect(Callable(self,"_workshop_angle").bind(float(preset[1])))
+        button.pressed.connect(Callable(self,"_workshop_angle").bind(
+            float(preset[1]),float(preset[2])))
         camera_row.add_child(button)
+    var zoom_row:=HBoxContainer.new()
+    workshop_controls.add_child(zoom_row)
+    for action in [["ALEJAR",1.18],["ACERCAR",0.85],["ZOOM 100%",0.0]]:
+        var zoom_button:=Button.new()
+        zoom_button.text=str(action[0])
+        zoom_button.pressed.connect(Callable(self,"_workshop_adjust_zoom").bind(
+            float(action[1])))
+        zoom_row.add_child(zoom_button)
     workshop_info=Label.new()
     workshop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     workshop_controls.add_child(workshop_info)
@@ -82,8 +95,15 @@ func _on_workshop_change(_index:int) -> void:
     if _role=="armored_workshop":
         _display_workshop()
 
-func _workshop_angle(degrees:float) -> void:
+func _workshop_angle(degrees:float,tilt:float=39.0) -> void:
     _workshop_yaw=fposmod(degrees,360.0)
+    _workshop_elevation=tilt
+    if _role=="armored_workshop":
+        _update_camera()
+
+func _workshop_adjust_zoom(factor:float) -> void:
+    _workshop_zoom=1.0 if factor==0.0 else clampf(
+        _workshop_zoom*factor,0.55,2.2)
     if _role=="armored_workshop":
         _update_camera()
 
@@ -156,11 +176,11 @@ func _update_camera() -> void:
     if _role=="armored_workshop" and camera!=null and workshop_level!=null:
         var level:int=workshop_level.selected+1
         var yaw:float=deg_to_rad(_workshop_yaw)
-        var elevation:float=deg_to_rad(38.0)
+        var elevation:float=deg_to_rad(_workshop_elevation)
         var distance:float=36.0 if level==1 else 45.0 if level==2 else 56.0
         var focus:=Vector3(0,2.2 if level==1 else 3.0 if level==2 else 3.5,0)
         camera.projection=Camera3D.PROJECTION_ORTHOGONAL
-        camera.size=22.0 if level==1 else 30.0 if level==2 else 39.0
+        camera.size=(22.0 if level==1 else 30.0 if level==2 else 39.0)*_workshop_zoom
         camera.position=focus+Vector3(
             sin(yaw)*cos(elevation)*distance,
             sin(elevation)*distance,
