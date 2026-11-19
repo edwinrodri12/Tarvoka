@@ -112,6 +112,7 @@ const G13RingV65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const G13MountV66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const G13FeedV67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const G13EjectorV68=preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
+const G13MuzzleV69=preload("res://scripts/ui/G13MuzzleMountFinishV69.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -245,7 +246,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V68 · expulsión y cañones mecanizados")
+        role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
@@ -1850,6 +1851,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v69_show_muzzle(enabled:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V69: bocachas y anclajes todavía no cargados."
+        return
+    if G13MuzzleV69.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V69 · bocachas abiertas, cañones escalonados y pernos exteriores"
+                if enabled else
+                "G13 V68 · comparación con bocachas y cañones anteriores")
+
 func _g13_v68_show_ejection(enabled:bool)->void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -1857,7 +1872,12 @@ func _g13_v68_show_ejection(enabled:bool)->void:
         if status_label!=null:
             status_label.text="G13 V68: guías de expulsión sin cargar."
         return
+    # V69 replaces the same gun surfaces first refinished by V68.
+    if bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+        G13MuzzleV69.show_finish(model_root,false)
     if G13EjectorV68.show_finish(model_root,enabled):
+        if enabled and bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+            G13MuzzleV69.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V68 · guías de casquillos, nervios biselados y acero mecanizado"
@@ -1871,6 +1891,9 @@ func _g13_v67_show_feed(enabled:bool)->void:
         if status_label!=null:
             status_label.text="G13 V67: recámara y tapas de alimentación sin cargar."
         return
+    # V69 changes the twin gun steel; remove the latest pass first.
+    if bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+        G13MuzzleV69.show_finish(model_root,false)
     # V68 also owns the top ejection covers and Android moving cheek.
     # Remove that coat before showing the previous V67 geometry.
     if bool(model_root.get_meta(G13EjectorV68.FLAG,false)):
@@ -1878,6 +1901,8 @@ func _g13_v67_show_feed(enabled:bool)->void:
     if G13FeedV67.show_finish(model_root,enabled):
         if enabled and bool(model_root.get_meta(G13EjectorV68.FLAG,false)):
             G13EjectorV68.show_finish(model_root,true)
+        if enabled and bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+            G13MuzzleV69.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V67 · recámara y registros de alimentación biselados"
@@ -1891,6 +1916,9 @@ func _g13_v66_show_mount(enabled:bool)->void:
         if status_label!=null:
             status_label.text="G13 V66: soportes de cañones no cargados."
         return
+    # V69, V68 and V67 layered materials must be undone in reverse.
+    if bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+        G13MuzzleV69.show_finish(model_root,false)
     # V68 and V67 share the existing moving cheek; compare V66 only
     # after removing both later layers in reverse build order.
     if bool(model_root.get_meta(G13EjectorV68.FLAG,false)):
@@ -1902,6 +1930,8 @@ func _g13_v66_show_mount(enabled:bool)->void:
             G13FeedV67.show_finish(model_root,true)
         if enabled and bool(model_root.get_meta(G13EjectorV68.FLAG,false)):
             G13EjectorV68.show_finish(model_root,true)
+        if enabled and bool(model_root.get_meta(G13MuzzleV69.FLAG,false)):
+            G13MuzzleV69.show_finish(model_root,true)
         if status_label!=null:
             status_label.text=(
                 "G13 V66 · rodamientos abiertos y collares de acero mecanizado"
@@ -2140,7 +2170,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V68 · EXPULSIÓN Y CAÑONES MECANIZADOS",14)
+        "G13 V69 · BOCACHAS Y ANCLAJES MECANIZADOS",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -2186,6 +2216,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V69 · Bocachas y soportes exteriores 3D",
+        func(): _g13_v69_show_muzzle(true),
+        "V69 · Comparar bocachas anteriores",
+        func(): _g13_v69_show_muzzle(false))
     _add_paired(g13_controls,"V68 · Guías de expulsión y acero de cañones",
         func(): _g13_v68_show_ejection(true),
         "V68 · Comparar acabado anterior",

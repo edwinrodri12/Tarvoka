@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V67=preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
 const V68=preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
+const V69=preload("res://scripts/ui/G13MuzzleMountFinishV69.gd")
 const V66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const V65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const V18=preload("res://scripts/ui/G13AutocannonSculptV18.gd")
@@ -31,6 +32,8 @@ func _run()->void:
             check(model!=null,"existing G13 physical model spawns")
             if model==null:
                 continue
+            check(V69.show_finish(model,false),
+                "temporarily revert V69 muzzle steel before historical V67 QA")
             check(V68.show_finish(model,false),
                 "V68 ejection overlay temporarily disabled for exact V67 QA")
             check(bool(model.get_meta(V65.FLAG,false)) and
@@ -147,6 +150,8 @@ func _run()->void:
                     "same instance renders new machined breech again")
             check(V68.show_finish(model,true),
                 "latest V68 real ejection and cooling details restored")
+            check(V69.show_finish(model,true),
+                "latest V69 ported gun muzzle meshes restored")
             model.free()
     check(faction_colors.size()==8,
         "original eight canonical faction colors distinct")
