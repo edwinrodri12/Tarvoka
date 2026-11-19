@@ -41,3 +41,8 @@ Prototipo reversible para inspección y futura reutilización, no una función y
 - `scenes/tools/AssetInspectionSmoke.tscn` usa ese controlador: al sustituir `SampleAsset` por un modelo 3D, la cámara centra sus mallas automáticamente.
 - `tests/test_asset_orbit_camera.gd` comprueba centro y distancia calculada desde el AABB de la esfera antes de probar el control manual.
 - **Godot CI para este commit: NO CONFIRMADO. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.**
+
+## 2026-11-19 — Corrección de parseo en CI
+- Run [44463098593](https://github.com/edwinrodri12/Tarvoka/actions/runs/44463098593): **FALLÓ** en Godot 4.3 headless. `AssetInspectionPreview.gd:5` no resolvía el tipo global `AssetOrbitCamera` al ejecutar directamente `--script tests/test_asset_orbit_camera.gd`; después falló el encuadre porque el controlador no cargó.
+- Corrección: usar referencia de nodo inferida `@onready var orbit_rig = $OrbitRig` en la escena aislada. El script del nodo sigue siendo `AssetOrbitCamera.gd`, sin modificar controles del juego ni su comportamiento.
+- Validación de la corrección: **NO CONFIRMADA** hasta recibir nuevo resultado del workflow. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE**.
