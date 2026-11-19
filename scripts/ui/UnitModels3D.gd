@@ -85,6 +85,7 @@ const G13EdgesV64 = preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const G13RingV65 = preload("res://scripts/ui/G13TurretRingFinishV65.gd")
 const G13MountV66 = preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const G13FeedV67 = preload("res://scripts/ui/G13BreechFeedFinishV67.gd")
+const G13EjectorV68 = preload("res://scripts/ui/G13EjectionMechanicsV68.gd")
 const G13LODPolicyV17 = preload("res://scripts/ui/G13LODPolicyV17.gd")
 const AttackHelicopterV1 = preload("res://scripts/ui/AttackHelicopterV1.gd")
 const AttackHelicopterCabinV2 = preload("res://scripts/ui/AttackHelicopterCabinV2.gd")
@@ -1148,6 +1149,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V66 machined twin cannon trunnion and barrel collars missing on LOD13")
                 if not G13FeedV67.apply(model):
                     push_warning("G13 V67 closed ejection/feeder hatches missing on LOD13")
+                if not G13EjectorV68.apply(model):
+                    push_warning("G13 V68 physical ejection channels and machined cooling ribs missing on LOD13")
             elif art_level>=8:
                 # Low-cost 3D readability: reuses existing gun/radar/faction
                 # meshes, adds no draw objects, never alters V24 hero art.
@@ -1229,6 +1232,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V66 low-draw hollow articulated cannon mount missing on LOD8")
                 if not G13FeedV67.apply(model):
                     push_warning("G13 V67 integrated moving receiver feed details missing on LOD8")
+                if not G13EjectorV68.apply(model):
+                    push_warning("G13 V68 compact machined gun steel and mobile cheek finish missing on LOD8")
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
