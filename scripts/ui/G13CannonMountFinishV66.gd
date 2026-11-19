@@ -207,7 +207,7 @@ static func apply(model:Node3D)->bool:
         after[name]=_coat(original,kind)
     var before_mesh:Dictionary={}
     for name in newmeshes:
-        var node:=nodes[name]
+        var node:GeometryInstance3D=nodes[name] as GeometryInstance3D
         if node is MultiMeshInstance3D:
             before_mesh[name]=(node as MultiMeshInstance3D).multimesh.mesh
         else:
@@ -215,7 +215,7 @@ static func apply(model:Node3D)->bool:
     for name in nodes:
         (nodes[name] as GeometryInstance3D).material_override=after[name]
     for name in newmeshes:
-        var node:=nodes[name]
+        var node:GeometryInstance3D=nodes[name] as GeometryInstance3D
         if node is MultiMeshInstance3D:
             (node as MultiMeshInstance3D).multimesh.mesh=newmeshes[name]
         else:
