@@ -6,6 +6,7 @@ on:
       - "scripts/core/BasicAI.gd"
       - "tests/test_ai_observed_relay_race_v398.gd"
       - "tests/test_ai_observed_relay_race_micro_v398.gd"
+      - "tests/test_ai_observed_relay_contest_v398.gd"
       - "tests/aggregate_ai_observed_relay_race_v398.py"
       - ".github/workflows/ai-observed-relay-race-v398.yml"
   workflow_dispatch:
@@ -32,6 +33,15 @@ jobs:
             2>&1 | tee /tmp/micro398.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/micro398.log; then exit 1; fi
           grep -Fq 'PASS TARVOKA v398 micro:' /tmp/micro398.log
+      - name: Validate actual contested relay move and exact road ETA
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 600s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_ai_observed_relay_contest_v398.gd \
+            2>&1 | tee /tmp/contest398.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/contest398.log; then exit 1; fi
+          grep -Fq 'PASS TARVOKA v398 contested relay:' /tmp/contest398.log
 
   pair:
     needs: [micro]
