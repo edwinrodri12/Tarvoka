@@ -32,6 +32,12 @@ func set_inspection_target(new_target: Vector3, radius: float = 1.0) -> void:
     distance = clampf(maxf(radius * 3.0, min_distance), min_distance, max_distance)
     _refresh_camera()
 
+## Frame a model's world-space bounding box without changing its transform.
+## Call after the asset has been placed in the inspection scene.
+func frame_world_bounds(bounds: AABB) -> void:
+    var radius: float = bounds.size.length() * 0.5
+    set_inspection_target(bounds.get_center(), maxf(radius, 0.01))
+
 func orbit(delta_yaw: float, delta_pitch: float) -> void:
     yaw = wrapf(yaw + delta_yaw, -PI, PI)
     pitch = clampf(pitch + delta_pitch, -1.4, 1.4)
