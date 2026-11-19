@@ -27,3 +27,8 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - `tests/test_mesh_budget_audit.gd` comprueba un quad indexado (4 vértices, 6 índices): exactamente 2 triángulos, no 1; verifica el umbral inclusivo (26 sin alerta, 25 con alerta) junto a mallas primitivas y líneas.
 - Commit de prueba: `533ea79380148cbeb6a8c1b929477ac8102ea85a`. La ejecución CI de este commit está pendiente de confirmación; el CI verde del commit anterior no lo valida.
 - Android físico: NO EJECUTADO EN DISPOSITIVO. Inspección visual: PENDIENTE DE REVISIÓN VISUAL. No se modifica geometría de producción ni reglas tácticas.
+
+## 2026-11-19 — casos de instancia invisible y escena anidada
+- Regresión nueva: `visible_instance_count = 0` excluye los tres cubos del MultiMesh del total (quedan 14 triángulos, tres instancias y tres nodos con malla); evita sobrecontar vegetación completamente oculta.
+- Regresión nueva: `Node3D` contenedor con `MeshInstance3D` hijo debe contar 12 triángulos y una instancia; verifica recorrido de jerarquías sin exigir malla en raíz.
+- Commit de pruebas: `3124387b506f077e919ad5c9c7529feff0796a5b`. Godot 4.3/CI del nuevo commit: NO CONFIRMADO al escribir. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE DE REVISIÓN VISUAL.
