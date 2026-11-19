@@ -26,3 +26,23 @@
 - \`.github/workflows/armored-workshop-v2-art-qa.yml\`: Godot 4.3 con OpenGL real (Xvfb); **resultado no confirmado hasta ver SUCCESS**.
 
 **Siguiente prioridad artística:** inspección visual de las seis cámaras en cada nivel, comprobar si hace falta más detalle en ventanales, marcos y maquinaria frente a edificios aprobados; corregir lo observado antes de cerrar el asset.
+
+
+## Revisión estructural V2.1 — siguiente prioridad
+
+En la revisión de geometría se detectaron y corrigieron los siguientes defectos:
+
+- **Paredes laterales:** la franja entre el zócalo y la chapa dejaba una abertura aproximada de 10 cm. Ahora los paneles se superponen físicamente tanto al zócalo como al dintel superior, y las dos juntas verticales se sellan con perfiles sólidos.
+- **Techo:** se añaden tapajuntas de longitud y anchura reales sobre los dos huecos entre los tres paneles de cada bahía intacta.
+- **Fachada posterior:** cristales altos con marcos metálicos visibles desde el exterior; el revestimiento V2 anterior ocultaba las ventanas V1 tras la chapa.
+- **Daño crítico D3:** la gran viga frontal intacta y los revestimientos laterales completos ya no quedan suspendidos: la viga se fragmenta y cae al piso; desaparecen los paneles altos que no tienen soporte.
+- **Visor compartido:** se corrige la orientación real de FRENTE (−Z) y POSTERIOR (+Z), se distingue TECHO (78°) de la isométrica, y se añaden controles de acercar, alejar y restablecer zoom.
+- **QA geométrica:** aserciones para solapes estructurales, ausencia de dintel intacto flotante en D3, marcos y cristales posteriores y sellado de cubierta.
+
+### Evidencia visual reproducible
+
+El script \`tests/capture_armored_workshop_v2_cameras.gd\` renderiza **24 PNG reales con Godot 4.3 OpenGL**:
+- 3 niveles × 6 cámaras (isométrica, frente, posterior, dos laterales, techo) en D0.
+- N3 neutral en D2, D3 y D4 desde isométrica y frente.
+
+El workflow \`.github/workflows/armored-workshop-v2-art-qa.yml\` publica el artefacto \`armored-workshop-v2-six-camera-evidence\` con imágenes y \`manifest.json\`, **únicamente cuando GitHub Actions haya ejecutado**. La creación del script o la cola de GitHub **no equivale a inspección visual ni aprobación**. Revisión humana de PNG y renderizado del Web Studio todavía necesarios antes de fusionar PR.
