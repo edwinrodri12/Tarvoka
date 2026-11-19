@@ -62,6 +62,7 @@ const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G14SAM=preload("res://scripts/ui/G14MobileSAMV1.gd")
+const G14ExteriorV2=preload("res://scripts/ui/G14MobileSAMExteriorV2.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -251,7 +252,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var sam_index:int=P06Models.ROLES.find("sam_mobile")
     if sam_index>=0:
-        role_picker.set_item_text(sam_index,"G14 · Batería SAM 8×8 · V1 en desarrollo")
+        role_picker.set_item_text(sam_index,"G14 · Batería SAM 8×8 · V2 blindaje y caucho")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V10")
@@ -605,7 +606,10 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "sam_mobile":
             return [
-                {"group":"G14 V1 · BATERÍA SAM 8×8 · MODELO INICIAL"},
+                {"group":"G14 V2 · BLINDAJE CERRADO, CRISTALES Y LLANTAS"},
+                {"title":"V2 · Mostrar blindaje, vidrio sólido y dibujo 3D","action":"g14_v2_on"},
+                {"title":"V1 · Comparar carrocería sin nuevos acabados","action":"g14_v2_off"},
+                {"group":"G14 V1 · BATERÍA SAM 8×8 · MECÁNICA"},
                 {"title":"Rodaje 8×8 y suspensiones","action":"g14_move"},
                 {"title":"Desplegar batería y estabilizadores","action":"g14_deploy"},
                 {"title":"Barrido del radar de búsqueda","action":"g14_scan"},
@@ -879,6 +883,11 @@ func _studio_run_animation(action: String) -> void:
                 "move" if action=="g11_battle_move" else "attack")
         "g11_battle_close":
             _g11_close_context_v25()
+        "g14_v2_on","g14_v2_off":
+            if _role=="sam_mobile" and model_root!=null:
+                var enabled_g14:bool=action=="g14_v2_on"
+                if G14ExteriorV2.show_finish(model_root,enabled_g14):
+                    status_label.text=("G14 V2 · cabina cerrada, acero PBR y caucho 3D" if enabled_g14 else "G14 V1 · comparación sin acabado exterior V2")
         "g14_move","g14_deploy","g14_scan","g14_aim","g14_launch","g14_stow","g14_hit":
             _studio_g14_animate(action.trim_prefix("g14_"))
         "g13_scan","g13_aim_air","g13_aim_ground","g13_aim_legacy":
@@ -1035,7 +1044,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "sam_mobile": label="G14 · Batería SAM 8×8 · V1 (arte en desarrollo)"
+            "sam_mobile": label="G14 · Batería SAM 8×8 · V2 (acabados 3D en revisión)"
             "ew_mobile": label="G15 · Guerra electrónica · V10 (cristales y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -3653,8 +3662,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("sam_mobile",_faction,true,13)
-        if model_root==null or not G14SAM.has_model(model_root):
-            push_error("G14 V1 native 8x8 model missing in shared 3D Studio")
+        if model_root==null or not G14SAM.has_model(model_root) or not G14ExteriorV2.has_model(model_root):
+            push_error("G14 V2 native exterior or V1 core model missing in shared 3D Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
