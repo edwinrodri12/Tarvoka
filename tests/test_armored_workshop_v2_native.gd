@@ -102,6 +102,12 @@ func _run() -> void:
                         "Full-height floating siding at D3")
                     assert(_mesh(model,"BandaFaccionSuperiorV2")==null)
                     assert(_mesh(model,"FocoAcceso_0_1")==null)
+                    assert(_mesh(original,"VigaFrontalDesprendida")!=null,
+                        "The reversible V1 comparison was modified")
+                    assert(_mesh(model,"VigaFrontalDesprendida")==null,
+                        "Legacy roofless D3 retains a midair detached beam")
+                    assert(not model.has_node(Workshop.STAGE+"/CubiertaIndustrial"),
+                        "D3 inherited a floating V1 roof assembly")
                     for bay in range(level):
                         assert(_mesh(model,
                             "NervioCubierta_%d_0" % bay)==null,
