@@ -42,3 +42,8 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - Nueva API `MeshBudgetAudit.inspect_packed_scene(scene, triangle_warning)` instancia temporalmente la escena sin añadirla al árbol de juego, contabiliza la geometría con `inspect` y libera la instancia. Permite auditar escenas de producción cuando se confirme su ruta, sin interferir con gameplay.
 - Regresión en `tests/test_mesh_budget_audit.gd`: escena empaquetada con BoxMesh (12 triángulos), alerta con umbral 11, árbol activo sin alteración y escena nula con aviso.
 - Commits `87641cbb9ec0e5a1975edb92307c5828e86123a7` y `e81169df4e74e75ab43e79f9ba0179ee465d061b`. CI del cambio: NO CONFIRMADO al registrar. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE DE REVISIÓN VISUAL.
+
+## 2026-11-19 — repetición de PackedScene
+- Regresión adicional: tres auditorías sucesivas de la misma escena empaquetada deben producir 12 triángulos, una instancia, cero alertas al umbral 12 y ninguna alteración de los hijos del árbol de prueba.
+- Commit de prueba `f477a8b3b928e9fdeb2464f300ea651491a764da`. Estado Godot 4.3 de este commit: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO; revisión visual: PENDIENTE DE REVISIÓN VISUAL.
+- Próximo paso: medir una escena real y registrar ruta, SHA y recuentos, sin atribuir FPS a la métrica geométrica.
