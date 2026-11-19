@@ -105,18 +105,29 @@ static func _real_spokes(st:SurfaceTool)->void:
     var rimedge:=Color("#57666c")
     for i in range(SPOKES):
         var ang:float=TAU*float(i)/float(SPOKES)
+        # True sloped 3D machining, not a normal-map illusion.
+        # The front face is narrower than the rear shoulder, producing
+        # four genuine bevel planes on each spoke with no extra draw calls
+        # or triangles. Keep the eight bolt axes and openings unchanged.
         var inner:float=0.225
         var outer:float=0.168
+        var front_inner:float=inner-0.028
+        var front_outer:float=outer-0.022
+        var face_y:float=HUB_HALF_THICK+0.003
         var front_points:Array[Vector3]=[
-            _metal_point(SPOKE_R_IN,ang-inner,HUB_HALF_THICK),
-            _metal_point(SPOKE_R_OUT,ang-outer,HUB_HALF_THICK),
-            _metal_point(SPOKE_R_OUT,ang+outer,HUB_HALF_THICK),
-            _metal_point(SPOKE_R_IN,ang+inner,HUB_HALF_THICK)]
-        var back_points:Array[Vector3]=[]
-        for p in front_points:
-            back_points.append(Vector3(p.x,-HUB_HALF_THICK,p.z))
+            _metal_point(SPOKE_R_IN,ang-front_inner,face_y),
+            _metal_point(SPOKE_R_OUT,ang-front_outer,face_y),
+            _metal_point(SPOKE_R_OUT,ang+front_outer,face_y),
+            _metal_point(SPOKE_R_IN,ang+front_inner,face_y)]
+        var back_points:Array[Vector3]=[
+            _metal_point(SPOKE_R_IN,ang-inner,-HUB_HALF_THICK),
+            _metal_point(SPOKE_R_OUT,ang-outer,-HUB_HALF_THICK),
+            _metal_point(SPOKE_R_OUT,ang+outer,-HUB_HALF_THICK),
+            _metal_point(SPOKE_R_IN,ang+inner,-HUB_HALF_THICK)]
+        var machined_front:Color=(
+            front.lightened(0.035) if i%2==0 else front)
         _quad(st,front_points[0],front_points[1],
-            front_points[2],front_points[3],front)
+            front_points[2],front_points[3],machined_front)
         _quad(st,back_points[3],back_points[2],
             back_points[1],back_points[0],front.darkened(0.22))
         for edge in range(4):
@@ -146,9 +157,11 @@ static func _hub_coat(original:StandardMaterial3D)->StandardMaterial3D:
     var material:=original.duplicate(true) as StandardMaterial3D
     material.albedo_color=Color.WHITE
     material.vertex_color_use_as_albedo=true
-    material.metallic=0.72
-    material.roughness=0.40
-    material.clearcoat_enabled=false
+    material.metallic=0.77
+    material.roughness=0.38
+    material.clearcoat_enabled=true
+    material.clearcoat=0.12
+    material.clearcoat_roughness=0.30
     material.cull_mode=BaseMaterial3D.CULL_DISABLED
     return material
 
