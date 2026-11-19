@@ -108,6 +108,7 @@ const G13GlassV62=preload("res://scripts/ui/G13OpticalGlazingV62.gd")
 const G13FactionV63=preload("res://scripts/ui/G13FactionReadabilityV63.gd")
 const G13EdgesV64=preload("res://scripts/ui/G13ArmorEdgeFinishV64.gd")
 const G13RingV65=preload("res://scripts/ui/G13TurretRingFinishV65.gd")
+const G13MountV66=preload("res://scripts/ui/G13CannonMountFinishV66.gd")
 const P06Stages := [
     "Intacto","Impactos leves","Daño moderado","Daño crítico","Destruido"
 ]
@@ -241,7 +242,7 @@ func _ready() -> void:
         role_picker.set_item_text(g11_index,"G11 Lanzador · V33")
     var aa_index: int=P06Models.ROLES.find("aa_mobile")
     if aa_index>=0:
-        role_picker.set_item_text(aa_index,"G13 · AA V65 · anillo de torreta mecanizado")
+        role_picker.set_item_text(aa_index,"G13 · AA V66 · soportes articulados de cañones")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V9")
@@ -1824,6 +1825,20 @@ func _g13_v53_set_reflections(enabled: bool) -> void:
         if _g13_rim_light_v53!=null:
             _g13_rim_light_v53.visible=false
 
+func _g13_v66_show_mount(enabled:bool)->void:
+    if _role!="aa_mobile" or model_root==null:
+        return
+    if not bool(model_root.get_meta(G13MountV66.FLAG,false)):
+        if status_label!=null:
+            status_label.text="G13 V66: soportes de cañones no cargados."
+        return
+    if G13MountV66.show_finish(model_root,enabled):
+        if status_label!=null:
+            status_label.text=(
+                "G13 V66 · rodamientos abiertos y collares de acero mecanizado"
+                if enabled else
+                "G13 V65 · comparación con soportes anteriores")
+
 func _g13_v65_show_ring(enabled:bool)->void:
     if _role!="aa_mobile" or model_root==null:
         return
@@ -2056,7 +2071,7 @@ func _install_g13_controls() -> void:
     g13_controls.add_theme_constant_override("separation",8)
     column.add_child(g13_controls)
     var title: Label=_title(g13_controls,
-        "G13 V65 · ANILLO DE TORRETA MECANIZADO",14)
+        "G13 V66 · SOPORTES ARTICULADOS DE CAÑONES",14)
     title.add_theme_color_override("font_color",Color("#E7BE70"))
     _add_paired(g13_controls,"Barrido del radar",
         func(): _g13_demo_v1("scan",0.78),
@@ -2102,6 +2117,10 @@ func _install_g13_controls() -> void:
         func(): _g13_v29_rear_attack("attack_ground"),
         "V29 · Ataque aéreo hacia atrás",
         func(): _g13_v29_rear_attack("attack_air"))
+    _add_paired(g13_controls,"V66 · Soportes de cañones mecanizados",
+        func(): _g13_v66_show_mount(true),
+        "V66 · Comparar soportes anteriores",
+        func(): _g13_v66_show_mount(false))
     _add_paired(g13_controls,"V65 · Anillo giratorio mecanizado",
         func(): _g13_v65_show_ring(true),
         "V65 · Comparar unión anterior",
