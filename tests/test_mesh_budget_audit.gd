@@ -72,6 +72,23 @@ func _initialize() -> void:
 	assert(report["warnings"].is_empty())
 	wrapper.free()
 	assert(Audit.inspect(null)["warnings"].size() == 1)
+	# PackedScene audit must not attach nodes to the active scene tree.
+	var packed_root := Node3D.new()
+	var packed_mesh := MeshInstance3D.new()
+	packed_mesh.mesh = BoxMesh.new()
+	packed_mesh.name = "AuditMesh"
+	packed_root.add_child(packed_mesh)
+	packed_mesh.owner = packed_root
+	var packed := PackedScene.new()
+	assert(packed.pack(packed_root) == OK)
+	var before_children := root.get_child_count()
+	var packed_report: Dictionary = Audit.inspect_packed_scene(packed, 11)
+	assert(packed_report["triangles"] == 12)
+	assert(packed_report["instances"] == 1)
+	assert(packed_report["warnings"].size() == 1)
+	assert(root.get_child_count() == before_children)
+	assert(Audit.inspect_packed_scene(null)["warnings"].size() == 1)
+	packed_root.free()
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
 	quit(0)
