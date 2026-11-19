@@ -23,6 +23,7 @@ on:
       - "scripts/ui/G13ArmorEdgeFinishV64.gd"
       - "scripts/ui/G13TurretRingFinishV65.gd"
       - "scripts/ui/G13CannonMountFinishV66.gd"
+      - "scripts/ui/G13BreechFeedFinishV67.gd"
       - "scripts/ui/G13WheelFinishV7.gd"
       - "scripts/ui/G13SurfaceFinishV8.gd"
       - "scripts/ui/G13SilhouetteV10.gd"
@@ -163,6 +164,7 @@ on:
       - "tests/test_g13_v64_armor_edge_finish.gd"
       - "tests/test_g13_v65_turret_ring_finish.gd"
       - "tests/test_g13_v66_cannon_mount_finish.gd"
+      - "tests/test_g13_v67_breech_feed_finish.gd"
       - "scripts/ui/APCArtV1.gd"
       - "scripts/ui/APCArmorV2.gd"
       - "scripts/ui/APCBatchingV4.gd"
@@ -357,6 +359,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_v65_turret_ring_finish.gd tests/test_g13_v65_turret_ring_finish.gd
           test -s hq-android-v15/tests/test_g13_v66_cannon_mount_finish.gd
           cp hq-android-v15/tests/test_g13_v66_cannon_mount_finish.gd tests/test_g13_v66_cannon_mount_finish.gd
+          test -s hq-android-v15/tests/test_g13_v67_breech_feed_finish.gd
+          cp hq-android-v15/tests/test_g13_v67_breech_feed_finish.gd tests/test_g13_v67_breech_feed_finish.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
@@ -1320,6 +1324,17 @@ jobs:
             echo "G13 V66 articulated hollow cannon mounts failed"; exit 1
           fi
           grep -F 'PASS G13 V66 REAL GUN MOUNTS:' /tmp/g13-v66-articulated-guns.log
+          # V67 is true closed/recessed breech and ammunition-feed metalwork
+          # inside the existing V18 hero or V31 tactical pitch-pivot meshes.
+          xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g13_v67_breech_feed_finish.gd \
+            2>&1 | tee /tmp/g13-v67-breech-feed.log
+          if grep -E "SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:" /tmp/g13-v67-breech-feed.log; then
+            echo "G13 V67 real breech/feed plate art validation failed"; exit 1
+          fi
+          grep -F 'PASS G13 V67 REAL BREECH AND FEED:' /tmp/g13-v67-breech-feed.log
           # V61 actual P06/G13 identical-light and wheel-size studio proof.
           # The V61 standalone workflow hard-gates all nine screenshots.
           if [[ -s tests/test_g13_v61_real_bastion_comparison.gd ]]; then
