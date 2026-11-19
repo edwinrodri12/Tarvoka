@@ -218,6 +218,35 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
                 Vector3(x+float(side)*0.145,upper-0.19,0),
                 Vector3(0.08,0.11,depth*0.72),accent.darkened(0.12),0.52,0.50)
     if damage<=2:
+        # REAL opaque lower rear closure. Legacy V1 alternates two wall
+        # materials that look like bright missing bays in rear renders.
+        # A continuous V2 steel-concrete panel hides that misleading gap.
+        _box(parent,"PanelPosteriorInferiorSelladoV2",
+            Vector3(0,1.61,depth*0.5+0.235),
+            Vector3(width-0.18,3.12,0.19),CONCRETE,0.18,0.78)
+        var service_width:float=width/float(bays+1)
+        for service in range(bays+1):
+            var door_x:float=-width*0.5+service_width*(float(service)+0.5)
+            _box(parent,"PortillaTecnicaPosterior_%d" % service,
+                Vector3(door_x,1.14,depth*0.5+0.35),
+                Vector3(service_width*0.64,1.69,0.075),
+                ARMOR_DARK,0.67,0.53)
+            _box(parent,"PortillaPanelPosterior_%d" % service,
+                Vector3(door_x,1.14,depth*0.5+0.395),
+                Vector3(service_width*0.56,1.53,0.022),
+                ARMOR,0.49,0.62)
+            _box(parent,"VentilacionPortillaPosterior_%d" % service,
+                Vector3(door_x,1.71,depth*0.5+0.416),
+                Vector3(service_width*0.37,0.13,0.023),
+                GALVANIZED,0.52,0.55)
+            _box(parent,"ManijaPosterior_%d" % service,
+                Vector3(door_x+service_width*0.22,1.07,
+                    depth*0.5+0.421),
+                Vector3(0.065,0.22,0.035),
+                BRIGHT_STEEL,0.73,0.41)
+        _box(parent,"BandaFaccionPosteriorV2",
+            Vector3(0,2.75,depth*0.5+0.342),
+            Vector3(width*0.68,0.14,0.049),accent,0.43,0.49)
         _box(parent,"PanelPosteriorAlto",
             Vector3(0,(3.13+height-0.48)*0.5,depth*0.5-0.03),
             Vector3(width-0.52,height-3.61,0.23),
