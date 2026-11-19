@@ -244,6 +244,7 @@ static func restore(root: Node3D)->void:
     var turret:=root.find_child(LAUNCHER,true,false) as Node3D
     var elevation:=root.find_child(ELEVATION,true,false) as Node3D
     var radar:=root.find_child(RADAR,true,false) as Node3D
+    root.rotation_degrees.z=0.0
     if turret!=null:
         turret.rotation_degrees=Vector3.ZERO
     if elevation!=null:
