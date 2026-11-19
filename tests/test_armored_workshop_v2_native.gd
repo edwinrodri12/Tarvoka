@@ -41,7 +41,7 @@ func _run() -> void:
                                 "PanelLateralCerrado_%d_%d" % [side,segment])
                             assert(siding!=null and siding.mesh!=null,
                                 "Opaque cladding gap")
-                            var wall_mat:StandardMaterial3D=siding.material_override
+                            var wall_mat:StandardMaterial3D=siding.material_override as StandardMaterial3D
                             assert(wall_mat!=null and
                                 wall_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                                 "Side siding must not disappear")
@@ -55,9 +55,8 @@ func _run() -> void:
                     assert(_mesh(model,"BandaFaccionSuperiorV2")!=null)
                     var band:MeshInstance3D=_mesh(model,"PlacaIdentidad_0")
                     assert(band!=null)
-                    var material:StandardMaterial3D=band.material_override
-                    var expected:Color=Style.faction_color(faction) \
-                        if faction>=0 else Workshop.NEUTRAL
+                    var material:StandardMaterial3D=band.material_override as StandardMaterial3D
+                    var expected:Color=Style.faction_color(faction) if faction>=0 else Workshop.NEUTRAL
                     assert(material.albedo_color.is_equal_approx(expected),
                         "All factions must use their real official palette")
                     colored+=1
