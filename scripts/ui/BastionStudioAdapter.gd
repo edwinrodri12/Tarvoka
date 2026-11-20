@@ -1147,7 +1147,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "logistics_mobile": label="G16 · Logística blindada 6×6 · V5 PBR, cabina y daños"
+            "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
