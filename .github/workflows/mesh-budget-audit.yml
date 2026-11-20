@@ -69,6 +69,8 @@ jobs:
           python3 tools/find_3d_census_scenes.py . > /tmp/tarvoka-census/candidates.txt || status=$?
           if [ "${status:-0}" -ne 0 ] && [ ! -s /tmp/tarvoka-census/candidates.txt ]; then
             echo "NO_PRODUCTION_3D_SCENE_CANDIDATE" | tee /tmp/tarvoka-census/status.txt
+            echo "### TARVOKA production geometry census" >> "$GITHUB_STEP_SUMMARY"
+            echo "No static 3D PackedScene candidate was found; procedural assets remain unmeasured." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           scene="$(head -n 1 /tmp/tarvoka-census/candidates.txt)"
@@ -87,6 +89,13 @@ jobs:
           assert isinstance(report.get("triangles"), int) and report["triangles"] >= 0
           Path("/tmp/tarvoka-census/production.json").write_text(json.dumps(records[0], indent=2) + "\n")
           print("PRODUCTION_3D_CENSUS_PASS", records[0]["scene"], report["triangles"])
+          import os
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("### TARVOKA production geometry census\\n".replace("\\n", "\n"))
+              summary.write(f"- Scene: `{records[0]['scene']}`\\n".replace("\\n", "\n"))
+              for key in ("triangles", "instances", "mesh_nodes", "surfaces"):
+                  summary.write(f"- {key}: {report.get(key, 'not reported')}\\n".replace("\\n", "\n"))
+              summary.write("- Diagnostic geometry only; no Android FPS claim.\\n".replace("\\n", "\n"))
           PY
       - name: Upload production census evidence
         if: always()
