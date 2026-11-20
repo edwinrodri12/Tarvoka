@@ -1,6 +1,6 @@
 # TARVOKA — G16 V3 · mecánica 6×6, servicio logístico y daños 3D
 
-**Estado:** G16 V3 FINAL — diseño, modelado nativo, animaciones y catálogo integrados en `main`. La unidad ha sido aprobada para cerrar su fase artística. No se altera el balance ni se añade un nuevo tipo táctico duplicado.
+**Estado:** G16 V3 es una base técnica ya integrada en `main`; **la G16 sigue EN DESARROLLO** con V4 y no está aprobada como unidad final. **La unidad que sí quedó terminada y aprobada es G15 V11C.** No se altera el balance ni se crea un tipo táctico duplicado.
 
 ## Nueva geometría de V3
 
@@ -49,4 +49,4 @@ Ninguna etapa suprime la cabina `BoxMesh`, las cuatro ventanas PBR opacas, el te
 - **QA final:** `tests/test_g16_v3_logistics_qa.gd` verifica ocho facciones, LOD8/13, daños, 28 capturas nativas y una operación REAL de reabastecimiento con stock consumido y bloqueo por turno. `tests/test_g16_v3_live_studio_ui.gd` verifica la unidad en la escena de Studio compartida.
 - **Límites conocidos:** la reparación de HP por esta unidad no está implementada; desplegar el toldo o el campamento es una animación, no una instalación persistente de suministros. No se declara que esas funciones existan.
 
-**Resultado de esta fase:** G16 V3 FINAL integrada, programada y cerrada en cuanto a modelo, animación y abastecimiento táctico existente; toda expansión de reparaciones o campamentos persistentes se gestionará como mecánica independiente.
+**Resultado de esta fase:** G16 V3 integrada como **base funcional**, con modelado y abastecimiento táctico existente. **La G16 completa permanece abierta para revisión y continuación de la V4**; reparar HP o convertir campamentos en instalaciones persistentes requeriría otro desarrollo.
