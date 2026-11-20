@@ -83,13 +83,47 @@ func _run() -> void:
                     assert(rear_box.size.x>=
                         (9.5 if level==1 else 15.0 if level==2 else 20.5)-0.20)
                     assert(rear_box.size.y>=3.10)
-                    assert(_mesh(model,"BandaFaccionPosteriorV2")!=null)
+                    var rear_accent:MeshInstance3D=_mesh(model,
+                        "BandaFaccionPosteriorV2")
+                    assert(rear_accent!=null and rear_accent.mesh is BoxMesh)
+                    var rear_width:float=9.5 if level==1 else 15.0 if level==2 else 20.5
+                    assert((rear_accent.mesh as BoxMesh).size.x>=rear_width*0.77,
+                        "Rear color identity must read across the building")
+                    var expected_color:Color=Style.faction_color(faction) if faction>=0 else Workshop.NEUTRAL
+                    assert((rear_accent.material_override as StandardMaterial3D
+                        ).albedo_color.is_equal_approx(expected_color))
+                    for side in [-1,1]:
+                        var band:MeshInstance3D=_mesh(model,
+                            "ZunchoLateralFaccion_%d" % side)
+                        var tag:MeshInstance3D=_mesh(model,
+                            "MarcaLateralFaccion_%d" % side)
+                        assert(band!=null and tag!=null)
+                        assert((band.mesh as BoxMesh).size.y>=0.17)
+                        assert((band.material_override as StandardMaterial3D
+                            ).albedo_color.is_equal_approx(expected_color))
+                        assert((tag.material_override as StandardMaterial3D
+                            ).albedo_color.is_equal_approx(expected_color))
                     for hatch in range(level+1):
                         assert(_mesh(model,
                             "PortillaTecnicaPosterior_%d" % hatch)!=null)
                         assert(_mesh(model,
                             "PortillaPanelPosterior_%d" % hatch)!=null)
                     assert(_mesh(model,"FrontispicioBlindadoV2")!=null)
+                    var front_accent:MeshInstance3D=_mesh(model,
+                        "BandaFaccionSuperiorV2")
+                    assert(front_accent!=null)
+                    assert((front_accent.mesh as BoxMesh).size.x>=rear_width*0.81)
+                    assert((front_accent.mesh as BoxMesh).size.y>=0.20)
+                    for bay in range(level):
+                        var top_plate:MeshInstance3D=_mesh(model,
+                            "MarcaFaccionCubierta_%d" % bay)
+                        assert(top_plate!=null and top_plate.mesh is BoxMesh,
+                            "Each level needs visible faction roof identity")
+                        assert(top_plate.position.y>0.0)
+                        assert((top_plate.material_override as StandardMaterial3D
+                            ).albedo_color.is_equal_approx(expected_color))
+                        assert((top_plate.mesh as BoxMesh).size.x>=
+                            (rear_width/float(level))*0.61)
                     for window in range(4):
                         assert(_mesh(model,
                             "CristalPosteriorPBR_%d" % window)!=null,
@@ -134,6 +168,15 @@ func _run() -> void:
                 if damage==2:
                     assert(_mesh(model,"LamaPortonDanada_0_0")!=null)
                     assert(_mesh(model,"TamborPersiana_0")==null)
+                if damage>=3:
+                    var debris_badge:MeshInstance3D=_mesh(model,
+                        "FragmentoFaccionDerrumbadoV2")
+                    assert(debris_badge!=null and debris_badge.mesh is BoxMesh,
+                        "Ruins should retain one recognizable faction plate")
+                    assert(debris_badge.position.y<=0.15,
+                        "Broken faction badge must rest on the ground")
+                    assert(_mesh(model,"MarcaFaccionCubierta_0")==null,
+                        "Ruins must not have floating faction roof panels")
                 if damage==3:
                     assert(_mesh(model,"ArmaduraHundidaV2_0")!=null)
                     assert(_mesh(model,"FragmentoFrontispicioCaido_0")!=null)
