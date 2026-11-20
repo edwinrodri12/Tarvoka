@@ -5,6 +5,7 @@ on:
       - 'scripts/tools/MeshBudgetAudit.gd'
       - 'tests/test_mesh_budget_audit.gd'
       - 'tests/audit_production_scene.gd'
+      - 'tools/find_3d_census_scenes.py'
       - 'tests/fixtures/mesh_budget_box.tscn'
       - '.github/workflows/mesh-budget-audit.yml'
   push:
@@ -60,3 +61,37 @@ jobs:
           assert report["mesh_nodes"] == 1, report
           print("MESH_PRODUCTION_CENSUS_SMOKE_PASS")
           PY
+      - name: Discover and census a production 3D scene (not the fixture)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tarvoka-census
+          python3 tools/find_3d_census_scenes.py . > /tmp/tarvoka-census/candidates.txt || status=$?
+          if [ "${status:-0}" -ne 0 ] && [ ! -s /tmp/tarvoka-census/candidates.txt ]; then
+            echo "NO_PRODUCTION_3D_SCENE_CANDIDATE" | tee /tmp/tarvoka-census/status.txt
+            exit 0
+          fi
+          scene="$(head -n 1 /tmp/tarvoka-census/candidates.txt)"
+          echo "Auditing production scene: $scene"
+          timeout --signal=TERM --kill-after=5s 100s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-driver opengl3 --audio-driver Dummy --path . --script res://tests/audit_production_scene.gd -- "$scene" 2>&1 | tee /tmp/tarvoka-census/production.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed' /tmp/tarvoka-census/production.log; then
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          lines = Path("/tmp/tarvoka-census/production.log").read_text().splitlines()
+          records = [json.loads(line.split("MESH_PRODUCTION_CENSUS ", 1)[1]) for line in lines if line.startswith("MESH_PRODUCTION_CENSUS ")]
+          assert len(records) == 1, f"Expected exactly one production report, got {len(records)}"
+          report = records[0]["report"]
+          assert isinstance(report.get("triangles"), int) and report["triangles"] >= 0
+          Path("/tmp/tarvoka-census/production.json").write_text(json.dumps(records[0], indent=2) + "\n")
+          print("PRODUCTION_3D_CENSUS_PASS", records[0]["scene"], report["triangles"])
+          PY
+      - name: Upload production census evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-3d-census
+          path: /tmp/tarvoka-census/
+          if-no-files-found: warn
