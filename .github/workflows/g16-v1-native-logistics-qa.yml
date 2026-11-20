@@ -1,4 +1,4 @@
-name: TARVOKA G16 V1-V4 native logistics premium 6x6 and dynamic wreck QA
+name: TARVOKA G16 V1-V5 native PBR glazing armor and thermal damage QA
 
 on:
   pull_request:
@@ -7,12 +7,15 @@ on:
       - 'scripts/ui/G16LogisticsExteriorV2.gd'
       - 'scripts/ui/G16LogisticsMechanicsDamageV3.gd'
       - 'scripts/ui/G16LogisticsSculptDamageV4.gd'
+      - 'scripts/ui/G16PremiumMaterialsDamageV5.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g16_v1_native_3d.gd'
       - 'tests/test_g16_v2_native_finish.gd'
       - 'tests/test_g16_v3_logistics_qa.gd'
       - 'tests/test_g16_v4_native_360.gd'
+      - 'tests/test_g16_v5_native_materials.gd'
+      - 'tests/test_g16_v5_shared_studio.gd'
       - '.github/workflows/g16-v1-native-logistics-qa.yml'
   push:
     branches: [main, feat/g16-v1-armored-logistics-studio-20261119]
@@ -21,12 +24,15 @@ on:
       - 'scripts/ui/G16LogisticsExteriorV2.gd'
       - 'scripts/ui/G16LogisticsMechanicsDamageV3.gd'
       - 'scripts/ui/G16LogisticsSculptDamageV4.gd'
+      - 'scripts/ui/G16PremiumMaterialsDamageV5.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g16_v1_native_3d.gd'
       - 'tests/test_g16_v2_native_finish.gd'
       - 'tests/test_g16_v3_logistics_qa.gd'
       - 'tests/test_g16_v4_native_360.gd'
+      - 'tests/test_g16_v5_native_materials.gd'
+      - 'tests/test_g16_v5_shared_studio.gd'
       - '.github/workflows/g16-v1-native-logistics-qa.yml'
   workflow_dispatch:
 
@@ -59,7 +65,11 @@ jobs:
           grep -Fq 'g16_v2_on' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_v2_off' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
-          grep -Fq 'G16 · Logística blindada 6×6 · V4 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'G16 · Logística blindada 6×6 · V5 materiales y desgaste' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'G16MaterialsV5.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16MaterialsV5.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'g16_v5_on' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'g16_v5_off' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.sync' scripts/ui/UnitModels3D.gd
@@ -159,6 +169,23 @@ jobs:
           fi
           grep -F 'PASS G16 V4 NATIVE 3D:' /tmp/g16-v4-native.log
           test "$(find build/qa/g16-v4 -name '*.png' | wc -l)" -eq 22
+      - name: Validate G16 V5 opaque physical glass, coated metal, real rivets, cumulative thermal wreck and 22 native Godot images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g16-v5
+          timeout --signal=TERM --kill-after=5s 290s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v5_native_materials.gd \
+            2>&1 | tee /tmp/g16-v5-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g16-v5-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS G16 V5 NATIVE PBR:' /tmp/g16-v5-native.log
+          test "$(find build/qa/g16-v5 -name '*.png' | wc -l)" -eq 22
       - name: Publish sixteen true Godot rendered faction and camp preview images
         if: always()
         uses: actions/upload-artifact@v4
@@ -189,4 +216,12 @@ jobs:
         with:
           name: tarvoka-g16-v4-closed-armor-dynamic-wreck-360
           path: build/qa/g16-v4/*.png
+          retention-days: 14
+
+      - name: Publish G16 V5 twenty-two real Godot 8-faction 360 and damaged-metal captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v5-pbr-opaque-glass-thermal-wear-native
+          path: build/qa/g16-v5/*.png
           retention-days: 14
