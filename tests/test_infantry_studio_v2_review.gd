@@ -26,7 +26,9 @@ func _run() -> void:
     await process_frame
     studio.call("_studio_jump_category",0)
     studio.call("_studio_select_tab",1)
-    var original_preview: Node3D=studio.get("preview") as Node3D
+    # The actual TARVOKA rendering parent is a SubViewport, not Node3D.
+    # A Node3D cast silently returned null and caused 26 false QA failures.
+    var original_preview: SubViewport=studio.get("preview") as SubViewport
     var role_picker: OptionButton=studio.get("role_picker") as OptionButton
     var faction_picker: OptionButton=studio.get("faction_picker") as OptionButton
     var camera_panel: VBoxContainer=studio.get("infantry_360_panel") as VBoxContainer
