@@ -53,10 +53,17 @@ static func _add_mesh(mesh: Mesh, count: int, report: Dictionary) -> void:
 		report["surfaces"] += count
 		if mesh is ArrayMesh and (mesh as ArrayMesh).surface_get_primitive_type(surface) != Mesh.PRIMITIVE_TRIANGLES:
 			continue
-		var indices := mesh.surface_get_arrays(surface)[Mesh.ARRAY_INDEX] as PackedInt32Array
-		var vertices := mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX] as PackedVector3Array
-		var element_count: int = indices.size() if not indices.is_empty() else vertices.size()
-		report["triangles"] += (element_count / 3) * count
+		var arrays: Array = mesh.surface_get_arrays(surface)
+		# Procedural ArrayMesh surfaces may omit indices (null), not an empty packed array.
+		# Never cast null: Godot emits SCRIPT ERROR even if the census continues.
+		var raw_indices: Variant = arrays[Mesh.ARRAY_INDEX]
+		var raw_vertices: Variant = arrays[Mesh.ARRAY_VERTEX]
+		var element_count: int = 0
+		if raw_indices is PackedInt32Array and not raw_indices.is_empty():
+			element_count = raw_indices.size()
+		elif raw_vertices is PackedVector3Array:
+			element_count = raw_vertices.size()
+		report["triangles"] += int(element_count / 3) * count
 
 ## Diagnostic only: identifies the most expensive node by submitted triangles.
 static func _record_largest(node: Node, triangles: int, report: Dictionary) -> void:
