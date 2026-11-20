@@ -4540,8 +4540,8 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root)
-        detail_label.text="G16 V3 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root)
+        detail_label.text="G16 V4 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
         status_label.text="G16 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             "carga, grúa y campamento 3D (solo visual)" if ready_g16 else "acabado incompleto"]
@@ -4711,7 +4711,7 @@ func _g16_play(kind: String) -> void:
         Callable(self,"_g16_tick").bind(art,kind),0.02,0.98,
         2.10 if kind in ["camp","unload","resupply"] else 1.30)
     _g16_tween.tween_callback(Callable(self,"_g16_done").bind(art,kind))
-    status_label.text="G16 V3 · "+kind+" · simulación 3D de suministros, sin aplicar recursos"
+    status_label.text="G16 V4 · "+kind+" · simulación 3D de suministros, sin aplicar recursos"
 
 func _g16_tick(t:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
@@ -4724,3 +4724,37 @@ func _g16_done(art:Node3D,kind:String)->void:
         P06Models.pose_model("logistics_mobile",art,kind,1.0)
     else:
         P06Models.restore_model_pose("logistics_mobile",art)
+
+
+# V4 native physical wreck sequence: the exact rig shown in the same
+# unified Godot Studio moves torn armor fragments and exhaust plumes.
+# Never touches HP or writes tactical economy data.
+func _g16_v4_destroy() -> void:
+    if _role!="logistics_mobile" or model_root==null or not G16SculptV4.has_model(model_root):
+        return
+    if _g16_tween!=null and _g16_tween.is_running():
+        _g16_tween.kill()
+    var art:Node3D=model_root
+    P06Models.restore_model_pose("logistics_mobile",art)
+    G16ExteriorV2.show_finish(art,true)
+    G16MechanicsV3.show_finish(art,true)
+    G16SculptV4.show_finish(art,true)
+    G16SculptV4.set_damage(art,0)
+    _g16_tween=art.create_tween()
+    _g16_tween.tween_method(Callable(self,"_g16_v4_tick").bind(art),
+        0.0,1.0,2.80)
+    _g16_tween.tween_callback(Callable(self,"_g16_v4_done").bind(art))
+    status_label.text="G16 V4 · destrucción física 3D en curso · simulación visual"
+
+func _g16_v4_tick(t:float,art:Node3D)->void:
+    if is_instance_valid(art) and G16SculptV4.has_model(art):
+        G16SculptV4.pose_wreck(art,t)
+        # Existing closed cab stays at every stage; shake the whole model.
+        art.rotation_degrees.z=sin(t*TAU*6.0)*1.2*(1.0-t)
+
+func _g16_v4_done(art:Node3D)->void:
+    if not is_instance_valid(art):
+        return
+    art.rotation_degrees.z=0
+    G16SculptV4.pose_wreck(art,1.0)
+    status_label.text="G16 V4 · destrucción 4/4 finalizada; Reparar restaura el modelo"
