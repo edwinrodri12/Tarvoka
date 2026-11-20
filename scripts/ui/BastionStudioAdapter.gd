@@ -255,7 +255,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Logística 6×6 · V4 cabina y daños")
+        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V3 FINAL + V4 acabados")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
@@ -574,7 +574,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
                 {"title":"V3 · Comparar sin acabados V4","action":"g16_v4_off"},
                 {"title":"V4 · Destrucción progresiva animada","action":"g16_v4_wreck"},
                 {"title":"V4 · Reparar carrocería visualmente","action":"g16_damage_0"},
-                {"group":"G16 V3 · MECÁNICA 6×6, CARGA Y DAÑOS 3D"},
+                {"group":"G16 V3 FINAL · MECÁNICA, CARGA Y DAÑOS 3D"},
                 {"title":"V3 · Mostrar suspensión, tuberías y tapas articuladas","action":"g16_v3_on"},
                 {"title":"V2 · Comparar sin mecánica ni detalles V3","action":"g16_v3_off"},
                 {"title":"V3 · Estado intacto","action":"g16_damage_0"},
@@ -1082,7 +1082,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "logistics_mobile": label="G16 · Logística 6×6 · V4 (blindaje cerrado, carga, ocho colores y daño animado)"
+            "logistics_mobile": label="G16 · Logística blindada 6×6 · V3 FINAL + V4 (blindaje y daños animados)"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -4544,7 +4544,7 @@ func _update_details() -> void:
         detail_label.text="G16 V4 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
         status_label.text="G16 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
-            "carga, grúa y campamento 3D (solo visual)" if ready_g16 else "acabado incompleto"]
+            "V3 suministro táctico real; V4 arte 3D y destrucción visual" if ready_g16 else "acabado incompleto"]
         return
     if _role=="ew_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready:bool=bool(model_root.get_meta(G15DetailV11.FLAG,false))
