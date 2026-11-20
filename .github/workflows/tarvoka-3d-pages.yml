@@ -237,7 +237,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -728,7 +728,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
+          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopLODPolicy ArmoredWorkshopBattlePreview3D ArmoredWorkshopBattleTile3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
             test -s "workshop-v1-source/scripts/ui/$name.gd"
             cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
@@ -739,6 +739,12 @@ jobs:
           test -s workshop-v1-source/tests/test_armored_workshop_v2_native.gd
           cp workshop-v1-source/tests/test_armored_workshop_v2_native.gd tests/
           grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'PRUEBA EN CASILLA 3D' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'Android · AUTOMÁTICO por zoom' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F '_workshop_auto_lod()' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'set_preview_detail' scripts/ui/ArmoredWorkshopBattleTile3D.gd
           grep -F 'extends "res://scripts/ui/PowerPlantStudioAdapterV1.gd"' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'building_picker.add_item("Taller de Blindados' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
