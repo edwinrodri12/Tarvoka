@@ -6,6 +6,7 @@ const Tile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
 const Preview=preload("res://scripts/ui/ArmoredWorkshopBattlePreview3D.gd")
 const Mobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
+const Hero=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 
 func _initialize() -> void:
     call_deferred("_test")
@@ -64,7 +65,7 @@ func _test() -> void:
                     assert(scaler!=null)
                     var scale:float=Preview.scale_for_level(level)
                     assert(scaler.scale.is_equal_approx(Vector3.ONE*scale))
-                    var tint:Color=Style.faction_color(faction) if faction>=0 else Mobile.Hero.NEUTRAL
+                    var tint:Color=Style.faction_color(faction) if faction>=0 else Hero.NEUTRAL
                     var plate:MultiMeshInstance3D=scaler.find_child(
                         "Lote_faction",true,false) as MultiMeshInstance3D
                     assert(plate!=null)
