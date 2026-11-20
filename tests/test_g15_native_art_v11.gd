@@ -221,8 +221,12 @@ func _run()->void:
                         "LOD-aware shoulder embossed marks "+token)
             check(ring_count==6,"six complete 3D tyre shoulder rigs")
             check(V11.show_finish(model,false),"V11 reversible old finish")
-            check(contour!=null and not contour.visible,
-                "V11B solid contours hidden in historical V10")
+            # V11B panels inherit visibility from their V11 assembly.
+            # The children correctly remain visible locally for quick
+            # reactivation; an invisible parent hides the entire subtree.
+            check(contour!=null and assembly!=null and
+                contour.get_parent()==assembly and not assembly.visible,
+                "V11B solid contours hidden through V11 parent in historical V10")
 
             for label in wall_names:
                 var old_wall:=model.find_child(str(label),true,false) as MeshInstance3D
