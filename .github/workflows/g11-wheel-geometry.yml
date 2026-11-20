@@ -1,0 +1,60 @@
+name: TARVOKA G11 roadwheel geometry QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/G11MobileLOD.gd'
+      - 'tests/test_g11_wheel_radial_8.gd'
+      - '.github/workflows/g11-wheel-geometry.yml'
+  workflow_dispatch:
+
+jobs:
+  roadwheels:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --version
+      - name: Import project resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit > /tmp/g11-import.log 2>&1 || { cat /tmp/g11-import.log; exit 1; }
+      - name: Measure wheel triangles and verify eight factions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_g11_wheel_radial_8.gd > /tmp/g11-wheel-geometry.log 2>&1 || { cat /tmp/g11-wheel-geometry.log; exit 1; }
+          cat /tmp/g11-wheel-geometry.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/g11-wheel-geometry.log; then exit 1; fi
+          grep -F 'PASS G11 WHEEL LOD:' /tmp/g11-wheel-geometry.log
+          grep -E '^G11 WHEEL TRIANGLES baseline=[0-9]+ optimized=[0-9]+ saved=[0-9]+' /tmp/g11-wheel-geometry.log | tee /tmp/g11-measurement.txt
+      - name: Publish measurements in run summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## G11 wheel geometry — Godot 4.3'
+            if test -s /tmp/g11-measurement.txt; then
+              cat /tmp/g11-measurement.txt
+            else
+              echo 'No validated measurement; inspect test logs.'
+            fi
+            echo 'Headless geometry only: NOT EXECUTED ON ANDROID DEVICE; VISUAL REVIEW PENDING.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g11-roadwheel-geometry
+          path: |
+            /tmp/g11-import.log
+            /tmp/g11-wheel-geometry.log
+            /tmp/g11-measurement.txt
+          if-no-files-found: warn
