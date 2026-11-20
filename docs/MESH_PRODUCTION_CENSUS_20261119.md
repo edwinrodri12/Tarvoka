@@ -23,3 +23,6 @@ La rama de PR #622 incluye `tests/fixtures/mesh_budget_box.tscn`, escena determi
 ## Validación defensiva del resultado (2026-11-19)
 
 La CLI ahora devuelve código 5 cuando el informe no contiene contadores enteros no negativos (`triangles`, `instances`, `mesh_nodes`, `surfaces`, `largest_mesh_triangles`), carece de arreglo `warnings`, declara una malla mayor que el total o declara más nodos de malla que instancias. Esto evita publicar JSON de éxito con métricas incoherentes. El smoke test existente de `mesh_budget_box.tscn` ejercita la ruta válida; aún falta una regresión específica de salida 5 con auditor simulado. **Godot 4.3/CI del nuevo commit: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO.**
+
+## Validación de integridad (2026-11-19)
+`MeshBudgetAudit.is_valid_report()` centraliza la validación usada por `tests/audit_production_scene.gd` (salida 5 para informes inválidos). `tests/test_mesh_budget_audit.gd` comprueba contadores negativos, malla mayor que el total, nodos mayores que instancias, ausencia de advertencias y ruta de malla con tipo incorrecto. Los commits aún requieren ejecución CI Godot 4.3; no son mediciones en Android físico ni de FPS.
