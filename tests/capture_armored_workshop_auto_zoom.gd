@@ -74,9 +74,9 @@ func _run() -> void:
         for py in range(20,700,12):
             for px in range(20,940,12):
                 var color:Color=screenshot.get_pixel(px,py)
-                if absf(color.r-background.r)+
+                if (absf(color.r-background.r)+
                         absf(color.g-background.g)+
-                        absf(color.b-background.b)>0.14:
+                        absf(color.b-background.b))>0.14:
                     meaningful+=1
         assert(meaningful>70,"Zoom rendered an empty scene")
         var file:String="zoom_%02d_%03d_LOD%d.png" % [
