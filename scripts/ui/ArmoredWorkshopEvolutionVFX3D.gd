@@ -120,10 +120,13 @@ func play_attack() -> void:
     busy=true
     _last_kind=EVENT_ATTACK
     var power:float=0.80+float(damage)*0.34
-    var destination:=Vector3(_half_width()*0.13,
-        _height()*0.57,-_half_depth()*0.38)
-    var projectile:=_sphere("ProyectilEnemigoEntrante",0.13,
-        Color("#ffd18c"),1.4)
+    # A roof strike must be visible above the solid, opaque workshop from
+    # TARVOKA's usual top-down camera. D3 has no roof, so strike a low wall.
+    var strike_height:float=_height()+0.53 if damage<=2 else 1.38
+    var destination:=Vector3(
+        _half_width()*0.13,strike_height,-_half_depth()*0.26)
+    var projectile:=_sphere("ProyectilEnemigoEntrante",0.28,
+        Color("#ffd18c"),2.2)
     projectile.position=destination+Vector3(
         -_half_width()*0.72,_height()*0.94,-_half_depth()*1.0)
     var path:=create_tween()
@@ -138,12 +141,20 @@ func play_attack() -> void:
     var next_damage:int=mini(damage+1,4)
     damage=next_damage
     stage_requested.emit(level,damage)
-    var flash:=_sphere("ExplosiónImpacto",power*0.58,
-        Color("#ffb054"),2.5)
+    var flash:=_sphere("ExplosiónImpacto",power*0.83,
+        Color("#ffb054"),3.1)
     flash.position=destination
     var shock:=_sphere("OndaExpansiva",power*0.66,
         Color("#fff0b1"),1.3,0.47)
     shock.position=destination
+    # Bright opaque blades on the visible roof plane make the hit readable
+    # even when translucent smoke and the building materials overlap.
+    for blade in range(5):
+        var radiant:=_bar("DestelloRadial_%02d" % blade,
+            Vector3(power*1.12,0.08,power*0.10),
+            Color("#ffd67a"),1.65)
+        radiant.position=destination+Vector3(0,0.05+blade*0.013,0)
+        radiant.rotation_degrees=Vector3(0,float(blade)*36.0,0)
     var burst:=create_tween()
     burst.set_parallel(true)
     var bloom:=burst.tween_property(flash,"scale",Vector3.ONE*1.76,
