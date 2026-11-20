@@ -123,6 +123,15 @@ func _run()->void:
                         "opaque closed service hardware "+name)
                     metal_plates+=1
             check(metal_plates==5,"five main modelled 3D service components")
+            var faction_mark:=truck.find_child(V5.MARK,
+                true,false) as MeshInstance3D
+            var coating:StandardMaterial3D=(
+                faction_mark.material_override as StandardMaterial3D
+                if faction_mark!=null else null)
+            check(coating!=null and
+                coating.albedo_color.is_equal_approx(
+                    Models.faction_paint_color(faction)),
+                "V5 uses original faction palette on actual quick-connect case")
             var step_count:int=int(truck.get_meta("tarvoka_g16_v5_hero_segments",-1))
             check(step_count==(6 if lod==13 else 3),
                 "V5 real LOD-aware rubber-hose segmentation")
@@ -160,6 +169,18 @@ func _run()->void:
                     "g16-v5-f%02d-hose-deployed" % faction)
                 check(_delta(closed,deployed)>14,
                     "V5 animated supply equipment visibly moves on real Godot frame")
+                # Proof specific to V5: same model, same deployed pose,
+                # same camera and lighting; toggle ONLY the V5 hardware.
+                check(V5.show_finish(truck,false),
+                    "hide ONLY V5 while keeping V1-V4 resupply pose")
+                await process_frame
+                await process_frame
+                await process_frame
+                var without_v5:Image=viewport.get_texture().get_image()
+                check(_delta(deployed,without_v5)>6,
+                    "V5 physical hose/cover add visible pixels independent of V1-V4 motion")
+                check(V5.show_finish(truck,true),
+                    "restore V5 for next model/faction")
             viewport.remove_child(truck)
             truck.free()
             await process_frame
