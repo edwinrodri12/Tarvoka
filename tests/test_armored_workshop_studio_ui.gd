@@ -34,6 +34,21 @@ func _run() -> void:
     var initial:Node3D=inspector.get("_model") as Node3D
     assert(initial!=null and
         int(initial.get_meta("workshop_art_version",-1))==2)
+    var buttons:Control=inspector.find_child(
+        "TallerBlindadosAccesoDirectoN1N2N3",true,false) as Control
+    assert(buttons!=null and buttons.get_child_count()==3,
+        "Standalone level shortcuts N1-N3 not accessible")
+    for target in [1,2,3]:
+        (buttons.get_child(target-1) as Button).pressed.emit()
+        var loaded:Node3D=inspector.get("_model") as Node3D
+        assert(loaded!=null and
+            int(loaded.get_meta("workshop_level",0))==target and
+            int(loaded.get_meta("workshop_bays",0))==target,
+            "Standalone shortcut didn't really load model N%d" % target)
+        var label:Label=inspector.get("_status") as Label
+        assert(label!=null and label.text.contains("N%d" % target))
+    inspector.call("_select_level",1)
+    assert(level.selected==1)
     # Switch into the same real battle tile preview that Pages will load.
     mode.select(1)
     inspector.call("_on_environment_change",1)
