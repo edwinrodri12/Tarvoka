@@ -75,7 +75,8 @@ func _run() -> void:
             check(Infantry.has_model(hero) and
                 str(hero.get_meta("tarvoka_infantry_role","")) == role,
                 "correct native identity, not generic stand-in")
-            check(mesh_count(hero) >= 55,
+            var hero_meshes: int = mesh_count(hero)
+            check(hero_meshes >= 55,
                 "enough actual sculpted 3D mesh volume %s" % role)
             check(opaque(hero),"ALL infantry mesh surfaces physically opaque")
             check(Models.paintable_count(hero) >= 7,
@@ -153,7 +154,7 @@ func _run() -> void:
                 "LOD8 native model %s faction %d" % [role,faction])
             if lite != null:
                 check(mesh_count(lite) >= 40 and
-                    mesh_count(lite) <= mesh_count(Models.build(role,faction,true,13)),
+                    mesh_count(lite) <= hero_meshes,
                     "LOD8 is not an empty or denser replacement")
                 check(opaque(lite),"LOD8 also fully opaque")
                 lite.free()
