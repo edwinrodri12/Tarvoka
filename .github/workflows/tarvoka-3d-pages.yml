@@ -782,6 +782,11 @@ jobs:
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           grep -F 'ArmoredWorkshopEvolutionVFX3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           grep -F 'ArmoredWorkshopEvolutionVFX3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          # The new color pass must be present in the EXACT assembled Pages
+          # build, not only in the standalone art-branch QA screenshots.
+          grep -F 'MarcaFaccionCubierta_' scripts/ui/ArmoredWorkshop3DV2.gd
+          grep -F 'MarcaLateralFaccion_' scripts/ui/ArmoredWorkshop3DV2.gd
+          grep -F 'Vector3(bw*0.63' scripts/ui/ArmoredWorkshopMobileLOD3D.gd
           grep -F 'EVOLUCIONAR N+1' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           grep -F 'RECIBIR ATAQUE D+1' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'PRUEBA EN CASILLA 3D' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
