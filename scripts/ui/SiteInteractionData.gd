@@ -26,7 +26,7 @@ static func describe(state: Dictionary, cell: Vector2i, viewer: int = 0) -> Dict
     var site_kind: String = str(marker.get("kind",""))
     var owner: int = int(marker.get("owner",-2))
     var names := {
-        "city":"Ciudad","factory":"Taller","armor_plant":"Fábrica blindada",
+        "city":"Ciudad","factory":"Taller","armor_plant":"Taller de Blindados",
         "artillery_depot":"Centro artillero","drone_center":"Centro de drones",
         "airbase":"Aeródromo","shipyard":"Astillero"
     }
