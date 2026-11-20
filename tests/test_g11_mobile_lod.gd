@@ -45,6 +45,9 @@ func _run() -> void:
             if tube != null and tube.multimesh != null:
                 _check(tube.multimesh.instance_count == Mobile.TUBES,
                     "full twelve-tube count")
+                var tube_mesh := tube.multimesh.mesh as CylinderMesh
+                _check(tube_mesh != null and tube_mesh.radial_segments == Mobile.TUBE_RADIAL_SEGMENTS,
+                    "rocket tube radial budget")
             var wheel: MultiMeshInstance3D = _find(model,
                 "G11Mobile_Lote12Ruedas") as MultiMeshInstance3D
             var rims: MultiMeshInstance3D = _find(model,
