@@ -57,3 +57,7 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 - Rechaza una malla mayor con triángulos positivos y ruta vacía, y advertencias cuyo elemento no sea texto.
 - Tres regresiones añadidas a `tests/test_mesh_budget_audit.gd`; ejecución Godot/CI del nuevo commit aún no confirmada. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.
 - Próximo paso: medir una escena real del catálogo y comparar el censo con su estructura.
+
+
+### 2026-11-20 — rutas de mallas anidadas
+`largest_mesh_path` conserva ahora la ruta de ancestros completa cuando la escena se inspecciona fuera del árbol activo (`Root/Container/Mesh`), en lugar de devolver solamente `Mesh`. Esto evita ambigüedad entre mallas homónimas y no modifica el conteo de triángulos. Las regresiones de `tests/test_mesh_budget_audit.gd` comprueban escenas anidadas y `PackedScene` desconectadas. **Godot 4.3/CI del nuevo commit: pendiente de confirmación; Android físico: NO EJECUTADO EN DISPOSITIVO.**
