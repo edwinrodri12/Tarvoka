@@ -150,6 +150,18 @@ static func apply(root:Node3D,paint:Color)->bool:
         _box(finish,"G16_V5_FactionCargoNameplate_"+tag,
             Vector3(s*1.079,1.300,1.020),
             Vector3(0.029,0.078,0.580),fraction)
+        # Distinct machined steel belt directly over the sealed lower flank:
+        # large enough to read at Android isometric distance, and intentionally
+        # below the colored shields and original opaque window geometry.
+        _box(finish,"G16_V5_MachinedLowerFlankGuard_"+tag,
+            Vector3(s*1.068,0.922,0.384),
+            Vector3(0.072,0.139,1.453),gloss)
+        _box(finish,"G16_V5_GuardCenterRecess_"+tag,
+            Vector3(s*1.112,0.930,0.381),
+            Vector3(0.012,0.042,1.286),seam)
+        _box(finish,"G16_V5_GuardFactionChannel_"+tag,
+            Vector3(s*1.119,0.956,0.397),
+            Vector3(0.017,0.043,1.165),fraction)
         _box(finish,"G16_V5_RecessedServiceCompartment_"+tag,
             Vector3(s*1.085,1.035,1.433),
             Vector3(0.026,0.088,0.390),seam)
@@ -184,6 +196,12 @@ static func apply(root:Node3D,paint:Color)->bool:
             Vector3(-10,0,-4))
     # Alternating rough, satin and polished metals add high-level visual
     # rhythm without expensive decals/shaders or increasing texture memory.
+    _box(finish,"G16_V5_MachinedFrontRescuePlate",
+        Vector3(0,0.842,-2.405),
+        Vector3(1.299,0.124,0.046),gloss)
+    _box(finish,"G16_V5_FrontFactionIdentification",
+        Vector3(0,0.852,-2.432),
+        Vector3(0.927,0.041,0.014),fraction)
     _box(finish,"G16_V5_FrontArmorWeld",
         Vector3(0,1.134,-2.275),
         Vector3(1.287,0.023,0.031),steel)
@@ -293,6 +311,9 @@ static func sync(root:Node3D)->bool:
     var progress:float=clampf(float(root.get_meta(V4.POSE,0.0)),0.0,1.0)
     flame_group.rotation_degrees.y=46.0*progress
     flame_group.scale=Vector3.ONE*(0.77+0.29*progress)
+    # The flame Node itself must not render in stages 0-3, not only its
+    # parent layer: Godot tests and the Studio read its local visibility.
+    flame_group.visible=visible and level>=4
     return true
 
 static func set_damage(root:Node3D,level:int)->bool:
