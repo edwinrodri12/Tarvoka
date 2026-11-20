@@ -26,3 +26,16 @@ El Taller de Blindados dispone de un **modo de vista 3D sobre nueve casillas tá
 
 ## Límites y aprobación
 El taller **todavía no está aprobado ni agregado como estructura funcional a las batallas/APK**. Este modo es una maqueta real 3D en el visor; ninguna operación del estado de juego se altera. Las pruebas de render en OpenGL por software **no son un benchmark de un teléfono Android físico**. Solicitar revisión del modelo antes de activar el edificio en partidas.
+
+## Siguiente prioridad: cambio automático de detalle al hacer zoom
+
+El selector `EDIFICIOS > Taller de Blindados` dispone ahora de la quinta opción **`Android · AUTOMÁTICO por zoom`** en los estudios compartido y separado. Al elegirla, pasa a la vista de nueve casillas; HERO sigue reservado a inspección artística del edificio completo.
+
+- Umbrales de tamaño proyectado reales, no distancias inventadas: al alcanzar **152 píxeles** cambia a **TACTICAL**, al caer a **112 píxeles** cambia a **DISTANT**, conservando el último LOD en el intervalo entre ambos (histéresis de 40 px).
+- `ArmoredWorkshopBattleTile3D.set_preview_detail` reconstruye únicamente la malla 3D del taller y mantiene intactos los nueve bloques de terreno, las tres líneas de carretera, posición del edificio, orientación de cámara y sistema de zoom. No se crean casillas nuevas del juego.
+- El visor muestra los píxeles proyectados y el perfil activo junto a la cantidad de lotes GPU; los perfiles manuales permanecen manuales.
+- `tests/test_armored_workshop_studio_ui.gd` incluye zoom cercano, lejano y de retorno, validación de que el árbol de las nueve casillas y el contenedor de edificio no cambian de identidad, más control de selección manual.
+- `tests/capture_armored_workshop_auto_zoom.gd` crea **8 capturas nuevas de Godot OpenGL**, cada una con zoom, LOD, píxeles, lotes GPU y validación de geometría visible en el manifiesto. Pasan de 58 a **66 vistas** en el artefacto de Actions cuando concluya la ejecución.
+- Publicación: el flujo general de GitHub Pages ha sido modificado para copiar y verificar los scripts nuevos desde la rama artística. El despliegue de la revisión automática debe completarse antes de afirmar disponibilidad del nuevo selector en la web.
+
+**Estado de validación:** el run anterior `44647769023` publicó con éxito el visor compartido **sin** modo AUTO. La prueba nativa de la lógica AUTO tuvo un run SUCCESS `44653647315`. La exportación visual de ocho zooms y el Pages actualizado siguen sujetos a sus propias comprobaciones, antes de solicitar visto bueno artístico.
