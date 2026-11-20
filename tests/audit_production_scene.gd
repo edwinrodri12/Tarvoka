@@ -20,5 +20,19 @@ func _initialize() -> void:
 		quit(4)
 		return
 	var report: Dictionary = Audit.inspect_packed_scene(scene)
+	# A malformed audit must never produce a success-shaped census in CI.
+	for key in ["triangles", "instances", "mesh_nodes", "surfaces", "largest_mesh_triangles"]:
+		if not report.has(key) or typeof(report[key]) != TYPE_INT or report[key] < 0:
+			push_error("Invalid geometry census field: " + key)
+			quit(5)
+			return
+	if not report.has("warnings") or not (report["warnings"] is Array):
+		push_error("Invalid geometry census warnings")
+		quit(5)
+		return
+	if report["largest_mesh_triangles"] > report["triangles"] or report["mesh_nodes"] > report["instances"]:
+		push_error("Inconsistent geometry census totals")
+		quit(5)
+		return
 	print("MESH_PRODUCTION_CENSUS " + JSON.stringify({"scene": path, "report": report}))
 	quit(0)
