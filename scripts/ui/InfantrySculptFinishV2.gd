@@ -336,6 +336,27 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
             Vector3(0.33,0.095,0.17),rubber)
         _box(weapon,"V2_FaccionCarcasaAT",Vector3(-0.12,0.334,-0.005),
             Vector3(0.21,0.024,0.14),faction)
+    # Native 3D attack feedback shares the same rifle rig, never a sprite.
+    # Rifle lengths are already defined by InfantryFamilyV1; position the
+    # flash on each actual muzzle, not in the character's torso.
+    var short_rifle: bool=role in ["scout","infantry_urban","infantry_engineer"]
+    var muzzle_x: float=0.91 if role=="infantry_antitank" else (
+        0.81 if short_rifle else 1.04)
+    var flame: StandardMaterial3D=_coat(Color("#ffc562"),0.0,0.25)
+    flame.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+    flame.emission_enabled=true
+    flame.emission=Color("#ffad32")
+    flame.emission_energy_multiplier=1.6
+    var flash: MeshInstance3D=_sphere(weapon,"V2_DestelloDisparo3D",
+        Vector3(muzzle_x,0.025,0),
+        Vector3(0.18,0.11,0.11),flame)
+    flash.visible=false
+    if hero and role!="infantry_antitank":
+        var brass: MeshInstance3D=_box(weapon,"V2_CasquilloFisico",
+            Vector3(0.09,0.10,0.21),Vector3(0.10,0.035,0.039),
+            _coat(Color("#b69a54"),0.77,0.29),Vector3(0,18,25))
+        brass.visible=false
+
     # Variant-specific V2 outlines retain their original tactical identity
     # without turning them into extra buildable units.
     if role=="infantry_urban":
@@ -387,24 +408,47 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     if rifle==null:
         return false
     var phase: float=clampf(t,0.0,1.0)
+    var pulse: float=sin(phase*PI)
+    var walk: float=sin(phase*TAU*2.0)
     # Rifle points forward, not horizontally across the preview screenshot.
     rifle.rotation_degrees=Vector3(-6,67,0) if role!="infantry_antitank" else Vector3(-9,64,-12)
     for side in [-1,1]:
         var arm: Node3D=_find(model,"BrazoRig_%d"%side)
         if arm==null:
             return false
+        # In V1 the hands hang far outside the weapon. Opposing shoulder
+        # yaw now converges the two covered palms around the real grips.
         arm.rotation_degrees.x=49.0 if role!="infantry_antitank" else 56.0
-        arm.rotation_degrees.z=float(side)*-8.0
+        arm.rotation_degrees.z=34.0 if side<0 else -24.0
+        arm.rotation_degrees.y=6.0 if side<0 else -4.0
         if kind=="move":
-            arm.rotation_degrees.x+=5.0*sin(phase*TAU*2.0+float(side)*PI*0.5)
+            arm.rotation_degrees.x+=3.5*sin(phase*TAU*2.0+float(side)*PI*0.5)
+            arm.rotation_degrees.z+=3.0*walk*float(side)
         elif kind in ["attack","aim"]:
-            arm.rotation_degrees.x+=4.0
+            arm.rotation_degrees.x+=5.0
+            arm.rotation_degrees.z+=(-3.0 if side<0 else 2.0)*pulse
         elif kind in ["work","repair","capture"]:
-            arm.rotation_degrees.x=37.0+12.0*sin(phase*PI)
+            arm.rotation_degrees.x=38.0+14.0*pulse
+            arm.rotation_degrees.z=18.0 if side<0 else -14.0
     if kind=="attack":
-        rifle.rotation_degrees.x-=4.0*sin(phase*PI)
+        rifle.rotation_degrees.x-=6.5*pulse
+        rifle.position.z-=0.045*pulse
+    elif kind=="aim":
+        rifle.rotation_degrees.x-=1.8*pulse
     if role=="infantry_antitank":
         rifle.rotation_degrees.y=64.0
+    var head: Node3D=_find(model,"CabezaRig")
+    if head!=null:
+        head.rotation_degrees.x=2.0+2.5*walk if kind=="move" else (
+            -3.5*pulse if kind in ["attack","aim"] else 0.0)
+        head.rotation_degrees.y=-4.0*walk if kind=="move" else 0.0
+    var flash: Node3D=_find(model,"V2_DestelloDisparo3D")
+    if flash!=null:
+        flash.visible=kind=="attack" and phase>0.13 and phase<0.53
+    var case_mesh: Node3D=_find(model,"V2_CasquilloFisico")
+    if case_mesh!=null:
+        case_mesh.visible=kind=="attack" and phase>0.26 and phase<0.74
+        case_mesh.position=Vector3(0.09,0.10+0.09*pulse,0.21+0.13*pulse)
     # Damage remains owned by V1 and survives pose changes. Never amend HP.
     var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
     var scar: Node3D=_find(model,"V2_CicatrizCasco")
