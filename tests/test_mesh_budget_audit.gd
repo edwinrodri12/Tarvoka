@@ -100,6 +100,23 @@ func _initialize() -> void:
 		assert(repeat_report["instances"] == 1)
 		assert(repeat_report["warnings"].is_empty())
 		assert(root.get_child_count() == before_children)
+	# Report validator guards CI against malformed and contradictory output.
+	assert(Audit.is_valid_report(packed_report))
+	var invalid_report: Dictionary = packed_report.duplicate(true)
+	invalid_report["triangles"] = -1
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["largest_mesh_triangles"] = 13
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["mesh_nodes"] = 2
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report.erase("warnings")
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["largest_mesh_path"] = 7
+	assert(not Audit.is_valid_report(invalid_report))
 	packed_root.free()
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
