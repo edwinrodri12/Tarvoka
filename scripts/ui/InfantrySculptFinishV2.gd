@@ -236,6 +236,10 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         Vector3(0.11,0.014,0.010),metal,Vector3(0,0,-17))
     _plate(head,"V2_FaccionCasco",Vector3(0,0.58,-0.065),
         0.36,0.085,0.052,faction)
+    var scar: MeshInstance3D=_box(head,"V2_CicatrizCasco",
+        Vector3(0.18,0.36,-0.286),Vector3(0.10,0.024,0.035),
+        _coat(Color("#342e2c"),0.07,0.82),Vector3(0,0,-38))
+    scar.visible=false
     _sphere(head,"V2_ProteccionBarbilla",Vector3(0,0.054,-0.205),
         Vector3(0.28,0.12,0.13),seam)
     for side in [-1,1]:
