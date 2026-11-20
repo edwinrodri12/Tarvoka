@@ -26,7 +26,6 @@ func _run() -> void:
     await process_frame
     studio.call("_studio_jump_category",0)
     studio.call("_studio_select_tab",1)
-    var original_viewport: SubViewport=studio.get("preview_viewport") as SubViewport
     var original_preview: Node3D=studio.get("preview") as Node3D
     var role_picker: OptionButton=studio.get("role_picker") as OptionButton
     var faction_picker: OptionButton=studio.get("faction_picker") as OptionButton
