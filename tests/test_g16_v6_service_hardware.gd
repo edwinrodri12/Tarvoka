@@ -9,7 +9,7 @@ const V4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const MaterialsV5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
 const V6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
-const OUT="res://build/qa/g16-v5"
+const OUT="res://build/qa/g16-v6"
 var failures:int=0
 var shots:int=0
 
@@ -163,11 +163,11 @@ func _run()->void:
             if lod==13 and faction in [0,3]:
                 truck.rotation_degrees.y=12
                 var closed:Image=await _capture(viewport,
-                    "g16-v5-f%02d-hose-stowed" % faction)
+                    "g16-v6-f%02d-hose-stowed" % faction)
                 check(Models.pose_model("logistics_mobile",truck,
                     "resupply",0.96),"QA animate physical hose to 96%")
                 var deployed:Image=await _capture(viewport,
-                    "g16-v5-f%02d-hose-deployed" % faction)
+                    "g16-v6-f%02d-hose-deployed" % faction)
                 check(_delta(closed,deployed)>14,
                     "V5 animated supply equipment visibly moves on real Godot frame")
                 # Proof specific to V5: same model, same deployed pose,
@@ -177,8 +177,8 @@ func _run()->void:
                 await process_frame
                 await process_frame
                 await process_frame
-                var without_v5:Image=viewport.get_texture().get_image()
-                check(_delta(deployed,without_v5)>6,
+                var without_v6:Image=viewport.get_texture().get_image()
+                check(_delta(deployed,without_v6)>6,
                     "V5 physical hose/cover add visible pixels independent of V1-V4 motion")
                 check(V6.show_finish(truck,true),
                     "restore V5 for next model/faction")
