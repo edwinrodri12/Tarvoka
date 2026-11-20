@@ -75,6 +75,7 @@ func _check_level(studio:Variant,level:int,
         ProjectSettings.globalize_path(OUT))==OK)
     var img:Image=studio.preview.get_texture().get_image()
     assert(img.save_png(OUT+"workshop-shared-%s-n%d.png" % [tag,level])==OK)
+    assert(studio.workshop_info.text.begins_with("MODELO 3D CARGADO"))
     assert(studio.workshop_info.text.contains("N%d" % level))
     print("PASS WORKSHOP LEVEL %s N%d: %d drawable children, %d visible pixel samples" % [
         tag,level,_visible_meshes(model),colored])
@@ -108,6 +109,10 @@ func _run() -> void:
         "TallerBlindadosAccesoRapidoNiveles",true,false) as Control
     assert(level_buttons!=null and level_buttons.get_child_count()==3)
     assert(level_buttons.is_visible_in_tree())
+    assert(studio.workshop_info!=null and studio.workshop_info.is_visible_in_tree())
+    assert(studio.workshop_info.name=="TallerBlindadosEstadoCarga")
+    assert(studio.workshop_info.get_index()==level_buttons.get_index()+1,
+        "Loaded N# confirmation must sit immediately after level buttons")
     # Exercise real dropdown emission, not just direct geometry construction.
     for level in [1,2,3]:
         await _check_level(studio,level,0,"HERO")
@@ -126,6 +131,26 @@ func _run() -> void:
     assert(studio.workshop_view.selected==1)
     for level in [1,2,3]:
         await _check_level(studio,level,1,"MAP")
+    # Regression: strongest faction identity + total ruins also work in the
+    # exact published shared viewer, not just neutral / undamaged defaults.
+    studio.workshop_faction.select(8)
+    studio.workshop_faction.item_selected.emit(8)
+    studio.workshop_damage.select(4)
+    studio.workshop_damage.item_selected.emit(4)
+    await _frames(8)
+    var ruins:Node3D=studio.model_root as Node3D
+    assert(ruins!=null and ruins.is_inside_tree())
+    assert(int(ruins.get_meta("workshop_level",-1))==3)
+    assert(int(ruins.get_meta("workshop_faction",-2))==7)
+    assert(int(ruins.get_meta("workshop_damage",-1))==4)
+    assert(_visible_meshes(ruins)>=8)
+    var ruins_samples:int=await _nonblank_pixels(studio.preview,ruins)
+    assert(ruins_samples>55,"Faction F8 D4 destroyed workshop rendered blank")
+    assert(studio.workshop_info.text.contains("D4"))
+    var ruins_image:Image=studio.preview.get_texture().get_image()
+    assert(ruins_image.save_png(OUT+"workshop-shared-MAP-f8-d4.png")==OK)
+    studio.workshop_damage.select(0)
+    studio.workshop_damage.item_selected.emit(0)
     # Return to Civilian City and preserve its approved controls at index2.
     studio.building_picker.select(4)
     studio.building_picker.item_selected.emit(4)
