@@ -27,6 +27,8 @@ def validate(report):
         return "largest mesh exceeds total triangles"
     if report["instances"] == 0 and (report["triangles"] or report["mesh_nodes"] or report["surfaces"]):
         return "geometry declared without instances"
+    if report["triangles"] > 0 and report["largest_mesh_triangles"] == 0:
+        return "triangles declared without a contributing mesh"
     path = report.get("largest_mesh_path")
     if not isinstance(path, str):
         return "largest_mesh_path must be a string"
@@ -46,13 +48,14 @@ def self_test():
     assert validate(good) is None
     for patch in ({"triangles": -1}, {"triangles": True}, {"mesh_nodes": 2},
                   {"largest_mesh_triangles": 13}, {"largest_mesh_path": ""},
-                  {"warnings": [3]}, {"instances": 0}, {"surfaces": "1"}):
+                  {"warnings": [3]}, {"instances": 0}, {"surfaces": "1"},
+                  {"largest_mesh_triangles": 0}, {"largest_mesh_path": 42}):
         bad = dict(good, **patch)
         assert validate(bad) is not None, patch
     empty = dict.fromkeys(COUNTS, 0)
     empty.update(largest_mesh_path="", warnings=[])
     assert validate(empty) is None
-    print("PASS: 10 structural cases")
+    print("PASS: 12 structural cases")
 
 
 def main(argv):
