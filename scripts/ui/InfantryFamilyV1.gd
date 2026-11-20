@@ -23,8 +23,9 @@ static func supports(role: String) -> bool:
 
 static func _mat(color: Color, metallic: float = 0.08, roughness: float = 0.66) -> StandardMaterial3D:
     var mat := StandardMaterial3D.new()
-    mat.albedo_color = color
-    mat.albedo_color.a = 1.0
+    var opaque: Color = color
+    opaque.a = 1.0
+    mat.albedo_color = opaque
     mat.metallic = metallic
     mat.roughness = roughness
     mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
