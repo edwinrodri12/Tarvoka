@@ -105,7 +105,7 @@ func _run() -> void:
     assert(studio.workshop_version.selected==1)
     assert(studio.workshop_view.selected==0)
     var level_buttons:Control=studio.workshop_controls.find_child(
-        "TallerBlindadosAccesoRapidoNiveles",true,false)
+        "TallerBlindadosAccesoRapidoNiveles",true,false) as Control
     assert(level_buttons!=null and level_buttons.get_child_count()==3)
     assert(level_buttons.is_visible_in_tree())
     # Exercise real dropdown emission, not just direct geometry construction.
