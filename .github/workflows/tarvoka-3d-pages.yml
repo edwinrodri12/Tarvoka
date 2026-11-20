@@ -712,6 +712,9 @@ jobs:
           test -s workshop-v1-source/tests/test_armored_workshop_v2_native.gd
           cp workshop-v1-source/tests/test_armored_workshop_v2_native.gd tests/
           grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'PRUEBA EN CASILLA 3D' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'extends "res://scripts/ui/PowerPlantStudioAdapterV1.gd"' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'building_picker.add_item("Taller de Blindados' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
