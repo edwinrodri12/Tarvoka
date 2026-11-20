@@ -97,12 +97,32 @@ func _verify() -> void:
                     if damage<=2:
                         var height:float=4.90 if level==1 else 6.10 if level==2 else 7.20
                         var roof_marks:int=0
+                        var roof_width:float=9.5 if level==1 else 15.0 if level==2 else 20.5
+                        var bay_width:float=roof_width/float(level)
+                        var large_front:int=0
+                        var rear:int=0
+                        var side:int=0
                         for plate_idx in range(faction_batch.multimesh.instance_count):
                             var transform:Transform3D=faction_batch.multimesh.get_instance_transform(plate_idx)
-                            if absf(transform.origin.y-(height+0.235))<0.001:
+                            var size:Vector3=transform.basis.get_scale()
+                            if absf(transform.origin.y-(height+0.24))<0.001:
+                                assert(size.x>=bay_width*0.62,
+                                    "Faction roof stripe too thin in Android LOD")
                                 roof_marks+=1
-                        assert(roof_marks==level,
-                            "Overhead tactical roof insignia must identify each service bay")
+                            if absf(transform.origin.y-(height-0.16))<0.001:
+                                assert(size.x>=bay_width*0.72)
+                                large_front+=1
+                            if absf(transform.origin.y-height*0.86)<0.001:
+                                assert(size.x>=roof_width*0.77)
+                                rear+=1
+                            if absf(transform.origin.y-height*0.75)<0.001:
+                                assert(size.z>=
+                                    (12.0 if level==1 else 15.0 if level==2 else 18.0)*0.33)
+                                side+=1
+                        assert(roof_marks==level and large_front==level,
+                            "Overhead/mobile roof or front faction identity disappeared")
+                        assert(rear==1 and side==2,
+                            "Mobile faction needs strong rear and both side stripes")
                         assert(faction_batch.multimesh.instance_count>=4+level*2,
                             "Faction colors missing from roof or service bays")
                     if damage in [1,2]:
