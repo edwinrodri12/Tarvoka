@@ -33,7 +33,10 @@ func _run() -> void:
         "Battle must use Android profile, not hundreds of HERO meshes")
     var terrain:Array=Scenarios.terrain(0)
     var state:Dictionary=Session.start(
-        Roles.experimental_armies(),terrain,0,false,false,true)
+        Roles.experimental_armies(),terrain,0,false,false,true,true)
+    # BattleSession.start: (units, terrain, first, fog, relays, economy, modern).
+    # Always set BOTH economy and modern explicitly, otherwise armor_plant
+    # never exists and a false failure hides the real 3D integration.
     assert(not state.is_empty() and state["economy"].get("modern",false))
     assert(Economy.site_at(state["economy"],LEFT)["kind"]=="armor_plant")
     assert(Economy.site_at(state["economy"],RIGHT)["kind"]=="armor_plant")
@@ -113,7 +116,7 @@ func _run() -> void:
     var fog:Dictionary=Session.start([
         Roles.make_unit("AL",0,Vector2i(1,2),"line"),
         Roles.make_unit("EN",1,Vector2i(8,5),"line")
-    ],terrain,0,true,false,true)
+    ],terrain,0,true,false,true,true)
     assert(not fog.is_empty())
     var unknown:Node3D=Terrain.build(fog,"",0)
     assert(unknown!=null)
