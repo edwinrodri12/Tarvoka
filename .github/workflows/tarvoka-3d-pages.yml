@@ -76,6 +76,8 @@ on:
       - "tests/test_unified_studio_navigation.gd"
       - "tests/test_g16_v4_native_360.gd"
       - "tests/test_g16_v4_shared_studio.gd"
+      - "tests/test_g16_v5_native_materials.gd"
+      - "tests/test_g16_v5_shared_studio.gd"
       - "tests/test_city_shared_visual_presence.gd"
       - "tests/test_studio_full_animation_inventory.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
@@ -239,7 +241,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -305,6 +307,15 @@ jobs:
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
           test -s scripts/ui/G16LogisticsSculptDamageV4.gd
+          test -s scripts/ui/G16PremiumMaterialsDamageV5.gd
+          test -s hq-android-v15/tests/test_g16_v5_native_materials.gd
+          cp hq-android-v15/tests/test_g16_v5_native_materials.gd tests/test_g16_v5_native_materials.gd
+          test -s hq-android-v15/tests/test_g16_v5_shared_studio.gd
+          cp hq-android-v15/tests/test_g16_v5_shared_studio.gd tests/test_g16_v5_shared_studio.gd
+          grep -Fq 'G16MaterialsV5.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16MaterialsV5.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'g16_v5_on' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'g16_v5_off' scripts/ui/BastionStudioAdapter.gd
           test -s hq-android-v15/tests/test_g16_v4_native_360.gd
           cp hq-android-v15/tests/test_g16_v4_native_360.gd tests/test_g16_v4_native_360.gd
           test -s hq-android-v15/tests/test_g16_v4_shared_studio.gd
@@ -318,7 +329,7 @@ jobs:
           test -s hq-android-v15/tests/test_g16_v3_live_studio_ui.gd
           cp hq-android-v15/tests/test_g16_v3_live_studio_ui.gd tests/test_g16_v3_live_studio_ui.gd
           grep -q 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
-          grep -q 'G16 · Logística blindada 6×6 · V4 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G16 · Logística blindada 6×6 · V5 materiales y desgaste' scripts/ui/BastionStudioAdapter.gd
           grep -q 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -q 'g16_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'g16_v3_off' scripts/ui/BastionStudioAdapter.gd
@@ -522,6 +533,7 @@ jobs:
           for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
                             'const G16LogisticsV1 = preload(', 'const G16ExteriorV2 = preload(',
                             'const G16MechanicsV3 = preload(', 'const G16SculptV4 = preload(',
+                            'const G16MaterialsV5 = preload(',
                             'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
                             'G11Art.build', 'APCClosedTiresV25.apply',
                             'static func pose_model(', 'static func restore_model_pose(']:
@@ -1309,6 +1321,31 @@ jobs:
           fi
           grep -F 'PASS G16 V4 LIVE STUDIO:' /tmp/g16-v4-live-ui.log
           test -s build/qa/g16-v4/g16-v4-real-unified-studio.png
+          # V5: actual reflective but 100% OPAQUE 3D glass, steel/chrome
+          # microdetail, reversible metal weathering and volumetric flames.
+          # Native QA + original selectable TARVOKA Studio UI must both pass
+          # before the public web bundle can be deployed.
+          mkdir -p build/qa/g16-v5
+          timeout 290s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v5_native_materials.gd \
+            2>&1 | tee /tmp/g16-v5-assembled.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v5-assembled.log; then
+            echo '::error::G16 V5 physical glass, PBR or progressive damage failed in assembled 3D Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G16 V5 NATIVE PBR:' /tmp/g16-v5-assembled.log
+          test "$(find build/qa/g16-v5 -maxdepth 1 -name '*.png' | wc -l)" -eq 22
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v5_shared_studio.gd \
+            2>&1 | tee /tmp/g16-v5-live-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v5-live-ui.log; then
+            echo '::error::G16 V5 is broken in the actual shared original Godot TARVOKA Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G16 V5 LIVE STUDIO:' /tmp/g16-v5-live-ui.log
+          test -s build/qa/g16-v5/g16-v5-unified-studio-real.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.
@@ -1734,6 +1771,15 @@ jobs:
         with:
           name: tarvoka-g16-v4-shared-studio-real-model
           path: build/qa/g16-v4/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Save real G16 V5 360 surface and live unified Studio native PNGs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v5-unified-studio-opaque-pbr-glass
+          path: build/qa/g16-v5/*.png
           if-no-files-found: warn
           retention-days: 14
 
