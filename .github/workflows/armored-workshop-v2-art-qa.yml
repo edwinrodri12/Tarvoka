@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/ui/ArmoredWorkshop3DV2.gd"
       - "scripts/ui/ArmoredWorkshopMobileLOD3D.gd"
+      - "scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd"
       - "scripts/ui/ArmoredWorkshopLODPolicy.gd"
       - "scripts/ui/ArmoredWorkshopBattlePreview3D.gd"
       - "scripts/ui/ArmoredWorkshopBattleTile3D.gd"
@@ -21,6 +22,8 @@ on:
       - "tests/capture_armored_workshop_studio_tile.gd"
       - "tests/capture_armored_workshop_auto_zoom.gd"
       - "tests/test_armored_workshop_android_multi_stress.gd"
+      - "tests/test_armored_workshop_evolution_vfx.gd"
+      - "tests/capture_armored_workshop_evolution_vfx.gd"
       - "tests/capture_armored_workshop_v2_cameras.gd"
       - ".github/workflows/armored-workshop-v2-art-qa.yml"
   workflow_dispatch:
@@ -256,11 +259,46 @@ jobs:
           grep -F 'PASS WORKSHOP MULTI STRESS:' /tmp/workshop-multi-stress.log
           test "$(find qa_artifacts/armored_workshop_multi_stress -name '*.png' | wc -l)" -eq 4
           test -s qa_artifacts/armored_workshop_multi_stress/manifest.json
+      - name: Animate N1 to N3, incoming attacks D0-D4 and repairs in real Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd
+          timeout --signal=TERM --kill-after=10s 90s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_evolution_vfx.gd \
+            2>&1 | tee /tmp/workshop-evolution-vfx.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-vfx.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION VFX:' /tmp/workshop-evolution-vfx.log
+      - name: Capture 17 native upgrade, incoming projectile and damage-stage frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_evolution_vfx.gd \
+            2>&1 | tee /tmp/workshop-evolution-frames.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-frames.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION CINEMATIC:' /tmp/workshop-evolution-frames.log
+          test "$(find qa_artifacts/armored_workshop_evolution_vfx -name '*.png' | wc -l)" -eq 17
+          test -s qa_artifacts/armored_workshop_evolution_vfx/manifest.json
       - name: Preserve camera screenshots and native QA logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: armored-workshop-v2-70-camera-multi-stress-and-auto-zoom-evidence
+          name: armored-workshop-v2-87-camera-evolution-attacks-and-damage-evidence
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -269,6 +307,7 @@ jobs:
             qa_artifacts/armored_workshop_studio_tile/
             qa_artifacts/armored_workshop_auto_zoom/
             qa_artifacts/armored_workshop_multi_stress/
+            qa_artifacts/armored_workshop_evolution_vfx/
             /tmp/workshop-v2-art.log
             /tmp/workshop-mobile-lod.log
             /tmp/workshop-lod-policy.log
@@ -278,5 +317,7 @@ jobs:
             /tmp/workshop-studio-ui.log
             /tmp/workshop-auto-zoom.log
             /tmp/workshop-multi-stress.log
+            /tmp/workshop-evolution-vfx.log
+            /tmp/workshop-evolution-frames.log
             /tmp/workshop-tile-capture.log
             /tmp/workshop-v2-visual.log
