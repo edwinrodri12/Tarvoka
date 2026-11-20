@@ -47,6 +47,10 @@ jobs:
           /tmp/Godot_v4.3-stable_linux.x86_64 \
             --headless --editor --path . --import --quit \
             2>&1 | tee /tmp/workshop-live-import.log
+          # Godot's --import can exit successfully despite script parse
+          # diagnostics. A live-game render QA cannot ignore those errors.
+          if grep -E 'SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:' \
+              /tmp/workshop-live-import.log; then exit 1; fi
       - name: Test actual modern armor_plant with fog, 3 visual tiers and 5 damage stages
         run: |
           set -euo pipefail
