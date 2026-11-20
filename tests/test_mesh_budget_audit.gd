@@ -117,6 +117,16 @@ func _initialize() -> void:
 	invalid_report = packed_report.duplicate(true)
 	invalid_report["largest_mesh_path"] = 7
 	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["instances"] = 0
+	invalid_report["mesh_nodes"] = 0
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["largest_mesh_path"] = ""
+	assert(not Audit.is_valid_report(invalid_report))
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["warnings"] = [42]
+	assert(not Audit.is_valid_report(invalid_report))
 	packed_root.free()
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
