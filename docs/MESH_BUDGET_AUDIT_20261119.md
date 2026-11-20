@@ -51,3 +51,9 @@ Se espera `MESH_BUDGET_AUDIT_PASS` y salida 0. El test comprueba caja de 12 tri�
 
 ## 2026-11-19 — Identificación del mayor contribuyente
 `inspect()` y `inspect_packed_scene()` devuelven ahora `largest_mesh_triangles` y `largest_mesh_path` (nombre del nodo si no está dentro del SceneTree). El recuento incluye multiplicidad visible de MultiMesh; no es una medición de GPU/FPS. Empates conservan el primer nodo visitado. Regresiones añadidas para BoxMesh, MultiMesh×3 y cero instancias visibles. Godot/CI del commit nuevo: pendiente; Android físico: NO EJECUTADO EN DISPOSITIVO. No alterar presupuestos de producción sin medir escenas reales.
+
+## 2026-11-20 — Integridad de reportes vacíos
+- `is_valid_report` rechaza reportes sin instancias que declaran triángulos, superficies o nodos de malla.
+- Rechaza una malla mayor con triángulos positivos y ruta vacía, y advertencias cuyo elemento no sea texto.
+- Tres regresiones añadidas a `tests/test_mesh_budget_audit.gd`; ejecución Godot/CI del nuevo commit aún no confirmada. Android físico: NO EJECUTADO EN DISPOSITIVO. Revisión visual: PENDIENTE.
+- Próximo paso: medir una escena real del catálogo y comparar el censo con su estructura.
