@@ -1,0 +1,362 @@
+name: TARVOKA armored workshop V2 native art QA
+on:
+  push:
+    branches:
+      - art/armored-workshop-v1-20261119
+    paths:
+      - "scripts/ui/ArmoredWorkshop3DV2.gd"
+      - "scripts/ui/ArmoredWorkshopMobileLOD3D.gd"
+      - "scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd"
+      - "scripts/ui/ArmoredWorkshopLODPolicy.gd"
+      - "scripts/ui/ArmoredWorkshopBattlePreview3D.gd"
+      - "scripts/ui/ArmoredWorkshopBattleTile3D.gd"
+      - "scripts/ui/ArmoredWorkshopStudioAdapterV1.gd"
+      - "scripts/ui/ArmoredWorkshopDesignStudioV1.gd"
+      - "tests/test_armored_workshop_v2_native.gd"
+      - "tests/test_armored_workshop_mobile_lod.gd"
+      - "tests/test_armored_workshop_lod_policy.gd"
+      - "tests/test_armored_workshop_battle_preview.gd"
+      - "tests/capture_armored_workshop_battle_preview.gd"
+      - "tests/test_armored_workshop_studio_tile.gd"
+      - "tests/test_armored_workshop_studio_ui.gd"
+      - "tests/capture_armored_workshop_studio_tile.gd"
+      - "tests/capture_armored_workshop_auto_zoom.gd"
+      - "tests/test_armored_workshop_android_multi_stress.gd"
+      - "tests/test_armored_workshop_evolution_vfx.gd"
+      - "tests/test_armored_workshop_evolution_studio_ui.gd"
+      - "tests/capture_armored_workshop_evolution_vfx.gd"
+      - "tests/capture_armored_workshop_faction_colors.gd"
+      - "tests/capture_armored_workshop_v2_cameras.gd"
+      - ".github/workflows/armored-workshop-v2-art-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+# Only the most recent edit needs a 36-image visual review; cancel obsolete
+# art-branch QA submissions so they cannot block current progress.
+concurrency:
+  group: armored-workshop-art-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-art:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Godot 4.3 and Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" \
+            -o /tmp/tarvoka-godot.zip
+          unzip -oq /tmp/tarvoka-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          command -v xvfb-run
+      - name: Import native 3D project
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The public studio is assembled on Pages from several branches.
+          # Its missing parent scripts here are unrelated to isolated V2 meshes.
+          # Validate the adapter by source before isolating the native art test.
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          rm -f scripts/ui/ArmoredWorkshopStudioAdapterV1.gd scripts/ui/BastionStudioAdapter.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/workshop-v2-import.log
+      - name: Test all 135 3D material/geometry variants with real OpenGL
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshop3DV1.gd
+          test -s scripts/ui/ArmoredWorkshop3DV2.gd
+          # The multi-branch adapter was source-checked in the import step.
+          test -s scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          test -s tests/test_armored_workshop_v2_native.gd
+          grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_v2_native.gd \
+            2>&1 | tee /tmp/workshop-v2-art.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+            /tmp/workshop-v2-art.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP V2 native:' /tmp/workshop-v2-art.log
+      - name: Verify 270 Android LOD variants and GPU instancing budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopMobileLOD3D.gd
+          test -s tests/test_armored_workshop_mobile_lod.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_mobile_lod.gd \
+            2>&1 | tee /tmp/workshop-mobile-lod.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-mobile-lod.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP MOBILE LOD:' /tmp/workshop-mobile-lod.log
+      - name: Verify stable zoom transitions at 840 mobile screen sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopLODPolicy.gd
+          test -s tests/test_armored_workshop_lod_policy.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_lod_policy.gd \
+            2>&1 | tee /tmp/workshop-lod-policy.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-lod-policy.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP LOD POLICY:' /tmp/workshop-lod-policy.log
+      - name: Verify actual tile-scale battle art bridge without gameplay changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopBattlePreview3D.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_battle_preview.gd \
+            2>&1 | tee /tmp/workshop-map-bridge.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-map-bridge.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP MAP BRIDGE:' /tmp/workshop-map-bridge.log
+      - name: Assert 270 selectable nine-tile workshop studio views
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopBattleTile3D.gd
+          grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_studio_tile.gd \
+            2>&1 | tee /tmp/workshop-tile-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-tile-studio.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP STUDIO TILE:' /tmp/workshop-tile-studio.log
+      - name: Native UI smoke for interactive map and full-scale switching
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_studio_ui.gd \
+            2>&1 | tee /tmp/workshop-studio-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-studio-ui.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP STUDIO UI:' /tmp/workshop-studio-ui.log
+      - name: Render real 3D evidence from all six cameras and damage stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s tests/capture_armored_workshop_v2_cameras.gd
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_v2_cameras.gd \
+            2>&1 | tee /tmp/workshop-v2-visual.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-v2-visual.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP V2 VISUAL:' /tmp/workshop-v2-visual.log
+          test "$(find qa_artifacts/armored_workshop_v2 -name '*.png' | wc -l)" -eq 36
+          test -s qa_artifacts/armored_workshop_v2/manifest.json
+      - name: Render eight battlefield-scale approval shots
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_battle_preview.gd \
+            2>&1 | tee /tmp/workshop-map-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-map-capture.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP BATTLE PREVIEW:' /tmp/workshop-map-capture.log
+          test "$(find qa_artifacts/armored_workshop_map_preview -name '*.png' | wc -l)" -eq 8
+          test -s qa_artifacts/armored_workshop_map_preview/manifest.json
+      - name: Render fourteen interactive nine-tile studio views for review
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_studio_tile.gd \
+            2>&1 | tee /tmp/workshop-tile-capture.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-tile-capture.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP STUDIO TILE VISUAL:' /tmp/workshop-tile-capture.log
+          test "$(find qa_artifacts/armored_workshop_studio_tile -name '*.png' | wc -l)" -eq 14
+          test -s qa_artifacts/armored_workshop_studio_tile/manifest.json
+      - name: Capture eight zoom distances with actual automatic LOD and stable terrain
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Prevent an assertion inside an asynchronous screenshot test from
+          # leaving a live Godot process and masking the actual error in CI.
+          timeout --signal=TERM --kill-after=10s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_auto_zoom.gd \
+            2>&1 | tee /tmp/workshop-auto-zoom.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-auto-zoom.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP AUTO ZOOM VISUAL:' /tmp/workshop-auto-zoom.log
+          test "$(find qa_artifacts/armored_workshop_auto_zoom -name '*.png' | wc -l)" -eq 8
+          test -s qa_artifacts/armored_workshop_auto_zoom/manifest.json
+      - name: Measure 12-48 simultaneous real 3D buildings (software GL)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This is a comparative GL/Mesa stress fixture, NOT Android FPS.
+          # Fail rather than hang forever if the video driver stalls.
+          timeout --signal=TERM --kill-after=10s 170s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_android_multi_stress.gd \
+            2>&1 | tee /tmp/workshop-multi-stress.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-multi-stress.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP MULTI STRESS:' /tmp/workshop-multi-stress.log
+          test "$(find qa_artifacts/armored_workshop_multi_stress -name '*.png' | wc -l)" -eq 4
+          test -s qa_artifacts/armored_workshop_multi_stress/manifest.json
+      - name: Animate N1 to N3, incoming attacks D0-D4 and repairs in real Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd
+          timeout --signal=TERM --kill-after=10s 90s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_evolution_vfx.gd \
+            2>&1 | tee /tmp/workshop-evolution-vfx.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-vfx.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION VFX:' /tmp/workshop-evolution-vfx.log
+      - name: Exercise REAL Godot 3D studio controls for evolving and receiving attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_evolution_studio_ui.gd \
+            2>&1 | tee /tmp/workshop-evolution-studio-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-studio-ui.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION STUDIO UI:' /tmp/workshop-evolution-studio-ui.log
+      - name: Capture 17 native upgrade, incoming projectile and damage-stage frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_evolution_vfx.gd \
+            2>&1 | tee /tmp/workshop-evolution-frames.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-frames.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION CINEMATIC:' /tmp/workshop-evolution-frames.log
+          test "$(find qa_artifacts/armored_workshop_evolution_vfx -name '*.png' | wc -l)" -eq 17
+          test -s qa_artifacts/armored_workshop_evolution_vfx/manifest.json
+      - name: Capture 27 actual nine-palette workshop comparison views
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 180s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/capture_armored_workshop_faction_colors.gd \
+            2>&1 | tee /tmp/workshop-faction-colors.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-faction-colors.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP FACTION COLORS:' /tmp/workshop-faction-colors.log
+          test "$(find qa_artifacts/armored_workshop_faction_colors -name '*.png' | wc -l)" -eq 27
+          test -s qa_artifacts/armored_workshop_faction_colors/manifest.json
+      - name: Preserve camera screenshots and native QA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: armored-workshop-v2-114-camera-faction-color-evolution-evidence
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            qa_artifacts/armored_workshop_v2/
+            qa_artifacts/armored_workshop_map_preview/
+            qa_artifacts/armored_workshop_studio_tile/
+            qa_artifacts/armored_workshop_auto_zoom/
+            qa_artifacts/armored_workshop_multi_stress/
+            qa_artifacts/armored_workshop_evolution_vfx/
+            qa_artifacts/armored_workshop_faction_colors/
+            /tmp/workshop-v2-art.log
+            /tmp/workshop-mobile-lod.log
+            /tmp/workshop-lod-policy.log
+            /tmp/workshop-map-bridge.log
+            /tmp/workshop-map-capture.log
+            /tmp/workshop-tile-studio.log
+            /tmp/workshop-studio-ui.log
+            /tmp/workshop-auto-zoom.log
+            /tmp/workshop-multi-stress.log
+            /tmp/workshop-evolution-vfx.log
+            /tmp/workshop-evolution-studio-ui.log
+            /tmp/workshop-evolution-frames.log
+            /tmp/workshop-faction-colors.log
+            /tmp/workshop-tile-capture.log
+            /tmp/workshop-v2-visual.log

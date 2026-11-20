@@ -13,7 +13,7 @@ const Factions = preload("res://scripts/ui/VisualStyle.gd")
 const FUNCTIONS := {
     "city":"Centro urbano. Su control proporciona ingresos a cada nuevo turno del propietario.",
     "factory":"Produce infantería y unidades básicas, según el catálogo de la partida.",
-    "armor_plant":"Instalación especializada en vehículos blindados y tanques.",
+    "armor_plant":"Taller de Blindados. Produce vehículos blindados y tanques; las mejoras y daños N1–N3/D0–D4 son visuales.",
     "artillery_depot":"Produce artillería, lanzacohetes y defensa antiaérea.",
     "drone_center":"Produce drones y plataformas aéreas ligeras.",
     "airbase":"Permite producir unidades aéreas y helicópteros.",
