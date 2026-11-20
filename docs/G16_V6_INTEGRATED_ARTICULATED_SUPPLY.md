@@ -19,7 +19,7 @@ La capa V6 se crea y anima desde `scripts/ui/UnitModels3D.gd` sobre el mismo nod
 ## Detalles físicos y animación
 
 - Los componentes son `MeshInstance3D` con `BoxMesh` y `CylinderMesh` cerrados y `StandardMaterial3D` opacos, sin sprites ni agujeros transparentes.
-- El latiguillo está dividido en **6 segmentos (LOD13)** o **3 (LOD8)**, con acoplador metálico y junta; la pieza gira físicamente sobre `Node3D`.
+- El latiguillo está dividido en **6 segmentos (LOD13)** o **3 (LOD8)**, con acoplador metálico y junta; la pieza gira físicamente sobre `Node3D`. Tras la inspección de capturas originales V6, se extendió la tubería visible hasta ~1,17 m fuera del carrete, se reforzó el caucho con collarines PBR 3D y se redujo el giro de 80° (ocultaba el acople detrás de la caja) a 18° para despejar el lateral blindado.
 - La tapa del compartimento y el conducto se sincronizan con `resupply`, `camp`, `deploy`, `pack`, `unload`; `idle` y `stop` los repliegan.
 - Color de cada una de las ocho facciones en panel de servicio, tapa y conector, sin modificar los escudos existentes ni la paleta base.
 - Comparar contra V5 solo oculta el hardware V6, mientras que comparar V4/V3/V2 oculta las capas más nuevas de forma coherente. Nada obliga a que la versión visual final esté aprobada.
@@ -30,7 +30,7 @@ Los cambios son **exclusivamente artísticos**. Se preserva `ModernArsenal.gd`: 
 
 ## QA y publicación condicionada
 
-- `tests/test_g16_v6_service_hardware.gd`: ocho facciones × LOD8/LOD13, geometría y opacidad PBR, movimiento real de manguera/tapa, conservación de la apertura V3 de cofres, comparación V5/V6 y cuatro capturas PNG nativas.
+- `tests/test_g16_v6_service_hardware.gd`: ocho facciones × LOD8/LOD13, geometría y opacidad PBR, acoplador físicamente separado del chasis, movimiento real de manguera/tapa, conservación de la apertura V3 de cofres, comparación aislada V5/V6 y **24 capturas PNG nativas (8 facciones × recogida/despliegue + 8 vistas de 360°)**.
 - `tests/test_g16_v6_shared_studio.gd`: abrir `scenes/UnitArtStudioWeb.tscn`, seleccionar G16, verificar controles y animación de abastecimiento dentro del visor unificado, cambiar de facción y capturar la escena real.
 - `.github/workflows/g16-v1-native-logistics-qa.yml`: pruebas V1–V6 y subida de capturas.
 - `.github/workflows/tarvoka-3d-pages.yml`: exportación integrada del visor, pruebas de animación V6 dentro del ensamblado y capturas de la interfaz real. Mantiene los tests previos V3–V5 y las comparaciones históricas, aislando V6 donde corresponde.
