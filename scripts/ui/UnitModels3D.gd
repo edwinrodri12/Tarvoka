@@ -20,6 +20,7 @@ const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const G16SculptV4 = preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
+const G16ServiceV5 = preload("res://scripts/ui/G16DeployableSupplyHardwareV5.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -1033,6 +1034,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G16 V3 six spring packs, working ammo lids, sealed fuel services and native damage missing")
                 elif not G16SculptV4.apply(model,faction_paint_color(faction)):
                     push_warning("G16 V4 sealed bevelled armor, physical faction panels or damaged vehicle fragments missing")
+                elif not G16ServiceV5.apply(model,faction_paint_color(faction)):
+                    push_warning("G16 V5 physical quick-connect service hose, pump and equipment lid missing")
         "ew_mobile":
             # G15 is an art-only communications carrier; not a tactical class.
             if not G15EW.build(model,faction_paint_color(faction),
@@ -1477,6 +1480,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
                 G16MechanicsV3.sync(model,kind,progress)
             if g16_posed and G16SculptV4.has_model(model):
                 G16SculptV4.sync(model)
+            if g16_posed and G16ServiceV5.has_model(model):
+                G16ServiceV5.sync(model,kind,progress)
             return g16_posed
         "aa_mobile", "mobile_aa":
             return G13AA.pose(model,kind,progress,target_heading)
@@ -1515,6 +1520,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G16MechanicsV3.restore(model)
             if G16SculptV4.has_model(model):
                 G16SculptV4.restore(model)
+            if G16ServiceV5.has_model(model):
+                G16ServiceV5.restore(model)
         "aa_mobile", "mobile_aa":
             G13AA.restore(model)
         "ew_mobile":
