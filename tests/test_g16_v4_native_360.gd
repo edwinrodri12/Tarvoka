@@ -8,6 +8,7 @@ const V2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const V3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const V4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const V5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
+const V6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/g16-v4"
 const SHAPES=[
@@ -100,6 +101,7 @@ func _run()->void:
             if model==null:
                 continue
             viewport.add_child(model)
+            check(V6.show_finish(model,false),"exclude service V6 from historical V4 view")
             check(V5.show_finish(model,false),"isolate approved V4 geometry before tests against V3")
             check(V1.has_model(model) and V2.has_model(model) and
                 V3.has_model(model) and V4.has_model(model),
