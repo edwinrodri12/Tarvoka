@@ -57,3 +57,20 @@ El hardware de CI reportó (mediana aproximada de cinco muestras) tiempos de ren
 En las cuatro capturas 960×640 la facción se reconoce mejor desde arriba en DISTANTE que en TÁCTICO. Se modificó la geometría móvil para dar **una franja de facción visible desde el techo por bahía también al perfil TÁCTICO**; reutiliza el mismo material y lote `faction`, por lo que el número de llamadas GPU agrupadas debe permanecer estable, aunque aumenta ligeramente el número de cajas instanciadas. La prueba de 270 variantes verifica explícitamente las marcas por bahía en techo.
 
 Esta última corrección tiene que volver a pasar el workflow antes de aprobar los números posteriores. El Taller conserva `workshop_approved=false` y no se fusiona en el juego principal.
+
+## Nueva medición tras reforzar el color de facción del techo
+
+La validación definitiva [Actions #44660058307](https://github.com/edwinrodri12/Tarvoka/actions/runs/44660058307) terminó **SUCCESS** con 70 imágenes PNG (incluidas 4 de densidad múltiple), pruebas de 270 perfiles Android y 48 transiciones de detalle.
+
+| Escenario | Lotes MultiMesh | Cajas instanciadas | Draw calls del viewport |
+| --- | ---: | ---: | ---: |
+| 12 TÁCTICO | 96 | 514 | 367 |
+| 24 MIXTO | 160 | 768 | 588 |
+| 48 DISTANTE | 271 | 1.196 | 1.032 |
+| 48 TÁCTICO | 371 | 1.868 | 1.414 |
+
+A la misma densidad de 48 talleres, la vista DISTANTE reduce **382 draw calls (≈27,0 %)**, **100 lotes (≈27,0 %)** y **672 cajas (≈36,0 %)** en relación con la TÁCTICA. La nueva franja de color del techo aumentó las cajas tácticas, pero **no agregó ni un solo lote GPU ni una llamada de dibujo** en las escenas comparadas. Las nuevas capturas muestran que el color de facción es más fácil de identificar desde el mapa en ambos perfiles.
+
+Los tiempos reportados por el controlador software variaron considerablemente con la carga de CI: las medianas de la nueva ejecución fueron **18,7 vs 23,0 ms CPU** y **31,2 vs 38,2 ms GPU** entre los casos de 48 DISTANTE y 48 TÁCTICO, respectivamente. No extrapolar estos números a FPS de teléfono. El caso de 12 TÁCTICO siguió con monitor de tiempo en cero y debe quedar como medición ausente.
+
+**Conclusión:** la geometría mantiene un costo escalable y no aparece un problema de render ni de visibilidad en los escenarios de prueba. La carga física Android (p50/p95, temperatura, RAM, GPU real) continúa pendiente. PR #629 permanece en borrador y las reglas jugables permanecen sin modificaciones.
