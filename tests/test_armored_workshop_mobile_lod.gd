@@ -94,6 +94,17 @@ func _verify() -> void:
                     var faction_mat:StandardMaterial3D=faction_batch.material_override as StandardMaterial3D
                     var expected:Color=Style.faction_color(faction) if faction>=0 else Hero.NEUTRAL
                     assert(faction_mat.albedo_color.is_equal_approx(expected))
+                    if damage<=2:
+                        var height:float=4.90 if level==1 else 6.10 if level==2 else 7.20
+                        var roof_marks:int=0
+                        for plate_idx in range(faction_batch.multimesh.instance_count):
+                            var transform:Transform3D=faction_batch.multimesh.get_instance_transform(plate_idx)
+                            if absf(transform.origin.y-(height+0.235))<0.001:
+                                roof_marks+=1
+                        assert(roof_marks==level,
+                            "Overhead tactical roof insignia must identify each service bay")
+                        assert(faction_batch.multimesh.instance_count>=4+level*2,
+                            "Faction colors missing from roof or service bays")
                     if damage==4:
                         assert(mobile.find_child("Lote_roof",true,false)==null)
                         assert(mobile.find_child("Lote_glass",true,false)==null)
