@@ -781,6 +781,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Print the failing command and its line: missing dependencies once
+          # failed without context before Godot import, obscuring the fix.
+          trap 'echo "::error::Workshop/G16 online Studio prep failed at line $LINENO: $BASH_COMMAND" >&2' ERR
+          echo "Checking current main workshop battle scripts before Studio import"
+          for required in ArmoredWorkshopBattle3D ArmoredWorkshopBattleLOD; do
+            if ! test -s "hq-android-v15/scripts/ui/$required.gd"; then
+              echo "::error::Missing $required.gd in the current main source checkout" >&2
+              ls -la hq-android-v15/scripts/ui/ArmoredWorkshop* 2>/dev/null || true
+              exit 1
+            fi
+          done
           for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopLODPolicy ArmoredWorkshopBattlePreview3D ArmoredWorkshopBattleTile3D ArmoredWorkshopEvolutionVFX3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
             test -s "workshop-v1-source/scripts/ui/$name.gd"
             cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
