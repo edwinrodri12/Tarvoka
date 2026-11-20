@@ -150,18 +150,6 @@ static func apply(root:Node3D,paint:Color)->bool:
         _box(finish,"G16_V5_FactionCargoNameplate_"+tag,
             Vector3(s*1.079,1.300,1.020),
             Vector3(0.029,0.078,0.580),fraction)
-        # Distinct machined steel belt directly over the sealed lower flank:
-        # large enough to read at Android isometric distance, and intentionally
-        # below the colored shields and original opaque window geometry.
-        _box(finish,"G16_V5_MachinedLowerFlankGuard_"+tag,
-            Vector3(s*1.068,0.922,0.384),
-            Vector3(0.072,0.139,1.453),gloss)
-        _box(finish,"G16_V5_GuardCenterRecess_"+tag,
-            Vector3(s*1.112,0.930,0.381),
-            Vector3(0.012,0.042,1.286),seam)
-        _box(finish,"G16_V5_GuardFactionChannel_"+tag,
-            Vector3(s*1.119,0.956,0.397),
-            Vector3(0.017,0.043,1.165),fraction)
         _box(finish,"G16_V5_RecessedServiceCompartment_"+tag,
             Vector3(s*1.085,1.035,1.433),
             Vector3(0.026,0.088,0.390),seam)
@@ -196,12 +184,6 @@ static func apply(root:Node3D,paint:Color)->bool:
             Vector3(-10,0,-4))
     # Alternating rough, satin and polished metals add high-level visual
     # rhythm without expensive decals/shaders or increasing texture memory.
-    _box(finish,"G16_V5_MachinedFrontRescuePlate",
-        Vector3(0,0.842,-2.505),
-        Vector3(1.299,0.124,0.046),gloss)
-    _box(finish,"G16_V5_FrontFactionIdentification",
-        Vector3(0,0.852,-2.535),
-        Vector3(0.927,0.041,0.014),fraction)
     _box(finish,"G16_V5_FrontArmorWeld",
         Vector3(0,1.134,-2.275),
         Vector3(1.287,0.023,0.031),steel)
@@ -209,6 +191,30 @@ static func apply(root:Node3D,paint:Color)->bool:
         _box(finish,"G16_V5_RoofSatinRib_%02d" % i,
             Vector3(-0.577+float(i)*0.390,1.872,-1.237),
             Vector3(0.034,0.029,0.563),chrome)
+    # V5 silhouette-readability: real raised enamel/composite plates visible
+    # at tactical-camera distance, rather than tiny near-invisible rivets only.
+    # Roof panels frame rather than cover V4's original central colored crest.
+    for side in [-1,1]:
+        var s:float=float(side)
+        var tag:String=str(side)
+        _box(finish,"G16_V5_RaisedRoofComposite_"+tag,
+            Vector3(s*0.685,1.895,-1.238),
+            Vector3(0.252,0.039,0.742),steel)
+        _box(finish,"G16_V5_RoofFactionInlay_"+tag,
+            Vector3(s*0.686,1.918,-1.259),
+            Vector3(0.131,0.019,0.547),fraction)
+        _box(finish,"G16_V5_WideCargoShoulder_"+tag,
+            Vector3(s*1.094,1.287,0.934),
+            Vector3(0.028,0.132,1.016),steel)
+        _box(finish,"G16_V5_WideFactionFlank_"+tag,
+            Vector3(s*1.110,1.288,0.936),
+            Vector3(0.019,0.082,0.847),fraction)
+    _box(finish,"G16_V5_RearArmorEnamelPlate",
+        Vector3(0,1.408,2.173),
+        Vector3(1.148,0.185,0.041),steel)
+    _box(finish,"G16_V5_RearFactionFleetMark",
+        Vector3(0,1.427,2.199),
+        Vector3(0.738,0.104,0.027),fraction)
     for i in range(3):
         _box(finish,"G16_V5_RearAmmoProtectiveSeal_%d" % i,
             Vector3(-0.54+float(i)*0.54,1.705,1.895),
@@ -307,13 +313,11 @@ static func sync(root:Node3D)->bool:
     var flame_group:=root.find_child(FLAMES,true,false) as Node3D
     if flame_group==null:
         return false
+    flame_group.visible=visible and level>=4
     # V4's destruction tween keeps its actual wreck progress in POSE.
     var progress:float=clampf(float(root.get_meta(V4.POSE,0.0)),0.0,1.0)
     flame_group.rotation_degrees.y=46.0*progress
     flame_group.scale=Vector3.ONE*(0.77+0.29*progress)
-    # The flame Node itself must not render in stages 0-3, not only its
-    # parent layer: Godot tests and the Studio read its local visibility.
-    flame_group.visible=visible and level>=4
     return true
 
 static func set_damage(root:Node3D,level:int)->bool:
