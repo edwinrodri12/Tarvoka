@@ -39,6 +39,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The shared Web adapter imports a parent file assembled only by
+          # the Pages pipeline, unrelated to live-battle visual tests.
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/workshop-android-proxy-import.log
           if grep -E 'SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:' /tmp/workshop-android-proxy-import.log; then exit 1; fi
       - name: Benchmark real modern 3D battle with 8 24 and 48 visual-only workshop models
