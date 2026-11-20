@@ -730,7 +730,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopLODPolicy ArmoredWorkshopBattlePreview3D ArmoredWorkshopBattleTile3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
+          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopLODPolicy ArmoredWorkshopBattlePreview3D ArmoredWorkshopBattleTile3D ArmoredWorkshopEvolutionVFX3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
             test -s "workshop-v1-source/scripts/ui/$name.gd"
             cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
@@ -743,6 +743,10 @@ jobs:
           grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'ArmoredWorkshopEvolutionVFX3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'ArmoredWorkshopEvolutionVFX3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          grep -F 'EVOLUCIONAR N+1' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
+          grep -F 'RECIBIR ATAQUE D+1' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'PRUEBA EN CASILLA 3D' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'Android · AUTOMÁTICO por zoom' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F '_workshop_auto_lod()' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
