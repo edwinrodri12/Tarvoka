@@ -25,6 +25,8 @@ func _run() -> void:
         "dense 8-player viewport selects lower detail")
     _check(Mobile.recommended_level(4.0,8) == 10,
         "near camera retains visible detail")
+    var baseline_tube_triangles: int = 0
+    var optimized_tube_triangles: int = 0
     for faction in range(8):
         for level in [8,10]:
             var model: Node3D = Models.build("mlrs",faction,true,level)
@@ -48,6 +50,17 @@ func _run() -> void:
                 var tube_mesh := tube.multimesh.mesh as CylinderMesh
                 _check(tube_mesh != null and tube_mesh.radial_segments == Mobile.TUBE_RADIAL_SEGMENTS,
                     "rocket tube radial budget")
+                if tube_mesh != null:
+                    var reference := CylinderMesh.new()
+                    reference.top_radius = tube_mesh.top_radius
+                    reference.bottom_radius = tube_mesh.bottom_radius
+                    reference.height = tube_mesh.height
+                    reference.radial_segments = 10
+                    var old_count: int = reference.get_faces().size() / 3
+                    var new_count: int = tube_mesh.get_faces().size() / 3
+                    _check(new_count < old_count, "tube optimization reduces actual mesh triangles")
+                    baseline_tube_triangles += old_count * tube.multimesh.instance_count
+                    optimized_tube_triangles += new_count * tube.multimesh.instance_count
             var wheel: MultiMeshInstance3D = _find(model,
                 "G11Mobile_Lote12Ruedas") as MultiMeshInstance3D
             var rims: MultiMeshInstance3D = _find(model,
@@ -56,6 +69,12 @@ func _run() -> void:
                 "wheel geometry only drawn near camera")
             _check((rims != null) == (level == 10),
                 "tube rim geometry culled at distance")
+            if rims != null and rims.multimesh != null:
+                _check(rims.multimesh.instance_count == Mobile.TUBES,
+                    "all twelve near-camera rims preserved")
+                var rim_mesh := rims.multimesh.mesh as CylinderMesh
+                _check(rim_mesh != null and rim_mesh.radial_segments == Mobile.TUBE_RADIAL_SEGMENTS,
+                    "near-camera rims match reduced radial budget")
             if wheel != null and wheel.multimesh != null:
                 _check(wheel.multimesh.instance_count == Mobile.WHEELS,
                     "12 wheels in one MultiMesh")
@@ -83,6 +102,11 @@ func _run() -> void:
         "no mobile proxy allocated under studio sculpt")
     if hero != null:
         hero.free()
+    _check(optimized_tube_triangles < baseline_tube_triangles,
+        "aggregate tube triangle budget reduced across all faction LODs")
+    print("G11 tube census (16 models, tubes only): baseline=", baseline_tube_triangles,
+        " optimized=", optimized_tube_triangles,
+        " saved=", baseline_tube_triangles - optimized_tube_triangles)
     if errors > 0:
         push_error("G11 mobile QA %d failed" % errors)
         quit(1)
