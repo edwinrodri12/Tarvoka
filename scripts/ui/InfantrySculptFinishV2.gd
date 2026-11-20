@@ -178,6 +178,8 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
     _hide(model,"CorazaFrontal")
     _hide(model,"FaccionPecho")
     _hide(model,"MochilaRigida")
+    _hide(model,"FaccionMochila")
+    _hide(model,"FaccionCasco")
     _hide(model,"CascoSolido")
     _hide(model,"ViseraBlindada")
     _hide(model,"VisorSellado")
@@ -334,6 +336,41 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
             Vector3(0.33,0.095,0.17),rubber)
         _box(weapon,"V2_FaccionCarcasaAT",Vector3(-0.12,0.334,-0.005),
             Vector3(0.21,0.024,0.14),faction)
+    # Variant-specific V2 outlines retain their original tactical identity
+    # without turning them into extra buildable units.
+    if role=="infantry_urban":
+        _hide(model,"EscudoUrbanoPlegado")
+        _hide(model,"FaccionEscudoUrbano")
+        _plate(upper,"V2_EscudoUrbanoFacetado",Vector3(-0.36,-0.17,-0.42),
+            0.47,0.70,0.10,armor)
+        _plate(upper,"V2_FaccionEscudoUrbano",Vector3(-0.36,0.055,-0.483),
+            0.29,0.135,0.035,faction)
+    elif role=="infantry_defense":
+        _hide(model,"ProteccionTorno")
+        _hide(model,"FaccionBlindajeDefensivo")
+        _plate(upper,"V2_CorazaDefensivaAdicional",Vector3(0,-0.09,-0.38),
+            0.70,0.40,0.12,armor)
+        _plate(upper,"V2_FaccionDefensiva",Vector3(0,-0.055,-0.463),
+            0.47,0.09,0.029,faction)
+        for side in [-1,1]:
+            _plate(upper,"V2_HombreraDefensiva_%d"%side,
+                Vector3(float(side)*0.47,0.275,-0.06),
+                0.25,0.28,0.075,armor)
+    elif role=="scout":
+        _box(upper,"V2_SensorPasivoMochila",Vector3(0.16,0.26,0.48),
+            Vector3(0.11,0.14,0.09),metal)
+        _box(upper,"V2_FaccionSensor",Vector3(0.16,0.335,0.48),
+            Vector3(0.085,0.018,0.072),faction)
+    elif role=="infantry_antitank":
+        _box(upper,"V2_CargaRepuestoLateral",Vector3(-0.33,-0.28,0.37),
+            Vector3(0.20,0.47,0.19),rubber)
+        _box(upper,"V2_FaccionCargaAT",Vector3(-0.33,-0.05,0.48),
+            Vector3(0.15,0.09,0.018),faction)
+    elif role=="infantry_engineer":
+        _box(upper,"V2_SujecionHerramienta",Vector3(0.36,-0.22,0.375),
+            Vector3(0.13,0.24,0.04),rubber)
+        _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
+            0.20,0.095,0.026,faction)
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)
     model.set_meta("tarvoka_infantry_v2_opaque",true)
