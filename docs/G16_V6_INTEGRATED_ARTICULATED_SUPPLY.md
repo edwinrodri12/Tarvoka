@@ -30,9 +30,13 @@ Los cambios son **exclusivamente artísticos**. Se preserva `ModernArsenal.gd`: 
 
 ## QA y publicación condicionada
 
-- `tests/test_g16_v6_service_hardware.gd`: ocho facciones × LOD8/LOD13, geometría y opacidad PBR, acoplador físicamente separado del chasis, movimiento real de manguera/tapa, conservación de la apertura V3 de cofres, comparación aislada V5/V6 y **24 capturas PNG nativas (8 facciones × recogida/despliegue + 8 vistas de 360°)**.
+- `tests/test_g16_v6_service_hardware.gd`: ocho facciones × LOD8/LOD13, geometría y opacidad PBR, acoplador físicamente separado del chasis, movimiento real de manguera/tapa, conservación de la apertura V3 de cofres, comparación aislada V5/V6 y **40 capturas PNG nativas (8 facciones × 2 niveles de detalle × recogida/despliegue + 8 vistas de 360°)**.
 - `tests/test_g16_v6_shared_studio.gd`: abrir `scenes/UnitArtStudioWeb.tscn`, seleccionar G16, verificar controles y animación de abastecimiento dentro del visor unificado, cambiar de facción y capturar la escena real.
 - `.github/workflows/g16-v1-native-logistics-qa.yml`: pruebas V1–V6 y subida de capturas.
 - `.github/workflows/tarvoka-3d-pages.yml`: exportación integrada del visor, pruebas de animación V6 dentro del ensamblado y capturas de la interfaz real. Mantiene los tests previos V3–V5 y las comparaciones históricas, aislando V6 donde corresponde.
 
 **Criterio de aprobación pendiente:** revisar capturas Godot de los ocho colores, el perfil cerrado sin huecos, visibilidad isométrica, animación conector-tapa sin intersecciones y rendimiento LOD8 Android. No fusionar como acabado final ni declarar G16 terminada antes de superar la verificación nativa y la inspección visual.
+
+## Revisión posterior: calidad Android LOD8
+
+La batería visual también exige que la manguera LOD8 resulte visible en el render real de Godot, para cada una de las ocho facciones. Se comprueban las imágenes antes y después del despliegue y se oculta solo la capa V6 para descartar falsos positivos causados por la animación de la grúa V1–V5. El total obligatorio es de **40 PNG nativos**. Esto preserva el visor unificado TARVOKA y mantiene los suministros de campaña como elementos gráficos sin alterar el combate ni el coste de G16.
