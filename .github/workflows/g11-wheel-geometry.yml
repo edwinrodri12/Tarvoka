@@ -26,11 +26,13 @@ jobs:
         run: |
           set -euo pipefail
           timeout 180s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit > /tmp/g11-import.log 2>&1 || { cat /tmp/g11-import.log; exit 1; }
+      - name: Install virtual display for real mesh surfaces
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri
       - name: Measure wheel triangles and verify eight factions
         shell: bash
         run: |
           set -euo pipefail
-          timeout 120s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_g11_wheel_radial_8.gd > /tmp/g11-wheel-geometry.log 2>&1 || { cat /tmp/g11-wheel-geometry.log; exit 1; }
+          timeout 120s xvfb-run -a /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-driver opengl3 --rendering-method gl_compatibility --path . --script res://tests/test_g11_wheel_radial_8.gd > /tmp/g11-wheel-geometry.log 2>&1 || { cat /tmp/g11-wheel-geometry.log; exit 1; }
           cat /tmp/g11-wheel-geometry.log
           if grep -E 'SCRIPT ERROR:|Assertion failed|ERROR:' /tmp/g11-wheel-geometry.log; then exit 1; fi
           grep -F 'PASS G11 WHEEL LOD:' /tmp/g11-wheel-geometry.log
