@@ -282,8 +282,11 @@ func _display_workshop() -> void:
         if status_label!=null:
             status_label.text="Taller N%d no disponible: error de carga 3D" % level
         return
-    model_root.name="TallerBlindados_Visible_N%d_F%d_D%d" % [
-        level,faction,damage]
+    # The nine-tile preview has a canonical root name required by the
+    # zoom/LOD policy. Never rename it or automatic detail swaps will fail.
+    if workshop_view==null or workshop_view.selected==0:
+        model_root.name="TallerBlindados_Visible_N%d_F%d_D%d" % [
+            level,faction,damage]
     preview.add_child(model_root)
     if _workshop_fx==null:
         _workshop_fx=WorkshopFX.new()
