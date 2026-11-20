@@ -221,7 +221,7 @@ func _run()->void:
                         "LOD-aware shoulder embossed marks "+token)
             check(ring_count==6,"six complete 3D tyre shoulder rigs")
             check(V11.show_finish(model,false),"V11 reversible old finish")
-            check(contour!=null and not contour.is_visible_in_tree(),
+            check(contour!=null and not contour.visible,
                 "V11B solid contours hidden in historical V10")
 
             for label in wall_names:
