@@ -32,6 +32,38 @@ func opaque(n: Node) -> bool:
             return false
     return true
 
+# Mesh topology QA: every edge of a sealed native triangular surface must
+# be referenced twice. A bounding box alone cannot detect hollow armor.
+func _vkey(v: Vector3) -> String:
+    return "%d:%d:%d" % [
+        roundi(v.x*100000.0),roundi(v.y*100000.0),roundi(v.z*100000.0)]
+
+func closed_solid(mesh: Mesh) -> bool:
+    if not mesh is ArrayMesh or mesh.get_surface_count()==0:
+        return false
+    for surf in range(mesh.get_surface_count()):
+        var arrays: Array=mesh.surface_get_arrays(surf)
+        var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var indices: PackedInt32Array=arrays[Mesh.ARRAY_INDEX]
+        var edges: Dictionary={}
+        var count: int=indices.size() if indices.size()>0 else points.size()
+        if count==0 or count%3!=0:
+            return false
+        for i in range(0,count,3):
+            var keys: Array[String]=[]
+            for j in range(3):
+                var index: int=indices[i+j] if indices.size()>0 else i+j
+                keys.append(_vkey(points[index]))
+            for j in range(3):
+                var edge: Array[String]=[keys[j],keys[(j+1)%3]]
+                edge.sort()
+                var signature: String=edge[0]+"|"+edge[1]
+                edges[signature]=int(edges.get(signature,0))+1
+        for uses in edges.values():
+            if int(uses)!=2:
+                return false
+    return true
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -114,6 +146,8 @@ func _run() -> void:
                         check(part.mesh.get_surface_count()>0 and
                             part.mesh.get_aabb().size.length()>0.12,
                             "nondegenerate dimensional geometry "+name)
+                        check(closed_solid(part.mesh),
+                            "watertight non-open full 360 degree "+name)
                 for side in [-1,1]:
                     for name in ["V2_MusloTaper_%d","V2_PantorrillaTaper_%d",
                             "V2_MangaCerrada_%d","V2_AntebrazoCerrado_%d",
@@ -149,6 +183,26 @@ func _run() -> void:
                     "weapon no longer points horizontally to the side")
                 check(Models.pose_model(role,model,"attack",0.5),
                     "V2 weapon recoil integrated")
+                var flash: MeshInstance3D=model.find_child(
+                    "V2_DestelloDisparo3D",true,false) as MeshInstance3D
+                check(flash!=null and flash.visible,
+                    "real moving muzzle flash mounted at weapon muzzle")
+                var brass: MeshInstance3D=model.find_child(
+                    "V2_CasquilloFisico",true,false) as MeshInstance3D
+                if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) and role!="infantry_antitank":
+                    check(brass!=null and brass.visible,
+                        "native shell ejection follows shot in detailed LOD")
+                else:
+                    check(brass==null,
+                        "mobile LOD and rocket launcher avoid extra casings")
+                var left: Node3D=model.find_child("BrazoRig_-1",true,false) as Node3D
+                check(left!=null and left.rotation_degrees.z>30 and
+                    arm.rotation_degrees.z< -20,
+                    "both shoulders converge hands on actual rifle grips")
+                check(Models.pose_model(role,model,"idle",0.0) and
+                    flash!=null and not flash.visible,
+                    "shot flash ends cleanly after attack, never stuck on")
+
                 check(Models.pose_model(role,model,"capture",0.5),
                     "V2 capture posture integrated")
                 check(Infantry.set_damage(model,4) and
