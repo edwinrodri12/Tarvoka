@@ -62,7 +62,7 @@ static func _add_mesh(mesh: Mesh, count: int, report: Dictionary) -> void:
 static func _record_largest(node: Node, triangles: int, report: Dictionary) -> void:
 	if triangles > report["largest_mesh_triangles"]:
 		report["largest_mesh_triangles"] = triangles
-		report["largest_mesh_path"] = str(node.get_path()) if node.is_inside_tree() else str(node.name)
+		report["largest_mesh_path"] = _diagnostic_path(node)
 
 ## Validate report shape before CI treats a census as trustworthy.
 ## Returns false for missing, malformed, or contradictory counters.
@@ -84,3 +84,14 @@ static func is_valid_report(report: Dictionary) -> bool:
 		if typeof(warning) != TYPE_STRING:
 			return false
 	return true
+
+## Keep nested node paths unambiguous even when PackedScene is not in SceneTree.
+static func _diagnostic_path(node: Node) -> String:
+	if node.is_inside_tree():
+		return str(node.get_path())
+	var parts: PackedStringArray = []
+	var current: Node = node
+	while current != null:
+		parts.insert(0, str(current.name))
+		current = current.get_parent()
+	return "/".join(parts)
