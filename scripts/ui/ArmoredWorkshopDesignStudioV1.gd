@@ -7,6 +7,7 @@ const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
+const WorkshopFX=preload("res://scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd")
 const WorkshopLOD=preload("res://scripts/ui/ArmoredWorkshopLODPolicy.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
@@ -21,6 +22,7 @@ var _level:OptionButton
 var _damage:OptionButton
 var _faction:OptionButton
 var _status:Label
+var _workshop_fx:TarvokaArmoredWorkshopEvolutionVFX3D
 var _yaw:float=145.0
 var _elevation:float=39.0
 var _zoom:float=1.0
@@ -83,6 +85,18 @@ func _ready() -> void:
         b.text=str(key[0])
         b.pressed.connect(Callable(self,"_adjust_zoom").bind(float(key[1])))
         zoom_row.add_child(b)
+    column.add_child(_label("EVOLUCIÓN / IMPACTOS / DAÑO · PREVISUALIZACIÓN"))
+    var battle_buttons:=HFlowContainer.new()
+    column.add_child(battle_buttons)
+    for action in [
+            ["EVOLUCIONAR N+1","upgrade"],
+            ["RECIBIR ATAQUE D+1","attack"],
+            ["REPARACIÓN VISUAL D-1","repair"]]:
+        var effect_button:=Button.new()
+        effect_button.text=str(action[0])
+        effect_button.pressed.connect(
+            Callable(self,"_play_workshop_effect").bind(str(action[1])))
+        battle_buttons.add_child(effect_button)
     _status=_label("")
     _status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     column.add_child(_status)
@@ -126,6 +140,11 @@ func _ready() -> void:
     _stage=Node3D.new()
     _stage.name="EditableNativeWorkshop"
     _viewport.add_child(_stage)
+    _workshop_fx=WorkshopFX.new()
+    _workshop_fx.name="FX_EvolucionImpactoYDestruccion"
+    _stage.add_child(_workshop_fx)
+    _workshop_fx.stage_requested.connect(_on_visual_stage)
+    _workshop_fx.sequence_finished.connect(_on_visual_sequence_complete)
     _rebuild()
     call_deferred("_resize_canvas")
 
@@ -178,6 +197,32 @@ func _adjust_zoom(factor:float) -> void:
     _zoom=1.0 if factor==0.0 else clampf(_zoom*factor,0.53,2.25)
     _update_camera()
 
+func _play_workshop_effect(kind:String) -> void:
+    if _workshop_fx==null or _workshop_fx.busy:
+        return
+    match kind:
+        "upgrade":
+            _workshop_fx.play_upgrade()
+        "attack":
+            _workshop_fx.play_attack()
+        "repair":
+            _workshop_fx.play_repair()
+
+func _on_visual_stage(level:int,damage:int) -> void:
+    # This changes ONLY selectors and the preview model; zero game state.
+    if _level==null or _damage==null:
+        return
+    _level.select(level-1)
+    _damage.select(damage)
+    _rebuild()
+
+func _on_visual_sequence_complete(_kind:String,_level_done:int,
+        _damage_done:int) -> void:
+    if _workshop_fx!=null:
+        _workshop_fx.configure(_level.selected+1,_faction.selected-1,
+            _damage.selected,_environment.selected==1)
+    _refresh_status()
+
 func _rebuild() -> void:
     if _stage==null:
         return
@@ -208,6 +253,9 @@ func _rebuild() -> void:
         _status.text="ERROR: geometria 3D no disponible"
         return
     _stage.add_child(_model)
+    if _workshop_fx!=null:
+        _workshop_fx.configure(level,faction,damage,
+            _environment!=null and _environment.selected==1)
     _update_camera()
     _refresh_status()
 
