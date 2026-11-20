@@ -1137,7 +1137,7 @@ func _infantry_review_version(latest: bool) -> void:
         infantry_360_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
-    var candidate: Node3D=Node3D.new()
+    var candidate: Node3D=null
     if latest:
         candidate=P06Models.build(_role,_faction,true,13)
         if candidate==null or not bool(candidate.get_meta(
@@ -1147,6 +1147,7 @@ func _infantry_review_version(latest: bool) -> void:
             push_error("Infantería V2 real no disponible; conservar modelo de revisión")
             return
     else:
+        candidate=Node3D.new()
         if not InfantryV1.build(candidate,_role,
                 P06Models.faction_paint_color(_faction),true):
             candidate.free()
