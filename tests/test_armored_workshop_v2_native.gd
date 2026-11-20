@@ -33,6 +33,22 @@ func _run() -> void:
                 assert(model.has_node(Workshop.STAGE+"/"+Workshop.FINISH_STAGE))
                 var delta:int=Workshop.mesh_count(model)-Original.mesh_count(original)
                 assert(delta>=10,"V2 missing real geometric details")
+                # D0 has a clean roof, D1 has two small scorch patches and
+                # D2 six stronger patches. D3/D4 cannot retain floating scars.
+                var roof_scars:int=2 if damage==1 else 6 if damage==2 else 0
+                for mark in range(6):
+                    var scar:MeshInstance3D=_mesh(model,
+                        "QuemaduraCubiertaV2_%d" % mark)
+                    if mark<roof_scars:
+                        assert(scar!=null and scar.mesh is BoxMesh,
+                            "Damage progression is invisible on the roof")
+                        var mat:StandardMaterial3D=scar.material_override as StandardMaterial3D
+                        assert(mat!=null and
+                            mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                            "Scars must not cut holes in the roof")
+                    else:
+                        assert(scar==null,
+                            "No burned roof should remain on intact or ruined workshop")
                 added_min=mini(added_min,delta)
                 if damage<=2:
                     for side in [-1,1]:
