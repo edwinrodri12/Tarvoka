@@ -110,9 +110,10 @@ static func _portal(parent:Node3D,width:float,depth:float,
         return
     _box(parent,"FrontispicioBlindadoV2",Vector3(0,height-0.33,front-0.42),
         Vector3(width-0.35,0.68,0.24),ARMOR_DARK,0.72,0.49)
+    # More legible accent, still a modest fraction of the industrial face.
     _box(parent,"BandaFaccionSuperiorV2",
-        Vector3(0,height+0.025,front-0.46),
-        Vector3(width*0.76,0.15,0.13),accent,0.44,0.34)
+        Vector3(0,height+0.055,front-0.46),
+        Vector3(width*0.82,0.22,0.13),accent,0.44,0.34)
     for bay in range(bays):
         var cx:float=-width*0.5+bw*(float(bay)+0.5)
         # Solid machined aperture with full physical door jambs.
@@ -151,7 +152,7 @@ static func _portal(parent:Node3D,width:float,depth:float,
                     Vector3(0,0,float(slat-1)*7.0))
         _box(parent,"PlacaIdentidad_%d" % bay,
             Vector3(cx,height-0.13,front-0.56),
-            Vector3(bw*0.32,0.25,0.07),accent,0.38,0.44)
+            Vector3(bw*0.44,0.30,0.07),accent,0.38,0.44)
         _box(parent,"PlacaIdentidadCentro_%d" % bay,
             Vector3(cx,height-0.13,front-0.604),
             Vector3(bw*0.10,0.11,0.02),BRIGHT_STEEL,0.65,0.35)
@@ -216,7 +217,11 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
         if damage<=2:
             _box(parent,"ZunchoLateralFaccion_%d" % side,
                 Vector3(x+float(side)*0.145,upper-0.19,0),
-                Vector3(0.08,0.11,depth*0.72),accent.darkened(0.12),0.52,0.50)
+                Vector3(0.08,0.18,depth*0.82),accent,0.52,0.50)
+            # High side identity tag, away from the enclosed glass windows.
+            _box(parent,"MarcaLateralFaccion_%d" % side,
+                Vector3(x+float(side)*0.157,height-0.69,-depth*0.26),
+                Vector3(0.055,0.25,depth*0.16),accent,0.48,0.46)
     if damage<=2:
         # REAL opaque lower rear closure. Legacy V1 alternates two wall
         # materials that look like bright missing bays in rear renders.
@@ -246,7 +251,7 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
                 BRIGHT_STEEL,0.73,0.41)
         _box(parent,"BandaFaccionPosteriorV2",
             Vector3(0,2.75,depth*0.5+0.342),
-            Vector3(width*0.68,0.14,0.049),accent,0.43,0.49)
+            Vector3(width*0.78,0.21,0.049),accent,0.43,0.49)
         _box(parent,"PanelPosteriorAlto",
             Vector3(0,(3.13+height-0.48)*0.5,depth*0.5-0.03),
             Vector3(width-0.52,height-3.61,0.23),
@@ -271,7 +276,7 @@ static func _wall_enclosure(parent:Node3D,width:float,depth:float,
                 Vector3(width*0.012,0.24,0.007),BRIGHT_STEEL,0.33,0.18)
 
 static func _roof_finish(parent:Node3D,width:float,depth:float,height:float,
-        bays:int,damage:int) -> void:
+        bays:int,damage:int,accent:Color) -> void:
     # D3 and D4 have no continuous roofing: even a single full-length rib
     # would appear to float above the ruined workshop without a supporting wall.
     if damage>=3:
@@ -280,6 +285,11 @@ static func _roof_finish(parent:Node3D,width:float,depth:float,height:float,
     for bay in range(bays):
         var bw:float=width/float(bays)
         var cx:float=-width*0.5+bw*(float(bay)+0.5)
+        # One bright, opaque faction-colored roof plate per bay, positioned
+        # above steel crests and away from vents and most impact scars.
+        _box(parent,"MarcaFaccionCubierta_%d" % bay,
+            Vector3(cx,height+0.324,-depth*0.115),
+            Vector3(bw*0.62,0.042,depth*0.11),accent,0.49,0.44)
         for ridge in range(4):
             var x:float=cx+bw*(float(ridge)-1.5)*0.20
             _box(parent,"NervioCubierta_%d_%d" % [bay,ridge],
@@ -435,7 +445,14 @@ static func _wear(parent:Node3D,width:float,depth:float,height:float,
                 Vector3(0,float(i*23),-10.0))
         _box(group,"CartelCaidoV2",
             Vector3(width*0.12,0.085,-depth*0.31),
-            Vector3(1.48,0.08,0.52),accent.darkened(0.32),0.44,0.82)
+            Vector3(1.48,0.08,0.52),accent.darkened(0.24),0.44,0.82)
+        # Ruins retain just one grounded faction fragment, never a
+        # full-height sign or impossible suspended roof badge.
+        _box(group,"FragmentoFaccionDerrumbadoV2",
+            Vector3(-width*0.19,0.11,-depth*0.27),
+            Vector3(1.09,0.09,0.40),
+            accent.darkened(0.17 if damage==3 else 0.32),
+            0.37,0.81,Vector3(0,18.0,0))
 
 static func build(level:int=1,faction:int=-1,damage:int=0) -> Node3D:
     if not valid(level,faction,damage):
@@ -461,7 +478,7 @@ static func build(level:int=1,faction:int=-1,damage:int=0) -> Node3D:
     var stage:Node3D=_node(base_root,FINISH_STAGE)
     _portal(stage,width,depth,height,bays,damage,accent)
     _wall_enclosure(stage,width,depth,height,bays,damage,accent)
-    _roof_finish(stage,width,depth,height,bays,damage)
+    _roof_finish(stage,width,depth,height,bays,damage,accent)
     _machinery(stage,width,depth,height,bays,damage)
     _wear(stage,width,depth,height,damage,accent)
     model.name="TallerBlindados_V2_N%d_F%d_D%d" % [level,faction,damage]
