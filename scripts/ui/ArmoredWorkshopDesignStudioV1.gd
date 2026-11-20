@@ -53,7 +53,17 @@ func _ready() -> void:
     _environment=_select(column,"VISTA REAL",[
         "Edificio completo","Prueba mapa 3D · casilla 2,4 m"])
     _level=_select(column,"ARQUITECTURA",Workshop.LEVEL_NAMES)
+    _level.name="TallerBlindadosNivelesArquitectura"
     _level.select(1)
+    var quick_levels:=HFlowContainer.new()
+    quick_levels.name="TallerBlindadosAccesoDirectoN1N2N3"
+    column.add_child(quick_levels)
+    for index in range(3):
+        var level_button:=Button.new()
+        level_button.name="VerTallerN%d" % (index+1)
+        level_button.text="VER N%d" % (index+1)
+        level_button.pressed.connect(Callable(self,"_select_level").bind(index))
+        quick_levels.add_child(level_button)
     _damage=_select(column,"ESTADO DE DAÑO",Workshop.DAMAGE_NAMES)
     _faction=_select(column,"FACCION",["Neutral"])
     for info in Style.FACTIONS:
@@ -197,6 +207,12 @@ func _adjust_zoom(factor:float) -> void:
     _zoom=1.0 if factor==0.0 else clampf(_zoom*factor,0.53,2.25)
     _update_camera()
 
+func _select_level(index:int) -> void:
+    if _level==null or index<0 or index>=_level.item_count:
+        return
+    _level.select(index)
+    _on_change(index)
+
 func _play_workshop_effect(kind:String) -> void:
     if _workshop_fx==null or _workshop_fx.busy:
         return
@@ -274,8 +290,8 @@ func _refresh_status() -> void:
             _camera,Vector3(0,0.3,0),2.17)
         var label:String="TÁCTICO" if mobile_profile==WorkshopMobile.PROFILE_TACTICAL else "DISTANTE"
         context+=" · AUTO %d px → %s" % [int(roundf(px)),label]
-    _status.text="V%d · %s · D%d · %d bahía(s) · %s%s · ARTE EN REVISIÓN" % [
-        int(_model.get_meta("workshop_art_version",1)),
+    _status.text="MODELO CARGADO · N%d · %s · D%d · %d bahía(s) · %s%s" % [
+        _level.selected+1,
         Workshop.LEVEL_NAMES[_level.selected],_damage.selected,
         int(_model.get_meta("workshop_bays",0)),detail,context]
 
