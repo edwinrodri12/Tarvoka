@@ -9,3 +9,7 @@ Expected keys: `triangles`, `instances`, `mesh_nodes`, `surfaces`, `largest_mesh
 **Next:** run self-test and actual Godot census on a production model, compare structural report, then optimize the largest contributor only after recording baseline. This PR is independent of draft #622 and does not merge it.
 
 **2026-11-20 follow-up:** commit e8583e0 adds the positive-total/zero-largest invariant and two negative cases. Python self-test remains **NO EJECUTADO**: the execution container cannot resolve GitHub raw host, so no claim of test success is made. CI of the new commit is unconfirmed. No production-scene census has been measured.
+
+## 2026-11-20 — JSON duplicate-key integrity
+- The CLI now rejects duplicate JSON object keys (including nested objects) instead of silently accepting the last value. Two negative self-tests cover duplicate triangle and warning fields; self-test total: 14.
+- Previous head `fe677d4a` passed Mesh Census JSON QA, Godot headless, and Android debug export (GitHub Actions); this does not verify the new commit. Device: NO EJECUTADO EN DISPOSITIVO. Visual: PENDIENTE DE REVISIÓN VISUAL.
