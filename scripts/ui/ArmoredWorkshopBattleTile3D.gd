@@ -77,6 +77,8 @@ static func build(level:int=1,faction:int=-1,damage:int=0,
     root.set_meta("workshop_art_approved",false)
     root.set_meta("tile_meters",TILE)
     root.set_meta("tile_count",9)
+    root.set_meta("workshop_art_version",2)
+    root.set_meta("workshop_bays",level)
     root.set_meta("workshop_level",level)
     root.set_meta("workshop_faction",faction)
     root.set_meta("workshop_damage",damage)
