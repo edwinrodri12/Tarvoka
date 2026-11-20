@@ -197,10 +197,10 @@ static func apply(root:Node3D,paint:Color)->bool:
     # Alternating rough, satin and polished metals add high-level visual
     # rhythm without expensive decals/shaders or increasing texture memory.
     _box(finish,"G16_V5_MachinedFrontRescuePlate",
-        Vector3(0,0.842,-2.405),
+        Vector3(0,0.842,-2.505),
         Vector3(1.299,0.124,0.046),gloss)
     _box(finish,"G16_V5_FrontFactionIdentification",
-        Vector3(0,0.852,-2.432),
+        Vector3(0,0.852,-2.535),
         Vector3(0.927,0.041,0.014),fraction)
     _box(finish,"G16_V5_FrontArmorWeld",
         Vector3(0,1.134,-2.275),
