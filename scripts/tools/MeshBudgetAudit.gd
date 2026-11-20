@@ -76,6 +76,11 @@ static func is_valid_report(report: Dictionary) -> bool:
 		return false
 	if report["largest_mesh_triangles"] > report["triangles"] or report["mesh_nodes"] > report["instances"]:
 		return false
-	if report["triangles"] > 0 and report["instances"] == 0:
+	if report["instances"] == 0 and (report["triangles"] > 0 or report["surfaces"] > 0 or report["mesh_nodes"] > 0):
 		return false
+	if report["largest_mesh_triangles"] > 0 and report["largest_mesh_path"].is_empty():
+		return false
+	for warning in report["warnings"]:
+		if typeof(warning) != TYPE_STRING:
+			return false
 	return true
