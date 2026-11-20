@@ -257,7 +257,7 @@ func _ready() -> void:
         role_picker.set_item_text(logistics_index,"G16 · Logística 6×6 · V3 suspensión y carga")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
-        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
+        role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11B")
     var heli_index: int=P06Models.ROLES.find("attack_heli")
     if heli_index >= 0:
         role_picker.set_item_text(heli_index,"Helicóptero A01 HAT-29 · V14.15")
@@ -591,8 +591,8 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "ew_mobile":
             return [
-                {"group":"G15 V11C · IDENTIDAD DE FACCIÓN FINAL"},
-                {"title":"V11C · Color de facción reforzado y blindaje cerrado","action":"g15_v11_on"},
+                {"group":"G15 V11B · CARROCERÍA CERRADA EN 360°"},
+                {"title":"V11B · Contornos sólidos, caucho y limpiaparabrisas","action":"g15_v11_on"},
                 {"title":"V10 · Comparar sin los nuevos detalles","action":"g15_v11_off"},
                 {"group":"G15 V10 · CRISTALES CURVOS Y SERVICIO ELECTRÓNICO"},
                 {"title":"V10 · Cristales PBR curvos y acabados posteriores","action":"g15_v10_on"},
@@ -763,10 +763,10 @@ func _studio_run_animation(action: String) -> void:
                 if latest:
                     G15OpticalV10.show_finish(model_root,true)
                 if G15DetailV11.show_finish(model_root,latest):
-                    status_label.text=("G15 V11C · 14 placas de facción y 13 cierres sólidos" if latest else "G15 V10 · comparación sin acabado V11")
+                    status_label.text=("G15 V11B · 13 cierres de blindaje, neumáticos y cristales" if latest else "G15 V10 · comparación sin acabado V11")
         "g15_v10_on","g15_v10_off":
             if _role=="ew_mobile" and model_root!=null and G15OpticalV10.show_finish(model_root,action=="g15_v10_on"):
-                status_label.text=("G15 V11C · identidad de facción y carrocería restauradas" if action=="g15_v10_on" else "G15 V9 · cristales de comparación")
+                status_label.text=("G15 V11B · contornos sólidos y acabados restaurados" if action=="g15_v10_on" else "G15 V9 · cristales de comparación")
         "g15_v9_on","g15_v9_off":
             if _role=="ew_mobile" and model_root!=null:
                 var v9_active:bool=action=="g15_v9_on"
@@ -4521,8 +4521,8 @@ func _update_details() -> void:
         return
     if _role=="ew_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready:bool=bool(model_root.get_meta(G15DetailV11.FLAG,false))
-        detail_label.text="G15 V11C FINAL · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
-        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V11C · ocho colores de facción reforzados, blindaje cerrado" if ready else "acabado incompleto"]
+        detail_label.text="G15 V11B · Guerra electrónica · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        status_label.text="G15 · %s · %s" % [str(Factions.FACTIONS[_faction]["name"]),"V11 360° neumáticos y óptica 3D cargados" if ready else "acabado incompleto"]
         return
     if _role == "attack_heli":
         if model_root == null or detail_label == null or status_label == null:
