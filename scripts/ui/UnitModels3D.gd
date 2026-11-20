@@ -17,6 +17,7 @@ const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
+const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -1018,11 +1019,14 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "destroyer":
             _destroyer(model)
         "logistics_mobile":
-            # G16 V1: visual-only 6x6 logistics art. Tactical 'logistics'
-            # remains unchanged until the model is reviewed and approved.
+            # G16 remains Studio visual-only. Tactical role logistics is
+            # unchanged; V2 is genuine Godot mesh detail on the same V1 rig.
             if not G16LogisticsV1.build(model,
                     faction_paint_color(faction),finish_enabled and art_level>=13):
                 return null
+            if finish_enabled and art_level>=8:
+                if not G16ExteriorV2.apply(model,faction_paint_color(faction)):
+                    push_warning("G16 V2 opaque hard-surface cab, 6 wheels and articulated crane missing")
         "ew_mobile":
             # G15 is an art-only communications carrier; not a tactical class.
             if not G15EW.build(model,faction_paint_color(faction),
@@ -1460,7 +1464,10 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
         "logistics_mobile":
-            return G16LogisticsV1.pose(model,kind,progress,target_heading)
+            var g16_posed:bool=G16LogisticsV1.pose(model,kind,progress,target_heading)
+            if g16_posed and G16ExteriorV2.has_model(model):
+                G16ExteriorV2.sync(model)
+            return g16_posed
         "aa_mobile", "mobile_aa":
             return G13AA.pose(model,kind,progress,target_heading)
         "ew_mobile":
@@ -1492,6 +1499,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             AttackHelicopterV1.restore(model)
         "logistics_mobile":
             G16LogisticsV1.restore(model)
+            if G16ExteriorV2.has_model(model):
+                G16ExteriorV2.sync(model)
         "aa_mobile", "mobile_aa":
             G13AA.restore(model)
         "ew_mobile":
