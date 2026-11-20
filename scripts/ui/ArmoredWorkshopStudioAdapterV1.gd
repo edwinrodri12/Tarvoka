@@ -64,10 +64,24 @@ func _install_workshop_controls() -> void:
     workshop_view.select(0)
     workshop_controls.add_child(workshop_view)
     workshop_level=OptionButton.new()
+    workshop_level.name="TallerBlindadosSelectorN1N2N3"
+    workshop_level.tooltip_text="Selecciona N1, N2 o N3 para cargar el modelo 3D completo"
     for title in Workshop.LEVEL_NAMES:
         workshop_level.add_item(str(title))
     workshop_level.select(1)
     workshop_controls.add_child(workshop_level)
+    var level_row:=HFlowContainer.new()
+    level_row.name="TallerBlindadosAccesoRapidoNiveles"
+    workshop_controls.add_child(level_row)
+    for index in range(3):
+        var level_button:=Button.new()
+        level_button.name="TallerBlindadosN%d" % (index+1)
+        level_button.text="N%d · %d bahía%s" % [
+            index+1,index+1,"s" if index>0 else ""]
+        level_button.tooltip_text="Cargar y mostrar taller nivel N%d" % (index+1)
+        level_button.pressed.connect(
+            Callable(self,"_workshop_select_level").bind(index))
+        level_row.add_child(level_button)
     workshop_damage=OptionButton.new()
     for title in Workshop.DAMAGE_NAMES:
         workshop_damage.add_item(str(title))
@@ -120,6 +134,25 @@ func _install_workshop_controls() -> void:
     workshop_info=Label.new()
     workshop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     workshop_controls.add_child(workshop_info)
+
+func _workshop_show_controls_first() -> void:
+    # This sidebar contains dozens of historical building controls. The
+    # workshop must sit directly beneath the building picker while selected.
+    # Restore the approved city's position when switching back.
+    if workshop_controls!=null and building_controls!=null and (
+            workshop_controls.get_parent()==building_controls):
+        building_controls.move_child(workshop_controls,2)
+
+func _workshop_restore_city_controls() -> void:
+    if civilian_city_controls!=null and building_controls!=null and (
+            civilian_city_controls.get_parent()==building_controls):
+        building_controls.move_child(civilian_city_controls,2)
+
+func _workshop_select_level(index:int) -> void:
+    if workshop_level==null or index<0 or index>=workshop_level.item_count:
+        return
+    workshop_level.select(index)
+    _on_workshop_change(index)
 
 func _workshop_play_effect(kind:String) -> void:
     if _role!="armored_workshop" or _workshop_fx==null or _workshop_fx.busy:
@@ -180,6 +213,7 @@ func _workshop_adjust_zoom(factor:float) -> void:
 
 func _change_selected_building(index:int) -> void:
     if index==WORKSHOP_BUILDING_INDEX and workshop_controls!=null:
+        _workshop_show_controls_first()
         if plant_controls!=null:
             plant_controls.visible=false
         if civilian_city_controls!=null:
@@ -189,6 +223,7 @@ func _change_selected_building(index:int) -> void:
         return
     if workshop_controls!=null:
         workshop_controls.visible=false
+    _workshop_restore_city_controls()
     if _workshop_fx!=null:
         _workshop_fx.visible=false
     super._change_selected_building(index)
@@ -198,6 +233,7 @@ func _switch_category(index:int) -> void:
     if workshop_controls==null or building_picker==null:
         return
     if index==1 and building_picker.selected==WORKSHOP_BUILDING_INDEX:
+        _workshop_show_controls_first()
         if plant_controls!=null:
             plant_controls.visible=false
         if civilian_city_controls!=null:
@@ -206,6 +242,7 @@ func _switch_category(index:int) -> void:
         _display_workshop()
     else:
         workshop_controls.visible=false
+        _workshop_restore_city_controls()
         if _workshop_fx!=null:
             _workshop_fx.visible=false
 
@@ -238,8 +275,15 @@ func _display_workshop() -> void:
                 model_root=WorkshopMobile.build(level,faction,damage,
                     WorkshopMobile.PROFILE_DISTANT)
     if model_root==null:
-        push_error("TARVOKA: workshop native 3D geometry failed")
+        push_error("TARVOKA: no se pudo cargar el Taller N%d D%d" % [
+            level,damage])
+        if workshop_info!=null:
+            workshop_info.text="ERROR: no se pudo cargar N%d. Selecciona otro nivel." % level
+        if status_label!=null:
+            status_label.text="Taller N%d no disponible: error de carga 3D" % level
         return
+    model_root.name="TallerBlindados_Visible_N%d_F%d_D%d" % [
+        level,faction,damage]
     preview.add_child(model_root)
     if _workshop_fx==null:
         _workshop_fx=WorkshopFX.new()
@@ -283,8 +327,8 @@ func _workshop_refresh_info() -> void:
             camera,Vector3(0,0.3,0),2.17)
         var detail:String="TÁCTICO" if mobile_profile==WorkshopMobile.PROFILE_TACTICAL else "DISTANTE"
         context+=" · AUTO %d px → %s" % [int(roundf(px)),detail]
-    workshop_info.text="V%d · %s · D%d · %d bahías · %s%s · arte pendiente de aprobación" % [
-        int(model_root.get_meta("workshop_art_version",1)),
+    workshop_info.text="MODELO 3D CARGADO · N%d · %s · D%d · %d bahías · %s%s" % [
+        workshop_level.selected+1,
         Workshop.LEVEL_NAMES[workshop_level.selected],
         workshop_damage.selected,
         int(model_root.get_meta("workshop_bays",0)),geometry_info,context]
