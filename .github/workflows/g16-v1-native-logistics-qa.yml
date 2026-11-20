@@ -59,7 +59,7 @@ jobs:
           grep -Fq 'g16_v2_on' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_v2_off' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
-          grep -Fq 'G16 · Logística blindada 6×6 · V3 FINAL' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'G16 · Logística blindada 6×6 · V4 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.sync' scripts/ui/UnitModels3D.gd
