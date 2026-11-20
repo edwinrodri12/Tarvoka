@@ -173,6 +173,13 @@ func _run()->void:
             check(fumes!=null and fumes.visible and
                 sparks!=null and sparks.visible,
                 "dense emissive native wreck smoke + sparks")
+            var taper:=model.find_child(
+                "G16_V4_TaperedSmokeWisp_00",true,false) as MeshInstance3D
+            var wisp_mesh: CylinderMesh=(taper.mesh as CylinderMesh if taper!=null else null)
+            check(wisp_mesh!=null and
+                wisp_mesh.bottom_radius>wisp_mesh.top_radius and
+                wisp_mesh.radial_segments>=7,
+                "wreck smoke uses real tapered opaque volume, never giant floating spheres")
             var smoke_position:float=fumes.position.y if fumes!=null else -99.0
             check(V4.pose_wreck(model,1.0),"complete wreck sequence")
             check(fumes!=null and fumes.position.y>smoke_position,
