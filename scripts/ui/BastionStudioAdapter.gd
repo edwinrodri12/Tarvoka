@@ -235,6 +235,10 @@ var studio_animation_inventory: VBoxContainer
 var studio_animation_message: Label
 var studio_animation_role: String = ""
 var studio_animation_rebuild_count: int = 0
+# Shared-viewport V1/V2 comparison and orbit: no second viewer or scene.
+var infantry_360_panel: VBoxContainer
+var infantry_360_tween: Tween = null
+var infantry_review_v2: bool = true
 
 
 func _ready() -> void:
@@ -355,6 +359,18 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(studio_camera_panel,"Alejar",func(): _change_zoom(-1),
         "Acercar",func(): _change_zoom(1))
     _button(studio_camera_panel,"Restablecer cámara",_reset_camera)
+    infantry_360_panel=VBoxContainer.new()
+    infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
+    infantry_360_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(infantry_360_panel)
+    _title(infantry_360_panel,"INFANTERÍA · REVISIÓN 360° V1 / V2",13)
+    _add_paired(infantry_360_panel,"Frente",func(): _infantry_review_look(180.0,"frente"),
+        "Perfil",func(): _infantry_review_look(90.0,"perfil"))
+    _add_paired(infantry_360_panel,"Espalda",func(): _infantry_review_look(0.0,"espalda"),
+        "Giro 360°",_infantry_review_spin)
+    _add_paired(infantry_360_panel,"Comparar V1",func(): _infantry_review_version(false),
+        "Ver V2",func(): _infantry_review_version(true))
+    infantry_360_panel.visible=false
 
     # Revision comparisons are kept for QA but not shown on the front page.
     studio_versions_fold=VBoxContainer.new()
@@ -516,7 +532,7 @@ func _studio_jump_details() -> void:
 func _studio_animation_specs(role: String) -> Array[Dictionary]:
     if InfantryV1.supports(role):
         var actions: Array[Dictionary] = [
-            {"group":"INFANTERÍA V1 · MOVIMIENTO Y POSTURAS"},
+            {"group":"INFANTERÍA V2 · MOVIMIENTO Y POSTURAS"},
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
@@ -1084,6 +1100,70 @@ func _studio_g11_turn_done(art: Node3D) -> void:
     if is_instance_valid(art):
         G11Rig.restore(art)
 
+# The same SubViewport, camera, scene and role/faction controls are reused.
+# V1 and V2 are real Godot MeshInstance3D trees, not image swaps.
+func _infantry_review_look(yaw: float, perspective: String) -> void:
+    if model_root==null or not InfantryV1.supports(_role):
+        return
+    if infantry_360_tween!=null and infantry_360_tween.is_running():
+        infantry_360_tween.kill()
+    _yaw=yaw
+    model_root.rotation_degrees.y=yaw
+    _update_camera()
+    status_label.text="Infantería %s · ángulo %s · mismo visor 3D" % [
+        "V2" if infantry_review_v2 else "V1",perspective]
+
+func _infantry_review_spin_tick(angle: float) -> void:
+    if model_root==null or not InfantryV1.supports(_role):
+        return
+    _yaw=angle
+    model_root.rotation_degrees.y=angle
+
+func _infantry_review_spin() -> void:
+    if model_root==null or not InfantryV1.supports(_role):
+        return
+    if infantry_360_tween!=null and infantry_360_tween.is_running():
+        infantry_360_tween.kill()
+    infantry_360_tween=create_tween()
+    infantry_360_tween.tween_method(Callable(self,"_infantry_review_spin_tick"),
+        _yaw,_yaw+360.0,6.0).set_trans(Tween.TRANS_LINEAR)
+    status_label.text="Infantería %s · revisión 360° real en Godot" % (
+        "V2" if infantry_review_v2 else "V1")
+
+func _infantry_review_version(latest: bool) -> void:
+    if model_root==null or preview==null or not InfantryV1.supports(_role):
+        return
+    if infantry_360_tween!=null and infantry_360_tween.is_running():
+        infantry_360_tween.kill()
+    if _infantry_tween!=null and _infantry_tween.is_running():
+        _infantry_tween.kill()
+    var candidate: Node3D=Node3D.new()
+    if latest:
+        candidate=P06Models.build(_role,_faction,true,13)
+        if candidate==null or not bool(candidate.get_meta(
+                "tarvoka_infantry_sculpt_finish_v2",false)):
+            if candidate!=null:
+                candidate.free()
+            push_error("Infantería V2 real no disponible; conservar modelo de revisión")
+            return
+    else:
+        if not InfantryV1.build(candidate,_role,
+                P06Models.faction_paint_color(_faction),true):
+            candidate.free()
+            push_error("Comparativa V1 genuina no disponible")
+            return
+    var old: Node3D=model_root
+    preview.remove_child(old)
+    old.queue_free()
+    model_root=candidate
+    preview.add_child(model_root)
+    model_root.rotation_degrees.y=_yaw
+    infantry_review_v2=latest
+    _update_camera()
+    _update_details()
+    status_label.text="Infantería %s · comparación en el visor 3D original" % (
+        "V2 acabada" if latest else "V1 referencia")
+
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
         P06Models.pose_model(_role,model_root,kind,t,Vector2i(0,-1))
@@ -1096,7 +1176,8 @@ func _infantry_play(kind: String) -> void:
     _infantry_tween=create_tween()
     _infantry_tween.tween_method(Callable(self,"_infantry_pose_tick").bind(kind),
         0.0,1.0,1.15)
-    status_label.text="Infantería · animación %s (modelo 3D V1)" % kind
+    status_label.text="Infantería · animación %s · modelo %s" % [kind,
+        "3D V2" if infantry_review_v2 else "3D V1"]
 
 func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
@@ -1216,6 +1297,8 @@ func _refresh_unified_studio_navigation() -> void:
         heli_controls.visible=show_unit_details and _role=="attack_heli"
     if studio_legacy_controls!=null:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
+    if infantry_360_panel!=null:
+        infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
     _studio_rebuild_animation_catalog()
@@ -3798,6 +3881,9 @@ func _display_role(role: String) -> void:
         _g13_v53_set_reflections(false)
     super._display_role(role)
     if InfantryV1.supports(role):
+        if infantry_360_tween!=null and infantry_360_tween.is_running():
+            infantry_360_tween.kill()
+        infantry_review_v2=true
         # Swap the base low-detail preview for the hero-grade native geometry
         # in the SAME shared Studio viewport; battle LOD stays lightweight.
         if model_root!=null:
