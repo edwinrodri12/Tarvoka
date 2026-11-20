@@ -300,6 +300,11 @@ jobs:
             cp "$g16_source" scripts/ui/
           done
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
+          test -s scripts/ui/G16LogisticsExteriorV2.gd
+          grep -q 'G16ExteriorV2.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'G16ExteriorV2.sync' scripts/ui/UnitModels3D.gd
+          grep -q 'g16_v2_on' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'g16_v2_off' scripts/ui/BastionStudioAdapter.gd
           grep -q '"logistics_mobile"' scripts/ui/UnitModels3D.gd
           grep -q 'G16LogisticsV1.build' scripts/ui/UnitModels3D.gd
           grep -q 'g16_camp' scripts/ui/BastionStudioAdapter.gd
@@ -492,7 +497,7 @@ jobs:
           current = current[:start] + approved_tank + apc_tail + current[end:]
           assert current.count(tank_anchor) == 1, 'Duplicate G09 build stages remain'
           for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
-                            'const G16LogisticsV1 = preload(',
+                            'const G16LogisticsV1 = preload(', 'const G16ExteriorV2 = preload(',
                             'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
                             'G11Art.build', 'APCClosedTiresV25.apply',
                             'static func pose_model(', 'static func restore_model_pose(']:
