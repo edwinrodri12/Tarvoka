@@ -106,6 +106,7 @@ func _verify() -> void:
                         assert(faction_batch.multimesh.instance_count>=4+level*2,
                             "Faction colors missing from roof or service bays")
                     if damage in [1,2]:
+                        var roof_height:float=4.90 if level==1 else 6.10 if level==2 else 7.20
                         var mark_batch:MultiMeshInstance3D=mobile.find_child(
                             "Lote_dark_steel",true,false) as MultiMeshInstance3D
                         assert(mark_batch!=null)
@@ -113,7 +114,7 @@ func _verify() -> void:
                         var found_marks:int=0
                         for mark_index in range(mark_batch.multimesh.instance_count):
                             var mark_transform:Transform3D=mark_batch.multimesh.get_instance_transform(mark_index)
-                            if absf(mark_transform.origin.y-(height+0.232))<0.001:
+                            if absf(mark_transform.origin.y-(roof_height+0.232))<0.001:
                                 found_marks+=1
                         assert(found_marks==expected_marks,
                             "Mobile roof battle scars must reflect each D1/D2 damage stage")
