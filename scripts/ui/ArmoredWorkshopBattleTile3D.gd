@@ -88,3 +88,22 @@ static func build(level:int=1,faction:int=-1,damage:int=0,
     root.set_meta("workshop_instances",
         int(workshop.get_meta("workshop_instances",0)))
     return root
+
+# Replace ONLY the armored workshop child. Keep all nine terrain tiles, road
+# markers, root position and camera target unchanged during zoom transitions.
+static func set_preview_detail(root:Node3D,profile:int) -> bool:
+    if root==null or not is_instance_valid(root):
+        return false
+    if root.name!=STAGE or not bool(root.get_meta("visual_preview_only",false)):
+        return false
+    if profile not in [Mobile.PROFILE_TACTICAL,Mobile.PROFILE_DISTANT]:
+        return false
+    var workshop:Node3D=root.get_node_or_null(WORKSHOP_NODE) as Node3D
+    if workshop==null:
+        return false
+    if not Preview.set_preview_detail(workshop,profile):
+        return false
+    root.set_meta("workshop_lod_profile",profile)
+    root.set_meta("workshop_batches",int(workshop.get_meta("workshop_batches",0)))
+    root.set_meta("workshop_instances",int(workshop.get_meta("workshop_instances",0)))
+    return true
