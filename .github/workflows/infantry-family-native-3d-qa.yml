@@ -4,9 +4,11 @@ on:
   pull_request:
     paths:
       - 'scripts/ui/InfantryFamilyV1.gd'
+      - 'scripts/ui/InfantrySculptFinishV2.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_infantry_family_v1.gd'
+      - 'tests/test_infantry_family_v2.gd'
       - '.github/workflows/infantry-family-native-3d-qa.yml'
   workflow_dispatch:
 
@@ -33,6 +35,8 @@ jobs:
         run: |
           set -euo pipefail
           test -s scripts/ui/InfantryFamilyV1.gd
+          test -s scripts/ui/InfantrySculptFinishV2.gd
+          test -s tests/test_infantry_family_v2.gd
           test -s tests/test_infantry_family_v1.gd
           grep -Fq 'InfantryFamily.build' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryFamily.pose' scripts/ui/UnitModels3D.gd
@@ -60,10 +64,23 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V1 NATIVE 3D:' /tmp/infantry-native.log
           test "$(find build/qa/infantry-v1 -name '*.png' | wc -l)" -eq 13
+      - name: Verify V2 sealed sculpt, 8-faction LOD, anatomy and 20 native renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/infantry-v2
+          timeout --signal=TERM --kill-after=5s 270s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_infantry_family_v2.gd 2>&1 | tee /tmp/infantry-v2-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v2-native.log; then exit 1; fi
+          grep -Fq 'PASS INFANTRY V2 NATIVE 3D:' /tmp/infantry-v2-native.log
+          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 20
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: tarvoka-infantry-v1-godot-native-review
-          path: build/qa/infantry-v1/*.png
+          path: |
+            build/qa/infantry-v1/*.png
+            build/qa/infantry-v2/*.png
           if-no-files-found: warn
           retention-days: 14
