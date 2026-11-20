@@ -7,6 +7,7 @@ const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
+const WorkshopLOD=preload("res://scripts/ui/ArmoredWorkshopLODPolicy.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
 var _model:Node3D
@@ -44,7 +45,8 @@ func _ready() -> void:
     column.add_child(subtitle)
     _version=_select(column,"ACABADO",[
         "V1 · original","V2 · industrial refinado",
-        "Android · táctico","Android · distante"])
+        "Android · táctico","Android · distante",
+        "Android · AUTOMÁTICO por zoom"])
     _version.select(1)
     _environment=_select(column,"VISTA REAL",[
         "Edificio completo","Prueba mapa 3D · casilla 2,4 m"])
@@ -149,6 +151,8 @@ func _resize_canvas() -> void:
         maxi(320,int(area.x)),maxi(240,int(area.y)))
 
 func _on_change(_index:int) -> void:
+    if _version.selected==4 and _environment.selected==0:
+        _environment.select(1)
     if _environment!=null and _environment.selected==1 and _version.selected<2:
         _version.select(2)
     _rebuild()
@@ -156,6 +160,8 @@ func _on_change(_index:int) -> void:
 func _on_environment_change(_index:int) -> void:
     if _environment.selected==1 and _version.selected<2:
         _version.select(2)
+    if _environment.selected==0 and _version.selected==4:
+        _version.select(1)
     _zoom=1.0
     _rebuild()
 
@@ -202,17 +208,44 @@ func _rebuild() -> void:
         _status.text="ERROR: geometria 3D no disponible"
         return
     _stage.add_child(_model)
+    _update_camera()
+    _refresh_status()
+
+func _refresh_status() -> void:
+    if _model==null or _status==null or _level==null:
+        return
     var mobile_profile:int=int(_model.get_meta("workshop_lod_profile",0))
     var detail:String="%d lotes GPU / %d cajas" % [
         int(_model.get_meta("workshop_batches",0)),
         int(_model.get_meta("workshop_instances",0))
     ] if mobile_profile>0 else "%d mallas 3D" % Workshop.mesh_count(_model)
-    var context:String=" · escenario 3D / casilla 2,4 m" if (
-        _environment!=null and _environment.selected==1) else ""
+    var map_view:bool=_environment!=null and _environment.selected==1
+    var context:String=" · escenario 3D / casilla 2,4 m" if map_view else ""
+    if map_view and _version.selected==4:
+        var px:float=WorkshopLOD.projected_width(
+            _camera,Vector3(0,0.3,0),2.17)
+        var label:String="TÁCTICO" if mobile_profile==WorkshopMobile.PROFILE_TACTICAL else "DISTANTE"
+        context+=" · AUTO %d px → %s" % [int(roundf(px)),label]
     _status.text="V%d · %s · D%d · %d bahía(s) · %s%s · ARTE EN REVISIÓN" % [
-        int(_model.get_meta("workshop_art_version",1)),Workshop.LEVEL_NAMES[level-1],
-        damage,int(_model.get_meta("workshop_bays",0)),detail,context]
-    _update_camera()
+        int(_model.get_meta("workshop_art_version",1)),
+        Workshop.LEVEL_NAMES[_level.selected],_damage.selected,
+        int(_model.get_meta("workshop_bays",0)),detail,context]
+
+func _auto_lod_for_zoom() -> void:
+    if _model==null or _environment==null or _version==null:
+        return
+    if _environment.selected!=1 or _version.selected!=4:
+        return
+    var pixels:float=WorkshopLOD.projected_width(
+        _camera,Vector3(0,0.3,0),2.17)
+    var previous:int=int(_model.get_meta("workshop_lod_profile",
+        WorkshopMobile.PROFILE_TACTICAL))
+    var requested:int=WorkshopLOD.choose_mobile(pixels,previous)
+    if requested!=previous:
+        if not WorkshopTile.set_preview_detail(_model,requested):
+            push_error("TARVOKA: mobile studio workshop LOD swap failed")
+            return
+    _refresh_status()
 
 func _update_camera() -> void:
     if _camera==null or _level==null:
@@ -228,6 +261,7 @@ func _update_camera() -> void:
             sin(map_tilt)*19.0,
             cos(map_yaw)*cos(map_tilt)*19.0)
         _camera.look_at(map_center,Vector3.UP)
+        _auto_lod_for_zoom()
         return
     var radius:float=38.0 if level==1 else 48.0 if level==2 else 59.0
     var focal_height:float=2.3 if level==1 else 2.8 if level==2 else 3.7
