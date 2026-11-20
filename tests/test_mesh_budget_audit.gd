@@ -129,6 +129,16 @@ func _initialize() -> void:
 	invalid_report = packed_report.duplicate(true)
 	invalid_report["warnings"] = [42]
 	assert(not Audit.is_valid_report(invalid_report))
+	# A positive triangle count requires a nonzero largest contributor.
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["largest_mesh_triangles"] = 0
+	invalid_report["largest_mesh_path"] = ""
+	assert(not Audit.is_valid_report(invalid_report))
+	# A zero-triangle report cannot identify a positive-cost largest mesh.
+	invalid_report = packed_report.duplicate(true)
+	invalid_report["triangles"] = 0
+	invalid_report["largest_mesh_triangles"] = 0
+	assert(not Audit.is_valid_report(invalid_report))
 	packed_root.free()
 	root.free()
 	print("MESH_BUDGET_AUDIT_PASS")
