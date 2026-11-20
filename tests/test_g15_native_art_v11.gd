@@ -159,6 +159,33 @@ func _run()->void:
                 var seal:=model.find_child(name,true,false) as MeshInstance3D
                 check(seal!=null and seal.mesh is BoxMesh,
                     "closed physical thickness bridging 8cm cab gap "+name)
+            # V11B must physically back the formerly see-through contours.
+            # Every seal is a six-sided closed BoxMesh, never a decal.
+            var contour:=model.find_child(V11.SEALED_GROUP,true,false) as Node3D
+            check(contour!=null and
+                contour.get_child_count()==V11.SEALED_PARTS.size(),
+                "V11B 13 physical contour closures in each faction/LOD")
+            check(int(model.get_meta(
+                "tarvoka_g15_v11b_physical_contour_seals",0))==13,
+                "native thirteen structural backings installed")
+            for plate_name in V11.SEALED_PARTS:
+                var panel:=model.find_child(str(plate_name),
+                    true,false) as MeshInstance3D
+                check(panel!=null,"physical 3D no-hole plate "+str(plate_name))
+                if panel!=null:
+                    var geometry:=panel.mesh as BoxMesh
+                    var surface:=panel.material_override as StandardMaterial3D
+                    check(geometry!=null and
+                        geometry.size.x>=0.05 and
+                        geometry.size.y>=0.16 and
+                        geometry.size.z>=0.12,
+                        "real six-face body panel thickness "+str(plate_name))
+                    check(surface!=null and
+                        surface.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                        surface.cull_mode==BaseMaterial3D.CULL_DISABLED and
+                        surface.depth_draw_mode==BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY and
+                        is_equal_approx(surface.albedo_color.a,1.0),
+                        "completely opaque contour backing "+str(plate_name))
             var assembly:=model.find_child(V11.ASSEMBLY,true,false) as Node3D
             var wheels:=model.find_child(V1.WHEEL_GROUP,true,false) as Node3D
             check(assembly!=null,"front cab sculpt is native node")
@@ -194,6 +221,9 @@ func _run()->void:
                         "LOD-aware shoulder embossed marks "+token)
             check(ring_count==6,"six complete 3D tyre shoulder rigs")
             check(V11.show_finish(model,false),"V11 reversible old finish")
+            check(contour!=null and not contour.is_visible_in_tree(),
+                "V11B solid contours hidden in historical V10")
+
             for label in wall_names:
                 var old_wall:=model.find_child(str(label),true,false) as MeshInstance3D
                 check(old_wall!=null and old_wall.material_override==previous[label],
@@ -218,6 +248,8 @@ func _run()->void:
                     "explicit V11-off persists when switching V10 optics "+
                     str(label))
             check(V11.show_finish(model,true),"V11 restored")
+            check(contour!=null and contour.visible,
+                "V11B solid contour closures restored")
             for label in wall_names:
                 var latest_wall:=model.find_child(str(label),true,false) as MeshInstance3D
                 check(latest_wall!=null and latest_wall.material_override==current[label],
@@ -264,9 +296,10 @@ func _run()->void:
                 leak_probe.material_override=marker
                 leak_probe.position=Vector3(0.0,1.49,0.62)
                 model.add_child(leak_probe)
-                # Genuine full 360° orbit: 8 headings at 45° increments.
-                for view in range(8):
-                    var theta:float=TAU*float(view)/8.0
+                # Genuine 360° orbit at every 22.5°: thin corner gaps are
+                # most visible between the older 45° QA viewpoints.
+                for view in range(16):
+                    var theta:float=TAU*float(view)/16.0
                     camera.position=Vector3(
                         6.2*sin(theta),3.15,-6.2*cos(theta))
                     camera.look_at(Vector3(0,1.38,-0.15))
@@ -281,19 +314,20 @@ func _run()->void:
                         "solid walls fully occlude interior probe from 360° "+key)
                     var changed:int=_difference(key+"-v10",key+"-v11")
                     check(changed>=0,"both real 3D captures exist "+key)
-                    if view in [1,2,6,7]:
+                    if view in [1,2,3,4,12,13,14,15]:
                         check(changed>8,
                             "V11 wheel-sidewall detail visible in oblique view "+key)
                 stage.remove_child(model)
                 model.free()
             else:
                 model.free()
-    check(captures==32,"32 authentic V10/V11 Godot renders covering the full 360°")
+    check(captures==64,"64 authentic V10/V11B Godot renders covering 360° every 22.5°")
     var file:=FileAccess.open(ProjectSettings.globalize_path(
         OUT.path_join("g15-v11-manifest.json")),FileAccess.WRITE)
     if file!=null:
         file.store_string(JSON.stringify({
-            "version":"G15 V11","real_3d":true,"factions":8,
+            "version":"G15 V11B","real_3d":true,"factions":8,
+            "backing_plates":13,"angle_step_degrees":22.5,
             "lods":[8,13],"original_wheels":6,"captures":captures,
             "no_gameplay_changes":true,"errors":failures
         },"  "))
@@ -301,7 +335,7 @@ func _run()->void:
     stage.queue_free()
     await process_frame
     if failures==0:
-        print("PASS G15 V11 360 NATIVE: eleven opaque double-sided armor walls, three watertight octagons, solid cab bulkheads, six matte rubber shoulders, two real front wipers, 8 factions, 2 LODs, 32 Godot views")
+        print("PASS G15 V11B 360 NATIVE: 13 true solid contour backing plates, 11 existing opaque armor walls, 3 watertight octagons, 6 original wheel pivots, eight factions/two LODs and 64 native Godot renders at 22.5-degree steps")
     else:
         print("FAIL G15 V11 360 NATIVE: %d problems" % failures)
     quit(1 if failures>0 else 0)
