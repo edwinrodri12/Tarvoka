@@ -91,6 +91,26 @@ func _run() -> void:
             expected_boxes+=int(model.get_meta("workshop_instances",0))
         var build_ms:int=Time.get_ticks_msec()-begun
         assert(instances.size()==count)
+        # Simulate a screen-size LOD oscillation across 24 buildings. The
+        # root of each workshop and its tactical tile position must persist.
+        var lod_swaps:int=0
+        if mode=="mixed":
+            for round_id in range(2):
+                for model in instances:
+                    var original_position:Vector3=model.position
+                    var current:int=int(model.get_meta("workshop_lod",0))
+                    var other:int=Mobile.PROFILE_DISTANT if (
+                        current==Mobile.PROFILE_TACTICAL) else Mobile.PROFILE_TACTICAL
+                    var stable_id:int=model.get_instance_id()
+                    assert(Preview.set_preview_detail(model,other))
+                    assert(model.get_instance_id()==stable_id and
+                        model.position.is_equal_approx(original_position))
+                    lod_swaps+=1
+            expected_batches=0
+            expected_boxes=0
+            for model in instances:
+                expected_batches+=int(model.get_meta("workshop_batches",0))
+                expected_boxes+=int(model.get_meta("workshop_instances",0))
         assert(expected_batches>0 and expected_batches<=count*11)
         assert(expected_boxes>0 and expected_boxes<=count*115)
         var render_cpu:Array[float]=[]
@@ -129,6 +149,7 @@ func _run() -> void:
             "expected_gpu_batches":expected_batches,
             "instanced_boxes":expected_boxes,
             "construction_ms":build_ms,
+            "preserving_root_lod_swaps":lod_swaps,
             "viewport_draw_calls_last":draws.back(),
             "viewport_draw_calls_samples":draws,
             "render_cpu_ms_samples":render_cpu,
