@@ -7,10 +7,12 @@ class_name TarvokaArmoredWorkshopStudioAdapterV1
 const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
+const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
 const WorkshopStyle=preload("res://scripts/ui/VisualStyle.gd")
 const WORKSHOP_BUILDING_INDEX:int=6
 var workshop_controls:VBoxContainer
 var workshop_version:OptionButton
+var workshop_view:OptionButton
 var workshop_level:OptionButton
 var workshop_faction:OptionButton
 var workshop_damage:OptionButton
@@ -52,6 +54,11 @@ func _install_workshop_controls() -> void:
     workshop_version.add_item("Android · distante agrupado")
     workshop_version.select(1)
     workshop_controls.add_child(workshop_version)
+    workshop_view=OptionButton.new()
+    workshop_view.add_item("MODELO 3D COMPLETO")
+    workshop_view.add_item("PRUEBA EN CASILLA 3D · 2,4 m")
+    workshop_view.select(0)
+    workshop_controls.add_child(workshop_view)
     workshop_level=OptionButton.new()
     for title in Workshop.LEVEL_NAMES:
         workshop_level.add_item(str(title))
@@ -70,6 +77,7 @@ func _install_workshop_controls() -> void:
     workshop_controls.add_child(workshop_faction)
     for selector in [workshop_version,workshop_level,workshop_damage,workshop_faction]:
         selector.item_selected.connect(_on_workshop_change)
+    workshop_view.item_selected.connect(_on_workshop_view_change)
     var camera_row:=HFlowContainer.new()
     workshop_controls.add_child(camera_row)
     # Same world-space convention as the standalone camera: front = -Z.
@@ -95,6 +103,17 @@ func _install_workshop_controls() -> void:
     workshop_controls.add_child(workshop_info)
 
 func _on_workshop_change(_index:int) -> void:
+    # Battle-scale 3D requires the real compact Android asset, never HERO.
+    if workshop_view!=null and workshop_view.selected==1 and (
+            workshop_version.selected<2):
+        workshop_version.select(2)
+    if _role=="armored_workshop":
+        _display_workshop()
+
+func _on_workshop_view_change(_index:int) -> void:
+    if workshop_view.selected==1 and workshop_version.selected<2:
+        workshop_version.select(2)
+    _workshop_zoom=1.0
     if _role=="armored_workshop":
         _display_workshop()
 
@@ -149,17 +168,22 @@ func _display_workshop() -> void:
     var level:int=workshop_level.selected+1
     var faction:int=workshop_faction.selected-1
     var damage:int=workshop_damage.selected
-    match workshop_version.selected:
-        0:
-            model_root=WorkshopV1.build(level,faction,damage)
-        1:
-            model_root=Workshop.build(level,faction,damage)
-        2:
-            model_root=WorkshopMobile.build(level,faction,damage,
-                WorkshopMobile.PROFILE_TACTICAL)
-        _:
-            model_root=WorkshopMobile.build(level,faction,damage,
-                WorkshopMobile.PROFILE_DISTANT)
+    if workshop_view!=null and workshop_view.selected==1:
+        var profile:int=WorkshopMobile.PROFILE_DISTANT if (
+            workshop_version.selected==3) else WorkshopMobile.PROFILE_TACTICAL
+        model_root=WorkshopTile.build(level,faction,damage,profile)
+    else:
+        match workshop_version.selected:
+            0:
+                model_root=WorkshopV1.build(level,faction,damage)
+            1:
+                model_root=Workshop.build(level,faction,damage)
+            2:
+                model_root=WorkshopMobile.build(level,faction,damage,
+                    WorkshopMobile.PROFILE_TACTICAL)
+            _:
+                model_root=WorkshopMobile.build(level,faction,damage,
+                    WorkshopMobile.PROFILE_DISTANT)
     if model_root==null:
         push_error("TARVOKA: workshop native 3D geometry failed")
         return
@@ -185,16 +209,29 @@ func _display_workshop() -> void:
         int(model_root.get_meta("workshop_batches",0)),
         int(model_root.get_meta("workshop_instances",0))
     ] if mobile_profile>0 else "%d mallas 3D HERO" % Workshop.mesh_count(model_root)
-    workshop_info.text="V%d · %s · D%d · %d bahías · %s · arte pendiente de aprobación" % [
+    var context:String=" · casilla 2,4 m · 9 piezas de terreno" if (
+        workshop_view!=null and workshop_view.selected==1) else ""
+    workshop_info.text="V%d · %s · D%d · %d bahías · %s%s · arte pendiente de aprobación" % [
         int(model_root.get_meta("workshop_art_version",1)),
         Workshop.LEVEL_NAMES[level-1],damage,
-        int(model_root.get_meta("workshop_bays",0)),geometry_info]
+        int(model_root.get_meta("workshop_bays",0)),geometry_info,context]
 
 func _update_camera() -> void:
     if _role=="armored_workshop" and camera!=null and workshop_level!=null:
         var level:int=workshop_level.selected+1
         var yaw:float=deg_to_rad(_workshop_yaw)
         var elevation:float=deg_to_rad(_workshop_elevation)
+        if workshop_view!=null and workshop_view.selected==1:
+            var center:=Vector3(0,0.32,0)
+            var mobile_distance:float=19.0
+            camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+            camera.size=9.60*_workshop_zoom
+            camera.position=center+Vector3(
+                sin(yaw)*cos(elevation)*mobile_distance,
+                sin(elevation)*mobile_distance,
+                cos(yaw)*cos(elevation)*mobile_distance)
+            camera.look_at(center,Vector3.UP)
+            return
         var distance:float=36.0 if level==1 else 45.0 if level==2 else 56.0
         var focus:=Vector3(0,2.2 if level==1 else 3.0 if level==2 else 3.5,0)
         camera.projection=Camera3D.PROJECTION_ORTHOGONAL
@@ -210,7 +247,9 @@ func _update_camera() -> void:
 func _update_details() -> void:
     if _role=="armored_workshop":
         if studio_overview_label!=null:
-            studio_overview_label.text="EDIFICIOS · TALLER DE BLINDADOS V1 / V2 EN DISEÑO"
+            studio_overview_label.text="EDIFICIOS · TALLER DE BLINDADOS · PRUEBA DE MAPA 3D" if (
+                workshop_view!=null and workshop_view.selected==1) else (
+                "EDIFICIOS · TALLER DE BLINDADOS V1 / V2 EN DISEÑO")
         if status_label!=null and workshop_level!=null:
             status_label.text="%s · D%d · arte 3D; logistica movil independiente" % [
                 Workshop.LEVEL_NAMES[workshop_level.selected],workshop_damage.selected]
