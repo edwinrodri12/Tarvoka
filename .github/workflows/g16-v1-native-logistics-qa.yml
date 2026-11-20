@@ -211,7 +211,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS G16 V6 REAL 3D:' /tmp/g16-v6-native.log
-          test "$(find build/qa/g16-v6 -maxdepth 1 -name '*.png' | wc -l)" -eq 4
+          test "$(find build/qa/g16-v6 -maxdepth 1 -name '*.png' | wc -l)" -eq 24
       - name: Publish sixteen true Godot rendered faction and camp preview images
         if: always()
         uses: actions/upload-artifact@v4
