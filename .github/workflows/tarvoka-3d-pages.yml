@@ -287,6 +287,18 @@ jobs:
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
+          # The pinned HQ 3D release scene predates the Workshop battle
+          # integration. Its Studio adapter now preloads these two real
+          # mainline battle/LOD scripts. Ship them from the SAME tested main
+          # snapshot as the infantry V2 models; otherwise web export fails
+          # with missing ArmoredWorkshopBattle3D and BattleLOD.
+          for battle_part in ArmoredWorkshopBattle3D.gd ArmoredWorkshopBattleLOD.gd; do
+            test -s "hq-android-v15/scripts/ui/$battle_part"
+            cp "hq-android-v15/scripts/ui/$battle_part" "scripts/ui/$battle_part"
+            test -s "scripts/ui/$battle_part"
+          done
+          test -s scripts/ui/ArmoredWorkshopBattle3D.gd
+          test -s scripts/ui/ArmoredWorkshopBattleLOD.gd
           test -s scripts/ui/InfantryFamilyV1.gd
           test -s scripts/ui/InfantrySculptFinishV2.gd
           test -s hq-android-v15/tests/test_infantry_family_v2.gd
