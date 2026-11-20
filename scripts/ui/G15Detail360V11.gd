@@ -16,6 +16,23 @@ const TIRE="G15_V11_ResinTireShoulder_"
 const BEAD="G15_V11_SealedOuterTireBead_"
 const MARK="G15_V11_EmbossedShoulderMarks_"
 const WIPER="G15_V11_WiperBlade_"
+const SEALED_GROUP="G15_V11B_SolidContourBackings"
+const SEALED_PARTS=[
+    "G15_V11B_LeftSideBackingPlate",
+    "G15_V11B_RightSideBackingPlate",
+    "G15_V11B_LeftRearSideBackingPlate",
+    "G15_V11B_RightRearSideBackingPlate",
+    "G15_V11B_LeftCabBackingPlate",
+    "G15_V11B_RightCabBackingPlate",
+    "G15_V11B_CabMidSeal",
+    "G15_V11B_CabLowerSeal",
+    "G15_V11B_CabUpperSeal",
+    "G15_V11B_LeftWheelArchClosure",
+    "G15_V11B_RightWheelArchClosure",
+    "G15_V11B_LeftRearEdgeClosure",
+    "G15_V11B_RightRearEdgeClosure"
+]
+
 const HULL_MATERIAL_OLD="tarvoka_g15_v11_before_opaque_wall"
 const HULL_MATERIAL_NEW="tarvoka_g15_v11_double_sided_opaque_wall"
 const HULL_LIST=[
@@ -75,6 +92,55 @@ static func _box(parent:Node3D,label:String,pos:Vector3,
     node.position=pos
     parent.add_child(node)
     return node
+
+# V11B: a proper closed BoxMesh backing is different from a narrow
+# cosmetic edge strip. These panels overlap the *inside* of existing
+# shell/doors and keep side glazing and visible tyre wells unobstructed.
+# All thirteen join into the original 6x6 body coordinate system.
+static func _seal_contours(parent:Node3D,steel:StandardMaterial3D)->int:
+    var backing:=Node3D.new()
+    backing.name=SEALED_GROUP
+    parent.add_child(backing)
+    var seal_mat:=_solid_wall_material(steel)
+    var count:int=0
+    for side in [-1,1]:
+        var s:float=float(side)
+        var title:String="Left" if side<0 else "Right"
+        # Continuous center-flank layer: behind service latches and colored
+        # enamel; overlaps rear cheek and the cab-to-shelter transition.
+        _box(backing,"G15_V11B_"+title+"SideBackingPlate",
+            Vector3(s*0.738,1.54,0.44),
+            Vector3(0.068,0.79,1.54),seal_mat)
+        # Rear half: overlaps center skin rather than leaving a hairline gap
+        # behind the diagonal rear corner armor and vent frame.
+        _box(backing,"G15_V11B_"+title+"RearSideBackingPlate",
+            Vector3(s*0.739,1.53,1.365),
+            Vector3(0.066,0.77,0.455),seal_mat)
+        # Lower cab side wall is deliberately below the physical V10
+        # blue-glass windows, so the cabin is not blacked out.
+        _box(backing,"G15_V11B_"+title+"CabBackingPlate",
+            Vector3(s*0.692,1.148,-1.025),
+            Vector3(0.060,0.454,0.967),seal_mat)
+        # Close only ABOVE the tyre upper tangent, preserving authentic
+        # arch clearance and six moving original wheel pivots.
+        _box(backing,"G15_V11B_"+title+"WheelArchClosure",
+            Vector3(s*0.717,1.010,0.464),
+            Vector3(0.068,0.175,1.615),seal_mat)
+        # Rear perimeter returns into the original V3 rear shell cap.
+        _box(backing,"G15_V11B_"+title+"RearEdgeClosure",
+            Vector3(s*0.702,1.49,1.599),
+            Vector3(0.102,0.765,0.166),seal_mat)
+        count+=5
+    # Cross-sectional body seams; all boxes have real six-face thickness.
+    # z=-.35 intentionally overlaps V3 cab end(-.39), module start(-.31).
+    _box(backing,"G15_V11B_CabMidSeal",Vector3(0,1.375,-0.352),
+        Vector3(1.374,0.565,0.125),seal_mat)
+    _box(backing,"G15_V11B_CabLowerSeal",Vector3(0,0.974,-0.348),
+        Vector3(1.360,0.237,0.130),seal_mat)
+    _box(backing,"G15_V11B_CabUpperSeal",Vector3(0,1.863,-0.347),
+        Vector3(1.38,0.184,0.127),seal_mat)
+    count+=3
+    return count
 
 static func _rod(parent:Node3D,label:String,a:Vector3,b:Vector3,
         radius:float,mat:Material)->MeshInstance3D:
@@ -172,6 +238,9 @@ static func apply(root:Node3D,paint:Color)->bool:
         Vector3(0.0,1.36,-0.353),Vector3(1.36,0.87,0.112),arms)
     _box(assembly,"G15_V11_UpperCabSeamBridge",
         Vector3(0.0,1.91,-0.350),Vector3(1.30,0.11,0.126),steel)
+    var sealed_parts:int=_seal_contours(assembly,arms)
+    if sealed_parts!=SEALED_PARTS.size():
+        return false
     # The wipers are actual thin 3D arms in front of the curved V10 panes.
     # Both are swept across the lower third, avoiding the central A pillar.
     for side in [-1,1]:
@@ -211,6 +280,8 @@ static func apply(root:Node3D,paint:Color)->bool:
     root.set_meta(HULL_MATERIAL_NEW,solid)
     root.set_meta("tarvoka_g15_v11_closed_wall_count",HULL_LIST.size())
     root.set_meta("tarvoka_g15_v11_physical_cab_to_shelter_bulkheads",2)
+    root.set_meta("tarvoka_g15_v11b_physical_contour_seals",sealed_parts)
+    root.set_meta("tarvoka_g15_v11b_no_see_through_frames",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g15_v11_six_original_wheel_pivots",6)
     root.set_meta("tarvoka_g15_v11_nonmetal_rubber",true)
