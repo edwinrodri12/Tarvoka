@@ -785,6 +785,18 @@ jobs:
             test -s "workshop-v1-source/scripts/ui/$name.gd"
             cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
+          # BattleTerrain3D.gd now comes from current main and preloads the
+          # current workshop battlefield renderer + Android distance driver.
+          # Neither exists on the pinned workshop art branch above. Ship both
+          # from the SAME main revision as BattleTerrain3D, not from a stale
+          # gallery source, or Web Godot import fails before G16 can render.
+          for name in ArmoredWorkshopBattle3D ArmoredWorkshopBattleLOD; do
+            test -s "hq-android-v15/scripts/ui/$name.gd"
+            cp "hq-android-v15/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+            cmp -s "hq-android-v15/scripts/ui/$name.gd" "scripts/ui/$name.gd"
+          done
+          grep -Fq 'ArmoredWorkshopBattle3D.gd' scripts/ui/BattleTerrain3D.gd
+          grep -Fq 'ArmoredWorkshopBattleLOD.gd' scripts/ui/BattleTerrain3D.gd
           test -s workshop-v1-source/scenes/ArmoredWorkshopDesignStudioV1.tscn
           cp workshop-v1-source/scenes/ArmoredWorkshopDesignStudioV1.tscn scenes/
           test -s workshop-v1-source/tests/test_armored_workshop_v1_native.gd
