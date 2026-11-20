@@ -219,7 +219,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          xvfb-run -a -s '-screen 0 1280x720x24' \
+          # Prevent an assertion inside an asynchronous screenshot test from
+          # leaving a live Godot process and masking the actual error in CI.
+          timeout --signal=TERM --kill-after=10s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
