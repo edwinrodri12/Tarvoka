@@ -318,7 +318,7 @@ jobs:
           test -s hq-android-v15/tests/test_g16_v3_live_studio_ui.gd
           cp hq-android-v15/tests/test_g16_v3_live_studio_ui.gd tests/test_g16_v3_live_studio_ui.gd
           grep -q 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
-          grep -q 'G16 · Logística blindada 6×6 · V3 FINAL' scripts/ui/BastionStudioAdapter.gd
+          grep -q 'G16 · Logística blindada 6×6 · V4 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           grep -q 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -q 'g16_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'g16_v3_off' scripts/ui/BastionStudioAdapter.gd

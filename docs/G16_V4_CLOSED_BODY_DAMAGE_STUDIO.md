@@ -1,6 +1,6 @@
 # TARVOKA · G16 V4 — escultura 3D premium y destrucción articulada
 
-Estado: implementada sobre la G16 V3 en rama de revisión; las comprobaciones nativas y la integración en visor web compartido son obligatorias antes de fusionar y desplegar.
+**Estado: G16 V4 EN DESARROLLO.** La escultura, las animaciones y la QA se integraron como avance al proyecto principal, pero no constituyen aprobación visual final del vehículo. **G15 V11C es la unidad aprobada y terminada; G16 sigue abierta a mejoras.**
 
 ## Alcance artístico
 
