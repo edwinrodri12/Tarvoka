@@ -192,7 +192,7 @@ static func apply(root:Node3D,paint:Color)->bool:
                 Vector3(s*1.009,0.417,0),
                 Vector3(0.179,0.207,0.164),spring)
         if axle>0:
-            other_z:float=float(V1.AXLES[axle-1])
+            var other_z:float=float(V1.AXLES[axle-1])
             _segment(running,"G16_V3_ProtectedDriveshaft_%d" % axle,
                 Vector3(0,0.504,other_z+0.113),
                 Vector3(0,0.504,zz-0.113),
@@ -231,7 +231,7 @@ static func apply(root:Node3D,paint:Color)->bool:
             _box(cargo,"G16_V3_AmmoReinforcedCorner_%d_%d" % [i,corner],
                 Vector3(0.804,1.411,z+float(corner)*0.320),
                 Vector3(0.044,0.494,0.044),steel)
-        lid:=_group(cargo,DOOR+str(i))
+        var lid:=_group(cargo,DOOR+str(i))
         lid.position=Vector3(0.470,1.649,z+0.378)
         # Rotating closed lid fully covers the original ammo box opening.
         _box(lid,"G16_V3_SealedLid_"+str(i),
@@ -317,7 +317,7 @@ static func apply(root:Node3D,paint:Color)->bool:
         Vector3(-0.740,1.941,1.160),
         Vector3(0.385,0.319,0.312),ash,hero)
     for i in range(2):
-        cargo_damage:=_group(cargo,DAMAGED_CARGO+str(i))
+        var cargo_damage:=_group(cargo,DAMAGED_CARGO+str(i))
         _box(cargo_damage,"G16_V3_AmmoLidCrack_"+str(i),
             Vector3(0.470,1.688,0.36+float(i)*0.94),
             Vector3(0.242,0.031,0.041),rust,Vector3(0,26,0))
