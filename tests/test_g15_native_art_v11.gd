@@ -202,6 +202,29 @@ func _run()->void:
                         is_equal_approx(surface.albedo_color.a,1.0),
                         "completely opaque contour backing "+str(plate_name))
             var assembly:=model.find_child(V11.ASSEMBLY,true,false) as Node3D
+            # V11C identity paint must be visually prominent and map 1:1
+            # to all eight existing faction colors, never an invented hue.
+            var identity:=model.find_child(V11.FACTION_GROUP,true,false) as Node3D
+            var expected:Color=Models.faction_paint_color(faction)
+            check(identity!=null and
+                identity.get_child_count()==V11.FACTION_TOTAL_PANELS and
+                identity.get_parent()==assembly,
+                "V11C exactly fourteen physical faction-painted armor accents")
+            check(int(model.get_meta("tarvoka_g15_v11c_faction_panels",0))==14 and
+                bool(model.get_meta("tarvoka_g15_v11c_original_palette_preserved",false)),
+                "V11C 14 original faction paint panels registered")
+            if identity!=null:
+                for plate in identity.get_children():
+                    var panel:=plate as MeshInstance3D
+                    var mat:=panel.material_override as StandardMaterial3D
+                    check(panel.mesh is BoxMesh and
+                        str(panel.name).begins_with(V11.FACTION_PREFIX),
+                        "V11C panel is a real armor solid, not a painted decal")
+                    check(mat!=null and mat.albedo_color.is_equal_approx(expected)
+                        and mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED
+                        and mat.cull_mode==BaseMaterial3D.CULL_DISABLED
+                        and mat.roughness>=0.35 and mat.metallic<=0.35,
+                        "V11C original exact faction hue is vivid, opaque PBR")
             var wheels:=model.find_child(V1.WHEEL_GROUP,true,false) as Node3D
             check(assembly!=null,"front cab sculpt is native node")
             check(wheels!=null and wheels.get_child_count()==6,
@@ -242,6 +265,9 @@ func _run()->void:
             check(contour!=null and assembly!=null and
                 contour.get_parent()==assembly and not assembly.visible,
                 "V11B solid contours hidden through V11 parent in historical V10")
+            check(identity!=null and identity.get_parent()==assembly and
+                not assembly.visible,
+                "V11C faction identity panels hide for historical V10")
 
             for label in wall_names:
                 var old_wall:=model.find_child(str(label),true,false) as MeshInstance3D
@@ -267,6 +293,8 @@ func _run()->void:
                     "explicit V11-off persists when switching V10 optics "+
                     str(label))
             check(V11.show_finish(model,true),"V11 restored")
+            check(identity!=null and identity.visible,
+                "V11C strong faction identity restored")
             check(contour!=null and contour.visible,
                 "V11B solid contour closures restored")
             for label in wall_names:
@@ -343,6 +371,18 @@ func _run()->void:
                         contour.visible=true
                         check(_render_delta(closed_image,no_backing)>8,
                             "V11B adds clearly visible solid contour coverage "+key)
+                    # Same-camera proof that the new faction paint is actually
+                    # visible on both flanks at tactical and inspection views.
+                    if view in [2,6,10,14]:
+                        var with_paint:Image=root.get_texture().get_image()
+                        identity.visible=false
+                        await process_frame
+                        await process_frame
+                        await RenderingServer.frame_post_draw
+                        var without_paint:Image=root.get_texture().get_image()
+                        identity.visible=true
+                        check(_render_delta(with_paint,without_paint)>18,
+                            "visible V11C faction color improvement in 3D "+key)
                     var changed:int=_difference(key+"-v10",key+"-v11")
                     check(changed>=0,"both real 3D captures exist "+key)
                     if view in [1,2,3,4,12,13,14,15]:
@@ -357,8 +397,9 @@ func _run()->void:
         OUT.path_join("g15-v11-manifest.json")),FileAccess.WRITE)
     if file!=null:
         file.store_string(JSON.stringify({
-            "version":"G15 V11B","real_3d":true,"factions":8,
-            "backing_plates":13,"angle_step_degrees":22.5,
+            "version":"G15 V11C","real_3d":true,"factions":8,
+            "backing_plates":13,"faction_identity_solids":14,
+            "original_faction_palette":true,"angle_step_degrees":22.5,
             "lods":[8,13],"original_wheels":6,"captures":captures,
             "no_gameplay_changes":true,"errors":failures
         },"  "))
@@ -366,7 +407,7 @@ func _run()->void:
     stage.queue_free()
     await process_frame
     if failures==0:
-        print("PASS G15 V11B 360 NATIVE: 13 true solid contour backing plates, 11 existing opaque armor walls, 3 watertight octagons, 6 original wheel pivots, eight factions/two LODs and 64 native Godot renders at 22.5-degree steps")
+        print("PASS G15 V11C FINAL NATIVE: 14 prominent solid faction enamel accents for all 8 factions and both LODs, 13 opaque contour seals, 3 manifold shells, 6 wheel pivots, 64 360-degree Godot screenshots")
     else:
         print("FAIL G15 V11 360 NATIVE: %d problems" % failures)
     quit(1 if failures>0 else 0)

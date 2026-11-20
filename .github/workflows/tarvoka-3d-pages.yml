@@ -338,6 +338,7 @@ jobs:
           test -s hq-android-v15/tests/test_g15_native_art_v11.gd
           cp hq-android-v15/tests/test_g15_native_art_v11.gd tests/test_g15_native_art_v11.gd
           grep -q 'G15DetailV11.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'G15_V11C_FactionIdentityPanels' scripts/ui/G15Detail360V11.gd
           grep -q 'tarvoka_g15_v11_before_opaque_wall' scripts/ui/G15Detail360V11.gd
           # The main repository holds the genuine G13 inspection scene.
           # Copy it into the assembled native Web Studio checkout so
@@ -1240,7 +1241,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g15-v11-assembled-opaque-wall-360.log; then
             echo '::error::G15 V11 transparent wall regression in assembled Web Studio' >&2; exit 1
           fi
-          grep -F 'PASS G15 V11B 360 NATIVE:' /tmp/g15-v11-assembled-opaque-wall-360.log
+          grep -F 'PASS G15 V11C FINAL NATIVE:' /tmp/g15-v11-assembled-opaque-wall-360.log
           test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 64
           test -s build/qa/g15-v11/g15-v11-manifest.json
           # G16 real 6-wheel chassis and two animated supply lids MUST render
