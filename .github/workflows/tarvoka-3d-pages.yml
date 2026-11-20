@@ -2215,6 +2215,11 @@ jobs:
           add_link(Path('build/web/index.html'),
                    'apc/', 'BASTIÓN P06 V25 · MODELO ACTUAL',
                    'Bastión V25 con las seis carcasas cerradas y controles de inspección', 196)
+          # Review link opens G16 inside THIS EXACT Godot scene, with a
+          # URL-selected native role, not a second copy of the 3D viewer.
+          add_link(Path('build/web/index.html'),
+                   '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
+                   'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
                    'Inspeccionar Bastión V25 sin alterar G09 V32', 196)
@@ -2245,6 +2250,10 @@ jobs:
           grep -q 'ESTUDIO' build/web/batalla-g09/index.html
           grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
+          grep -Fq 'href="?unidad=g16"' build/web/index.html
+          grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
+          grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
           grep -q 'BASTIÓN P06 V25 · ACTUAL' build/web/tanque/index.html
           grep -q 'TANQUE G09 V32' build/web/apc/index.html
           grep -q 'ESTUDIO CENTRAL · BASTIÓN P06 V25' build/web/apc/index.html
