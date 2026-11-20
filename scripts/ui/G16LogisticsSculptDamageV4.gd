@@ -272,14 +272,31 @@ static func apply(root:Node3D,faction:Color)->bool:
         Vector3(0,0,13))
     var exhaust:=_group(wreck,SMOKE)
     exhaust.position=Vector3(0.366,1.768,0.768)
-    for i in range(5 if hero else 3):
+    # V4.1 eliminates the oversized spherical "stone" clouds. The smoke
+    # consists of individual 3D tapered opaque wisps with irregular lean,
+    # small overlapping joins and a soft dark-to-grey material rhythm.
+    # Each wisp is a solid original Godot CylinderMesh (no transparent quad).
+    for i in range(6 if hero else 4):
         var t:float=float(i)
-        var plume:=_sphere(exhaust,"G16_V4_DenseSmokeCluster_%02d" % i,
-            Vector3(sin(t*1.43)*0.190,0.175+t*0.252,
-                cos(t*0.93)*0.155),
-            Vector3(0.325+t*0.055,0.424+t*0.092,
-                0.327+t*0.051),smoke if i%2==0 else ash,hero)
-        plume.visible=true
+        var wisp:=CylinderMesh.new()
+        wisp.bottom_radius=0.132+0.025*float(i%3)
+        wisp.top_radius=0.032+0.020*float((i+1)%3)
+        wisp.height=0.37+0.083*float(i%3)
+        wisp.radial_segments=11 if hero else 7
+        var streak:=MeshInstance3D.new()
+        streak.name="G16_V4_TaperedSmokeWisp_%02d" % i
+        streak.mesh=wisp
+        streak.material_override=smoke if i%3!=0 else ash
+        streak.position=Vector3(
+            sin(t*1.87)*0.178,0.135+t*0.210,
+            cos(t*1.32)*0.143)
+        streak.rotation_degrees=Vector3(
+            13.0*sin(t*1.91),0,17.0*cos(t*1.31))
+        exhaust.add_child(streak)
+        if hero and i%2==0:
+            _sphere(exhaust,"G16_V4_SmokeWispJoin_%02d" % i,
+                streak.position+Vector3(0,-0.105,0),
+                Vector3(0.181,0.168,0.158),ash,hero)
     var sparks:=_group(wreck,SPARKS)
     sparks.position=Vector3(-0.396,1.446,1.062)
     for i in range(9 if hero else 4):
