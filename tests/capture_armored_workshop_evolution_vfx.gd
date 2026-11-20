@@ -71,7 +71,7 @@ func _run() -> void:
             int(state["level"]),
             "N%d_construccion.png" % evolution_level,
             "Evolucion N%d: andamios y soldadura" % evolution_level,fx))
-        await fx.sequence_finished
+        await _wait_effect_done(fx)
         assert(fx.level==evolution_level)
         records.append(await _capture(viewport,camera,evolution_level,
             "N%d_D0_completo.png" % evolution_level,
@@ -89,7 +89,7 @@ func _run() -> void:
         records.append(await _capture(viewport,camera,3,
             "N3_D%d_explosion.png" % target_damage,
             "Impacto y explosión que causan D%d" % target_damage,fx))
-        await fx.sequence_finished
+        await _wait_effect_done(fx)
         assert(fx.damage==target_damage)
         records.append(await _capture(viewport,camera,3,
             "N3_D%d_persistente.png" % target_damage,
@@ -112,6 +112,15 @@ func _run() -> void:
     stage.queue_free()
     viewport.queue_free()
     quit(0)
+
+func _wait_effect_done(fx:Node3D) -> void:
+    # Screenshot callbacks may take more time than the remaining tween.
+    # Do not await a signal after it may already have fired.
+    for frame in range(180):
+        if not fx.busy:
+            return
+        await create_timer(0.035).timeout
+    assert(false,"Workshop cinematic tween did not finish")
 
 func _capture(viewport:SubViewport,camera:Camera3D,level:int,
         filename:String,caption:String,fx:Node3D) -> Dictionary:
