@@ -17,6 +17,7 @@ const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const InfantryFamily = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const InfantryFinishV2 = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1002,6 +1003,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             if not InfantryFamily.build(model,role,faction_paint_color(faction),
                     finish_enabled and art_level >= 13):
                 _person(model,role == "scout")
+            elif finish_enabled and art_level>=8:
+                if not InfantryFinishV2.apply(model,faction_paint_color(faction),art_level>=13):
+                    push_warning("Infantry V2 organic solid sculpt/PBR not applied")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
@@ -1465,7 +1469,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
 static func pose_model(role: String, model: Node3D, kind: String,
         progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
     if InfantryFamily.supports(role) and InfantryFamily.has_model(model):
-        return InfantryFamily.pose(model,kind,progress,target_heading)
+        var posed: bool=InfantryFamily.pose(model,kind,progress,target_heading)
+        if posed and InfantryFinishV2.has_model(model):
+            InfantryFinishV2.pose(model,kind,progress)
+        return posed
     match role:
         "tank":
             return TankRig.pose(model,kind,progress,target_heading)
@@ -1508,6 +1515,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
 static func restore_model_pose(role: String, model: Node3D) -> void:
     if InfantryFamily.supports(role) and InfantryFamily.has_model(model):
         InfantryFamily.restore(model)
+        if InfantryFinishV2.has_model(model):
+            InfantryFinishV2.restore(model)
         return
     match role:
         "tank":
