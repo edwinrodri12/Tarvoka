@@ -6,6 +6,7 @@ class_name TarvokaArmoredWorkshopDesignStudioV1
 const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
+const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 
 var _model:Node3D
@@ -14,6 +15,7 @@ var _camera:Camera3D
 var _viewport:SubViewport
 var _canvas:SubViewportContainer
 var _version:OptionButton
+var _environment:OptionButton
 var _level:OptionButton
 var _damage:OptionButton
 var _faction:OptionButton
@@ -44,6 +46,8 @@ func _ready() -> void:
         "V1 · original","V2 · industrial refinado",
         "Android · táctico","Android · distante"])
     _version.select(1)
+    _environment=_select(column,"VISTA REAL",[
+        "Edificio completo","Prueba mapa 3D · casilla 2,4 m"])
     _level=_select(column,"ARQUITECTURA",Workshop.LEVEL_NAMES)
     _level.select(1)
     _damage=_select(column,"ESTADO DE DAÑO",Workshop.DAMAGE_NAMES)
@@ -53,6 +57,7 @@ func _ready() -> void:
     _faction.select(0)
     for selection in [_version,_level,_damage,_faction]:
         selection.item_selected.connect(_on_change)
+    _environment.item_selected.connect(_on_environment_change)
     var cameras:=HFlowContainer.new()
     column.add_child(_label("INSPECCION 3D"))
     column.add_child(cameras)
@@ -144,6 +149,14 @@ func _resize_canvas() -> void:
         maxi(320,int(area.x)),maxi(240,int(area.y)))
 
 func _on_change(_index:int) -> void:
+    if _environment!=null and _environment.selected==1 and _version.selected<2:
+        _version.select(2)
+    _rebuild()
+
+func _on_environment_change(_index:int) -> void:
+    if _environment.selected==1 and _version.selected<2:
+        _version.select(2)
+    _zoom=1.0
     _rebuild()
 
 func _set_view(yaw:float,tilt:float) -> void:
@@ -169,17 +182,22 @@ func _rebuild() -> void:
     var level:int=_level.selected+1
     var damage:int=_damage.selected
     var faction:int=_faction.selected-1
-    match _version.selected:
-        0:
-            _model=WorkshopV1.build(level,faction,damage)
-        1:
-            _model=Workshop.build(level,faction,damage)
-        2:
-            _model=WorkshopMobile.build(level,faction,damage,
-                WorkshopMobile.PROFILE_TACTICAL)
-        _:
-            _model=WorkshopMobile.build(level,faction,damage,
-                WorkshopMobile.PROFILE_DISTANT)
+    if _environment!=null and _environment.selected==1:
+        var profile:int=WorkshopMobile.PROFILE_DISTANT if (
+            _version.selected==3) else WorkshopMobile.PROFILE_TACTICAL
+        _model=WorkshopTile.build(level,faction,damage,profile)
+    else:
+        match _version.selected:
+            0:
+                _model=WorkshopV1.build(level,faction,damage)
+            1:
+                _model=Workshop.build(level,faction,damage)
+            2:
+                _model=WorkshopMobile.build(level,faction,damage,
+                    WorkshopMobile.PROFILE_TACTICAL)
+            _:
+                _model=WorkshopMobile.build(level,faction,damage,
+                    WorkshopMobile.PROFILE_DISTANT)
     if _model==null:
         _status.text="ERROR: geometria 3D no disponible"
         return
@@ -189,15 +207,28 @@ func _rebuild() -> void:
         int(_model.get_meta("workshop_batches",0)),
         int(_model.get_meta("workshop_instances",0))
     ] if mobile_profile>0 else "%d mallas 3D" % Workshop.mesh_count(_model)
-    _status.text="V%d · %s · D%d · %d bahía(s) · %s · ARTE EN REVISIÓN" % [
+    var context:String=" · escenario 3D / casilla 2,4 m" if (
+        _environment!=null and _environment.selected==1) else ""
+    _status.text="V%d · %s · D%d · %d bahía(s) · %s%s · ARTE EN REVISIÓN" % [
         int(_model.get_meta("workshop_art_version",1)),Workshop.LEVEL_NAMES[level-1],
-        damage,int(_model.get_meta("workshop_bays",0)),detail]
+        damage,int(_model.get_meta("workshop_bays",0)),detail,context]
     _update_camera()
 
 func _update_camera() -> void:
     if _camera==null or _level==null:
         return
     var level:int=_level.selected+1
+    if _environment!=null and _environment.selected==1:
+        var map_center:=Vector3(0,0.32,0)
+        var map_yaw:float=deg_to_rad(_yaw)
+        var map_tilt:float=deg_to_rad(_elevation)
+        _camera.size=9.60*_zoom
+        _camera.position=map_center+Vector3(
+            sin(map_yaw)*cos(map_tilt)*19.0,
+            sin(map_tilt)*19.0,
+            cos(map_yaw)*cos(map_tilt)*19.0)
+        _camera.look_at(map_center,Vector3.UP)
+        return
     var radius:float=38.0 if level==1 else 48.0 if level==2 else 59.0
     var focal_height:float=2.3 if level==1 else 2.8 if level==2 else 3.7
     var focus:=Vector3(0,focal_height,0)
