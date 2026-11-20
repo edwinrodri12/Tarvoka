@@ -1679,6 +1679,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Save screenshot of the real unified 3D viewer with G16 V3 selected
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v3-live-unified-studio-ui
+          path: build/qa/g16-v3/g16-v3-actual-unified-studio-1280x720.png
+          if-no-files-found: warn
+          retention-days: 14
+
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
