@@ -14,6 +14,16 @@ import sys
 COUNTS = ("triangles", "instances", "mesh_nodes", "surfaces", "largest_mesh_triangles")
 
 
+def reject_duplicate_keys(pairs):
+    """Reject ambiguous JSON objects instead of silently keeping the last value."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
 def validate(report):
     if not isinstance(report, dict):
         return "report must be an object"
@@ -55,7 +65,14 @@ def self_test():
     empty = dict.fromkeys(COUNTS, 0)
     empty.update(largest_mesh_path="", warnings=[])
     assert validate(empty) is None
-    print("PASS: 12 structural cases")
+    for raw in ('{"triangles":12,"triangles":-1}', '{"warnings":[],"warnings":[3]}'):
+        try:
+            json.loads(raw, object_pairs_hook=reject_duplicate_keys)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("duplicate JSON key accepted")
+    print("PASS: 14 structural and JSON-integrity cases")
 
 
 def main(argv):
@@ -66,7 +83,7 @@ def main(argv):
         print(__doc__, file=sys.stderr)
         return 2
     try:
-        report = json.loads(pathlib.Path(argv[1]).read_text(encoding="utf-8"))
+        report = json.loads(pathlib.Path(argv[1]).read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"INVALID: cannot read JSON: {exc}", file=sys.stderr)
         return 2
