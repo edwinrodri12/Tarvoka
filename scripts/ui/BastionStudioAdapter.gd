@@ -261,12 +261,12 @@ func _ready() -> void:
         role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V5 materiales EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
-        ["line","G01 · Guardia · infantería V1"],
-        ["infantry_urban","G01 · Guardia urbana · V1"],
-        ["infantry_defense","G01 · Guardia defensiva · V1"],
-        ["scout","G03 · Rastreador · V1"],
-        ["infantry_antitank","G04 · Rompedor antiblindaje · V1"],
-        ["infantry_engineer","G05 · Ingeniero de combate · V1"]
+        ["line","G01 · Guardia · infantería V2"],
+        ["infantry_urban","G01 · Guardia urbana · V2"],
+        ["infantry_defense","G01 · Guardia defensiva · V2"],
+        ["scout","G03 · Rastreador · V2"],
+        ["infantry_antitank","G04 · Rompedor antiblindaje · V2"],
+        ["infantry_engineer","G05 · Ingeniero de combate · V2"]
     ]:
         var index:int=P06Models.ROLES.find(str(entry[0]))
         if index>=0:
@@ -1172,12 +1172,12 @@ func _refresh_unified_studio_navigation() -> void:
         label="EDIFICIO · "+str(_role).replace("_"," ").to_upper()
     else:
         match _role:
-            "line": label="G01 · Guardia · V1 en revisión"
-            "infantry_urban": label="G01 · Guardia urbana · V1 en revisión"
-            "infantry_defense": label="G01 · Guardia defensiva · V1 en revisión"
-            "scout": label="G03 · Rastreador · V1 en revisión"
-            "infantry_antitank": label="G04 · Rompedor · V1 en revisión"
-            "infantry_engineer": label="G05 · Ingeniero · V1 en revisión"
+            "line": label="G01 · Guardia · V2 en revisión"
+            "infantry_urban": label="G01 · Guardia urbana · V2 en revisión"
+            "infantry_defense": label="G01 · Guardia defensiva · V2 en revisión"
+            "scout": label="G03 · Rastreador · V2 en revisión"
+            "infantry_antitank": label="G04 · Rompedor · V2 en revisión"
+            "infantry_engineer": label="G05 · Ingeniero · V2 en revisión"
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
@@ -3804,8 +3804,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build(role,_faction,true,13)
-        if model_root==null or not InfantryV1.has_model(model_root):
-            push_error("Infantry V1 native 3D missing in unified Studio")
+        if model_root==null or not InfantryV1.has_model(model_root) or not bool(model_root.get_meta("tarvoka_infantry_sculpt_finish_v2",false)):
+            push_error("Infantry V2 organic native 3D finish missing in unified Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
