@@ -8,6 +8,7 @@ const V2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const V3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const V4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const V5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
+const V6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const Supply=preload("res://scripts/core/Logistics.gd")
 const PATH="res://build/qa/g16-v3"
@@ -237,6 +238,7 @@ func _run()->void:
             # The V3 historical comparison MUST disable later V4 sculpt;
             # otherwise V4 panels cover the precise V2-V3 pixel delta.
             # The real Studio also hides later sculpt during comparison.
+            check(V6.show_finish(model,false),"exclude V6 supply hardware from historical V2/V3 comparison")
             check(V5.show_finish(model,false),"exclude V5 glass and metal from historical V2/V3 comparison")
             check(V4.show_finish(model,false),"hide later V4 to compare genuine V2/V3")
             check(V3.show_finish(model,false),"G16 V2 visual comparison enabled")

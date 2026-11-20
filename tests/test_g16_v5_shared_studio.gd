@@ -40,8 +40,8 @@ func _run()->void:
             "G16 selectable in same unit roster")
         if index>=0 and index<picker.item_count:
             check(picker.get_item_text(index).contains("G16") and
-                picker.get_item_text(index).contains("V5"),
-                "visible V5 option in unified studio")
+                picker.get_item_text(index).contains("V6"),
+                "V5 art available within latest V6 unit selector")
             picker.select(index)
     studio.call("_display_role","logistics_mobile")
     await process_frame

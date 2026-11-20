@@ -66,6 +66,7 @@ const G16ExteriorV2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const G16SculptV4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G16MaterialsV5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
+const G16ServiceV6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -256,7 +257,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V5 materiales EN DESARROLLO")
+        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V6 EN DESARROLLO")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
@@ -570,6 +571,10 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "logistics_mobile":
             return [
+                {"group":"G16 V6 · SUMINISTROS MECÁNICOS ARTICULADOS"},
+                {"title":"V6 · Mostrar manguera, conector y tapa blindada","action":"g16_v6_on"},
+                {"title":"V5 · Comparar sin hardware de servicio V6","action":"g16_v6_off"},
+                {"title":"V6 · Desplegar manguera para reabastecimiento visual","action":"g16_v6_connect"},
                 {"group":"G16 V5 · MATERIALES PBR, CRISTALES Y DESGASTE"},
                 {"title":"V5 · Mostrar metales, brillo, sellos y desgaste físico","action":"g16_v5_on"},
                 {"title":"V4 · Comparar carrocería sin el acabado PBR V5","action":"g16_v5_off"},
@@ -739,6 +744,20 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g16_v6_on","g16_v6_off":
+            if _role=="logistics_mobile" and model_root!=null and G16ServiceV6.has_model(model_root):
+                var enabled:bool=action=="g16_v6_on"
+                if enabled:
+                    G16ExteriorV2.show_finish(model_root,true)
+                    G16MechanicsV3.show_finish(model_root,true)
+                    G16SculptV4.show_finish(model_root,true)
+                    G16MaterialsV5.show_finish(model_root,true)
+                if G16ServiceV6.show_finish(model_root,enabled):
+                    status_label.text=("G16 V6 · manguera, conector y tapa metálica visibles" if enabled else "G16 V5 · comparación sin hardware de abastecimiento V6")
+        "g16_v6_connect":
+            if _role=="logistics_mobile" and model_root!=null and G16ServiceV6.has_model(model_root):
+                G16ServiceV6.show_finish(model_root,true)
+                _g16_play("resupply")
         "g16_v5_on","g16_v5_off":
             if _role=="logistics_mobile" and model_root!=null and G16MaterialsV5.has_model(model_root):
                 var latest:bool=action=="g16_v5_on"
@@ -746,11 +765,17 @@ func _studio_run_animation(action: String) -> void:
                     G16ExteriorV2.show_finish(model_root,true)
                     G16MechanicsV3.show_finish(model_root,true)
                     G16SculptV4.show_finish(model_root,true)
+                if not latest and G16ServiceV6.has_model(model_root):
+                    G16ServiceV6.show_finish(model_root,false)
                 if G16MaterialsV5.show_finish(model_root,latest):
-                    status_label.text=("G16 V5 · vidrio PBR opaco y acero detallado" if latest else "G16 V4 · comparación sin acabado V5")
+                    if latest and G16ServiceV6.has_model(model_root):
+                        G16ServiceV6.show_finish(model_root,true)
+                    status_label.text=("G16 V6 · vidrio PBR opaco y hardware restaurados" if latest else "G16 V4 · comparación sin acabado V5/V6")
         "g16_v4_on","g16_v4_off":
             if _role=="logistics_mobile" and model_root!=null and G16SculptV4.has_model(model_root):
                 var on:bool=action=="g16_v4_on"
+                if not on and G16ServiceV6.has_model(model_root):
+                    G16ServiceV6.show_finish(model_root,false)
                 if not on and G16MaterialsV5.has_model(model_root):
                     G16MaterialsV5.show_finish(model_root,false)
                 if on:
@@ -759,6 +784,8 @@ func _studio_run_animation(action: String) -> void:
                 if G16SculptV4.show_finish(model_root,on):
                     if on and G16MaterialsV5.has_model(model_root):
                         G16MaterialsV5.show_finish(model_root,true)
+                    if on and G16ServiceV6.has_model(model_root):
+                        G16ServiceV6.show_finish(model_root,true)
                     status_label.text=("G16 V5 · carrocería, cristales y materiales restaurados" if on else "G16 V3 · comparación sin acabados V4/V5")
         "g16_v4_wreck":
             if _role=="logistics_mobile" and model_root!=null and G16SculptV4.has_model(model_root):
@@ -788,6 +815,8 @@ func _studio_run_animation(action: String) -> void:
                 if show_v3:
                     G16ExteriorV2.show_finish(model_root,true)
                 if not show_v3:
+                    if G16ServiceV6.has_model(model_root):
+                        G16ServiceV6.show_finish(model_root,false)
                     if G16MaterialsV5.has_model(model_root):
                         G16MaterialsV5.show_finish(model_root,false)
                     G16SculptV4.show_finish(model_root,false)
@@ -796,11 +825,15 @@ func _studio_run_animation(action: String) -> void:
                         G16SculptV4.show_finish(model_root,true)
                         if G16MaterialsV5.has_model(model_root):
                             G16MaterialsV5.show_finish(model_root,true)
-                    status_label.text=("G16 V5 · carrocería y seis suspensiones restauradas" if show_v3 else "G16 V2 · comparación de acabados anteriores")
+                        if G16ServiceV6.has_model(model_root):
+                            G16ServiceV6.show_finish(model_root,true)
+                    status_label.text=("G16 V6 · carrocería y seis suspensiones restauradas" if show_v3 else "G16 V2 · comparación de acabados anteriores")
         "g16_v2_on","g16_v2_off":
             if _role=="logistics_mobile" and model_root!=null:
                 var finish_on:bool=action=="g16_v2_on"
                 if not finish_on:
+                    if G16ServiceV6.has_model(model_root):
+                        G16ServiceV6.show_finish(model_root,false)
                     if G16MaterialsV5.has_model(model_root):
                         G16MaterialsV5.show_finish(model_root,false)
                     G16SculptV4.show_finish(model_root,false)
@@ -811,7 +844,9 @@ func _studio_run_animation(action: String) -> void:
                         G16SculptV4.show_finish(model_root,true)
                         if G16MaterialsV5.has_model(model_root):
                             G16MaterialsV5.show_finish(model_root,true)
-                    status_label.text=("G16 V5 · materiales, blindaje y mecánica restaurados" if finish_on else "G16 V1 · comparación sin acabados V2/V3/V4/V5")
+                        if G16ServiceV6.has_model(model_root):
+                            G16ServiceV6.show_finish(model_root,true)
+                    status_label.text=("G16 V6 · materiales, blindaje y mecánica restaurados" if finish_on else "G16 V1 · comparación sin acabados V2/V3/V4/V5")
         "g16_move","g16_deploy","g16_unload","g16_resupply","g16_camp","g16_pack","g16_hit":
             _g16_play(action.trim_prefix("g16_"))
         "g15_v11_on","g15_v11_off":
@@ -1112,7 +1147,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "logistics_mobile": label="G16 · Logística blindada 6×6 · V5 PBR, cabina y daños"
+            "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -4741,7 +4776,7 @@ func _g16_play(kind: String) -> void:
         Callable(self,"_g16_tick").bind(art,kind),0.02,0.98,
         2.10 if kind in ["camp","unload","resupply"] else 1.30)
     _g16_tween.tween_callback(Callable(self,"_g16_done").bind(art,kind))
-    status_label.text="G16 V5 · "+kind+" · simulación 3D de suministros, sin aplicar recursos"
+    status_label.text="G16 V6 · "+kind+" · simulación 3D de suministros, sin aplicar recursos"
 
 func _g16_tick(t:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):

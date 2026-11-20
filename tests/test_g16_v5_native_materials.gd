@@ -8,6 +8,7 @@ const V2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const V3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const V4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const V5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
+const V6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/g16-v5"
 var errors:int=0
@@ -127,6 +128,8 @@ func _run()->void:
                         "G16_V5_PhysicalDoorRivet_%s_%02d" % [tag,i],
                         true,false) is MeshInstance3D,
                         "physical door steel rivet at this LOD")
+            check(V6.show_finish(model,false),
+                "isolate original V5 PBR vs V4 with V6 hose hidden")
             check(V5.show_finish(model,false),
                 "V4 baseline control toggles V5 without deleting meshes")
             check(body!=null and not body.visible,
