@@ -82,6 +82,13 @@ func _install_workshop_controls() -> void:
         level_button.pressed.connect(
             Callable(self,"_workshop_select_level").bind(index))
         level_row.add_child(level_button)
+    # Immediate visual acknowledgement: visible next to N1/N2/N3 instead
+    # of buried underneath camera and animation controls.
+    workshop_info=Label.new()
+    workshop_info.name="TallerBlindadosEstadoCarga"
+    workshop_info.text="Selecciona N1, N2 o N3 para visualizar el modelo."
+    workshop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    workshop_controls.add_child(workshop_info)
     workshop_damage=OptionButton.new()
     for title in Workshop.DAMAGE_NAMES:
         workshop_damage.add_item(str(title))
@@ -131,9 +138,6 @@ func _install_workshop_controls() -> void:
         effect_button.pressed.connect(
             Callable(self,"_workshop_play_effect").bind(str(action[1])))
         action_row.add_child(effect_button)
-    workshop_info=Label.new()
-    workshop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-    workshop_controls.add_child(workshop_info)
 
 func _workshop_show_controls_first() -> void:
     # This sidebar contains dozens of historical building controls. The
