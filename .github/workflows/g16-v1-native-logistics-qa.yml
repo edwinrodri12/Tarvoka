@@ -1,4 +1,4 @@
-name: TARVOKA G16 V1-V3 native logistics 6x6 3D and damage QA
+name: TARVOKA G16 V1-V4 native logistics premium 6x6 and dynamic wreck QA
 
 on:
   pull_request:
@@ -6,11 +6,13 @@ on:
       - 'scripts/ui/G16ArmoredLogisticsV1.gd'
       - 'scripts/ui/G16LogisticsExteriorV2.gd'
       - 'scripts/ui/G16LogisticsMechanicsDamageV3.gd'
+      - 'scripts/ui/G16LogisticsSculptDamageV4.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g16_v1_native_3d.gd'
       - 'tests/test_g16_v2_native_finish.gd'
       - 'tests/test_g16_v3_logistics_qa.gd'
+      - 'tests/test_g16_v4_native_360.gd'
       - '.github/workflows/g16-v1-native-logistics-qa.yml'
   push:
     branches: [main, feat/g16-v1-armored-logistics-studio-20261119]
@@ -18,11 +20,13 @@ on:
       - 'scripts/ui/G16ArmoredLogisticsV1.gd'
       - 'scripts/ui/G16LogisticsExteriorV2.gd'
       - 'scripts/ui/G16LogisticsMechanicsDamageV3.gd'
+      - 'scripts/ui/G16LogisticsSculptDamageV4.gd'
       - 'scripts/ui/UnitModels3D.gd'
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_g16_v1_native_3d.gd'
       - 'tests/test_g16_v2_native_finish.gd'
       - 'tests/test_g16_v3_logistics_qa.gd'
+      - 'tests/test_g16_v4_native_360.gd'
       - '.github/workflows/g16-v1-native-logistics-qa.yml'
   workflow_dispatch:
 
@@ -57,6 +61,11 @@ jobs:
           grep -Fq 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16 · Logística blindada 6×6 · V3 FINAL' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16SculptV4.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16SculptV4.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'g16_v4_wreck' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'g16_v4_on' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq '_g16_v4_destroy' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_v3_off' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_damage_4' scripts/ui/BastionStudioAdapter.gd
@@ -133,6 +142,23 @@ jobs:
           fi
           grep -F 'PASS G16 V3 FINAL NATIVE 3D:' /tmp/g16-v3-native.log
           test "$(find build/qa/g16-v3 -name '*.png' | wc -l)" -eq 28
+      - name: Validate G16 V4 360 closed octagonal armor and animated multi-stage wreck in 22 true Godot PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/g16-v4
+          timeout --signal=TERM --kill-after=5s 290s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v4_native_360.gd \
+            2>&1 | tee /tmp/g16-v4-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g16-v4-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS G16 V4 NATIVE 3D:' /tmp/g16-v4-native.log
+          test "$(find build/qa/g16-v4 -name '*.png' | wc -l)" -eq 22
       - name: Publish sixteen true Godot rendered faction and camp preview images
         if: always()
         uses: actions/upload-artifact@v4
@@ -155,4 +181,12 @@ jobs:
         with:
           name: tarvoka-g16-v3-real-six-springs-cargo-wreck
           path: build/qa/g16-v3/*.png
+          retention-days: 14
+
+      - name: Publish twenty-two authentic Godot G16 V4 closed 360 and wreck screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v4-closed-armor-dynamic-wreck-360
+          path: build/qa/g16-v4/*.png
           retention-days: 14
