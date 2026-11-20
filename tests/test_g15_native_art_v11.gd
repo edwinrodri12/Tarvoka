@@ -88,6 +88,21 @@ func _difference(a:String,b:String)->int:
                 count+=1
     return count
 
+# Compare one identical render with only the structural backings toggled.
+# This directly proves V11B contributes visible geometry beyond V11 rather
+# than relying exclusively on the much older V10 baseline.
+func _render_delta(first:Image,second:Image)->int:
+    if first==null or second==null or first.get_size()!=second.get_size():
+        return -1
+    var changed:int=0
+    for yy in range(0,first.get_height(),3):
+        for xx in range(0,first.get_width(),3):
+            var a:Color=first.get_pixel(xx,yy)
+            var b:Color=second.get_pixel(xx,yy)
+            if absf(a.r-b.r)+absf(a.g-b.g)+absf(a.b-b.b)>0.12:
+                changed+=1
+    return changed
+
 func _run()->void:
     root.size=Vector2i(1024,768)
     check(DirAccess.make_dir_recursive_absolute(
@@ -316,6 +331,18 @@ func _run()->void:
                     await _capture(key+"-v11")
                     check(_leaking_probe_pixels()==0,
                         "solid walls fully occlude interior probe from 360° "+key)
+                    # Pixel-level verification of the NEW contour panels
+                    # against V11 with all other rendering held identical.
+                    if view in [2,4,14]:
+                        var closed_image:Image=root.get_texture().get_image()
+                        contour.visible=false
+                        await process_frame
+                        await process_frame
+                        await RenderingServer.frame_post_draw
+                        var no_backing:Image=root.get_texture().get_image()
+                        contour.visible=true
+                        check(_render_delta(closed_image,no_backing)>8,
+                            "V11B adds clearly visible solid contour coverage "+key)
                     var changed:int=_difference(key+"-v10",key+"-v11")
                     check(changed>=0,"both real 3D captures exist "+key)
                     if view in [1,2,3,4,12,13,14,15]:
