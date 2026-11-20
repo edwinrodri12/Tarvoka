@@ -100,7 +100,6 @@ func _run()->void:
             var wear:=model.find_child(V5.WEAR,true,false) as Node3D
             check(body!=null and body.visible and wear!=null and wear.visible,
                 "PBR finish and physical wear nodes visible by default")
-            var glass_before:Dictionary={}
             for glass_name in V5._glass_names():
                 var pane:=model.find_child(
                     glass_name,true,false) as MeshInstance3D
@@ -113,7 +112,6 @@ func _run()->void:
                         and material.clearcoat_enabled and
                         material.roughness<0.20,
                         "reflective PBR, but absolutely opaque")
-                    glass_before[glass_name]=material.get_instance_id() if material!=null else 0
             for side in [-1,1]:
                 var tag:String=str(side)
                 for part_name in [
@@ -145,10 +143,10 @@ func _run()->void:
             for glass_name in V5._glass_names():
                 var pane:=model.find_child(
                     glass_name,true,false) as MeshInstance3D
-                check(pane!=null and
-                    pane.material_override.get_instance_id()==glass_before[glass_name] if false else
-                    pane!=null and
-                    (pane.material_override as StandardMaterial3D).clearcoat_enabled,
+                var recoated:StandardMaterial3D=(
+                    pane.material_override as StandardMaterial3D if pane!=null else null)
+                check(recoated!=null and recoated.clearcoat_enabled and
+                    recoated.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                     "V5 glass coating actually re-enabled")
             for level in range(5):
                 check(V5.set_damage(model,level),"damage stage "+str(level))
