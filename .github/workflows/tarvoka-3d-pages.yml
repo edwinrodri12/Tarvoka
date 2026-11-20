@@ -1775,10 +1775,10 @@ jobs:
           # Infantry V2 shares the exact same native viewport, model
           # selector, camera and animation rig. Also verifies genuine old
           # V1 -> improved V2 comparison without opening an extra viewer.
-          timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \\
-            /tmp/Godot_v4.3-stable_linux.x86_64 \\
-            --rendering-method gl_compatibility --audio-driver Dummy --path . \\
-            --script res://tests/test_infantry_studio_v2_review.gd \\
+          timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_infantry_studio_v2_review.gd \
             2>&1 | tee /tmp/infantry-v2-studio-review.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/infantry-v2-studio-review.log; then
             echo 'Infantry 3D viewer is not selecting genuine V2 geometry'; exit 1

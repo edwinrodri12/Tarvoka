@@ -44,7 +44,12 @@ func closed_solid(mesh: Mesh) -> bool:
     for surf in range(mesh.get_surface_count()):
         var arrays: Array=mesh.surface_get_arrays(surf)
         var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
-        var indices: PackedInt32Array=arrays[Mesh.ARRAY_INDEX]
+        # SurfaceTool commits unindexed triangle soups. Godot returns Nil
+        # for ARRAY_INDEX, not an empty PackedInt32Array. Both encodings
+        # must be handled without a runtime type error.
+        var index_field: Variant=arrays[Mesh.ARRAY_INDEX]
+        var indices: PackedInt32Array=(
+            index_field if index_field is PackedInt32Array else PackedInt32Array())
         var edges: Dictionary={}
         var count: int=indices.size() if indices.size()>0 else points.size()
         if count==0 or count%3!=0:
