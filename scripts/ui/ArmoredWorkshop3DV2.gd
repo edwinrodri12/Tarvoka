@@ -397,12 +397,26 @@ static func _machinery(parent:Node3D,width:float,depth:float,height:float,
             Vector3(px,1.38,depth*0.5-3.02),
             0.115,0.80,BRIGHT_STEEL,0.83,0.35)
 
-static func _wear(parent:Node3D,width:float,depth:float,
+static func _wear(parent:Node3D,width:float,depth:float,height:float,
         damage:int,accent:Color) -> void:
     if damage==0:
         return
     var group:=_node(parent,"DesgasteFisicoV2")
     var n:int=3 if damage==1 else 8 if damage==2 else 15 if damage==3 else 23
+    # Damage D1/D2 must also be legible from the usual high battle camera.
+    # These are opaque raised scorched steel patches, NEVER transparent
+    # holes in the roof. D3/D4 have already lost their roof entirely.
+    if damage<=2:
+        var roof_marks:int=2 if damage==1 else 6
+        for mark in range(roof_marks):
+            var sx:float=width*(-0.28+float(mark%3)*0.225)
+            var sz:float=depth*(-0.23+float(mark/3)*0.28)
+            _box(group,"QuemaduraCubiertaV2_%d" % mark,
+                Vector3(sx,height+0.285,sz),
+                Vector3(width*(0.061 if damage==1 else 0.087),
+                    0.032,depth*(0.055 if damage==1 else 0.079)),
+                BLACK if mark%2==0 else RUST,0.09,0.95,
+                Vector3(0,float(mark*31),0))
     for i in range(n):
         var x:float=-width*0.38+float((i*5)%17)*width*0.047
         var z:float=-depth*0.38+float((i*7)%19)*depth*0.044
@@ -449,7 +463,7 @@ static func build(level:int=1,faction:int=-1,damage:int=0) -> Node3D:
     _wall_enclosure(stage,width,depth,height,bays,damage,accent)
     _roof_finish(stage,width,depth,height,bays,damage)
     _machinery(stage,width,depth,height,bays,damage)
-    _wear(stage,width,depth,damage,accent)
+    _wear(stage,width,depth,height,damage,accent)
     model.name="TallerBlindados_V2_N%d_F%d_D%d" % [level,faction,damage]
     model.set_meta("workshop_art_version",2)
     model.set_meta("workshop_approved",false)
