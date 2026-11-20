@@ -127,8 +127,10 @@ func play_attack() -> void:
     projectile.position=destination+Vector3(
         -_half_width()*0.72,_height()*0.94,-_half_depth()*1.0)
     var path:=create_tween()
-    path.tween_property(projectile,"position",destination,DURATION_IMPACT).\
-        set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+    var tracer:=path.tween_property(
+        projectile,"position",destination,DURATION_IMPACT)
+    tracer.set_trans(Tween.TRANS_QUAD)
+    tracer.set_ease(Tween.EASE_IN)
     await path.finished
     if not is_inside_tree():
         return
@@ -144,8 +146,9 @@ func play_attack() -> void:
     shock.position=destination
     var burst:=create_tween()
     burst.set_parallel(true)
-    burst.tween_property(flash,"scale",Vector3.ONE*1.76,
-        DURATION_BLAST).set_trans(Tween.TRANS_CUBIC)
+    var bloom:=burst.tween_property(flash,"scale",Vector3.ONE*1.76,
+        DURATION_BLAST)
+    bloom.set_trans(Tween.TRANS_CUBIC)
     burst.tween_property(shock,"scale",Vector3.ONE*2.18,
         DURATION_BLAST)
     for i in range(8):
@@ -156,8 +159,9 @@ func play_attack() -> void:
         var end:=destination+Vector3(cos(angle)*power*1.55,
             power*(0.15+float(i%3)*0.45),
             sin(angle)*power*1.28)
-        burst.tween_property(spark,"position",end,DURATION_BLAST).\
-            set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        var fly:=burst.tween_property(spark,"position",end,DURATION_BLAST)
+        fly.set_trans(Tween.TRANS_QUAD)
+        fly.set_ease(Tween.EASE_OUT)
     for plume in range(4):
         var smoke:=_sphere("HumoImpacto_%d" % plume,
             power*(0.32+float(plume)*0.09),Color("#515355"),0,0.60)
@@ -190,9 +194,10 @@ func play_upgrade() -> void:
         var beam:=_bar("AndamioEvolución_%d" % i,
             Vector3(0.075,rise,0.075),accent,0.68)
         beam.position=Vector3(x,-rise*0.45,-depth*0.53)
-        timeline.tween_property(beam,"position",
-            Vector3(x,rise*0.48,-depth*0.53),DURATION_EVOLVE).\
-            set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+        var lift:=timeline.tween_property(beam,"position",
+            Vector3(x,rise*0.48,-depth*0.53),DURATION_EVOLVE)
+        lift.set_trans(Tween.TRANS_CUBIC)
+        lift.set_ease(Tween.EASE_OUT)
     for i in range(4):
         var spark:=_sphere("SoldaduraEvolución_%d" % i,0.16,
             Color("#9beaff"),1.35)
