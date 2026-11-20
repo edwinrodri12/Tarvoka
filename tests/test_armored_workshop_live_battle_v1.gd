@@ -121,6 +121,10 @@ func _run() -> void:
         "Undiscovered hostile workshop leaks through fog")
     unknown.free()
     fog["explored"]["0"].append(RIGHT)
+    # Enemy may have upgraded or been hit behind the fog. Do not reveal
+    # these CURRENT hidden details through the remembered 3D silhouette.
+    Economy.site_at(fog["economy"],RIGHT)["visual_level"]=3
+    Economy.site_at(fog["economy"],RIGHT)["visual_damage_stage"]=4
     var remembered:Node3D=Terrain.build(fog,"",0)
     assert(remembered!=null)
     var neutral:Node3D=_find(remembered,RIGHT)
@@ -128,6 +132,10 @@ func _run() -> void:
     assert(neutral.get_meta("owner_public",-99)==-1)
     assert(int(neutral.get_meta("visual_faction",-99))==-1,
         "Fog-hidden enemy faction color leaked")
+    assert(int(neutral.get_meta("visual_tier",0))==1,
+        "Unseen enemy visual upgrade leaked into spectator render")
+    assert(int(neutral.get_meta("visual_damage",-1))==0,
+        "Unseen enemy damage leaked into spectator render")
     remembered.free()
     assert(original==state)
     print("PASS WORKSHOP LIVE BATTLE: actual modern armor_plant sites, ",
