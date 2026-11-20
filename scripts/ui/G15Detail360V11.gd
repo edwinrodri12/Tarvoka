@@ -17,6 +17,13 @@ const BEAD="G15_V11_SealedOuterTireBead_"
 const MARK="G15_V11_EmbossedShoulderMarks_"
 const WIPER="G15_V11_WiperBlade_"
 const SEALED_GROUP="G15_V11B_SolidContourBackings"
+# Final V11C identity pass, kept under the existing V11 parent for
+# reversible comparisons. Original faction hues stay unchanged.
+const FACTION_GROUP="G15_V11C_FactionIdentityPanels"
+const FACTION_PREFIX="G15_V11C_Faction"
+const FACTION_PANELS_PER_SIDE=7
+const FACTION_TOTAL_PANELS=14
+
 const SEALED_PARTS=[
     "G15_V11B_LeftSideBackingPlate",
     "G15_V11B_RightSideBackingPlate",
@@ -92,6 +99,58 @@ static func _box(parent:Node3D,label:String,pos:Vector3,
     node.position=pos
     parent.add_child(node)
     return node
+
+# Final G15 faction paint: substantial opaque enamel plates across both
+# sides, front and rear, plus roof shoulders. All sit OUTSIDE the V11B
+# physical seals, BELOW the four transparent-looking curved V10 windows,
+# and OUTSIDE the original wheel arches. They are real 3D BoxMeshes, not
+# emission/decal overlays or tint changes to structural silver steel.
+static func _faction_identity(parent:Node3D,tint:Color)->int:
+    var group:=Node3D.new()
+    group.name=FACTION_GROUP
+    parent.add_child(group)
+    var enamel:=_mat(tint,0.27,0.40)
+    enamel.clearcoat_enabled=true
+    enamel.clearcoat=0.34
+    enamel.clearcoat_roughness=0.24
+    enamel.cull_mode=BaseMaterial3D.CULL_DISABLED
+    enamel.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+    enamel.depth_draw_mode=BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+    var opaque_color:Color=enamel.albedo_color
+    opaque_color.a=1.0
+    enamel.albedo_color=opaque_color
+    for side in [-1,1]:
+        var s:float=float(side)
+        var id:String=str(side)
+        # Three distinct, broad enamel panels make each faction readable
+        # on 320p tactical thumbnails, without masking latches at y~1.4.
+        _box(group,FACTION_PREFIX+"MainFlank_"+id,
+            Vector3(s*0.912,1.272,0.025),
+            Vector3(0.048,0.158,0.615),enamel)
+        _box(group,FACTION_PREFIX+"MidFlank_"+id,
+            Vector3(s*0.922,1.270,0.772),
+            Vector3(0.047,0.158,0.486),enamel)
+        _box(group,FACTION_PREFIX+"RearFlank_"+id,
+            Vector3(s*0.884,1.325,1.396),
+            Vector3(0.045,0.172,0.294),enamel)
+        # Below the cab side window and behind the outward door handle.
+        _box(group,FACTION_PREFIX+"CabDoor_"+id,
+            Vector3(s*0.863,1.074,-1.020),
+            Vector3(0.038,0.160,0.467),enamel)
+        # Real low roof edge trim does not cover the central radar mast.
+        _box(group,FACTION_PREFIX+"RoofShoulder_"+id,
+            Vector3(s*0.752,2.252,0.660),
+            Vector3(0.083,0.038,1.382),enamel)
+        # Rear vertical recognition at the shelter corner, outside the
+        # already approved rear electronics/vent and tail-light hardware.
+        _box(group,FACTION_PREFIX+"RearPillar_"+id,
+            Vector3(s*0.683,1.492,1.868),
+            Vector3(0.100,0.387,0.035),enamel)
+        # Front brow under V10 glazing: no window or wiper obstruction.
+        _box(group,FACTION_PREFIX+"FrontCheek_"+id,
+            Vector3(s*0.453,1.271,-1.761),
+            Vector3(0.296,0.080,0.041),enamel)
+    return group.get_child_count()
 
 # V11B: a proper closed BoxMesh backing is different from a narrow
 # cosmetic edge strip. These panels overlap the *inside* of existing
@@ -241,6 +300,9 @@ static func apply(root:Node3D,paint:Color)->bool:
     var sealed_parts:int=_seal_contours(assembly,arms)
     if sealed_parts!=SEALED_PARTS.size():
         return false
+    var enamel_parts:int=_faction_identity(assembly,paint)
+    if enamel_parts!=FACTION_TOTAL_PANELS:
+        return false
     # The wipers are actual thin 3D arms in front of the curved V10 panes.
     # Both are swept across the lower third, avoiding the central A pillar.
     for side in [-1,1]:
@@ -282,6 +344,9 @@ static func apply(root:Node3D,paint:Color)->bool:
     root.set_meta("tarvoka_g15_v11_physical_cab_to_shelter_bulkheads",2)
     root.set_meta("tarvoka_g15_v11b_physical_contour_seals",sealed_parts)
     root.set_meta("tarvoka_g15_v11b_no_see_through_frames",true)
+    root.set_meta("tarvoka_g15_v11c_faction_panels",enamel_parts)
+    root.set_meta("tarvoka_g15_v11c_original_palette_preserved",true)
+    root.set_meta("tarvoka_g15_v11c_visual_final_candidate",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_g15_v11_six_original_wheel_pivots",6)
     root.set_meta("tarvoka_g15_v11_nonmetal_rubber",true)
