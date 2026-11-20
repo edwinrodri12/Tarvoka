@@ -33,6 +33,8 @@ def validate(report):
             return f"{key} must be a non-negative integer"
     if report["mesh_nodes"] > report["instances"]:
         return "mesh_nodes exceeds instances"
+    if report["mesh_nodes"] == 0 and (report["triangles"] > 0 or report["surfaces"] > 0):
+        return "geometry or surfaces declared without mesh nodes"
     if report["largest_mesh_triangles"] > report["triangles"]:
         return "largest mesh exceeds total triangles"
     if report["instances"] == 0 and (report["triangles"] or report["mesh_nodes"] or report["surfaces"]):
@@ -62,6 +64,9 @@ def self_test():
                   {"largest_mesh_triangles": 0}, {"largest_mesh_path": 42}):
         bad = dict(good, **patch)
         assert validate(bad) is not None, patch
+    for patch in ({"mesh_nodes": 0}, {"mesh_nodes": 0, "triangles": 0, "largest_mesh_triangles": 0, "largest_mesh_path": ""}):
+        bad = dict(good, **patch)
+        assert validate(bad) is not None, patch
     empty = dict.fromkeys(COUNTS, 0)
     empty.update(largest_mesh_path="", warnings=[])
     assert validate(empty) is None
@@ -72,7 +77,7 @@ def self_test():
             pass
         else:
             raise AssertionError("duplicate JSON key accepted")
-    print("PASS: 14 structural and JSON-integrity cases")
+    print("PASS: 16 structural and JSON-integrity cases")
 
 
 def main(argv):
