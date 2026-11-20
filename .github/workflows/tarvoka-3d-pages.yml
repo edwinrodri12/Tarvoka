@@ -1818,6 +1818,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Save G16 V6 native hose animation and unified Studio screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v6-physical-service-shared-studio
+          path: build/qa/g16-v6/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
       # Keep the current HQ V11 gallery as the SAME PUBLIC ROOT.
       # Add the complete tested Battle V8 Studio under /Tarvoka/batalla/.
       # No download or local installation is required for either view.
