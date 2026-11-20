@@ -106,6 +106,21 @@ func _run()->void:
         "real on-screen unified Godot Studio view renders")
     if capture!=null and not capture.is_empty():
         check(capture.save_png(OUT)==OK,"real Studio screenshot saved")
+    # A second screenshot shows the ACTIVE supply operation inside the
+    # identical shared UI, not only a separate close-up test viewport.
+    if model!=null:
+        check(Models.pose_model("logistics_mobile",model,"resupply",0.97),
+            "shared Studio can display extended outboard hose")
+        await process_frame
+        await process_frame
+        await process_frame
+        var deployed:Image=root.get_texture().get_image()
+        check(deployed!=null and not deployed.is_empty(),
+            "real unified 3D Studio renders actively deployed G16")
+        if deployed!=null and not deployed.is_empty():
+            check(deployed.save_png(
+                "res://build/qa/g16-v6/g16-v6-unified-deployed.png")==OK,
+                "save real shared Studio with the new visible service hose")
     studio.queue_free()
     await process_frame
     if failures>0:
