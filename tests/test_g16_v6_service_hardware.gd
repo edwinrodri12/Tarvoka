@@ -166,6 +166,28 @@ func _run()->void:
             check(group.visible,"V5 hardware becomes visible after comparison")
             check(V4.has_model(truck) and V3.stage(truck)==0,
                 "V5 doesn't damage old 3D asset")
+            if lod==8:
+                # Android mobile LOD must actually render the flexible hose,
+                # not merely contain a Node3D that passes structural tests.
+                truck.rotation_degrees.y=12.0
+                var mobile_closed:Image=await _capture(viewport,
+                    "g16-v6-lod8-f%02d-hose-stowed" % faction)
+                check(Models.pose_model("logistics_mobile",truck,
+                    "resupply",0.96),"Android LOD8 operates the supply hose")
+                var mobile_deployed:Image=await _capture(viewport,
+                    "g16-v6-lod8-f%02d-hose-deployed" % faction)
+                check(_delta(mobile_closed,mobile_deployed)>12,
+                    "Android LOD8 supply deployment is visually distinguishable")
+                check(V6.show_finish(truck,false),
+                    "Android LOD8 hides its hose independently of the crane")
+                await process_frame
+                await process_frame
+                await process_frame
+                var mobile_without:Image=viewport.get_texture().get_image()
+                check(_delta(mobile_deployed,mobile_without)>6,
+                    "Android LOD8 physical rubber hose makes its own real pixels")
+                check(V6.show_finish(truck,true),
+                    "restore mobile low detail without changing active unit")
             if lod==13:
                 truck.rotation_degrees.y=12.0
                 var closed:Image=await _capture(viewport,
@@ -197,13 +219,13 @@ func _run()->void:
             truck.free()
             await process_frame
     check(counted==16,"all eight faction paints and both native model LODs")
-    check(shots==24,
-        "eight factions stowed/deployed + eight true Godot 360-degree views")
+    check(shots==40,
+        "8 factions × 2 LOD stowed/deployed + 8 true Godot 360-degree views")
     viewport.queue_free()
     await process_frame
     if failures>0:
         printerr("FAIL G16 V6 REAL 3D: %d issues" % failures)
         quit(1)
     else:
-        print("PASS G16 V6 REAL 3D: 8 factions, 2 LODs, extended coupler outside chassis, 16 stowed/deployed renders, 8 orbit angles, 24 real Godot frames")
+        print("PASS G16 V6 REAL 3D: 8 factions, 2 LODs, coupler outside chassis, 32 stowed/deployed renders, 8 orbit angles, 40 real Godot frames")
         quit(0)
