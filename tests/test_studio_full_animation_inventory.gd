@@ -3,6 +3,18 @@ extends SceneTree
 # Executed on the same Godot 4.3 scene that is exported at the Pages root,
 # after the G09 V32 overlay. Do not test an HTML mock or isolated proxy.
 const EXPECTED := {
+    "line":["move","aim","attack","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
+    "infantry_urban":["move","aim","attack","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
+    "infantry_defense":["move","aim","attack","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
+    "scout":["move","aim","attack","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
+    "infantry_antitank":["move","aim","attack","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
+    "infantry_engineer":["move","aim","work","capture","hit_bullet",
+        "damage_1","damage_2","damage_3","damage_4","damage_0","stop"],
     "tank":["move","attack","damaged","hit_bullet","hit_explosion",
         "damage_1","damage_2","damage_3","damage_4","damage_0",
         "tank_standalone","stop"],
@@ -156,7 +168,7 @@ func _run() -> void:
                     "HAT-29 destruction plays including rotor fragments, slowed")
                 studio.call("_studio_run_animation","stop")
                 studio.call("_studio_run_animation","damage_0")
-    for role in ["line","scout","fighter","destroyer"]:
+    for role in ["fighter","destroyer"]:
         _check((studio.call("_studio_animation_specs",role) as Array).is_empty(),
             "%s honestly reports no dedicated animation rig" % role)
     # Single real studio, also keeps full HQ/building catalogue intact.

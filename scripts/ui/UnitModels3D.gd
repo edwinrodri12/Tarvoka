@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -16,6 +16,8 @@ const G11Rig = preload("res://scripts/ui/G11VisualRig3D.gd")
 const G11Mobile = preload("res://scripts/ui/G11MobileLOD.gd")
 const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
+const InfantryFamily = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const InfantryFinishV2 = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -160,7 +162,9 @@ const TANK_BARREL_PIVOT := "ElevacionCanon"
 # Orthographic visual footprint, shared by in-game sprite captures and
 # the inspection viewer. Each value leaves enough room for hull/rotors.
 const PREVIEW_FRAME := {
-    "line":3.05,"scout":3.05,"apc":3.55,"tank":3.75,
+    "line":3.05,"scout":3.05,"infantry_urban":3.05,
+    "infantry_defense":3.05,"infantry_antitank":3.15,
+    "infantry_engineer":3.05,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
     "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45,
     "logistics_mobile":5.0
@@ -993,10 +997,15 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     var model := Node3D.new()
     model.name = "Modelo3D_" + role
     match role:
-        "line":
-            _person(model,false)
-        "scout":
-            _person(model,true)
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+            # One genuine native infantry family; level variants do not invent
+            # new tactical classes or alter established battle unit IDs.
+            if not InfantryFamily.build(model,role,faction_paint_color(faction),
+                    finish_enabled and art_level >= 13):
+                _person(model,role == "scout")
+            elif finish_enabled and art_level>=8:
+                if not InfantryFinishV2.apply(model,faction_paint_color(faction),art_level>=13):
+                    push_warning("Infantry V2 organic solid sculpt/PBR not applied")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
@@ -1269,6 +1278,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     elif role in ["attack_heli","fighter","destroyer"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
+    elif InfantryFamily.supports(role):
+        # Infantry boots stay above ground, unlike legacy vehicle proxies.
+        model.scale=Vector3.ONE*0.83
+        model.position.y=0.0
     elif role=="ew_mobile" or role=="logistics_mobile":
         model.scale=Vector3.ONE*0.83
         model.position.y=0.0
@@ -1455,6 +1468,11 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
 # Old unit roles keep their existing renderer and pose behavior.
 static func pose_model(role: String, model: Node3D, kind: String,
         progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
+    if InfantryFamily.supports(role) and InfantryFamily.has_model(model):
+        var posed: bool=InfantryFamily.pose(model,kind,progress,target_heading)
+        if posed and InfantryFinishV2.has_model(model):
+            InfantryFinishV2.pose(model,kind,progress)
+        return posed
     match role:
         "tank":
             return TankRig.pose(model,kind,progress,target_heading)
@@ -1495,6 +1513,11 @@ static func pose_model(role: String, model: Node3D, kind: String,
     return false
 
 static func restore_model_pose(role: String, model: Node3D) -> void:
+    if InfantryFamily.supports(role) and InfantryFamily.has_model(model):
+        InfantryFamily.restore(model)
+        if InfantryFinishV2.has_model(model):
+            InfantryFinishV2.restore(model)
+        return
     match role:
         "tank":
             TankRig.restore(model)
