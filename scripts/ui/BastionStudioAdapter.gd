@@ -270,10 +270,31 @@ func _ready() -> void:
     var tank_index: int = P06Models.ROLES.find("tank")
     if tank_index >= 0:
         role_picker.set_item_text(tank_index,"Tanque G09 · V32 FINAL")
-    # The project home link now opens the model under review rather than
-    # showing the old default G09 first and confusing Android users.
-    _display_role("apc")
+    # A review link targets the SAME native Godot Web Studio and selector.
+    # Other navigation and all Android/non-Web launches keep P06 as default.
+    var launch_role: String=_studio_web_entry_role()
+    var launch_index: int=P06Models.ROLES.find(launch_role)
+    if launch_index>=0:
+        role_picker.select(launch_index)
+    _display_role(launch_role)
     _refresh_unified_studio_navigation()
+
+func _studio_role_from_link_key(value:String) -> String:
+    # Fixed allowlist: URL text never controls a scene or resource path.
+    match value.strip_edges().to_lower():
+        "g16", "logistics_mobile", "logistica", "logistica_6x6":
+            return "logistics_mobile"
+        _:
+            return "apc"
+
+func _studio_web_entry_role() -> String:
+    if not OS.has_feature("web"):
+        return "apc"
+    # Only a static expression runs in the browser: no untrusted JS eval.
+    var link_key:Variant=JavaScriptBridge.eval(
+        "new URLSearchParams(window.location.search).get('unidad') || ''",
+        true)
+    return _studio_role_from_link_key(str(link_key))
 
 func _install_unified_studio_navigation() -> void:
     var column: VBoxContainer=role_picker.get_parent() as VBoxContainer
@@ -3765,8 +3786,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("logistics_mobile",_faction,true,13)
-        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root) or not G16MechanicsV3.has_model(model_root) or not G16SculptV4.has_model(model_root) or not G16MaterialsV5.has_model(model_root):
-            push_error("G16 V5 opaque PBR glass, 6×6 model, real cargo or damage materials missing in unified Studio")
+        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root) or not G16MechanicsV3.has_model(model_root) or not G16SculptV4.has_model(model_root) or not G16MaterialsV5.has_model(model_root) or not G16ServiceV6.has_model(model_root):
+            push_error("G16 V6 physical supply hose, V5 PBR glazing or prior 6×6 mechanics missing in unified Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw

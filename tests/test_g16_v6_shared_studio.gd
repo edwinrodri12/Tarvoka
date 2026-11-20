@@ -31,6 +31,19 @@ func _run()->void:
     root.add_child(studio)
     await process_frame
     await process_frame
+    # The public Pages link may contain ?unidad=g16; all other links must
+    # fall back safely to P06 without ever accepting a file/scene pathname.
+    check(str(studio.call("_studio_role_from_link_key","G16"))=="logistics_mobile",
+        "online G16 direct link resolves to the genuine existing Godot role")
+    check(str(studio.call("_studio_role_from_link_key","logistics_mobile"))=="logistics_mobile",
+        "native model slug is also supported")
+    check(str(studio.call("_studio_role_from_link_key","../res://other.tscn"))=="apc",
+        "unknown URL text cannot load arbitrary model or scene")
+    check(str(studio.call("_studio_role_from_link_key",""))=="apc",
+        "normal homepage maintains the historical APC default")
+    if not OS.has_feature("web"):
+        check(str(studio.call("_studio_web_entry_role"))=="apc",
+            "non-browser Godot studio remains free of URL side-effects")
     var picker:=studio.get("role_picker") as OptionButton
     var factions:=studio.get("faction_picker") as OptionButton
     check(picker!=null and factions!=null,"original model and faction dropdowns")
