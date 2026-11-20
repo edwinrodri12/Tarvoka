@@ -63,6 +63,7 @@ const G11AuditV33 = preload("res://scripts/ui/G11FinalAuditV33.gd")
 const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G16Logistics=preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
+const G16MechanicsV3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -253,7 +254,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Camión logístico 6×6 · V2 blindaje y grúa")
+        role_picker.set_item_text(logistics_index,"G16 · Logística 6×6 · V3 suspensión y carga")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11")
@@ -567,6 +568,14 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "logistics_mobile":
             return [
+                {"group":"G16 V3 · MECÁNICA 6×6, CARGA Y DAÑOS 3D"},
+                {"title":"V3 · Mostrar suspensión, tuberías y tapas articuladas","action":"g16_v3_on"},
+                {"title":"V2 · Comparar sin mecánica ni detalles V3","action":"g16_v3_off"},
+                {"title":"V3 · Estado intacto","action":"g16_damage_0"},
+                {"title":"V3 · Abolladuras y rayones","action":"g16_damage_1"},
+                {"title":"V3 · Carrocería y cristales dañados","action":"g16_damage_2"},
+                {"title":"V3 · Carga y depósitos deteriorados","action":"g16_damage_3"},
+                {"title":"V3 · Destrucción visual","action":"g16_damage_4"},
                 {"group":"G16 V2 · CABINA PBR, LLANTAS Y GRÚA HIDRÁULICA"},
                 {"title":"V2 · Mostrar blindaje, llantas y pistón 3D","action":"g16_v2_on"},
                 {"title":"V1 · Comparar sin los acabados V2","action":"g16_v2_off"},
@@ -720,11 +729,32 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g16_damage_0","g16_damage_1","g16_damage_2","g16_damage_3","g16_damage_4":
+            if _role=="logistics_mobile" and model_root!=null and G16MechanicsV3.has_model(model_root):
+                if _g16_tween!=null and _g16_tween.is_running():
+                    _g16_tween.kill()
+                P06Models.restore_model_pose("logistics_mobile",model_root)
+                G16ExteriorV2.show_finish(model_root,true)
+                G16MechanicsV3.show_finish(model_root,true)
+                var damage_level:int=int(action.trim_prefix("g16_damage_"))
+                if G16MechanicsV3.set_damage(model_root,damage_level):
+                    status_label.text="G16 V3 · daño visual %d/4 · sin afectar suministros, combate ni HP" % damage_level
+        "g16_v3_on","g16_v3_off":
+            if _role=="logistics_mobile" and model_root!=null:
+                var show_v3:bool=action=="g16_v3_on"
+                if show_v3:
+                    G16ExteriorV2.show_finish(model_root,true)
+                if G16MechanicsV3.show_finish(model_root,show_v3):
+                    status_label.text=("G16 V3 · seis suspensiones, carga articulada y daños físicos" if show_v3 else "G16 V2 · comparación de acabados anteriores")
         "g16_v2_on","g16_v2_off":
             if _role=="logistics_mobile" and model_root!=null:
                 var finish_on:bool=action=="g16_v2_on"
+                if not finish_on:
+                    G16MechanicsV3.show_finish(model_root,false)
                 if G16ExteriorV2.show_finish(model_root,finish_on):
-                    status_label.text=("G16 V2 · cabina cerrada, vidrio PBR y seis llantas mecanizadas" if finish_on else "G16 V1 · carrocería anterior sin acabado V2")
+                    if finish_on:
+                        G16MechanicsV3.show_finish(model_root,true)
+                    status_label.text=("G16 V3 · acabados y mecánica 6×6 restaurados" if finish_on else "G16 V1 · comparación sin acabados V2 ni V3")
         "g16_move","g16_deploy","g16_unload","g16_resupply","g16_camp","g16_pack","g16_hit":
             _g16_play(action.trim_prefix("g16_"))
         "g15_v11_on","g15_v11_off":
@@ -1025,7 +1055,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "logistics_mobile": label="G16 · Logística 6×6 · V2 (acabados PBR, combustible, municiones y grúa real)"
+            "logistics_mobile": label="G16 · Logística 6×6 · V3 (suspensión, carga articulada y daños nativos)"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -3643,8 +3673,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("logistics_mobile",_faction,true,13)
-        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root):
-            push_error("G16 V2 sealed cab, 6 wheels or native crane rig missing in unified 3D Studio")
+        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root) or not G16MechanicsV3.has_model(model_root):
+            push_error("G16 V3 closed 6×6 truck or its native cargo/suspension meshes missing in shared Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
@@ -4483,8 +4513,8 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root)
-        detail_label.text="G16 V2 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root)
+        detail_label.text="G16 V3 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
         status_label.text="G16 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             "carga, grúa y campamento 3D (solo visual)" if ready_g16 else "acabado incompleto"]
@@ -4654,7 +4684,7 @@ func _g16_play(kind: String) -> void:
         Callable(self,"_g16_tick").bind(art,kind),0.02,0.98,
         2.10 if kind in ["camp","unload","resupply"] else 1.30)
     _g16_tween.tween_callback(Callable(self,"_g16_done").bind(art,kind))
-    status_label.text="G16 V1 · "+kind+" · simulación visual de logística, sin aplicar suministros"
+    status_label.text="G16 V3 · "+kind+" · simulación 3D de suministros, sin aplicar recursos"
 
 func _g16_tick(t:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
