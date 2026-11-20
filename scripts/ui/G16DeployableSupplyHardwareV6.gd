@@ -80,6 +80,8 @@ static func apply(root:Node3D,paint:Color)->bool:
     var hose_black:=_mat(Color("#1b2226"),0.0,0.97)
     var bright:=_mat(paint,0.28,0.44)
     var dial:=_mat(Color("#cce2e9"),0.15,0.20)
+    var hose_ridge:=_mat(Color("#53666b"),0.33,0.73)
+    var coupling_latch:=_mat(Color("#e0ebeb"),0.77,0.27)
     var active:=Node3D.new()
     active.name=ROOT
     chassis.add_child(active)
@@ -105,8 +107,11 @@ static func apply(root:Node3D,paint:Color)->bool:
         Vector3(-1.182,1.319,-0.226),
         Vector3(0.018,0.061,0.066),dial)
 
-    # The entire flexible pipe chain follows a REAL Node3D hinge.
-    # Stored pose is parallel to the truck; deployed swings outward.
+    # Visible, 3D external supply loop. The previous 0.72 m hose rotated
+    # 80 degrees into the cargo bay and was almost invisible in the actual
+    # isometric Godot screenshots. This longer hose extends OUTWARD, away
+    # from the chassis (X negative), and droops naturally under gravity.
+    # Everything remains a rigid articulated Studio preview; not a fuel rule.
     var hinge:=Node3D.new()
     hinge.name=HOSE
     hinge.position=Vector3(-1.181,1.342,-0.175)
@@ -116,26 +121,36 @@ static func apply(root:Node3D,paint:Color)->bool:
     for i in range(step_count+1):
         var t:float=float(i)/float(step_count)
         points.append(Vector3(
-            -0.06-0.72*t,
-            -0.065-0.118*sin(t*PI),
-            0.052+0.14*t))
+            -0.085-1.17*t,
+            -0.046-0.27*sin(t*PI)-0.14*t,
+            0.047+0.23*t+0.042*sin(t*PI)))
     for j in range(step_count):
         _rod(hinge,"G16_V6_RealRubberHoseSegment_%02d" % j,
             points[j],points[j+1],
-            0.029,hose_black,9 if hero else 6)
+            0.048 if hero else 0.055,hose_black,12 if hero else 8)
+        # Opaque physical strain-relief collars (not decal rings) keep the
+        # curved assembly readable in LOD8 and avoid detached pipe seams.
+        if j<step_count-1:
+            var collar_a:Vector3=points[j].lerp(points[j+1],0.88)
+            var collar_b:Vector3=points[j].lerp(points[j+1],1.0)
+            _rod(hinge,"G16_V6_HoseStrainCollar_%02d" % j,
+                collar_a,collar_b,0.061,hose_ridge,12 if hero else 8)
     var nozzle:=Node3D.new()
     nozzle.name=COUPLING
     nozzle.position=points[step_count]
     hinge.add_child(nozzle)
     _rod(nozzle,"G16_V6_MetalCoupling",
-        Vector3.ZERO,Vector3(-0.135,-0.018,0.026),
-        0.046,metal,14 if hero else 8)
+        Vector3.ZERO,Vector3(-0.175,-0.018,0.028),
+        0.067,metal,16 if hero else 10)
     _rod(nozzle,"G16_V6_SealWasher",
-        Vector3(-0.131,-0.017,0.027),Vector3(-0.158,-0.019,0.033),
-        0.050,hose_black,12 if hero else 8)
+        Vector3(-0.165,-0.017,0.029),Vector3(-0.203,-0.019,0.034),
+        0.070,hose_black,12 if hero else 8)
     _box(nozzle,"G16_V6_ColorCodedQuickConnect",
-        Vector3(-0.098,-0.012,0.020),
-        Vector3(0.083,0.105,0.075),bright)
+        Vector3(-0.117,-0.012,0.020),
+        Vector3(0.110,0.138,0.099),bright)
+    _box(nozzle,"G16_V6_MechanicalLockingClaw",
+        Vector3(-0.205,0.009,0.028),
+        Vector3(0.046,0.072,0.095),coupling_latch)
 
     # Hinged external cover built with actual thickness. Its existence
     # remains visible while folded, unlike an untextured flat decal.
@@ -156,6 +171,7 @@ static func apply(root:Node3D,paint:Color)->bool:
     root.set_meta(SHOW,true)
     root.set_meta("tarvoka_g16_v6_pbr_opaque_physical_solids",true)
     root.set_meta("tarvoka_g16_v6_hero_segments",step_count)
+    root.set_meta("tarvoka_g16_v6_extended_hose_clears_chassis",true)
     root.set_meta("tarvoka_g16_v6_visual_only",true)
     root.set_meta("tarvoka_g16_v6_original_tactical_rules_unchanged",true)
     return sync(root,"idle",0.0)
@@ -180,8 +196,10 @@ static func sync(root:Node3D,kind:String,progress:float)->bool:
     elif kind=="unload":
         exposure=0.15*smoothstep(0.0,0.80,p)
     hinge.visible=bool(root.get_meta(SHOW,true)) and exposure>0.035
-    hinge.rotation_degrees.y=-80.0*exposure
-    hinge.rotation_degrees.z=-14.0*exposure
+    # A small swivel keeps the whole nozzle OUTSIDE the vehicle. A broad
+    # 80-degree rotation had hidden it behind the service body in LOD8.
+    hinge.rotation_degrees.y=-18.0*exposure
+    hinge.rotation_degrees.z=11.0*exposure
     lid.rotation_degrees.z=-67.0*exposure
     root.set_meta(MODE,kind)
     root.set_meta("tarvoka_g16_v6_last_progress",p)
