@@ -19,7 +19,7 @@ func _run() -> void:
         ProjectSettings.globalize_path(OUTPUT))==OK)
     var board:Array=Scenarios.terrain(0)
     var state:Dictionary=Session.start(
-        Roles.experimental_armies(),board,0,false,false,true)
+        Roles.experimental_armies(),board,0,false,false,true,true)
     assert(state.get("economy",{}).get("modern",false))
     var view:=SubViewport.new()
     view.size=Vector2i(960,720)
@@ -89,8 +89,10 @@ func _run() -> void:
         for y in range(16,700,10):
             for x in range(16,940,10):
                 var px:Color=png.get_pixel(x,y)
-                if absf(px.r-bg_color.r)+absf(px.g-bg_color.g)+
-                        absf(px.b-bg_color.b)>0.14:
+                var color_delta:float=(absf(px.r-bg_color.r)
+                    + absf(px.g-bg_color.g)
+                    + absf(px.b-bg_color.b))
+                if color_delta>0.14:
                     filled+=1
         assert(filled>100,"Actual battle frame blank")
         var label:String="N%d_D%d_LOD%d" % [
