@@ -7,6 +7,7 @@ const V1=preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const V2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const V3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
+const Supply=preload("res://scripts/core/Logistics.gd")
 const PATH="res://build/qa/g16-v3"
 var errors:int=0
 var images:int=0
@@ -45,10 +46,64 @@ func changed(a:Image,b:Image)->int:
                 count+=1
     return count
 
+# FINAL ACCEPTANCE: G16 visual supplies are linked to the existing playable
+# modern-battle logistics role. Core supply operations are real, stock-limited
+# and turn-limited; the Studio buttons must remain art-only.
+func audit_live_g16_supply()->void:
+    var truck:Dictionary={
+        "id":"g16","role":"logistics","hp":8,
+        "faction":0,"pos":Vector2i(4,4),
+        "acted":false,"moved":false,"domain":"ground"
+    }
+    var ally:Dictionary={
+        "id":"ally","role":"tank","hp":14,
+        "faction":0,"pos":Vector2i(4,3),
+        "acted":false,"moved":false,"domain":"ground"
+    }
+    Supply.equip(truck)
+    Supply.equip(ally)
+    ally["ammo"]=0
+    ally["fuel"]=4
+    check(Supply.valid_unit(truck) and Supply.valid_unit(ally),
+        "G16 and allied armor use real playable fuel/ammunition inventories")
+    var starting_ammo:int=int(truck["supply_ammo"])
+    var starting_fuel:int=int(truck["supply_fuel"])
+    var state:Dictionary={
+        "faction":0,"winner":-1,
+        "economy":{"modern":true,"credits":[1000,1000],"sites":[]},
+        "units":[truck,ally]
+    }
+    var quote:Dictionary=Supply.quote(state,"ally")
+    check(bool(quote.get("valid",false)) and
+        str(quote.get("source_kind",""))=="truck" and
+        str(quote.get("source_id",""))=="g16",
+        "actual tactical supply quotes identify nearby G16")
+    var result:Dictionary=Supply.resupply(state,"ally")
+    check(bool(result.get("valid",false)),
+        "playable G16 actually transfers finite field supplies")
+    if not bool(result.get("valid",false)):
+        return
+    var applied:Dictionary=result["state"]
+    var changed_truck:Dictionary=applied["units"][0]
+    var changed_ally:Dictionary=applied["units"][1]
+    check(int(changed_ally["ammo"])>0 and int(changed_ally["fuel"])>4,
+        "G16 refills actual ammo and fuel rather than just visual markers")
+    check(int(changed_truck["supply_ammo"])<starting_ammo and
+        int(changed_truck["supply_fuel"])<starting_fuel,
+        "G16 genuinely consumes its persistent finite cargo")
+    check(bool(changed_truck["supply_used"]) and
+        bool(changed_truck["acted"]) and bool(changed_ally["acted"]) and
+        not Supply.can_resupply(applied,"ally"),
+        "G16 respects once-per-turn resupply and action limits")
+    check(int(applied["economy"]["credits"][0])==1000 and
+        int(state["units"][0]["supply_ammo"])==starting_ammo,
+        "already-owned truck cargo transfers at zero new cost and never mutates original state")
+
 func _initialize()->void:
     call_deferred("_run")
 
 func _run()->void:
+    audit_live_g16_supply()
     var profile:Dictionary=Arsenal.profile("logistics")
     check(Arsenal.code("logistics")=="G16" and
         Arsenal.price("logistics")==300 and
@@ -237,5 +292,5 @@ func _run()->void:
         printerr("FAIL G16 V3 NATIVE 3D: %d failed assertions" % errors)
         quit(1)
         return
-    print("PASS G16 V3 NATIVE 3D: six leaf-springs, three differential axles, two cargo lids, real fuel pipes, reversible damage, 28 Godot captures")
+    print("PASS G16 V3 FINAL NATIVE 3D: six leaf-springs, three differential axles, two cargo lids, real finite tactical ammo/fuel resupply, reversible damage, 28 Godot captures")
     quit(0)
