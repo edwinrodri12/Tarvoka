@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V1=preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const V2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const V3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
+const V4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const Supply=preload("res://scripts/core/Logistics.gd")
 const PATH="res://build/qa/g16-v3"
@@ -232,6 +233,10 @@ func _run()->void:
                 check(hinge!=null and absf(hinge.rotation_degrees.x)<0.01,
                     "all lids close on stop without clearing damage")
             check(V3.stage(model)==4,"restore of pose retains visual wreck")
+            # The V3 historical comparison MUST disable later V4 sculpt;
+            # otherwise V4 panels cover the precise V2-V3 pixel delta.
+            # The real Studio also hides later sculpt during comparison.
+            check(V4.show_finish(model,false),"hide later V4 to compare genuine V2/V3")
             check(V3.show_finish(model,false),"G16 V2 visual comparison enabled")
             var group:=model.find_child(V3.MECHANICS,true,false) as Node3D
             check(group!=null and not group.visible,
