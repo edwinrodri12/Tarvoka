@@ -48,3 +48,19 @@ En el modo de nueve casillas se reduce la escala de los efectos al tamaño real 
 - Actualizaciones de `tests/test_armored_workshop_v2_native.gd` y `tests/test_armored_workshop_mobile_lod.gd` comprueban la cantidad de quemaduras y su opacidad en todos los perfiles.
 
 **Límites:** esto es arte animado y previsualización, no integración jugable. No cambia `BattleTerrain3D.gd`, reglas, economía, combate, producción, consumibles ni datos guardados. El Taller no obtiene un arma ni capacidad ofensiva. El teléfono Android físico sigue pendiente de evaluación antes de entrega comercial.
+
+## Resultados nativos después de las correcciones visuales
+
+[Actions #44668541965](https://github.com/edwinrodri12/Tarvoka/actions/runs/44668541965) terminó **SUCCESS** en Godot 4.3 GL Compatibility, con **87 capturas PNG reales** y las siguientes comprobaciones:
+
+- 135 variantes completas HERO de tres edificios N1–N3 × nueve paletas × D0–D4.
+- 270 variantes Android TÁCTICO/DISTANTE, incluyendo las nuevas marcas de incendio D1/D2.
+- Prueba aislada de la secuencia: dos evoluciones, cuatro impactos progresivos, cuatro reparaciones y ataque contextual en el mapa de 2,4 m.
+- Prueba **del estudio nativo real**: los tres botones cambian modelos geométricos de N1 a N3 y de D0 a D4, y la reparación devuelve D4 a D3. Las ruinas D3/D4 no tienen una cubierta flotante.
+- 17 nuevas capturas con modelos N1/N2/N3, construcción con soldadura, proyectil en vuelo, explosión y daños persistentes D0/D1/D2/D3/D4.
+
+Se corrigieron las explosiones ocultas: los proyectiles impactan por encima del techo aún existente (D0–D2) y en el muro bajo cuando ya se destruyó la cubierta (D3). Los destellos radiales opacos hacen el impacto más legible desde la cámara de batalla. En D1 se crean dos quemaduras en cubierta; en D2, seis más grandes, sin transparencia o agujeros en paredes.
+
+En esta revisión **el modelo arquitectónico se considera aprobado**, según la aprobación visual del usuario, pero el tratamiento de efectos, animaciones y despliegue continúan sujetos a inspección visual. No se activa función jugable ni se mezcla la rama artística con `main` para el juego.
+
+La definición web de TARVOKA Estudio 3D en `main` incluye ya `ArmoredWorkshopEvolutionVFX3D.gd` y los controles en la categoría EDIFICIOS. Publicación del nuevo paquete: [Actions #44668799234](https://github.com/edwinrodri12/Tarvoka/actions/runs/44668799234).
