@@ -1370,7 +1370,7 @@ jobs:
             echo '::error::G16 V6 physical service hose failed in assembled 3D Studio' >&2; exit 1
           fi
           grep -F 'PASS G16 V6 REAL 3D:' /tmp/g16-v6-assembled.log
-          test "$(find build/qa/g16-v6 -maxdepth 1 -name '*.png' | wc -l)" -eq 4
+          test "$(find build/qa/g16-v6 -maxdepth 1 -name '*.png' | wc -l)" -eq 24
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
