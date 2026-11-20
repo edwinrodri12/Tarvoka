@@ -777,6 +777,10 @@ jobs:
           cp workshop-v1-source/tests/test_armored_workshop_v1_native.gd tests/
           test -s workshop-v1-source/tests/test_armored_workshop_v2_native.gd
           cp workshop-v1-source/tests/test_armored_workshop_v2_native.gd tests/
+          # Regression for the ACTUAL published shared studio, not just the
+          # separate native workshop inspector (which had already passed).
+          test -s workshop-v1-source/tests/test_armored_workshop_shared_levels_web.gd
+          cp workshop-v1-source/tests/test_armored_workshop_shared_levels_web.gd tests/
           grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
@@ -1423,6 +1427,27 @@ jobs:
             echo 'City V43 shared viewer did not render'; exit 1
           fi
           grep -F 'PASS CITY V43 SHARED STUDIO VISIBLE:' /tmp/city-shared-visual-smoke.log
+          # Hard publication gate: every N1/N2/N3 must load AND yield actual
+          # pixels in the SAME EDIFICIOS widget that players open in Pages.
+          # Also assert its controls sit directly beneath the building picker
+          # and that the city remains accessible after leaving the workshop.
+          timeout --signal=TERM --kill-after=10s 190s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_shared_levels_web.gd \
+            2>&1 | tee /tmp/workshop-shared-levels-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-shared-levels-smoke.log; then
+            echo 'Workshop N1/N2/N3 does not load in shared Pages viewer'; exit 1
+          fi
+          grep -F 'PASS WORKSHOP SHARED LEVELS:' /tmp/workshop-shared-levels-smoke.log
+          for mode in HERO MAP; do
+            for n in 1 2 3; do
+              test -s "build/qa/workshop-shared-${mode}-n${n}.png"
+            done
+          done
           test -s build/qa/city-v43-visible-main-studio.png
           test -s build/qa/studio-960x540.png
           test -s build/qa/studio-1280x720.png
