@@ -1,6 +1,6 @@
 # TARVOKA — G16 V3 · mecánica 6×6, servicio logístico y daños 3D
 
-**Estado:** programación nativa implementada sobre el modelo V1/V2 de la G16 en la rama `feat/g16-v1-armored-logistics-studio-20261119`. No fusionado ni desplegado todavía; ejecutar Godot QA antes de aprobar.
+**Estado:** G16 V3 FINAL — diseño, modelado nativo, animaciones y catálogo integrados en `main`. La unidad ha sido aprobada para cerrar su fase artística. No se altera el balance ni se añade un nuevo tipo táctico duplicado.
 
 ## Nueva geometría de V3
 
@@ -41,4 +41,12 @@ Ninguna etapa suprime la cabina `BoxMesh`, las cuatro ventanas PBR opacas, el te
 ## Jugabilidad que NO se altera
 `scripts/core/ModernArsenal.gd`: rol táctico `logistics`, código G16, HP **8**, movimiento **4**, ataque **0**, coste **300**, fábrica, reglas de reabastecimiento existentes sin cambios. `logistics_mobile` continúa siendo un rol **exclusivamente artístico**.
 
-**Pendiente final:** resultados CI, inspección de los 28 PNG y publicación comprobada. No declarar el modelo final mientras existan huecos, transparencias o fallas del visor.
+## Cierre de producción e integración
+
+- **Arte G16 aprobado:** V1 cabina/carga 6×6, V2 cristales PBR y llantas, V3 suspensión, conexiones de abastecimiento, tapas articuladas, grúa y cuatro daños acumulativos. Sin nuevo visor independiente.
+- **Visor 3D oficial:** `scripts/ui/UnitModels3D.gd` construye `logistics_mobile`; `scripts/ui/BastionStudioAdapter.gd` muestra **G16 · Logística blindada 6×6 · V3 FINAL** con ocho facciones, controles, etapas de destrucción y campamento visual.
+- **Unidad táctica real:** `scripts/core/ModernArsenal.gd` tiene el rol **`logistics`**, código **G16**, 8 HP, 4 de movimiento, ataque 0, producción en fábrica y costo 300. `scripts/core/Logistics.gd` ya permite abastecimiento adyacente de munición y combustible en batallas modernas, con existencias finitas por camión y un uso por turno; `scripts/core/BattleSession.gd` utiliza esa implementación. Las animaciones del visor no modifican inventarios, y eso es intencional.
+- **QA final:** `tests/test_g16_v3_logistics_qa.gd` verifica ocho facciones, LOD8/13, daños, 28 capturas nativas y una operación REAL de reabastecimiento con stock consumido y bloqueo por turno. `tests/test_g16_v3_live_studio_ui.gd` verifica la unidad en la escena de Studio compartida.
+- **Límites conocidos:** la reparación de HP por esta unidad no está implementada; desplegar el toldo o el campamento es una animación, no una instalación persistente de suministros. No se declara que esas funciones existan.
+
+**Resultado de esta fase:** G16 V3 FINAL integrada, programada y cerrada en cuanto a modelo, animación y abastecimiento táctico existente; toda expansión de reparaciones o campamentos persistentes se gestionará como mecánica independiente.
