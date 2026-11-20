@@ -14,7 +14,7 @@ func _run() -> void:
     assert(packed!=null,"Native standalone studio scene not importable")
     var inspector:Control=packed.instantiate() as Control
     assert(inspector!=null)
-    root.add_child(inspector)
+    get_root().add_child(inspector)
     await process_frame
     var mode:OptionButton=inspector.get("_environment") as OptionButton
     var version:OptionButton=inspector.get("_version") as OptionButton
