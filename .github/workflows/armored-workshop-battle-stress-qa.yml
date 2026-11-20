@@ -4,12 +4,16 @@ on:
     branches: [feat/workshop-battle-android-stress-v1-20261120]
     paths:
       - scripts/ui/ArmoredWorkshopBattleLOD.gd
+      - scripts/ui/City3DPerfProbeV7.gd
+      - scripts/ui/Battle3DMapView.gd
       - tests/benchmark_armored_workshop_battle_android_v1.gd
       - .github/workflows/armored-workshop-battle-stress-qa.yml
   pull_request:
     branches: [main]
     paths:
       - scripts/ui/ArmoredWorkshopBattleLOD.gd
+      - scripts/ui/City3DPerfProbeV7.gd
+      - scripts/ui/Battle3DMapView.gd
       - tests/benchmark_armored_workshop_battle_android_v1.gd
       - .github/workflows/armored-workshop-battle-stress-qa.yml
   workflow_dispatch:
