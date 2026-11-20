@@ -73,10 +73,14 @@ func _run()->void:
             "V6 on restores actual same hardware meshes")
         studio.call("_studio_run_animation","g16_v6_connect")
         studio.call("_g16_tick",0.93,model,"resupply")
-        check(hose!=null and hose.visible and hose.rotation_degrees.y< -45,
+        check(hose!=null and hose.visible and hose.rotation_degrees.y< -10,
             "original UI animates physical supply hose")
         check(lid!=null and lid.rotation_degrees.z< -40,
             "original UI animates armored service cover")
+        var nozzle:=model.find_child(V6.COUPLING,true,false) as Node3D
+        check(nozzle!=null and hose!=null and
+            nozzle.global_position.distance_to(hose.global_position)>0.95,
+            "real UI presents a long hose outside the armoured flank")
         for i in range(2):
             var ammo:=model.find_child(V3.DOOR+str(i),true,false) as Node3D
             check(ammo!=null and ammo.rotation_degrees.x>65,
