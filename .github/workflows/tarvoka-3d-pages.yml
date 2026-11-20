@@ -80,6 +80,9 @@ on:
       - "tests/test_g16_v5_shared_studio.gd"
       - "tests/test_city_shared_visual_presence.gd"
       - "tests/test_studio_full_animation_inventory.gd"
+      - "tests/test_infantry_studio_v2_review.gd"
+      - "tests/test_infantry_family_v2.gd"
+      - "scripts/ui/InfantrySculptFinishV2.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
       - "tests/test_bastion_v17_360_capture.gd"
@@ -286,6 +289,8 @@ jobs:
           test -s scripts/ui/InfantrySculptFinishV2.gd
           test -s hq-android-v15/tests/test_infantry_family_v2.gd
           cp hq-android-v15/tests/test_infantry_family_v2.gd tests/test_infantry_family_v2.gd
+          test -s hq-android-v15/tests/test_infantry_studio_v2_review.gd
+          cp hq-android-v15/tests/test_infantry_studio_v2_review.gd tests/test_infantry_studio_v2_review.gd
           test -s hq-android-v15/tests/test_infantry_family_v1.gd
           cp hq-android-v15/tests/test_infantry_family_v1.gd tests/test_infantry_family_v1.gd
           grep -Fq "InfantryFamily.build" scripts/ui/UnitModels3D.gd
@@ -1706,6 +1711,18 @@ jobs:
           else
             echo 'ART PREVIEW ONLY: A01 full animation inventory not executed; model remains unapproved'
           fi
+          # Infantry V2 shares the exact same native viewport, model
+          # selector, camera and animation rig. Also verifies genuine old
+          # V1 -> improved V2 comparison without opening an extra viewer.
+          timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \\
+            /tmp/Godot_v4.3-stable_linux.x86_64 \\
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \\
+            --script res://tests/test_infantry_studio_v2_review.gd \\
+            2>&1 | tee /tmp/infantry-v2-studio-review.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/infantry-v2-studio-review.log; then
+            echo 'Infantry 3D viewer is not selecting genuine V2 geometry'; exit 1
+          fi
+          grep -Fq 'PASS INFANTRY V2 SAME STUDIO:' /tmp/infantry-v2-studio-review.log
           # The new G13 must actually be selectable in the SAME native
           # combined Studio, with its radar and twin gun mechanisms moving.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
@@ -2184,6 +2201,15 @@ jobs:
           cmp -s build/web/index.js build/web/apc/index.js
           cmp -s build/web/index.wasm build/web/apc/index.wasm
           touch build/web/.nojekyll
+
+      - name: Upload downloadable native TARVOKA Studio preview for infantry review
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-family-native-3d-v1-20261120'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-studio-3d-infantry-v2-review
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload GitHub Pages web site
         uses: actions/upload-pages-artifact@v3
