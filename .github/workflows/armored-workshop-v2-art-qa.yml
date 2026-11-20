@@ -23,6 +23,7 @@ on:
       - "tests/capture_armored_workshop_auto_zoom.gd"
       - "tests/test_armored_workshop_android_multi_stress.gd"
       - "tests/test_armored_workshop_evolution_vfx.gd"
+      - "tests/test_armored_workshop_evolution_studio_ui.gd"
       - "tests/capture_armored_workshop_evolution_vfx.gd"
       - "tests/capture_armored_workshop_v2_cameras.gd"
       - ".github/workflows/armored-workshop-v2-art-qa.yml"
@@ -276,6 +277,22 @@ jobs:
             exit 1
           fi
           grep -F 'PASS WORKSHOP EVOLUTION VFX:' /tmp/workshop-evolution-vfx.log
+      - name: Exercise REAL Godot 3D studio controls for evolving and receiving attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 110s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_evolution_studio_ui.gd \
+            2>&1 | tee /tmp/workshop-evolution-studio-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-evolution-studio-ui.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP EVOLUTION STUDIO UI:' /tmp/workshop-evolution-studio-ui.log
       - name: Capture 17 native upgrade, incoming projectile and damage-stage frames
         shell: bash
         run: |
@@ -318,6 +335,7 @@ jobs:
             /tmp/workshop-auto-zoom.log
             /tmp/workshop-multi-stress.log
             /tmp/workshop-evolution-vfx.log
+            /tmp/workshop-evolution-studio-ui.log
             /tmp/workshop-evolution-frames.log
             /tmp/workshop-tile-capture.log
             /tmp/workshop-v2-visual.log
