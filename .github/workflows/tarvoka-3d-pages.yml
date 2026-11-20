@@ -237,7 +237,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -1230,7 +1230,7 @@ jobs:
           # G15 360 opaque-wall gate runs INSIDE the exact assembled public
           # Godot Studio checkout, not only standalone model CI. A high-chroma
           # interior marker must be hidden by 11 opaque native armor walls
-          # at every angle, faction and LOD. 32 genuine pre/post Godot frames.
+          # at every 22.5-degree angle, 8 factions and both LODs; 64 genuine frames.
           mkdir -p build/qa/g15-v11
           timeout 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -1240,8 +1240,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g15-v11-assembled-opaque-wall-360.log; then
             echo '::error::G15 V11 transparent wall regression in assembled Web Studio' >&2; exit 1
           fi
-          grep -F 'PASS G15 V11 360 NATIVE:' /tmp/g15-v11-assembled-opaque-wall-360.log
-          test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 32
+          grep -F 'PASS G15 V11B 360 NATIVE:' /tmp/g15-v11-assembled-opaque-wall-360.log
+          test "$(find build/qa/g15-v11 -maxdepth 1 -name '*.png' | wc -l)" -eq 64
           test -s build/qa/g15-v11/g15-v11-manifest.json
           # G16 real 6-wheel chassis and two animated supply lids MUST render
           # inside the exact unified Godot export checkout, not only the PR.
