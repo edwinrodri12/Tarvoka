@@ -109,7 +109,7 @@ static func _ruins(g:Dictionary,width:float,depth:float,damage:int,
         Vector3(width*0.24,0.25,0.45),Vector3(0,0.35,0.11))
     # The faction plaque is FLAT on the ground, never floating in D3/D4.
     _put(g,"faction",Vector3(-width*0.11,0.095,-depth*0.32),
-        Vector3(0.93,0.065,0.48),Vector3(0,0.33,0.0))
+        Vector3(1.18,0.065,0.51),Vector3(0,0.33,0.0))
 
 static func _shape(g:Dictionary,width:float,depth:float,height:float,
         bays:int,level:int,damage:int,profile:int,accent:Color) -> void:
@@ -153,10 +153,10 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
     for side in [-1,1]:
         _put(g,"faction",
             Vector3(float(side)*(width*0.5+0.235),
-                height*0.73,-depth*0.12),
-            Vector3(0.037,height*0.07,depth*0.24))
-    _put(g,"faction",Vector3(0,height*0.81,back+0.225),
-        Vector3(width*0.63,height*0.075,0.043))
+                height*0.75,-depth*0.12),
+            Vector3(0.047,height*0.11,depth*0.34))
+    _put(g,"faction",Vector3(0,height*0.86,back+0.225),
+        Vector3(width*0.78,height*0.09,0.043))
     if tactical and damage<=1:
         for side in [-1,1]:
             for i in range(3):
@@ -189,13 +189,13 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                 _put(g,"hazard",Vector3(edge,0.48,front-0.72),
                     Vector3(0.24,0.94,0.23))
         _put(g,"faction",Vector3(center_x,height-0.16,front-0.54),
-            Vector3(bw*0.60,0.17,0.09))
+            Vector3(bw*0.73,0.24,0.09))
         # A slim roof insignia for BOTH Android LODs. The overhead battle
         # camera otherwise loses faction identity in TACTICAL even when the
         # DISTANT roof is readable. Adds 1 cube per bay, zero GPU batches.
         _put(g,"faction",
-            Vector3(center_x,height+0.235,front+depth*0.24),
-            Vector3(bw*0.44,0.035,depth*0.09))
+            Vector3(center_x,height+0.24,-depth*0.17),
+            Vector3(bw*0.63,0.035,depth*0.11))
         # Three recognizable service bays, even at distant mobile LOD:
         # an opaque dark workshop recess behind two articulated metal bars.
         # Keep the hero/tactical versions open to reveal machinery.
@@ -235,7 +235,7 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                 _put(g,"light",Vector3(center_x,height-0.52,
                     front-0.71),Vector3(0.31,0.13,0.19))
     _put(g,"faction",Vector3(0,height+0.25,front-0.34),
-        Vector3(width*0.73,0.10,0.13))
+        Vector3(width*0.82,0.14,0.13))
     # Small, opaque roof scorch plates survive both Android LODs. The
     # preexisting dark-steel batch is reused; no extra draw-call group.
     if damage in [1,2]:
