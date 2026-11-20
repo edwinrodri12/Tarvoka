@@ -39,3 +39,28 @@ El selector `EDIFICIOS > Taller de Blindados` dispone ahora de la quinta opción
 - Publicación: el flujo general de GitHub Pages ha sido modificado para copiar y verificar los scripts nuevos desde la rama artística. El despliegue de la revisión automática debe completarse antes de afirmar disponibilidad del nuevo selector en la web.
 
 **Estado de validación:** el run anterior `44647769023` publicó con éxito el visor compartido **sin** modo AUTO. La prueba nativa de la lógica AUTO tuvo un run SUCCESS `44653647315`. La exportación visual de ocho zooms y el Pages actualizado siguen sujetos a sus propias comprobaciones, antes de solicitar visto bueno artístico.
+
+## Cierre de la prioridad de publicación y auto-LOD (validado en CI)
+
+**GitHub Pages:** [run #44654258519](https://github.com/edwinrodri12/Tarvoka/actions/runs/44654258519), compilación y despliegue **SUCCESS**. Se construyó el estudio nativo con la nueva opción `Android · AUTOMÁTICO por zoom`.
+
+**Godot nativo:** [run #44656702261](https://github.com/edwinrodri12/Tarvoka/actions/runs/44656702261), **SUCCESS**. El artefacto `armored-workshop-v2-66-camera-auto-zoom-and-battle-evidence` tiene **66 PNG**: 36 cámaras de taller, 8 de escala táctica, 14 de estudio con nueve casillas, y 8 nuevas tomas de zoom.
+
+**Causa y corrección de la prueba bloqueada:** el guion anterior intentaba capturar una `SubViewport` redimensionada por el panel responsive del inspector (resolución dependiente de UI). Para evitar falsos fallos y un proceso Godot retenido, `capture_armored_workshop_auto_zoom.gd` renderiza ahora la misma escena `ArmoredWorkshopBattleTile3D` con `ArmoredWorkshopLODPolicy` en un `SubViewport` independiente de 960 × 720. La interfaz interactiva se verifica por separado en `test_armored_workshop_studio_ui.gd`. El paso de CI incorpora un límite de 150 segundos para terminar con error explícito ante bloqueos.
+
+**Datos observados en el manifiesto de las ocho capturas reales:**
+
+| Zoom | Ancho proyectado | Perfil | Lotes GPU |
+| --- | ---: | --- | ---: |
+| 0.60 | 271.3 px | Táctico | 10 |
+| 0.85 | 191.5 px | Táctico | 10 |
+| 1.12 | 145.3 px | Táctico, retenido por histéresis | 10 |
+| 1.42 | 114.6 px | Táctico, retenido por histéresis | 10 |
+| 1.95 | 83.5 px | Distante | 6 |
+| 1.25 | 130.2 px | Distante, retenido por histéresis | 6 |
+| 0.90 | 180.8 px | Táctico | 10 |
+| 0.60 | 271.3 px | Táctico | 10 |
+
+Las ocho imágenes contienen geometría y verifican la reutilización del terreno y del nodo raíz del edificio. Reducción de lotes de **10 a 6** en la vista distante (**40 %**); no se infiere FPS sin medición real en teléfono.
+
+**Conflicto de integración resuelto:** se sincronizó la definición de publicación en la rama artística con la última versión comprobada en `main`, que también incluye las dependencias y controles del taller. PR #629 volvió a estado `clean`, conservándose como **draft**. No se marcó como aprobado ni se añadió como edificio funcional a `BattleTerrain3D`.
