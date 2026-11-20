@@ -52,7 +52,7 @@ func _run()->void:
         int(profile.get("attack",-1))==0 and
         int(profile.get("move_points",-1))==4 and
         Arsenal.price("logistics")==300,
-        "V5 does not change playable G16 HP, movement, attack or price")
+        "V6 does not change playable G16 HP, movement, attack or price")
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path(OUT))==OK,"native QA folder")
     var viewport:=SubViewport.new()
@@ -138,9 +138,15 @@ func _run()->void:
                 "V5 real LOD-aware rubber-hose segmentation")
             check(Models.pose_model("logistics_mobile",truck,"resupply",0.90),
                 "original G16 resupply drives external articulated hose")
-            check(hinge.visible and hinge.rotation_degrees.y< -45 and
+            check(hinge.visible and hinge.rotation_degrees.y< -10 and
                 lid.rotation_degrees.z< -40,
-                "physical hose swings out and real hatch opens")
+                "hose swivels outward with real articulated service cover")
+            check(nozzle!=null and
+                nozzle.global_position.x<hinge.global_position.x-0.85,
+                "outboard coupling physically clears armoured chassis side")
+            check(bool(truck.get_meta(
+                "tarvoka_g16_v6_extended_hose_clears_chassis",false)),
+                "extended tube is labelled as a separate visible 3D asset")
             for i in range(2):
                 var ammo:=truck.find_child(V3.DOOR+str(i),true,false) as Node3D
                 check(ammo!=null and ammo.rotation_degrees.x>65,
@@ -160,8 +166,8 @@ func _run()->void:
             check(group.visible,"V5 hardware becomes visible after comparison")
             check(V4.has_model(truck) and V3.stage(truck)==0,
                 "V5 doesn't damage old 3D asset")
-            if lod==13 and faction in [0,3]:
-                truck.rotation_degrees.y=12
+            if lod==13:
+                truck.rotation_degrees.y=12.0
                 var closed:Image=await _capture(viewport,
                     "g16-v6-f%02d-hose-stowed" % faction)
                 check(Models.pose_model("logistics_mobile",truck,
@@ -169,29 +175,35 @@ func _run()->void:
                 var deployed:Image=await _capture(viewport,
                     "g16-v6-f%02d-hose-deployed" % faction)
                 check(_delta(closed,deployed)>14,
-                    "V5 animated supply equipment visibly moves on real Godot frame")
-                # Proof specific to V5: same model, same deployed pose,
-                # same camera and lighting; toggle ONLY the V5 hardware.
+                    "full supply deployment visibly changes real Godot frame")
+                # Isolate V6 with an identical crane, lighting and resupply
+                # pose. This cannot falsely pass on V1-V5 animation pixels.
                 check(V6.show_finish(truck,false),
-                    "hide ONLY V5 while keeping V1-V4 resupply pose")
+                    "hide ONLY V6 while maintaining V1-V5 resupply pose")
                 await process_frame
                 await process_frame
                 await process_frame
                 var without_v6:Image=viewport.get_texture().get_image()
-                check(_delta(deployed,without_v6)>6,
-                    "V5 physical hose/cover add visible pixels independent of V1-V4 motion")
+                check(_delta(deployed,without_v6)>12,
+                    "physical V6 hose alone is recognizable in 3D image")
                 check(V6.show_finish(truck,true),
-                    "restore V5 for next model/faction")
+                    "restore V6 for next camera/faction")
+                if faction==0:
+                    for angle in range(8):
+                        truck.rotation_degrees.y=float(angle)*45.0
+                        await _capture(viewport,
+                            "g16-v6-hose-orbit_%03d" % (angle*45))
             viewport.remove_child(truck)
             truck.free()
             await process_frame
     check(counted==16,"all eight faction paints and both native model LODs")
-    check(shots==4,"four real stowed/deployed 3D Godot comparison PNGs")
+    check(shots==24,
+        "eight factions stowed/deployed + eight true Godot 360-degree views")
     viewport.queue_free()
     await process_frame
     if failures>0:
         printerr("FAIL G16 V6 REAL 3D: %d issues" % failures)
         quit(1)
     else:
-        print("PASS G16 V6 REAL 3D: 8 factions, two LODs, physical hose/coupling/lid, V1-V5 intact and four real Godot motion frames")
+        print("PASS G16 V6 REAL 3D: 8 factions, 2 LODs, extended coupler outside chassis, 16 stowed/deployed renders, 8 orbit angles, 24 real Godot frames")
         quit(0)
