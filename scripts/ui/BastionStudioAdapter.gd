@@ -4,6 +4,7 @@ class_name TarvokaBastionStudioAdapter
 # Published P06 presentation uses the sculpted V5 art, not the initial native
 # prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
+const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
 const P06Details = preload("res://scripts/ui/APCDetailV5.gd")
@@ -196,6 +197,7 @@ var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
+var _infantry_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -257,6 +259,18 @@ func _ready() -> void:
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
         role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V5 materiales EN DESARROLLO")
+    # Preserve existing roles/indices; these are additional native 3D variants.
+    for entry in [
+        ["line","G01 · Guardia · infantería V1"],
+        ["infantry_urban","G01 · Guardia urbana · V1"],
+        ["infantry_defense","G01 · Guardia defensiva · V1"],
+        ["scout","G03 · Rastreador · V1"],
+        ["infantry_antitank","G04 · Rompedor antiblindaje · V1"],
+        ["infantry_engineer","G05 · Ingeniero de combate · V1"]
+    ]:
+        var index:int=P06Models.ROLES.find(str(entry[0]))
+        if index>=0:
+            role_picker.set_item_text(index,str(entry[1]))
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
@@ -500,6 +514,28 @@ func _studio_jump_details() -> void:
 # supported by the current native rig. Camera angles, LOD, material audits
 # and former revision buttons stay available on the separate Details tab.
 func _studio_animation_specs(role: String) -> Array[Dictionary]:
+    if InfantryV1.supports(role):
+        var actions: Array[Dictionary] = [
+            {"group":"INFANTERÍA V1 · MOVIMIENTO Y POSTURAS"},
+            {"title":"Marcha con equipo","action":"move"},
+            {"title":"Orientar y apuntar","action":"aim"}
+        ]
+        if role=="infantry_engineer":
+            actions.append({"title":"Trabajo y herramientas","action":"work"})
+        else:
+            actions.append({"title":"Ataque · retroceso de arma","action":"attack"})
+        actions.append_array([
+            {"title":"Captura · postura","action":"capture"},
+            {"group":"DAÑOS VISUALES · NO ALTERAN HP"},
+            {"title":"Reaccionar a un impacto","action":"hit_bullet"},
+            {"title":"Daño ligero D1","action":"damage_1"},
+            {"title":"Daño medio D2","action":"damage_2"},
+            {"title":"Daño grave D3","action":"damage_3"},
+            {"title":"Caída / destrucción D4","action":"damage_4"},
+            {"title":"Restaurar D0","action":"damage_0"},
+            {"title":"Detener y restablecer pose","action":"stop"}
+        ])
+        return actions
     match role:
         "tank":
             return [
@@ -959,7 +995,14 @@ func _studio_run_animation(action: String) -> void:
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
             var selected_stage: int=int(action.get_slice("_",1))
-            if _role=="attack_heli":
+            if InfantryV1.supports(_role):
+                if InfantryV1.set_damage(model_root,selected_stage):
+                    if selected_stage==4:
+                        P06Models.pose_model(_role,model_root,"idle",1.0)
+                    else:
+                        P06Models.pose_model(_role,model_root,"idle",0.0)
+                    status_label.text="Infantería · daños D%d · solo arte 3D" % selected_stage
+            elif _role=="attack_heli":
                 _heli_select_damage(selected_stage)
             else:
                 _set_damage(selected_stage)
@@ -1041,10 +1084,26 @@ func _studio_g11_turn_done(art: Node3D) -> void:
     if is_instance_valid(art):
         G11Rig.restore(art)
 
+func _infantry_pose_tick(t: float, kind: String) -> void:
+    if model_root!=null and InfantryV1.supports(_role):
+        P06Models.pose_model(_role,model_root,kind,t,Vector2i(0,-1))
+
+func _infantry_play(kind: String) -> void:
+    if not InfantryV1.supports(_role) or model_root==null:
+        return
+    if _infantry_tween!=null and _infantry_tween.is_running():
+        _infantry_tween.kill()
+    _infantry_tween=create_tween()
+    _infantry_tween.tween_method(Callable(self,"_infantry_pose_tick").bind(kind),
+        0.0,1.0,1.15)
+    status_label.text="Infantería · animación %s (modelo 3D V1)" % kind
+
 func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+            _infantry_play("hit_bullet" if kind=="hit" else kind)
         "logistics_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="G16 no tiene armamento. Solo logística y descarga."
@@ -1075,7 +1134,12 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="logistics_mobile":
+    if InfantryV1.supports(_role):
+        if _infantry_tween!=null and _infantry_tween.is_running():
+            _infantry_tween.kill()
+        if model_root!=null:
+            P06Models.restore_model_pose(_role,model_root)
+    elif _role=="logistics_mobile":
         if _g16_tween!=null and _g16_tween.is_running():
             _g16_tween.kill()
         if model_root!=null:
@@ -1108,6 +1172,12 @@ func _refresh_unified_studio_navigation() -> void:
         label="EDIFICIO · "+str(_role).replace("_"," ").to_upper()
     else:
         match _role:
+            "line": label="G01 · Guardia · V1 en revisión"
+            "infantry_urban": label="G01 · Guardia urbana · V1 en revisión"
+            "infantry_defense": label="G01 · Guardia defensiva · V1 en revisión"
+            "scout": label="G03 · Rastreador · V1 en revisión"
+            "infantry_antitank": label="G04 · Rompedor · V1 en revisión"
+            "infantry_engineer": label="G05 · Ingeniero · V1 en revisión"
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
@@ -3713,6 +3783,8 @@ func _display_role(role: String) -> void:
         _g15_tween.kill()
     if _g16_tween!=null and _g16_tween.is_running():
         _g16_tween.kill()
+    if _infantry_tween!=null and _infantry_tween.is_running():
+        _infantry_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
@@ -3725,6 +3797,20 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if InfantryV1.supports(role):
+        # Swap the base low-detail preview for the hero-grade native geometry
+        # in the SAME shared Studio viewport; battle LOD stays lightweight.
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build(role,_faction,true,13)
+        if model_root==null or not InfantryV1.has_model(model_root):
+            push_error("Infantry V1 native 3D missing in unified Studio")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        _update_camera()
     if role=="logistics_mobile":
         if model_root!=null:
             preview.remove_child(model_root)
