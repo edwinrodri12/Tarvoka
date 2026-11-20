@@ -45,7 +45,7 @@ func _nonblank_pixels(viewport:SubViewport,model:Node3D) -> int:
                 changed+=1
     return changed
 
-func _check_level(studio:Control,level:int,
+func _check_level(studio:Variant,level:int,
         profile:int,tag:String) -> void:
     studio.workshop_level.select(level-1)
     studio.workshop_level.item_selected.emit(level-1)
@@ -83,7 +83,7 @@ func _run() -> void:
     root.size=Vector2i(1280,720)
     var scene:PackedScene=load("res://scenes/UnitArtStudioWeb.tscn") as PackedScene
     assert(scene!=null)
-    var studio:Control=scene.instantiate() as Control
+    var studio:Variant=scene.instantiate()
     assert(studio!=null)
     root.add_child(studio)
     await _frames(16)
@@ -104,7 +104,7 @@ func _run() -> void:
         studio.workshop_level.item_count==3)
     assert(studio.workshop_version.selected==1)
     assert(studio.workshop_view.selected==0)
-    var level_buttons:Node=studio.workshop_controls.find_child(
+    var level_buttons:Control=studio.workshop_controls.find_child(
         "TallerBlindadosAccesoRapidoNiveles",true,false)
     assert(level_buttons!=null and level_buttons.get_child_count()==3)
     assert(level_buttons.is_visible_in_tree())
