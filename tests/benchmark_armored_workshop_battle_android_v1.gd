@@ -11,6 +11,7 @@ const Session=preload("res://scripts/core/BattleSession.gd")
 const Roles=preload("res://scripts/core/UnitRoles.gd")
 const Scenarios=preload("res://scripts/core/Scenarios.gd")
 const Economy=preload("res://scripts/core/UrbanEconomy.gd")
+const Probe=preload("res://scripts/ui/City3DPerfProbeV7.gd")
 const OUT="res://artifacts/workshop_battle_android_v1"
 const CASES=[
     {"id":"10x8_real_2","dims":Vector2i(10,8),"count":2},
@@ -210,6 +211,18 @@ func _run_case(spec:Dictionary) -> Dictionary:
             "Pure visual LOD changes must not edit state, economy or units")
     # Show the full playable map with two original, real armor producers,
     # plus stress-only visual models when this is a synthetic density case.
+    # Exactly the same optional FPS overlay that players open on Android.
+    # Test its live, non-mutating workshop statistics on the actual scene.
+    var probe:Control=Probe.new()
+    root.add_child(probe)
+    probe.call("attach_battle",scene)
+    var device_snapshot:Dictionary=probe.call("snapshot")
+    assert(int(device_snapshot["workshops"])==sites.size())
+    assert(int(device_snapshot["workshop_lod_distant"])==sites.size())
+    assert(int(device_snapshot["workshop_lod_tactical"])==0)
+    assert(int(device_snapshot["workshop_lod_changes"])>=sites.size()*3)
+    assert(float(device_snapshot["workshop_peak_step_ms"])>0.0)
+    probe.queue_free()
     var shot_pixels:int=await _picture(str(spec["id"]))
     var total:int=0
     var batches:int=0
@@ -230,7 +243,8 @@ func _run_case(spec:Dictionary) -> Dictionary:
         "battle_build_cpu_ms":snappedf(build_ms,0.01),
         "batches_after_return_far":batches,
         "instances_after_return_far":instances,
-        "visible_pixel_samples":shot_pixels,"phases":phases}
+        "visible_pixel_samples":shot_pixels,"fps_overlay":device_snapshot,
+        "phases":phases}
     viewport.remove_child(scene)
     scene.free()
     await process_frame
