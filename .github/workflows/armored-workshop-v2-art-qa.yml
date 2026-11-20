@@ -17,6 +17,7 @@ on:
       - "tests/test_armored_workshop_battle_preview.gd"
       - "tests/capture_armored_workshop_battle_preview.gd"
       - "tests/test_armored_workshop_studio_tile.gd"
+      - "tests/test_armored_workshop_studio_ui.gd"
       - "tests/capture_armored_workshop_studio_tile.gd"
       - "tests/capture_armored_workshop_v2_cameras.gd"
       - ".github/workflows/armored-workshop-v2-art-qa.yml"
@@ -146,6 +147,21 @@ jobs:
             exit 1
           fi
           grep -F 'PASS WORKSHOP STUDIO TILE:' /tmp/workshop-tile-studio.log
+      - name: Native UI smoke for interactive map and full-scale switching
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_armored_workshop_studio_ui.gd \
+            2>&1 | tee /tmp/workshop-studio-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/workshop-studio-ui.log; then
+            exit 1
+          fi
+          grep -F 'PASS WORKSHOP STUDIO UI:' /tmp/workshop-studio-ui.log
       - name: Render real 3D evidence from all six cameras and damage stages
         shell: bash
         run: |
@@ -215,5 +231,6 @@ jobs:
             /tmp/workshop-map-bridge.log
             /tmp/workshop-map-capture.log
             /tmp/workshop-tile-studio.log
+            /tmp/workshop-studio-ui.log
             /tmp/workshop-tile-capture.log
             /tmp/workshop-v2-visual.log
