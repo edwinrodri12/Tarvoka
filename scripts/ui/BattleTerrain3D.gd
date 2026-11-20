@@ -12,6 +12,8 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
+const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
+const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
@@ -524,6 +526,23 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 parent.add_child(barracks)
                 drawn+=1
                 continue
+        # Existing modern armor_plant sites already manufacture armored
+        # units. Replace ONLY their generic render cube with approved
+        # workshop art; keep all game production, capture, saving and supply.
+        if str(site["kind"])=="armor_plant":
+            var workshop:Node3D=ArmoredWorkshop.build_site(
+                state,site,owner)
+            if workshop!=null:
+                workshop.name="Instalacion3D_armor_plant_%d_%d" % [
+                    cell.x,cell.y]
+                workshop.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                workshop.set_meta("owner_public",owner)
+                workshop.set_meta("kind","armor_plant")
+                workshop.set_meta("battle_cell",cell)
+                parent.add_child(workshop)
+                drawn+=1
+                continue
         var color: Color = Color("#a9ada5")
         if owner == 0:
             color = Color("#6099db")
@@ -682,6 +701,21 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["trees"] = _make_cone_trees(scene,cells,biome)
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
+    # Automatic workshop LOD runs only on already instantiated public sites,
+    # at 4 Hz, and never changes a tile/root or any gameplay object.
+    var workshop_lod:Node=ArmoredWorkshopLOD.new()
+    workshop_lod.name="TallerBlindadosLOD_Camara"
+    var workshop_count:int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta(
+                "site_kind",""))=="armor_plant":
+            if workshop_lod.register(placed as Node3D):
+                workshop_count+=1
+    if workshop_count>0:
+        scene.add_child(workshop_lod)
+    else:
+        workshop_lod.free()
+    counters["workshop_lod_models"]=workshop_count
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
