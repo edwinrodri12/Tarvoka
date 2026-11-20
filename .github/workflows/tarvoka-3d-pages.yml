@@ -693,7 +693,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
+          for name in ArmoredWorkshop3DV1 ArmoredWorkshop3DV2 ArmoredWorkshopMobileLOD3D ArmoredWorkshopLODPolicy ArmoredWorkshopBattlePreview3D ArmoredWorkshopBattleTile3D ArmoredWorkshopDesignStudioV1 ArmoredWorkshopStudioAdapterV1; do
             test -s "workshop-v1-source/scripts/ui/$name.gd"
             cp "workshop-v1-source/scripts/ui/$name.gd" "scripts/ui/$name.gd"
           done
