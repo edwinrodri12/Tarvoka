@@ -256,7 +256,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V5 materiales y desgaste")
+        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V5 materiales EN DESARROLLO")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
