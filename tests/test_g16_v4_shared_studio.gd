@@ -43,8 +43,8 @@ func _run()->void:
             "G16 selectable among all previous units")
         if role_index>=0 and role_index<picker.item_count:
             var name_in_picker:String=picker.get_item_text(role_index)
-            verify(name_in_picker.contains("G16") and name_in_picker.contains("V4"),
-                "G16 V4 displayed on the same selector")
+            verify(name_in_picker.contains("G16") and name_in_picker.contains("V5"),
+                "G16 V5 is visible on same selector with V4 historical comparison")
             verify(name_in_picker.contains("EN DESARROLLO") and
                 not name_in_picker.contains("FINAL"),
                 "G16 remains in art development; G15 alone was approved FINAL")
@@ -66,7 +66,7 @@ func _run()->void:
         for button in buttons:
             if button.has("action"):
                 available[str(button["action"])]=true
-        for label in ["g16_v4_on","g16_v4_off","g16_v4_wreck",
+        for label in ["g16_v5_on","g16_v5_off","g16_v4_on","g16_v4_off","g16_v4_wreck",
                 "g16_damage_0","g16_damage_4","g16_resupply",
                 "g16_move","g16_camp","g16_v3_off","g16_v2_off"]:
             verify(available.has(label),"actual Studio UI contains "+label)
