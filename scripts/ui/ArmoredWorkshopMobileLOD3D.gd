@@ -190,6 +190,12 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                     Vector3(0.24,0.94,0.23))
         _put(g,"faction",Vector3(center_x,height-0.16,front-0.54),
             Vector3(bw*0.60,0.17,0.09))
+        # A slim roof insignia for BOTH Android LODs. The overhead battle
+        # camera otherwise loses faction identity in TACTICAL even when the
+        # DISTANT roof is readable. Adds 1 cube per bay, zero GPU batches.
+        _put(g,"faction",
+            Vector3(center_x,height+0.235,front+depth*0.24),
+            Vector3(bw*0.44,0.035,depth*0.09))
         # Three recognizable service bays, even at distant mobile LOD:
         # an opaque dark workshop recess behind two articulated metal bars.
         # Keep the hero/tactical versions open to reveal machinery.
@@ -203,11 +209,7 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                         height*(0.30+float(stripe)*0.19),
                         front-0.235),
                     Vector3(bw*0.70,0.065,0.046))
-            # Roof identification is visible in the overhead battlefield
-            # camera without requiring high-poly insignia or new materials.
-            _put(g,"faction",
-                Vector3(center_x,height+0.235,front+depth*0.24),
-                Vector3(bw*0.44,0.035,depth*0.09))
+            # A simplified roof vent improves the distant silhouette.
             _put(g,"dark_steel",
                 Vector3(center_x,height+0.42,depth*0.29),
                 Vector3(bw*0.19,0.39,0.62))
