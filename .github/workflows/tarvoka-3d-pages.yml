@@ -304,6 +304,8 @@ jobs:
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
           test -s hq-android-v15/tests/test_g16_v3_logistics_qa.gd
           cp hq-android-v15/tests/test_g16_v3_logistics_qa.gd tests/test_g16_v3_logistics_qa.gd
+          test -s hq-android-v15/tests/test_g16_v3_live_studio_ui.gd
+          cp hq-android-v15/tests/test_g16_v3_live_studio_ui.gd tests/test_g16_v3_live_studio_ui.gd
           grep -q 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
           grep -q 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -q 'g16_v3_on' scripts/ui/BastionStudioAdapter.gd
@@ -1253,7 +1255,20 @@ jobs:
             echo '::error::G16 V3 failed native 3D QA inside unified studio' >&2; exit 1
           fi
           grep -F 'PASS G16 V3 NATIVE 3D:' /tmp/g16-v3-assembled.log
-          test "$(find build/qa/g16-v3 -maxdepth 1 -name '*.png' | wc -l)" -eq 28
+          test "$(find build/qa/g16-v3 -maxdepth 1 -name 'g16_v3_*.png' -o -name 'g16_v2_faction_*.png' | wc -l)" -eq 28
+          # A complete native truck render alone is not enough. Open the SAME
+          # published TARVOKA Studio UI, select G16 with its actual unit
+          # dropdown, use V2/V3 and damage/camp buttons and capture the screen.
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v3_live_studio_ui.gd \
+            2>&1 | tee /tmp/g16-v3-web-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v3-web-ui.log; then
+            echo '::error::G16 V3 could not be selected/animated in live unified Web Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G16 V3 LIVE WEB STUDIO:' /tmp/g16-v3-web-ui.log
+          test -s build/qa/g16-v3/g16-v3-actual-unified-studio-1280x720.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.
