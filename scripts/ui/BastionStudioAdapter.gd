@@ -64,6 +64,7 @@ const G15EW=preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const G16Logistics=preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2=preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
+const G16SculptV4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -254,7 +255,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Logística 6×6 · V3 suspensión y carga")
+        role_picker.set_item_text(logistics_index,"G16 · Logística 6×6 · V4 cabina y daños")
     var ew_index:int=P06Models.ROLES.find("ew_mobile")
     if ew_index>=0:
         role_picker.set_item_text(ew_index,"G15 · Guerra electrónica · V11C FINAL")
@@ -568,6 +569,11 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             ]
         "logistics_mobile":
             return [
+                {"group":"G16 V4 · ESCULTURA 360°, FACCIÓN Y DESTRUCCIÓN"},
+                {"title":"V4 · Mostrar blindaje biselado, faros y detalles premium","action":"g16_v4_on"},
+                {"title":"V3 · Comparar sin acabados V4","action":"g16_v4_off"},
+                {"title":"V4 · Destrucción progresiva animada","action":"g16_v4_wreck"},
+                {"title":"V4 · Reparar carrocería visualmente","action":"g16_damage_0"},
                 {"group":"G16 V3 · MECÁNICA 6×6, CARGA Y DAÑOS 3D"},
                 {"title":"V3 · Mostrar suspensión, tuberías y tapas articuladas","action":"g16_v3_on"},
                 {"title":"V2 · Comparar sin mecánica ni detalles V3","action":"g16_v3_off"},
@@ -729,6 +735,17 @@ func _studio_run_animation(action: String) -> void:
         "heli_destroy_slow":
             if _role=="attack_heli":
                 _heli_destroy(0.43)
+        "g16_v4_on","g16_v4_off":
+            if _role=="logistics_mobile" and model_root!=null and G16SculptV4.has_model(model_root):
+                var on:bool=action=="g16_v4_on"
+                if on:
+                    G16ExteriorV2.show_finish(model_root,true)
+                    G16MechanicsV3.show_finish(model_root,true)
+                if G16SculptV4.show_finish(model_root,on):
+                    status_label.text=("G16 V4 · carrocería 360° maciza y colores de facción" if on else "G16 V3 · comparación sin acabado V4")
+        "g16_v4_wreck":
+            if _role=="logistics_mobile" and model_root!=null and G16SculptV4.has_model(model_root):
+                _g16_v4_destroy()
         "g16_damage_0","g16_damage_1","g16_damage_2","g16_damage_3","g16_damage_4":
             if _role=="logistics_mobile" and model_root!=null and G16MechanicsV3.has_model(model_root):
                 if _g16_tween!=null and _g16_tween.is_running():
@@ -737,24 +754,34 @@ func _studio_run_animation(action: String) -> void:
                 G16ExteriorV2.show_finish(model_root,true)
                 G16MechanicsV3.show_finish(model_root,true)
                 var damage_level:int=int(action.trim_prefix("g16_damage_"))
-                if G16MechanicsV3.set_damage(model_root,damage_level):
+                if G16SculptV4.has_model(model_root):
+                    G16SculptV4.show_finish(model_root,true)
+                    if G16SculptV4.set_damage(model_root,damage_level):
+                        status_label.text="G16 V4 · daños físicos %d/4 · sin alterar HP ni logística" % damage_level
+                elif G16MechanicsV3.set_damage(model_root,damage_level):
                     status_label.text="G16 V3 · daño visual %d/4 · sin afectar suministros, combate ni HP" % damage_level
         "g16_v3_on","g16_v3_off":
             if _role=="logistics_mobile" and model_root!=null:
                 var show_v3:bool=action=="g16_v3_on"
                 if show_v3:
                     G16ExteriorV2.show_finish(model_root,true)
+                if not show_v3:
+                    G16SculptV4.show_finish(model_root,false)
                 if G16MechanicsV3.show_finish(model_root,show_v3):
-                    status_label.text=("G16 V3 · seis suspensiones, carga articulada y daños físicos" if show_v3 else "G16 V2 · comparación de acabados anteriores")
+                    if show_v3:
+                        G16SculptV4.show_finish(model_root,true)
+                    status_label.text=("G16 V4 · escultura y seis suspensiones visibles" if show_v3 else "G16 V2 · comparación de acabados anteriores")
         "g16_v2_on","g16_v2_off":
             if _role=="logistics_mobile" and model_root!=null:
                 var finish_on:bool=action=="g16_v2_on"
                 if not finish_on:
+                    G16SculptV4.show_finish(model_root,false)
                     G16MechanicsV3.show_finish(model_root,false)
                 if G16ExteriorV2.show_finish(model_root,finish_on):
                     if finish_on:
                         G16MechanicsV3.show_finish(model_root,true)
-                    status_label.text=("G16 V3 · acabados y mecánica 6×6 restaurados" if finish_on else "G16 V1 · comparación sin acabados V2 ni V3")
+                        G16SculptV4.show_finish(model_root,true)
+                    status_label.text=("G16 V4 · blindaje, mecánica y faros restaurados" if finish_on else "G16 V1 · comparación sin acabados V2/V3/V4")
         "g16_move","g16_deploy","g16_unload","g16_resupply","g16_camp","g16_pack","g16_hit":
             _g16_play(action.trim_prefix("g16_"))
         "g15_v11_on","g15_v11_off":
@@ -1055,7 +1082,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "logistics_mobile": label="G16 · Logística 6×6 · V3 (suspensión, carga articulada y daños nativos)"
+            "logistics_mobile": label="G16 · Logística 6×6 · V4 (blindaje cerrado, carga, ocho colores y daño animado)"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
             _: label="UNIDAD · "+str(_role).replace("_"," ").to_upper()
@@ -3673,8 +3700,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("logistics_mobile",_faction,true,13)
-        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root) or not G16MechanicsV3.has_model(model_root):
-            push_error("G16 V3 closed 6×6 truck or its native cargo/suspension meshes missing in shared Studio")
+        if model_root==null or not G16Logistics.has_model(model_root) or not G16ExteriorV2.has_model(model_root) or not G16MechanicsV3.has_model(model_root) or not G16SculptV4.has_model(model_root):
+            push_error("G16 V4 closed bevelled 6×6 truck or its native cargo and armor missing in shared Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
