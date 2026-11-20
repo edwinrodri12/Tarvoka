@@ -496,6 +496,11 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var visible: bool = bool(known.get("visible",false))
         # Ownership cannot leak through fog; unknown allegiance is neutral.
         var owner: int = int(site["owner"]) if visible else -1
+        # A hidden workshop is explored geometry only, never a live feed
+        # of enemy upgrades or fresh damage inflicted behind the fog.
+        if not visible and str(site["kind"])=="armor_plant":
+            site["visual_damage_stage"]=0
+            site.erase("visual_level")
         # Real civil V4 district, identical to the shared Art Studio.
         # CELL_MODEL_SCALE confines all geometry to one 2.4 m board tile.
         # An explored-but-not-visible city must not reveal its new owner.
