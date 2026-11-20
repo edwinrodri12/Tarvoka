@@ -8,6 +8,7 @@ const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
+const WorkshopLOD=preload("res://scripts/ui/ArmoredWorkshopLODPolicy.gd")
 const WorkshopStyle=preload("res://scripts/ui/VisualStyle.gd")
 const WORKSHOP_BUILDING_INDEX:int=6
 var workshop_controls:VBoxContainer
@@ -52,6 +53,7 @@ func _install_workshop_controls() -> void:
     workshop_version.add_item("V2 · acabados industriales")
     workshop_version.add_item("Android · táctico agrupado")
     workshop_version.add_item("Android · distante agrupado")
+    workshop_version.add_item("Android · AUTOMÁTICO por zoom")
     workshop_version.select(1)
     workshop_controls.add_child(workshop_version)
     workshop_view=OptionButton.new()
@@ -103,7 +105,9 @@ func _install_workshop_controls() -> void:
     workshop_controls.add_child(workshop_info)
 
 func _on_workshop_change(_index:int) -> void:
-    # Battle-scale 3D requires the real compact Android asset, never HERO.
+    # Automatic LOD applies only to the battle-scale view, not to HERO.
+    if workshop_version.selected==4 and workshop_view.selected==0:
+        workshop_view.select(1)
     if workshop_view!=null and workshop_view.selected==1 and (
             workshop_version.selected<2):
         workshop_version.select(2)
@@ -113,6 +117,8 @@ func _on_workshop_change(_index:int) -> void:
 func _on_workshop_view_change(_index:int) -> void:
     if workshop_view.selected==1 and workshop_version.selected<2:
         workshop_version.select(2)
+    if workshop_view.selected==0 and workshop_version.selected==4:
+        workshop_version.select(1)
     _workshop_zoom=1.0
     if _role=="armored_workshop":
         _display_workshop()
@@ -204,17 +210,44 @@ func _display_workshop() -> void:
     _update_camera()
     _update_details()
     _refresh_unified_studio_navigation()
+    _workshop_refresh_info()
+
+func _workshop_refresh_info() -> void:
+    if model_root==null or workshop_info==null or workshop_level==null:
+        return
     var mobile_profile:int=int(model_root.get_meta("workshop_lod_profile",0))
     var geometry_info:String="%d lotes GPU · %d cajas agrupadas" % [
         int(model_root.get_meta("workshop_batches",0)),
         int(model_root.get_meta("workshop_instances",0))
     ] if mobile_profile>0 else "%d mallas 3D HERO" % Workshop.mesh_count(model_root)
-    var context:String=" · casilla 2,4 m · 9 piezas de terreno" if (
-        workshop_view!=null and workshop_view.selected==1) else ""
+    var map_view:bool=workshop_view!=null and workshop_view.selected==1
+    var context:String=" · casilla 2,4 m · 9 piezas de terreno" if map_view else ""
+    if map_view and workshop_version.selected==4:
+        var px:float=WorkshopLOD.projected_width(
+            camera,Vector3(0,0.3,0),2.17)
+        var detail:String="TÁCTICO" if mobile_profile==WorkshopMobile.PROFILE_TACTICAL else "DISTANTE"
+        context+=" · AUTO %d px → %s" % [int(roundf(px)),detail]
     workshop_info.text="V%d · %s · D%d · %d bahías · %s%s · arte pendiente de aprobación" % [
         int(model_root.get_meta("workshop_art_version",1)),
-        Workshop.LEVEL_NAMES[level-1],damage,
+        Workshop.LEVEL_NAMES[workshop_level.selected],
+        workshop_damage.selected,
         int(model_root.get_meta("workshop_bays",0)),geometry_info,context]
+
+func _workshop_auto_lod() -> void:
+    if model_root==null or workshop_view==null or workshop_version==null:
+        return
+    if workshop_view.selected!=1 or workshop_version.selected!=4:
+        return
+    var projected_px:float=WorkshopLOD.projected_width(
+        camera,Vector3(0,0.3,0),2.17)
+    var previous:int=int(model_root.get_meta("workshop_lod_profile",
+        WorkshopMobile.PROFILE_TACTICAL))
+    var next_profile:int=WorkshopLOD.choose_mobile(projected_px,previous)
+    if next_profile!=previous:
+        if not WorkshopTile.set_preview_detail(model_root,next_profile):
+            push_error("TARVOKA: automated workshop zoom LOD swap failed")
+            return
+    _workshop_refresh_info()
 
 func _update_camera() -> void:
     if _role=="armored_workshop" and camera!=null and workshop_level!=null:
@@ -231,6 +264,7 @@ func _update_camera() -> void:
                 sin(elevation)*mobile_distance,
                 cos(yaw)*cos(elevation)*mobile_distance)
             camera.look_at(center,Vector3.UP)
+            _workshop_auto_lod()
             return
         var distance:float=36.0 if level==1 else 45.0 if level==2 else 56.0
         var focus:=Vector3(0,2.2 if level==1 else 3.0 if level==2 else 3.5,0)
