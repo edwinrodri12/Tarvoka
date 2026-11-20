@@ -43,8 +43,8 @@ func _run()->void:
             "G16 selectable among all previous units")
         if role_index>=0 and role_index<picker.item_count:
             var name_in_picker:String=picker.get_item_text(role_index)
-            verify(name_in_picker.contains("G16") and name_in_picker.contains("V4"),
-                "G16 V4 displayed on the same selector")
+            verify(name_in_picker.contains("G16") and name_in_picker.contains("V6"),
+                "G16 current V6 displayed on the same selector while V4 remains available")
             verify(name_in_picker.contains("EN DESARROLLO") and
                 not name_in_picker.contains("FINAL"),
                 "G16 remains in art development; G15 alone was approved FINAL")
