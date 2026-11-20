@@ -191,6 +191,30 @@ static func apply(root:Node3D,paint:Color)->bool:
         _box(finish,"G16_V5_RoofSatinRib_%02d" % i,
             Vector3(-0.577+float(i)*0.390,1.872,-1.237),
             Vector3(0.034,0.029,0.563),chrome)
+    # V5 silhouette-readability: real raised enamel/composite plates visible
+    # at tactical-camera distance, rather than tiny near-invisible rivets only.
+    # Roof panels frame rather than cover V4's original central colored crest.
+    for side in [-1,1]:
+        var s:float=float(side)
+        var tag:String=str(side)
+        _box(finish,"G16_V5_RaisedRoofComposite_"+tag,
+            Vector3(s*0.685,1.895,-1.238),
+            Vector3(0.252,0.039,0.742),steel)
+        _box(finish,"G16_V5_RoofFactionInlay_"+tag,
+            Vector3(s*0.686,1.918,-1.259),
+            Vector3(0.131,0.019,0.547),fraction)
+        _box(finish,"G16_V5_WideCargoShoulder_"+tag,
+            Vector3(s*1.094,1.287,0.934),
+            Vector3(0.028,0.132,1.016),steel)
+        _box(finish,"G16_V5_WideFactionFlank_"+tag,
+            Vector3(s*1.110,1.288,0.936),
+            Vector3(0.019,0.082,0.847),fraction)
+    _box(finish,"G16_V5_RearArmorEnamelPlate",
+        Vector3(0,1.408,2.173),
+        Vector3(1.148,0.185,0.041),steel)
+    _box(finish,"G16_V5_RearFactionFleetMark",
+        Vector3(0,1.427,2.199),
+        Vector3(0.738,0.104,0.027),fraction)
     for i in range(3):
         _box(finish,"G16_V5_RearAmmoProtectiveSeal_%d" % i,
             Vector3(-0.54+float(i)*0.54,1.705,1.895),
@@ -289,6 +313,7 @@ static func sync(root:Node3D)->bool:
     var flame_group:=root.find_child(FLAMES,true,false) as Node3D
     if flame_group==null:
         return false
+    flame_group.visible=visible and level>=4
     # V4's destruction tween keeps its actual wreck progress in POSE.
     var progress:float=clampf(float(root.get_meta(V4.POSE,0.0)),0.0,1.0)
     flame_group.rotation_degrees.y=46.0*progress
