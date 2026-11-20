@@ -63,3 +63,19 @@ static func _record_largest(node: Node, triangles: int, report: Dictionary) -> v
 	if triangles > report["largest_mesh_triangles"]:
 		report["largest_mesh_triangles"] = triangles
 		report["largest_mesh_path"] = str(node.get_path()) if node.is_inside_tree() else str(node.name)
+
+## Validate report shape before CI treats a census as trustworthy.
+## Returns false for missing, malformed, or contradictory counters.
+static func is_valid_report(report: Dictionary) -> bool:
+	for key in ["triangles", "instances", "mesh_nodes", "surfaces", "largest_mesh_triangles"]:
+		if not report.has(key) or typeof(report[key]) != TYPE_INT or report[key] < 0:
+			return false
+	if not report.has("warnings") or not (report["warnings"] is Array):
+		return false
+	if not report.has("largest_mesh_path") or typeof(report["largest_mesh_path"]) != TYPE_STRING:
+		return false
+	if report["largest_mesh_triangles"] > report["triangles"] or report["mesh_nodes"] > report["instances"]:
+		return false
+	if report["triangles"] > 0 and report["instances"] == 0:
+		return false
+	return true
