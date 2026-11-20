@@ -42,8 +42,11 @@ func _run()->void:
         verify(role_index>=0 and role_index<picker.item_count,
             "G16 selectable among all previous units")
         if role_index>=0 and role_index<picker.item_count:
-            verify(picker.get_item_text(role_index).contains("G16"),
+            var entry:String=picker.get_item_text(role_index)
+            verify(entry.contains("G16") and entry.contains("V4"),
                 "G16 V4 displayed on the same selector")
+            verify(entry.contains("EN DESARROLLO") and not entry.contains("FINAL"),
+                "G16 remains under development; only G15 was approved FINAL")
             picker.select(role_index)
     studio.call("_display_role","logistics_mobile")
     await process_frame
