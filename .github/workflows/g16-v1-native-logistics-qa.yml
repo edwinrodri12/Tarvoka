@@ -59,6 +59,7 @@ jobs:
           grep -Fq 'g16_v2_on' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'g16_v2_off' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16 · Logística blindada 6×6 · V3 FINAL' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'G16SculptV4.sync' scripts/ui/UnitModels3D.gd
@@ -139,7 +140,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/g16-v3-native.log; then
             exit 1
           fi
-          grep -F 'PASS G16 V3 NATIVE 3D:' /tmp/g16-v3-native.log
+          grep -F 'PASS G16 V3 FINAL NATIVE 3D:' /tmp/g16-v3-native.log
           test "$(find build/qa/g16-v3 -name '*.png' | wc -l)" -eq 28
       - name: Validate G16 V4 360 closed octagonal armor and animated multi-stage wreck in 22 true Godot PNGs
         shell: bash
