@@ -8,6 +8,7 @@ const WorkshopV1=preload("res://scripts/ui/ArmoredWorkshop3DV1.gd")
 const Workshop=preload("res://scripts/ui/ArmoredWorkshop3DV2.gd")
 const WorkshopMobile=preload("res://scripts/ui/ArmoredWorkshopMobileLOD3D.gd")
 const WorkshopTile=preload("res://scripts/ui/ArmoredWorkshopBattleTile3D.gd")
+const WorkshopFX=preload("res://scripts/ui/ArmoredWorkshopEvolutionVFX3D.gd")
 const WorkshopLOD=preload("res://scripts/ui/ArmoredWorkshopLODPolicy.gd")
 const WorkshopStyle=preload("res://scripts/ui/VisualStyle.gd")
 const WORKSHOP_BUILDING_INDEX:int=6
@@ -18,6 +19,7 @@ var workshop_level:OptionButton
 var workshop_faction:OptionButton
 var workshop_damage:OptionButton
 var workshop_info:Label
+var _workshop_fx:TarvokaArmoredWorkshopEvolutionVFX3D
 var _workshop_yaw:float=145.0
 var _workshop_elevation:float=39.0
 var _workshop_zoom:float=1.0
@@ -100,9 +102,50 @@ func _install_workshop_controls() -> void:
         zoom_button.pressed.connect(Callable(self,"_workshop_adjust_zoom").bind(
             float(action[1])))
         zoom_row.add_child(zoom_button)
+    var effects_heading:=Label.new()
+    effects_heading.text="EVOLUCIÓN / ATAQUES / DESTRUCCIÓN (PRUEBA VISUAL)"
+    effects_heading.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    workshop_controls.add_child(effects_heading)
+    var action_row:=HFlowContainer.new()
+    workshop_controls.add_child(action_row)
+    for action in [
+            ["EVOLUCIONAR N+1","upgrade"],
+            ["RECIBIR ATAQUE D+1","attack"],
+            ["REPARACIÓN VISUAL D-1","repair"]]:
+        var effect_button:=Button.new()
+        effect_button.text=str(action[0])
+        effect_button.pressed.connect(
+            Callable(self,"_workshop_play_effect").bind(str(action[1])))
+        action_row.add_child(effect_button)
     workshop_info=Label.new()
     workshop_info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     workshop_controls.add_child(workshop_info)
+
+func _workshop_play_effect(kind:String) -> void:
+    if _role!="armored_workshop" or _workshop_fx==null or _workshop_fx.busy:
+        return
+    match kind:
+        "upgrade":
+            _workshop_fx.play_upgrade()
+        "attack":
+            _workshop_fx.play_attack()
+        "repair":
+            _workshop_fx.play_repair()
+
+func _workshop_stage_requested(level:int,damage:int) -> void:
+    if _role!="armored_workshop":
+        return
+    workshop_level.select(level-1)
+    workshop_damage.select(damage)
+    _display_workshop()
+
+func _workshop_sequence_complete(_kind:String,_level:int,_damage:int) -> void:
+    if _workshop_fx!=null and workshop_level!=null:
+        _workshop_fx.configure(workshop_level.selected+1,
+            workshop_faction.selected-1,workshop_damage.selected,
+            workshop_view.selected==1)
+    if _role=="armored_workshop":
+        _workshop_refresh_info()
 
 func _on_workshop_change(_index:int) -> void:
     # Automatic LOD applies only to the battle-scale view, not to HERO.
@@ -146,6 +189,8 @@ func _change_selected_building(index:int) -> void:
         return
     if workshop_controls!=null:
         workshop_controls.visible=false
+    if _workshop_fx!=null:
+        _workshop_fx.visible=false
     super._change_selected_building(index)
 
 func _switch_category(index:int) -> void:
@@ -161,6 +206,8 @@ func _switch_category(index:int) -> void:
         _display_workshop()
     else:
         workshop_controls.visible=false
+        if _workshop_fx!=null:
+            _workshop_fx.visible=false
 
 func _display_workshop() -> void:
     if workshop_level==null or workshop_faction==null or workshop_damage==null or preview==null:
@@ -194,6 +241,15 @@ func _display_workshop() -> void:
         push_error("TARVOKA: workshop native 3D geometry failed")
         return
     preview.add_child(model_root)
+    if _workshop_fx==null:
+        _workshop_fx=WorkshopFX.new()
+        _workshop_fx.name="FX_EvolucionAtaquesYDestruccionTaller"
+        preview.add_child(_workshop_fx)
+        _workshop_fx.stage_requested.connect(_workshop_stage_requested)
+        _workshop_fx.sequence_finished.connect(_workshop_sequence_complete)
+    _workshop_fx.visible=true
+    _workshop_fx.configure(level,faction,damage,
+        workshop_view!=null and workshop_view.selected==1)
     if hq_ground!=null:
         hq_ground.visible=false
     if hq_climate_stage!=null:
