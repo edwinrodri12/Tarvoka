@@ -782,6 +782,8 @@ jobs:
           test -s workshop-v1-source/tests/test_armored_workshop_shared_levels_web.gd
           cp workshop-v1-source/tests/test_armored_workshop_shared_levels_web.gd tests/
           grep -F 'ArmoredWorkshop3DV2.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          # Display actual load success immediately below N1/N2/N3 buttons.
+          grep -F 'TallerBlindadosEstadoCarga' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
           grep -F 'ArmoredWorkshopBattleTile3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
           grep -F 'ArmoredWorkshopEvolutionVFX3D.gd' scripts/ui/ArmoredWorkshopDesignStudioV1.gd
@@ -1448,6 +1450,7 @@ jobs:
               test -s "build/qa/workshop-shared-${mode}-n${n}.png"
             done
           done
+          test -s build/qa/workshop-shared-MAP-f8-d4.png
           test -s build/qa/city-v43-visible-main-studio.png
           test -s build/qa/studio-960x540.png
           test -s build/qa/studio-1280x720.png
