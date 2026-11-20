@@ -11,6 +11,8 @@ const TUBES := 12
 const WHEELS := 12
 const FAR_LEVEL := 8
 const NEAR_LEVEL := 10
+# Prototype: fewer radial sides on repeated rocket tubes, preserving 12 mouths.
+const TUBE_RADIAL_SEGMENTS := 8
 const TacticalV24 = preload("res://scripts/ui/G11TacticalReadabilityV24.gd")
 const PodV25 = preload("res://scripts/ui/G11RocketFaceReadabilityV25.gd")
 const PaintV27 = preload("res://scripts/ui/G11TacticalPaintReadabilityV27.gd")
@@ -135,11 +137,11 @@ static func build(model: Node3D, faction_color: Color,
     _box(pod,"G11Mobile_MarcaModulo",Vector3(0,0.48,0.10),
         Vector3(0.85,0.055,0.94),paint)
     var tube_multimesh: MultiMesh = _multi_cylinder(pod,
-        "G11Mobile_Lote12Tubos",TUBES,0.097,0.18,rubber,10)
+        "G11Mobile_Lote12Tubos",TUBES,0.097,0.18,rubber,TUBE_RADIAL_SEGMENTS)
     var rims: MultiMesh = null
     if close:
         rims = _multi_cylinder(pod,"G11Mobile_Lote12Bordes",
-            TUBES,0.110,0.025,metal,10)
+            TUBES,0.110,0.025,metal,TUBE_RADIAL_SEGMENTS)
     var tube_basis := Basis(Vector3.RIGHT,PI*0.5)
     for column in range(4):
         for row in range(3):
