@@ -307,6 +307,7 @@ jobs:
           test -s hq-android-v15/tests/test_g16_v3_live_studio_ui.gd
           cp hq-android-v15/tests/test_g16_v3_live_studio_ui.gd tests/test_g16_v3_live_studio_ui.gd
           grep -q 'G16MechanicsV3.apply' scripts/ui/UnitModels3D.gd
+          grep -q 'G16 · Logística blindada 6×6 · V3 FINAL' scripts/ui/BastionStudioAdapter.gd
           grep -q 'G16MechanicsV3.sync' scripts/ui/UnitModels3D.gd
           grep -q 'g16_v3_on' scripts/ui/BastionStudioAdapter.gd
           grep -q 'g16_v3_off' scripts/ui/BastionStudioAdapter.gd
@@ -1255,7 +1256,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v3-assembled.log; then
             echo '::error::G16 V3 failed native 3D QA inside unified studio' >&2; exit 1
           fi
-          grep -F 'PASS G16 V3 NATIVE 3D:' /tmp/g16-v3-assembled.log
+          grep -F 'PASS G16 V3 FINAL NATIVE 3D:' /tmp/g16-v3-assembled.log
           test "$(find build/qa/g16-v3 -maxdepth 1 -name 'g16_v3_*.png' -o -name 'g16_v2_faction_*.png' | wc -l)" -eq 28
           # A complete native truck render alone is not enough. Open the SAME
           # published TARVOKA Studio UI, select G16 with its actual unit
