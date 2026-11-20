@@ -74,6 +74,8 @@ on:
       - "scripts/ui/AttackHelicopterHubCutFinishV1415.gd"
       - "tests/test_bastion_studio_web_ui.gd"
       - "tests/test_unified_studio_navigation.gd"
+      - "tests/test_g16_v4_native_360.gd"
+      - "tests/test_g16_v4_shared_studio.gd"
       - "tests/test_city_shared_visual_presence.gd"
       - "tests/test_studio_full_animation_inventory.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
@@ -302,6 +304,15 @@ jobs:
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
+          test -s scripts/ui/G16LogisticsSculptDamageV4.gd
+          test -s hq-android-v15/tests/test_g16_v4_native_360.gd
+          cp hq-android-v15/tests/test_g16_v4_native_360.gd tests/test_g16_v4_native_360.gd
+          test -s hq-android-v15/tests/test_g16_v4_shared_studio.gd
+          cp hq-android-v15/tests/test_g16_v4_shared_studio.gd tests/test_g16_v4_shared_studio.gd
+          grep -Fq 'G16SculptV4.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'G16SculptV4.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'g16_v4_on' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'g16_v4_wreck' scripts/ui/BastionStudioAdapter.gd
           test -s hq-android-v15/tests/test_g16_v3_logistics_qa.gd
           cp hq-android-v15/tests/test_g16_v3_logistics_qa.gd tests/test_g16_v3_logistics_qa.gd
           test -s hq-android-v15/tests/test_g16_v3_live_studio_ui.gd
@@ -509,7 +520,7 @@ jobs:
           assert current.count(tank_anchor) == 1, 'Duplicate G09 build stages remain'
           for preserved in ['const G13AA = preload(', 'const G11Art = preload(',
                             'const G16LogisticsV1 = preload(', 'const G16ExteriorV2 = preload(',
-                            'const G16MechanicsV3 = preload(',
+                            'const G16MechanicsV3 = preload(', 'const G16SculptV4 = preload(',
                             'const APCClosedTiresV25 = preload(', 'G13DetailV2.apply',
                             'G11Art.build', 'APCClosedTiresV25.apply',
                             'static func pose_model(', 'static func restore_model_pose(']:
@@ -1270,6 +1281,29 @@ jobs:
           fi
           grep -F 'PASS G16 V3 LIVE WEB STUDIO:' /tmp/g16-v3-web-ui.log
           test -s build/qa/g16-v3/g16-v3-actual-unified-studio-1280x720.png
+          # G16 V4 physically enclosed premium 6x6 body / articulated
+          # staged wreck MUST also pass INSIDE the assembled public Studio.
+          mkdir -p build/qa/g16-v4
+          timeout 290s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v4_native_360.gd \
+            2>&1 | tee /tmp/g16-v4-assembled.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v4-assembled.log; then
+            echo '::error::G16 V4 closed geometry or moving wreck failed within Web Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G16 V4 NATIVE 3D:' /tmp/g16-v4-assembled.log
+          test "$(find build/qa/g16-v4 -maxdepth 1 -name '*.png' | wc -l)" -eq 22
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_g16_v4_shared_studio.gd \
+            2>&1 | tee /tmp/g16-v4-live-ui.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/g16-v4-live-ui.log; then
+            echo '::error::G16 V4 not selectable/animated in the real shared 3D Studio' >&2; exit 1
+          fi
+          grep -F 'PASS G16 V4 LIVE STUDIO:' /tmp/g16-v4-live-ui.log
+          test -s build/qa/g16-v4/g16-v4-real-unified-studio.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.
@@ -1686,6 +1720,15 @@ jobs:
         with:
           name: tarvoka-g16-v3-live-unified-studio-ui
           path: build/qa/g16-v3/g16-v3-actual-unified-studio-1280x720.png
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Save G16 V4 rendered 360 and live unified Studio screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g16-v4-shared-studio-real-model
+          path: build/qa/g16-v4/*.png
           if-no-files-found: warn
           retention-days: 14
 
