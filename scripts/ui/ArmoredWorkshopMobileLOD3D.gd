@@ -236,6 +236,18 @@ static func _shape(g:Dictionary,width:float,depth:float,height:float,
                     front-0.71),Vector3(0.31,0.13,0.19))
     _put(g,"faction",Vector3(0,height+0.25,front-0.34),
         Vector3(width*0.73,0.10,0.13))
+    # Small, opaque roof scorch plates survive both Android LODs. The
+    # preexisting dark-steel batch is reused; no extra draw-call group.
+    if damage in [1,2]:
+        var marks:int=2 if damage==1 else 6
+        for mark in range(marks):
+            _put(g,"dark_steel",
+                Vector3(width*(-0.28+float(mark%3)*0.225),
+                    height+0.232,
+                    depth*(-0.23+float(mark/3)*0.28)),
+                Vector3(width*(0.061 if damage==1 else 0.087),
+                    0.025,depth*(0.055 if damage==1 else 0.079)),
+                Vector3(0,float(mark)*0.54,0))
     if damage==2:
         # Moderate surface damage with no disconnected roof or wall.
         for i in range(bays+2):
