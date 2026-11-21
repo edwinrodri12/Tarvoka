@@ -474,7 +474,8 @@ func _add_building_mode() -> void:
     hq_v24_neutral_toggle.visible = false
     building_controls.add_child(hq_v24_neutral_toggle)
     _title(building_controls,
-        "V24: exactamente la geometría táctica integrada al mapa real; "        + "compara con el modelo HERO V23 al desactivar esta casilla.",12)
+        "V24: misma geometría táctica de la batalla real; "
+        + "desactiva para comparar con el modelo HERO V23.",12)
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
@@ -919,19 +920,20 @@ func _display_headquarters() -> void:
     hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
     hq_v12_toggle.visible = hq_v11_toggle.visible and hq_v11_toggle.button_pressed
     hq_camera_picker.visible = not showing_batch
-    hq_v15_mode_picker.visible = not showing_batch
-    hq_v15_neutral_toggle.visible = not showing_batch
-    hq_v15_frame.visible = not showing_batch and hq_v15_mode_picker.selected != 1
+    hq_v15_mode_picker.visible = not showing_batch and not showing_v24
+    hq_v15_neutral_toggle.visible = not showing_batch and not showing_v24
+    hq_v15_frame.visible = not showing_batch and not showing_v24 and hq_v15_mode_picker.selected != 1
     hq_v15_zoom_picker.visible = hq_v15_frame.visible
     hq_v15_caption.visible = hq_v15_frame.visible
-    hq_production_toggle.visible = _hq_show_v4 and not showing_batch
+    hq_production_toggle.visible = _hq_show_v4 and not showing_batch and not showing_v24
     hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch and not showing_v24
     hq_v24_toggle.visible = _hq_show_v4 and not showing_batch
     hq_v24_neutral_toggle.visible = showing_v24
     hq_fps_label.visible = showing_batch
     hq_stress_picker.visible = showing_batch
     var hero_mode: bool = not showing_batch and not showing_v24 and hq_v15_mode_picker.selected != 2 and not hq_production_toggle.button_pressed
-    hq_damage_stage_picker.disabled = not hero_mode
+    # Damage is interactive on V24 too: each selection builds its real D0-D4 mesh.
+    hq_damage_stage_picker.disabled = not hero_mode and not showing_v24
     hq_bullet_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
     hq_explosive_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
     # Large districts are deliberately batched dry map proxies; disable
@@ -1021,7 +1023,8 @@ func _display_headquarters() -> void:
             ][damage_stage]
             hq_impact_status.text = "V22 · %s · %s · impactos de bala y explosión" % [
                 str(HQDamageV21.STAGES[damage_stage]),detail]
-    _apply_hq_climate_v17()
+    if not showing_v24:
+        _apply_hq_climate_v17()
     if showing_v24 and hq_climate_stage != null:
         hq_climate_stage.visible = false
     _sync_hq_wayfinding_v18()
@@ -1071,7 +1074,7 @@ func _update_details() -> void:
         var fac: int = int(model_root.get_meta("visual_faction",-1))
         var dmg: int = int(model_root.get_meta("visual_damage_stage",0))
         var tier: int = int(model_root.get_meta("visual_tier",1))
-        detail_label.text = ("BATALLA REAL V24 · 2 mallas 3D de arquitectura "
+        detail_label.text = ("BATALLA REAL V24 · 2 mallas 3D de arquitectura · "
             + "9 superficies · Nivel %d · Daño D%d") % [tier,dmg]
         status_label.text = (
             "Neutral sin insignia" if fac == -1
