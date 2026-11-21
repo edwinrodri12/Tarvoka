@@ -277,7 +277,12 @@ func _ready() -> void:
         ["infantry_defense","G01 · Guardia defensiva · V2"],
         ["scout","G03 · Rastreador · V2"],
         ["infantry_antitank","G04 · Rompedor antiblindaje · V2"],
-        ["infantry_engineer","G05 · Ingeniero de combate · V2"]
+        ["infantry_engineer","G05 · Ingeniero de combate · V2"],
+        ["infantry_sniper","Francotirador · precisión · V4"],
+        ["infantry_aa","Infantería antiaérea · SAM portátil · V4"],
+        ["infantry_logistic","Logístico a pie · suministros · V4"],
+        ["infantry_medic","Médico de combate · V4"],
+        ["infantry_commando","FS-24 · Comando de operaciones especiales · V4"]
     ]:
         var index:int=P06Models.ROLES.find(str(entry[0]))
         if index>=0:
@@ -584,8 +589,13 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
-        if role=="infantry_engineer":
-            actions.append({"title":"Trabajo y herramientas","action":"work"})
+        if role in ["infantry_engineer","infantry_logistic","infantry_medic"]:
+            var action_title:String="Trabajo y herramientas"
+            if role=="infantry_logistic":
+                action_title="Organizar suministros (animación)"
+            elif role=="infantry_medic":
+                action_title="Atender heridos (animación)"
+            actions.append({"title":action_title,"action":"work"})
         else:
             actions.append({"title":"Ataque · retroceso de arma","action":"attack"})
         actions.append_array([
@@ -1339,7 +1349,9 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
-        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+        "line","scout","infantry_urban","infantry_defense",
+        "infantry_antitank","infantry_engineer","infantry_sniper",
+        "infantry_aa","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
         "logistics_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
@@ -1415,6 +1427,11 @@ func _refresh_unified_studio_navigation() -> void:
             "scout": label="G03 · Rastreador · V2 en revisión"
             "infantry_antitank": label="G04 · Rompedor · V2 en revisión"
             "infantry_engineer": label="G05 · Ingeniero · V2 en revisión"
+            "infantry_sniper": label="Francotirador · V4 3D en revisión"
+            "infantry_aa": label="Infantería antiaérea · V4 3D en revisión"
+            "infantry_logistic": label="Logístico a pie · V4 3D en revisión"
+            "infantry_medic": label="Médico de combate · V4 3D en revisión"
+            "infantry_commando": label="FS-24 · Comando especial · V4 3D en revisión"
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
