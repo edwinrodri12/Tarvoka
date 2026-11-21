@@ -1371,12 +1371,21 @@ func _engineer_v6_run(opening: bool) -> void:
         _infantry_tween.kill()
     if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
         _engineer_v6_tween.kill()
-    var start: float=0.0 if opening else 1.0
+    # Read the actual hinge angle before reversing or restarting a tween.
+    # Starting at hard-coded 0/1 snapped the board visibly if interrupted.
+    var hinge: Node3D=model_root.find_child(
+        EngineerFinishV6.RIG,true,false) as Node3D
+    if hinge==null:
+        return
+    var start: float=clampf(-hinge.rotation_degrees.x/54.0,0.0,1.0)
     var end: float=1.0 if opening else 0.0
-    _engineer_v6_tick(start,model_root)
-    _engineer_v6_tween=create_tween()
-    _engineer_v6_tween.tween_method(
-        Callable(self,"_engineer_v6_tick").bind(model_root),start,end,1.25)
+    if absf(end-start)<0.0001:
+        _engineer_v6_tick(end,model_root)
+    else:
+        _engineer_v6_tween=create_tween()
+        _engineer_v6_tween.tween_method(
+            Callable(self,"_engineer_v6_tick").bind(model_root),
+            start,end,maxf(0.08,1.25*absf(end-start)))
     status_label.text=(
         "Ingeniero V6 · barrera articulada abierta para inspección 360°, sin efecto táctico"
         if opening else
