@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Roster=preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
 const EngineerV6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const ClosureV7=preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -134,6 +135,21 @@ func _run() -> void:
             Models.faction_paint_color(0)),
             role+" hero colors restore exactly after switching factions")
         if role=="infantry_engineer":
+            must(ClosureV7.has_model(final_soldier),
+                "published engineer uses the FULL opaque rear helmet and neck")
+            # Verify real CAMERA buttons do not crop body on mobile-like UI.
+            studio.call("_infantry_review_focus",false)
+            var framed_camera: Camera3D=studio.get("camera") as Camera3D
+            must(framed_camera!=null and framed_camera.size>=3.5 and
+                framed_camera.size<=4.4,
+                "full-body camera frame shows boots and complete helmet")
+            studio.call("_infantry_review_focus",true)
+            must(framed_camera!=null and is_equal_approx(
+                framed_camera.size,2.15),
+                "helmet detail button zooms the SAME native camera")
+            studio.call("_infantry_review_focus",false)
+            must(framed_camera!=null and framed_camera.size>=3.5,
+                "return to complete character restores body framing")
             # Actual central 360 scene: not a fake or second renderer.
             must(EngineerV6.has_model(final_soldier),
                 "engineer V6 real articulated mesh loaded in shared SubViewport")
