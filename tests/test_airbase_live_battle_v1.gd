@@ -76,6 +76,8 @@ func _run() -> void:
         var colored:Dictionary=old.duplicate(true)
         var mapping:Dictionary=Identity.from_state(colored)
         mapping["0"]=str(Style.FACTIONS[faction]["key"])
+        mapping["1"]=str(Style.FACTIONS[(faction+1)%8]["key"])
+        assert(Identity.is_valid(mapping),"The two armies need distinct official identities")
         colored[Identity.STATE_FIELD]=mapping
         var owned:Node3D=Airbase.build_site(colored,
             Economy.site_at(colored["economy"],airfields[0]),0)
