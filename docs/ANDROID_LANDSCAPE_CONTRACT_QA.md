@@ -19,3 +19,9 @@ Expected: exit code 0 and `PASS ANDROID LANDSCAPE CONTRACT`. The test validates 
 - This does not measure FPS, battery, touch ergonomics, or prove an APK installs or upgrades safely.
 
 CI: `.github/workflows/android-landscape-contract.yml` imports Godot 4.3, executes the regression, requires the PASS marker and publishes a diagnostic log. Review its next run and fix reproducible failures before merging. No APK distributed.
+
+## 2026-11-21 — aspect ratio geometry regression
+
+Added 13 pure checks in `tests/test_android_landscape_contract.gd`: for 16:9, 20:9, 4:3 and 21:9 physical landscape dimensions, compute the expected expanded logical canvas and assert that neither base logical dimension shrinks and that the resulting aspect matches the screen. A zero-width physical screen must return an invalid zero canvas. This tests the **mathematical contract only**, not actual Godot Control anchors, cutouts, safe areas, UI clipping or Android touch behavior.
+
+Commit `9a04080dabb272117b83f7bd8ff0328f45ab9f0b`: **NO EJECUTADO** in Godot/CI at authoring time. Android physical: **NO EJECUTADO EN DISPOSITIVO**; visual HUD: **PENDIENTE DE REVISIÓN VISUAL**. Inspect the CI run for the new head SHA before declaring success. No gameplay rules changed.
