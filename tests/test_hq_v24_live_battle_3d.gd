@@ -62,6 +62,10 @@ func _run() -> void:
                 assert(finishes.mesh.get_surface_count()==4)
                 assert(piece.get_aabb().size.x*HQ.MODEL_SCALE<2.40)
                 assert(piece.get_aabb().size.z*HQ.MODEL_SCALE<2.40)
+                if damage==4:
+                    # D4 cannot degrade into a flat slab/landing pad:
+                    # three-dimensional broken command-room masonry remains.
+                    assert(piece.get_aabb().size.y*HQ.MODEL_SCALE>0.30)
                 assert(sample.get_meta("visual_damage_stage")==damage)
                 assert(sample.get_meta("visual_faction")==faction)
                 var crest:Node3D=sample.get_node_or_null(
