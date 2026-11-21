@@ -56,8 +56,22 @@ func _initialize() -> void:
     _check("reject invalid physical screen", _physical_safe_to_canvas(safe_area, Vector2i(width, height), Vector2i.ZERO) == Rect2())
     _check("reject invalid logical base", _physical_safe_to_canvas(safe_area, Vector2i.ZERO, Vector2i(2400, 1080)) == Rect2())
 
+    # Asymmetric insets and round-trip checks catch incorrect axis scaling.
+    # Test 16:9, wide and compact landscape devices independently.
+    for physical_size in [Vector2i(1920, 1080), Vector2i(2400, 1080), Vector2i(1600, 1200)]:
+        var physical_bounds := Rect2(Vector2.ZERO, Vector2(physical_size))
+        var inset_safe := Rect2(Vector2(71, 19), Vector2(physical_size) - Vector2(71 + 43, 19 + 57))
+        var canvas_bounds := _expanded_canvas(Vector2i(width, height), physical_size)
+        var projected := _physical_safe_to_canvas(inset_safe, Vector2i(width, height), physical_size)
+        var scale := canvas_bounds / Vector2(physical_size)
+        _check("asymmetric safe area valid at %s" % str(physical_size), _rect_inside(inset_safe, physical_bounds))
+        _check("asymmetric projection inside canvas at %s" % str(physical_size), _rect_inside(projected, Rect2(Vector2.ZERO, canvas_bounds)))
+        _check("asymmetric left/top preserved at %s" % str(physical_size), projected.position.distance_to(inset_safe.position * scale) < 0.01)
+        _check("asymmetric right/bottom preserved at %s" % str(physical_size), projected.end.distance_to(inset_safe.end * scale) < 0.01)
+        _check("physical-to-logical-to-physical roundtrip at %s" % str(physical_size), projected.position.distance_to(inset_safe.position * scale) < 0.01 and (projected.end / scale).distance_to(inset_safe.end) < 0.01)
+
     if failures.is_empty():
-        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks + 6 safe-area projection checks")
+        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks + 6 safe-area projection checks + 15 asymmetric inset checks")
         quit(0)
     else:
         for failure in failures:
