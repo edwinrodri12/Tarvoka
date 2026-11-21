@@ -159,10 +159,10 @@ func _run() -> void:
                 check(opaque(lite),"LOD8 also fully opaque")
                 lite.free()
     check(colors.size()==8,"all eight faction palettes are distinct")
-    check(captures==13,"8 faction + 5 alternate-role native screenshots")
+    check(captures==17,"8 faction + 9 alternate-role native screenshots")
     if failures > 0:
         push_error("FAIL INFANTRY V1 NATIVE 3D: %d issues" % failures)
         quit(1)
     else:
-        print("PASS INFANTRY V1 NATIVE 3D: 6 roles x 8 factions x 2 LOD; 13 PNG; reversible damage and poses")
+        print("PASS INFANTRY V1 NATIVE 3D: 10 built artworks (6 core + 4 legacy), 8 factions, 2 LOD, 17 PNG")
         quit(0)
