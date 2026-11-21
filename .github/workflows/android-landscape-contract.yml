@@ -4,6 +4,7 @@ on:
     paths:
       - 'project.godot'
       - 'tests/test_android_landscape_contract.gd'
+      - 'tests/test_production_hud_bounds.gd'
       - '.github/workflows/android-landscape-contract.yml'
   workflow_dispatch:
 
@@ -30,10 +31,18 @@ jobs:
           set -o pipefail
           timeout 90s ./Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy --script res://tests/test_android_landscape_contract.gd 2>&1 | tee landscape-contract.log
           grep -q 'PASS ANDROID LANDSCAPE CONTRACT' landscape-contract.log
+      - name: Verify instantiated production HUD bounds
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 90s ./Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy --script res://tests/test_production_hud_bounds.gd 2>&1 | tee production-hud-bounds.log
+          grep -q 'PASS PRODUCTION HUD BOUNDS' production-hud-bounds.log
       - name: Preserve diagnostic log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-landscape-contract-log
-          path: landscape-contract.log
+          path: |
+            landscape-contract.log
+            production-hud-bounds.log
           if-no-files-found: ignore
