@@ -29,6 +29,7 @@ func _watertight(mesh:ArrayMesh)->bool:
     if faces.size()<90 or faces.size()%3!=0:
         return false
     var edges:Dictionary={}
+    var directed:Dictionary={}
     for i in range(0,faces.size(),3):
         var a:Vector3=faces[i]
         var b:Vector3=faces[i+1]
@@ -42,10 +43,58 @@ func _watertight(mesh:ArrayMesh)->bool:
                 return false
             var key:String=(k1+"|"+k2) if k1<k2 else (k2+"|"+k1)
             edges[key]=int(edges.get(key,0))+1
-    for count in edges.values():
-        if int(count)!=2:
+            var directional:String=k1+">"+k2
+            directed[directional]=int(directed.get(directional,0))+1
+    for key in edges.keys():
+        if int(edges[key])!=2:
+            return false
+        var halves:PackedStringArray=str(key).split("|")
+        if halves.size()!=2 or int(directed.get(halves[0]+">"+halves[1],0))!=1 or (
+                int(directed.get(halves[1]+">"+halves[0],0))!=1):
+            # Two touching faces MUST have opposite winding. A closed
+            # but inverted half-fin otherwise disappears with backface cull.
             return false
     return true
+
+func _swept_taper(mesh:ArrayMesh)->bool:
+    if mesh==null:
+        return false
+    var vertices:PackedVector3Array=mesh.get_faces()
+    if vertices.size()==0:
+        return false
+    var bottom_y:float=INF
+    var top_y:float=-INF
+    for v in vertices:
+        bottom_y=minf(bottom_y,v.y)
+        top_y=maxf(top_y,v.y)
+    if top_y-bottom_y<0.22:
+        return false
+    var bx_min:float=INF
+    var bx_max:float=-INF
+    var tx_min:float=INF
+    var tx_max:float=-INF
+    var bz_min:float=INF
+    var bz_max:float=-INF
+    var tz_min:float=INF
+    var tz_max:float=-INF
+    for v in vertices:
+        if absf(v.y-bottom_y)<0.0001:
+            bx_min=minf(bx_min,v.x)
+            bx_max=maxf(bx_max,v.x)
+            bz_min=minf(bz_min,v.z)
+            bz_max=maxf(bz_max,v.z)
+        elif absf(v.y-top_y)<0.0001:
+            tx_min=minf(tx_min,v.x)
+            tx_max=maxf(tx_max,v.x)
+            tz_min=minf(tz_min,v.z)
+            tz_max=maxf(tz_max,v.z)
+    var base_chord:float=bz_max-bz_min
+    var tip_chord:float=tz_max-tz_min
+    var base_thickness:float=bx_max-bx_min
+    var tip_thickness:float=tx_max-tx_min
+    var tip_sweep:float=absf(0.5*(tx_min+tx_max-bx_min-bx_max))
+    return base_chord>0.3 and tip_chord<base_chord*0.58 and (
+        tip_thickness<base_thickness*0.60 and tip_sweep>0.045)
 
 func _real_capture(img:Image)->bool:
     if img==null or img.is_empty() or img.get_width()<600:
@@ -121,7 +170,9 @@ func _run()->void:
                 if new_fin!=null and new_fin.mesh is ArrayMesh:
                     var arr:=new_fin.mesh as ArrayMesh
                     check(_watertight(arr),
-                        "new tapered fin has fully sealed sides, roots, tip caps and nondegenerate triangles")
+                        "V8 360 sealed geometry has opposite edge winding, no transparent reversed facets")
+                    check(_swept_taper(arr),
+                        "V8 sculpt is swept, thin and genuinely tapered: no square tip regressions")
                     check(arr.get_faces().size()/3==(32 if lod==8 else 44),
                         "Android and hero maintain deliberately distinct tessellation")
                     var surface:=new_fin.material_override as StandardMaterial3D
