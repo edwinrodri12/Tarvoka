@@ -1,0 +1,64 @@
+name: TARVOKA HQ V24 Original Unified 3D Studio QA
+on:
+  push:
+    branches: [feat/hq-v24-unified-studio-20261121]
+    paths:
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/HeadquartersBattle3D.gd"
+      - "scripts/ui/HeadquartersMapLOD3D.gd"
+      - "scripts/ui/HeadquartersCurvedRoof3D.gd"
+      - "tests/test_hq_v24_unified_studio.gd"
+      - ".github/workflows/hq-v24-unified-studio-qa.yml"
+  pull_request:
+    branches: [feat/hq-v23-smoke-combat-bridge-android-20261114]
+    paths:
+      - "scripts/ui/CombinedArtStudioWeb.gd"
+      - "scripts/ui/HeadquartersBattle3D.gd"
+      - "scripts/ui/HeadquartersMapLOD3D.gd"
+      - "scripts/ui/HeadquartersCurvedRoof3D.gd"
+      - "tests/test_hq_v24_unified_studio.gd"
+      - ".github/workflows/hq-v24-unified-studio-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  same-studio-original:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download Godot 4.3
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/hq-studio-v24-godot.zip
+          unzip -oq /tmp/hq-studio-v24-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import original Godot textures
+        run: |
+          set -euo pipefail
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/hq-v24-studio-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:' /tmp/hq-v24-studio-import.log; then exit 1; fi
+      - name: Test same official art studio; render five real comparison images
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 120s \
+            xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_hq_v24_unified_studio.gd \
+            2>&1 | tee /tmp/hq-v24-studio-qa.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/hq-v24-studio-qa.log; then exit 1; fi
+          grep -F 'PASS HQ V24 UNIFIED STUDIO:' /tmp/hq-v24-studio-qa.log
+      - name: Attach original viewer comparison screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V24-original-studio-3D-QA
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/hq_v24_studio/*.png
+            /tmp/hq-v24-studio-import.log
+            /tmp/hq-v24-studio-qa.log
