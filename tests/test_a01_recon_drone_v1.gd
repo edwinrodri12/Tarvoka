@@ -30,6 +30,14 @@ func _has_rendered_airframe(img:Image)->bool:
                 distinct["%d-%d-%d" % [int(c.r*10.0),int(c.g*10.0),int(c.b*10.0)]]=true
     return foreground>28 and distinct.size()>5
 
+func _visible_mesh_count(model:Node3D)->int:
+    var active:int=0
+    for node in model.find_children("*","MeshInstance3D",true,false):
+        var part:=node as MeshInstance3D
+        if part!=null and part.visible and part.is_visible_in_tree():
+            active+=1
+    return active
+
 func _has_opaque_solid_parts(model:Node3D)->bool:
     var meshes:Array[Node]=model.find_children("*","MeshInstance3D",true,false)
     var count:int=0
@@ -114,6 +122,13 @@ func _run()->void:
                 "A01 V5 keeps native LOD8/LOD13 without gameplay changes")
             check(bool(model.get_meta("tarvoka_a01_v5_3d_visual_only",false)),
                 "A01 V5 does not change unit attack, vision or stats")
+            var active_mesh_count:int=_visible_mesh_count(model)
+            if faction==0:
+                print("A01 V5 ANDROID MESH BUDGET LOD%d: %d visible native meshes" % [
+                    lod,active_mesh_count])
+            check(active_mesh_count>=30 and active_mesh_count<=(
+                70 if lod==8 else 95),
+                "A01 V5 active mesh count respects Android and hero visual budgets")
             for side in [-1,1]:
                 var new_tail:=model.find_child(
                     TailV5.TAIL_L if side<0 else TailV5.TAIL_R,
@@ -125,6 +140,17 @@ func _run()->void:
                     true,false) as MeshInstance3D
                 check(old_tail!=null and not old_tail.visible,
                     "obsolete rectangular tail is hidden rather than doubled")
+                var old_boom:=model.find_child(
+                    "A01_V1_ClosedTailBoom_"+str(side),
+                    true,false) as MeshInstance3D
+                check(old_boom!=null and not old_boom.visible,
+                    "old rectangular support boom does not double the new sculpt")
+                var soft_boom:=model.find_child(
+                    TailV5.BOOM_L if side<0 else TailV5.BOOM_R,
+                    true,false) as MeshInstance3D
+                check(soft_boom!=null and soft_boom.visible and
+                    soft_boom.mesh is SphereMesh,
+                    "both V5 tail supports are closed composite ellipsoids")
                 var tail_band:=model.find_child(
                     "A01_V5_VtailFactionPanel"+("_L" if side<0 else "_R"),
                     true,false) as MeshInstance3D
