@@ -12,7 +12,7 @@ func _run() -> void:
     root.add_child(main)
     await process_frame
     await process_frame
-    for size in [Vector2(1280, 720), Vector2(1600, 900)]:
+    for size in [Vector2(1280, 720), Vector2(1600, 900), Vector2(2400, 1080), Vector2(1600, 1200)]:
         main.size = size
         await process_frame
         await process_frame
@@ -34,7 +34,7 @@ func _run() -> void:
                 failures.append("%s outside logical viewport %s: %s" % [name, size, rect])
     main.queue_free()
     if failures.is_empty():
-        print("PASS PRODUCTION HUD BOUNDS: instantiated Main at 1280x720 and 1600x900")
+        print("PASS PRODUCTION HUD BOUNDS: instantiated Main at 1280x720, 1600x900, 2400x1080 and 1600x1200")
         quit(0)
     else:
         for failure in failures:
