@@ -86,9 +86,20 @@ static func apply(model: Node3D, role: String, faction_color: Color, hero: bool)
     var rubber: StandardMaterial3D=_mat(Color("#252f31"),0.02,0.90)
     var seam: StandardMaterial3D=_mat(Color("#445b55"),0.04,0.86)
 
-    # Replace static V5 rear board with the same silhouette on a real hinge.
-    # Grouping both wings with the central plate prevents floating components
-    # when inspecting the model from above, below, front and back.
+    # Structural mount stays fixed to the soldier's TorsoRig. Earlier straps
+    # were parented to the moving board and visibly floated away while opening.
+    _box(chest,"V6_BancadaFijaBisagra",
+        Vector3(0,0.40,0.53),Vector3(0.88,0.16,0.16),dark)
+    for side in [-1,1]:
+        var mount_x: float=float(side)*0.42
+        _box(chest,"V6_EscuadraFija_%d"%side,
+            Vector3(mount_x,0.27,0.575),Vector3(0.12,0.33,0.13),steel)
+        _pin(chest,"V6_EjeFijoBisagra_%d"%side,
+            Vector3(mount_x,0.39,0.66),0.19,0.045,steel,
+            Vector3(0,0,90))
+
+    # Replace the static V5 board with a single rotating local assembly.
+    # Moving wings remain children of this pivot; shoulder straps stay fixed.
     var pivot: Node3D=_joint(chest,RIG,Vector3(0,0.10,0.55))
     _box(pivot,PANEL,Vector3(0,0,0.13),Vector3(1.12,0.68,0.12),enamel)
     _box(pivot,"V6_CostraBlindajeExterior",Vector3(0,-0.045,0.206),
@@ -109,9 +120,11 @@ static func apply(model: Node3D, role: String, faction_color: Color, hero: bool)
             Vector3(edge*0.08,0.16,0.067),Vector3(0.13,0.16,0.029),faction)
         _box(pivot,"V6_RielSoldado_%d"%side,Vector3(edge*0.42,-0.13,0.212),
             Vector3(0.055,0.30,0.027),steel)
-        # Back straps physically attach to the folded metal plate.
-        _box(pivot,"V6_CinchaAnclada_%d"%side,
-            Vector3(edge*0.37,-0.14,0.044),Vector3(0.11,0.36,0.08),seam)
+        # Fixed back straps remain attached to the body as the board swivels.
+        # Folded position matches the original V6 geometry (pivot offset).
+        _box(chest,"V6_CinchaAnclada_%d"%side,
+            Vector3(edge*0.37,-0.04,0.594),
+            Vector3(0.11,0.36,0.08),seam)
         if hero:
             _pin(pivot,"V6_PernoBisagra_%d"%side,
                 Vector3(edge*0.50,0.33,0.13),0.13,0.054,

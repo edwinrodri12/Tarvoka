@@ -6,6 +6,8 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Roster=preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
 const EngineerV6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const ClosureV7=preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
+const PremiumV8=preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -134,6 +136,30 @@ func _run() -> void:
             Models.faction_paint_color(0)),
             role+" hero colors restore exactly after switching factions")
         if role=="infantry_engineer":
+            must(ClosureV7.has_model(final_soldier),
+                "published engineer uses the FULL opaque rear helmet and neck")
+            must(PremiumV8.has_model(final_soldier),
+                "same online Godot Studio loads V8 sculpted shoulder and closed shield")
+            var shield_v8: Node3D=final_soldier.find_child(
+                PremiumV8.SHIELD,true,false) as Node3D
+            var rifle_v8: Node3D=final_soldier.find_child(
+                PremiumV8.RIFLE,true,false) as Node3D
+            must(shield_v8!=null and rifle_v8!=null,
+                "V8 full physical armor and detailed weapon remain in one viewport")
+
+            # Verify real CAMERA buttons do not crop body on mobile-like UI.
+            studio.call("_infantry_review_focus",false)
+            var framed_camera: Camera3D=studio.get("camera") as Camera3D
+            must(framed_camera!=null and framed_camera.size>=3.5 and
+                framed_camera.size<=4.4,
+                "full-body camera frame shows boots and complete helmet")
+            studio.call("_infantry_review_focus",true)
+            must(framed_camera!=null and is_equal_approx(
+                framed_camera.size,2.15),
+                "helmet detail button zooms the SAME native camera")
+            studio.call("_infantry_review_focus",false)
+            must(framed_camera!=null and framed_camera.size>=3.5,
+                "return to complete character restores body framing")
             # Actual central 360 scene: not a fake or second renderer.
             must(EngineerV6.has_model(final_soldier),
                 "engineer V6 real articulated mesh loaded in shared SubViewport")
@@ -151,6 +177,19 @@ func _run() -> void:
             await create_timer(1.4).timeout
             must(shield!=null and is_zero_approx(shield.rotation_degrees.x),
                 "barrier folds flat and does not detach from backpack")
+            # Reversing a live animation must preserve the current hinge angle;
+            # V6 originally snapped 0->1 before interpolating in reverse.
+            studio.call("_studio_run_animation","engineer_v6_inspect")
+            await create_timer(0.42).timeout
+            var interrupted: float=shield.rotation_degrees.x
+            must(interrupted < -6.0 and interrupted > -53.0,
+                "engineer hinge occupies an intermediate angle while opening")
+            studio.call("_studio_run_animation","engineer_v6_pack")
+            must(absf(shield.rotation_degrees.x-interrupted)<1.0,
+                "reverse action does not teleport the shield to fully open")
+            await create_timer(1.30).timeout
+            must(is_zero_approx(shield.rotation_degrees.x),
+                "interrupted hinge smoothly returns to folded position")
             studio.call("_studio_run_animation","work")
             await process_frame
             var driver: Node3D=final_soldier.find_child(

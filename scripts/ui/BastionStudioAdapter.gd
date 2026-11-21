@@ -261,6 +261,7 @@ var infantry_six_panel: VBoxContainer
 var infantry_360_tween: Tween = null
 var infantry_review_v2: bool = true
 var infantry_review_lod: int = 13
+var _infantry_helmet_focus: bool = false
 
 
 func _ready() -> void:
@@ -478,6 +479,8 @@ func _install_unified_studio_navigation() -> void:
         "Ver V2",func(): _infantry_review_version(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
+    _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
+        "Acercar casco",func(): _infantry_review_focus(true))
     infantry_360_panel.visible=false
 
     # Revision comparisons are kept for QA but not shown on the front page.
@@ -1369,6 +1372,18 @@ func _g16_review_spin() -> void:
 
 # The same SubViewport, camera, scene and role/faction controls are reused.
 # V1 and V2 are real Godot MeshInstance3D trees, not image swaps.
+func _infantry_review_focus(closeup: bool) -> void:
+    if model_root==null or not InfantryV1.supports(_role):
+        return
+    if closeup and infantry_review_lod!=13:
+        _infantry_review_lod(13)
+    _infantry_helmet_focus=closeup
+    _update_camera()
+    if status_label!=null:
+        status_label.text=(
+            "Infantería · acercamiento real al casco y cuello, mismo modelo 3D"
+            if closeup else "Infantería · cuerpo completo sin recorte, mismo visor 3D")
+
 func _infantry_review_look(yaw: float, perspective: String) -> void:
     if model_root==null or not InfantryV1.supports(_role):
         return
@@ -1478,6 +1493,7 @@ func _infantry_review_version(latest: bool) -> void:
             "V2" if latest else "V1",infantry_review_lod]
 
 func _infantry_review_lod(lod: int) -> void:
+    _infantry_helmet_focus=false
     if _infantry_review_rebuild(infantry_review_v2,lod):
         # Orthographic preview at reduced visual size, not a separate map.
         # LOD8 uses physically rebuilt low-poly geometry; players may still
@@ -1499,12 +1515,21 @@ func _engineer_v6_run(opening: bool) -> void:
         _infantry_tween.kill()
     if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
         _engineer_v6_tween.kill()
-    var start: float=0.0 if opening else 1.0
+    # Preserve the actual hinge position when reversing an interrupted
+    # inspection: never snap the engineering barrier between its states.
+    var hinge: Node3D=model_root.find_child(
+        EngineerFinishV6.RIG,true,false) as Node3D
+    if hinge==null:
+        return
+    var start: float=clampf(-hinge.rotation_degrees.x/54.0,0.0,1.0)
     var end: float=1.0 if opening else 0.0
-    _engineer_v6_tick(start,model_root)
-    _engineer_v6_tween=create_tween()
-    _engineer_v6_tween.tween_method(
-        Callable(self,"_engineer_v6_tick").bind(model_root),start,end,1.25)
+    if absf(end-start)<0.0001:
+        _engineer_v6_tick(end,model_root)
+    else:
+        _engineer_v6_tween=create_tween()
+        _engineer_v6_tween.tween_method(
+            Callable(self,"_engineer_v6_tick").bind(model_root),
+            start,end,maxf(0.08,1.25*absf(end-start)))
     status_label.text=(
         "Ingeniero V6 · barrera articulada abierta para inspección 360°, sin efecto táctico"
         if opening else
@@ -4106,6 +4131,14 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
+            infantry_review_lod==13):
+        if _infantry_helmet_focus:
+            camera.size=2.15
+            camera.look_at(Vector3(0,2.06,0),Vector3.UP)
+        elif _role=="infantry_engineer":
+            camera.size=3.8 / maxf(0.90,_zoom)
+            camera.look_at(Vector3(0,1.18,0),Vector3.UP)
     if _role=="uav_recon" and model_root!=null and camera!=null:
         if _a01_review_focus=="optica":
             var optics:=model_root.find_child(A01Recon.SENSOR,true,false) as Node3D
@@ -4249,6 +4282,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _infantry_helmet_focus=false
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
     if _a01_review_tween!=null and _a01_review_tween.is_running():
