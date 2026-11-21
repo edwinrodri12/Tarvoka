@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/tools/AssetOrbitCamera.gd" id="1_orbit"]
+[ext_resource type="Script" path="res://scripts/tools/AssetInspectionPreview.gd" id="2_preview"]
+[sub_resource type="SphereMesh" id="SphereMesh_demo"]
+
+[node name="AssetInspectionSmoke" type="Node3D"]
+script = ExtResource("2_preview")
+
+[node name="OrbitRig" type="Node3D" parent="."]
+script = ExtResource("1_orbit")
+input_enabled = true
+
+[node name="SampleAsset" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_demo")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-45, 35, 0)
