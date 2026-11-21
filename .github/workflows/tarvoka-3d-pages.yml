@@ -1414,6 +1414,7 @@ jobs:
           grep -F 'PASS G16 V6 SHARED STUDIO:' /tmp/g16-v6-shared-ui.log
           test -s build/qa/g16-v6/g16-v6-unified-studio.png
           test -s build/qa/g16-v6/g16-v6-unified-deployed.png
+          test -s build/qa/g16-v6/g16-v6-unified-hose-closeup.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.
