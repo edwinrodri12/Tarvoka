@@ -17,6 +17,7 @@ func _run() -> void:
         await process_frame
         await process_frame
         var initial_visibility: Dictionary = {}
+        var initial_geometry: Dictionary = {}
         for compact_mode in [false, true, false]:
             main.call("_set_compact_hud", compact_mode)
             await process_frame
@@ -26,8 +27,19 @@ func _run() -> void:
                 var snapshot := _visible_button_paths(main)
                 if initial_visibility.is_empty():
                     initial_visibility = snapshot
+                    initial_geometry = _visible_button_rects(main)
                 elif snapshot != initial_visibility:
                     failures.append("expanded HUD visibility not restored at %s: before=%s after=%s" % [size, initial_visibility, snapshot])
+                else:
+                    var restored_geometry := _visible_button_rects(main)
+                    for path in initial_geometry:
+                        if not restored_geometry.has(path):
+                            failures.append("expanded HUD button geometry missing after restoration at %s: %s" % [size, path])
+                            continue
+                        var before: Rect2 = initial_geometry[path]
+                        var after: Rect2 = restored_geometry[path]
+                        if before.position.distance_to(after.position) > 1.0 or before.size.distance_to(after.size) > 1.0:
+                            failures.append("expanded HUD button geometry not restored at %s: %s before=%s after=%s" % [size, path, before, after])
     main.queue_free()
     await process_frame
     if failures.is_empty():
@@ -114,4 +126,25 @@ func _visible_button_paths(main: Control) -> Dictionary:
             "end_turn_button", "order_cancel", "supply_button"]:
         var button: BaseButton = immersive.get(name) if immersive != null else null
         result["immersive/" + name] = button != null and button.is_visible_in_tree()
+    return result
+
+# Geometry is compared only for visible production buttons. Hidden contextual
+# actions are excluded; their layout is validated when they become visible.
+func _visible_button_rects(main: Control) -> Dictionary:
+    var result: Dictionary = {}
+    for name in ["compact_confirm", "compact_cancel", "compact_end_turn",
+            "expanded_confirm", "expanded_cancel", "expanded_end_turn",
+            "compact_menu_button", "compact_center", "compact_iso",
+            "compact_options_button", "compact_alerts_button",
+            "compact_next_unit", "compact_attention_unit", "compact_threat_button"]:
+        var button: BaseButton = main.get(name)
+        if button != null and button.is_visible_in_tree():
+            result[name] = button.get_global_rect()
+    var immersive: Control = main.get("immersive_battle_hud")
+    if immersive != null:
+        for name in ["menu_button", "objective_button", "battle_3d_button",
+                "end_turn_button", "order_cancel", "supply_button"]:
+            var button: BaseButton = immersive.get(name)
+            if button != null and button.is_visible_in_tree():
+                result["immersive/" + name] = button.get_global_rect()
     return result
