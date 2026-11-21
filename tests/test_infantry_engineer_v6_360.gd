@@ -175,6 +175,12 @@ func _run() -> void:
                 camera.position=positions[side]
                 camera.look_at(Vector3(0,1.15,0),Vector3.UP)
                 await _frame(view,"engineer_v6_%s_%s"%[stage,side])
+        # Capture the real mid-hinge interval: fixed straps stay behind.
+        Engineer.pose(art,"inspect",0.5)
+        for side in ["right","rear"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+            await _frame(view,"engineer_v6_half_open_%s"%side)
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
@@ -188,10 +194,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==10,"ten authentic Godot V6 360 comparison PNGs")
+    check(shots==12,"twelve authentic Godot V6 360 comparison PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 10 real PNGs")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 12 real PNGs")
         quit(0)
