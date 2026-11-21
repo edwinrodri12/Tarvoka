@@ -15,6 +15,18 @@ func verify(ok:bool,reason:String)->void:
         failures+=1
         push_error("A01 V6 DAMAGE QA: "+reason)
 
+func _changed_render_pixels(a:Image,b:Image)->int:
+    if a==null or b==null or a.get_size()!=b.get_size():
+        return 0
+    var count:int=0
+    for y in range(24,a.get_height()-24,4):
+        for x in range(24,a.get_width()-24,4):
+            var before:Color=a.get_pixel(x,y)
+            var after:Color=b.get_pixel(x,y)
+            if absf(before.r-after.r)+absf(before.g-after.g)+absf(before.b-after.b)>0.14:
+                count+=1
+    return count
+
 func _initialize()->void:
     call_deferred("_run")
 
@@ -77,6 +89,7 @@ func _run()->void:
             else:
                 verify(false,"V5 faction tail panel remains visible under damage")
 
+            var last_damage_render:Image=null
             for damage_level in range(5):
                 verify(Damage.set_stage(model,damage_level),
                     "set physical damage stage %d" % damage_level)
@@ -104,9 +117,22 @@ func _run()->void:
                     "out-of-range damage requests never corrupt state")
                 if damage_level>=2:
                     verify(Damage.animate(model,0.35),"real smoke follows native clock")
+                    for smoke_idx in range(2):
+                        var wisp:=model.find_child("A01_V6_SmokePlume_"+str(smoke_idx),
+                            true,false) as MeshInstance3D
+                        var cone:=wisp.mesh as CylinderMesh if wisp!=null else null
+                        verify(cone!=null and cone.top_radius<cone.bottom_radius,
+                            "D2-D4 tapered opaque smoke replaces unrealistic balloons")
                 else:
                     verify(not Damage.animate(model,0.35),
                         "intact and scratched UAV do not emit smoke")
+                var active_meshes:int=0
+                for candidate in model.find_children("*","MeshInstance3D",true,false):
+                    var visual:=candidate as MeshInstance3D
+                    if visual!=null and visual.visible and visual.is_visible_in_tree():
+                        active_meshes+=1
+                verify(active_meshes<=(70 if lod==8 else 95),
+                    "even destroyed UAV remains under Android/hero mesh budget")
                 for node in model.find_children("A01_V6_*","MeshInstance3D",true,false):
                     var part:=node as MeshInstance3D
                     verify(part!=null and part.mesh!=null and
@@ -122,6 +148,10 @@ func _run()->void:
                     verify(screenshot!=null and not screenshot.is_empty(),
                         "native 3D screenshot at stage %d" % damage_level)
                     if screenshot!=null and not screenshot.is_empty():
+                        if last_damage_render!=null:
+                            verify(_changed_render_pixels(last_damage_render,screenshot)>=5,
+                                "damage D%d produces observable new physical pixels" % damage_level)
+                        last_damage_render=screenshot
                         verify(screenshot.save_png("%s/a01-v6-d%d.png" % [
                             OUT,damage_level])==OK,
                             "record actual native damage stage %d" % damage_level)
