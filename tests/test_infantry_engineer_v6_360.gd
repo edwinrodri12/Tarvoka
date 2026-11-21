@@ -4,6 +4,8 @@ extends SceneTree
 # opaque faction PBR, four-angle camera orbit and Android LOD8.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
+const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -19,6 +21,39 @@ func meshes(n: Node) -> int:
     for c in n.get_children():
         amount+=meshes(c)
     return amount
+
+# Sealed polygon topology: no open thin planes, missing caps or holes.
+func _mesh_key(p: Vector3) -> String:
+    return "%d:%d:%d" % [roundi(p.x*100000.0),
+        roundi(p.y*100000.0),roundi(p.z*100000.0)]
+
+func _watertight(shape: Mesh) -> bool:
+    if not shape is ArrayMesh or shape.get_surface_count()==0:
+        return false
+    for surface in range(shape.get_surface_count()):
+        var arrays: Array=shape.surface_get_arrays(surface)
+        var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var raw_indices: Variant=arrays[Mesh.ARRAY_INDEX]
+        var indices: PackedInt32Array=(
+            raw_indices if raw_indices is PackedInt32Array else PackedInt32Array())
+        var total: int=indices.size() if indices.size()>0 else vertices.size()
+        if total<12 or total%3!=0:
+            return false
+        var edges: Dictionary={}
+        for t in range(0,total,3):
+            var triangle: Array[String]=[]
+            for j in range(3):
+                var index: int=indices[t+j] if indices.size()>0 else t+j
+                triangle.append(_mesh_key(vertices[index]))
+            for j in range(3):
+                var edge: Array[String]=[triangle[j],triangle[(j+1)%3]]
+                edge.sort()
+                var key: String=edge[0]+"|"+edge[1]
+                edges[key]=int(edges.get(key,0))+1
+        for count in edges.values():
+            if int(count)!=2:
+                return false
+    return true
 
 func fully_opaque(n: Node) -> bool:
     if n is MeshInstance3D:
@@ -56,6 +91,80 @@ func _run() -> void:
             if model==null:
                 continue
             check(Engineer.has_model(model),"real V6 installed F%d LOD%d"%[faction,lod])
+            check(ClosureV7.has_model(model),"rear helmet/neck V7 installed F%d LOD%d"%[faction,lod])
+            check(PremiumV8.has_model(model),"V8 real PBR finish installed F%d LOD%d"%[faction,lod])
+            var actual_shield: MeshInstance3D=model.find_child(
+                PremiumV8.SHIELD,true,false) as MeshInstance3D
+            var gun_detail: MeshInstance3D=model.find_child(
+                PremiumV8.RIFLE,true,false) as MeshInstance3D
+            var shoulder: MeshInstance3D=model.find_child(
+                PremiumV8.SHOULDER+"_1",true,false) as MeshInstance3D
+            var old_shoulder: Node3D=model.find_child(
+                "Hombrera_1",true,false) as Node3D
+            check(actual_shield!=null and actual_shield.mesh is ArrayMesh and
+                actual_shield.get_parent().name=="V6_BarreraArticuladaRig" and
+                _watertight(actual_shield.mesh),
+                "V8 bevel shield is watertight and attached to moving hinge")
+            var sealed_center: MeshInstance3D=model.find_child(
+                "V8_NucleoAceroBlindadoCerrado",true,false) as MeshInstance3D
+            check(sealed_center!=null and sealed_center.mesh is ArrayMesh and
+                _watertight(sealed_center.mesh) and
+                sealed_center.position.z>0.26 and
+                sealed_center.get_parent()==actual_shield.get_parent(),
+                "rear shield has a real sealed metallic center, not a dark hole")
+            check(gun_detail!=null and gun_detail.mesh is ArrayMesh and
+                gun_detail.get_parent().name=="ArmamentoRig" and
+                _watertight(gun_detail.mesh),
+                "V8 sealed rifle receiver follows real weapon rig")
+            check(shoulder!=null and shoulder.mesh is SphereMesh and
+                old_shoulder!=null and not old_shoulder.visible,
+                "anatomical moving shoulder replaces cuboid prototype")
+            for side in [-1,1]:
+                var kneeseal: MeshInstance3D=model.find_child(
+                    "V8_JuntaRodillaCerrada_%d"%side,true,false) as MeshInstance3D
+                var kneerear: MeshInstance3D=model.find_child(
+                    "V8_CantoneraRodillaPosterior_%d"%side,true,false) as MeshInstance3D
+                var calf: MeshInstance3D=model.find_child(
+                    "V8_PantorrillaContinua_%d"%side,true,false) as MeshInstance3D
+                var leg_joint: Node3D=model.find_child(
+                    "PiernaRig_%d"%side,true,false) as Node3D
+                check(kneeseal!=null and kneerear!=null and calf!=null and
+                    leg_joint!=null and kneeseal.get_parent()==leg_joint and
+                    kneerear.get_parent()==leg_joint and
+                    kneeseal.mesh is SphereMesh and
+                    kneerear.position.z>0.12 and kneeseal.scale.z>=0.40,
+                    "rear knee hole physically closed on leg rig F%d L%d side%d"%
+                    [faction,lod,side])
+            var logo: MeshInstance3D=model.find_child(
+                PremiumV8.FACTION,true,false) as MeshInstance3D
+            var logo_mat: StandardMaterial3D=(
+                logo.material_override as StandardMaterial3D if logo!=null else null)
+            check(logo_mat!=null and
+                logo_mat.albedo_color.is_equal_approx(
+                    Models.faction_paint_color(faction)),
+                "V8 raised premium shield badge uses exact official faction paint")
+            var scalp: Node3D=model.find_child("Cabeza",true,false) as Node3D
+            check(scalp!=null and not scalp.visible,
+                "legacy bare cranium is never exposed in 360 engineer view")
+            var occipital: MeshInstance3D=model.find_child(
+                ClosureV7.REAR,true,false) as MeshInstance3D
+            var nape: MeshInstance3D=model.find_child(
+                ClosureV7.NAPE,true,false) as MeshInstance3D
+            var full_mask: MeshInstance3D=model.find_child(
+                ClosureV7.MASK,true,false) as MeshInstance3D
+            var rear_paint: MeshInstance3D=model.find_child(
+                ClosureV7.COLOR,true,false) as MeshInstance3D
+            check(occipital!=null and occipital.mesh is SphereMesh and
+                occipital.position.z>=0.17 and occipital.scale.z>=0.38,
+                "full-depth enclosed rear helmet overlaps former exposed scalp")
+            check(nape!=null and full_mask!=null and nape.visible and full_mask.visible,
+                "helmet connects down to nape; respirator closes front face")
+            var helmet_color: StandardMaterial3D=(
+                rear_paint.material_override as StandardMaterial3D
+                if rear_paint!=null else null)
+            check(helmet_color!=null and helmet_color.albedo_color.is_equal_approx(
+                Models.faction_paint_color(faction)),
+                "official faction color remains on protected rear helmet")
             check(fully_opaque(model),"all V6 polygons opaque F%d LOD%d"%[faction,lod])
             var board: MeshInstance3D=model.find_child(
                 Engineer.PANEL,true,false) as MeshInstance3D
@@ -73,8 +182,19 @@ func _run() -> void:
             check(model.find_child("V5_BarreraPlegadaIngeniero",true,false)!=null and
                 not (model.find_child("V5_BarreraPlegadaIngeniero",true,false) as Node3D).visible,
                 "legacy static board hidden, not duplicated by new moving shield")
+            var chest: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+            var strap: Node3D=model.find_child(
+                "V6_CinchaAnclada_-1",true,false) as Node3D
+            var support: Node3D=model.find_child(
+                "V6_BancadaFijaBisagra",true,false) as Node3D
+            check(strap!=null and chest!=null and strap.get_parent()==chest and
+                support!=null and support.get_parent()==chest,
+                "straps and hinge mounts remain on torso, not moving armor")
+            var strap_before: Vector3=strap.position if strap!=null else Vector3.ZERO
             check(Engineer.pose(model,"inspect",1.0),
                 "native 3D shield inspection pose")
+            check(strap!=null and strap.position.is_equal_approx(strap_before),
+                "strap stays fixed while rear plate articulates")
             var hinge: Node3D=model.find_child(Engineer.RIG,true,false) as Node3D
             var left: Node3D=model.find_child(Engineer.WINGS[0],true,false) as Node3D
             var right: Node3D=model.find_child(Engineer.WINGS[1],true,false) as Node3D
@@ -114,8 +234,9 @@ func _run() -> void:
     for other_role in ["line","infantry_sniper","infantry_medic",
             "infantry_logistic","infantry_commando"]:
         var other: Node3D=Models.build(other_role,0,true,13)
-        check(other!=null and not Engineer.has_model(other),
-            "no V6 shield on other core role "+other_role)
+        check(other!=null and not Engineer.has_model(other) and
+            not ClosureV7.has_model(other) and not PremiumV8.has_model(other),
+            "no engineer V6/V7/V8 art installed on another core role "+other_role)
         if other!=null:
             other.free()
 
@@ -164,6 +285,44 @@ func _run() -> void:
                 camera.position=positions[side]
                 camera.look_at(Vector3(0,1.15,0),Vector3.UP)
                 await _frame(view,"engineer_v6_%s_%s"%[stage,side])
+        # Capture the real mid-hinge interval: fixed straps stay behind.
+        Engineer.pose(art,"inspect",0.5)
+        for side in ["right","rear"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+            await _frame(view,"engineer_v6_half_open_%s"%side)
+        # These close views detect exposed skin or neck gaps hidden in a
+        # general full-body thumbnail. They use REAL geometry and PBR.
+        Engineer.pose(art,"reset",0.0)
+        camera.size=2.15
+        for side in ["rear","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,2.07,0),Vector3.UP)
+            await _frame(view,"engineer_v7_full_helmet_%s_close"%side)
+        camera.size=3.6
+        # Real premium close-ups for the previously under-detailed areas.
+        # Model stays in the same SubViewport, not a stock/reference image.
+        Engineer.pose(art,"idle",0.0)
+        camera.size=2.50
+        for side in ["front","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.56,0),Vector3.UP)
+            await _frame(view,"engineer_v8_sculpted_chest_rifle_%s"%side)
+        camera.size=2.40
+        Engineer.pose(art,"inspect",0.0)
+        for side in ["rear","left"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.65,0),Vector3.UP)
+            await _frame(view,"engineer_v8_beveled_rear_shield_%s"%side)
+        # Full-height leg closeups are mandatory: original rear knee wedges
+        # only became visible when zooming beyond the generic hero camera.
+        camera.size=2.5
+        Engineer.pose(art,"reset",0.0)
+        for side in ["rear","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,0.60,0),Vector3.UP)
+            await _frame(view,"engineer_v8_sealed_knees_%s"%side)
+        camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
@@ -177,10 +336,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==10,"ten authentic Godot V6 360 comparison PNGs")
+    check(shots==20,"twenty authentic Godot V6/V7/V8 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 10 real PNGs")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 20 real PNGs; sealed knees, helmet and premium beveled sculpt")
         quit(0)
