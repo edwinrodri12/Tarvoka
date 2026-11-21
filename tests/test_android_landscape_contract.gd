@@ -33,8 +33,20 @@ func _initialize() -> void:
         _check("expand matches screen ratio at %s" % str(screen), absf(expanded.x / expanded.y - float(screen.x) / float(screen.y)) < 0.001)
     _check("reject invalid screen size", _expanded_canvas(Vector2i(width, height), Vector2i(0, 720)) == Vector2.ZERO)
 
+    # Safe-area geometry contract: HUD bounds must fit inside a device's
+    # usable rectangle, not merely inside its full physical viewport.
+    # These are pure regression controls, not measurements of live Controls.
+    var phone_screen := Rect2(Vector2.ZERO, Vector2(2400, 1080))
+    var safe_area := Rect2(Vector2(80, 24), Vector2(2240, 1032))
+    _check("safe area lies within physical screen", _rect_inside(safe_area, phone_screen))
+    _check("accept HUD within safe area", _rect_inside(Rect2(120, 60, 500, 140), safe_area))
+    _check("reject HUD under left cutout", not _rect_inside(Rect2(40, 60, 500, 140), safe_area))
+    _check("reject HUD beyond bottom inset", not _rect_inside(Rect2(120, 1010, 500, 80), safe_area))
+    _check("reject negative HUD dimensions", not _rect_inside(Rect2(120, 60, -10, 80), safe_area))
+    _check("reject nonpositive safe area", not _rect_inside(Rect2.ZERO, Rect2(0, 0, 0, 100)))
+
     if failures.is_empty():
-        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations")
+        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks")
         quit(0)
     else:
         for failure in failures:
@@ -58,3 +70,10 @@ func _expanded_canvas(base: Vector2i, screen: Vector2i) -> Vector2:
         return Vector2.ZERO
     var scale_factor: float = minf(float(screen.x) / float(base.x), float(screen.y) / float(base.y))
     return Vector2(float(screen.x), float(screen.y)) / scale_factor
+
+# Reject degenerate rectangles and ensure all four edges remain within bounds.
+# Caller must supply rectangles in the same physical pixel coordinate space.
+func _rect_inside(inner: Rect2, outer: Rect2) -> bool:
+    if inner.size.x <= 0.0 or inner.size.y <= 0.0 or outer.size.x <= 0.0 or outer.size.y <= 0.0:
+        return false
+    return inner.position.x >= outer.position.x and inner.position.y >= outer.position.y and inner.end.x <= outer.end.x and inner.end.y <= outer.end.y
