@@ -24,8 +24,8 @@ func _initialize() -> void:
     _check("reject zero viewport", not _is_landscape_size(1280, 0))
     _check("accept alternate landscape viewport", _is_landscape_size(1920, 1080))
 
-    if failures.is_empty():
-        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls")
+    # Mathematical regression for Godot expand canvas: no logical viewport cropping.\n    # These are geometry-only checks, not screenshots or physical touch tests.\n    for screen in [Vector2i(1280, 720), Vector2i(2400, 1080), Vector2i(1600, 1200), Vector2i(2520, 1080)]:\n        var expanded := _expanded_canvas(Vector2i(width, height), screen)\n        _check("expand preserves logical width at %s" % str(screen), expanded.x >= float(width) - 0.01)\n        _check("expand preserves logical height at %s" % str(screen), expanded.y >= float(height) - 0.01)\n        _check("expand matches screen ratio at %s" % str(screen), absf(expanded.x / expanded.y - float(screen.x) / float(screen.y)) < 0.001)\n    _check("reject invalid screen size", _expanded_canvas(Vector2i(width, height), Vector2i(0, 720)) == Vector2.ZERO)\n\n    if failures.is_empty():
+        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations")
         quit(0)
     else:
         for failure in failures:
@@ -41,3 +41,5 @@ func _is_landscape_size(width: int, height: int) -> bool:
 func _check(label: String, condition: bool) -> void:
     if not condition:
         failures.append(label)
+
+# Pure approximation of expand sizing; the shorter screen dimension keeps its\n# logical extent while the other dimension grows. Does not inspect Control nodes.\nfunc _expanded_canvas(base: Vector2i, screen: Vector2i) -> Vector2:\n    if base.x <= 0 or base.y <= 0 or screen.x <= 0 or screen.y <= 0:\n        return Vector2.ZERO\n    var scale_factor: float = minf(float(screen.x) / float(base.x), float(screen.y) / float(base.y))\n    return Vector2(float(screen.x), float(screen.y)) / scale_factor\n
