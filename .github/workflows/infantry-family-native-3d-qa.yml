@@ -45,6 +45,13 @@ jobs:
           grep -Fq 'InfantryV1.supports' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'InfantryFamilyV1.gd' .github/workflows/tarvoka-3d-pages.yml
           git diff --exit-code HEAD -- scripts/core/ModernArsenal.gd
+      - name: Parse specialist Godot script before loading full game imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 40s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_infantry_v4_preload.gd 2>&1 | tee /tmp/infantry-v4-preload.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:' /tmp/infantry-v4-preload.log; then exit 1; fi
+          grep -Fq 'PASS INFANTRY V4 ISOLATED PRELOAD:' /tmp/infantry-v4-preload.log
       - name: Import Godot 4.3; exclude publish-only Studio subclass
         shell: bash
         run: |
