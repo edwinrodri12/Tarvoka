@@ -198,6 +198,11 @@ var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
+# G16 in the SAME native online Godot viewer: camera presets and persistent
+# resupply inspection never affect gameplay or production stats.
+var g16_360_panel: VBoxContainer
+var _g16_review_tween: Tween = null
+var _g16_review_focus: String = "general"
 var _infantry_tween: Tween
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
@@ -381,6 +386,24 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(studio_camera_panel,"Alejar",func(): _change_zoom(-1),
         "Acercar",func(): _change_zoom(1))
     _button(studio_camera_panel,"Restablecer cámara",_reset_camera)
+    g16_360_panel=VBoxContainer.new()
+    g16_360_panel.name="G16V6_InspeccionReal360MismoVisor"
+    g16_360_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(g16_360_panel)
+    _title(g16_360_panel,"G16 V6 · INSPECCIÓN DE BLINDAJE Y SUMINISTROS",13)
+    _add_paired(g16_360_panel,
+        "Frente",func(): _g16_review_look(180.0,"general"),
+        "Trasera",func(): _g16_review_look(0.0,"general"))
+    _add_paired(g16_360_panel,
+        "Lateral izquierdo",func(): _g16_review_look(90.0,"general"),
+        "Lateral derecho",func(): _g16_review_look(270.0,"general"))
+    _add_paired(g16_360_panel,
+        "Manguera V6 abierta",func(): _g16_review_look(0.0,"suministros"),
+        "Ruedas y bajos",func(): _g16_review_look(0.0,"bajos"))
+    _add_paired(g16_360_panel,
+        "Giro 360°",_g16_review_spin,
+        "Vista completa",func(): _g16_review_look(35.0,"general"))
+    g16_360_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
     infantry_360_panel.add_theme_constant_override("separation",6)
@@ -1156,6 +1179,48 @@ func _studio_g11_turn_done(art: Node3D) -> void:
     if is_instance_valid(art):
         G11Rig.restore(art)
 
+# G16 V6 native camera presets: same SubViewport and real 3D geometry.
+# These are inspection tools only; the playable logistics rules do not change.
+func _g16_review_look(yaw: float, focus: String) -> void:
+    if _role!="logistics_mobile" or model_root==null or not G16ServiceV6.has_model(model_root):
+        return
+    if _g16_review_tween!=null and _g16_review_tween.is_running():
+        _g16_review_tween.kill()
+    _g16_review_focus=focus if focus in ["general","suministros","bajos"] else "general"
+    _yaw=yaw
+    model_root.rotation_degrees.y=yaw
+    if _g16_review_focus=="suministros":
+        if _g16_tween!=null and _g16_tween.is_running():
+            _g16_tween.kill()
+        G16ServiceV6.show_finish(model_root,true)
+        P06Models.restore_model_pose("logistics_mobile",model_root)
+        P06Models.pose_model("logistics_mobile",model_root,"resupply",1.0)
+    _update_camera()
+    if status_label!=null:
+        status_label.text="G16 V6 · %s · inspección real del mismo modelo 3D" % (
+            "suministros desplegados" if focus=="suministros" else (
+                "seis ruedas y bajos" if focus=="bajos" else "vista 360°"))
+
+func _g16_review_spin_tick(angle:float) -> void:
+    if _role!="logistics_mobile" or model_root==null:
+        return
+    _yaw=angle
+    model_root.rotation_degrees.y=angle
+
+func _g16_review_spin() -> void:
+    if _role!="logistics_mobile" or model_root==null or not G16ServiceV6.has_model(model_root):
+        return
+    if _g16_review_tween!=null and _g16_review_tween.is_running():
+        _g16_review_tween.kill()
+    _g16_review_focus="general"
+    _update_camera()
+    _g16_review_tween=create_tween()
+    _g16_review_tween.tween_method(
+        Callable(self,"_g16_review_spin_tick"),_yaw,_yaw+360.0,7.0
+    ).set_trans(Tween.TRANS_LINEAR)
+    if status_label!=null:
+        status_label.text="G16 V6 · giro real de 360° en visor online TARVOKA"
+
 # The same SubViewport, camera, scene and role/faction controls are reused.
 # V1 and V2 are real Godot MeshInstance3D trees, not image swaps.
 func _infantry_review_look(yaw: float, perspective: String) -> void:
@@ -1356,6 +1421,8 @@ func _refresh_unified_studio_navigation() -> void:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
     if infantry_360_panel!=null:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
+    if g16_360_panel!=null:
+        g16_360_panel.visible=not building and _role=="logistics_mobile"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
     _studio_rebuild_animation_catalog()
@@ -3792,6 +3859,20 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if _role=="logistics_mobile" and model_root!=null and camera!=null:
+        # The only camera that changes is the existing unified viewer.
+        # Keep close-ups stable during faction/color and zoom rebuilds.
+        if _g16_review_focus=="suministros":
+            var coupling:=model_root.find_child(G16ServiceV6.COUPLING,true,false) as Node3D
+            var target:Vector3=coupling.global_position if coupling!=null else Vector3(-2.1,1.3,0)
+            camera.position=target+Vector3(-4.6,2.6,3.1)
+            camera.look_at(target,Vector3.UP)
+            camera.size=3.65/maxf(0.65,_zoom)
+        elif _g16_review_focus=="bajos":
+            var target:=model_root.to_global(Vector3(-0.55,0.42,0))
+            camera.position=target+Vector3(-4.4,0.85,4.2)
+            camera.look_at(target,Vector3.UP)
+            camera.size=3.9/maxf(0.65,_zoom)
     if _role=="mlrs" and _g11_context_v25!=null and camera!=null:
         var center := Vector3(0,0.8,0)
         var facing: Vector3=(camera.position-center).normalized()
@@ -3904,6 +3985,10 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    if role!="logistics_mobile":
+        _g16_review_focus="general"
+    if _g16_review_tween!=null and _g16_review_tween.is_running():
+        _g16_review_tween.kill()
     var retain_night_v143: bool=(_heli_night_enabled_v143 and role=="attack_heli")
     if _heli_night_enabled_v143:
         _heli_set_night_v143(false)
@@ -4799,11 +4884,13 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root)
-        detail_label.text="G16 V5 · Camión logístico · 6×6 · %d mallas nativas" % P06Models.inspect_meshes(model_root)
+        var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root) and G16ServiceV6.has_model(model_root)
+        var stage:int=G16MechanicsV3.stage(model_root) if G16MechanicsV3.has_model(model_root) else 0
+        detail_label.text="G16 V6 EN DESARROLLO · Logística blindada 6×6 · %d mallas · daño %d/4" % [
+            P06Models.inspect_meshes(model_root),stage]
         status_label.text="G16 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
-            "V3 suministro táctico real; V4 arte 3D y destrucción visual" if ready_g16 else "acabado incompleto"]
+            "V6 · manguera articulada PBR y 4 etapas de daño (vista sin consumo de recursos)" if ready_g16 else "acabado V6 incompleto"]
         return
     if _role=="ew_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready:bool=bool(model_root.get_meta(G15DetailV11.FLAG,false))
@@ -4979,7 +5066,10 @@ func _g16_tick(t:float,art:Node3D,kind:String)->void:
 func _g16_done(art:Node3D,kind:String)->void:
     if not is_instance_valid(art):
         return
-    if kind in ["deploy","camp"]:
+    # The deployed hose/crane used to disappear after 2.1 seconds, making
+    # 360-degree visual review impossible. Keep service and unload poses
+    # fully open until the actual Stop/Pack action is requested.
+    if kind in ["deploy","camp","resupply","unload"]:
         P06Models.pose_model("logistics_mobile",art,kind,1.0)
     else:
         P06Models.restore_model_pose("logistics_mobile",art)
