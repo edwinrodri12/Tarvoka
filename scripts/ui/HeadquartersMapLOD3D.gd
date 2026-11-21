@@ -1,7 +1,9 @@
 extends RefCounted
 class_name TarvokaHeadquartersMapLOD3D
 
-# True low-poly 3D proxy for V4, never touches tactical rules or saves.
+# V24 tactical HQ skin reused from approved art V5; native grouped geometry.
+# Now supports eight factions + a genuinely neutral version and five
+# purely visual damage appearances. No economy, combat or save mutations.
 # Preserves the original V4 scene in a separate invisible subtree.
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const MATERIALS := ["concrete", "steel", "glass", "faction", "gold", "mark"]
@@ -17,6 +19,10 @@ static var _geometry_cache: Dictionary = {}
 
 static func _mat(key: String, color: Color) -> StandardMaterial3D:
     var tint: Color = color.darkened(0.17) if key == "faction" else PALETTE[key]
+    # Explicit neutral has NO yellow/gold accent: avoid reading it as
+    # Confederación Solar even when zooming out or under cloudy lighting.
+    if key == "gold" and color == Color("#65747d"):
+        tint = Color("#8e9da5")
     var identity: String = key + tint.to_html()
     if _cache.has(identity):
         return _cache[identity]
@@ -74,7 +80,7 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         clone.name = "MallaConsolidadaMapaV5"
         clone.mesh = _geometry_cache[cache_key]
         return clone
-    var color: Color = Style.faction_color(faction)
+    var color: Color = Color("#65747d") if faction == -1 else Style.faction_color(faction)
     var surfaces: Dictionary = {}
     for key in MATERIALS:
         var st := SurfaceTool.new()
@@ -104,6 +110,11 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         _box(steel,Vector3(0,y+0.09,0.25),Vector3(6.15,0.24,5.43))
         for s in [-1,1]:
             var sx: float = float(s)
+            if condition == "critico" and s == -1:
+                # Missing west wing; low fractured rubble takes its place.
+                _box(concrete,Vector3(sx*4.06,0.36,0.35),Vector3(2.30,0.54,3.85))
+                _box(steel,Vector3(sx*4.46,0.65,0.70),Vector3(1.75,0.19,1.72))
+                continue
             _box(concrete,Vector3(sx*4.06,1.10,0.35),Vector3(2.30,2.20,4.16))
             _box(steel,Vector3(sx*4.06,2.42,0.35),Vector3(2.6,0.25,4.48))
             _box(paint,Vector3(sx*4.06,2.54,-1.89),Vector3(2.13,0.17,0.17))
@@ -118,14 +129,19 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         _box(steel,Vector3(0,1.27,-3.18),Vector3(3.08,2.50,1.33))
         _box(glass,Vector3(0,1.18,-3.87),Vector3(1.38,1.44,0.10))
         var comm_h: float = 2.48+0.56*float(level-1)
-        _box(steel,Vector3(-4.50,2.54+comm_h*0.5,1.38),
-            Vector3(0.62,comm_h,0.62))
-        _box(glass,Vector3(-4.50,2.54+comm_h+0.13,1.38),
-            Vector3(1.51,0.50,1.52))
-        _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
-            Vector3(1.80,0.18,1.80))
-        _box(paint,Vector3(-5.13,4.92+0.41*float(level-1),0.43),
-            Vector3(1.05,0.70,0.07))
+        if condition == "critico":
+            # No floating tower on a wing already reduced to rubble.
+            _box(steel,Vector3(-4.40,0.41,1.38),
+                Vector3(0.65,0.18,1.1))
+        else:
+            _box(steel,Vector3(-4.50,2.54+comm_h*0.5,1.38),
+                Vector3(0.62,comm_h,0.62))
+            _box(glass,Vector3(-4.50,2.54+comm_h+0.13,1.38),
+                Vector3(1.51,0.50,1.52))
+            _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
+                Vector3(1.80,0.18,1.80))
+            _box(paint,Vector3(-5.13,4.92+0.41*float(level-1),0.43),
+                Vector3(1.05,0.70,0.07))
         _box(steel,Vector3(-1.86,y+1.04,0.76),Vector3(0.36,2.08,0.36))
         _dish(mark,Vector3(-1.86,y+2.35,0.66),0.96)
         _box(steel,Vector3(4.85,0.16,-4.08),Vector3(3.25,0.26,3.22))
@@ -136,8 +152,15 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         if level == 3:
             _box(concrete,Vector3(1.67,y+1.72,1.58),
                 Vector3(1.40,1.20,1.33))
-        if condition == "danado":
+        if condition in ["danado","leve","moderado","critico"]:
             _box(steel,Vector3(-2.30,1.61,-2.55),Vector3(0.79,0.74,0.14))
+        if condition in ["moderado","critico"]:
+            # Opaque shattered glazing and a broken frontal roof slab.
+            _box(steel,Vector3(0.58,1.12,-3.93),Vector3(0.40,1.02,0.17))
+            _box(concrete,Vector3(1.30,y+1.70,-2.65),Vector3(0.86,0.18,0.75))
+        if condition == "critico":
+            _box(steel,Vector3(-4.53,0.29,-2.65),Vector3(1.41,0.20,1.23))
+            _box(concrete,Vector3(1.80,0.34,-4.05),Vector3(0.95,0.60,0.83))
         if condition == "capturado":
             _box(paint,Vector3(0,0.12,-5.76),Vector3(2.31,0.04,0.17))
     var mesh := ArrayMesh.new()
@@ -188,9 +211,9 @@ static func set_distant(model: Node3D, distant: bool) -> bool:
 # mobile maps can show dozens of HQs without retaining hidden hero meshes.
 static func build_map_only(level: int, faction: int,
         condition: String = "operativo") -> Node3D:
-    if level < 1 or level > 3 or faction < 0 or faction >= 8:
+    if level < 1 or level > 3 or faction < -1 or faction >= 8:
         return null
-    if not condition in ["operativo","capturado","danado","destruido"]:
+    if not condition in ["operativo","capturado","danado","leve","moderado","critico","destruido"]:
         return null
     var node := Node3D.new()
     node.name = "CuartelGeneralMapaV6"
@@ -205,9 +228,9 @@ static func build_map_only(level: int, faction: int,
 
 static func shared_mesh(level: int, faction: int,
         condition: String = "operativo") -> ArrayMesh:
-    if level < 1 or level > 3 or faction < 0 or faction >= 8:
+    if level < 1 or level > 3 or faction < -1 or faction >= 8:
         return null
-    if not condition in ["operativo","capturado","danado","destruido"]:
+    if not condition in ["operativo","capturado","danado","leve","moderado","critico","destruido"]:
         return null
     var cache_key: String = "%d/%d/%s" % [level,faction,condition]
     if not _geometry_cache.has(cache_key):
@@ -218,3 +241,6 @@ static func shared_mesh(level: int, faction: int,
 
 static func cached_variant_count() -> int:
     return _geometry_cache.size()
+
+# A public 3D scene can request a fully neutral mesh without loading
+# a faction atlas (the neutral material is never a disguised gold faction).
