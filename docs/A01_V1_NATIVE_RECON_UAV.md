@@ -55,3 +55,21 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 **Prioridad V3 ejecutada en código (pendiente de confirmación nativa):** la prueba de Godot genera las 16 imágenes de facción/LOD y cinco nuevas vistas físicas del mismo dron (frontal, trasera, lateral, superior e inferior). Comprueba contraste real frente al fondo para detectar capturas vacías y recorre mallas 3D para rechazar materiales transparentes. El publicador usa marcadores V3 coherentes y existe un flujo exclusivo TARVOKA A01 Recon UAV V3 Native Visual QA con evidencia PNG propia.
 
 **Próxima prioridad:** revisar los 21 PNG reales cuando el CI concluya; corregir clipping, facciones ilegibles o contornos huecos; medir Android y después añadir daño visual escalonado sin inventar ataques. La ejecución de las pruebas no se da por aprobada solo porque el código esté incorporado.
+
+
+## Etapa V4 — alas de sección aerodinámica cerrada (Godot nativo verificado)
+
+- `scripts/ui/A01ReconAirfoilV4.gd`: dos alas volumétricas cerradas con raíz, sección intermedia hero, puntas estrechas y tapas reales; retira de la vista las alas rectangulares V1/V2.
+- En la ejecución de Godot 4.3 de noviembre de 2026 se generaron **21 capturas V4 auténticas** (16 facciones/LOD y cinco ángulos); la prueba nativa de geometría/materia pasó.
+- La inspección de las capturas confirmó que seguían visibles superficies de cola excesivamente rectangulares, por lo que V4 NO se aprueba como acabado final.
+- El visor compartido expuso una falla real al cambiar facción: el `UnitArtStudioWeb` original usaba pintura neutra (-1) para roles distintos de tanque. `BastionStudioAdapter` ahora reconstruye A01 en la MISMA escena con `_faction` y LOD13, y su prueba comprueba las ocho pinturas; se requiere CI del visor completo antes de declarar resuelto en producción.
+
+## Etapa V5 — estabilizadores en V y doble larguero aerodinámico (en prueba)
+
+- `scripts/ui/A01ReconTailV5.gd`: reemplaza visualmente las dos colas planas V1/V3 por perfiles triangulados y cerrados que se elevan hacia las puntas. Los dos largueros rectangulares se ocultan y se reemplazan por carenados elipsoidales sellados.
+- Bandas físicas de facción y bisagras oscuras sobre cada estabilizador; los controles, barrido del sensor y hélice no cambian.
+- El constructor `UnitModels3D.gd` ejecuta sucesivamente V1 → V2 → V3 → V4 → V5 en LOD8/13 para **un solo dron** del rol `uav_recon`.
+- `tests/test_a01_recon_drone_v1.gd` exige las 16 capturas por facción/LOD, cinco vistas adicionales, perfiles V4 y V5 cerrados, antiguos largueros ocultos, pintura y límite de mallas visibles (LOD8 ≤70, LOD13 ≤95).
+- `tests/test_a01_recon_shared_studio.gd` recorre las ocho facciones del selector original. El publisher completo ensambla la escena de las ramas fijadas y ejecuta esa prueba; el CI independiente **solo** valida la geometría y las 21 capturas, porque no dispone del árbol íntegro de las otras construcciones.
+
+**Aprobación pendiente:** resultado verde de Godot V5 en ambos procesos, inspección de las 21 capturas V5 y rendimiento Android. No se ha fusionado ni publicado A01; no se añade daño de combate, ataque ni ningún cambio a visión/fog/economía. Siguiente etapa: daños exclusivamente visuales escalonados y pruebas de reparación/restauración, después de cerrar la revisión del modelo V5.
