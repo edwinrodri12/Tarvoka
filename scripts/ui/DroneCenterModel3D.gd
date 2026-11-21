@@ -87,6 +87,7 @@ static func _disc(t:SurfaceTool,center:Vector3,radius:float,
             center+vb+Vector3(0,thickness*0.5,0)
         ]:
             t.set_normal(Vector3.UP)
+            t.set_uv(Vector2(vertex.x/6.0,vertex.z/6.0))
             t.add_vertex(vertex)
         for vertex in [
             center+Vector3(0,-thickness*0.5,0),
@@ -94,6 +95,7 @@ static func _disc(t:SurfaceTool,center:Vector3,radius:float,
             center+va+Vector3(0,-thickness*0.5,0)
         ]:
             t.set_normal(Vector3.DOWN)
+            t.set_uv(Vector2(vertex.x/6.0,vertex.z/6.0))
             t.add_vertex(vertex)
         var normal:Vector3=(va+vb).normalized()
         for vertex in [
@@ -105,6 +107,7 @@ static func _disc(t:SurfaceTool,center:Vector3,radius:float,
             Vector3(center.x+vb.x,top,center.z+vb.z)
         ]:
             t.set_normal(normal)
+            t.set_uv(Vector2(vertex.x/6.0,vertex.y/6.0))
             t.add_vertex(vertex)
 
 static func _base(g:Dictionary,tier:int,damage:int) -> void:
