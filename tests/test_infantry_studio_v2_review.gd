@@ -3,6 +3,7 @@ extends SceneTree
 # QA against the EXACT Pages-native combined Godot Studio scene; the V1/V2
 # buttons must swap real Godot meshes inside the existing SubViewport.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
+const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
 const UNITS := ["line","infantry_urban","infantry_defense",
     "scout","infantry_antitank","infantry_engineer",
     "infantry_sniper","infantry_aa","infantry_logistic",
@@ -56,10 +57,9 @@ func _run() -> void:
                 "infantry_logistic","infantry_medic","infantry_commando"]:
             must(str(mesh.get_meta("tarvoka_infantry_variant_v4",""))==role,
                 role+" specialist full native V4 kit selected in real Studio")
-            must(mesh.find_child("V4_InsigniaFS24",true,false)!=null
-                if role=="infantry_commando" else
-                mesh.get_child_count()>0,
-                role+" distinct physical specialist appearance")
+            var marker: String=str(Specialist.MARKER[role])
+            must(mesh.find_child(marker,true,false)!=null,
+                role+" physical 3D signature "+marker+" is in the SAME viewport")
         studio.call("_infantry_review_look",180.0,"frente")
         must(is_equal_approx(
             (studio.get("model_root") as Node3D).rotation_degrees.y,180.0),
