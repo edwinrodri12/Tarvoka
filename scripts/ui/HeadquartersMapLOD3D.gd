@@ -95,8 +95,23 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
     var y: float = 2.87+0.91*float(level-1)
     _box(steel,Vector3(0,-0.1,0),Vector3(13.6,0.20,12.8))
     if condition == "destruido":
-        _box(concrete,Vector3(0,0.19,0),Vector3(7.1,0.3,6.6))
-        _box(steel,Vector3(-0.85,0.66,-2.5),Vector3(3.2,0.92,1.5))
+        # A single intact white slab read as a landing pad, not a destroyed
+        # headquarters. Replace it with a collapsed FLOOR and disconnected
+        # structural fragments; the ruin must remain solid and legible.
+        _box(steel,Vector3(0,0.07,0),Vector3(7.1,0.19,6.6))
+        _box(concrete,Vector3(-2.15,0.25,-1.15),
+            Vector3(2.40,0.39,2.36))
+        _box(concrete,Vector3(1.65,0.19,1.42),
+            Vector3(2.70,0.27,2.15))
+        _box(concrete,Vector3(1.76,0.29,-2.48),
+            Vector3(1.12,0.45,1.03))
+        # Two broken structural posts remain; no healthy tall upper wall.
+        _box(concrete,Vector3(-2.84,0.48,2.0),
+            Vector3(0.56,0.90,1.52))
+        _box(steel,Vector3(2.77,0.30,1.89),
+            Vector3(0.53,0.54,1.10))
+        _box(steel,Vector3(-0.85,0.51,-2.5),
+            Vector3(2.45,0.63,1.12))
         for i in range(6):
             _box(concrete,Vector3(-2.65+float(i)*1.02,0.38,
                     -0.89+float(i%2)*1.29),
