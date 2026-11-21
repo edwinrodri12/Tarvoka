@@ -43,11 +43,39 @@ static func emblem_path(index: int) -> String:
         return ""
     return "res://assets/factions/%s.png" % str(FACTIONS[index]["key"])
 
+# Original approved atlas sheets are the source of truth when individual
+# PNG files are not present in the Web studio branch. Match main runtime.
+const FIRST_FOUR_ATLAS := "res://assets/factions/official_first_four_atlas.webp"
+const LAST_FOUR_ATLAS := "res://assets/factions/official_last_four_atlas.webp"
+const ATLAS_CREST_EDGE := 160
+const ATLAS_COMMANDER_HEIGHT := 113
+
 static func emblem_texture(index: int) -> Texture2D:
     var path: String = emblem_path(index)
-    if path.is_empty() or not ResourceLoader.exists(path):
+    if path.is_empty():
         return null
-    return ResourceLoader.load(path) as Texture2D
+    if ResourceLoader.exists(path):
+        var png: Texture2D = ResourceLoader.load(path) as Texture2D
+        if png != null:
+            return png
+    # This is NOT a substitute crest: it crops the real approved original
+    # image for precisely the same one of eight faction identities.
+    var atlas_path: String = FIRST_FOUR_ATLAS if index < 4 else LAST_FOUR_ATLAS
+    var sheet: Texture2D = null
+    if ResourceLoader.exists(atlas_path):
+        sheet = ResourceLoader.load(atlas_path) as Texture2D
+    if sheet == null:
+        return null
+    if sheet.get_width() != ATLAS_CREST_EDGE*4:
+        return null
+    if sheet.get_height() != ATLAS_CREST_EDGE+ATLAS_COMMANDER_HEIGHT:
+        return null
+    var texture := AtlasTexture.new()
+    texture.atlas = sheet
+    texture.region = Rect2((index%4)*ATLAS_CREST_EDGE,
+        0,ATLAS_CREST_EDGE,ATLAS_CREST_EDGE)
+    texture.filter_clip = true
+    return texture
 
 static func terrain_color(kind: String, x: int, y: int) -> Color:
     var base: Color = Color.html(str(TERRAIN_COLORS.get(kind, TERRAIN_COLORS["plain"])))

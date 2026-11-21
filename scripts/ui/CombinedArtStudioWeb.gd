@@ -5,6 +5,7 @@ class_name TarvokaCombinedArtStudioWeb
 # This adapter deliberately does NOT alter the tank inspector or meshes.
 const Headquarters = preload("res://scripts/ui/Headquarters3D.gd")
 const HQProduction = preload("res://scripts/ui/HeadquartersProductionV13.gd")
+const HQBattleV24 = preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const HQSpriteV16 = preload("res://scripts/ui/HeadquartersSpriteStudioV16.gd")
 const HQClimateV17 = preload("res://scripts/ui/HeadquartersClimateV17.gd")
 const HQWayfindingV18 = preload("res://scripts/ui/HeadquartersWayfindingV18.gd")
@@ -41,6 +42,8 @@ var hq_v10_toggle: CheckButton
 var hq_v11_toggle: CheckButton
 var hq_v12_toggle: CheckButton
 var hq_production_toggle: CheckButton
+var hq_v24_toggle: CheckButton
+var hq_v24_neutral_toggle: CheckButton
 var hq_production_metric_label: Label
 var hq_v15_mode_picker: OptionButton
 var hq_v15_neutral_toggle: CheckButton
@@ -457,6 +460,22 @@ func _add_building_mode() -> void:
     hq_production_metric_label = _title(building_controls,
         "Perfil V13: 2 mallas · 10 superficies · 8 escudos oficiales",12)
     hq_production_metric_label.visible = false
+    _title(building_controls,"V24 · MODELO QUE APARECE EN LA BATALLA 3D",13)
+    hq_v24_toggle = CheckButton.new()
+    hq_v24_toggle.name = "CuartelGeneralNativoJuegoV24"
+    hq_v24_toggle.text = "Inspeccionar Cuartel General V24 de la batalla"
+    hq_v24_toggle.button_pressed = false
+    hq_v24_toggle.toggled.connect(_change_hq_live_v24)
+    building_controls.add_child(hq_v24_toggle)
+    hq_v24_neutral_toggle = CheckButton.new()
+    hq_v24_neutral_toggle.name = "CuartelGeneralV24FaccionDesconocida"
+    hq_v24_neutral_toggle.text = "Mostrar modelo neutral (niebla)"
+    hq_v24_neutral_toggle.toggled.connect(_change_hq_live_v24_neutral)
+    hq_v24_neutral_toggle.visible = false
+    building_controls.add_child(hq_v24_neutral_toggle)
+    _title(building_controls,
+        "V24: misma geometría táctica de la batalla real; "
+        + "desactiva para comparar con el modelo HERO V23.",12)
 
     hq_lighting_label = _title(building_controls,"ILUMINACIÓN DE ESTUDIO",13)
     hq_lighting_picker = OptionButton.new()
@@ -822,6 +841,14 @@ func _change_hq_production_v13(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
 
+func _change_hq_live_v24(_enabled: bool) -> void:
+    if _role == "headquarters":
+        _display_headquarters()
+
+func _change_hq_live_v24_neutral(_enabled: bool) -> void:
+    if _role == "headquarters" and hq_v24_toggle.button_pressed:
+        _display_headquarters()
+
 func _change_building_batch(_enabled: bool) -> void:
     if _role == "headquarters":
         _display_headquarters()
@@ -883,6 +910,7 @@ func _display_headquarters() -> void:
     _role = "headquarters"
     _refresh_hq_v15_sprite()
     var showing_batch: bool = hq_batch_toggle.button_pressed and _hq_show_v4
+    var showing_v24: bool = hq_v24_toggle.button_pressed and _hq_show_v4 and not showing_batch
     _apply_hq_climate_v17()
     hq_batch_toggle.visible = _hq_show_v4
     hq_v7_toggle.visible = _hq_show_v4 and not showing_batch
@@ -892,23 +920,26 @@ func _display_headquarters() -> void:
     hq_v11_toggle.visible = hq_v10_toggle.visible and hq_v10_toggle.button_pressed
     hq_v12_toggle.visible = hq_v11_toggle.visible and hq_v11_toggle.button_pressed
     hq_camera_picker.visible = not showing_batch
-    hq_v15_mode_picker.visible = not showing_batch
-    hq_v15_neutral_toggle.visible = not showing_batch
-    hq_v15_frame.visible = not showing_batch and hq_v15_mode_picker.selected != 1
+    hq_v15_mode_picker.visible = not showing_batch and not showing_v24
+    hq_v15_neutral_toggle.visible = not showing_batch and not showing_v24
+    hq_v15_frame.visible = not showing_batch and not showing_v24 and hq_v15_mode_picker.selected != 1
     hq_v15_zoom_picker.visible = hq_v15_frame.visible
     hq_v15_caption.visible = hq_v15_frame.visible
-    hq_production_toggle.visible = _hq_show_v4 and not showing_batch
-    hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch
+    hq_production_toggle.visible = _hq_show_v4 and not showing_batch and not showing_v24
+    hq_production_metric_label.visible = hq_production_toggle.button_pressed and not showing_batch and not showing_v24
+    hq_v24_toggle.visible = _hq_show_v4 and not showing_batch
+    hq_v24_neutral_toggle.visible = showing_v24
     hq_fps_label.visible = showing_batch
     hq_stress_picker.visible = showing_batch
-    var hero_mode: bool = not showing_batch and hq_v15_mode_picker.selected != 2 and not hq_production_toggle.button_pressed
-    hq_damage_stage_picker.disabled = not hero_mode
+    var hero_mode: bool = not showing_batch and not showing_v24 and hq_v15_mode_picker.selected != 2 and not hq_production_toggle.button_pressed
+    # Damage is interactive on V24 too: each selection builds its real D0-D4 mesh.
+    hq_damage_stage_picker.disabled = not hero_mode and not showing_v24
     hq_bullet_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
     hq_explosive_test_button.disabled = not hero_mode or hq_map_lod_toggle.button_pressed
     # Large districts are deliberately batched dry map proxies; disable
     # climate selectors there instead of silently ignoring user clicks.
-    hq_weather_picker.disabled = showing_batch
-    hq_terrain_picker.disabled = showing_batch
+    hq_weather_picker.disabled = showing_batch or showing_v24
+    hq_terrain_picker.disabled = showing_batch or showing_v24
     if showing_batch:
         model_root = HQCityBatch.build_grid(_hq_grid_dimension,_hq_grid_dimension,15.5)
         assert(model_root != null)
@@ -929,7 +960,11 @@ func _display_headquarters() -> void:
     # HQ V21 stages 1..3 build a sound structural baseline so damage is
     # physically progressive, not old V8 rubble piled on each stage.
     var construction_condition: String = "operativo" if condition == "danado" and damage_stage in [1,2,3] else condition
-    if hq_v15_mode_picker.selected == 2 and _hq_show_v4:
+    if showing_v24:
+        var battle_faction: int = -1 if hq_v24_neutral_toggle.button_pressed else _faction
+        model_root = HQBattleV24.build(level,battle_faction,damage_stage)
+        hq_map_lod_toggle.visible = false
+    elif hq_v15_mode_picker.selected == 2 and _hq_show_v4:
         var sprite_faction: int = -1 if hq_v15_neutral_toggle.button_pressed else _faction
         model_root = HQSpriteV16.build_billboard(sprite_faction,_faction)
         if model_root == null:
@@ -988,7 +1023,10 @@ func _display_headquarters() -> void:
             ][damage_stage]
             hq_impact_status.text = "V22 · %s · %s · impactos de bala y explosión" % [
                 str(HQDamageV21.STAGES[damage_stage]),detail]
-    _apply_hq_climate_v17()
+    if not showing_v24:
+        _apply_hq_climate_v17()
+    if showing_v24 and hq_climate_stage != null:
+        hq_climate_stage.visible = false
     _sync_hq_wayfinding_v18()
     _sync_hq_facade_v19()
     if initial:
@@ -996,18 +1034,19 @@ func _display_headquarters() -> void:
         _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
     model_root.rotation_degrees.y = _yaw
     # Front-right camera reveals the command entrance, insignia, and helipad.
-    camera.position = _hq_camera_position()
-    camera.look_at(Vector3(0,2.3,0),Vector3.UP)
+    camera.position = Vector3(-3.8,3.3,-4.2) if showing_v24 else _hq_camera_position()
+    camera.look_at(Vector3(0,0.45,0) if showing_v24 else Vector3(0,2.3,0),Vector3.UP)
     _update_camera()
     _update_details()
 
 func _reset_camera() -> void:
     if _role == "headquarters":
         _yaw = 32.0
-        _zoom = 0.69 if _hq_camera_preset == 1 else 1.0
+        var small: bool = hq_v24_toggle != null and hq_v24_toggle.button_pressed
+        _zoom = 1.0 if small else 0.69 if _hq_camera_preset == 1 else 1.0
         if camera != null:
-            camera.position = _hq_camera_position()
-            camera.look_at(Vector3(0,2.3,0),Vector3.UP)
+            camera.position = Vector3(-3.8,3.3,-4.2) if small else _hq_camera_position()
+            camera.look_at(Vector3(0,0.45,0) if small else Vector3(0,2.3,0),Vector3.UP)
         if model_root != null:
             model_root.rotation_degrees.y = _yaw
         _update_camera()
@@ -1017,8 +1056,10 @@ func _reset_camera() -> void:
 func _update_camera() -> void:
     if _role == "headquarters":
         if camera != null:
-            camera.size = (153.0 * float(_hq_grid_dimension)/7.0 if hq_batch_toggle.button_pressed and _hq_show_v4 else 18.6) / _zoom
-            if model_root != null and not hq_batch_toggle.button_pressed:
+            var is_v24: bool = model_root != null and bool(
+                model_root.get_meta("hq_native_geometry",false))
+            camera.size = (3.05 if is_v24 else 153.0 * float(_hq_grid_dimension)/7.0 if hq_batch_toggle.button_pressed and _hq_show_v4 else 18.6) / _zoom
+            if model_root != null and not hq_batch_toggle.button_pressed and not is_v24:
                 Headquarters.set_render_detail(model_root,_zoom >= 1.24)
         return
     super._update_camera()
@@ -1028,6 +1069,17 @@ func _update_details() -> void:
         super._update_details()
         return
     if model_root == null:
+        return
+    if model_root.get_meta("hq_native_geometry",false):
+        var fac: int = int(model_root.get_meta("visual_faction",-1))
+        var dmg: int = int(model_root.get_meta("visual_damage_stage",0))
+        var tier: int = int(model_root.get_meta("visual_tier",1))
+        detail_label.text = ("BATALLA REAL V24 · 3 mallas 3D de arquitectura · "
+            + "13 superficies · Nivel %d · Daño D%d") % [tier,dmg]
+        status_label.text = (
+            "Neutral sin insignia" if fac == -1
+            else str(VisualStyle.FACTIONS[fac]["name"]) + " · escudo original"
+        ) + " · sin cambiar la economía ni los turnos"
         return
     if model_root.get_meta("tarvoka_hq_v15_sprite_card",false):
         detail_label.text = "V15 · Sprite Android real de 384 px dentro del escenario Godot 3D"
