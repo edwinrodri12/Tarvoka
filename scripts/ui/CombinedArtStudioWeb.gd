@@ -1074,8 +1074,8 @@ func _update_details() -> void:
         var fac: int = int(model_root.get_meta("visual_faction",-1))
         var dmg: int = int(model_root.get_meta("visual_damage_stage",0))
         var tier: int = int(model_root.get_meta("visual_tier",1))
-        detail_label.text = ("BATALLA REAL V24 · 2 mallas 3D de arquitectura · "
-            + "9 superficies · Nivel %d · Daño D%d") % [tier,dmg]
+        detail_label.text = ("BATALLA REAL V24 · 3 mallas 3D de arquitectura · "
+            + "13 superficies · Nivel %d · Daño D%d") % [tier,dmg]
         status_label.text = (
             "Neutral sin insignia" if fac == -1
             else str(VisualStyle.FACTIONS[fac]["name"]) + " · escudo original"
