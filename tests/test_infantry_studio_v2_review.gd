@@ -151,6 +151,19 @@ func _run() -> void:
             await create_timer(1.4).timeout
             must(shield!=null and is_zero_approx(shield.rotation_degrees.x),
                 "barrier folds flat and does not detach from backpack")
+            # Reversing a live animation must preserve the current hinge angle;
+            # V6 originally snapped 0->1 before interpolating in reverse.
+            studio.call("_studio_run_animation","engineer_v6_inspect")
+            await create_timer(0.42).timeout
+            var interrupted: float=shield.rotation_degrees.x
+            must(interrupted < -6.0 and interrupted > -53.0,
+                "engineer hinge occupies an intermediate angle while opening")
+            studio.call("_studio_run_animation","engineer_v6_pack")
+            must(absf(shield.rotation_degrees.x-interrupted)<1.0,
+                "reverse action does not teleport the shield to fully open")
+            await create_timer(1.30).timeout
+            must(is_zero_approx(shield.rotation_degrees.x),
+                "interrupted hinge smoothly returns to folded position")
             studio.call("_studio_run_animation","work")
             await process_frame
             var driver: Node3D=final_soldier.find_child(
