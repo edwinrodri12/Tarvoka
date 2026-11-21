@@ -5,8 +5,10 @@ on:
     paths:
       - "scripts/ui/HeadquartersMapLOD3D.gd"
       - "scripts/ui/HeadquartersBattle3D.gd"
+      - "scripts/ui/HeadquartersCurvedRoof3D.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "tests/test_hq_v24_live_battle_3d.gd"
+      - "tests/test_hq_v24_visual_gallery.gd"
       - ".github/workflows/hq-v24-live-3d-qa.yml"
   pull_request:
     branches: [main]
@@ -53,6 +55,18 @@ jobs:
             2>&1 | tee /tmp/hq-v24-3d-test.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/hq-v24-3d-test.log; then exit 1; fi
           grep -F 'PASS HQ V24 LIVE 3D:' /tmp/hq-v24-3d-test.log
+      - name: Capture actual Godot GL 3D battle and architecture screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 100s \
+            xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_hq_v24_visual_gallery.gd \
+            2>&1 | tee /tmp/hq-v24-visual.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/hq-v24-visual.log; then exit 1; fi
+          grep -F 'PASS HQ V24 VISUAL GALLERY:' /tmp/hq-v24-visual.log
       - name: Publish native QA output
         if: always()
         uses: actions/upload-artifact@v4
@@ -63,3 +77,5 @@ jobs:
           path: |
             /tmp/hq-v24-import.log
             /tmp/hq-v24-3d-test.log
+            /tmp/hq-v24-visual.log
+            artifacts/hq_v24_native/*.png
