@@ -1003,9 +1003,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     var model := Node3D.new()
     model.name = "Modelo3D_" + role
     match role:
-        "line","scout","infantry_urban","infantry_defense",
-        "infantry_antitank","infantry_engineer","infantry_sniper",
-        "infantry_aa","infantry_logistic","infantry_medic","infantry_commando":
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_aa","infantry_logistic","infantry_medic","infantry_commando":
             # One genuine native infantry family; level variants do not invent
             # new tactical classes or alter established battle unit IDs.
             if not InfantryFamily.build(model,role,faction_paint_color(faction),

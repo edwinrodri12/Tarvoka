@@ -1349,9 +1349,7 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
-        "line","scout","infantry_urban","infantry_defense",
-        "infantry_antitank","infantry_engineer","infantry_sniper",
-        "infantry_aa","infantry_logistic","infantry_medic","infantry_commando":
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_aa","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
         "logistics_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
