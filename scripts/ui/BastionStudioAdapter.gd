@@ -317,6 +317,8 @@ func _studio_role_from_link_key(value:String) -> String:
     match value.strip_edges().to_lower():
         "g16", "logistics_mobile", "logistica", "logistica_6x6":
             return "logistics_mobile"
+        "a01", "uav_recon", "dron_recon":
+            return "uav_recon"
         _:
             return "apc"
 
