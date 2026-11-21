@@ -250,6 +250,7 @@ var infantry_six_panel: VBoxContainer
 var infantry_360_tween: Tween = null
 var infantry_review_v2: bool = true
 var infantry_review_lod: int = 13
+var _infantry_helmet_focus: bool = false
 
 
 func _ready() -> void:
@@ -441,6 +442,8 @@ func _install_unified_studio_navigation() -> void:
         "Ver V2",func(): _infantry_review_version(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
+    _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
+        "Acercar casco",func(): _infantry_review_focus(true))
     infantry_360_panel.visible=false
 
     # Revision comparisons are kept for QA but not shown on the front page.
@@ -1271,6 +1274,18 @@ func _g16_review_spin() -> void:
 
 # The same SubViewport, camera, scene and role/faction controls are reused.
 # V1 and V2 are real Godot MeshInstance3D trees, not image swaps.
+func _infantry_review_focus(closeup: bool) -> void:
+    if model_root==null or not InfantryV1.supports(_role):
+        return
+    if closeup and infantry_review_lod!=13:
+        _infantry_review_lod(13)
+    _infantry_helmet_focus=closeup
+    _update_camera()
+    if status_label!=null:
+        status_label.text=(
+            "Infantería · acercamiento real al casco y cuello, mismo modelo 3D"
+            if closeup else "Infantería · cuerpo completo sin recorte, mismo visor 3D")
+
 func _infantry_review_look(yaw: float, perspective: String) -> void:
     if model_root==null or not InfantryV1.supports(_role):
         return
@@ -1350,6 +1365,7 @@ func _infantry_review_version(latest: bool) -> void:
             "V2" if latest else "V1",infantry_review_lod]
 
 func _infantry_review_lod(lod: int) -> void:
+    _infantry_helmet_focus=false
     if _infantry_review_rebuild(infantry_review_v2,lod):
         # Orthographic preview at reduced visual size, not a separate map.
         # LOD8 uses physically rebuilt low-poly geometry; players may still
@@ -3974,6 +3990,17 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if model_root!=null and camera!=null and InfantryV1.supports(_role) and
+            infantry_review_lod==13:
+        # The published phone viewer had no full-body/casco framing presets.
+        # Hero mode now fits the actual 2.6m-high soldier from boots to brow.
+        # Close-up is explicitly opt-in; tactical LOD8 keeps the wider view.
+        if _infantry_helmet_focus:
+            camera.size=2.15
+            camera.look_at(Vector3(0,2.06,0),Vector3.UP)
+        elif _role=="infantry_engineer":
+            camera.size=3.8 / maxf(0.90,_zoom)
+            camera.look_at(Vector3(0,1.18,0),Vector3.UP)
     if _role=="logistics_mobile" and model_root!=null and camera!=null:
         # The only camera that changes is the existing unified viewer.
         # Keep close-ups stable during faction/color and zoom rebuilds.
@@ -4100,6 +4127,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _infantry_helmet_focus=false
     if role!="logistics_mobile":
         _g16_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
