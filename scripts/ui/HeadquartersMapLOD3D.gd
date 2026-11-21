@@ -140,8 +140,10 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
                 Vector3(1.51,0.50,1.52))
             _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
                 Vector3(1.80,0.18,1.80))
-            _box(paint,Vector3(-5.13,4.92+0.41*float(level-1),0.43),
-                Vector3(1.05,0.70,0.07))
+            # Reanchor the old orphaned faction plaque to the COMMUNICATION
+            # tower's real front face, not floating beside the roof.
+            _box(paint,Vector3(-4.50,2.54+comm_h+0.13,0.57),
+                Vector3(0.95,0.28,0.10))
         _box(steel,Vector3(-1.86,y+1.04,0.76),Vector3(0.36,2.08,0.36))
         _dish(mark,Vector3(-1.86,y+2.35,0.66),0.96)
         _box(steel,Vector3(4.85,0.16,-4.08),Vector3(3.25,0.26,3.22))
@@ -150,8 +152,14 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         _box(mark,Vector3(4.85,0.31,-4.08),Vector3(0.69,0.03,0.12))
         _box(gold,Vector3(4.85,0.32,-5.56),Vector3(2.68,0.04,0.07))
         if level == 3:
-            _box(concrete,Vector3(1.67,y+1.72,1.58),
-                Vector3(1.40,1.20,1.33))
+            # V24 QA found an upper cube suspended 1.12 m over the roof:
+            # center y+0.60 rests a 1.20m module ON the actual y roof.
+            if condition == "critico":
+                _box(steel,Vector3(1.67,y+0.13,1.58),
+                    Vector3(1.14,0.26,1.00))
+            else:
+                _box(concrete,Vector3(1.67,y+0.60,1.58),
+                    Vector3(1.40,1.20,1.33))
         if condition in ["danado","leve","moderado","critico"]:
             _box(steel,Vector3(-2.30,1.61,-2.55),Vector3(0.79,0.74,0.14))
         if condition in ["moderado","critico"]:
