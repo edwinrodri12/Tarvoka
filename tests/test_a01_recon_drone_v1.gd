@@ -10,11 +10,43 @@ const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v1"
 var failures:int=0
 var captures:int=0
+var diagnostic_captures:int=0
+
+func _has_rendered_airframe(img:Image)->bool:
+    # Prove a screenshot is not simply an opaque environment/color plane.
+    if img==null or img.is_empty() or img.get_width()<480 or img.get_height()<320:
+        return false
+    var background:Color=img.get_pixel(12,12)
+    var distinct:Dictionary={}
+    var foreground:int=0
+    for y in range(40,img.get_height()-40,16):
+        for x in range(40,img.get_width()-40,16):
+            var c:Color=img.get_pixel(x,y)
+            var delta:float=absf(c.r-background.r)+absf(c.g-background.g)+absf(c.b-background.b)
+            if delta>0.22:
+                foreground+=1
+                distinct["%d-%d-%d" % [int(c.r*10.0),int(c.g*10.0),int(c.b*10.0)]]=true
+    return foreground>28 and distinct.size()>5
+
+func _has_opaque_solid_parts(model:Node3D)->bool:
+    var meshes:Array[Node]=model.find_children("*","MeshInstance3D",true,false)
+    var count:int=0
+    for node in meshes:
+        var part:=node as MeshInstance3D
+        if part==null or not part.visible:
+            continue
+        count+=1
+        if part.mesh==null or not (part.mesh is BoxMesh or part.mesh is SphereMesh or part.mesh is CylinderMesh):
+            return false
+        var material:=part.material_override as StandardMaterial3D
+        if material==null or material.transparency!=BaseMaterial3D.TRANSPARENCY_DISABLED:
+            return false
+    return count>30
 
 func check(ok:bool,description:String)->void:
     if not ok:
         failures+=1
-        push_error("A01 UAV V1 QA: "+description)
+        push_error("A01 UAV V3 QA: "+description)
 
 func _initialize()->void:
     call_deferred("_run")
@@ -139,6 +171,8 @@ func _run()->void:
                 "restoring original gimbal pose")
             check(Models.inspect_meshes(model)>=31,
                 "V2 enclosed composite wing and gimbal surfaces are complete")
+            check(_has_opaque_solid_parts(model),
+                "all rendered A01 V3 materials remain fully opaque closed 3D solids")
             await process_frame
             await process_frame
             await process_frame
@@ -146,19 +180,54 @@ func _run()->void:
             check(shot!=null and not shot.is_empty(),
                 "real engine screenshot faction %d LOD%d" % [faction,lod])
             if shot!=null and not shot.is_empty():
+                check(_has_rendered_airframe(shot),
+                    "A01 native capture contains real multi-shaded geometry, not blank background")
                 check(shot.save_png("%s/a01-f%d-lod%d.png" % [OUT,faction,lod])==OK,
                     "save genuine A01 Godot rendering")
                 captures+=1
+            if faction==0 and lod==13:
+                # Independently image all major directions, including underside,
+                # to expose silhouette gaps or intersecting pieces before art lock.
+                var target:=Vector3(0,0.95,0)
+                var views:Dictionary={
+                    "frontal":Vector3(0,2.8,-6.0),
+                    "trasera":Vector3(0,2.8,6.0),
+                    "lateral":Vector3(6.0,2.6,0),
+                    "superior":Vector3(0,6.0,-0.3),
+                    "inferior":Vector3(0,-4.2,2.2)
+                }
+                for key in views:
+                    camera.position=views[key]
+                    var up:=Vector3.UP
+                    if key=="superior":
+                        up=Vector3.FORWARD
+                    elif key=="inferior":
+                        up=Vector3.BACK
+                    camera.look_at(target,up)
+                    await process_frame
+                    await process_frame
+                    await process_frame
+                    var inspection:Image=vp.get_texture().get_image()
+                    check(_has_rendered_airframe(inspection),
+                        "V3 360 native view has real visible geometry: "+str(key))
+                    if inspection!=null and not inspection.is_empty():
+                        check(inspection.save_png(
+                            "%s/a01-v3-360-%s.png" % [OUT,key])==OK,
+                            "save real 360 diagnostic: "+str(key))
+                        diagnostic_captures+=1
+                camera.position=Vector3(4.7,3.9,5.6)
+                camera.look_at(Vector3(0,0.90,0),Vector3.UP)
             vp.remove_child(model)
             model.free()
 
     check(colors.size()==8,"all eight faction colors produce distinct painted meshes")
-    check(captures==16,"sixteen actual A01 V2 Godot 3D renders")
+    check(captures==16,"sixteen actual A01 V3 Godot 3D renders")
+    check(diagnostic_captures==5,"five 360-degree exterior, top and underside checks")
     vp.queue_free()
     await process_frame
     if failures>0:
         printerr("FAIL A01 RECON UAV V3: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 RECON UAV V3: sixteen native renders; three-blade prop, trunnions, winglets, LOD8/13 and eight factions")
+        print("PASS A01 RECON UAV V3: sixteen native renders plus five 360 views; opaque three-blade prop, trunnions, winglets, LOD8/13 and eight factions")
         quit(0)
