@@ -5,6 +5,7 @@ extends SceneTree
 const Battle=preload("res://scripts/ui/BattleTerrain3D.gd")
 const HQ=preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const MapLOD=preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
+const Curves=preload("res://scripts/ui/HeadquartersCurvedRoof3D.gd")
 const Command=preload("res://scripts/ui/CommandCityArtV14.gd")
 const Economy=preload("res://scripts/core/UrbanEconomy.gd")
 const Session=preload("res://scripts/core/BattleSession.gd")
@@ -44,6 +45,12 @@ func _run() -> void:
                 var piece:MeshInstance3D=_mesh(sample)
                 assert(piece!=null and piece.mesh is ArrayMesh)
                 assert(piece.mesh.get_surface_count()==6)
+                var arches:MeshInstance3D=sample.get_node_or_null(
+                    Curves.NAME) as MeshInstance3D
+                assert(arches!=null and arches.mesh!=null)
+                assert(arches.mesh.get_surface_count()==3)
+                assert(arches.mesh.get_faces().size()>0)
+                assert(int(sample.get_meta("hq_material_surfaces",0))==9)
                 assert(piece.get_aabb().size.x*HQ.MODEL_SCALE<2.40)
                 assert(piece.get_aabb().size.z*HQ.MODEL_SCALE<2.40)
                 assert(sample.get_meta("visual_damage_stage")==damage)
@@ -134,5 +141,5 @@ func _run() -> void:
     assert(not neutral.has_node("EscudoOficialDeFaccion"))
     assert(fog==state_fog_saved)
     remembered.free()
-    print("PASS HQ V24 LIVE 3D: 2 original command cities, 135 native variants, official crests, neutral fog, saved economy and scaled 3D footprint")
+    print("PASS HQ V24 LIVE 3D: 2 original command cities, 135 native variants, authentic 3D curved roofs, official crests, neutral fog, saved economy and scaled 3D footprint")
     quit(0)
