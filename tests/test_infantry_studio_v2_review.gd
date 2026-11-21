@@ -7,6 +7,7 @@ const Roster=preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
 const EngineerV6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7=preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
+const PremiumV8=preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -137,6 +138,15 @@ func _run() -> void:
         if role=="infantry_engineer":
             must(ClosureV7.has_model(final_soldier),
                 "published engineer uses the FULL opaque rear helmet and neck")
+            must(PremiumV8.has_model(final_soldier),
+                "same online Godot Studio loads V8 sculpted shoulder and closed shield")
+            var shield_v8: Node3D=final_soldier.find_child(
+                PremiumV8.SHIELD,true,false) as Node3D
+            var rifle_v8: Node3D=final_soldier.find_child(
+                PremiumV8.RIFLE,true,false) as Node3D
+            must(shield_v8!=null and rifle_v8!=null,
+                "V8 full physical armor and detailed weapon remain in one viewport")
+
             # Verify real CAMERA buttons do not crop body on mobile-like UI.
             studio.call("_infantry_review_focus",false)
             var framed_camera: Camera3D=studio.get("camera") as Camera3D
