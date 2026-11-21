@@ -69,6 +69,7 @@ const G16SculptV4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G16MaterialsV5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
 const G16ServiceV6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const A01Recon=preload("res://scripts/ui/A01ReconDroneV1.gd")
+const A01Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -278,7 +279,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V1 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V2 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","G01 · Guardia · infantería V2"],
@@ -614,7 +615,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "uav_recon":
             return [
-                {"group":"A01 V1 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
+                {"group":"A01 V2 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
                 {"title":"Volar · hélice impulsora", "action":"a01_move"},
                 {"title":"Explorar · girar cámara óptica", "action":"a01_scan"},
                 {"title":"Simular impacto visual", "action":"a01_hit"},
@@ -1478,7 +1479,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V1 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V2 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4992,11 +4993,11 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
-        var built:bool=A01Recon.has_model(model_root)
-        detail_label.text="A01 V1 EN DESARROLLO · UAV óptico sin armas · %d mallas 3D" % P06Models.inspect_meshes(model_root)
+        var built:bool=A01Recon.has_model(model_root) and A01Finish.has_model(model_root)
+        detail_label.text="A01 V2 EN DESARROLLO · UAV de reconocimiento sin armas · %d mallas 3D" % P06Models.inspect_meshes(model_root)
         status_label.text="A01 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
-            "Alas sólidas, cámara óptica y hélice móviles; no modifica visión táctica" if built else "modelo incompleto"]
+            "V2 · alas PBR, óptica EO/IR móvil y marcas de facción LOD8/13" if built else "modelo incompleto"]
         return
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root) and G16ServiceV6.has_model(model_root)
