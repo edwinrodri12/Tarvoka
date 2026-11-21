@@ -1444,7 +1444,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-native-v1.log; then
             echo '::error::A01 V1 closed body, optics or faction LOD failed' >&2; exit 1
           fi
-          grep -F 'PASS A01 RECON UAV V2:' /tmp/a01-native-v1.log
+          grep -F 'PASS A01 RECON UAV V3:' /tmp/a01-native-v1.log
           test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -1454,7 +1454,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-unified-v1.log; then
             echo '::error::A01 V1 not selectable or animated in original TARVOKA 3D Studio' >&2; exit 1
           fi
-          grep -F 'PASS A01 V2 SHARED STUDIO:' /tmp/a01-unified-v1.log
+          grep -F 'PASS A01 V3 SHARED STUDIO:' /tmp/a01-unified-v1.log
           test -s build/qa/a01-v1/a01-unified-studio.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
@@ -2296,7 +2296,7 @@ jobs:
                    '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
                    'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
           add_link(Path('build/web/index.html'),
-                   '?unidad=a01', 'A01 V2 · DRON DE RECONOCIMIENTO',
+                   '?unidad=a01', 'A01 V3 · DRON DE RECONOCIMIENTO',
                    'Revisar nuevo dron sin armas, sensores y ocho facciones', 316)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
@@ -2330,7 +2330,7 @@ jobs:
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
           grep -Fq 'href="?unidad=g16"' build/web/index.html
           grep -Fq 'href="?unidad=a01"' build/web/index.html
-          grep -Fq 'A01 V2 · DRON DE RECONOCIMIENTO' build/web/index.html
+          grep -Fq 'A01 V3 · DRON DE RECONOCIMIENTO' build/web/index.html
           grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
           grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
@@ -2356,7 +2356,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-a01-v2-native-and-shared-studio
+          name: tarvoka-a01-v3-native-and-shared-studio
           path: build/qa/a01-v1/*.png
           if-no-files-found: warn
           retention-days: 14
