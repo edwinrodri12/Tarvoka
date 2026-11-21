@@ -73,6 +73,7 @@ const G16ServiceV6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const A01Recon=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const A01Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const A01HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
+const A01SculptV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -287,7 +288,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V3 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V4 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -448,7 +449,7 @@ func _install_unified_studio_navigation() -> void:
     a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
-    _title(a01_360_panel,"A01 V3 · ALAS, ÓPTICA Y HÉLICE 3D",13)
+    _title(a01_360_panel,"A01 V4 · ALAS, ÓPTICA Y HÉLICE 3D",13)
     _add_paired(a01_360_panel,
         "Frente",func(): _a01_review_look(180.0,"general"),
         "Trasera",func(): _a01_review_look(0.0,"general"))
@@ -1286,7 +1287,7 @@ func _a01_review_look(yaw:float,focus:String)->void:
     model_root.rotation_degrees.y=yaw
     _update_camera()
     if status_label!=null:
-        status_label.text="A01 V3 · %s · mismo dron 3D sin armamento" % _a01_review_focus
+        status_label.text="A01 V4 · %s · mismo dron 3D sin armamento" % _a01_review_focus
 
 func _a01_review_spin_tick(angle:float)->void:
     if _role!="uav_recon" or model_root==null:
@@ -1606,7 +1607,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V3 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V4 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4275,7 +4276,7 @@ func _display_role(role: String) -> void:
     if role=="uav_recon":
         # The legacy Studio hides factions for unrecognized new roles.
         # A01 shares the ORIGINAL selector and eight official paint choices.
-        if model_root==null or not A01HardwareV3.has_model(model_root):
+        if model_root==null or not A01SculptV4.has_model(model_root):
             push_error("A01 V3 physical UAV is missing from shared Studio")
             return
         faction_picker.visible=true
@@ -5169,7 +5170,7 @@ func _process(delta: float) -> void:
 func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
         var built:bool=A01Recon.has_model(model_root) and A01Finish.has_model(model_root)
-        detail_label.text="A01 V3 EN DESARROLLO · UAV de reconocimiento sin armas · %d mallas 3D" % P06Models.inspect_meshes(model_root)
+        detail_label.text="A01 V4 EN DESARROLLO · UAV de reconocimiento sin armas · %d mallas 3D" % P06Models.inspect_meshes(model_root)
         status_label.text="A01 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
             "V2 · alas PBR, óptica EO/IR móvil y marcas de facción LOD8/13" if built else "modelo incompleto"]
