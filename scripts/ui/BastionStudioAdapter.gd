@@ -4274,12 +4274,20 @@ func _display_role(role: String) -> void:
         _g13_v53_set_reflections(false)
     super._display_role(role)
     if role=="uav_recon":
-        # The legacy Studio hides factions for unrecognized new roles.
-        # A01 shares the ORIGINAL selector and eight official paint choices.
+        # UnitArtStudioWeb builds neutral paint (-1) for every role other
+        # than the tank. Rebuild this same viewport's A01 with _faction.
+        # Calling the base again would silently erase faction colors.
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("uav_recon",_faction,true,13)
         if model_root==null or not A01SculptV4.has_model(model_root):
-            push_error("A01 V3 physical UAV is missing from shared Studio")
+            push_error("A01 V4 closed airframe or faction paint missing in shared Studio")
             return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
         faction_picker.visible=true
+        faction_picker.select(_faction)
         _update_camera()
     if InfantryV1.supports(role):
         if infantry_360_tween!=null and infantry_360_tween.is_running():
