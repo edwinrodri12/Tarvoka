@@ -336,16 +336,19 @@ jobs:
           # from the same checkout as UnitModels3D and BastionStudioAdapter.
           test -s hq-android-v15/scripts/ui/A01ReconDroneV1.gd
           test -s hq-android-v15/scripts/ui/A01ReconFinishV2.gd
+          test -s hq-android-v15/scripts/ui/A01ReconFinishV3.gd
           cp hq-android-v15/scripts/ui/A01ReconDroneV1.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconFinishV2.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconFinishV3.gd scripts/ui/
           test -s hq-android-v15/tests/test_a01_recon_drone_v1.gd
           cp hq-android-v15/tests/test_a01_recon_drone_v1.gd tests/
           test -s hq-android-v15/tests/test_a01_recon_shared_studio.gd
           cp hq-android-v15/tests/test_a01_recon_shared_studio.gd tests/
           grep -Fq 'A01Recon.build' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01Finish.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01HardwareV3.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'func _a01_review_look' scripts/ui/BastionStudioAdapter.gd
-          grep -Fq 'A01 · Dron de reconocimiento · V2 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'A01 · Dron de reconocimiento · V3 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
