@@ -1,6 +1,6 @@
 extends SceneTree
 
-# V1 acceptance harness: 6 genuine procedural military infantry silhouettes,
+# V1 acceptance harness: 11 genuine procedural military infantry silhouettes,
 # 8 approved factions, 2 LODs, opaque glazing and reversible damage/poses.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
@@ -111,6 +111,15 @@ func _run() -> void:
             if role=="infantry_defense":
                 check(hero.find_child("ProteccionTorno",true,false) != null,
                     "defensive armor kit")
+            var signatures: Dictionary={
+                "infantry_sniper":"MiraPrecisionBase",
+                "infantry_aa":"MisilAntiaereoBase",
+                "infantry_logistic":"CargaLogisticaBase",
+                "infantry_medic":"BotiquinMedicoBase",
+                "infantry_commando":"OpticaComandoBase"}
+            if signatures.has(role):
+                check(hero.find_child(str(signatures[role]),true,false)!=null,
+                    "unique physical V1 specialist base "+role)
             check(Models.pose_model(role,hero,"move",0.22,Vector2i(1,0)),
                 "real articulated walking animation")
             var leg: Node3D = hero.find_child("PiernaRig_1",true,false) as Node3D
@@ -159,10 +168,10 @@ func _run() -> void:
                 check(opaque(lite),"LOD8 also fully opaque")
                 lite.free()
     check(colors.size()==8,"all eight faction palettes are distinct")
-    check(captures==13,"8 faction + 5 alternate-role native screenshots")
+    check(captures==18,"8 faction + 10 alternate-role native screenshots")
     if failures > 0:
         push_error("FAIL INFANTRY V1 NATIVE 3D: %d issues" % failures)
         quit(1)
     else:
-        print("PASS INFANTRY V1 NATIVE 3D: 6 roles x 8 factions x 2 LOD; 13 PNG; reversible damage and poses")
+        print("PASS INFANTRY V1 NATIVE 3D: 11 roles x 8 factions x 2 LOD; 18 PNG; reversible damage and poses")
         quit(0)
