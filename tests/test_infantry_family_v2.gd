@@ -5,6 +5,7 @@ extends SceneTree
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const Finish = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const Specialist = preload("res://scripts/ui/InfantryVariantsV4.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const OUT := "res://build/qa/infantry-v2"
 var failed: int = 0
@@ -133,6 +134,21 @@ func _run() -> void:
             var n_lite: int=count_meshes(mobile)
             check(Finish.has_model(hero) and Finish.has_model(mobile),
                 "V2 actually installed on both real meshes")
+            if Specialist.supports(role):
+                check(Specialist.has_model(hero,role) and
+                    Specialist.has_model(mobile,role),
+                    "V4 specialist physical gear on BOTH LODs: "+role)
+                for soldier in [hero,mobile]:
+                    var part_name: String=str(Specialist.MARKER[role])
+                    var part: MeshInstance3D=soldier.find_child(
+                        part_name,true,false) as MeshInstance3D
+                    check(part!=null and part.mesh!=null and
+                        part.material_override is StandardMaterial3D,
+                        "specialist actual mesh signature "+role+" / "+part_name)
+            else:
+                check(not hero.has_meta(Specialist.FLAG) and
+                    not mobile.has_meta(Specialist.FLAG),
+                    "original six infantry sculpts unaffected")
             check(n_hero>n_lite and n_lite>=70,
                 "mobile LOD reduction without loss of soldier silhouette")
             check(opaque(hero) and opaque(mobile),
@@ -266,14 +282,16 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==26,"26 real 3D comparison / tactical frames")
+    check(rendered==41,"41 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
-            "infantry_antitank","infantry_engineer"]:
+            "infantry_antitank","infantry_engineer",
+            "infantry_sniper","infantry_aa","infantry_logistic",
+            "infantry_medic","infantry_commando"]:
         check(not Arsenal.valid(role),"no accidental battle-role unlock "+role)
     if failed>0:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 96 meshes, 8 colors, 6 silhouettes, 2 LOD, 26 true PNG including tactical LOD8")
+        print("PASS INFANTRY V2 NATIVE 3D: 176 meshes, 8 colors, 11 silhouettes, 2 LOD, 41 true PNG including tactical LOD8")
         quit(0)
