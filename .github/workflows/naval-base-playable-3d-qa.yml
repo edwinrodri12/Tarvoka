@@ -1,0 +1,70 @@
+name: TARVOKA Naval Base playable 3D marine QA
+on:
+  push:
+    branches: [feat/naval-base-real-battle-v1-20261121]
+    paths:
+      - "scripts/ui/NavalBase*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "tests/test_naval_base_playable_v1.gd"
+      - ".github/workflows/naval-base-playable-3d-qa.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/ui/NavalBase*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "tests/test_naval_base_playable_v1.gd"
+      - ".github/workflows/naval-base-playable-3d-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: naval-base-playable-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-coastal-battle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install official Godot 4.3 for real 3D tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-naval.zip
+          unzip -oq /tmp/godot-naval.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          command -v xvfb-run
+      - name: Import native renderer and real game state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/naval-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:' /tmp/naval-import.log; then exit 1; fi
+      - name: Test coastal producer battle with 120 variants and PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 120s \
+            xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_naval_base_playable_v1.gd \
+            2>&1 | tee /tmp/naval-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/naval-native.log; then exit 1; fi
+          grep -F 'PASS NAVAL BASE PLAYABLE 3D:' /tmp/naval-native.log
+          test -s artifacts/naval_base_battle_v1/report.json
+          test "$(find artifacts/naval_base_battle_v1/ -name '*.png' | wc -l)" -eq 2
+      - name: Upload capture files and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: naval-base-real-coastal-mesa
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/naval_base_battle_v1/
+            /tmp/naval-import.log
+            /tmp/naval-native.log

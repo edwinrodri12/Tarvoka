@@ -16,6 +16,8 @@ const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
 const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
 const Airbase3D = preload("res://scripts/ui/AirbaseBattle3D.gd")
 const AirbaseLOD = preload("res://scripts/ui/AirbaseBattleLOD.gd")
+const NavalBase3D = preload("res://scripts/ui/NavalBaseBattle3D.gd")
+const NavalBaseLOD = preload("res://scripts/ui/NavalBaseBattleLOD.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
@@ -500,7 +502,7 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var owner: int = int(site["owner"]) if visible else -1
         # A hidden workshop is explored geometry only, never a live feed
         # of enemy upgrades or fresh damage inflicted behind the fog.
-        if not visible and str(site["kind"]) in ["armor_plant","airbase"]:
+        if not visible and str(site["kind"]) in ["armor_plant","airbase","shipyard"]:
             site["visual_damage_stage"]=0
             site.erase("visual_level")
         # Real civil V4 district, identical to the shared Art Studio.
@@ -564,6 +566,22 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 airfield.set_meta("kind","airbase")
                 airfield.set_meta("battle_cell",cell)
                 parent.add_child(airfield)
+                drawn+=1
+                continue
+        # Existing modern shipyard site is the NAVAL BASE on navigable water.
+        # One sculpted native 3D visual replaces its generic gameplay cube.
+        # No extra shipyard building or production rules are introduced.
+        if str(site["kind"])=="shipyard":
+            var port:Node3D=NavalBase3D.build_site(state,site,owner)
+            if port!=null:
+                port.name="Instalacion3D_shipyard_%d_%d" % [
+                    cell.x,cell.y]
+                port.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                port.set_meta("owner_public",owner)
+                port.set_meta("kind","shipyard")
+                port.set_meta("battle_cell",cell)
+                parent.add_child(port)
                 drawn+=1
                 continue
         var color: Color = Color("#a9ada5")
@@ -754,6 +772,19 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         airbase_lod.free()
     counters["airbase_lod_models"]=airbase_count
+    var naval_lod:Node=NavalBaseLOD.new()
+    naval_lod.name="BaseNavalLOD_Camara"
+    var naval_count:int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta(
+                "site_kind",""))=="shipyard":
+            if naval_lod.register(placed as Node3D):
+                naval_count+=1
+    if naval_count>0:
+        scene.add_child(naval_lod)
+    else:
+        naval_lod.free()
+    counters["naval_lod_models"]=naval_count
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
