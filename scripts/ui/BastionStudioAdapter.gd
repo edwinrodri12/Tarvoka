@@ -75,6 +75,7 @@ const A01Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const A01HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const A01SculptV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const A01TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
+const A01DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -672,11 +673,17 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "uav_recon":
             return [
-                {"group":"A01 V2 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
+                {"group":"A01 V6 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
                 {"title":"Volar · hélice impulsora", "action":"a01_move"},
                 {"title":"Explorar · girar cámara óptica", "action":"a01_scan"},
                 {"title":"Simular impacto visual", "action":"a01_hit"},
-                {"title":"Detener y restaurar", "action":"stop"}
+                {"group":"DAÑO ACUMULATIVO · SOLO ARTE, NO MODIFICA HP"},
+                {"title":"D0 · intacto / reparar", "action":"damage_0"},
+                {"title":"D1 · impactos superficiales", "action":"damage_1"},
+                {"title":"D2 · placa dañada y humo", "action":"damage_2"},
+                {"title":"D3 · avería crítica y fuego", "action":"damage_3"},
+                {"title":"D4 · fuselaje destruido", "action":"damage_4"},
+                {"title":"Detener pose (conservar daño)", "action":"stop"}
             ]
         "tank":
             return [
@@ -1176,7 +1183,15 @@ func _studio_run_animation(action: String) -> void:
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
             var selected_stage: int=int(action.get_slice("_",1))
-            if InfantryV1.supports(_role):
+            if _role=="uav_recon" and A01DamageV6.has_model(model_root):
+                if _a01_tween!=null and _a01_tween.is_running():
+                    _a01_tween.kill()
+                A01Recon.restore(model_root)
+                if A01DamageV6.set_stage(model_root,selected_stage):
+                    status_label.text=(
+                        "A01 V6 · %s · SOLO ARTE · sin cambios a HP, visión o combate" %
+                        A01DamageV6.STAGES[selected_stage])
+            elif InfantryV1.supports(_role):
                 if InfantryV1.set_damage(model_root,selected_stage):
                     if selected_stage==4:
                         P06Models.pose_model(_role,model_root,"idle",1.0)
@@ -1387,6 +1402,9 @@ func _a01_play(kind:String)->void:
     if _role!="uav_recon" or model_root==null or not A01Recon.has_model(model_root):
         return
     if kind not in A01Recon.VALID_POSES:
+        return
+    if A01DamageV6.has_model(model_root) and A01DamageV6.stage(model_root)==4 and kind in ["move","scan"]:
+        status_label.text="A01 V6 · aeronave destruida, selecciona D0 para reparar."
         return
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
@@ -4530,6 +4548,9 @@ func _on_faction(index: int) -> void:
             return
         var keep_yaw:float=_yaw
         var keep_zoom:float=_zoom
+        var keep_damage:int=(
+            A01DamageV6.stage(model_root) if model_root!=null and
+            A01DamageV6.has_model(model_root) else 0)
         _faction=index
         _display_role("uav_recon")
         faction_picker.select(index)
@@ -4537,6 +4558,8 @@ func _on_faction(index: int) -> void:
         _zoom=keep_zoom
         if model_root!=null:
             model_root.rotation_degrees.y=_yaw
+            if A01DamageV6.has_model(model_root):
+                A01DamageV6.set_stage(model_root,keep_damage)
         _update_camera()
         return
     if _role=="ew_mobile":
@@ -5080,6 +5103,9 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if _role=="uav_recon" and model_root!=null and A01DamageV6.has_model(model_root):
+        _effect_time+=maxf(0.0,delta)
+        A01DamageV6.animate(model_root,_effect_time)
     if _role=="attack_heli" and HeliV13.has_model(model_root):
         _heli_damage_clock+=maxf(0.0,delta)
         if _heli_animation.is_empty():
@@ -5178,11 +5204,13 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
-        var built:bool=A01Recon.has_model(model_root) and A01Finish.has_model(model_root)
-        detail_label.text="A01 V5 EN DESARROLLO · UAV de reconocimiento sin armas · %d mallas 3D" % P06Models.inspect_meshes(model_root)
-        status_label.text="A01 · %s · %s" % [
-            str(Factions.FACTIONS[_faction]["name"]),
-            "V2 · alas PBR, óptica EO/IR móvil y marcas de facción LOD8/13" if built else "modelo incompleto"]
+        var ready_a01:bool=A01DamageV6.has_model(model_root)
+        var current_damage:int=A01DamageV6.stage(model_root) if ready_a01 else -1
+        detail_label.text="A01 V6 EN DESARROLLO · UAV SIN ARMAS · %d mallas · %s" % [
+            P06Models.inspect_meshes(model_root),
+            A01DamageV6.STAGES[current_damage] if ready_a01 else "modelo incompleto"]
+        status_label.text="A01 · %s · daño 3D artístico, sin cambiar HP, visión ni ataque" % [
+            str(Factions.FACTIONS[_faction]["name"])]
         return
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root) and G16ServiceV6.has_model(model_root)
