@@ -45,3 +45,8 @@ CI run [44883096497](https://github.com/edwinrodri12/Tarvoka/actions/runs/448830
 Commit `9b5247ec` adds `_physical_safe_to_canvas()` to the existing regression script. Six pure checks validate projection of physical left/right insets, containment in the expanded logical viewport, and rejection of invalid physical rectangles, screens, or logical base sizes. The conversion uses the same uniform scale factor as the `expand` geometry test; it does **not** alter actual HUD layout, Android settings, or game rules.
 
 Run: `godot --headless --path . --audio-driver Dummy --script res://tests/test_android_landscape_contract.gd`. Expected: `PASS ANDROID LANDSCAPE CONTRACT` and exit 0. **Godot/CI on this commit: NO CONFIRMADO** until a workflow result is inspected. **Android: NO EJECUTADO EN DISPOSITIVO**; **HUD real: PENDIENTE DE REVISIÓN VISUAL**. Next: inspect the actual HUD Control nodes and add a scene-instantiation regression without modifying parallel UI branches.
+
+
+## 2026-11-21 — asymmetric inset regression
+
+Added 15 pure geometry assertions across 1920×1080, 2400×1080 and 1600×1200 physical landscapes, with different left/right/top/bottom safe-area margins. Checks projected containment, both edges and physical-to-logical round trip. No real Control nodes or device insets are measured. Run `godot --headless --path . --script res://tests/test_android_landscape_contract.gd`; GitHub Actions outcome must be checked against the new head commit before marking PASS. Android: NO EJECUTADO EN DISPOSITIVO; HUD visual: PENDIENTE DE REVISIÓN VISUAL.
