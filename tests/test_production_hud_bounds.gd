@@ -22,6 +22,7 @@ func _run() -> void:
             await process_frame
             _check_hud(main, size, compact_mode)
     main.queue_free()
+    await process_frame
     if failures.is_empty():
         print("PASS PRODUCTION HUD BOUNDS: six landscape sizes x expanded/compact/expanded restoration")
         quit(0)
@@ -45,6 +46,12 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
             failures.append("missing production HUD control: " + name)
             continue
         if not node.is_visible_in_tree():
+            if compact_mode and node is BaseButton:
+                var blocker: CanvasItem = node
+                while blocker != null and blocker.visible:
+                    blocker = blocker.get_parent() as CanvasItem
+                var blocker_name := str(blocker.get_path()) if blocker != null else "unknown ancestor"
+                print("HUD hidden compact button %s: first invisible ancestor %s" % [name, blocker_name])
             continue
         checked_visible += 1
         var rect := node.get_global_rect()
