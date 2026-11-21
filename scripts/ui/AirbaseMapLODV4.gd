@@ -23,9 +23,16 @@ static func _mat(name: String,faction: int) -> StandardMaterial3D:
     if _material_cache.has(key):
         return _material_cache[key] as StandardMaterial3D
     var material := StandardMaterial3D.new()
-    material.albedo_color = (
-        (NEUTRAL_ACCENT if faction==-1 else Style.faction_color(faction))
-        if name=="faction" else COLORS[name])
+    # Glass is intentionally not in COLORS: that palette contains only
+    # opaque concrete, steel and marking finishes. Resolve separately to
+    # avoid reading a missing Dictionary key on real close-range models.
+    if name=="faction":
+        material.albedo_color=(NEUTRAL_ACCENT if faction==-1
+            else Style.faction_color(faction))
+    elif name=="glass":
+        material.albedo_color=Color(0.29,0.56,0.66,0.68)
+    else:
+        material.albedo_color=COLORS[name]
     material.metallic = 0.18 if name=="steel" else 0.05
     material.roughness = 0.78
     if name=="glass":
