@@ -43,7 +43,7 @@ func _initialize() -> void:
     _check("reject HUD under left cutout", not _rect_inside(Rect2(40, 60, 500, 140), safe_area))
     _check("reject HUD beyond bottom inset", not _rect_inside(Rect2(120, 1010, 500, 80), safe_area))
     _check("reject negative HUD dimensions", not _rect_inside(Rect2(120, 60, -10, 80), safe_area))
-    _check("reject nonpositive safe area", not _rect_inside(Rect2.ZERO, Rect2(0, 0, 0, 100)))
+    _check("reject nonpositive safe area", not _rect_inside(Rect2(), Rect2(0, 0, 0, 100)))
 
     if failures.is_empty():
         print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks")
