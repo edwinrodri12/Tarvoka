@@ -4,6 +4,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
+const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -36,14 +37,15 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V2 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V3 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and Drone.has_model(model) and Finish.has_model(model),
-        "native A01 V2 wing, sealed optics and motor loaded in original SubViewport")
+    check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
+        HardwareV3.has_model(model),
+        "native A01 V3 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
     check(panel!=null,"A01 V2 close-up and 360 controls added to the same Camera tab")
@@ -87,8 +89,18 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     model=studio.get("model_root") as Node3D
-    check(model!=null and Drone.has_model(model) and Finish.has_model(model),
-        "changing faction rebuilds A01 V2 physical PBR model")
+    check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
+        HardwareV3.has_model(model),
+        "changing faction rebuilds A01 V3 physical PBR model")
+    check(factions!=null and factions.visible and factions.selected==6,
+        "A01 keeps the same visible faction selector after repainting")
+    if model!=null:
+        var stripe:=model.find_child(Finish.FACTION_STRIPE+"_Port",
+            true,false) as MeshInstance3D
+        check(stripe!=null and stripe.material_override is StandardMaterial3D and
+            (stripe.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
+                Models.faction_paint_color(6)),
+            "A01 faction paint changes in native Godot materials")
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://build/qa/a01-v1"))==OK,
         "QA photo folder")
@@ -104,8 +116,8 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 V2 SHARED STUDIO: %d errors" % failures)
+        printerr("FAIL A01 V3 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V2 SHARED STUDIO: same A01 V2 selector, 8 factions, unarmed gimbal, 360 cameras")
+        print("PASS A01 V3 SHARED STUDIO: same A01 V2 selector, 8 factions, unarmed gimbal, 360 cameras")
         quit(0)
