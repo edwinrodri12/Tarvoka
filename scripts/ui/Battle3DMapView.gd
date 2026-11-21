@@ -242,7 +242,7 @@ func _ready() -> void:
     for descriptor in [
         ["↻",_rotate_camera,"Girar el mapa 3D"],
         ["RANGO",_toggle_ranges,"Mostrar u ocultar rangos legales"],
-        ["FPS",_toggle_city_perf,"Mostrar FPS y detalle real de ciudades, Talleres y Bases Aéreas"]
+        ["FPS",_toggle_city_perf,"Mostrar FPS y niveles de detalle de ciudades, Talleres, Bases Aéreas y Centros de Drones"]
     ]:
         var shortcut := Button.new()
         shortcut.text = str(descriptor[0])

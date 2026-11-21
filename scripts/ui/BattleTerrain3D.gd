@@ -18,6 +18,8 @@ const Airbase3D = preload("res://scripts/ui/AirbaseBattle3D.gd")
 const AirbaseLOD = preload("res://scripts/ui/AirbaseBattleLOD.gd")
 const NavalBase3D = preload("res://scripts/ui/NavalBaseBattle3D.gd")
 const NavalBaseLOD = preload("res://scripts/ui/NavalBaseBattleLOD.gd")
+const DroneCenter3D = preload("res://scripts/ui/DroneCenterBattle3D.gd")
+const DroneCenterLOD = preload("res://scripts/ui/DroneCenterBattleLOD.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
@@ -502,7 +504,7 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var owner: int = int(site["owner"]) if visible else -1
         # A hidden workshop is explored geometry only, never a live feed
         # of enemy upgrades or fresh damage inflicted behind the fog.
-        if not visible and str(site["kind"]) in ["armor_plant","airbase","shipyard"]:
+        if not visible and str(site["kind"]) in ["armor_plant","airbase","shipyard","drone_center"]:
             site["visual_damage_stage"]=0
             site.erase("visual_level")
         # Real civil V4 district, identical to the shared Art Studio.
@@ -582,6 +584,21 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 port.set_meta("kind","shipyard")
                 port.set_meta("battle_cell",cell)
                 parent.add_child(port)
+                drawn+=1
+                continue
+        # Existing drone producer uses its real tactical 3D building.
+        # No new site or drone production change; only public geometry.
+        if str(site["kind"])=="drone_center":
+            var drone_site:Node3D=DroneCenter3D.build_site(state,site,owner)
+            if drone_site!=null:
+                drone_site.name="Instalacion3D_drone_center_%d_%d" % [
+                    cell.x,cell.y]
+                drone_site.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                drone_site.set_meta("owner_public",owner)
+                drone_site.set_meta("kind","drone_center")
+                drone_site.set_meta("battle_cell",cell)
+                parent.add_child(drone_site)
                 drawn+=1
                 continue
         var color: Color = Color("#a9ada5")
@@ -785,6 +802,19 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         naval_lod.free()
     counters["naval_lod_models"]=naval_count
+    var drone_lod:Node=DroneCenterLOD.new()
+    drone_lod.name="CentroDronesLOD_Camara"
+    var drone_count:int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta(
+                "site_kind",""))=="drone_center":
+            if drone_lod.register(placed as Node3D):
+                drone_count+=1
+    if drone_count>0:
+        scene.add_child(drone_lod)
+    else:
+        drone_lod.free()
+    counters["drone_center_lod_models"]=drone_count
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
