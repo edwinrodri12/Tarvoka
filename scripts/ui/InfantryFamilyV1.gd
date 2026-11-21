@@ -6,7 +6,9 @@ class_name TarvokaInfantryFamilyV1
 # line = G01, scout = G03. All infantry_* options are STUDIO-ONLY previews.
 const ROLES := [
     "line", "infantry_urban", "infantry_defense",
-    "scout", "infantry_antitank", "infantry_engineer"
+    "scout", "infantry_antitank", "infantry_engineer",
+    "infantry_sniper", "infantry_logistic", "infantry_medic",
+    "infantry_commando"
 ]
 const FLAG := "tarvoka_infantry_family_v1"
 const UNIFORM := Color("#596a65")
@@ -215,7 +217,8 @@ static func build(model: Node3D, role: String, faction_color: Color,
         _cylinder(upper,"HerramientaPlegada",Vector3(0.37,-0.16,0.32),
             0.035,0.58,STEEL,Vector3(25,0,18))
     else:
-        _rifle(weapon,role in ["infantry_urban","scout"],accent)
+        _rifle(weapon,role in ["infantry_urban","scout",
+            "infantry_logistic","infantry_medic","infantry_commando"],accent)
     if role == "scout":
         for side in [-1,1]:
             _cylinder(head,"OpticaExploracion_%d" % side,
@@ -240,6 +243,26 @@ static func build(model: Node3D, role: String, faction_color: Color,
             Vector3(0.52,0.12,0.018),accent)
         _box(head,"VisorCascoReforzado",Vector3(0,0.20,-0.294),
             Vector3(0.48,0.23,0.09),RUBBER)
+    # Historic V1 compare view: physical silhouettes for the four missing
+    # agreed designs, without changing tactical combat or camp rules.
+    if role=="infantry_sniper":
+        _cylinder(weapon,"MiraPrecisionBase",Vector3(0.22,0.23,0),
+            0.07,0.43,GLASS,Vector3(0,0,90))
+        _cylinder(weapon,"CanonPrecisionBase",Vector3(1.07,0,0),
+            0.035,0.24,STEEL,Vector3(0,0,90))
+    elif role=="infantry_logistic":
+        _box(upper,"CargaLogisticaBase",Vector3(0,0.02,0.54),
+            Vector3(0.64,0.62,0.29),CLOTH)
+    elif role=="infantry_medic":
+        _box(upper,"BotiquinMedicoBase",Vector3(-0.32,-0.09,0.51),
+            Vector3(0.36,0.45,0.19),CLOTH)
+        _box(upper,"IdentificadorMedicoBase",Vector3(-0.32,0.04,0.626),
+            Vector3(0.25,0.075,0.028),accent)
+    elif role=="infantry_commando":
+        _box(head,"OpticaComandoBase",Vector3(0,0.425,-0.325),
+            Vector3(0.37,0.13,0.17),GLASS)
+        _cylinder(upper,"AntenaComandoBase",Vector3(0.27,0.44,0.35),
+            0.019,0.51,STEEL)
     # Physical, opaque impact marks exist in all LODs. Each remains hidden
     # until the Studio damage state explicitly reveals its numbered stage.
     var impacts := _joint(upper,"DaniosFisicos",Vector3.ZERO)

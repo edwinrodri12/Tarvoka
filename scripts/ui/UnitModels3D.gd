@@ -4,7 +4,8 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer",
+    "infantry_sniper","infantry_logistic","infantry_medic","infantry_commando"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -18,6 +19,7 @@ const G13AA = preload("res://scripts/ui/G13MobileAirDefenseV1.gd")
 const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const InfantryFamily = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const InfantryFinishV2 = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const InfantryVariantsV4 = preload("res://scripts/ui/InfantryVariantsV4.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -165,7 +167,9 @@ const TANK_BARREL_PIVOT := "ElevacionCanon"
 const PREVIEW_FRAME := {
     "line":3.05,"scout":3.05,"infantry_urban":3.05,
     "infantry_defense":3.05,"infantry_antitank":3.15,
-    "infantry_engineer":3.05,"apc":3.55,"tank":3.75,
+    "infantry_engineer":3.05,"infantry_sniper":3.25,
+    "infantry_logistic":3.25,"infantry_medic":3.15,
+    "infantry_commando":3.15,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
     "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45,
     "logistics_mobile":5.0
@@ -998,7 +1002,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     var model := Node3D.new()
     model.name = "Modelo3D_" + role
     match role:
-        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             # One genuine native infantry family; level variants do not invent
             # new tactical classes or alter established battle unit IDs.
             if not InfantryFamily.build(model,role,faction_paint_color(faction),
@@ -1007,6 +1011,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             elif finish_enabled and art_level>=8:
                 if not InfantryFinishV2.apply(model,faction_paint_color(faction),art_level>=13):
                     push_warning("Infantry V2 organic solid sculpt/PBR not applied")
+                elif InfantryVariantsV4.supports(role):
+                    if not InfantryVariantsV4.apply(model,role,
+                            faction_paint_color(faction),art_level>=13):
+                        push_warning("Approved infantry specialist kit not applied: "+role)
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6

@@ -3,8 +3,10 @@ extends SceneTree
 # QA against the EXACT Pages-native combined Godot Studio scene; the V1/V2
 # buttons must swap real Godot meshes inside the existing SubViewport.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
-const UNITS := ["line","infantry_urban","infantry_defense",
-    "scout","infantry_antitank","infantry_engineer"]
+const Roster=preload("res://scripts/ui/InfantryCampRosterV1.gd")
+const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
+const UNITS := ["line","infantry_commando","infantry_sniper",
+    "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
 
 func must(ok: bool, description: String) -> void:
@@ -50,6 +52,15 @@ func _run() -> void:
             role+" model belongs to native viewport")
         must(camera_panel!=null and camera_panel.is_visible_in_tree(),
             role+" comparison controls visible on CAMERA tab")
+        var six_panel: VBoxContainer=studio.get("infantry_six_panel") as VBoxContainer
+        must(six_panel!=null and six_panel.is_visible_in_tree() and
+            six_panel.find_children("*","Button",true,false).size()==6,
+            "six and only six agreed core navigation buttons remain visible")
+        must(Roster.is_core(role),"published six-core catalog includes "+role)
+        if Specialist.supports(role):
+            must(str(mesh.get_meta(Specialist.FLAG,""))==role and
+                mesh.find_child(str(Specialist.MARKER[role]),true,false)!=null,
+                "specialist full native kit visible in original 3D viewport")
         studio.call("_infantry_review_look",180.0,"frente")
         must(is_equal_approx(
             (studio.get("model_root") as Node3D).rotation_degrees.y,180.0),
@@ -142,5 +153,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 SAME STUDIO: %d errors"%errors)
         quit(1)
     else:
-        print("PASS INFANTRY V2 SAME STUDIO: 6 roles, 8-faction repaint, V1/V2, LOD8/13 camera, 360 orbit, original shared scene")
+        print("PASS INFANTRY V2 SAME STUDIO: exactly 6 agreed core roles, 4 camp specialists, V1/V2, 8 factions, LOD8/13, 360, same Studio")
         quit(0)

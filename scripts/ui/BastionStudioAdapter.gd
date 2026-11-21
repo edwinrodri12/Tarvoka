@@ -5,6 +5,7 @@ class_name TarvokaBastionStudioAdapter
 # prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
 const P06Details = preload("res://scripts/ui/APCDetailV5.gd")
@@ -243,6 +244,7 @@ var studio_animation_role: String = ""
 var studio_animation_rebuild_count: int = 0
 # Shared-viewport V1/V2 comparison and orbit: no second viewer or scene.
 var infantry_360_panel: VBoxContainer
+var infantry_six_panel: VBoxContainer
 var infantry_360_tween: Tween = null
 var infantry_review_v2: bool = true
 var infantry_review_lod: int = 13
@@ -272,12 +274,16 @@ func _ready() -> void:
         role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V6 FINAL")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
-        ["line","G01 · Guardia · infantería V2"],
-        ["infantry_urban","G01 · Guardia urbana · V2"],
-        ["infantry_defense","G01 · Guardia defensiva · V2"],
-        ["scout","G03 · Rastreador · V2"],
-        ["infantry_antitank","G04 · Rompedor antiblindaje · V2"],
-        ["infantry_engineer","G05 · Ingeniero de combate · V2"]
+        ["line","★ INFANTERÍA BÁSICA · Guardia"],
+        ["infantry_urban","Boceto anterior · Guardia urbana"],
+        ["infantry_defense","Boceto anterior · Guardia defensiva"],
+        ["scout","Boceto anterior · Rastreador"],
+        ["infantry_antitank","Boceto anterior · Rompedor"],
+        ["infantry_engineer","★ CAMPAMENTO DEFENSIVO · Ingeniero"],
+        ["infantry_sniper","★ CAMPAMENTO RECONOCIMIENTO · Francotirador"],
+        ["infantry_logistic","★ CAMPAMENTO SUMINISTROS · Logístico a pie"],
+        ["infantry_medic","★ CAMPAMENTO MÉDICO · Médico"],
+        ["infantry_commando","★ UNIDAD ESPECIAL · Comando FS-24"]
     ]:
         var index:int=P06Models.ROLES.find(str(entry[0]))
         if index>=0:
@@ -405,6 +411,21 @@ func _install_unified_studio_navigation() -> void:
         "Giro 360°",_g16_review_spin,
         "Vista completa",func(): _g16_review_look(35.0,"general"))
     g16_360_panel.visible=false
+    infantry_six_panel=VBoxContainer.new()
+    infantry_six_panel.name="InfanteriaSeisUnidadesAcordadas"
+    infantry_six_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(infantry_six_panel)
+    _title(infantry_six_panel,"INFANTERÍA · SEIS UNIDADES DEFINIDAS",13)
+    _add_paired(infantry_six_panel,"Guardia básica",
+        func(): _display_role("line"),
+        "Comando especial",func(): _display_role("infantry_commando"))
+    _add_paired(infantry_six_panel,"Francotirador · Recon.",
+        func(): _display_role("infantry_sniper"),
+        "Ingeniero · Defensa",func(): _display_role("infantry_engineer"))
+    _add_paired(infantry_six_panel,"Logístico · Suministros",
+        func(): _display_role("infantry_logistic"),
+        "Médico · Curación",func(): _display_role("infantry_medic"))
+    infantry_six_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
     infantry_360_panel.add_theme_constant_override("separation",6)
@@ -584,8 +605,13 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
-        if role=="infantry_engineer":
-            actions.append({"title":"Trabajo y herramientas","action":"work"})
+        if role in ["infantry_engineer","infantry_logistic","infantry_medic"]:
+            var task_name:String="Trabajo y herramientas"
+            if role=="infantry_logistic":
+                task_name="Organizar suministros (animación)"
+            elif role=="infantry_medic":
+                task_name="Asistencia médica (animación)"
+            actions.append({"title":task_name,"action":"work"})
         else:
             actions.append({"title":"Ataque · retroceso de arma","action":"attack"})
         actions.append_array([
@@ -1339,7 +1365,7 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
-        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
         "logistics_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
@@ -1409,12 +1435,16 @@ func _refresh_unified_studio_navigation() -> void:
         label="EDIFICIO · "+str(_role).replace("_"," ").to_upper()
     else:
         match _role:
-            "line": label="G01 · Guardia · V2 en revisión"
             "infantry_urban": label="G01 · Guardia urbana · V2 en revisión"
             "infantry_defense": label="G01 · Guardia defensiva · V2 en revisión"
             "scout": label="G03 · Rastreador · V2 en revisión"
             "infantry_antitank": label="G04 · Rompedor · V2 en revisión"
-            "infantry_engineer": label="G05 · Ingeniero · V2 en revisión"
+            "infantry_engineer": label="Ingeniero · Campamento defensivo"
+            "infantry_sniper": label="Francotirador · Campamento reconocimiento"
+            "infantry_logistic": label="Logístico a pie · Campamento suministros"
+            "infantry_medic": label="Médico · Campamento médico"
+            "infantry_commando": label="Comando especial FS-24 · Infantería"
+            "line": label="Infantería básica · Guardia"
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
@@ -1453,6 +1483,8 @@ func _refresh_unified_studio_navigation() -> void:
         heli_controls.visible=show_unit_details and _role=="attack_heli"
     if studio_legacy_controls!=null:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
+    if infantry_six_panel!=null:
+        infantry_six_panel.visible=not building and InfantryV1.supports(_role)
     if infantry_360_panel!=null:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if g16_360_panel!=null:

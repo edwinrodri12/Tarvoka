@@ -5,6 +5,8 @@ extends SceneTree
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const Finish = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const Specialist = preload("res://scripts/ui/InfantryVariantsV4.gd")
+const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const OUT := "res://build/qa/infantry-v2"
 var failed: int = 0
@@ -133,6 +135,21 @@ func _run() -> void:
             var n_lite: int=count_meshes(mobile)
             check(Finish.has_model(hero) and Finish.has_model(mobile),
                 "V2 actually installed on both real meshes")
+            if Specialist.supports(role):
+                check(Specialist.has_model(hero,role) and
+                    Specialist.has_model(mobile,role),
+                    "approved specialist has real 3D gear in BOTH LODs: "+role)
+                for soldier in [hero,mobile]:
+                    var signature: String=str(Specialist.MARKER[role])
+                    var gear: MeshInstance3D=soldier.find_child(
+                        signature,true,false) as MeshInstance3D
+                    check(gear!=null and gear.mesh!=null and
+                        gear.material_override is StandardMaterial3D,
+                        "unique physical 3D specialist signature "+role)
+            else:
+                check(not hero.has_meta(Specialist.FLAG) and
+                    not mobile.has_meta(Specialist.FLAG),
+                    "older models remain unchanged, no random kit")
             check(n_hero>n_lite and n_lite>=70,
                 "mobile LOD reduction without loss of soldier silhouette")
             check(opaque(hero) and opaque(mobile),
@@ -266,14 +283,16 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==26,"26 real 3D comparison / tactical frames")
+    check(rendered==38,"38 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
-            "infantry_antitank","infantry_engineer"]:
+            "infantry_antitank","infantry_engineer",
+            "infantry_sniper","infantry_logistic","infantry_medic",
+            "infantry_commando"]:
         check(not Arsenal.valid(role),"no accidental battle-role unlock "+role)
     if failed>0:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 96 meshes, 8 colors, 6 silhouettes, 2 LOD, 26 true PNG including tactical LOD8")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 38 true PNG")
         quit(0)
