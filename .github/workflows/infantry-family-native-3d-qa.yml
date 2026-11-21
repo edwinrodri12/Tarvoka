@@ -58,6 +58,13 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/infantry-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/infantry-import.log; then exit 1; fi
+      - name: Verify six agreed infantry roles and four exclusive camp links
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 65s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_infantry_camp_roster.gd 2>&1 | tee /tmp/infantry-core-six.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:' /tmp/infantry-core-six.log; then exit 1; fi
+          grep -Fq 'PASS INFANTRY CORE SIX:' /tmp/infantry-core-six.log
       - name: Test 160 native sculpt combinations; capture 17 genuine Godot V1 PNGs
         shell: bash
         run: |
