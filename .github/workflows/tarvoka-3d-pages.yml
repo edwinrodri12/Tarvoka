@@ -362,6 +362,8 @@ jobs:
           cp hq-android-v15/tests/test_a01_recon_shared_studio.gd tests/
           test -s hq-android-v15/tests/test_a01_recon_damage_v6.gd
           cp hq-android-v15/tests/test_a01_recon_damage_v6.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_mobile_budget_v7.gd
+          cp hq-android-v15/tests/test_a01_recon_mobile_budget_v7.gd tests/
           grep -Fq 'A01Recon.build' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01Finish.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01HardwareV3.apply' scripts/ui/UnitModels3D.gd
@@ -1480,6 +1482,16 @@ jobs:
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_mobile_budget_v7.gd \
+            2>&1 | tee /tmp/a01-v7-mobile-budget.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v7-mobile-budget.log; then
+            echo '::error::A01 V7 mobile triangle/mesh budget or 12-UAV proxy failed' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V7 MOBILE BUDGET:' /tmp/a01-v7-mobile-budget.log
+          test "$(find build/qa/a01-v7 -maxdepth 1 -name 'a01-v7-12-*.png' | wc -l)" -eq 2
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
             --script res://tests/test_a01_recon_shared_studio.gd \
             2>&1 | tee /tmp/a01-unified-v1.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-unified-v1.log; then
@@ -2391,6 +2403,7 @@ jobs:
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
+            build/qa/a01-v7/*.png
           if-no-files-found: warn
           retention-days: 14
 
