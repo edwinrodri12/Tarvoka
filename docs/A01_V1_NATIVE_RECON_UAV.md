@@ -52,4 +52,6 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 
 **Estado:** código en PR de desarrollo #655. Faltan resultado de CI Godot 4.3, revisión de capturas nativas, inspección de contornos 360° y rendimiento en Android. No declarar A01 finalizado ni la URL ?unidad=a01 publicada antes de superar las validaciones.
 
-**Próxima prioridad:** inspeccionar 16 vistas y macros de hélice/sensor, corregir clipping o transparencias, y después incorporar daño visual escalonado sin inventar ataques.
+**Prioridad V3 ejecutada en código (pendiente de confirmación nativa):** la prueba de Godot genera las 16 imágenes de facción/LOD y cinco nuevas vistas físicas del mismo dron (frontal, trasera, lateral, superior e inferior). Comprueba contraste real frente al fondo para detectar capturas vacías y recorre mallas 3D para rechazar materiales transparentes. El publicador usa marcadores V3 coherentes y existe un flujo exclusivo TARVOKA A01 Recon UAV V3 Native Visual QA con evidencia PNG propia.
+
+**Próxima prioridad:** revisar los 21 PNG reales cuando el CI concluya; corregir clipping, facciones ilegibles o contornos huecos; medir Android y después añadir daño visual escalonado sin inventar ataques. La ejecución de las pruebas no se da por aprobada solo porque el código esté incorporado.
