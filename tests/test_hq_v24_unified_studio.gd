@@ -65,6 +65,11 @@ func _run() -> void:
     assert(studio.model_root.get_meta("visual_damage_stage")==4)
     assert(not studio.model_root.has_node("EscudoOficialDeFaccion"))
     await _capture(studio,"04_hq_v24_D4_ruins")
+    # D4 must retain unmistakably fractured command-gate columns, not a
+    # featureless flat tile. Geometry has already been validated in battle.
+    var masonry:MeshInstance3D=studio.model_root.find_child(
+        "MallaConsolidadaMapaV5",true,false) as MeshInstance3D
+    assert(masonry!=null and masonry.get_aabb().size.y*HQBattle.MODEL_SCALE>0.30)
 
     studio.hq_damage_stage_picker.select(0)
     studio._change_hq_damage_stage(0)
