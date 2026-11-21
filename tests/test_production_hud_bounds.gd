@@ -37,7 +37,9 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
     var checked_buttons := 0
     for name in ["board_holder", "sidebar", "compact_confirm", "compact_cancel",
             "compact_end_turn", "expanded_confirm", "expanded_cancel",
-            "expanded_end_turn", "compact_menu_button"]:
+            "expanded_end_turn", "compact_menu_button", "compact_center", "compact_iso",
+            "compact_options_button", "compact_alerts_button", "compact_next_unit",
+            "compact_attention_unit", "compact_threat_button"] :
         var node: Control = main.get(name)
         if node == null:
             failures.append("missing production HUD control: " + name)
