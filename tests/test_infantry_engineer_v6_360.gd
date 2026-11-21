@@ -22,6 +22,39 @@ func meshes(n: Node) -> int:
         amount+=meshes(c)
     return amount
 
+# Sealed polygon topology: no open thin planes, missing caps or holes.
+func _mesh_key(p: Vector3) -> String:
+    return "%d:%d:%d" % [roundi(p.x*100000.0),
+        roundi(p.y*100000.0),roundi(p.z*100000.0)]
+
+func _watertight(shape: Mesh) -> bool:
+    if not shape is ArrayMesh or shape.get_surface_count()==0:
+        return false
+    for surface in range(shape.get_surface_count()):
+        var arrays: Array=shape.surface_get_arrays(surface)
+        var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var raw_indices: Variant=arrays[Mesh.ARRAY_INDEX]
+        var indices: PackedInt32Array=(
+            raw_indices if raw_indices is PackedInt32Array else PackedInt32Array())
+        var total: int=indices.size() if indices.size()>0 else vertices.size()
+        if total<12 or total%3!=0:
+            return false
+        var edges: Dictionary={}
+        for t in range(0,total,3):
+            var triangle: Array[String]=[]
+            for j in range(3):
+                var index: int=indices[t+j] if indices.size()>0 else t+j
+                triangle.append(_mesh_key(vertices[index]))
+            for j in range(3):
+                var edge: Array[String]=[triangle[j],triangle[(j+1)%3]]
+                edge.sort()
+                var key: String=edge[0]+"|"+edge[1]
+                edges[key]=int(edges.get(key,0))+1
+        for count in edges.values():
+            if int(count)!=2:
+                return false
+    return true
+
 func fully_opaque(n: Node) -> bool:
     if n is MeshInstance3D:
         var part: MeshInstance3D=n as MeshInstance3D
@@ -68,11 +101,14 @@ func _run() -> void:
                 PremiumV8.SHOULDER+"_1",true,false) as MeshInstance3D
             var old_shoulder: Node3D=model.find_child(
                 "Hombrera_1",true,false) as Node3D
-            check(actual_shield!=null and actual_shield.mesh is ArrayMesh,
-                "V8 shield is real 3D capped bevel rather than flat texture")
+            check(actual_shield!=null and actual_shield.mesh is ArrayMesh and
+                actual_shield.get_parent().name=="V6_BarreraArticuladaRig" and
+                _watertight(actual_shield.mesh),
+                "V8 bevel shield is watertight and attached to moving hinge")
             check(gun_detail!=null and gun_detail.mesh is ArrayMesh and
-                gun_detail.get_parent().name=="ArmamentoRig",
-                "V8 sculpted receiver follows real rifle rig")
+                gun_detail.get_parent().name=="ArmamentoRig" and
+                _watertight(gun_detail.mesh),
+                "V8 sealed rifle receiver follows real weapon rig")
             check(shoulder!=null and shoulder.mesh is SphereMesh and
                 old_shoulder!=null and not old_shoulder.visible,
                 "anatomical moving shoulder replaces cuboid prototype")
