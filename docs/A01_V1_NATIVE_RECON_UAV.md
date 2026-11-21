@@ -39,3 +39,17 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - Tests nativos y de visor actualizados: **8 facciones × LOD8 y LOD13 = 16 imágenes** en Godot; pruebas del sensor, color, geometría física, vistas y selección compartida; obligatorias para publicar `?unidad=a01`.
 
 **Estado:** V2 en pruebas. No declarar finalizada ni afirmar publicación hasta que el workflow de Godot y la aprobación visual estén confirmados. Los valores de detección, visión y combate del juego no cambian.
+
+
+## Etapa V3 — hélice auténtica, herrajes EO/IR y selector compartido (en desarrollo)
+
+- Archivo aditivo: scripts/ui/A01ReconFinishV3.gd. Es la MISMA aeronave V1/V2; no se crea un rol nuevo.
+- La hélice V1 usaba tres barras centradas que aparentaban seis extremos. V3 oculta esas barras y dibuja exactamente tres palas radiales independientes bajo el mismo motor animado. Las piezas V1 se conservan como referencia invisible.
+- Winglets volumétricos, superficies de ajuste de cola y cubiertas de servos. Las tapas y canalizaciones exclusivas de LOD13 no se añaden a LOD8.
+- Gimbal EO/IR con dos apoyos cilíndricos sólidos, hijos del pivote óptico: siguen físicamente barrido y restauración; no crean cámaras de juego ni detección táctica.
+- El Estudio principal vuelve a mostrar el selector compartido de ocho facciones para A01; al cambiar color reconstruye materiales físicos sin perder yaw/zoom.
+- Pruebas nativas ampliadas a tres palas, dos apoyos del sensor, winglets, pintura de facción y 16 capturas reales (8 facciones × 2 LOD). El workflow de publicación copia el nuevo módulo V3.
+
+**Estado:** código en PR de desarrollo #655. Faltan resultado de CI Godot 4.3, revisión de capturas nativas, inspección de contornos 360° y rendimiento en Android. No declarar A01 finalizado ni la URL ?unidad=a01 publicada antes de superar las validaciones.
+
+**Próxima prioridad:** inspeccionar 16 vistas y macros de hélice/sensor, corregir clipping o transparencias, y después incorporar daño visual escalonado sin inventar ataques.
