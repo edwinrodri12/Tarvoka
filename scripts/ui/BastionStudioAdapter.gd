@@ -269,7 +269,7 @@ func _ready() -> void:
         role_picker.set_item_text(aa_index,"G13 · AA V69 · bocachas y anclajes mecanizados")
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
-        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V6 EN DESARROLLO")
+        role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V6 FINAL")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","G01 · Guardia · infantería V2"],
@@ -4932,7 +4932,7 @@ func _update_details() -> void:
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root) and G16ServiceV6.has_model(model_root)
         var stage:int=G16MechanicsV3.stage(model_root) if G16MechanicsV3.has_model(model_root) else 0
-        detail_label.text="G16 V6 EN DESARROLLO · Logística blindada 6×6 · %d mallas · daño %d/4" % [
+        detail_label.text="G16 V6 FINAL · Logística blindada 6×6 · %d mallas · daño %d/4" % [
             P06Models.inspect_meshes(model_root),stage]
         status_label.text="G16 · %s · %s" % [
             str(Factions.FACTIONS[_faction]["name"]),
