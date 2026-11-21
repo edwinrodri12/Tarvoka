@@ -92,3 +92,7 @@ Se añadió diagnóstico de la primera capa ancestral invisible de cada botón c
 ## 2026-11-21 — inspección del HUD inmersivo real
 
 Commit `94ae9c7c` amplía `tests/test_production_hud_bounds.gd` para revisar los botones del componente `immersive_battle_hud` (menú, objetivos, mapa 3D, finalizar turno y acciones contextuales) en modo compacto. La fila de atajos antigua puede permanecer oculta por diseño; los botones contextuales solo se miden si son visibles. Se conservan las aserciones de cobertura no vacía, dimensiones y límites. **Godot/CI de este commit: NO CONFIRMADO**; **Android físico: NO EJECUTADO EN DISPOSITIVO**; **QA visual: PENDIENTE DE REVISIÓN VISUAL**. Si falla, comprobar el primer ancestro invisible y la pantalla activa antes de modificar producción.
+
+## 2026-11-21 — expanded HUD geometry restoration
+
+Commit `ebe6d6b3` extends `tests/test_production_hud_bounds.gd` beyond visibility restoration: it captures the global rectangles of visible production buttons before compact mode and verifies that their positions and sizes return within a 1 logical pixel tolerance after expanded → compact → expanded. It runs across six landscape dimensions. Hidden contextual actions are excluded until visible. This detects layout drift even when visibility flags recover correctly. Previous head `1f97da30` had four successful CI workflows; those results do **not** validate this change. New head Godot/CI: **NO CONFIRMADO** until checked. Android: **NO EJECUTADO EN DISPOSITIVO**. Visual/touch review: **PENDIENTE DE REVISIÓN VISUAL**.
