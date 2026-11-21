@@ -50,3 +50,9 @@ Run: `godot --headless --path . --audio-driver Dummy --script res://tests/test_a
 ## 2026-11-21 — asymmetric inset regression
 
 Added 15 pure geometry assertions across 1920×1080, 2400×1080 and 1600×1200 physical landscapes, with different left/right/top/bottom safe-area margins. Checks projected containment, both edges and physical-to-logical round trip. No real Control nodes or device insets are measured. Run `godot --headless --path . --script res://tests/test_android_landscape_contract.gd`; GitHub Actions outcome must be checked against the new head commit before marking PASS. Android: NO EJECUTADO EN DISPOSITIVO; HUD visual: PENDIENTE DE REVISIÓN VISUAL.
+
+## 2026-11-21 — production HUD instance regression
+
+New `tests/test_production_hud_bounds.gd` instantiates the actual `scenes/Main.tscn` and checks visible named HUD controls at logical 1280×720 and 1600×900. Missing controls, nonpositive rectangles and bounds outside the logical Main viewport fail. The landscape workflow runs this script independently and archives its log. This is a real scene/layout test, unlike earlier pure coordinate examples, but does not simulate physical cutouts, font legibility, taps or device scaling. Main may load an existing autosave in its normal `_ready`; CI should run in an isolated environment.
+
+Source/CI wiring committed as `2a2f5ea0` and `f2018c81`. **Godot 4.3 CI: NO CONFIRMADO** for these commits until a completed run is inspected. **Android: NO EJECUTADO EN DISPOSITIVO**; **visual review: PENDIENTE**. If this test fails, inspect its named-control diagnostics before changing layout or weakening assertions. No APK delivered.
