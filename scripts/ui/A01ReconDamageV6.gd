@@ -192,8 +192,9 @@ static func repair(root:Node3D)->bool:
 static func animate(root:Node3D,clock:float)->bool:
     # Hot path: this is called on every visible studio frame. Skip recursive
     # find_child()/has_model() scans: geometry was fully checked in prepare().
-    if root==null or not bool(root.get_meta(FLAG,false)) or
-            int(root.get_meta(STAGE_KEY,0))<2:
+    if root==null:
+        return false
+    if not bool(root.get_meta(FLAG,false)) or int(root.get_meta(STAGE_KEY,0))<2:
         return false
     var vapors:Array=root.get_meta(SMOKE_CACHE,[])
     if vapors.size()!=2:
