@@ -127,6 +127,9 @@ func _run() -> void:
     _stage_scene(_grid([{"level":3,"faction":0,"damage":0}],1,3.0))
     _camera_at(Vector3(0,0.60,0),Vector3(2.4,2.6,-3.8),2.9)
     await _snap("06_closeup_materials_and_official_crest")
+    _stage_scene(_grid([{"level":3,"faction":0,"damage":4}],1,3.0))
+    _camera_at(Vector3(0,0.46,0),Vector3(2.4,2.6,-3.8),2.9)
+    await _snap("07_destroyed_command_arch_detail")
     # Native mesh budgets: six shell, three curved roofs, four native trims.
     for damage_value in range(5):
         var item:Node3D=HQ.build(3,4,damage_value)
@@ -138,5 +141,5 @@ func _run() -> void:
         item.free()
     _stage_scene(Node3D.new())
     _view.queue_free()
-    print("PASS HQ V24 VISUAL GALLERY: actual 3D battle close/far, 8 official factions, neutral, N1-N3, D0-D4, six native PNG captures")
+    print("PASS HQ V24 VISUAL GALLERY: actual 3D battle close/far, 8 official factions, neutral, N1-N3, D0-D4, seven native PNG captures")
     quit(0)
