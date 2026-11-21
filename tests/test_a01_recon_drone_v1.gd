@@ -7,6 +7,7 @@ const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
+const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v1"
 var failures:int=0
@@ -107,6 +108,30 @@ func _run()->void:
                 "A01 V3 physical winglets, gimbal trunnions and three-blade prop")
             check(AeroV4.has_model(model),
                 "A01 V4 both sealed tapered wing surfaces are installed")
+            check(TailV5.has_model(model),
+                "A01 V5 sealed twin booms and tapered V-tail triangles in BOTH LODs")
+            check(int(model.get_meta("tarvoka_a01_v5_lod",0))==lod,
+                "A01 V5 keeps native LOD8/LOD13 without gameplay changes")
+            check(bool(model.get_meta("tarvoka_a01_v5_3d_visual_only",false)),
+                "A01 V5 does not change unit attack, vision or stats")
+            for side in [-1,1]:
+                var new_tail:=model.find_child(
+                    TailV5.TAIL_L if side<0 else TailV5.TAIL_R,
+                    true,false) as MeshInstance3D
+                check(new_tail!=null and new_tail.visible and new_tail.mesh is ArrayMesh,
+                    "V5 real watertight 3D aerodynamic tail surface")
+                var old_tail:=model.find_child(
+                    "A01_V1_DihedralTail_"+str(side),
+                    true,false) as MeshInstance3D
+                check(old_tail!=null and not old_tail.visible,
+                    "obsolete rectangular tail is hidden rather than doubled")
+                var tail_band:=model.find_child(
+                    "A01_V5_VtailFactionPanel"+("_L" if side<0 else "_R"),
+                    true,false) as MeshInstance3D
+                check(tail_band!=null and tail_band.material_override is StandardMaterial3D and
+                    (tail_band.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
+                        Models.faction_paint_color(faction)),
+                    "V5 faction enamel remains distinct on both V-tail surfaces")
             check(int(model.get_meta("tarvoka_a01_v4_lod",0))==lod,
                 "A01 V4 has genuine Android and hero LOD")
             for wing_name in [AeroV4.WING_L,AeroV4.WING_R]:
@@ -226,7 +251,7 @@ func _run()->void:
                         "V3 360 native view has real visible geometry: "+str(key))
                     if inspection!=null and not inspection.is_empty():
                         check(inspection.save_png(
-                            "%s/a01-v4-360-%s.png" % [OUT,key])==OK,
+                            "%s/a01-v5-360-%s.png" % [OUT,key])==OK,
                             "save real 360 diagnostic: "+str(key))
                         diagnostic_captures+=1
                 camera.position=Vector3(4.7,3.9,5.6)
@@ -240,8 +265,8 @@ func _run()->void:
     vp.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 RECON UAV V4: %d errors" % failures)
+        printerr("FAIL A01 RECON UAV V5: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 RECON UAV V4: sixteen native renders plus five 360 views; closed tapered wings, physical gimbal, LOD8/13 and eight factions")
+        print("PASS A01 RECON UAV V5: sixteen native renders plus five 360 views; sculpted wings and closed V-tail, 8 factions, LOD8/13")
         quit(0)
