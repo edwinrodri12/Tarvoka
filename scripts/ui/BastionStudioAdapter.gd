@@ -3990,8 +3990,8 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
-    if model_root!=null and camera!=null and InfantryV1.supports(_role) and
-            infantry_review_lod==13:
+    if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
+            infantry_review_lod==13):
         # The published phone viewer had no full-body/casco framing presets.
         # Hero mode now fits the actual 2.6m-high soldier from boots to brow.
         # Close-up is explicitly opt-in; tactical LOD8 keeps the wider view.
