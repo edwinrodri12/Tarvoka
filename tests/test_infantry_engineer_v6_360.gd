@@ -105,6 +105,13 @@ func _run() -> void:
                 actual_shield.get_parent().name=="V6_BarreraArticuladaRig" and
                 _watertight(actual_shield.mesh),
                 "V8 bevel shield is watertight and attached to moving hinge")
+            var sealed_center: MeshInstance3D=model.find_child(
+                "V8_NucleoAceroBlindadoCerrado",true,false) as MeshInstance3D
+            check(sealed_center!=null and sealed_center.mesh is ArrayMesh and
+                _watertight(sealed_center.mesh) and
+                sealed_center.position.z>0.26 and
+                sealed_center.get_parent()==actual_shield.get_parent(),
+                "rear shield has a real sealed metallic center, not a dark hole")
             check(gun_detail!=null and gun_detail.mesh is ArrayMesh and
                 gun_detail.get_parent().name=="ArmamentoRig" and
                 _watertight(gun_detail.mesh),
