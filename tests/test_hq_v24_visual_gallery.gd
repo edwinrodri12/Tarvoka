@@ -97,7 +97,7 @@ func _run() -> void:
     assert(actual.find_child("Instalacion3D_city_7_1",true,false)!=null)
     _stage_scene(actual)
     var target:Vector3=Terrain.world_at(Vector2i(2,1))
-    _camera_at(target,Vector3(7,10,11),9.0)
+    _camera_at(target+Vector3(0,0.4,0),Vector3(5,7,-7),5.2)
     await _snap("01_real_battle_close")
     _camera_at(Vector3(10.8,0,8.4),Vector3(14,24,23),34.0)
     await _snap("02_real_battle_far")
@@ -107,22 +107,27 @@ func _run() -> void:
     for f in range(8):
         national.append({"level":3,"faction":f,"damage":0})
     national.append({"level":3,"faction":-1,"damage":0})
-    _stage_scene(_grid(national,3,3.25))
-    _camera_at(Vector3(3.25,0,3.25),Vector3(10,15,17),16.0)
+    _stage_scene(_grid(national,4,3.05))
+    _camera_at(Vector3(4.575,0,1.525),Vector3(8,10,-12),10.8)
     await _snap("03_eight_factions_and_neutral")
     var damage:Array=[]
     for d in range(5):
         damage.append({"level":3,"faction":0,"damage":d})
-    _stage_scene(_grid(damage,5,3.20))
-    _camera_at(Vector3(6.4,0,0),Vector3(12,15,17),21.0)
+    _stage_scene(_grid(damage,5,3.05))
+    _camera_at(Vector3(6.1,0,0),Vector3(8,10,-12),8.6)
     await _snap("04_damage_D0_to_D4")
     var tiers:Array=[]
     for lv in [1,2,3]:
         tiers.append({"level":lv,"faction":1,"damage":0})
-    _stage_scene(_grid(tiers,3,3.6))
-    _camera_at(Vector3(3.6,0,0),Vector3(11,14,16),13.0)
+    _stage_scene(_grid(tiers,3,3.3))
+    _camera_at(Vector3(3.3,0,0),Vector3(6,9,-10),6.0)
     await _snap("05_levels_N1_to_N3")
-    # Native mesh budgets: 6 surfaces existing shell + 3 curved roofs.
+    # Individual eye-level front quarter view to see metal, real glazing,
+    # crest and solid entrance rather than only thumbnails from above.
+    _stage_scene(_grid([{"level":3,"faction":0,"damage":0}],1,3.0))
+    _camera_at(Vector3(0,0.60,0),Vector3(2.4,2.6,-3.8),2.9)
+    await _snap("06_closeup_materials_and_official_crest")
+    # Native mesh budgets: six shell, three curved roofs, four native trims.
     for damage_value in range(5):
         var item:Node3D=HQ.build(3,4,damage_value)
         assert(item.get_meta("hq_material_surfaces")==13)
@@ -133,5 +138,5 @@ func _run() -> void:
         item.free()
     _stage_scene(Node3D.new())
     _view.queue_free()
-    print("PASS HQ V24 VISUAL GALLERY: actual 3D battle close/far, 8 official factions, neutral, N1-N3, D0-D4, five native PNG captures")
+    print("PASS HQ V24 VISUAL GALLERY: actual 3D battle close/far, 8 official factions, neutral, N1-N3, D0-D4, six native PNG captures")
     quit(0)
