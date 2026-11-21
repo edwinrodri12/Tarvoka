@@ -5,6 +5,7 @@ extends SceneTree
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
+const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -58,6 +59,31 @@ func _run() -> void:
                 continue
             check(Engineer.has_model(model),"real V6 installed F%d LOD%d"%[faction,lod])
             check(ClosureV7.has_model(model),"rear helmet/neck V7 installed F%d LOD%d"%[faction,lod])
+            check(PremiumV8.has_model(model),"V8 real PBR finish installed F%d LOD%d"%[faction,lod])
+            var actual_shield: MeshInstance3D=model.find_child(
+                PremiumV8.SHIELD,true,false) as MeshInstance3D
+            var gun_detail: MeshInstance3D=model.find_child(
+                PremiumV8.RIFLE,true,false) as MeshInstance3D
+            var shoulder: MeshInstance3D=model.find_child(
+                PremiumV8.SHOULDER+"_1",true,false) as MeshInstance3D
+            var old_shoulder: Node3D=model.find_child(
+                "Hombrera_1",true,false) as Node3D
+            check(actual_shield!=null and actual_shield.mesh is ArrayMesh,
+                "V8 shield is real 3D capped bevel rather than flat texture")
+            check(gun_detail!=null and gun_detail.mesh is ArrayMesh and
+                gun_detail.get_parent().name=="ArmamentoRig",
+                "V8 sculpted receiver follows real rifle rig")
+            check(shoulder!=null and shoulder.mesh is SphereMesh and
+                old_shoulder!=null and not old_shoulder.visible,
+                "anatomical moving shoulder replaces cuboid prototype")
+            var logo: MeshInstance3D=model.find_child(
+                PremiumV8.FACTION,true,false) as MeshInstance3D
+            var logo_mat: StandardMaterial3D=(
+                logo.material_override as StandardMaterial3D if logo!=null else null)
+            check(logo_mat!=null and
+                logo_mat.albedo_color.is_equal_approx(
+                    Models.faction_paint_color(faction)),
+                "V8 raised premium shield badge uses exact official faction paint")
             var scalp: Node3D=model.find_child("Cabeza",true,false) as Node3D
             check(scalp!=null and not scalp.visible,
                 "legacy bare cranium is never exposed in 360 engineer view")
@@ -150,8 +176,8 @@ func _run() -> void:
             "infantry_logistic","infantry_commando"]:
         var other: Node3D=Models.build(other_role,0,true,13)
         check(other!=null and not Engineer.has_model(other) and
-            not ClosureV7.has_model(other),
-            "no engineer V6/V7 coverage installed on other approved core role "+other_role)
+            not ClosureV7.has_model(other) and not PremiumV8.has_model(other),
+            "no engineer V6/V7/V8 art installed on another core role "+other_role)
         if other!=null:
             other.free()
 
@@ -215,6 +241,21 @@ func _run() -> void:
             camera.look_at(Vector3(0,2.07,0),Vector3.UP)
             await _frame(view,"engineer_v7_full_helmet_%s_close"%side)
         camera.size=3.6
+        # Real premium close-ups for the previously under-detailed areas.
+        # Model stays in the same SubViewport, not a stock/reference image.
+        Engineer.pose(art,"idle",0.0)
+        camera.size=2.50
+        for side in ["front","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.56,0),Vector3.UP)
+            await _frame(view,"engineer_v8_sculpted_chest_rifle_%s"%side)
+        camera.size=2.40
+        Engineer.pose(art,"inspect",0.0)
+        for side in ["rear","left"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.65,0),Vector3.UP)
+            await _frame(view,"engineer_v8_beveled_rear_shield_%s"%side)
+        camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
@@ -228,10 +269,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==14,"fourteen authentic Godot V6/V7 360 comparison PNGs")
+    check(shots==18,"eighteen authentic Godot V6/V7/V8 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 14 real PNGs; rear helmet sealed")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 18 real PNGs; closed helmet and premium beveled sculpt")
         quit(0)
