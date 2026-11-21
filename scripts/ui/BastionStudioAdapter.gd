@@ -201,6 +201,9 @@ var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
 var _a01_tween: Tween = null
+var a01_360_panel:VBoxContainer
+var _a01_review_tween:Tween = null
+var _a01_review_focus:String="general"
 # G16 in the SAME native online Godot viewer: camera presets and persistent
 # resupply inspection never affect gameplay or production stats.
 var g16_360_panel: VBoxContainer
@@ -417,6 +420,23 @@ func _install_unified_studio_navigation() -> void:
         "Giro 360°",_g16_review_spin,
         "Vista completa",func(): _g16_review_look(35.0,"general"))
     g16_360_panel.visible=false
+    a01_360_panel=VBoxContainer.new()
+    a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
+    a01_360_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(a01_360_panel)
+    _title(a01_360_panel,"A01 V2 · ALAS, ÓPTICA Y HÉLICE 3D",13)
+    _add_paired(a01_360_panel,
+        "Frente",func(): _a01_review_look(180.0,"general"),
+        "Trasera",func(): _a01_review_look(0.0,"general"))
+    _add_paired(a01_360_panel,
+        "Lateral",func(): _a01_review_look(90.0,"general"),
+        "Superior",func(): _a01_review_look(0.0,"superior"))
+    _add_paired(a01_360_panel,
+        "Sensor EO/IR · detalle",func(): _a01_review_look(35.0,"optica"),
+        "Hélice y cola",func(): _a01_review_look(0.0,"cola"))
+    _add_paired(a01_360_panel,"Giro 360°",_a01_review_spin,
+        "Vista completa",func(): _a01_review_look(35.0,"general"))
+    a01_360_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
     infantry_360_panel.add_theme_constant_override("separation",6)
@@ -1210,8 +1230,44 @@ func _studio_g11_turn_done(art: Node3D) -> void:
 func _studio_review_reset_camera() -> void:
     if _g16_review_tween!=null and _g16_review_tween.is_running():
         _g16_review_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
     _g16_review_focus="general"
+    _a01_review_focus="general"
     _reset_camera()
+
+# A01 cameras operate in the same Godot SubViewport.  No tactical fog,
+# combat target acquisition or fake aircraft is introduced by this rig.
+func _a01_review_look(yaw:float,focus:String)->void:
+    if _role!="uav_recon" or model_root==null or not A01Finish.has_model(model_root):
+        return
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus=focus if focus in ["general","optica","cola","superior"] else "general"
+    _yaw=yaw
+    model_root.rotation_degrees.y=yaw
+    _update_camera()
+    if status_label!=null:
+        status_label.text="A01 V2 · %s · mismo dron 3D sin armamento" % _a01_review_focus
+
+func _a01_review_spin_tick(angle:float)->void:
+    if _role!="uav_recon" or model_root==null:
+        return
+    _yaw=angle
+    model_root.rotation_degrees.y=angle
+
+func _a01_review_spin()->void:
+    if _role!="uav_recon" or model_root==null or not A01Finish.has_model(model_root):
+        return
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus="general"
+    _update_camera()
+    _a01_review_tween=create_tween()
+    _a01_review_tween.tween_method(Callable(self,"_a01_review_spin_tick"),
+        _yaw,_yaw+360.0,7.0).set_trans(Tween.TRANS_LINEAR)
+    if status_label!=null:
+        status_label.text="A01 V2 · giro 360° · visor 3D TARVOKA"
 
 # G16 V6 native camera presets: same SubViewport and real 3D geometry.
 # These are inspection tools only; the playable logistics rules do not change.
@@ -1518,6 +1574,8 @@ func _refresh_unified_studio_navigation() -> void:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if g16_360_panel!=null:
         g16_360_panel.visible=not building and _role=="logistics_mobile"
+    if a01_360_panel!=null:
+        a01_360_panel.visible=not building and _role=="uav_recon"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
     _studio_rebuild_animation_catalog()
@@ -3954,6 +4012,23 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if _role=="uav_recon" and model_root!=null and camera!=null:
+        if _a01_review_focus=="optica":
+            var optics:=model_root.find_child(A01Recon.SENSOR,true,false) as Node3D
+            var target:Vector3=optics.global_position if optics!=null else Vector3(0,0.65,-0.60)
+            camera.position=target+Vector3(2.5,1.4,-2.9)
+            camera.look_at(target,Vector3.UP)
+            camera.size=2.05/maxf(0.65,_zoom)
+        elif _a01_review_focus=="cola":
+            var target:=model_root.to_global(Vector3(0,1.02,1.14))
+            camera.position=target+Vector3(3.3,1.9,2.5)
+            camera.look_at(target,Vector3.UP)
+            camera.size=2.85/maxf(0.65,_zoom)
+        elif _a01_review_focus=="superior":
+            var target:=model_root.to_global(Vector3(0,1.04,-0.10))
+            camera.position=target+Vector3(0.35,5.7,0.25)
+            camera.look_at(target,Vector3(0,0,-1))
+            camera.size=4.1/maxf(0.65,_zoom)
     if _role=="logistics_mobile" and model_root!=null and camera!=null:
         # The only camera that changes is the existing unified viewer.
         # Keep close-ups stable during faction/color and zoom rebuilds.
@@ -4082,6 +4157,9 @@ func _stage_p06() -> int:
 func _display_role(role: String) -> void:
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus="general"
     if role!="logistics_mobile":
         _g16_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
