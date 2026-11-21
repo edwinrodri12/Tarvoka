@@ -242,7 +242,7 @@ func _ready() -> void:
     for descriptor in [
         ["↻",_rotate_camera,"Girar el mapa 3D"],
         ["RANGO",_toggle_ranges,"Mostrar u ocultar rangos legales"],
-        ["FPS",_toggle_city_perf,"Mostrar FPS y detalle real de ciudades y Talleres en este dispositivo"]
+        ["FPS",_toggle_city_perf,"Mostrar FPS y niveles de detalle de ciudades, Talleres, Bases Aéreas y Centros de Drones"]
     ]:
         var shortcut := Button.new()
         shortcut.text = str(descriptor[0])
@@ -257,7 +257,7 @@ func _ready() -> void:
     city_perf_probe.offset_left=-289
     city_perf_probe.offset_right=-9
     city_perf_probe.offset_top=119
-    city_perf_probe.offset_bottom=219
+    city_perf_probe.offset_bottom=248
     city_perf_probe.z_index=8
     city_perf_probe.set_recording(false)
     # A 3D building tap now opens the SAME native contextual card as 2D.

@@ -5,6 +5,9 @@ extends SceneTree
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const Finish = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const Specialist = preload("res://scripts/ui/InfantryVariantsV4.gd")
+const EngineerV5 = preload("res://scripts/ui/InfantryEngineerSilhouetteV5.gd")
+const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Arsenal = preload("res://scripts/core/ModernArsenal.gd")
 const OUT := "res://build/qa/infantry-v2"
 var failed: int = 0
@@ -133,6 +136,57 @@ func _run() -> void:
             var n_lite: int=count_meshes(mobile)
             check(Finish.has_model(hero) and Finish.has_model(mobile),
                 "V2 actually installed on both real meshes")
+            if Specialist.supports(role):
+                check(Specialist.has_model(hero,role) and
+                    Specialist.has_model(mobile,role),
+                    "approved specialist has real 3D gear in BOTH LODs: "+role)
+                for soldier in [hero,mobile]:
+                    var signature: String=str(Specialist.MARKER[role])
+                    var gear: MeshInstance3D=soldier.find_child(
+                        signature,true,false) as MeshInstance3D
+                    check(gear!=null and gear.mesh!=null and
+                        gear.material_override is StandardMaterial3D,
+                        "unique physical 3D specialist signature "+role)
+            else:
+                check(not hero.has_meta(Specialist.FLAG) and
+                    not mobile.has_meta(Specialist.FLAG),
+                    "older models remain unchanged, no random kit")
+            # Engineer V5 is a physical silhouette, not a new tactical class.
+            # Confirm it reads differently from Guardia front AND rear in both LODs.
+            if role=="infantry_engineer":
+                check(EngineerV5.has_model(hero) and EngineerV5.has_model(mobile),
+                    "V5 engineer identity exists in real hero and tactical meshes")
+                for soldier in [hero,mobile]:
+                    var barrier: MeshInstance3D=soldier.find_child(
+                        EngineerV5.BARRIER,true,false) as MeshInstance3D
+                    var banner: MeshInstance3D=soldier.find_child(
+                        EngineerV5.FACTION_PANEL,true,false) as MeshInstance3D
+                    var harness: MeshInstance3D=soldier.find_child(
+                        "V5_ArnesDiagonalIngeniero",true,false) as MeshInstance3D
+                    var brow: MeshInstance3D=soldier.find_child(
+                        "V5_ViseraObraIngeniero",true,false) as MeshInstance3D
+                    check(barrier!=null and barrier.mesh is BoxMesh and
+                        (barrier.mesh as BoxMesh).size.x>=1.10,
+                        "folded defensive barrier visibly widens engineer rear silhouette")
+                    check(harness!=null and brow!=null and
+                        harness.visible and brow.visible,
+                        "construction harness and helmet distinguish engineer from front")
+                    var banner_paint: StandardMaterial3D=(
+                        banner.material_override as StandardMaterial3D
+                        if banner!=null else null)
+                    check(banner_paint!=null and banner_paint.albedo_color.is_equal_approx(
+                        Models.faction_paint_color(faction)) and
+                        banner_paint.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                        "wide rear construction barrier retains exact faction palette")
+                    var hero_piece: Node3D=soldier.find_child(
+                        "V5_CierreObraIngeniero",true,false) as Node3D
+                    check((hero_piece!=null)==bool(soldier.get_meta(
+                        "tarvoka_infantry_engineer_v5_hero",false)),
+                        "engineer hero hardware omitted in Android LOD8")
+            else:
+                check(not hero.has_meta(EngineerV5.FLAG) and
+                    not mobile.has_meta(EngineerV5.FLAG),
+                    "Guardia, other specialists and old sketches unchanged")
             check(n_hero>n_lite and n_lite>=70,
                 "mobile LOD reduction without loss of soldier silhouette")
             check(opaque(hero) and opaque(mobile),
@@ -266,14 +320,16 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==26,"26 real 3D comparison / tactical frames")
+    check(rendered==38,"38 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
-            "infantry_antitank","infantry_engineer"]:
+            "infantry_antitank","infantry_engineer",
+            "infantry_sniper","infantry_logistic","infantry_medic",
+            "infantry_commando"]:
         check(not Arsenal.valid(role),"no accidental battle-role unlock "+role)
     if failed>0:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 96 meshes, 8 colors, 6 silhouettes, 2 LOD, 26 true PNG including tactical LOD8")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 38 true PNG")
         quit(0)

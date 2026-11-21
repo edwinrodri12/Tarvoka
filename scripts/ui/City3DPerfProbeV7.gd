@@ -106,9 +106,59 @@ func _workshop_stats() -> Dictionary:
             site.get_meta("workshop_batches",0))
     return stats
 
+# Read-only airbase scene statistics using the same local FPS button.
+func _airbase_stats() -> Dictionary:
+    var stats:Dictionary={"airbases":0,"close":0,"distant":0,
+        "surfaces":0,"changes":0,"peak_step_ms":0.0}
+    if scene_root==null or not is_instance_valid(scene_root):
+        return stats
+    var driver:Node=scene_root.get_node_or_null("BaseAereaLOD_Camara")
+    if driver==null:
+        return stats
+    stats["changes"]=int(driver.get("transitions"))
+    stats["peak_step_ms"]=float(driver.get("peak_step_ms"))
+    var entries:Array=driver.get("_sites")
+    for site in entries:
+        if not is_instance_valid(site):
+            continue
+        stats["airbases"]=int(stats["airbases"])+1
+        if int(site.get_meta("airbase_lod_profile",0))==1:
+            stats["close"]=int(stats["close"])+1
+        else:
+            stats["distant"]=int(stats["distant"])+1
+        stats["surfaces"]=int(stats["surfaces"])+int(
+            site.get_meta("airbase_mesh_surfaces",0))
+    return stats
+
+# Opt-in drone center statistics from visible, existing producer sites.
+func _drone_stats() -> Dictionary:
+    var output:Dictionary={"centers":0,"close":0,"far":0,
+        "surfaces":0,"changes":0,"peak_step_ms":0.0}
+    if scene_root==null or not is_instance_valid(scene_root):
+        return output
+    var driver:Node=scene_root.get_node_or_null("CentroDronesLOD_Camara")
+    if driver==null:
+        return output
+    output["changes"]=int(driver.get("transitions"))
+    output["peak_step_ms"]=float(driver.get("peak_step_ms"))
+    var entries:Array=driver.get("_sites")
+    for item in entries:
+        if not is_instance_valid(item):
+            continue
+        output["centers"]=int(output["centers"])+1
+        if int(item.get_meta("drone_center_lod",0))==1:
+            output["close"]=int(output["close"])+1
+        else:
+            output["far"]=int(output["far"])+1
+        output["surfaces"]=int(output["surfaces"])+int(
+            item.get_meta("render_surface_count",0))
+    return output
+
 func snapshot() -> Dictionary:
     var city: Dictionary=_city_stats()
     var workshop:Dictionary=_workshop_stats()
+    var airbases:Dictionary=_airbase_stats()
+    var drones:Dictionary=_drone_stats()
     var current_fps: float=_samples[-1] if not _samples.is_empty() else 0.0
     var samples: Array[float]=_samples.duplicate()
     samples.sort()
@@ -142,6 +192,18 @@ func snapshot() -> Dictionary:
         "workshop_batches":workshop["batches"],
         "workshop_lod_changes":workshop["changes"],
         "workshop_peak_step_ms":workshop["peak_step_ms"],
+        "airbases":airbases["airbases"],
+        "airbase_lod_close":airbases["close"],
+        "airbase_lod_distant":airbases["distant"],
+        "airbase_surfaces":airbases["surfaces"],
+        "airbase_lod_changes":airbases["changes"],
+        "airbase_peak_step_ms":airbases["peak_step_ms"],
+        "drone_centers":drones["centers"],
+        "drone_lod_close":drones["close"],
+        "drone_lod_far":drones["far"],
+        "drone_surfaces":drones["surfaces"],
+        "drone_lod_changes":drones["changes"],
+        "drone_peak_step_ms":drones["peak_step_ms"],
         "device":OS.get_name(),
     }
 
@@ -155,6 +217,8 @@ func refresh_once() -> void:
             _samples.pop_front()
     var stats: Dictionary=_city_stats()
     var workshop:Dictionary=_workshop_stats()
+    var airbases:Dictionary=_airbase_stats()
+    var drones:Dictionary=_drone_stats()
     _peak_meshes=maxi(_peak_meshes,int(stats["meshes"]))
     var count: int=_samples.size()
     var total: float=0.0
@@ -173,7 +237,13 @@ func refresh_once() -> void:
                 stats["meshes"],stats["changes"],stats["peak_step_ms"]]
             +"Talleres %d · detalle cercano/lejos %d/%d · pico %.1f ms" % [
                 workshop["workshops"],workshop["tactical"],
-                workshop["distant"],workshop["peak_step_ms"]])
+                workshop["distant"],workshop["peak_step_ms"]]
+            +"\nBases aéreas %d · cerca/lejos %d/%d · pico %.1f ms" % [
+                airbases["airbases"],airbases["close"],airbases["distant"],
+                airbases["peak_step_ms"]]
+            +"\nCentros drones %d · cerca/lejos %d/%d · pico %.1f ms" % [
+                drones["centers"],drones["close"],drones["far"],
+                drones["peak_step_ms"]])
 
 func _process(delta: float) -> void:
     if not visible:

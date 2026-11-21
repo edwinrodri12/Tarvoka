@@ -1,0 +1,73 @@
+name: TARVOKA Airbase V16 tactical zoom and Android LOD QA
+on:
+  push:
+    branches: [feat/airbase-v16-tactical-detail-zoom-20261121]
+    paths:
+      - "scripts/ui/Airbase*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/City3DPerfProbeV7.gd"
+      - "tests/test_airbase_v16_tactical_zoom.gd"
+      - ".github/workflows/airbase-v16-tactical-zoom-qa.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/ui/Airbase*.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/City3DPerfProbeV7.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "tests/test_airbase_v16_tactical_zoom.gd"
+      - ".github/workflows/airbase-v16-tactical-zoom-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: airbase-v16-tactical-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-airbase:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Godot 4.3 and Mesa native renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot-airbase.zip
+          unzip -oq /tmp/godot-airbase.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          command -v xvfb-run
+      - name: Import native battle (exclude Pages-only bridge)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/airbase-v16-import.log
+          if grep -E 'SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:' /tmp/airbase-v16-import.log; then exit 1; fi
+      - name: Test 120 3D variants and actual battle zoom, save 2 PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 120s \
+            xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_airbase_v16_tactical_zoom.gd \
+            2>&1 | tee /tmp/airbase-v16-battle.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/airbase-v16-battle.log; then exit 1; fi
+          grep -F 'PASS AIRBASE V16 TACTICAL ZOOM:' /tmp/airbase-v16-battle.log
+          test -s artifacts/airbase_v16_tactical_zoom/report.json
+          test "$(find artifacts/airbase_v16_tactical_zoom/ -name '*.png' | wc -l)" -eq 2
+      - name: Upload real native images and validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: airbase-v16-tactical-zoom-mesa-real
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/airbase_v16_tactical_zoom/
+            /tmp/airbase-v16-import.log
+            /tmp/airbase-v16-battle.log

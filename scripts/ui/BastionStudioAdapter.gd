@@ -5,6 +5,8 @@ class_name TarvokaBastionStudioAdapter
 # prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
 const P06Details = preload("res://scripts/ui/APCDetailV5.gd")
@@ -211,6 +213,7 @@ var g16_360_panel: VBoxContainer
 var _g16_review_tween: Tween = null
 var _g16_review_focus: String = "general"
 var _infantry_tween: Tween
+var _engineer_v6_tween: Tween = null
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -250,6 +253,7 @@ var studio_animation_role: String = ""
 var studio_animation_rebuild_count: int = 0
 # Shared-viewport V1/V2 comparison and orbit: no second viewer or scene.
 var infantry_360_panel: VBoxContainer
+var infantry_six_panel: VBoxContainer
 var infantry_360_tween: Tween = null
 var infantry_review_v2: bool = true
 var infantry_review_lod: int = 13
@@ -286,12 +290,16 @@ func _ready() -> void:
             "A01 · Dron de reconocimiento · V3 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
-        ["line","G01 · Guardia · infantería V2"],
-        ["infantry_urban","G01 · Guardia urbana · V2"],
-        ["infantry_defense","G01 · Guardia defensiva · V2"],
-        ["scout","G03 · Rastreador · V2"],
-        ["infantry_antitank","G04 · Rompedor antiblindaje · V2"],
-        ["infantry_engineer","G05 · Ingeniero de combate · V2"]
+        ["line","★ INFANTERÍA BÁSICA · Guardia"],
+        ["infantry_urban","Boceto anterior · Guardia urbana"],
+        ["infantry_defense","Boceto anterior · Guardia defensiva"],
+        ["scout","Boceto anterior · Rastreador"],
+        ["infantry_antitank","Boceto anterior · Rompedor"],
+        ["infantry_engineer","★ CAMPAMENTO DEFENSIVO · Ingeniero"],
+        ["infantry_sniper","★ CAMPAMENTO RECONOCIMIENTO · Francotirador"],
+        ["infantry_logistic","★ CAMPAMENTO SUMINISTROS · Logístico a pie"],
+        ["infantry_medic","★ CAMPAMENTO MÉDICO · Médico"],
+        ["infantry_commando","★ UNIDAD ESPECIAL · Comando FS-24"]
     ]:
         var index:int=P06Models.ROLES.find(str(entry[0]))
         if index>=0:
@@ -421,6 +429,21 @@ func _install_unified_studio_navigation() -> void:
         "Giro 360°",_g16_review_spin,
         "Vista completa",func(): _g16_review_look(35.0,"general"))
     g16_360_panel.visible=false
+    infantry_six_panel=VBoxContainer.new()
+    infantry_six_panel.name="InfanteriaSeisUnidadesAcordadas"
+    infantry_six_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(infantry_six_panel)
+    _title(infantry_six_panel,"INFANTERÍA · SEIS UNIDADES DEFINIDAS",13)
+    _add_paired(infantry_six_panel,"Guardia básica",
+        func(): _display_role("line"),
+        "Comando especial",func(): _display_role("infantry_commando"))
+    _add_paired(infantry_six_panel,"Francotirador · Recon.",
+        func(): _display_role("infantry_sniper"),
+        "Ingeniero · Defensa",func(): _display_role("infantry_engineer"))
+    _add_paired(infantry_six_panel,"Logístico · Suministros",
+        func(): _display_role("infantry_logistic"),
+        "Médico · Curación",func(): _display_role("infantry_medic"))
+    infantry_six_panel.visible=false
     a01_360_panel=VBoxContainer.new()
     a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
@@ -617,8 +640,19 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
-        if role=="infantry_engineer":
-            actions.append({"title":"Trabajo y herramientas","action":"work"})
+        if role in ["infantry_engineer","infantry_logistic","infantry_medic"]:
+            var task_name:String="Trabajo y herramientas"
+            if role=="infantry_logistic":
+                task_name="Organizar suministros (animación)"
+            elif role=="infantry_medic":
+                task_name="Asistencia médica (animación)"
+            actions.append({"title":task_name,"action":"work"})
+            if role=="infantry_engineer":
+                actions.append_array([
+                    {"group":"INGENIERO V6 · HERRAJES Y 360° · SOLO ARTE"},
+                    {"title":"V6 · Girar bisagra y abrir barrera plegada (inspección)","action":"engineer_v6_inspect"},
+                    {"title":"V6 · Plegar barrera y guardar equipo","action":"engineer_v6_pack"}
+                ])
         else:
             actions.append({"title":"Ataque · retroceso de arma","action":"attack"})
         actions.append_array([
@@ -878,6 +912,9 @@ func _studio_run_animation(action: String) -> void:
         "a01_move","a01_scan","a01_hit":
             if _role=="uav_recon":
                 _a01_play(action.trim_prefix("a01_"))
+        "engineer_v6_inspect","engineer_v6_pack":
+            if _role=="infantry_engineer":
+                _engineer_v6_run(action=="engineer_v6_inspect")
         "heli_bullet_slow":
             if _role=="attack_heli":
                 _heli_play("hit_bullet",0.42)
@@ -1374,6 +1411,8 @@ func _a01_done(art:Node3D)->void:
 func _infantry_review_rebuild(latest: bool, lod: int) -> bool:
     if model_root==null or preview==null or not InfantryV1.supports(_role):
         return false
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if lod not in [8,13]:
         return false
     if infantry_360_tween!=null and infantry_360_tween.is_running():
@@ -1427,6 +1466,29 @@ func _infantry_review_lod(lod: int) -> void:
         status_label.text=("Infantería · LOD8 · prueba de distancia táctica en el visor 3D"
             if lod==8 else "Infantería · LOD13 · inspección de detalle 3D")
 
+func _engineer_v6_tick(t: float, art: Node3D) -> void:
+    if is_instance_valid(art) and EngineerFinishV6.has_model(art):
+        EngineerFinishV6.pose(art,"inspect",t)
+
+func _engineer_v6_run(opening: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null or \
+            not EngineerFinishV6.has_model(model_root):
+        return
+    if _infantry_tween!=null and _infantry_tween.is_running():
+        _infantry_tween.kill()
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
+    var start: float=0.0 if opening else 1.0
+    var end: float=1.0 if opening else 0.0
+    _engineer_v6_tick(start,model_root)
+    _engineer_v6_tween=create_tween()
+    _engineer_v6_tween.tween_method(
+        Callable(self,"_engineer_v6_tick").bind(model_root),start,end,1.25)
+    status_label.text=(
+        "Ingeniero V6 · barrera articulada abierta para inspección 360°, sin efecto táctico"
+        if opening else
+        "Ingeniero V6 · barrera plegada y asegurada en mochila")
+
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
         P06Models.pose_model(_role,model_root,kind,t,Vector2i(0,-1))
@@ -1434,6 +1496,8 @@ func _infantry_pose_tick(t: float, kind: String) -> void:
 func _infantry_play(kind: String) -> void:
     if not InfantryV1.supports(_role) or model_root==null:
         return
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
     _infantry_tween=create_tween()
@@ -1446,7 +1510,7 @@ func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
         return
     match _role:
-        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer":
+        "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
@@ -1489,6 +1553,8 @@ func _studio_quick_stop() -> void:
         if model_root!=null:
             A01Recon.restore(model_root)
     elif InfantryV1.supports(_role):
+        if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+            _engineer_v6_tween.kill()
         if _infantry_tween!=null and _infantry_tween.is_running():
             _infantry_tween.kill()
         if model_root!=null:
@@ -1526,12 +1592,16 @@ func _refresh_unified_studio_navigation() -> void:
         label="EDIFICIO · "+str(_role).replace("_"," ").to_upper()
     else:
         match _role:
-            "line": label="G01 · Guardia · V2 en revisión"
             "infantry_urban": label="G01 · Guardia urbana · V2 en revisión"
             "infantry_defense": label="G01 · Guardia defensiva · V2 en revisión"
             "scout": label="G03 · Rastreador · V2 en revisión"
             "infantry_antitank": label="G04 · Rompedor · V2 en revisión"
-            "infantry_engineer": label="G05 · Ingeniero · V2 en revisión"
+            "infantry_engineer": label="Ingeniero · Campamento defensivo"
+            "infantry_sniper": label="Francotirador · Campamento reconocimiento"
+            "infantry_logistic": label="Logístico a pie · Campamento suministros"
+            "infantry_medic": label="Médico · Campamento médico"
+            "infantry_commando": label="Comando especial FS-24 · Infantería"
+            "line": label="Infantería básica · Guardia"
             "tank": label="G09 · Tanque · V32 final"
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
@@ -1571,6 +1641,8 @@ func _refresh_unified_studio_navigation() -> void:
         heli_controls.visible=show_unit_details and _role=="attack_heli"
     if studio_legacy_controls!=null:
         studio_legacy_controls.visible=show_unit_details and _role=="tank"
+    if infantry_six_panel!=null:
+        infantry_six_panel.visible=not building and InfantryV1.supports(_role)
     if infantry_360_panel!=null:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if g16_360_panel!=null:
@@ -4186,6 +4258,8 @@ func _display_role(role: String) -> void:
         _g16_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
