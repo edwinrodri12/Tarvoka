@@ -16,11 +16,18 @@ func _run() -> void:
         main.size = size
         await process_frame
         await process_frame
+        var initial_visibility: Dictionary = {}
         for compact_mode in [false, true, false]:
             main.call("_set_compact_hud", compact_mode)
             await process_frame
             await process_frame
             _check_hud(main, size, compact_mode)
+            if not compact_mode:
+                var snapshot := _visible_button_paths(main)
+                if initial_visibility.is_empty():
+                    initial_visibility = snapshot
+                elif snapshot != initial_visibility:
+                    failures.append("expanded HUD visibility not restored at %s: before=%s after=%s" % [size, initial_visibility, snapshot])
     main.queue_free()
     await process_frame
     if failures.is_empty():
@@ -89,3 +96,22 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
     if checked_visible == 0 or checked_buttons == 0:
         failures.append("HUD coverage empty at %s mode %s: %d controls, %d buttons" % [size, mode, checked_visible, checked_buttons])
     print("HUD %s mode %s: %d visible production controls, %d buttons checked" % [size, mode, checked_visible, checked_buttons])
+
+# Compare the same production controls before and after compact mode.
+# A missing button or stale visibility flag is a regression even if all
+# remaining visible controls are geometrically inside the viewport.
+func _visible_button_paths(main: Control) -> Dictionary:
+    var result: Dictionary = {}
+    for name in ["compact_confirm", "compact_cancel", "compact_end_turn",
+            "expanded_confirm", "expanded_cancel", "expanded_end_turn",
+            "compact_menu_button", "compact_center", "compact_iso",
+            "compact_options_button", "compact_alerts_button",
+            "compact_next_unit", "compact_attention_unit", "compact_threat_button"]:
+        var button: BaseButton = main.get(name)
+        result[name] = button != null and button.is_visible_in_tree()
+    var immersive: Control = main.get("immersive_battle_hud")
+    for name in ["menu_button", "objective_button", "battle_3d_button",
+            "end_turn_button", "order_cancel", "supply_button"]:
+        var button: BaseButton = immersive.get(name) if immersive != null else null
+        result["immersive/" + name] = button != null and button.is_visible_in_tree()
+    return result
