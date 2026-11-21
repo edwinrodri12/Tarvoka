@@ -15,3 +15,6 @@ Expected: 8 factions × 2 LODs; near LOD retains 12 wheels at 8 radial segments,
 
 ## Isolation
 Independent of open draft #641 (rocket tubes), #622 (census) and #203 (terrain). Do not merge without Godot CI and visual QA. No APK generated, no changes to balance, AI, saves or combat.
+
+## CI log-filter regression — 2026-11-20
+The roadwheel workflow previously searched for the unanchored string `G11 WHEEL LOD:` as a failure marker, but the successful test emits `PASS G11 WHEEL LOD: ...`. Thus a successful test could cause the workflow to exit 1. Commit `aabdd08b` narrows failure detection to `^ERROR: G11 WHEEL LOD:` while retaining `SCRIPT ERROR:` and `Assertion failed`. The positive `PASS G11 WHEEL LOD:` marker remains mandatory. This is a CI false-negative fix, **not** a geometry or Android performance improvement. Verification: static comparison of the failure regex and emitted PASS marker; new GitHub Actions run still must be checked. Android physical: NO EJECUTADO EN DISPOSITIVO; visual: PENDIENTE DE REVISIÓN VISUAL.
