@@ -6,6 +6,7 @@ const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
+const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -38,15 +39,15 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V4 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V5 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model),
-        "native A01 V4 airframe, sealed optics and three-blade motor in original SubViewport")
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model),
+        "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
     check(panel!=null,"A01 V2 close-up and 360 controls added to the same Camera tab")
@@ -91,8 +92,8 @@ func _run()->void:
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model),
-        "changing faction rebuilds A01 V4 physical PBR model")
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model),
+        "changing faction rebuilds A01 V5 physical PBR model")
     check(factions!=null and factions.visible and factions.selected==6,
         "A01 keeps the same visible faction selector after repainting")
     if model!=null:
@@ -102,7 +103,7 @@ func _run()->void:
             (stripe.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
                 Models.faction_paint_color(6)),
             "A01 faction paint changes in native Godot materials")
-    # The original Studio used neutral paint for non-tanks before A01 V4.
+    # The original Studio used neutral paint for non-tanks before A01 V5.
     # Sweep EVERY faction on the same selector to catch stale materials
     # and palette aliasing, not only a single before/after color change.
     var painted_colors:Dictionary={}
@@ -111,8 +112,8 @@ func _run()->void:
         await process_frame
         var active:=studio.get("model_root") as Node3D
         var faction_picker:=studio.get("faction_picker") as OptionButton
-        check(active!=null and AeroV4.has_model(active),
-            "A01 V4 model stays native after changing to team %d" % team)
+        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active),
+            "A01 V5 model stays native after changing to team %d" % team)
         check(faction_picker!=null and faction_picker.visible and
             faction_picker.selected==team,
             "original eight-faction selector tracks team %d" % team)
@@ -145,8 +146,8 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 V4 SHARED STUDIO: %d errors" % failures)
+        printerr("FAIL A01 V5 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V4 SHARED STUDIO: same native A01 V4, all eight faction paints verified, unarmed gimbal, 360 cameras")
+        print("PASS A01 V5 SHARED STUDIO: same native A01 V5, all eight faction paints verified, unarmed gimbal, 360 cameras")
         quit(0)
