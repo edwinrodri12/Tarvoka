@@ -64,6 +64,28 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
             failures.append("%s undersized visible button at %s mode %s: %s" % [name, size, mode, rect.size])
         if not visible_area.encloses(rect):
             failures.append("%s outside logical viewport %s mode %s: %s" % [name, size, mode, rect])
+    # The old compact shortcut row is intentionally hidden. Inspect the actual
+    # immersive battlefield buttons instead of treating legacy controls as UI.
+    if compact_mode:
+        var immersive: Control = main.get("immersive_battle_hud")
+        if immersive == null:
+            failures.append("missing immersive production battlefield HUD")
+        else:
+            for name in ["menu_button", "objective_button", "battle_3d_button",
+                    "end_turn_button", "order_cancel", "supply_button"]:
+                var button: BaseButton = immersive.get(name)
+                if button == null:
+                    failures.append("missing immersive HUD button: " + name)
+                    continue
+                if not button.is_visible_in_tree():
+                    continue # Contextual actions can legitimately be hidden.
+                checked_visible += 1
+                checked_buttons += 1
+                var rect := button.get_global_rect()
+                if rect.size.x < 24.0 or rect.size.y < 24.0:
+                    failures.append("immersive %s undersized at %s: %s" % [name, size, rect.size])
+                if not visible_area.encloses(rect):
+                    failures.append("immersive %s outside viewport %s: %s" % [name, size, rect])
     if checked_visible == 0 or checked_buttons == 0:
         failures.append("HUD coverage empty at %s mode %s: %d controls, %d buttons" % [size, mode, checked_visible, checked_buttons])
     print("HUD %s mode %s: %d visible production controls, %d buttons checked" % [size, mode, checked_visible, checked_buttons])
