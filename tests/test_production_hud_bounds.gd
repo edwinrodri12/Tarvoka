@@ -16,14 +16,14 @@ func _run() -> void:
         main.size = size
         await process_frame
         await process_frame
-        for compact_mode in [false, true]:
+        for compact_mode in [false, true, false]:
             main.call("_set_compact_hud", compact_mode)
             await process_frame
             await process_frame
             _check_hud(main, size, compact_mode)
     main.queue_free()
     if failures.is_empty():
-        print("PASS PRODUCTION HUD BOUNDS: six landscape sizes x expanded/compact states")
+        print("PASS PRODUCTION HUD BOUNDS: six landscape sizes x expanded/compact/expanded restoration")
         quit(0)
     else:
         for failure in failures:
