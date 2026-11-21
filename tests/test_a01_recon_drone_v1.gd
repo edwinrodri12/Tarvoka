@@ -19,7 +19,7 @@ func _initialize()->void:
 
 func _run()->void:
     check(Models.supports("uav_recon"),"A01 art has its own role")
-    check(not Arsenal.valid("uav_recon"),"3D art does not duplicate tactical role")
+    check(Arsenal.valid("uav_recon"),"3D art reuses the existing A01 tactical profile")
     check(Arsenal.valid("uav_recon") and Arsenal.code("uav_recon")=="A01",
         "A01 tactical ID stays assigned to the reconnaissance UAV")
     var p:Dictionary=Arsenal.profile("uav_recon")
