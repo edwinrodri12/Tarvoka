@@ -17,7 +17,7 @@ func _run() -> void:
         await process_frame
         await process_frame
         for compact_mode in [false, true]:
-            main._set_compact_hud(compact_mode)
+            main.call("_set_compact_hud", compact_mode)
             await process_frame
             await process_frame
             _check_hud(main, size, compact_mode)
