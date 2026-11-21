@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
+const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v1"
 var failures:int=0
@@ -36,7 +37,7 @@ func _has_opaque_solid_parts(model:Node3D)->bool:
         if part==null or not part.visible:
             continue
         count+=1
-        if part.mesh==null or not (part.mesh is BoxMesh or part.mesh is SphereMesh or part.mesh is CylinderMesh):
+        if part.mesh==null or not (part.mesh is BoxMesh or part.mesh is SphereMesh or part.mesh is CylinderMesh or part.mesh is ArrayMesh):
             return false
         var material:=part.material_override as StandardMaterial3D
         if material==null or material.transparency!=BaseMaterial3D.TRANSPARENCY_DISABLED:
@@ -104,6 +105,19 @@ func _run()->void:
                 "A01 V2 native physical wing edges, faction marks and EOIR optics")
             check(HardwareV3.has_model(model),
                 "A01 V3 physical winglets, gimbal trunnions and three-blade prop")
+            check(AeroV4.has_model(model),
+                "A01 V4 both sealed tapered wing surfaces are installed")
+            check(int(model.get_meta("tarvoka_a01_v4_lod",0))==lod,
+                "A01 V4 has genuine Android and hero LOD")
+            for wing_name in [AeroV4.WING_L,AeroV4.WING_R]:
+                var tapered:=model.find_child(wing_name,true,false) as MeshInstance3D
+                check(tapered!=null and tapered.visible and tapered.mesh is ArrayMesh,
+                    "A01 V4 aircraft wing is a genuine volumetric triangle mesh")
+                if tapered!=null and tapered.mesh is ArrayMesh:
+                    var foil:=tapered.mesh as ArrayMesh
+                    check(foil.get_surface_count()==1 and
+                        foil.surface_get_primitive_type(0)==Mesh.PRIMITIVE_TRIANGLES,
+                        "A01 V4 closed airfoil has one physical triangle surface")
             check(int(model.get_meta("tarvoka_a01_v3_lod",0))==lod,
                 "A01 V3 geometry is present in native LOD8 and LOD13")
             check(bool(model.get_meta("tarvoka_a01_v3_unarmed_visual_only",false)),
@@ -212,7 +226,7 @@ func _run()->void:
                         "V3 360 native view has real visible geometry: "+str(key))
                     if inspection!=null and not inspection.is_empty():
                         check(inspection.save_png(
-                            "%s/a01-v3-360-%s.png" % [OUT,key])==OK,
+                            "%s/a01-v4-360-%s.png" % [OUT,key])==OK,
                             "save real 360 diagnostic: "+str(key))
                         diagnostic_captures+=1
                 camera.position=Vector3(4.7,3.9,5.6)
@@ -226,8 +240,8 @@ func _run()->void:
     vp.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 RECON UAV V3: %d errors" % failures)
+        printerr("FAIL A01 RECON UAV V4: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 RECON UAV V3: sixteen native renders plus five 360 views; opaque three-blade prop, trunnions, winglets, LOD8/13 and eight factions")
+        print("PASS A01 RECON UAV V4: sixteen native renders plus five 360 views; closed tapered wings, physical gimbal, LOD8/13 and eight factions")
         quit(0)
