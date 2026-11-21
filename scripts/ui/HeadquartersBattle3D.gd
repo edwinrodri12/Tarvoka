@@ -4,6 +4,7 @@ class_name TarvokaHeadquartersBattle3D
 # Same two pre-existing command CITY sites as 2D CommandCityArtV14.
 # Art only: no new HQ kind, structure HP, buildings, capture or income rules.
 const MapLOD=preload("res://scripts/ui/HeadquartersMapLOD3D.gd")
+const Curves=preload("res://scripts/ui/HeadquartersCurvedRoof3D.gd")
 const Command=preload("res://scripts/ui/CommandCityArtV14.gd")
 const Style=preload("res://scripts/ui/VisualStyle.gd")
 const Rules=preload("res://scripts/core/Rules.gd")
@@ -24,6 +25,11 @@ static func build(level:int,faction:int,damage:int) -> Node3D:
     root.name="CuartelGeneralTacticoRealV24"
     root.scale=Vector3.ONE*MODEL_SCALE
     root.add_child(actual)
+    var architectural_curves:MeshInstance3D=Curves.build(level,faction,damage)
+    if architectural_curves==null:
+        root.free()
+        return null
+    root.add_child(architectural_curves)
     # Real approved shield atlas, never a fabricated stand-in. The neutral
     # model and collapsed ruins never receive a faction emblem.
     if faction>=0 and damage<4:
@@ -45,7 +51,9 @@ static func build(level:int,faction:int,damage:int) -> Node3D:
     root.set_meta("visual_damage_stage",damage)
     root.set_meta("game_visual_only",true)
     root.set_meta("city_economy_untouched",true)
-    root.set_meta("hq_art_family","approved V5/V13 tactical sculpt")
+    root.set_meta("hq_art_family","approved V13 curved tactical sculpt")
+    root.set_meta("native_curved_arches",true)
+    root.set_meta("hq_material_surfaces",9)
     root.set_meta("hq_native_geometry",true)
     return root
 
