@@ -127,6 +127,16 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
         0.965,0.57,0.028,0.14,armor)
     _bevel(shield,"V8_BarreraMarcoReforzado",
         Vector3(0,-0.04,0.249),0.77,0.385,0.020,0.10,trim)
+    # Native rear screenshots previously read as a large BLACK HOLE:
+    # central carbon frame covered the metal. Place a sealed, lighter
+    # armored inset in front, leaving just the dark perimeter as a gasket.
+    _bevel(shield,"V8_NucleoAceroBlindadoCerrado",
+        Vector3(0,-0.07,0.269),0.64,0.265,0.019,0.055,armor)
+    if hero:
+        for side in [-1,1]:
+            _box(shield,"V8_CerrojoNucleoBlindado_%d"%side,
+                Vector3(float(side)*0.27,-0.15,0.288),
+                Vector3(0.045,0.11,0.018),steel)
     _bevel(shield,FACTION,Vector3(0,0.13,0.277),
         0.57,0.115,0.025,0.035,marking)
     for side in [-1,1]:
