@@ -45,8 +45,19 @@ func _initialize() -> void:
     _check("reject negative HUD dimensions", not _rect_inside(Rect2(120, 60, -10, 80), safe_area))
     _check("reject nonpositive safe area", not _rect_inside(Rect2(), Rect2(0, 0, 0, 100)))
 
+    # Convert Android physical safe-area pixels into the expanded Godot canvas.
+    # Non-16:9 screens can have a different logical width after expand.
+    var logical_safe := _physical_safe_to_canvas(safe_area, Vector2i(width, height), Vector2i(2400, 1080))
+    var expanded_phone := _expanded_canvas(Vector2i(width, height), Vector2i(2400, 1080))
+    _check("projected safe area remains inside logical canvas", _rect_inside(logical_safe, Rect2(Vector2.ZERO, expanded_phone)))
+    _check("safe inset x projected", absf(logical_safe.position.x - 80.0 * expanded_phone.x / 2400.0) < 0.01)
+    _check("safe right edge projected", absf(logical_safe.end.x - 2320.0 * expanded_phone.x / 2400.0) < 0.01)
+    _check("reject physical safe area outside screen", _physical_safe_to_canvas(Rect2(-1, 0, 100, 100), Vector2i(width, height), Vector2i(2400, 1080)) == Rect2())
+    _check("reject invalid physical screen", _physical_safe_to_canvas(safe_area, Vector2i(width, height), Vector2i.ZERO) == Rect2())
+    _check("reject invalid logical base", _physical_safe_to_canvas(safe_area, Vector2i.ZERO, Vector2i(2400, 1080)) == Rect2())
+
     if failures.is_empty():
-        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks")
+        print("PASS ANDROID LANDSCAPE CONTRACT: 6 project settings + 6 negative/positive controls + 13 aspect simulations + 6 safe-area geometry checks + 6 safe-area projection checks")
         quit(0)
     else:
         for failure in failures:
@@ -77,3 +88,14 @@ func _rect_inside(inner: Rect2, outer: Rect2) -> bool:
     if inner.size.x <= 0.0 or inner.size.y <= 0.0 or outer.size.x <= 0.0 or outer.size.y <= 0.0:
         return false
     return inner.position.x >= outer.position.x and inner.position.y >= outer.position.y and inner.end.x <= outer.end.x and inner.end.y <= outer.end.y
+
+# Pure coordinate transform. Returns empty rectangle on invalid input.
+# Physical safe area and screen must use the same pixel coordinate system.
+func _physical_safe_to_canvas(physical: Rect2, logical_base: Vector2i, screen: Vector2i) -> Rect2:
+    if logical_base.x <= 0 or logical_base.y <= 0 or screen.x <= 0 or screen.y <= 0:
+        return Rect2()
+    if not _rect_inside(physical, Rect2(Vector2.ZERO, Vector2(screen))):
+        return Rect2()
+    var expanded := _expanded_canvas(logical_base, screen)
+    var factor := expanded / Vector2(screen)
+    return Rect2(physical.position * factor, physical.size * factor)
