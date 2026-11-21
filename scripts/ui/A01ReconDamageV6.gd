@@ -56,6 +56,26 @@ static func _orb(parent:Node3D,label:String,where:Vector3,dim:Vector3,
     parent.add_child(n)
     return n
 
+static func _plume(parent:Node3D,label:String,where:Vector3,
+        bottom_radius:float,top_radius:float,height:float,
+        mat:Material,hero:bool,tilt:float=0.0)->MeshInstance3D:
+    # Tiny tapered solid smoke/flame; the old spherical clouds appeared
+    # like unsupported floating balloons above this small aircraft.
+    # Single opaque low-poly draw, compatible with Android LOD8.
+    var n:=MeshInstance3D.new()
+    n.name=label
+    var mesh:=CylinderMesh.new()
+    mesh.bottom_radius=bottom_radius
+    mesh.top_radius=top_radius
+    mesh.height=height
+    mesh.radial_segments=9 if hero else 6
+    n.mesh=mesh
+    n.position=where
+    n.rotation_degrees.z=tilt
+    n.material_override=mat
+    parent.add_child(n)
+    return n
+
 static func _layer(rig:Node3D,index:int)->Node3D:
     var layer:=Node3D.new()
     layer.name="A01_V6_DamageLayer_"+str(index)
@@ -91,8 +111,8 @@ static func prepare(root:Node3D,hero:bool)->bool:
     var smoke:=_material(Color("#57636c"),0.04,0.97)
 
     var d1:=_layer(rig,1)
-    _box(d1,"A01_V6_D1_PortWingScuff",Vector3(-0.97,1.103,-0.064),
-        Vector3(0.37,0.012,0.080),soot,Vector3(0,21,0))
+    _box(d1,"A01_V6_D1_PortWingScuff",Vector3(-0.97,1.142,-0.064),
+        Vector3(0.52,0.026,0.100),soot,Vector3(0,21,0))
     _box(d1,"A01_V6_D1_NoseScuff",Vector3(0.13,1.125,-0.89),
         Vector3(0.085,0.018,0.24),soot,Vector3(0,-20,11))
 
@@ -101,18 +121,18 @@ static func prepare(root:Node3D,hero:bool)->bool:
         Vector3(0.29,0.026,0.23),blast,Vector3(0,16,0))
     _box(d2,"A01_V6_D2_FraggedTrailingPlate",Vector3(0.81,1.096,0.20),
         Vector3(0.21,0.032,0.13),steel,Vector3(0,0,26))
-    _orb(d2,"A01_V6_SmokePlume_0",Vector3(0.25,1.35,0.19),
-        Vector3(0.25,0.38,0.23),smoke,hero)
-    _orb(d2,"A01_V6_SmokePlume_1",Vector3(0.34,1.56,0.24),
-        Vector3(0.35,0.45,0.31),soot,hero)
+    _plume(d2,"A01_V6_SmokePlume_0",Vector3(0.25,1.29,0.19),
+        0.085,0.025,0.30,smoke,hero,12.0)
+    _plume(d2,"A01_V6_SmokePlume_1",Vector3(0.32,1.53,0.24),
+        0.112,0.018,0.39,soot,hero,-16.0)
 
     var d3:=_layer(rig,3)
     _box(d3,"A01_V6_D3_BurntTailRoot",Vector3(-0.45,1.005,1.34),
         Vector3(0.20,0.026,0.23),blast)
-    _orb(d3,"A01_V6_EngineEmber_0",Vector3(0.0,1.09,1.04),
-        Vector3(0.18,0.31,0.19),hot,hero)
-    _orb(d3,"A01_V6_EngineEmber_1",Vector3(0.11,1.20,1.09),
-        Vector3(0.14,0.22,0.14),hot,hero)
+    _plume(d3,"A01_V6_EngineEmber_0",Vector3(0.0,1.105,1.04),
+        0.080,0.008,0.23,hot,hero,9.0)
+    _plume(d3,"A01_V6_EngineEmber_1",Vector3(0.11,1.225,1.09),
+        0.057,0.005,0.16,hot,hero,-11.0)
     _box(d3,"A01_V6_D3_BentAccessPanel",Vector3(0.20,1.145,0.65),
         Vector3(0.23,0.035,0.21),steel,Vector3(0,0,22))
 
@@ -123,10 +143,10 @@ static func prepare(root:Node3D,hero:bool)->bool:
         Vector3(0.28,0.06,0.22),steel,Vector3(22,18,-33))
     _box(d4,"A01_V6_D4_BrokenPropBlade",Vector3(-0.20,0.78,1.25),
         Vector3(0.34,0.055,0.13),blast,Vector3(14,-28,22))
-    _orb(d4,"A01_V6_D4_ThickSmoke",Vector3(-0.12,1.61,0.60),
-        Vector3(0.44,0.60,0.37),smoke,hero)
-    _orb(d4,"A01_V6_D4_FinalEmber",Vector3(0.0,0.95,1.01),
-        Vector3(0.19,0.23,0.19),hot,hero)
+    _plume(d4,"A01_V6_D4_ThickSmoke",Vector3(-0.12,1.47,0.60),
+        0.165,0.027,0.46,smoke,hero,16.0)
+    _plume(d4,"A01_V6_D4_FinalEmber",Vector3(0.0,0.95,1.01),
+        0.090,0.004,0.19,hot,hero,-8.0)
 
     root.set_meta(FLAG,true)
     root.set_meta(STAGE_KEY,0)
@@ -168,13 +188,13 @@ static func repair(root:Node3D)->bool:
 static func animate(root:Node3D,clock:float)->bool:
     if not has_model(root) or stage(root)<2:
         return false
-    # Small physical smoke spheres move; no alpha sprites/particle shaders.
+    # Two narrow physical smoke plumes move; no fake alpha circles.
     for index in range(2):
         var vapor:=root.find_child("A01_V6_SmokePlume_"+str(index),
             true,false) as MeshInstance3D
         if vapor!=null:
-            vapor.position.y=(1.35 if index==0 else 1.56)+(
-                0.07*sin(clock*2.0+float(index)))
-            vapor.position.x=(0.25 if index==0 else 0.34)+(
-                0.04*sin(clock*1.3+float(index)))
+            vapor.position.y=(1.29 if index==0 else 1.53)+(
+                0.055*sin(clock*2.0+float(index)))
+            vapor.position.x=(0.25 if index==0 else 0.32)+(
+                0.025*sin(clock*1.3+float(index)))
     return true
