@@ -206,15 +206,17 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
             Vector3(0.11,-0.04,-0.115),
             Vector3(0.19,0.035,0.027),marking)
 
-    # Reduce blocky facial stack by hiding a redundant old engineer visor;
-    # V7 respirator + V2 sealed optics and full rear helmet remain.
-    var old_vis: Node3D=_find(model,"V5_ViseraObraIngeniero")
-    if old_vis!=null:
-        old_vis.visible=false
+    # IMPORTANT: V5 construction brow is a core approved class signifier.
+    # Keep its existing charcoal backing VISIBLE in both LODs: the V8 thin
+    # contoured armor overlays it, without replacing it by a generic visor.
+    var construction_brow: Node3D=_find(model,"V5_ViseraObraIngeniero")
+    if construction_brow==null:
+        return false
+    construction_brow.visible=true
     _bevel(face,"V8_ViseraSuperiorSellada",
-        Vector3(0,0.435,-0.351),0.53,0.11,0.13,0.065,trim)
+        Vector3(0,0.435,-0.437),0.52,0.10,0.032,0.058,trim)
     _bevel(face,"V8_CrestaCascoFaccion",
-        Vector3(0,0.465,-0.435),0.31,0.053,0.022,0.019,marking)
+        Vector3(0,0.467,-0.459),0.31,0.053,0.022,0.019,marking)
 
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_engineer_premium_art_only",true)
