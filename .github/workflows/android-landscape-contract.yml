@@ -1,0 +1,39 @@
+name: TARVOKA Android landscape contract
+on:
+  pull_request:
+    paths:
+      - 'project.godot'
+      - 'tests/test_android_landscape_contract.gd'
+      - '.github/workflows/android-landscape-contract.yml'
+  workflow_dispatch:
+
+jobs:
+  landscape-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+      - name: Import project
+        shell: bash
+        run: |
+          timeout 120s ./Godot_v4.3-stable_linux.x86_64 --headless --path . --editor --import --quit
+      - name: Verify Android landscape contract
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 90s ./Godot_v4.3-stable_linux.x86_64 --headless --path . --audio-driver Dummy --script res://tests/test_android_landscape_contract.gd 2>&1 | tee landscape-contract.log
+          grep -q 'PASS ANDROID LANDSCAPE CONTRACT' landscape-contract.log
+      - name: Preserve diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-landscape-contract-log
+          path: landscape-contract.log
+          if-no-files-found: ignore
