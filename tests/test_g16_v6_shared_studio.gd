@@ -98,9 +98,20 @@ func _run()->void:
             var ammo:=model.find_child(V3.DOOR+str(i),true,false) as Node3D
             check(ammo!=null and ammo.rotation_degrees.x>65,
                 "old ammo doors synchronize with the new hose")
+        # The video-visible supply kit stays extended after its tween ends,
+        # so users can inspect the actual hose instead of a 2-second flash.
+        studio.call("_g16_done",model,"resupply")
+        check(hose!=null and hose.visible and
+            float(model.get_meta("tarvoka_g16_v6_service_extension",0.0))>0.95,
+            "resupply stays deployed after finishing the native animation")
+        check(lid!=null and lid.rotation_degrees.z< -60,
+            "service cover remains physically open for manual 360 inspection")
         studio.call("_studio_run_animation","stop")
         check(V6.has_model(model) and V5.has_model(model),
             "stop never destroys preceding 3D assets")
+        check(float(model.get_meta(
+            "tarvoka_g16_v6_service_extension",1.0))<0.01,
+            "stop actually retracts extended hose and closes service hatch")
     studio.call("_on_faction",4)
     await process_frame
     model=studio.get("model_root") as Node3D
@@ -108,6 +119,31 @@ func _run()->void:
         "new faction rebuild retains V6 articulated parts")
     check(factions!=null and factions.visible,
         "same original faction picker remains available")
+    var g16_panel:=studio.get("g16_360_panel") as VBoxContainer
+    check(g16_panel!=null,"native Studio has G16-only 360 inspection controls")
+    studio.call("_studio_select_tab",1)
+    check(g16_panel!=null and g16_panel.visible,
+        "G16 camera presets appear in the same existing Camera tab")
+    studio.call("_g16_review_look",0.0,"suministros")
+    check(str(studio.get("_g16_review_focus"))=="suministros",
+        "service close-up chooses outboard nozzle, not another 3D viewer")
+    check(model!=null and float(model.get_meta(
+        "tarvoka_g16_v6_service_extension",0.0))>0.95,
+        "close-up displays REAL extended hose in the current faction")
+    var native_camera:=studio.get("camera") as Camera3D
+    check(native_camera!=null and native_camera.size<6.0,
+        "supply camera moves in for visible mechanical joints")
+    studio.call("_g16_review_look",0.0,"bajos")
+    check(str(studio.get("_g16_review_focus"))=="bajos",
+        "low side camera exposes six wheels and axle mounting")
+    studio.call("_g16_review_spin")
+    var orbit_tween:=studio.get("_g16_review_tween") as Tween
+    check(orbit_tween!=null and orbit_tween.is_running(),
+        "native G16 model can rotate continuously through 360 degrees")
+    studio.call("_g16_review_look",35.0,"general")
+    check(str(studio.get("_g16_review_focus"))=="general",
+        "manual inspection camera resets to full-vehicle view")
+    studio.call("_studio_select_tab",0)
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://build/qa/g16-v6"))==OK,
         "shared Studio screenshot folder")
@@ -119,9 +155,21 @@ func _run()->void:
         "real on-screen unified Godot Studio view renders")
     if capture!=null and not capture.is_empty():
         check(capture.save_png(OUT)==OK,"real Studio screenshot saved")
-    # A second screenshot shows the ACTIVE supply operation inside the
-    # identical shared UI, not only a separate close-up test viewport.
+    # Save the real mobile-friendly close-up with physical nozzle and hatch.
+    # Every screenshot uses the SAME original SubViewport and active 3D model.
     if model!=null:
+        studio.call("_g16_review_look",0.0,"suministros")
+        await process_frame
+        await process_frame
+        await process_frame
+        var closeup:Image=root.get_texture().get_image()
+        check(closeup!=null and not closeup.is_empty(),
+            "genuine G16 material/mechanics close-up renders in shared Studio")
+        if closeup!=null and not closeup.is_empty():
+            check(closeup.save_png(
+                "res://build/qa/g16-v6/g16-v6-unified-hose-closeup.png")==OK,
+                "save real 3D G16 V6 side service close-up for art review")
+        studio.call("_g16_review_look",35.0,"general")
         check(Models.pose_model("logistics_mobile",model,"resupply",0.97),
             "shared Studio can display extended outboard hose")
         await process_frame
@@ -140,5 +188,5 @@ func _run()->void:
         printerr("FAIL G16 V6 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS G16 V6 SHARED STUDIO: real selector, 8 factions, V5/V6 comparison, physically animated nozzle and ammo doors")
+        print("PASS G16 V6 SHARED STUDIO: V6 selector, persistent supply hose, 360 orbit, real hose/low camera views, 8 factions, no new viewer")
         quit(0)
