@@ -292,7 +292,10 @@ jobs:
           # mainline battle/LOD scripts. Ship them from the SAME tested main
           # snapshot as the infantry V2 models; otherwise web export fails
           # with missing ArmoredWorkshopBattle3D and BattleLOD.
-          for battle_part in ArmoredWorkshopBattle3D.gd ArmoredWorkshopBattleLOD.gd; do
+          # Current unified Workshop Studio adapter preloads newer playable
+          # production buildings. Preserve the whole dependency closure from
+          # the SAME main/PR checkout (never from pinned old HQ branch).
+          for battle_part in ArmoredWorkshopBattle3D.gd ArmoredWorkshopBattleLOD.gd AirbaseMapLODV4.gd AirbaseBattle3D.gd AirbaseBattleLOD.gd NavalBaseTactical3D.gd NavalBaseBattle3D.gd NavalBaseBattleLOD.gd DroneCenterModel3D.gd DroneCenterBattle3D.gd DroneCenterBattleLOD.gd; do
             test -s "hq-android-v15/scripts/ui/$battle_part"
             cp "hq-android-v15/scripts/ui/$battle_part" "scripts/ui/$battle_part"
             test -s "scripts/ui/$battle_part"
