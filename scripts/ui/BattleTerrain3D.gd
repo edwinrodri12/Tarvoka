@@ -14,6 +14,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
 const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
+const Airbase3D = preload("res://scripts/ui/AirbaseBattle3D.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
@@ -498,7 +499,7 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         var owner: int = int(site["owner"]) if visible else -1
         # A hidden workshop is explored geometry only, never a live feed
         # of enemy upgrades or fresh damage inflicted behind the fog.
-        if not visible and str(site["kind"])=="armor_plant":
+        if not visible and str(site["kind"]) in ["armor_plant","airbase"]:
             site["visual_damage_stage"]=0
             site.erase("visual_level")
         # Real civil V4 district, identical to the shared Art Studio.
@@ -546,6 +547,22 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 workshop.set_meta("kind","armor_plant")
                 workshop.set_meta("battle_cell",cell)
                 parent.add_child(workshop)
+                drawn+=1
+                continue
+        # The existing airbase already produces aircraft. Render its
+        # approved V4 single-mesh tactical building in that SAME tile.
+        # Do not insert new sites or touch prices / production / capture.
+        if str(site["kind"])=="airbase":
+            var airfield:Node3D=Airbase3D.build_site(state,site,owner)
+            if airfield!=null:
+                airfield.name="Instalacion3D_airbase_%d_%d" % [
+                    cell.x,cell.y]
+                airfield.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                airfield.set_meta("owner_public",owner)
+                airfield.set_meta("kind","airbase")
+                airfield.set_meta("battle_cell",cell)
+                parent.add_child(airfield)
                 drawn+=1
                 continue
         var color: Color = Color("#a9ada5")
