@@ -29,3 +29,9 @@ Commit `9a04080dabb272117b83f7bd8ff0328f45ab9f0b`: **NO EJECUTADO** in Godot/CI 
 ## 2026-11-21 — GDScript parsing hotfix
 
 Inspection of PR #649 head `7f9d43cd` found 16 literal `\\n` escape sequences embedded in source code outside strings, rather than physical line breaks, in the 13-check aspect simulation block and `_expanded_canvas` helper. This makes the test script syntactically invalid before the geometry assertions can run. Commit `02f63537befe90f7a43d5f9acf88028563d0e481` replaces those sequences with real newlines, preserving all test conditions and the project configuration. **Static source repair: PASÓ** (16 replacements); **Godot 4.3 execution: NO CONFIRMADO** until CI reports on the corrected head. **Android físico: NO EJECUTADO EN DISPOSITIVO**; **HUD visual: PENDIENTE DE REVISIÓN VISUAL**.
+
+## 2026-11-21 — safe-area geometry regression
+
+Commit `07c58f4c` adds six pure safe-area/HUD rectangle controls to `tests/test_android_landscape_contract.gd`: valid physical safe-area containment, an accepted HUD rectangle, left-cutout rejection, bottom-inset rejection, negative HUD dimensions and degenerate safe-area rejection. Coordinates are illustrative physical pixels, not measured from a device. No scene nodes, gameplay, export preset or rendering settings changed.
+
+**Godot 4.3 CI: NO CONFIRMADO** for this head until its workflow run completes. **Android: NO EJECUTADO EN DISPOSITIVO**. **Real HUD anchors/cutouts: PENDIENTE DE REVISIÓN VISUAL**. Next independent increment: instantiate the actual HUD scene in a headless viewport and compare each interactive Control's global bounds against its viewport/safe-area, after identifying the authoritative HUD scene and avoiding parallel UI branches.
