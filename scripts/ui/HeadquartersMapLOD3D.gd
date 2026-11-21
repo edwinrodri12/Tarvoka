@@ -105,7 +105,25 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
             Vector3(2.70,0.27,2.15))
         _box(concrete,Vector3(1.76,0.29,-2.48),
             Vector3(1.12,0.45,1.03))
-        # Two broken structural posts remain; no healthy tall upper wall.
+        # Characteristic BROKEN HQ silhouette: a fractured central command
+        # doorway, truncated east/west wings and a short rear wall remain.
+        # These are NOT intact storeys; all roofs, glass and crest are gone.
+        _box(concrete,Vector3(-1.34,1.17,-3.02),
+            Vector3(0.66,2.22,0.73)) # left gate pier
+        _box(concrete,Vector3(1.32,0.72,-3.02),
+            Vector3(0.69,1.31,0.71)) # torn right pier
+        _box(steel,Vector3(-0.60,2.28,-3.02),
+            Vector3(1.91,0.30,0.82)) # one half of the snapped arch
+        _box(concrete,Vector3(0.20,0.96,1.06),
+            Vector3(3.78,1.80,0.48)) # shortened command-room back wall
+        _box(steel,Vector3(-0.67,1.72,1.07),
+            Vector3(1.55,0.25,0.56)) # collapsed wall top
+        _box(concrete,Vector3(-4.07,0.76,0.44),
+            Vector3(1.42,1.40,1.70)) # west-wing stump
+        _box(concrete,Vector3(4.03,1.03,0.47),
+            Vector3(1.20,1.92,1.46)) # east-wing stump
+        _box(steel,Vector3(3.55,1.86,0.51),
+            Vector3(0.98,0.18,1.15)) # ragged projecting cap
         _box(concrete,Vector3(-2.84,0.48,2.0),
             Vector3(0.56,0.90,1.52))
         _box(steel,Vector3(2.77,0.30,1.89),
