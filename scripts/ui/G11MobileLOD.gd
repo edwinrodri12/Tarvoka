@@ -109,7 +109,7 @@ static func build(model: Node3D, faction_color: Color,
     # All twelve roadwheels rendered in one GPU MultiMesh batch.
     if close:
         var wheels: MultiMesh = _multi_cylinder(model,
-            "G11Mobile_Lote12Ruedas",WHEELS,0.16,0.075,metal,10)
+            "G11Mobile_Lote12Ruedas",WHEELS,0.16,0.075,metal,8)
         var index: int = 0
         for side in [-1,1]:
             for axle in range(6):
