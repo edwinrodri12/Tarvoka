@@ -4,6 +4,7 @@ extends SceneTree
 # The new art-only preview must never change tactical unit profiles or fog.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
+const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v1"
 var failures:int=0
@@ -66,6 +67,25 @@ func _run()->void:
                 continue
             vp.add_child(model)
             check(Drone.has_model(model),"closed A01 fuselage, optical pod and prop")
+            check(Finish.has_model(model),
+                "A01 V2 native physical wing edges, faction marks and EOIR optics")
+            check(int(model.get_meta("tarvoka_a01_v2_lod",0))==lod,
+                "V2 true native LOD8/13 consistency")
+            check(bool(model.get_meta("tarvoka_a01_v2_no_fog_or_damage_rules",false)),
+                "V2 PBR upgrade changes no tactical vision/attack rules")
+            var v2_mark:=model.find_child(
+                Finish.FACTION_STRIPE+"_Port",true,false) as MeshInstance3D
+            check(v2_mark!=null and v2_mark.mesh is BoxMesh and
+                v2_mark.material_override is StandardMaterial3D,
+                "physical V2 faction band remains large in Android LOD8")
+            if v2_mark!=null and v2_mark.material_override is StandardMaterial3D:
+                var v2_color:Color=(v2_mark.material_override as StandardMaterial3D).albedo_color
+                check(v2_color.is_equal_approx(Models.faction_paint_color(faction)),
+                    "V2 band inherits official eight-faction paint")
+            var glass:=model.find_child(Finish.LENS_BEZEL,
+                true,false) as MeshInstance3D
+            check(glass!=null and glass.mesh is CylinderMesh,
+                "opaque 3D lens bezel with real depth, no decal")
             check(bool(model.get_meta("tarvoka_a01_unarmed",false)) and
                 bool(model.get_meta("tarvoka_a01_visual_only",false)),
                 "no attack or tactical fog modifications")
@@ -99,8 +119,8 @@ func _run()->void:
             Models.restore_model_pose("uav_recon",model)
             check(optics!=null and absf(optics.rotation_degrees.y)<0.01,
                 "restoring original gimbal pose")
-            check(Models.inspect_meshes(model)>=21,
-                "no missing closed composite surfaces")
+            check(Models.inspect_meshes(model)>=31,
+                "V2 enclosed composite wing and gimbal surfaces are complete")
             await process_frame
             await process_frame
             await process_frame
@@ -115,12 +135,12 @@ func _run()->void:
             model.free()
 
     check(colors.size()==8,"all eight faction colors produce distinct painted meshes")
-    check(captures==16,"sixteen actual A01 V1 Godot 3D renders")
+    check(captures==16,"sixteen actual A01 V2 Godot 3D renders")
     vp.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 RECON UAV V1: %d errors" % failures)
+        printerr("FAIL A01 RECON UAV V2: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 RECON UAV V1: sixteen native renders; 8 factions, LOD8/13, optics, prop, unarmed safety")
+        print("PASS A01 RECON UAV V2: sixteen native renders; 8 factions, LOD8/13, PBR wing/EOIR, unarmed safety")
         quit(0)
