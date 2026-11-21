@@ -20,3 +20,11 @@ El visor online de TARVOKA conserva el mismo SubViewport y todos los modelos ant
 ## Prioridad artística V5 — Ingeniero claramente distinto de Guardia
 
 El Ingeniero conserva su rol exclusivo de campamento defensivo. En el **mismo Estudio 3D** añade una barrera defensiva plegada y fijada a la mochila (no desplegada ni activa en combate), un arnés frontal de construcción y una visera robusta; el color de facción se mantiene exacto y opaco en ocho facciones. A LOD8 se conservan las formas principales que lo distinguen; LOD13 añade herrajes y fundas. No añade clases, no cambia reparación/captura/campamentos ni usa iconos 2D. La QA de la familia comprueba 8 facciones × 2 LOD, piezas visibles, barrera ancha y que la Guardia no reciba equipamiento de Ingeniero.
+
+## V6 — Articulación 360°, acabados y animaciones (en revisión)
+
+El Ingeniero mantiene exactamente el mismo rol de campamento defensivo y las seis identidades oficiales. Se conserva la geometría de referencia V5, pero se oculta su barrera estática al activar V6, que dibuja una barrera plegable real bajo `V6_BarreraArticuladaRig`: acero satinado opaco, junta de goma, cinchas de sujeción, rieles, pernos y dos alas abatibles. La banda de facción es material Godot nativo y usa una de las ocho pinturas oficiales sin cambiar saturaciones. El LOD13 lleva herrajes y herramientas extra; LOD8 conserva panel, alas, franjas y volumen.
+
+En **el mismo TARVOKA Estudio 3D** se añaden dos botones de animación exclusivos del Ingeniero: **Abrir barrera para inspección 360°** y **Plegar y guardar**. El trabajo de construcción existente mueve una herramienta física en el rig nativo; D2 y D3 revelan marcas reales sobre el metal. Girar la cámara, detener una animación, cambiar facción o comparar LOD no crea un segundo visor. **Todas estas animaciones son artísticas**: no despliegan campamentos, no añaden cobertura, escudo ni defensa y no alteran balance, colisiones, IA, recursos o reglas tácticas.
+
+Cierre técnico requerido: prueba Godot de 8 facciones × 2 LOD, cuatro orientaciones de cámara, diez capturas reales, movimiento de bisagras y herramienta, D0–D3, inventario de Animar del visor unificado y exportación de Pages. El Ingeniero permanece en revisión artística hasta la inspección visual final.

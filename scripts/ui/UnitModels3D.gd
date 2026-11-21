@@ -21,6 +21,7 @@ const InfantryFamily = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const InfantryFinishV2 = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const InfantryVariantsV4 = preload("res://scripts/ui/InfantryVariantsV4.gd")
 const InfantryEngineerV5 = preload("res://scripts/ui/InfantryEngineerSilhouetteV5.gd")
+const InfantryEngineerV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1020,6 +1021,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     if not InfantryEngineerV5.apply(model,role,
                             faction_paint_color(faction),art_level>=13):
                         push_warning("Engineer V5 construction silhouette not applied")
+                    elif not InfantryEngineerV6.apply(model,role,
+                            faction_paint_color(faction),art_level>=13):
+                        push_warning("Engineer V6 360 finish and animation rig not applied")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
@@ -1488,6 +1492,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
         var posed: bool=InfantryFamily.pose(model,kind,progress,target_heading)
         if posed and InfantryFinishV2.has_model(model):
             InfantryFinishV2.pose(model,kind,progress)
+        if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
+            InfantryEngineerV6.pose(model,kind,progress)
         return posed
     match role:
         "tank":
@@ -1535,6 +1541,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
         InfantryFamily.restore(model)
         if InfantryFinishV2.has_model(model):
             InfantryFinishV2.restore(model)
+        if role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
+            InfantryEngineerV6.reset(model)
         return
     match role:
         "tank":

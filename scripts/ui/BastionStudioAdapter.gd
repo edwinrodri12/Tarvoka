@@ -5,6 +5,7 @@ class_name TarvokaBastionStudioAdapter
 # prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -205,6 +206,7 @@ var g16_360_panel: VBoxContainer
 var _g16_review_tween: Tween = null
 var _g16_review_focus: String = "general"
 var _infantry_tween: Tween
+var _engineer_v6_tween: Tween = null
 var _g11_animation: String = ""
 var _g11_turn_tween: Tween
 var _g11_time: float = 0.0
@@ -612,6 +614,12 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
             elif role=="infantry_medic":
                 task_name="Asistencia médica (animación)"
             actions.append({"title":task_name,"action":"work"})
+            if role=="infantry_engineer":
+                actions.append_array([
+                    {"group":"INGENIERO V6 · HERRAJES Y 360° · SOLO ARTE"},
+                    {"title":"V6 · Girar bisagra y abrir barrera plegada (inspección)","action":"engineer_v6_inspect"},
+                    {"title":"V6 · Plegar barrera y guardar equipo","action":"engineer_v6_pack"}
+                ])
         else:
             actions.append({"title":"Ataque · retroceso de arma","action":"attack"})
         actions.append_array([
@@ -860,6 +868,9 @@ func _studio_run_animation(action: String) -> void:
     match action:
         "stop":
             _studio_quick_stop()
+        "engineer_v6_inspect","engineer_v6_pack":
+            if _role=="infantry_engineer":
+                _engineer_v6_run(action=="engineer_v6_inspect")
         "heli_bullet_slow":
             if _role=="attack_heli":
                 _heli_play("hit_bullet",0.42)
@@ -1293,6 +1304,8 @@ func _infantry_review_spin() -> void:
 func _infantry_review_rebuild(latest: bool, lod: int) -> bool:
     if model_root==null or preview==null or not InfantryV1.supports(_role):
         return false
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if lod not in [8,13]:
         return false
     if infantry_360_tween!=null and infantry_360_tween.is_running():
@@ -1346,6 +1359,29 @@ func _infantry_review_lod(lod: int) -> void:
         status_label.text=("Infantería · LOD8 · prueba de distancia táctica en el visor 3D"
             if lod==8 else "Infantería · LOD13 · inspección de detalle 3D")
 
+func _engineer_v6_tick(t: float, art: Node3D) -> void:
+    if is_instance_valid(art) and EngineerFinishV6.has_model(art):
+        EngineerFinishV6.pose(art,"inspect",t)
+
+func _engineer_v6_run(opening: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null or \
+            not EngineerFinishV6.has_model(model_root):
+        return
+    if _infantry_tween!=null and _infantry_tween.is_running():
+        _infantry_tween.kill()
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
+    var start: float=0.0 if opening else 1.0
+    var end: float=1.0 if opening else 0.0
+    _engineer_v6_tick(start,model_root)
+    _engineer_v6_tween=create_tween()
+    _engineer_v6_tween.tween_method(
+        Callable(self,"_engineer_v6_tick").bind(model_root),start,end,1.25)
+    status_label.text=(
+        "Ingeniero V6 · barrera articulada abierta para inspección 360°, sin efecto táctico"
+        if opening else
+        "Ingeniero V6 · barrera plegada y asegurada en mochila")
+
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
         P06Models.pose_model(_role,model_root,kind,t,Vector2i(0,-1))
@@ -1353,6 +1389,8 @@ func _infantry_pose_tick(t: float, kind: String) -> void:
 func _infantry_play(kind: String) -> void:
     if not InfantryV1.supports(_role) or model_root==null:
         return
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
     _infantry_tween=create_tween()
@@ -1398,6 +1436,8 @@ func _studio_quick_action(kind: String) -> void:
 
 func _studio_quick_stop() -> void:
     if InfantryV1.supports(_role):
+        if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+            _engineer_v6_tween.kill()
         if _infantry_tween!=null and _infantry_tween.is_running():
             _infantry_tween.kill()
         if model_root!=null:
@@ -4076,6 +4116,8 @@ func _display_role(role: String) -> void:
         _g16_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
+    if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
+        _engineer_v6_tween.kill()
     if role!="mlrs":
         _g11_preview_lod_v24=13
     if _p06_fleet!=null:
