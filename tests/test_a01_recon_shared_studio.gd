@@ -102,6 +102,34 @@ func _run()->void:
             (stripe.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
                 Models.faction_paint_color(6)),
             "A01 faction paint changes in native Godot materials")
+    # The original Studio used neutral paint for non-tanks before A01 V4.
+    # Sweep EVERY faction on the same selector to catch stale materials
+    # and palette aliasing, not only a single before/after color change.
+    var painted_colors:Dictionary={}
+    for team in range(8):
+        studio.call("_on_faction",team)
+        await process_frame
+        var active:=studio.get("model_root") as Node3D
+        var faction_picker:=studio.get("faction_picker") as OptionButton
+        check(active!=null and AeroV4.has_model(active),
+            "A01 V4 model stays native after changing to team %d" % team)
+        check(faction_picker!=null and faction_picker.visible and
+            faction_picker.selected==team,
+            "original eight-faction selector tracks team %d" % team)
+        if active!=null:
+            var band:=active.find_child(Finish.FACTION_STRIPE+"_Port",
+                true,false) as MeshInstance3D
+            var expected:Color=Models.faction_paint_color(team)
+            var valid:bool=band!=null and band.material_override is StandardMaterial3D
+            if valid:
+                var actual:Color=(band.material_override as StandardMaterial3D).albedo_color
+                painted_colors[actual.to_html()]=true
+                valid=actual.is_equal_approx(expected)
+            check(valid,"A01 real Studio wing stripe uses official palette team %d" % team)
+    check(painted_colors.size()==8,
+        "eight distinct faction paints in ONE original 3D studio")
+    studio.call("_on_faction",6)
+    await process_frame
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://build/qa/a01-v1"))==OK,
         "QA photo folder")
@@ -120,5 +148,5 @@ func _run()->void:
         printerr("FAIL A01 V4 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V4 SHARED STUDIO: same A01 V2 selector, 8 factions, unarmed gimbal, 360 cameras")
+        print("PASS A01 V4 SHARED STUDIO: same native A01 V4, all eight faction paints verified, unarmed gimbal, 360 cameras")
         quit(0)
