@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
+const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v1"
 var failures:int=0
@@ -69,6 +70,23 @@ func _run()->void:
             check(Drone.has_model(model),"closed A01 fuselage, optical pod and prop")
             check(Finish.has_model(model),
                 "A01 V2 native physical wing edges, faction marks and EOIR optics")
+            check(HardwareV3.has_model(model),
+                "A01 V3 physical winglets, gimbal trunnions and three-blade prop")
+            check(int(model.get_meta("tarvoka_a01_v3_lod",0))==lod,
+                "A01 V3 geometry is present in native LOD8 and LOD13")
+            check(bool(model.get_meta("tarvoka_a01_v3_unarmed_visual_only",false)),
+                "A01 V3 changes no weapons or tactical rules")
+            var prop_v3:=model.find_child(Drone.PROPELLER,true,false) as Node3D
+            if prop_v3!=null:
+                for blade_index in range(3):
+                    var real_blade:=prop_v3.find_child(
+                        HardwareV3.BLADE_PREFIX+str(blade_index),true,false) as MeshInstance3D
+                    var old_blade:=prop_v3.find_child(
+                        "A01_V1_PusherBlade_"+str(blade_index),true,false) as MeshInstance3D
+                    check(real_blade!=null and real_blade.visible and real_blade.mesh is BoxMesh,
+                        "V3 has exactly three single-ended physical blades")
+                    check(old_blade!=null and not old_blade.visible,
+                        "V1 centered six-spoke silhouette is not rendered")
             check(int(model.get_meta("tarvoka_a01_v2_lod",0))==lod,
                 "V2 true native LOD8/13 consistency")
             check(bool(model.get_meta("tarvoka_a01_v2_no_fog_or_damage_rules",false)),
@@ -139,8 +157,8 @@ func _run()->void:
     vp.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 RECON UAV V2: %d errors" % failures)
+        printerr("FAIL A01 RECON UAV V3: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 RECON UAV V2: sixteen native renders; 8 factions, LOD8/13, PBR wing/EOIR, unarmed safety")
+        print("PASS A01 RECON UAV V3: sixteen native renders; three-blade prop, trunnions, winglets, LOD8/13 and eight factions")
         quit(0)
