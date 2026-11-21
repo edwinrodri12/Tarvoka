@@ -106,8 +106,8 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
     var right: Node3D=_find(model,"V6_AlaDerechaRig")
     var rifle: Node3D=_find(model,"ArmamentoRig")
     var face: Node3D=_find(model,"CabezaRig")
-    if chest==null or shield==null or left==null or right==null or \
-            rifle==null or face==null:
+    if (chest==null or shield==null or left==null or right==null or
+            rifle==null or face==null):
         return false
     for side in [-1,1]:
         if _find(model,"BrazoRig_%d"%side)==null:
