@@ -73,8 +73,8 @@ static func apply(model: Node3D, role: String, faction: Color,
     if head==null or torso==null:
         return false
     for side in [-1,1]:
-        if _find(model,"PiernaRig_%d"%side)==null or \
-                _find(model,"BrazoRig_%d"%side)==null:
+        if (_find(model,"PiernaRig_%d"%side)==null or
+                _find(model,"BrazoRig_%d"%side)==null):
             return false
     var armor := _paint(Color("#798d8b"),0.28,0.44)
     var alloy := _paint(Color("#a0b0b2"),0.51,0.33)
