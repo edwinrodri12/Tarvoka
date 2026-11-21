@@ -3,6 +3,7 @@ extends SceneTree
 # A01 must load in the SAME real native TARVOKA Godot Web Studio.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
+const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -35,15 +36,37 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("EN DESARROLLO"),
+            picker.get_item_text(index).contains("V2 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and Drone.has_model(model),
-        "native A01 wing, sensor and motor loaded in original SubViewport")
+    check(model!=null and Drone.has_model(model) and Finish.has_model(model),
+        "native A01 V2 wing, sealed optics and motor loaded in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
+    var panel:=studio.get("a01_360_panel") as VBoxContainer
+    check(panel!=null,"A01 V2 close-up and 360 controls added to the same Camera tab")
+    studio.call("_studio_select_tab",1)
+    check(panel!=null and panel.visible,
+        "physical A01 V2 camera presets visible without changing scenes")
+    studio.call("_a01_review_look",35.0,"optica")
+    check(str(studio.get("_a01_review_focus"))=="optica",
+        "dedicated close-up keeps actual EO/IR gimbal in main viewport")
+    var camera:=studio.get("camera") as Camera3D
+    check(camera!=null and camera.size<3.5,
+        "real camera focuses on the glass and mechanical bezel")
+    studio.call("_a01_review_look",0.0,"superior")
+    check(str(studio.get("_a01_review_focus"))=="superior",
+        "true overhead look exposes solid wing and faction band")
+    studio.call("_a01_review_spin")
+    var orbit:=studio.get("_a01_review_tween") as Tween
+    check(orbit!=null and orbit.is_running(),
+        "actual same model makes a continuous 360-degree orbit")
+    studio.call("_studio_review_reset_camera")
+    check(str(studio.get("_a01_review_focus"))=="general",
+        "reset returns from macro camera to original full-drone view")
+    studio.call("_studio_select_tab",0)
     var specs:Array[Dictionary]=studio.call("_studio_animation_specs","uav_recon")
     var action_names:Dictionary={}
     for spec in specs:
@@ -64,8 +87,8 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     model=studio.get("model_root") as Node3D
-    check(model!=null and Drone.has_model(model),
-        "changing faction rebuilds A01 real geometry")
+    check(model!=null and Drone.has_model(model) and Finish.has_model(model),
+        "changing faction rebuilds A01 V2 physical PBR model")
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path("res://build/qa/a01-v1"))==OK,
         "QA photo folder")
@@ -81,8 +104,8 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 V1 SHARED STUDIO: %d errors" % failures)
+        printerr("FAIL A01 V2 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V1 SHARED STUDIO: real A01 selector, 8 factions, unarmed optics animation")
+        print("PASS A01 V2 SHARED STUDIO: same A01 V2 selector, 8 factions, unarmed gimbal, 360 cameras")
         quit(0)
