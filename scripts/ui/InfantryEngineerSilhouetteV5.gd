@@ -106,5 +106,5 @@ static func apply(model: Node3D, role: String, faction_paint: Color, hero: bool)
     return true
 
 static func has_model(model: Node3D) -> bool:
-    return model != null and bool(model.get_meta(FLAG,false)) and \
-        str(model.get_meta("tarvoka_infantry_role","")) == ROLE
+    return (model != null and bool(model.get_meta(FLAG,false)) and
+        str(model.get_meta("tarvoka_infantry_role","")) == ROLE)
