@@ -6,6 +6,7 @@ class_name TarvokaBastionStudioAdapter
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const EngineerFinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -1378,6 +1379,8 @@ func _infantry_review_lod(lod: int) -> void:
 func _engineer_v6_tick(t: float, art: Node3D) -> void:
     if is_instance_valid(art) and EngineerFinishV6.has_model(art):
         EngineerFinishV6.pose(art,"inspect",t)
+        if EngineerFinishV9.has_model(art):
+            EngineerFinishV9.sync(art,"idle")
 
 func _engineer_v6_run(opening: bool) -> void:
     if _role!="infantry_engineer" or model_root==null or \
@@ -1403,9 +1406,9 @@ func _engineer_v6_run(opening: bool) -> void:
             Callable(self,"_engineer_v6_tick").bind(model_root),
             start,end,maxf(0.08,1.25*absf(end-start)))
     status_label.text=(
-        "Ingeniero V6 · barrera articulada abierta para inspección 360°, sin efecto táctico"
+        "Ingeniero V9 · barrera articulada abierta para inspección 360°, sin efecto táctico"
         if opening else
-        "Ingeniero V6 · barrera plegada y asegurada en mochila")
+        "Ingeniero V9 · barrera plegada y asegurada en mochila")
 
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
