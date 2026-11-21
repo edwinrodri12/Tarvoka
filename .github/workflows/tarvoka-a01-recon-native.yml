@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V5 Native Visual QA
+name: TARVOKA A01 Recon UAV V6 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v5-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v6-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -75,6 +75,23 @@ jobs:
           test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
           find build/qa/a01-v1 -name 'a01-f*-lod*.png' -size +2k | wc -l | grep -qx '16'
 
+      - name: Validate five cumulative damage stages and genuine repair in Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_a01_recon_damage_v6.gd \
+            2>&1 | tee /tmp/a01-v6-damage.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a01-v6-damage.log; then
+            echo "::error::A01 visual D0-D4 repair test failed"
+            exit 1
+          fi
+          grep -F 'PASS A01 V6 NATIVE DAMAGE:' /tmp/a01-v6-damage.log
+          test "$(find build/qa/a01-v6 -maxdepth 1 -name 'a01-v6-d*.png' | wc -l)" -eq 5
+
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
       # dependencies not contained in main; copying one scene here would
@@ -86,16 +103,18 @@ jobs:
           set -euo pipefail
           test -s tests/test_a01_recon_shared_studio.gd
           grep -Fq "test_a01_recon_shared_studio.gd" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "PASS A01 V5 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "A01TailV5.has_model" scripts/ui/BastionStudioAdapter.gd
+          grep -Fq "PASS A01 V6 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "A01DamageV6.has_model" scripts/ui/BastionStudioAdapter.gd
+          grep -Fq "test_a01_recon_damage_v6.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq 'faction_picker.select(_faction)' scripts/ui/BastionStudioAdapter.gd
 
       - name: Upload real Godot visual evidence, even on failures
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v5-native-visual-evidence
+          name: tarvoka-a01-v6-native-and-damage-evidence
           path: |
             build/qa/a01-v1/*.png
+            build/qa/a01-v6/*.png
           if-no-files-found: warn
           retention-days: 14
