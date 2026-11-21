@@ -52,8 +52,8 @@ func _run()->void:
         check(index>=0 and index<picker.item_count,"G16 remains selectable")
         if index>=0 and index<picker.item_count:
             check(picker.get_item_text(index).contains("V6") and
-                picker.get_item_text(index).contains("EN DESARROLLO"),
-                "G16 V6 appears as an unfinished working model")
+                picker.get_item_text(index).contains("FINAL"),
+                "G16 V6 appears as a user-approved final model")
             picker.select(index)
     studio.call("_display_role","logistics_mobile")
     await process_frame

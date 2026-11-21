@@ -1,7 +1,7 @@
 # TARVOKA · G16 V6 — blindado logístico 6×6, hardware de abastecimiento articulado
 
-**Estado: MODELO 3D EN DESARROLLO; pendiente revisión de capturas y aprobación visual.**
-La unidad G15 V11C sí está finalizada; la G16 no. Esta rama integra los dos avances paralelos de G16 sin perder los materiales V5 ni el mecanismo V5 de abastecimiento: los materiales conservan el nombre `V5`, el hardware se registra como `V6` para evitar duplicación de clases, banderas y controles.
+**Estado: MODELO 3D V6 FINAL Y APROBADO POR EL USUARIO (20-nov-2026).**
+La G16 se da por cerrada después de las pruebas nativas, el giro 360°, las inspecciones de manguera/ruedas y las ocho pinturas de facción. El catálogo del visor ahora la identifica como FINAL. La integración V1–V6 conserva los materiales V5 y el hardware mecánico V6 sin duplicar clases, banderas ni controles. La aprobación es del **modelo artístico y su presentación en el mismo visor**, no una afirmación de que todas las capacidades de campaña, reparaciones o nuevas reglas de reabastecimiento ya estén terminadas.
 
 ## Capas nativas en la MISMA unidad y el MISMO visor
 
@@ -35,8 +35,15 @@ Los cambios son **exclusivamente artísticos**. Se preserva `ModernArsenal.gd`: 
 - `.github/workflows/g16-v1-native-logistics-qa.yml`: pruebas V1–V6 y subida de capturas.
 - `.github/workflows/tarvoka-3d-pages.yml`: exportación integrada del visor, pruebas de animación V6 dentro del ensamblado y capturas de la interfaz real. Mantiene los tests previos V3–V5 y las comparaciones históricas, aislando V6 donde corresponde.
 
-**Criterio de aprobación pendiente:** revisar capturas Godot de los ocho colores, el perfil cerrado sin huecos, visibilidad isométrica, animación conector-tapa sin intersecciones y rendimiento LOD8 Android. No fusionar como acabado final ni declarar G16 terminada antes de superar la verificación nativa y la inspección visual.
+**Aprobación recibida:** el usuario aprobó los acabados G16 V6, las ocho facciones y los movimientos de la manguera/compuertas tras revisar capturas 3D. Se cierra el **diseño 3D**; cualquier regresión de Godot, Android LOD8 o publicación online seguirá siendo motivo de corrección técnica, sin reabrir el alcance artístico.
 
 ## Revisión posterior: calidad Android LOD8
 
 La batería visual también exige que la manguera LOD8 resulte visible en el render real de Godot, para cada una de las ocho facciones. Se comprueban las imágenes antes y después del despliegue y se oculta solo la capa V6 para descartar falsos positivos causados por la animación de la grúa V1–V5. El total obligatorio es de **40 PNG nativos**. Esto preserva el visor unificado TARVOKA y mantiene los suministros de campaña como elementos gráficos sin alterar el combate ni el coste de G16.
+
+## Acta de cierre V6 — 20-nov-2026
+
+- **APROBADA / FINAL**: 6×6 blindado, V1–V6 PBR, manguera articulada, 4 estados de daño, ocho pinturas de facción, cámara de inspección y giro de 360° en el Estudio 3D unificado.
+- El modelo sigue identificado internamente por `logistics_mobile`, reutilizado por la lógica visual existente. La economía de la unidad táctica utiliza el rol `logistics` del perfil `ModernArsenal.gd` (8 HP, 4 MOV, 0 ATQ y 300 créditos).
+- **Alcance no declarado como terminado**: nuevas acciones de reparación real, cargas de combustible no disponibles en el sistema actual, capacidades de combate adicionales o APK de lanzamiento comercial.
+- La próxima unidad de diseño es **A01 — dron de reconocimiento**, según `MILITARY_UNIT_CATALOG.md` y `ModernArsenal.gd`. **No crear G17**; G16 es la última entrada terrestre de ese catálogo.
