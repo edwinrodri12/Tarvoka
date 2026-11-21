@@ -4,6 +4,7 @@ extends SceneTree
 # opaque faction PBR, four-angle camera orbit and Android LOD8.
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
+const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -56,6 +57,29 @@ func _run() -> void:
             if model==null:
                 continue
             check(Engineer.has_model(model),"real V6 installed F%d LOD%d"%[faction,lod])
+            check(ClosureV7.has_model(model),"rear helmet/neck V7 installed F%d LOD%d"%[faction,lod])
+            var scalp: Node3D=model.find_child("Cabeza",true,false) as Node3D
+            check(scalp!=null and not scalp.visible,
+                "legacy bare cranium is never exposed in 360 engineer view")
+            var occipital: MeshInstance3D=model.find_child(
+                ClosureV7.REAR,true,false) as MeshInstance3D
+            var nape: MeshInstance3D=model.find_child(
+                ClosureV7.NAPE,true,false) as MeshInstance3D
+            var full_mask: MeshInstance3D=model.find_child(
+                ClosureV7.MASK,true,false) as MeshInstance3D
+            var rear_paint: MeshInstance3D=model.find_child(
+                ClosureV7.COLOR,true,false) as MeshInstance3D
+            check(occipital!=null and occipital.mesh is SphereMesh and
+                occipital.position.z>=0.17 and occipital.scale.z>=0.38,
+                "full-depth enclosed rear helmet overlaps former exposed scalp")
+            check(nape!=null and full_mask!=null and nape.visible and full_mask.visible,
+                "helmet connects down to nape; respirator closes front face")
+            var helmet_color: StandardMaterial3D=(
+                rear_paint.material_override as StandardMaterial3D
+                if rear_paint!=null else null)
+            check(helmet_color!=null and helmet_color.albedo_color.is_equal_approx(
+                Models.faction_paint_color(faction)),
+                "official faction color remains on protected rear helmet")
             check(fully_opaque(model),"all V6 polygons opaque F%d LOD%d"%[faction,lod])
             var board: MeshInstance3D=model.find_child(
                 Engineer.PANEL,true,false) as MeshInstance3D
@@ -125,8 +149,9 @@ func _run() -> void:
     for other_role in ["line","infantry_sniper","infantry_medic",
             "infantry_logistic","infantry_commando"]:
         var other: Node3D=Models.build(other_role,0,true,13)
-        check(other!=null and not Engineer.has_model(other),
-            "no V6 shield on other core role "+other_role)
+        check(other!=null and not Engineer.has_model(other) and
+            not ClosureV7.has_model(other),
+            "no engineer V6/V7 coverage installed on other approved core role "+other_role)
         if other!=null:
             other.free()
 
@@ -181,6 +206,15 @@ func _run() -> void:
             camera.position=positions[side]
             camera.look_at(Vector3(0,1.15,0),Vector3.UP)
             await _frame(view,"engineer_v6_half_open_%s"%side)
+        # These close views detect exposed skin or neck gaps hidden in a
+        # general full-body thumbnail. They use REAL geometry and PBR.
+        Engineer.pose(art,"reset",0.0)
+        camera.size=2.15
+        for side in ["rear","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,2.07,0),Vector3.UP)
+            await _frame(view,"engineer_v7_full_helmet_%s_close"%side)
+        camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
@@ -194,10 +228,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==12,"twelve authentic Godot V6 360 comparison PNGs")
+    check(shots==14,"fourteen authentic Godot V6/V7 360 comparison PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 12 real PNGs")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 14 real PNGs; rear helmet sealed")
         quit(0)
