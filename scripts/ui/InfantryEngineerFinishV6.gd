@@ -73,8 +73,8 @@ static func has_model(model: Node3D) -> bool:
 static func apply(model: Node3D, role: String, faction_color: Color, hero: bool) -> bool:
     if model==null or role!=ROLE or has_model(model):
         return false
-    if str(model.get_meta("tarvoka_infantry_role",""))!=ROLE or \
-            not bool(model.get_meta("tarvoka_infantry_engineer_silhouette_v5",false)):
+    if (str(model.get_meta("tarvoka_infantry_role",""))!=ROLE or
+            not bool(model.get_meta("tarvoka_infantry_engineer_silhouette_v5",false))):
         return false
     var chest: Node3D=_find(model,"TorsoRig")
     if chest==null:
