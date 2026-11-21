@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Validate a TARVOKA mesh census JSON independently of Godot.
+
+Usage: python3 tools/validate_mesh_census.py report.json
+       python3 tools/validate_mesh_census.py --self-test
+Exit codes: 0 valid, 2 invalid report/input.
+This is a structural check, NOT a frame-rate or device benchmark.
+"""
+import json
+import pathlib
+import sys
+
+
+COUNTS = ("triangles", "instances", "mesh_nodes", "surfaces", "largest_mesh_triangles")
+
+
+def reject_duplicate_keys(pairs):
+    """Reject ambiguous JSON objects instead of silently keeping the last value."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def validate(report):
+    if not isinstance(report, dict):
+        return "report must be an object"
+    for key in COUNTS:
+        value = report.get(key)
+        if type(value) is not int or value < 0:
+            return f"{key} must be a non-negative integer"
+    if report["mesh_nodes"] > report["instances"]:
+        return "mesh_nodes exceeds instances"
+    if report["mesh_nodes"] == 0 and (report["triangles"] > 0 or report["surfaces"] > 0):
+        return "geometry or surfaces declared without mesh nodes"
+    if report["largest_mesh_triangles"] > report["triangles"]:
+        return "largest mesh exceeds total triangles"
+    if report["instances"] == 0 and (report["triangles"] or report["mesh_nodes"] or report["surfaces"]):
+        return "geometry declared without instances"
+    if report["triangles"] > 0 and report["largest_mesh_triangles"] == 0:
+        return "triangles declared without a contributing mesh"
+    path = report.get("largest_mesh_path")
+    if not isinstance(path, str):
+        return "largest_mesh_path must be a string"
+    if report["largest_mesh_triangles"] > 0 and not path.strip():
+        return "largest mesh has no path"
+    if report["largest_mesh_triangles"] == 0 and path:
+        return "zero-sized largest mesh has a path"
+    warnings = report.get("warnings")
+    if not isinstance(warnings, list) or any(not isinstance(w, str) for w in warnings):
+        return "warnings must be a list of strings"
+    return None
+
+
+def self_test():
+    good = dict(triangles=12, instances=1, mesh_nodes=1, surfaces=1,
+                largest_mesh_triangles=12, largest_mesh_path="Vehicle/Hull", warnings=[])
+    assert validate(good) is None
+    for patch in ({"triangles": -1}, {"triangles": True}, {"mesh_nodes": 2},
+                  {"largest_mesh_triangles": 13}, {"largest_mesh_path": ""},
+                  {"warnings": [3]}, {"instances": 0}, {"surfaces": "1"},
+                  {"largest_mesh_triangles": 0}, {"largest_mesh_path": 42}):
+        bad = dict(good, **patch)
+        assert validate(bad) is not None, patch
+    for patch in ({"mesh_nodes": 0}, {"mesh_nodes": 0, "triangles": 0, "largest_mesh_triangles": 0, "largest_mesh_path": ""}):
+        bad = dict(good, **patch)
+        assert validate(bad) is not None, patch
+    empty = dict.fromkeys(COUNTS, 0)
+    empty.update(largest_mesh_path="", warnings=[])
+    assert validate(empty) is None
+    for raw in ('{"triangles":12,"triangles":-1}', '{"warnings":[],"warnings":[3]}'):
+        try:
+            json.loads(raw, object_pairs_hook=reject_duplicate_keys)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("duplicate JSON key accepted")
+    print("PASS: 16 structural and JSON-integrity cases")
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == "--self-test":
+        self_test()
+        return 0
+    if len(argv) != 2:
+        print(__doc__, file=sys.stderr)
+        return 2
+    try:
+        report = json.loads(pathlib.Path(argv[1]).read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"INVALID: cannot read JSON: {exc}", file=sys.stderr)
+        return 2
+    error = validate(report)
+    if error:
+        print(f"INVALID: {error}", file=sys.stderr)
+        return 2
+    print("PASS: mesh census report structure")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
