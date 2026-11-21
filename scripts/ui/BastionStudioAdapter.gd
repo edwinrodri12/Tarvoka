@@ -240,6 +240,7 @@ var studio_animation_rebuild_count: int = 0
 var infantry_360_panel: VBoxContainer
 var infantry_360_tween: Tween = null
 var infantry_review_v2: bool = true
+var infantry_review_lod: int = 13
 
 
 func _ready() -> void:
@@ -385,13 +386,15 @@ func _install_unified_studio_navigation() -> void:
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
     infantry_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(infantry_360_panel)
-    _title(infantry_360_panel,"INFANTERÍA · REVISIÓN 360° V1 / V2",13)
+    _title(infantry_360_panel,"INFANTERÍA · REVISIÓN 360° Y DISTANCIA TÁCTICA",13)
     _add_paired(infantry_360_panel,"Frente",func(): _infantry_review_look(180.0,"frente"),
         "Perfil",func(): _infantry_review_look(90.0,"perfil"))
     _add_paired(infantry_360_panel,"Espalda",func(): _infantry_review_look(0.0,"espalda"),
         "Giro 360°",_infantry_review_spin)
     _add_paired(infantry_360_panel,"Comparar V1",func(): _infantry_review_version(false),
         "Ver V2",func(): _infantry_review_version(true))
+    _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
+        "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     infantry_360_panel.visible=false
 
     # Revision comparisons are kept for QA but not shown on the front page.
@@ -1186,40 +1189,63 @@ func _infantry_review_spin() -> void:
     status_label.text="Infantería %s · revisión 360° real en Godot" % (
         "V2" if infantry_review_v2 else "V1")
 
-func _infantry_review_version(latest: bool) -> void:
+# Rebuild the actual native Godot mesh inside the existing SubViewport.
+# Preserve faction, damage, camera heading and comparison revision.
+func _infantry_review_rebuild(latest: bool, lod: int) -> bool:
     if model_root==null or preview==null or not InfantryV1.supports(_role):
-        return
+        return false
+    if lod not in [8,13]:
+        return false
     if infantry_360_tween!=null and infantry_360_tween.is_running():
         infantry_360_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
     var candidate: Node3D=null
     if latest:
-        candidate=P06Models.build(_role,_faction,true,13)
+        candidate=P06Models.build(_role,_faction,true,lod)
         if candidate==null or not bool(candidate.get_meta(
                 "tarvoka_infantry_sculpt_finish_v2",false)):
             if candidate!=null:
                 candidate.free()
-            push_error("Infantería V2 real no disponible; conservar modelo de revisión")
-            return
+            push_error("No se pudo cargar infantería 3D V2 en LOD%d"%lod)
+            return false
     else:
         candidate=Node3D.new()
         if not InfantryV1.build(candidate,_role,
-                P06Models.faction_paint_color(_faction),true):
+                P06Models.faction_paint_color(_faction),lod>=13):
             candidate.free()
-            push_error("Comparativa V1 genuina no disponible")
-            return
-    var old: Node3D=model_root
-    preview.remove_child(old)
-    old.queue_free()
+            push_error("No se pudo cargar la comparación V1")
+            return false
+    var previous_damage:int=InfantryV1.damage_stage(model_root)
+    var previous: Node3D=model_root
+    preview.remove_child(previous)
+    previous.queue_free()
     model_root=candidate
     preview.add_child(model_root)
     model_root.rotation_degrees.y=_yaw
+    InfantryV1.set_damage(model_root,previous_damage)
+    if latest:
+        P06Models.pose_model(_role,model_root,"idle",0.0,Vector2i(0,-1))
     infantry_review_v2=latest
+    infantry_review_lod=lod
     _update_camera()
     _update_details()
-    status_label.text="Infantería %s · comparación en el visor 3D original" % (
-        "V2 acabada" if latest else "V1 referencia")
+    return true
+
+func _infantry_review_version(latest: bool) -> void:
+    if _infantry_review_rebuild(latest,infantry_review_lod):
+        status_label.text="Infantería %s · LOD%d · comparación en el mismo visor 3D" % [
+            "V2" if latest else "V1",infantry_review_lod]
+
+func _infantry_review_lod(lod: int) -> void:
+    if _infantry_review_rebuild(infantry_review_v2,lod):
+        # Orthographic preview at reduced visual size, not a separate map.
+        # LOD8 uses physically rebuilt low-poly geometry; players may still
+        # zoom/pan with the normal controls of the shared Godot Studio.
+        _zoom=0.38 if lod==8 else 1.0
+        _update_camera()
+        status_label.text=("Infantería · LOD8 · prueba de distancia táctica en el visor 3D"
+            if lod==8 else "Infantería · LOD13 · inspección de detalle 3D")
 
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
@@ -3941,6 +3967,7 @@ func _display_role(role: String) -> void:
         if infantry_360_tween!=null and infantry_360_tween.is_running():
             infantry_360_tween.kill()
         infantry_review_v2=true
+        infantry_review_lod=13
         # Swap the base low-detail preview for the hero-grade native geometry
         # in the SAME shared Studio viewport; battle LOD stays lightweight.
         if model_root!=null:
@@ -4147,6 +4174,17 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if InfantryV1.supports(_role):
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        # Base Studio only repaints G09; V2 infantry needs brand-new
+        # physical 3D armor with the selected palette, including at LOD8.
+        _faction=index
+        if _infantry_review_rebuild(infantry_review_v2,infantry_review_lod):
+            faction_picker.select(index)
+            status_label.text="Infantería · facción %d · LOD%d · pintura 3D actualizada"%[
+                index,infantry_review_lod]
+        return
     if _role=="logistics_mobile":
         if index<0 or index>=Factions.FACTIONS.size():
             return

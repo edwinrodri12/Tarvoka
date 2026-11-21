@@ -311,6 +311,29 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
                     Vector3(0,-0.25-float(row)*0.095,-0.147),
                     Vector3(0.21,0.012,0.02),dark)
 
+    # Tactical color pass V3: bold REAL 3D faction paint on the existing
+    # Android LOD8 model. At distant camera zoom the V2 thin stripes vanish.
+    # Keep hero-grade details unchanged and preserve the exact official
+    # faction palette: no extra tactical roles, billboards, or fake overlays.
+    if not hero:
+        _plate(upper,"V3_IdentidadPechoMapa",Vector3(0,0.165,-0.412),
+            0.53,0.17,0.045,faction)
+        _plate(upper,"V3_IdentidadMochilaMapa",Vector3(0,0.15,0.53),
+            0.43,0.18,0.045,faction)
+        _box(head,"V3_IdentidadFrenteCascoMapa",
+            Vector3(0,0.466,-0.296),Vector3(0.35,0.085,0.025),faction)
+        for side in [-1,1]:
+            var sleeve: Node3D=_find(model,"BrazoRig_%d"%side)
+            var shin: Node3D=_find(model,"PiernaRig_%d"%side)
+            if sleeve==null or shin==null:
+                return false
+            _box(sleeve,"V3_IdentidadMangaMapa_%d"%side,
+                Vector3(float(side)*0.170,-0.17,-0.043),
+                Vector3(0.052,0.28,0.22),faction)
+            _box(shin,"V3_IdentidadRodillaMapa_%d"%side,
+                Vector3(0,-0.485,-0.207),Vector3(0.235,0.115,0.035),faction)
+        model.set_meta("tarvoka_infantry_v3_tactical_identity",true)
+
     # The V1 gun looked like a side-pointing floating rod. V2 adds hand grips,
     # controls and mechanical detail and aims down -Z at a natural angle.
     var weapon: Node3D=_find(model,"ArmamentoRig")
