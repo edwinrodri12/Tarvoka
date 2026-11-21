@@ -73,3 +73,18 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - `tests/test_a01_recon_shared_studio.gd` recorre las ocho facciones del selector original. El publisher completo ensambla la escena de las ramas fijadas y ejecuta esa prueba; el CI independiente **solo** valida la geometría y las 21 capturas, porque no dispone del árbol íntegro de las otras construcciones.
 
 **Aprobación pendiente:** resultado verde de Godot V5 en ambos procesos, inspección de las 21 capturas V5 y rendimiento Android. No se ha fusionado ni publicado A01; no se añade daño de combate, ataque ni ningún cambio a visión/fog/economía. Siguiente etapa: daños exclusivamente visuales escalonados y pruebas de reparación/restauración, después de cerrar la revisión del modelo V5.
+
+
+## Etapa V6 — daños visuales acumulativos y reparación (en pruebas)
+
+**V5 ya superó una ejecución nativa real de Godot 4.3:** ocho facciones × LOD8/13, cinco ángulos de inspección, 21 PNG y presupuesto de 48 mallas visibles en LOD8 / 68 en LOD13. La revisión artística de esas capturas muestra una cola en V más legible y doble larguero cerrado. La publicación de esa revisión falló por un marcador de texto obsoleto (`PASS A01 RECON UAV V4`), ya corregido en el workflow, no por la geometría V5.
+
+**Nueva implementación V6:**
+- Archivo `scripts/ui/A01ReconDamageV6.gd`: cinco estados visuales D0 intacto; D1 marcas de impacto; D2 cubierta dañada y humo; D3 avería crítica y brasas; D4 destrucción 3D con piezas separadas, inclinación del casco y tres palas rotas/ocultas.
+- Materiales opacos y mallas nativas; humo animado con geometría cerrada. Ninguna animación de disparo o arma nueva.
+- `repair()` restituye D0, las posiciones y las tres palas; `set_stage()` es determinista y acumulativo y rechaza valores fuera de 0–4.
+- El Estudio 3D ORIGINAL, no otro visor, recibe botones de daño/reparación. Detener una animación conserva los daños; cambiar de facción preserva etapa, dirección de cámara y zoom.
+- `tests/test_a01_recon_damage_v6.gd`: comprueba en Godot las cinco etapas para ocho facciones × dos LOD, opacity de materiales, hélice D4/restauración, ausencia de ataque y conservación de `ModernArsenal`; guarda cinco capturas D0–D4.
+- El workflow exclusivo exige tanto las 21 capturas de A01 V5 como la nueva prueba de cinco daños. El flujo de publicación completo incorpora las fuentes V6 al árbol real del visor y ejecuta la prueba de los botones.
+
+**Estado de V6:** programado en el PR #655; **ejecución CI de daños y visor aún sin resultado confirmado**. No fusionar el PR ni anunciar publicación en Pages hasta obtener pruebas verdes, inspeccionar las imágenes de destrucción y medir rendimiento Android; los 48/68 anteriores corresponden a D0 de V5 y no a los efectos activos D4.
