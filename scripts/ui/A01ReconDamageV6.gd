@@ -7,6 +7,7 @@ class_name TarvokaA01ReconDamageV6
 const FLAG:String="tarvoka_a01_v6_visual_damage"
 const STAGE_KEY:String="tarvoka_a01_v6_damage_stage"
 const EFFECTS:String="A01_V6_VisualDamageRig"
+const SMOKE_CACHE:String="tarvoka_a01_v6_smoke_nodes"
 const V1=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const V3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const V5=preload("res://scripts/ui/A01ReconTailV5.gd")
@@ -121,10 +122,13 @@ static func prepare(root:Node3D,hero:bool)->bool:
         Vector3(0.29,0.026,0.23),blast,Vector3(0,16,0))
     _box(d2,"A01_V6_D2_FraggedTrailingPlate",Vector3(0.81,1.096,0.20),
         Vector3(0.21,0.032,0.13),steel,Vector3(0,0,26))
-    _plume(d2,"A01_V6_SmokePlume_0",Vector3(0.25,1.29,0.19),
-        0.085,0.025,0.30,smoke,hero,12.0)
-    _plume(d2,"A01_V6_SmokePlume_1",Vector3(0.32,1.53,0.24),
-        0.112,0.018,0.39,soot,hero,-16.0)
+    var smoke0:MeshInstance3D=_plume(d2,"A01_V6_SmokePlume_0",
+        Vector3(0.25,1.29,0.19),0.085,0.025,0.30,smoke,hero,12.0)
+    var smoke1:MeshInstance3D=_plume(d2,"A01_V6_SmokePlume_1",
+        Vector3(0.32,1.53,0.24),0.112,0.018,0.39,soot,hero,-16.0)
+    # Two directly cached child references avoid 4 full tree scans per
+    # displayed frame in the shared Studio or mobile battle preview.
+    root.set_meta(SMOKE_CACHE,[smoke0,smoke1])
 
     var d3:=_layer(rig,3)
     _box(d3,"A01_V6_D3_BurntTailRoot",Vector3(-0.45,1.005,1.34),
@@ -186,15 +190,20 @@ static func repair(root:Node3D)->bool:
     return set_stage(root,0)
 
 static func animate(root:Node3D,clock:float)->bool:
-    if not has_model(root) or stage(root)<2:
+    # Hot path: this is called on every visible studio frame. Skip recursive
+    # find_child()/has_model() scans: geometry was fully checked in prepare().
+    if root==null or not bool(root.get_meta(FLAG,false)) or
+            int(root.get_meta(STAGE_KEY,0))<2:
         return false
-    # Two narrow physical smoke plumes move; no fake alpha circles.
+    var vapors:Array=root.get_meta(SMOKE_CACHE,[])
+    if vapors.size()!=2:
+        return false
     for index in range(2):
-        var vapor:=root.find_child("A01_V6_SmokePlume_"+str(index),
-            true,false) as MeshInstance3D
-        if vapor!=null:
-            vapor.position.y=(1.29 if index==0 else 1.53)+(
-                0.055*sin(clock*2.0+float(index)))
-            vapor.position.x=(0.25 if index==0 else 0.32)+(
-                0.025*sin(clock*1.3+float(index)))
+        var vapor:=vapors[index] as MeshInstance3D
+        if not is_instance_valid(vapor):
+            return false
+        vapor.position.y=(1.29 if index==0 else 1.53)+(
+            0.055*sin(clock*2.0+float(index)))
+        vapor.position.x=(0.25 if index==0 else 0.32)+(
+            0.025*sin(clock*1.3+float(index)))
     return true
