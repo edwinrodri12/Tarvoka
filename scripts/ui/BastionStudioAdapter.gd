@@ -440,7 +440,7 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(infantry_360_panel,"Espalda",func(): _infantry_review_look(0.0,"espalda"),
         "Giro 360°",_infantry_review_spin)
     _add_paired(infantry_360_panel,"Comparar V1",func(): _infantry_review_version(false),
-        "Ver V2",func(): _infantry_review_version(true))
+        "Ver última",func(): _infantry_review_version(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1287,6 +1287,13 @@ func _infantry_review_focus(closeup: bool) -> void:
             "Infantería · acercamiento real al casco y cuello, mismo modelo 3D"
             if closeup else "Infantería · cuerpo completo sin recorte, mismo visor 3D")
 
+func _infantry_review_edition() -> String:
+    if not infantry_review_v2:
+        return "V1"
+    if _role=="infantry_engineer" and model_root!=null and EngineerFinishV9.has_model(model_root):
+        return "V9"
+    return "V2"
+
 func _infantry_review_look(yaw: float, perspective: String) -> void:
     if model_root==null or not InfantryV1.supports(_role):
         return
@@ -1296,7 +1303,7 @@ func _infantry_review_look(yaw: float, perspective: String) -> void:
     model_root.rotation_degrees.y=yaw
     _update_camera()
     status_label.text="Infantería %s · ángulo %s · mismo visor 3D" % [
-        "V2" if infantry_review_v2 else "V1",perspective]
+        _infantry_review_edition(),perspective]
 
 func _infantry_review_spin_tick(angle: float) -> void:
     if model_root==null or not InfantryV1.supports(_role):
@@ -1313,7 +1320,7 @@ func _infantry_review_spin() -> void:
     infantry_360_tween.tween_method(Callable(self,"_infantry_review_spin_tick"),
         _yaw,_yaw+360.0,6.0).set_trans(Tween.TRANS_LINEAR)
     status_label.text="Infantería %s · revisión 360° real en Godot" % (
-        "V2" if infantry_review_v2 else "V1")
+        _infantry_review_edition())
 
 # Rebuild the actual native Godot mesh inside the existing SubViewport.
 # Preserve faction, damage, camera heading and comparison revision.
@@ -1363,7 +1370,7 @@ func _infantry_review_rebuild(latest: bool, lod: int) -> bool:
 func _infantry_review_version(latest: bool) -> void:
     if _infantry_review_rebuild(latest,infantry_review_lod):
         status_label.text="Infantería %s · LOD%d · comparación en el mismo visor 3D" % [
-            "V2" if latest else "V1",infantry_review_lod]
+            _infantry_review_edition(),infantry_review_lod]
 
 func _infantry_review_lod(lod: int) -> void:
     _infantry_helmet_focus=false
@@ -1425,7 +1432,7 @@ func _infantry_play(kind: String) -> void:
     _infantry_tween.tween_method(Callable(self,"_infantry_pose_tick").bind(kind),
         0.0,1.0,1.15)
     status_label.text="Infantería · animación %s · modelo %s" % [kind,
-        "3D V2" if infantry_review_v2 else "3D V1"]
+        "3D "+_infantry_review_edition()]
 
 func _studio_quick_action(kind: String) -> void:
     if model_root==null or category_picker==null or category_picker.selected!=0:
