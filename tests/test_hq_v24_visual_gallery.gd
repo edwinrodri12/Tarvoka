@@ -5,6 +5,7 @@ extends SceneTree
 const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
 const HQ=preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const Curves=preload("res://scripts/ui/HeadquartersCurvedRoof3D.gd")
+const Accents=preload("res://scripts/ui/HeadquartersBattleAccents3D.gd")
 const Scenarios=preload("res://scripts/core/Scenarios.gd")
 const Session=preload("res://scripts/core/BattleSession.gd")
 const Roles=preload("res://scripts/core/UnitRoles.gd")
@@ -76,6 +77,7 @@ func _grid(variants:Array,columns:int,spacing:float) -> Node3D:
             int(cfg.get("damage",0)))
         assert(hq!=null)
         assert(hq.get_node_or_null(Curves.NAME)!=null)
+        assert(hq.get_node_or_null(Accents.NAME)!=null)
         hq.position=Vector3(float(i%columns)*spacing,0.0,
             float(int(i/columns))*spacing)
         scene.add_child(hq)
@@ -123,7 +125,7 @@ func _run() -> void:
     # Native mesh budgets: 6 surfaces existing shell + 3 curved roofs.
     for damage_value in range(5):
         var item:Node3D=HQ.build(3,4,damage_value)
-        assert(item.get_meta("hq_material_surfaces")==9)
+        assert(item.get_meta("hq_material_surfaces")==13)
         var curve:MeshInstance3D=item.get_node(Curves.NAME)
         assert(curve!=null)
         assert(curve.mesh.get_surface_count()==3)
