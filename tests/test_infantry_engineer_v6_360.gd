@@ -73,8 +73,19 @@ func _run() -> void:
             check(model.find_child("V5_BarreraPlegadaIngeniero",true,false)!=null and
                 not (model.find_child("V5_BarreraPlegadaIngeniero",true,false) as Node3D).visible,
                 "legacy static board hidden, not duplicated by new moving shield")
+            var chest: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+            var strap: Node3D=model.find_child(
+                "V6_CinchaAnclada_-1",true,false) as Node3D
+            var support: Node3D=model.find_child(
+                "V6_BancadaFijaBisagra",true,false) as Node3D
+            check(strap!=null and chest!=null and strap.get_parent()==chest and
+                support!=null and support.get_parent()==chest,
+                "straps and hinge mounts remain on torso, not moving armor")
+            var strap_before: Vector3=strap.position if strap!=null else Vector3.ZERO
             check(Engineer.pose(model,"inspect",1.0),
                 "native 3D shield inspection pose")
+            check(strap!=null and strap.position.is_equal_approx(strap_before),
+                "strap stays fixed while rear plate articulates")
             var hinge: Node3D=model.find_child(Engineer.RIG,true,false) as Node3D
             var left: Node3D=model.find_child(Engineer.WINGS[0],true,false) as Node3D
             var right: Node3D=model.find_child(Engineer.WINGS[1],true,false) as Node3D
