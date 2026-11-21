@@ -5103,7 +5103,9 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
-    if _role=="uav_recon" and model_root!=null and A01DamageV6.has_model(model_root):
+    # A01 V6 is checked once during model build/selection. Avoid a deep
+    # model tree audit sixty times per second on mobile browsers.
+    if _role=="uav_recon" and model_root!=null and bool(model_root.get_meta(A01DamageV6.FLAG,false)):
         _effect_time+=maxf(0.0,delta)
         A01DamageV6.animate(model_root,_effect_time)
     if _role=="attack_heli" and HeliV13.has_model(model_root):
