@@ -1,0 +1,46 @@
+name: TARVOKA balance phase 06 full 32-unit real-match audit
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_balance_phase06_real_match_value.gd"
+      - "docs/BALANCE_PHASE06_REAL_MATCHES_20261115.md"
+      - ".github/workflows/balance-phase06-real-match.yml"
+  workflow_dispatch:
+
+jobs:
+  comprehensive_field_audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Simulate all 32 roles in real mirror AI matches, costs, weather and 32x32 counters
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=15s 720s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tests/test_balance_phase06_real_match_value.gd \
+            2>&1 | tee /tmp/tarvoka-balance-real-match06.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/tarvoka-balance-real-match06.log; then
+            echo 'Phase06 simulation or rules check failed'; exit 1
+          fi
+          grep -Fq 'PASS balance phase06:' /tmp/tarvoka-balance-real-match06.log
+          echo "Observations"
+          grep -E 'REALMATCH_SUMMARY|PASS balance phase06:' /tmp/tarvoka-balance-real-match06.log
+      - name: Preserve full analytical log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-phase06-32-role-match-log
+          path: /tmp/tarvoka-balance-real-match06.log
+          if-no-files-found: ignore
+          retention-days: 30
