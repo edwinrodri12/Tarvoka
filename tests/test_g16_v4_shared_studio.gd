@@ -47,7 +47,7 @@ func _run()->void:
                 "G16 current V6 displayed on the same selector while V4 remains available")
             verify(name_in_picker.contains("FINAL") and
                 not name_in_picker.contains("EN DESARROLLO"),
-                "G16 V6 remains user-approved FINAL while V4 comparison stays available")
+                "G16 V6 remains user-approved FINAL while older V4 comparison stays available")
             picker.select(role_index)
     studio.call("_display_role","logistics_mobile")
     await process_frame
