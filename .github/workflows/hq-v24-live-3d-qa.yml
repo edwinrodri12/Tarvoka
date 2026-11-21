@@ -15,8 +15,10 @@ on:
     paths:
       - "scripts/ui/HeadquartersMapLOD3D.gd"
       - "scripts/ui/HeadquartersBattle3D.gd"
+      - "scripts/ui/HeadquartersCurvedRoof3D.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "tests/test_hq_v24_live_battle_3d.gd"
+      - "tests/test_hq_v24_visual_gallery.gd"
       - ".github/workflows/hq-v24-live-3d-qa.yml"
   workflow_dispatch:
 permissions:
