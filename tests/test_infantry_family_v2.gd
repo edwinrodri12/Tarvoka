@@ -153,6 +153,32 @@ func _run() -> void:
                             "nondegenerate dimensional geometry "+name)
                         check(closed_solid(part.mesh),
                             "watertight non-open full 360 degree "+name)
+                # Real LOD8 tactical paint must be MUCH broader than tiny
+                # hero emblems, and must match one of the eight official
+                # palettes exactly (not a guessed or invented highlight).
+                var tactical: bool=not bool(model.get_meta(
+                    "tarvoka_infantry_v2_hero",false))
+                check(bool(model.get_meta(
+                    "tarvoka_infantry_v3_tactical_identity",false))==tactical,
+                    "tactical color passes exist ONLY on the Android LOD8")
+                var identifiers: Array[String]=[
+                    "V3_IdentidadPechoMapa","V3_IdentidadMochilaMapa",
+                    "V3_IdentidadFrenteCascoMapa",
+                    "V3_IdentidadMangaMapa_-1","V3_IdentidadMangaMapa_1",
+                    "V3_IdentidadRodillaMapa_-1","V3_IdentidadRodillaMapa_1"]
+                for marker_name in identifiers:
+                    var badge: MeshInstance3D=model.find_child(
+                        marker_name,true,false) as MeshInstance3D
+                    check((badge!=null)==tactical,
+                        "no missing tactical badge or needless hero draw "+marker_name)
+                    if badge!=null:
+                        var badge_mat: StandardMaterial3D=(
+                            badge.material_override as StandardMaterial3D)
+                        check(badge_mat!=null and
+                            badge_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                            badge_mat.albedo_color.is_equal_approx(
+                                Models.faction_paint_color(faction)),
+                            "exact opaque faction identity on "+marker_name)
                 for side in [-1,1]:
                     for name in ["V2_MusloTaper_%d","V2_PantorrillaTaper_%d",
                             "V2_MangaCerrada_%d","V2_AntebrazoCerrado_%d",
@@ -229,9 +255,18 @@ func _run() -> void:
                     hero.rotation_degrees.y=0
                     await save_frame(view,"v2_%s_f%d_back"%[role,faction])
                 hero.get_parent().remove_child(hero)
+            # Tactical camera uses the SAME real renderer with reduced
+            # visible model size, NOT a second artist-only 3D fake.
+            if faction==0:
+                view.add_child(mobile)
+                camera.size=8.4
+                mobile.rotation_degrees.y=180
+                await save_frame(view,"v3_tactical_%s_f0"%role)
+                mobile.get_parent().remove_child(mobile)
+                camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==20,"20 real 3D comparison frames")
+    check(rendered==26,"26 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer"]:
@@ -240,5 +275,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 96 meshes, 8 colors, 6 silhouettes, 2 LOD, 20 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 96 meshes, 8 colors, 6 silhouettes, 2 LOD, 26 true PNG including tactical LOD8")
         quit(0)
