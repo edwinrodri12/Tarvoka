@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Roster=preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
+const EngineerV6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -132,6 +133,34 @@ func _run() -> void:
         must(original_mat!=null and original_mat.albedo_color.is_equal_approx(
             Models.faction_paint_color(0)),
             role+" hero colors restore exactly after switching factions")
+        if role=="infantry_engineer":
+            # Actual central 360 scene: not a fake or second renderer.
+            must(EngineerV6.has_model(final_soldier),
+                "engineer V6 real articulated mesh loaded in shared SubViewport")
+            studio.call("_studio_select_tab",0)
+            studio.call("_studio_run_animation","engineer_v6_inspect")
+            var v6_tween: Tween=studio.get("_engineer_v6_tween") as Tween
+            must(v6_tween!=null and v6_tween.is_running(),
+                "engineer opens hinged backplate with native timed Tween")
+            await create_timer(1.4).timeout
+            var shield: Node3D=final_soldier.find_child(
+                EngineerV6.RIG,true,false) as Node3D
+            must(shield!=null and shield.rotation_degrees.x < -50.0,
+                "inspected barrier actually opens in 3D")
+            studio.call("_studio_run_animation","engineer_v6_pack")
+            await create_timer(1.4).timeout
+            must(shield!=null and is_zero_approx(shield.rotation_degrees.x),
+                "barrier folds flat and does not detach from backpack")
+            studio.call("_studio_run_animation","work")
+            await process_frame
+            var driver: Node3D=final_soldier.find_child(
+                EngineerV6.TOOL,true,false) as Node3D
+            must(driver!=null and studio.get("_infantry_tween")!=null,
+                "construction tool work animation uses same 3D infantry rig")
+            studio.call("_studio_run_animation","stop")
+            must(driver!=null and is_zero_approx(driver.rotation_degrees.z),
+                "stop cancels work and restores physical tool")
+            studio.call("_studio_select_tab",1)
         studio.call("_infantry_review_spin")
         await process_frame
         var tween: Tween=studio.get("infantry_360_tween") as Tween
