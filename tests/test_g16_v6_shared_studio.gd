@@ -136,6 +136,9 @@ func _run()->void:
     studio.call("_g16_review_look",0.0,"bajos")
     check(str(studio.get("_g16_review_focus"))=="bajos",
         "low side camera exposes six wheels and axle mounting")
+    studio.call("_studio_review_reset_camera")
+    check(str(studio.get("_g16_review_focus"))=="general",
+        "shared Reset Camera exits close-up instead of leaving the user stuck")
     studio.call("_g16_review_spin")
     var orbit_tween:=studio.get("_g16_review_tween") as Tween
     check(orbit_tween!=null and orbit_tween.is_running(),
