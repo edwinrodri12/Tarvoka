@@ -31,6 +31,7 @@ const A01Recon = preload("res://scripts/ui/A01ReconDroneV1.gd")
 const A01Finish = preload("res://scripts/ui/A01ReconFinishV2.gd")
 const A01HardwareV3 = preload("res://scripts/ui/A01ReconFinishV3.gd")
 const A01AirfoilV4 = preload("res://scripts/ui/A01ReconAirfoilV4.gd")
+const A01TailV5 = preload("res://scripts/ui/A01ReconTailV5.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -1064,6 +1065,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("A01 V3 propeller, winglet or camera bearings failed")
                 elif not A01AirfoilV4.apply(model,art_level>=13):
                     push_warning("A01 V4 closed aerofoil and root fairings failed")
+                elif not A01TailV5.apply(model,faction_paint_color(faction),art_level>=13):
+                    push_warning("A01 V5 closed V-tail sculpt and boom fairings failed")
         "fighter":
             _fighter(model)
         "destroyer":
