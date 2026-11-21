@@ -6,6 +6,7 @@ on:
       - 'scripts/ui/InfantryFamilyV1.gd'
       - 'scripts/ui/InfantrySculptFinishV2.gd'
       - 'scripts/ui/InfantryVariantsV4.gd'
+      - 'scripts/ui/InfantryEngineerSilhouetteV5.gd'
       - 'scripts/ui/InfantryCampRosterV1.gd'
       - 'tests/test_infantry_camp_roster.gd'
       - 'scripts/ui/UnitModels3D.gd'
@@ -40,10 +41,12 @@ jobs:
           test -s scripts/ui/InfantryFamilyV1.gd
           test -s scripts/ui/InfantrySculptFinishV2.gd
           test -s scripts/ui/InfantryVariantsV4.gd
+          test -s scripts/ui/InfantryEngineerSilhouetteV5.gd
           test -s scripts/ui/InfantryCampRosterV1.gd
           test -s tests/test_infantry_family_v2.gd
           test -s tests/test_infantry_family_v1.gd
           grep -Fq 'InfantryFamily.build' scripts/ui/UnitModels3D.gd
+          grep -Fq 'InfantryEngineerV5.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryFamily.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryV1.supports' scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'InfantryFamilyV1.gd' .github/workflows/tarvoka-3d-pages.yml
