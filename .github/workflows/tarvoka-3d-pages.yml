@@ -1460,7 +1460,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-native-v1.log; then
             echo '::error::A01 V1 closed body, optics or faction LOD failed' >&2; exit 1
           fi
-          grep -F 'PASS A01 RECON UAV V4:' /tmp/a01-native-v1.log
+          grep -F 'PASS A01 RECON UAV V5:' /tmp/a01-native-v1.log
           test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
