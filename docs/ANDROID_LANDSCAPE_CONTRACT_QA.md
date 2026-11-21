@@ -39,3 +39,9 @@ Commit `07c58f4c` adds six pure safe-area/HUD rectangle controls to `tests/test_
 ## 2026-11-21 — Godot 4.3 parse regression fixed
 
 CI run [44883096497](https://github.com/edwinrodri12/Tarvoka/actions/runs/44883096497) on head `9dde39e2` **FALLÓ**: Godot 4.3 reports `Cannot find constant "ZERO" on base "Rect2"` at line 46. Replaced `Rect2.ZERO` with `Rect2()` in the degenerate-safe-area negative control. Commit `f417a3955da29886bba5266c06e76853e1aa26a2`; this is a source-level correction, **CI del nuevo commit NO CONFIRMADO** until run completes. Separate generic rules workflow run [44883096509](https://github.com/edwinrodri12/Tarvoka/actions/runs/44883096509) also failed in a V13 HQ sprite verification; that failure is not evidence about this landscape test and requires independent investigation. Android physical **NO EJECUTADO EN DISPOSITIVO**; HUD visual **PENDIENTE DE REVISIÓN VISUAL**.
+
+## 2026-11-21 — projection from physical safe area to logical HUD canvas
+
+Commit `9b5247ec` adds `_physical_safe_to_canvas()` to the existing regression script. Six pure checks validate projection of physical left/right insets, containment in the expanded logical viewport, and rejection of invalid physical rectangles, screens, or logical base sizes. The conversion uses the same uniform scale factor as the `expand` geometry test; it does **not** alter actual HUD layout, Android settings, or game rules.
+
+Run: `godot --headless --path . --audio-driver Dummy --script res://tests/test_android_landscape_contract.gd`. Expected: `PASS ANDROID LANDSCAPE CONTRACT` and exit 0. **Godot/CI on this commit: NO CONFIRMADO** until a workflow result is inspected. **Android: NO EJECUTADO EN DISPOSITIVO**; **HUD real: PENDIENTE DE REVISIÓN VISUAL**. Next: inspect the actual HUD Control nodes and add a scene-instantiation regression without modifying parallel UI branches.
