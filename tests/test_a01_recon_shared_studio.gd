@@ -7,6 +7,7 @@ const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
+const DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -46,7 +47,7 @@ func _run()->void:
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -77,7 +78,10 @@ func _run()->void:
         if spec.has("action"):
             action_names[str(spec.get("action"))]=true
     check(action_names.has("a01_scan") and action_names.has("a01_move") and
-        action_names.has("stop") and not action_names.has("attack"),
+        action_names.has("stop") and action_names.has("damage_0") and
+        action_names.has("damage_1") and action_names.has("damage_2") and
+        action_names.has("damage_3") and action_names.has("damage_4") and
+        not action_names.has("attack"),
         "visible A01 actions use real gimbal/propeller, not combat weapons")
     if model!=null:
         studio.call("_studio_run_animation","a01_scan")
@@ -92,7 +96,7 @@ func _run()->void:
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model),
         "changing faction rebuilds A01 V5 physical PBR model")
     check(factions!=null and factions.visible and factions.selected==6,
         "A01 keeps the same visible faction selector after repainting")
@@ -103,6 +107,31 @@ func _run()->void:
             (stripe.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
                 Models.faction_paint_color(6)),
             "A01 faction paint changes in native Godot materials")
+    # Visual damage stays inside the original 3D scene with the same model.
+    check(model!=null and DamageV6.stage(model)==0,
+        "shared Studio starts with undamaged reconnaissance UAV")
+    studio.call("_studio_run_animation","damage_3")
+    model=studio.get("model_root") as Node3D
+    check(DamageV6.stage(model)==3,
+        "V6 critical damage exposes physical smoke and glowing parts")
+    studio.call("_studio_run_animation","stop")
+    check(DamageV6.stage(model)==3,
+        "Stop resets flight pose WITHOUT silently repairing the unit")
+    studio.call("_on_faction",2)
+    await process_frame
+    model=studio.get("model_root") as Node3D
+    check(DamageV6.stage(model)==3,
+        "changing faction preserves cumulative damage in original viewer")
+    for level in range(5):
+        studio.call("_studio_run_animation","damage_"+str(level))
+        check(DamageV6.stage(model)==level,
+            "shared Studio damage button selects real stage D%d" % level)
+    studio.call("_studio_run_animation","damage_4")
+    check(DamageV6.stage(model)==4,
+        "D4 displays destroyed composite aircraft")
+    studio.call("_studio_run_animation","damage_0")
+    check(DamageV6.stage(model)==0,
+        "repair restores intact physical UAV in the same viewer")
     # The original Studio used neutral paint for non-tanks before A01 V5.
     # Sweep EVERY faction on the same selector to catch stale materials
     # and palette aliasing, not only a single before/after color change.
@@ -146,8 +175,8 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures>0:
-        printerr("FAIL A01 V5 SHARED STUDIO: %d errors" % failures)
+        printerr("FAIL A01 V6 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V5 SHARED STUDIO: same native A01 V5, all eight faction paints verified, unarmed gimbal, 360 cameras")
+        print("PASS A01 V6 SHARED STUDIO: native A01, all eight colors, D0-D4 damage/repair, unarmed gimbal, 360 cameras")
         quit(0)
