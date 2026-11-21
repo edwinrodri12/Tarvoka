@@ -290,7 +290,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V5 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V6 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -451,7 +451,7 @@ func _install_unified_studio_navigation() -> void:
     a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
-    _title(a01_360_panel,"A01 V5 · ALAS, ÓPTICA Y HÉLICE 3D",13)
+    _title(a01_360_panel,"A01 V6 · ALAS, COLA, ÓPTICA Y DAÑO 3D",13)
     _add_paired(a01_360_panel,
         "Frente",func(): _a01_review_look(180.0,"general"),
         "Trasera",func(): _a01_review_look(0.0,"general"))
@@ -1303,7 +1303,7 @@ func _a01_review_look(yaw:float,focus:String)->void:
     model_root.rotation_degrees.y=yaw
     _update_camera()
     if status_label!=null:
-        status_label.text="A01 V5 · %s · mismo dron 3D sin armamento" % _a01_review_focus
+        status_label.text="A01 V6 · %s · mismo dron 3D sin armamento" % _a01_review_focus
 
 func _a01_review_spin_tick(angle:float)->void:
     if _role!="uav_recon" or model_root==null:
@@ -1626,7 +1626,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V5 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V6 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
