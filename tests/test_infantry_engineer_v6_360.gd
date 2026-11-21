@@ -112,6 +112,22 @@ func _run() -> void:
             check(shoulder!=null and shoulder.mesh is SphereMesh and
                 old_shoulder!=null and not old_shoulder.visible,
                 "anatomical moving shoulder replaces cuboid prototype")
+            for side in [-1,1]:
+                var kneeseal: MeshInstance3D=model.find_child(
+                    "V8_JuntaRodillaCerrada_%d"%side,true,false) as MeshInstance3D
+                var kneerear: MeshInstance3D=model.find_child(
+                    "V8_CantoneraRodillaPosterior_%d"%side,true,false) as MeshInstance3D
+                var calf: MeshInstance3D=model.find_child(
+                    "V8_PantorrillaContinua_%d"%side,true,false) as MeshInstance3D
+                var leg_joint: Node3D=model.find_child(
+                    "PiernaRig_%d"%side,true,false) as Node3D
+                check(kneeseal!=null and kneerear!=null and calf!=null and
+                    leg_joint!=null and kneeseal.get_parent()==leg_joint and
+                    kneerear.get_parent()==leg_joint and
+                    kneeseal.mesh is SphereMesh and
+                    kneerear.position.z>0.12 and kneeseal.scale.z>=0.40,
+                    "rear knee hole physically closed on leg rig F%d L%d side%d"%
+                    [faction,lod,side])
             var logo: MeshInstance3D=model.find_child(
                 PremiumV8.FACTION,true,false) as MeshInstance3D
             var logo_mat: StandardMaterial3D=(
@@ -291,6 +307,14 @@ func _run() -> void:
             camera.position=positions[side]
             camera.look_at(Vector3(0,1.65,0),Vector3.UP)
             await _frame(view,"engineer_v8_beveled_rear_shield_%s"%side)
+        # Full-height leg closeups are mandatory: original rear knee wedges
+        # only became visible when zooming beyond the generic hero camera.
+        camera.size=2.5
+        Engineer.pose(art,"reset",0.0)
+        for side in ["rear","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,0.60,0),Vector3.UP)
+            await _frame(view,"engineer_v8_sealed_knees_%s"%side)
         camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
@@ -305,10 +329,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==18,"eighteen authentic Godot V6/V7/V8 360 inspection PNGs")
+    check(shots==20,"twenty authentic Godot V6/V7/V8 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 18 real PNGs; closed helmet and premium beveled sculpt")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 20 real PNGs; sealed knees, helmet and premium beveled sculpt")
         quit(0)
