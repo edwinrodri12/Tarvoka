@@ -33,7 +33,11 @@ func _run() -> void:
     assert(HQ.build(1,-2,0)==null)
     assert(HQ.build(1,0,-1)==null)
     assert(HQ.build(1,0,5)==null)
-    assert(MapLOD.build_map_only(1,-1,"operativo")!=null)
+    # Do not leak even a temporary native MeshInstance3D at test shutdown;
+    # Godot Compatibility CI treats abandoned graphics RIDs as failures.
+    var neutral_probe:Node3D=MapLOD.build_map_only(1,-1,"operativo")
+    assert(neutral_probe!=null)
+    neutral_probe.free()
     var tested:int=0
     for tier in [1,2,3]:
         for damage in [0,1,2,3,4]:
