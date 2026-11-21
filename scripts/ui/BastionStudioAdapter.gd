@@ -385,7 +385,7 @@ func _install_unified_studio_navigation() -> void:
         "45° ↷",func(): _rotate(45.0))
     _add_paired(studio_camera_panel,"Alejar",func(): _change_zoom(-1),
         "Acercar",func(): _change_zoom(1))
-    _button(studio_camera_panel,"Restablecer cámara",_reset_camera)
+    _button(studio_camera_panel,"Restablecer cámara",_studio_review_reset_camera)
     g16_360_panel=VBoxContainer.new()
     g16_360_panel.name="G16V6_InspeccionReal360MismoVisor"
     g16_360_panel.add_theme_constant_override("separation",6)
@@ -1178,6 +1178,14 @@ func _studio_g11_turn_tick(t: float,art: Node3D,heading: Vector2i) -> void:
 func _studio_g11_turn_done(art: Node3D) -> void:
     if is_instance_valid(art):
         G11Rig.restore(art)
+
+# Reset the original Godot camera AND any specialized G16 close-up.
+# Otherwise the shared "Restablecer cámara" button did not exit hose view.
+func _studio_review_reset_camera() -> void:
+    if _g16_review_tween!=null and _g16_review_tween.is_running():
+        _g16_review_tween.kill()
+    _g16_review_focus="general"
+    _reset_camera()
 
 # G16 V6 native camera presets: same SubViewport and real 3D geometry.
 # These are inspection tools only; the playable logistics rules do not change.
