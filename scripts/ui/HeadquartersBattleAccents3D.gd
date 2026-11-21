@@ -84,6 +84,8 @@ static func _mesh(level:int,faction:int,damage:int) -> ArrayMesh:
         _box(steel,Vector3(-2.30,0.27,-2.40),Vector3(1.18,0.16,0.48))
         _box(steel,Vector3(1.75,0.25,-1.80),Vector3(0.82,0.17,1.10))
         _box(trim,Vector3(2.15,0.19,1.45),Vector3(0.64,0.10,0.35))
+        # Scattered broken glass retains a separate physical material surface.
+        _box(glass,Vector3(-1.25,0.11,-3.05),Vector3(0.34,0.045,0.47))
         _box(accent,Vector3(1.55,0.38,-3.68),Vector3(1.30,0.10,0.83))
     else:
         # Two large roof inset panels: color reads from battle-zoom without
