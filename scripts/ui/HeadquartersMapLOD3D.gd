@@ -19,6 +19,10 @@ static var _geometry_cache: Dictionary = {}
 
 static func _mat(key: String, color: Color) -> StandardMaterial3D:
     var tint: Color = color.darkened(0.17) if key == "faction" else PALETTE[key]
+    # Explicit neutral has NO yellow/gold accent: avoid reading it as
+    # Confederación Solar even when zooming out or under cloudy lighting.
+    if key == "gold" and color == Color("#65747d"):
+        tint = Color("#8e9da5")
     var identity: String = key + tint.to_html()
     if _cache.has(identity):
         return _cache[identity]
@@ -125,14 +129,19 @@ static func _build(level: int, faction: int, condition: String) -> MeshInstance3
         _box(steel,Vector3(0,1.27,-3.18),Vector3(3.08,2.50,1.33))
         _box(glass,Vector3(0,1.18,-3.87),Vector3(1.38,1.44,0.10))
         var comm_h: float = 2.48+0.56*float(level-1)
-        _box(steel,Vector3(-4.50,2.54+comm_h*0.5,1.38),
-            Vector3(0.62,comm_h,0.62))
-        _box(glass,Vector3(-4.50,2.54+comm_h+0.13,1.38),
-            Vector3(1.51,0.50,1.52))
-        _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
-            Vector3(1.80,0.18,1.80))
-        _box(paint,Vector3(-5.13,4.92+0.41*float(level-1),0.43),
-            Vector3(1.05,0.70,0.07))
+        if condition == "critico":
+            # No floating tower on a wing already reduced to rubble.
+            _box(steel,Vector3(-4.40,0.41,1.38),
+                Vector3(0.65,0.18,1.1))
+        else:
+            _box(steel,Vector3(-4.50,2.54+comm_h*0.5,1.38),
+                Vector3(0.62,comm_h,0.62))
+            _box(glass,Vector3(-4.50,2.54+comm_h+0.13,1.38),
+                Vector3(1.51,0.50,1.52))
+            _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
+                Vector3(1.80,0.18,1.80))
+            _box(paint,Vector3(-5.13,4.92+0.41*float(level-1),0.43),
+                Vector3(1.05,0.70,0.07))
         _box(steel,Vector3(-1.86,y+1.04,0.76),Vector3(0.36,2.08,0.36))
         _dish(mark,Vector3(-1.86,y+2.35,0.66),0.96)
         _box(steel,Vector3(4.85,0.16,-4.08),Vector3(3.25,0.26,3.22))
