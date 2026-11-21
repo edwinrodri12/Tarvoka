@@ -15,6 +15,7 @@ const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
 const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
 const Airbase3D = preload("res://scripts/ui/AirbaseBattle3D.gd")
+const AirbaseLOD = preload("res://scripts/ui/AirbaseBattleLOD.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
@@ -738,6 +739,21 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         workshop_lod.free()
     counters["workshop_lod_models"]=workshop_count
+    # Only already-visible, pre-existing airbase producer sites are managed.
+    # Camera detail changes are strictly visual, never persisted to a save.
+    var airbase_lod:Node=AirbaseLOD.new()
+    airbase_lod.name="BaseAereaLOD_Camara"
+    var airbase_count:int=0
+    for placed in scene.get_children():
+        if placed is Node3D and str(placed.get_meta(
+                "site_kind",""))=="airbase":
+            if airbase_lod.register(placed as Node3D):
+                airbase_count+=1
+    if airbase_count>0:
+        scene.add_child(airbase_lod)
+    else:
+        airbase_lod.free()
+    counters["airbase_lod_models"]=airbase_count
     counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
