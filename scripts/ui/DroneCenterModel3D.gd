@@ -130,7 +130,7 @@ static func _base(g:Dictionary,tier:int,damage:int) -> void:
             Vector3(0.16,0.18,4.8))
     # Vary architecture rather than simply scaling a generic box.
     if damage<4:
-        roof:float=2.52+float(tier-1)*0.27
+        var roof:float=2.52+float(tier-1)*0.27
         _box(slab,Vector3(-2.3,1.28,-1.2),Vector3(6.58,2.52,6.72))
         if damage<3:
             _box(steel,Vector3(-2.3,roof,-1.2),
@@ -157,7 +157,7 @@ static func _base(g:Dictionary,tier:int,damage:int) -> void:
                     Vector3(0.12,2.24,0.14))
         # Tier-2/3 command module grows above left maintenance hangar.
         if tier>=2 and damage<4:
-            height:float=3.63 if tier==2 else 4.45
+            var height:float=3.63 if tier==2 else 4.45
             _box(slab,Vector3(3.69,1.45,-3.4),
                 Vector3(2.28,2.55,2.4))
             if damage<3:
@@ -204,7 +204,7 @@ static func _close(g:Dictionary,tier:int,damage:int) -> void:
     var mark:SurfaceTool=g["mark"]
     # Side cladding, facade supports and ribbed doors, physical 3D.
     if damage<4:
-        roof:float=2.52+float(tier-1)*0.27
+        var roof:float=2.52+float(tier-1)*0.27
         for side in [-1,1]:
             var x:float=-2.30+float(side)*3.34
             for n in range(5):
