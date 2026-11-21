@@ -1,19 +1,21 @@
 # Android landscape configuration regression (2026-11-21)
 
-Scope: independent headless contract test for existing `project.godot` settings. This does not alter gameplay, assets, UI or Android export.
+Scope: independent Godot 4.3 headless contract for existing `project.godot` settings. No gameplay, art, Android export or user-facing layout changes.
 
-Run after importing the project with Godot 4.3:
+Run after importing the project:
 
 ```sh
-godot --headless --path . --script res://tests/test_android_landscape_contract.gd
+godot --headless --path . --audio-driver Dummy --script res://tests/test_android_landscape_contract.gd
 ```
 
-Expected: exit code 0 and `PASS ANDROID LANDSCAPE CONTRACT`. A wrong orientation, non-landscape logical viewport, changed stretch mode/aspect, mobile renderer or disabled ETC2/ASTC import exits nonzero. Do not mistake this configuration test for a physical-device UX test.
+Expected: exit code 0 and `PASS ANDROID LANDSCAPE CONTRACT`. The test validates six project settings (fixed landscape orientation, landscape logical viewport, expand aspect, canvas_items stretch, mobile GL compatibility and ETC2/ASTC compression). Six additional pure controls ensure that portrait/sensor orientation, portrait/square/zero-sized viewports are rejected and a different landscape resolution is accepted. No ProjectSettings values are modified by the controls.
 
-QA: Godot execution **NO EJECUTADO** at authoring; Android device **NO EJECUTADO EN DISPOSITIVO**; touch legibility and real layout **PENDIENTE DE REVISIÓN VISUAL**.
+## Evidence and limitations
 
-Next: integrate into an existing CI workflow after verifying the test in Godot 4.3, then perform landscape/rotation and UI clipping checks on mid-range Android. No APK distributed.
+- Previous head `ac29cbbf14f76e588fe6315f9f08517344198d7c`: landscape workflow **PASÓ** on [GitHub Actions run 44864143520](https://github.com/edwinrodri12/Tarvoka/actions/runs/44864143520); generic Godot rules and Android debug export also reported success for that commit.
+- New negative controls in commit `adce0c6b79f827906d9e07b507896cfb132888b8`: **NO EJECUTADO** until its own CI result is inspected. The prior run does not validate this commit.
+- Android physical: **NO EJECUTADO EN DISPOSITIVO**.
+- HUD clipping, touch targets, safe areas and legibility: **PENDIENTE DE REVISIÓN VISUAL**.
+- This does not measure FPS, battery, touch ergonomics, or prove an APK installs or upgrades safely.
 
-## CI automatizado (2026-11-21)
-
-`.github/workflows/android-landscape-contract.yml` ejecuta el test con Godot 4.3 estable en pull requests que alteren la configuración, la prueba o el workflow; también admite `workflow_dispatch`. Importa el proyecto, ejecuta la regresión con timeout, exige código de salida correcto y marcador PASS, y publica el log como artefacto. **Al escribir este documento la ejecución del workflow nuevo NO ESTÁ CONFIRMADA**. Esta prueba solo verifica configuración: orientación real, controles táctiles, recortes de HUD y rendimiento siguen **NO EJECUTADO EN DISPOSITIVO / PENDIENTE DE REVISIÓN VISUAL**.
+CI: `.github/workflows/android-landscape-contract.yml` imports Godot 4.3, executes the regression, requires the PASS marker and publishes a diagnostic log. Review its next run and fix reproducible failures before merging. No APK distributed.
