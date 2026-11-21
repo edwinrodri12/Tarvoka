@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V4 Native Visual QA
+name: TARVOKA A01 Recon UAV V5 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v4-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v5-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
             echo "::error::A01 native visual or safety tests failed"
             exit 1
           fi
-          grep -F 'PASS A01 RECON UAV V4:' /tmp/a01-native.log
+          grep -F 'PASS A01 RECON UAV V5:' /tmp/a01-native.log
           test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
           find build/qa/a01-v1 -name 'a01-f*-lod*.png' -size +2k | wc -l | grep -qx '16'
 
@@ -86,15 +86,15 @@ jobs:
           set -euo pipefail
           test -s tests/test_a01_recon_shared_studio.gd
           grep -Fq "test_a01_recon_shared_studio.gd" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "PASS A01 V4 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "A01SculptV4.has_model" scripts/ui/BastionStudioAdapter.gd
+          grep -Fq "PASS A01 V5 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "A01TailV5.has_model" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'faction_picker.select(_faction)' scripts/ui/BastionStudioAdapter.gd
 
       - name: Upload real Godot visual evidence, even on failures
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v4-native-visual-evidence
+          name: tarvoka-a01-v5-native-visual-evidence
           path: |
             build/qa/a01-v1/*.png
           if-no-files-found: warn
