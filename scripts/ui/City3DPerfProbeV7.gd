@@ -80,8 +80,35 @@ func _city_stats() -> Dictionary:
             city.get_meta("actual_3d_meshes",0))
     return output
 
+# Workshop readings share the same opt-in FPS panel. Each value comes
+# exclusively from models that the live 3D battlefield already instantiated.
+func _workshop_stats() -> Dictionary:
+    var stats:Dictionary={"workshops":0,"tactical":0,"distant":0,
+        "batches":0,"changes":0,"peak_step_ms":0.0}
+    if scene_root==null or not is_instance_valid(scene_root):
+        return stats
+    var driver:Node=scene_root.get_node_or_null("TallerBlindadosLOD_Camara")
+    if driver==null:
+        return stats
+    stats["changes"]=int(driver.get("transitions"))
+    stats["peak_step_ms"]=float(driver.get("peak_step_ms"))
+    var entries:Array=driver.get("_sites")
+    for site in entries:
+        if not is_instance_valid(site):
+            continue
+        stats["workshops"]=int(stats["workshops"])+1
+        var profile:int=int(site.get_meta("workshop_lod_profile",2))
+        if profile==1:
+            stats["tactical"]=int(stats["tactical"])+1
+        elif profile==2:
+            stats["distant"]=int(stats["distant"])+1
+        stats["batches"]=int(stats["batches"])+int(
+            site.get_meta("workshop_batches",0))
+    return stats
+
 func snapshot() -> Dictionary:
     var city: Dictionary=_city_stats()
+    var workshop:Dictionary=_workshop_stats()
     var current_fps: float=_samples[-1] if not _samples.is_empty() else 0.0
     var samples: Array[float]=_samples.duplicate()
     samples.sort()
@@ -109,6 +136,12 @@ func snapshot() -> Dictionary:
         "city_peak_meshes":_peak_meshes,
         "city_lod_changes":city["changes"],
         "lod_peak_step_ms":city["peak_step_ms"],
+        "workshops":workshop["workshops"],
+        "workshop_lod_tactical":workshop["tactical"],
+        "workshop_lod_distant":workshop["distant"],
+        "workshop_batches":workshop["batches"],
+        "workshop_lod_changes":workshop["changes"],
+        "workshop_peak_step_ms":workshop["peak_step_ms"],
         "device":OS.get_name(),
     }
 
@@ -121,6 +154,7 @@ func refresh_once() -> void:
         if _samples.size()>MAX_SAMPLES:
             _samples.pop_front()
     var stats: Dictionary=_city_stats()
+    var workshop:Dictionary=_workshop_stats()
     _peak_meshes=maxi(_peak_meshes,int(stats["meshes"]))
     var count: int=_samples.size()
     var total: float=0.0
@@ -135,8 +169,11 @@ func refresh_once() -> void:
                 roundi(fps),mean,low]
             +"Ciudades %d · LOD cercano/medio/lejos %d/%d/%d\n" % [
                 stats["cities"],stats["lod0"],stats["lod1"],stats["lod2"]]
-            +"Mallas %d · LOD cambios %d · pico %.1f ms" % [
-                stats["meshes"],stats["changes"],stats["peak_step_ms"]])
+            +"Mallas ciudad %d · cambios %d · pico %.1f ms\n" % [
+                stats["meshes"],stats["changes"],stats["peak_step_ms"]]
+            +"Talleres %d · detalle cercano/lejos %d/%d · pico %.1f ms" % [
+                workshop["workshops"],workshop["tactical"],
+                workshop["distant"],workshop["peak_step_ms"]])
 
 func _process(delta: float) -> void:
     if not visible:
