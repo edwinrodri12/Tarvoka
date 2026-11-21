@@ -4,7 +4,9 @@ extends SceneTree
 # buttons must swap real Godot meshes inside the existing SubViewport.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const UNITS := ["line","infantry_urban","infantry_defense",
-    "scout","infantry_antitank","infantry_engineer"]
+    "scout","infantry_antitank","infantry_engineer",
+    "infantry_sniper","infantry_aa","infantry_logistic",
+    "infantry_medic","infantry_commando"]
 var errors: int=0
 
 func must(ok: bool, description: String) -> void:
@@ -50,6 +52,14 @@ func _run() -> void:
             role+" model belongs to native viewport")
         must(camera_panel!=null and camera_panel.is_visible_in_tree(),
             role+" comparison controls visible on CAMERA tab")
+        if role in ["infantry_sniper","infantry_aa",
+                "infantry_logistic","infantry_medic","infantry_commando"]:
+            must(str(mesh.get_meta("tarvoka_infantry_variant_v4",""))==role,
+                role+" specialist full native V4 kit selected in real Studio")
+            must(mesh.find_child("V4_InsigniaFS24",true,false)!=null
+                if role=="infantry_commando" else
+                mesh.get_child_count()>0,
+                role+" distinct physical specialist appearance")
         studio.call("_infantry_review_look",180.0,"frente")
         must(is_equal_approx(
             (studio.get("model_root") as Node3D).rotation_degrees.y,180.0),
@@ -142,5 +152,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 SAME STUDIO: %d errors"%errors)
         quit(1)
     else:
-        print("PASS INFANTRY V2 SAME STUDIO: 6 roles, 8-faction repaint, V1/V2, LOD8/13 camera, 360 orbit, original shared scene")
+        print("PASS INFANTRY V2 SAME STUDIO: 11 roles, 8-faction repaint, V1/V2, LOD8/13 camera, 360 orbit, original shared scene")
         quit(0)
