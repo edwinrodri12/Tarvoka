@@ -54,7 +54,7 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
         if node is BaseButton and (rect.size.x < 24.0 or rect.size.y < 24.0):
             failures.append("%s undersized visible button at %s mode %s: %s" % [name, size, mode, rect.size])
         if not visible_area.encloses(rect):
-            failures.append("%s outside logical viewport %s: %s" % [name, size, mode, rect])
+            failures.append("%s outside logical viewport %s mode %s: %s" % [name, size, mode, rect])
     if checked_visible == 0 or checked_buttons == 0:
         failures.append("HUD coverage empty at %s mode %s: %d controls, %d buttons" % [size, mode, checked_visible, checked_buttons])
-    print("HUD %s mode %s: %d visible production controls, %d buttons checked" % [size, checked_visible, checked_buttons])
+    print("HUD %s mode %s: %d visible production controls, %d buttons checked" % [size, mode, checked_visible, checked_buttons])
