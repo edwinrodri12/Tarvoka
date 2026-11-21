@@ -171,12 +171,12 @@ func _run() -> void:
                     check(harness!=null and brow!=null and
                         harness.visible and brow.visible,
                         "construction harness and helmet distinguish engineer from front")
-                    var paint: StandardMaterial3D=(
+                    var banner_paint: StandardMaterial3D=(
                         banner.material_override as StandardMaterial3D
                         if banner!=null else null)
-                    check(paint!=null and paint.albedo_color.is_equal_approx(
+                    check(banner_paint!=null and banner_paint.albedo_color.is_equal_approx(
                         Models.faction_paint_color(faction)) and
-                        paint.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                        banner_paint.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                         "wide rear construction barrier retains exact faction palette")
                     var hero_piece: Node3D=soldier.find_child(
                         "V5_CierreObraIngeniero",true,false) as Node3D
