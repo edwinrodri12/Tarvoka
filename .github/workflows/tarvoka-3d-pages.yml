@@ -1468,7 +1468,8 @@ jobs:
           grep -F 'PASS A01 RECON UAV V5:' /tmp/a01-native-v1.log
           test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
-            godot --path . --rendering-method gl_compatibility --audio-driver Dummy \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
             --script res://tests/test_a01_recon_damage_v6.gd \
             2>&1 | tee /tmp/a01-v6-damage.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v6-damage.log; then
