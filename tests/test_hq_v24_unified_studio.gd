@@ -5,6 +5,7 @@ extends SceneTree
 const Combined=preload("res://scripts/ui/CombinedArtStudioWeb.gd")
 const HQBattle=preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const Curves=preload("res://scripts/ui/HeadquartersCurvedRoof3D.gd")
+const Accents=preload("res://scripts/ui/HeadquartersBattleAccents3D.gd")
 const OUT:String="res://artifacts/hq_v24_studio"
 
 func _initialize() -> void:
@@ -45,6 +46,7 @@ func _run() -> void:
     assert(studio.hq_damage_stage_picker.disabled==false)
     assert(studio.camera.size<5.0)
     assert(studio.model_root.get_node_or_null(Curves.NAME)!=null)
+    assert(studio.model_root.get_node_or_null(Accents.NAME)!=null)
     assert(studio.model_root.has_node("EscudoOficialDeFaccion"))
     assert(studio.hq_v24_neutral_toggle.visible)
     await _capture(studio,"02_hq_real_battle_v24_close")
@@ -52,7 +54,7 @@ func _run() -> void:
     studio.level_picker.select(2)
     studio._change_building_variant(2)
     assert(studio.model_root.get_meta("visual_tier")==3)
-    assert(studio.model_root.get_meta("hq_material_surfaces")==9)
+    assert(studio.model_root.get_meta("hq_material_surfaces")==13)
     studio.hq_damage_stage_picker.select(3)
     studio._change_hq_damage_stage(3)
     assert(studio.model_root.get_meta("visual_damage_stage")==3)
