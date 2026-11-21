@@ -110,7 +110,8 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
             rifle==null or face==null):
         return false
     for side in [-1,1]:
-        if _find(model,"BrazoRig_%d"%side)==null:
+        if (_find(model,"BrazoRig_%d"%side)==null or
+                _find(model,"PiernaRig_%d"%side)==null):
             return false
 
     var armor := _coat(Color("#87989b"),0.45,0.38,true)
@@ -165,6 +166,26 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
             _box(arm,"V8_CosturaHombrera_%d"%side,
                 Vector3(0,-0.26,-0.10),
                 Vector3(0.23,0.025,0.032),trim)
+
+    # Actual V8 native Godot rear captures revealed DARK OPEN KNEE WEDGES:
+    # the V2 thigh and calf terminate at different local Y heights. Cover the
+    # gap with an opaque continuous flex-seal attached to each LEG joint,
+    # not an unrigged decal. Rear caps are thick SOLIDS, not one-sided quads.
+    for side in [-1,1]:
+        var leg: Node3D=_find(model,"PiernaRig_%d"%side)
+        _ellipsoid(leg,"V8_JuntaRodillaCerrada_%d"%side,
+            Vector3(0,-0.50,0.018),
+            Vector3(0.32,0.295,0.42),cloth,hero)
+        _ellipsoid(leg,"V8_CantoneraRodillaPosterior_%d"%side,
+            Vector3(0,-0.50,0.147),
+            Vector3(0.245,0.235,0.13),trim,hero)
+        _ellipsoid(leg,"V8_PantorrillaContinua_%d"%side,
+            Vector3(0,-0.68,0.025),
+            Vector3(0.27,0.405,0.30),cloth,hero)
+        if hero:
+            _box(leg,"V8_RefuerzoTraseroRodilla_%d"%side,
+                Vector3(0,-0.50,0.235),
+                Vector3(0.165,0.075,0.033),armor)
 
     # Front volume follows the vest instead of stacking wide boxes over it.
     _bevel(chest,"V8_PetoDelanteroContinuo",
