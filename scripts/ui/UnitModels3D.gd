@@ -20,6 +20,7 @@ const G15EW = preload("res://scripts/ui/G15ElectronicWarfareV1.gd")
 const InfantryFamily = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const InfantryFinishV2 = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const InfantryVariantsV4 = preload("res://scripts/ui/InfantryVariantsV4.gd")
+const InfantryEngineerV5 = preload("res://scripts/ui/InfantryEngineerSilhouetteV5.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1015,6 +1016,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     if not InfantryVariantsV4.apply(model,role,
                             faction_paint_color(faction),art_level>=13):
                         push_warning("Approved infantry specialist kit not applied: "+role)
+                elif role=="infantry_engineer":
+                    if not InfantryEngineerV5.apply(model,role,
+                            faction_paint_color(faction),art_level>=13):
+                        push_warning("Engineer V5 construction silhouette not applied")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
