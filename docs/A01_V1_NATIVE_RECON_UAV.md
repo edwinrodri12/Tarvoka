@@ -28,3 +28,14 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 5. Revisar compatibilidad Android y rendimiento antes de declararlo definitivo. No informar que sensores de IA o mecánicas de niebla están implementados a partir de estas animaciones.
 
 **Próxima prioridad artística:** acabado de ala/fuselaje, herrajes de cámaras, cableado físico, luces de navegación, daño visual acumulativo y rendimiento al alejar cámara. Debe revisarse en el visor online antes de cerrar A01.
+
+## Etapa V2 — acabados PBR y revisión 360° (en desarrollo)
+
+- Archivo aditivo: `scripts/ui/A01ReconFinishV2.gd`. Se aplica automáticamente a la geometría V1 en `UnitModels3D.gd`; no reemplaza ninguna unidad anterior ni el helicóptero histórico.
+- Bordes sólidos de las alas, flaperones, uniones de cola, luces física izquierda roja y derecha verde, y bandas de color ampliadas para reconocer las facciones en LOD8 sin pegatinas planas.
+- Sensor EO/IR: tres capas físicas opacas (carcasa, bisel y vidrio PBR azul), integradas en el pivote original de barrido. Sin transparencia, sin piezas flotantes por animación.
+- LOD13: cierres de raíz alar, placas y conductos mecánicos adicionales. LOD8: mantiene el contorno esencial, las marcas de facción y el visor óptico con menos segmentos.
+- Controles dentro de la **pestaña Cámara del mismo TARVOKA Estudio 3D**: frente, trasera, lateral, superior, acercamiento óptico, hélice/cola, giro 360° y restablecimiento de cámara.
+- Tests nativos y de visor actualizados: **8 facciones × LOD8 y LOD13 = 16 imágenes** en Godot; pruebas del sensor, color, geometría física, vistas y selección compartida; obligatorias para publicar `?unidad=a01`.
+
+**Estado:** V2 en pruebas. No declarar finalizada ni afirmar publicación hasta que el workflow de Godot y la aprobación visual estén confirmados. Los valores de detección, visión y combate del juego no cambian.
