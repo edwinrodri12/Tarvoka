@@ -72,3 +72,8 @@ Commit `9bb4309c` extends the instantiated production HUD test to 2520×1080 (21
 
 ### 2026-11-21 — Cobertura de estados HUD
 `tests/test_production_hud_bounds.gd` ahora recorre los modos expandido y compacto en seis resoluciones (12 combinaciones) utilizando `_set_compact_hud` de la escena real. Comprueba controles visibles, botones, tamaño mínimo lógico y límites; no altera el estado de producción. **Godot CI: NO CONFIRMADO para estos commits. Android: NO EJECUTADO EN DISPOSITIVO. QA visual: PENDIENTE.** Si CI falla, inspeccionar los nombres y tamaños de controles visibles por modo antes de ajustar la interfaz.
+
+
+## 2026-11-21 — Compact HUD regression diagnosis
+
+GitHub Actions run 44927855963 failed `test_production_hud_bounds.gd` in all six compact resolutions: the test enumerated only legacy compact buttons (zero visible), while `Main.gd::_set_compact_hud` actually enables the immersive battlefield controls (`compact_center`, `compact_iso`, `compact_options_button`, `compact_alerts_button`, `compact_next_unit`, `compact_attention_unit`, `compact_threat_button`). Commit f31af69 adds those real production controls to the tested set; the earlier landscape configuration test PASSED. This is a test coverage correction, **not** evidence that the visual HUD is usable. New CI: NOT YET VERIFIED; Android: NO EJECUTADO EN DISPOSITIVO; review: PENDIENTE DE REVISIÓN VISUAL. Next: inspect new run, distinguish actual bounds defects from test harness mismatches, and cover secondary menu states.
