@@ -18,7 +18,7 @@ def audit(root: pathlib.Path) -> list[str]:
     errors: list[str] = []
     root = root.resolve()
     for scene in sorted((*root.rglob("*.tscn"), *root.rglob("*.tres"))):
-        if ".git" in scene.relative_to(root).parts:
+        if any(part in (".git", ".godot") for part in scene.relative_to(root).parts):
             continue
         try:
             source = scene.read_text(encoding="utf-8-sig")
