@@ -6,6 +6,7 @@ class_name TarvokaCampModels3DV1
 # effects are implemented here. Game rules belong in scripts/core.
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
+const SupplyFinishV2 = preload("res://scripts/ui/CampSupplyFinishV2.gd")
 const CAMPS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const BUILDERS := {
     "suministros": "infantry_logistic",
@@ -282,6 +283,10 @@ static func build(kind: String, faction: int, lod: int = 13,
             "medico":
                 _medical(deployable, accent, lod, damage)
     _weather_damage(root, damage, lod)
+    if kind == "suministros" and not SupplyFinishV2.apply(
+            root, accent, lod, damage):
+        root.free()
+        return null
     return root
 
 static func pose_deploy(root: Node3D, progress: float) -> bool:
@@ -291,7 +296,16 @@ static func pose_deploy(root: Node3D, progress: float) -> bool:
     if deployable == null:
         return false
     var t: float = clampf(progress, 0.0, 1.0)
-    deployable.visible = t > 0.01
-    deployable.scale = Vector3(1.0, maxf(t, 0.01), 1.0)
+    # Supply V2 articulates real roof hinges and hose instead of flattening
+    # the whole physical camp. Existing other three camps keep their V1 pose.
+    if str(root.get_meta("camp_kind", "")) == "suministros" and \
+            int(root.get_meta("visual_damage", 0)) < 3:
+        deployable.visible = true
+        deployable.scale = Vector3.ONE
+        if not SupplyFinishV2.pose(root, t):
+            return false
+    else:
+        deployable.visible = t > 0.01
+        deployable.scale = Vector3(1.0, maxf(t, 0.01), 1.0)
     root.set_meta("visual_deploy_progress", t)
     return true
