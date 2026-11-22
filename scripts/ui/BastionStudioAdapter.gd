@@ -497,6 +497,9 @@ func _install_unified_studio_navigation() -> void:
         "Ver última",func(): _infantry_review_version(true))
     _add_paired(infantry_360_panel,"Ingeniero V11",func(): _engineer_v12_compare(false),
         "Ingeniero V12",func(): _engineer_v12_compare(true))
+    _add_paired(infantry_360_panel,"V12.2 · ver antes",
+        func(): _engineer_v123_compare(false),
+        "V12.3 · modelo sellado",func(): _engineer_v123_compare(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1470,6 +1473,20 @@ func _engineer_v12_compare(new_finish: bool) -> void:
     if EngineerDorsalV12.show_finish(model_root,new_finish):
         status_label.text=("Ingeniero V12 · estuches dorsales y escudo esculpido 3D"
             if new_finish else "Ingeniero V11 · comparativa del acabado anterior")
+
+
+# The shared 3D viewport toggles only V12.3 closed interior anatomy.
+# Original armature, V12.2 armor, camera and gameplay remain unchanged.
+func _engineer_v123_compare(sealed: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    if not EngineerDorsalV12.is_visible(model_root):
+        EngineerDorsalV12.show_finish(model_root,true)
+    if EngineerDorsalV12.show_seals(model_root,sealed):
+        status_label.text=(
+            "Ingeniero V12.3 · casco, cuello, torso y articulaciones sellados en 3D"
+            if sealed else
+            "Ingeniero V12.2 · comparativa sin sellado interior")
 
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:
