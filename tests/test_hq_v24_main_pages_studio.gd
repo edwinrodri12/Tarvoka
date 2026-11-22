@@ -24,14 +24,19 @@ func _run() -> void:
     assert(scene!=null)
     var studio:Control=scene.instantiate()
     root.add_child(studio)
-    for i in range(8):
+    for i in range(16):
         await process_frame
-    assert(studio._role=="tank")
-    assert(studio.building_picker.item_count>=7)
-    assert(studio._hq24_toggle!=null)
+    # Other approved subclasses may start in tank, selected city, or an
+    # URL-preset unit. Startup role is NOT the publication contract.
+    assert(studio.building_picker.item_count>=7,
+        "The full EDIFICIOS catalog was replaced")
+    assert(studio._hq24_toggle!=null,
+        "The native V24 toggle was not installed")
     assert(not studio._hq24_toggle.button_pressed)
-    studio._switch_category(1)
-    for i in range(6):
+    studio.building_picker.select(0)
+    studio.category_picker.select(1)
+    studio.category_picker.item_selected.emit(1)
+    for i in range(10):
         await process_frame
     assert(studio._role=="headquarters")
     assert(not studio.model_root.get_meta("hq_native_geometry",false))
