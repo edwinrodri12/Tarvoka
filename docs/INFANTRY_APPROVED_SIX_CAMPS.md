@@ -76,3 +76,9 @@ La barrera V6 conserva su articulación original y sus ocho colores. Para elimin
 - Dos botones nuevos para comparar V11/V12 en el **mismo** `BastionStudioAdapter` y `SubViewport`. Reusar los controles existentes de 360°, barrera, 8 facciones, daños D0–D4 y LOD8/13.
 - QA nativo dedicado `tests/test_infantry_engineer_v12_finish.gd`: 16 combinaciones de facción/LOD, mallas herméticas y opacas, rig correcto, comparación reversible, otras cinco tropas sin cambios y seis capturas reales Godot. CI nativa y publicador Pages ajustados para copiar la nueva dependencia.
 - **Estado**: revisión de arte y CI pendientes; mantener PR en borrador y no presentar el visor público, APK o integración en `main` como completados sin comprobar ejecuciones y renders auténticos.
+
+### Revisión visual V12.1 — 22 noviembre 2026
+
+Se analizaron las seis fotografías Godot originales de V12 frente a las seis capturas V11. La silueta dorsal conservaba un rectángulo demasiado evidente y los estuches laterales parecían óvalos superpuestos. Se sustituyó la envolvente por una placa central **octagonal biselada y hermética** sobre el mismo rig V6, y se formaron estuches con **cinco secciones geométricas 3D cerradas** y tapas metálicas; nuevos paneles laterales PBR grandes usan el color auténtico de cada facción. La comparación V11/V12 sigue siendo reversible, y los controles LOD8/LOD13, giro, animación, color, combate y campamentos no cambian.
+
+La prueba dedicada se amplió a **ocho capturas Godot**, incluyendo V11 y V12 desde la **misma cámara** y una facción adicional, además de verificar que las superficies nuevas no tienen bordes abiertos. Esta revisión no está aprobada para publicar hasta comprobar el nuevo CI y sus imágenes.
