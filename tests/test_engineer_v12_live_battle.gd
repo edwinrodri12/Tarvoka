@@ -84,10 +84,11 @@ func _run() -> void:
         Vector2i(1,1):{"kind":"plain","seen":true,"visible":true},
         Vector2i(2,2):{"kind":"plain","seen":true,"visible":true}
     }
+    var two_sides: Dictionary={"units":[a,b]}
+    two_sides[Identity.STATE_FIELD]=state[Identity.STATE_FIELD]
     var both: Node3D=Node3D.new()
     var stats: Dictionary=Terrain._make_units(
-        both,{"units":[a,b],Identity.STATE_FIELD:state[Identity.STATE_FIELD]},
-        tiles,"G05-B",0)
+        both,two_sides,tiles,"G05-B",0)
     check(int(stats.get("visible",0))==2 and
         int(stats.get("detailed",0))==2,
         "both playable engineers visible with approved Android LOD")
@@ -98,11 +99,12 @@ func _run() -> void:
         "enemy G05 uses onyx visual faction with engine team unchanged")
     both.free()
     var fog: Dictionary=tiles.duplicate(true)
-    fog[Vector2i(2,2)]["visible"]=false
+    var fog_tile: Dictionary=fog[Vector2i(2,2)]
+    fog_tile["visible"]=false
+    fog[Vector2i(2,2)]=fog_tile
     var hidden: Node3D=Node3D.new()
-    var fog_stats: Dictionary=Terrain._make_units(hidden,
-        {"units":[a,b],Identity.STATE_FIELD:state[Identity.STATE_FIELD]},
-        fog,"G05-B",0)
+    var fog_stats: Dictionary=Terrain._make_units(
+        hidden,two_sides,fog,"G05-B",0)
     check(int(fog_stats.get("hidden_enemies",0))==1 and
         hidden.find_child("Unidad3D_G05-R",false,false)==null,
         "enemy engineer is still hidden by original fog of war")
