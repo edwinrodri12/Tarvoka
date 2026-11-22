@@ -75,7 +75,7 @@ La barrera V6 conserva su articulación original y sus ocho colores. Para elimin
 - Dos chapas octogonales **cerradas por todos los lados**, con relieve, franja PBR opaca del color exacto de las ocho facciones y nervaduras exteriores en el escudo V6 móvil. Remaches y costuras extra solo en LOD13; LOD8 conserva silueta y colores.
 - Dos botones nuevos para comparar V11/V12 en el **mismo** `BastionStudioAdapter` y `SubViewport`. Reusar los controles existentes de 360°, barrera, 8 facciones, daños D0–D4 y LOD8/13.
 - QA nativo dedicado `tests/test_infantry_engineer_v12_finish.gd`: 16 combinaciones de facción/LOD, mallas herméticas y opacas, rig correcto, comparación reversible, otras cinco tropas sin cambios y seis capturas reales Godot. CI nativa y publicador Pages ajustados para copiar la nueva dependencia.
-- **Estado**: revisión de arte y CI pendientes; mantener PR en borrador y no presentar el visor público, APK o integración en `main` como completados sin comprobar ejecuciones y renders auténticos.
+- **Estado de esta etapa histórica (V12 inicial)**: fue una fase de revisión previa a los acabados V12.1/V12.2. El estado efectivo de V12.2 integrado y desplegado se documenta más abajo; la APK sigue sin formar parte de esta entrega.
 
 ### Revisión visual V12.1 — 22 noviembre 2026
 
