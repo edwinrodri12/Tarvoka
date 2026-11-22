@@ -47,7 +47,7 @@ func _watertight(mesh:ArrayMesh,expected:int)->bool:
         if int(undirected[k])!=2:
             return false
         var v:PackedStringArray=str(k).split("|")
-        if int(directed.get(v[0]+">"+v[1],0))!=1 or (
+        if int(directed.get(v[0]+">"+v[1],0))!=1 or \
                 int(directed.get(v[1]+">"+v[0],0))!=1:
             return false
     return true
