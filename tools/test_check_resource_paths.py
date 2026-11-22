@@ -36,6 +36,22 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertTrue(any("sample.tscn:3:" in e and "missing.gd" in e for e in errors), errors)
             self.assertTrue(any("sample.tscn:4:" in e and "missing path" in e for e in errors), errors)
 
+    def test_generated_cache_and_git_metadata_are_excluded(self):
+        # Imported Godot cache and Git internals are not source assets.
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            for directory in (".godot", ".git"):
+                (root / directory).mkdir()
+                (root / directory / "generated.tscn").write_text(
+                    '[ext_resource type="Script" path="res://missing.gd" id="1"]\n'
+                )
+            (root / "actual.tscn").write_text(
+                '[ext_resource type="Script" path="res://missing.gd" id="1"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("actual.tscn:1:", errors[0])
+
     def test_non_external_text_is_ignored(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
