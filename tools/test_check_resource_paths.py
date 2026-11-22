@@ -28,6 +28,23 @@ class ResourcePathAuditTests(unittest.TestCase):
             (root / "sample.tres").write_text('[resource]\nresource_name="res://not_a_path"\n')
             self.assertEqual(audit(root), [])
 
+    def test_attribute_order_and_malformed_segments(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "assets").mkdir()
+            (root / "assets" / "valid.png").write_bytes(b"ok")
+            (root / "sample.tscn").write_text(
+                '[ext_resource id="1" path="res://assets/valid.png" type="Texture2D"]\n'
+                '[ext_resource id="2" path="res://assets/absent.png" type="Texture2D"]\n'
+                '[ext_resource id="3" path="res://assets/../assets/valid.png"]\n'
+                '[ext_resource id="4" path="res://assets//valid.png"]\n'
+                '[ext_resource id="5" path="res://assets/./valid.png"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 4, errors)
+            self.assertEqual(sum("missing resource" in e for e in errors), 1)
+            self.assertEqual(sum("invalid resource path" in e for e in errors), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
