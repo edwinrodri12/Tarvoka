@@ -95,6 +95,18 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 3, errors)
             self.assertTrue(all("invalid external resource path" in e for e in errors), errors)
 
+    def test_external_resource_without_path_is_reported(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Script" id="1"]\n'
+                '[ext_resource type="Script" path="res://missing.gd" id="2"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 2, errors)
+            self.assertTrue(any("missing path attribute" in e for e in errors), errors)
+            self.assertTrue(any("missing resource" in e for e in errors), errors)
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
