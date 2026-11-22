@@ -263,3 +263,10 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 2026-11-22 — PR #673: auditor de recursos ahora señala IDs `ext_resource` duplicados dentro de una misma escena (`archivo:línea`); IDs iguales en escenas distintas son válidos. Prueba unitaria nueva en `tools/test_check_resource_paths.py`. NO EJECUTADO: unittest, auditoría integral, Godot 4.3, Android físico. No activar como gate de CI antes de validar falsos positivos.
 
 2026-11-22 — PR #673: corrección crítica del auditor: `ID_ATTRIBUTE` era utilizado pero nunca definido, provocando `NameError` al inspeccionar cualquier `ext_resource` (commit b043c1c8). Se añadió el patrón para atributos `id` sin depender de su orden. PASÓ: prueba local aislada de dos variantes de orden de atributos con Python 3. NO EJECUTADO: batería completa de 11 pruebas y auditoría integral (clon bloqueado por DNS de github.com), Godot 4.3 y Android físico. Mantener PR en draft hasta ejecutar pruebas sobre rama real; no integrar en CI todavía.
+
+
+## 2026-11-22 — Auditor de recursos: ejecución CI dedicada
+- PR #673: nuevo `.github/workflows/resource-path-audit.yml` en rama de trabajo, commit `d9a6ae60bc33cd3a350ce2b71f969317f4272a8b`.
+- Ejecuta 11 pruebas Python `unittest` y auditoría real de escenas `.tscn`/`.tres` sobre checkout en GitHub Actions; no requiere clonar localmente ni Android.
+- Estado al registrar: NO EJECUTADO / sin workflow run confirmado para el commit. No afirmar éxito hasta inspeccionar conclusión y logs. Si falla la auditoría, revisar recursos generados y falsos positivos antes de integrar.
+- Android físico: NO EJECUTADO EN DISPOSITIVO. No se modifican reglas de juego ni se genera APK.
