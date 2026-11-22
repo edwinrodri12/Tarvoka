@@ -137,6 +137,18 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertTrue(any("missing path attribute" in e for e in errors), errors)
             self.assertTrue(any("missing resource" in e for e in errors), errors)
 
+    def test_duplicate_external_resource_ids_are_scoped_per_scene(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "assets").mkdir()
+            (root / "assets" / "valid.png").write_bytes(b"ok")
+            declaration = '[ext_resource type="Texture2D" path="res://assets/valid.png" id="same"]\n'
+            (root / "first.tscn").write_text(declaration + declaration)
+            (root / "second.tscn").write_text(declaration)
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("first.tscn:2: duplicate external resource id same", errors[0])
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
