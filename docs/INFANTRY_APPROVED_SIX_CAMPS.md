@@ -82,3 +82,11 @@ La barrera V6 conserva su articulación original y sus ocho colores. Para elimin
 Se analizaron las seis fotografías Godot originales de V12 frente a las seis capturas V11. La silueta dorsal conservaba un rectángulo demasiado evidente y los estuches laterales parecían óvalos superpuestos. Se sustituyó la envolvente por una placa central **octagonal biselada y hermética** sobre el mismo rig V6, y se formaron estuches con **cinco secciones geométricas 3D cerradas** y tapas metálicas; nuevos paneles laterales PBR grandes usan el color auténtico de cada facción. La comparación V11/V12 sigue siendo reversible, y los controles LOD8/LOD13, giro, animación, color, combate y campamentos no cambian.
 
 La prueba dedicada se amplió a **ocho capturas Godot**, incluyendo V11 y V12 desde la **misma cámara** y una facción adicional, además de verificar que las superficies nuevas no tienen bordes abiertos. Esta revisión no está aprobada para publicar hasta comprobar el nuevo CI y sus imágenes.
+
+### G05 Ingeniero jugable — puente visual del combate 3D (PR independiente)
+
+Se comprobó un hueco entre el arte del Estudio y el mapa real: `ModernArsenal.gd` y `UnitRoles.gd` usan el identificador jugable **`engineer` (G05)**, mientras que el constructor 3D lo cataloga como **`infantry_engineer`**. Antes, `BattleTerrain3D.gd` no encontraba un modelo para G05 y lo representaba como disco genérico.
+
+El nuevo puente en `BattleTerrain3D.gd` asigna exclusivamente en la capa visual `engineer → infantry_engineer` y construye el mismo V12.2 con **LOD8**, aprovechando la identidad visual seleccionada entre las ocho facciones. La unidad sigue teniendo `role=engineer`, equipo y equipo táctico 0/1 intactos, sus estadísticas/costo/perfil/captura/niebla y guardado no se modifican. El mapa conserva su tope `MAX_DETAILED_UNITS=8`: no se generan soldados de alta geometría adicionales fuera del presupuesto.
+
+`tests/test_engineer_v12_live_battle.gd` comprueba la unidad G05 jugable dentro del terreno Godot auténtico, materiales/rig V12.2, su facción visible, visibilidad de enemigos, límites de rendimiento y que el estado de la partida no cambia; captura además un PNG 3D del G05 sobre el mapa. **Validación de esta nueva integración pendiente de su workflow dedicado**; no equiparar al resultado anterior del visor ni afirmar APK publicada.
