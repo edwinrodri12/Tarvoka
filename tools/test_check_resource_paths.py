@@ -149,6 +149,20 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("first.tscn:2: duplicate external resource id same", errors[0])
 
+    def test_missing_and_empty_external_resource_ids_are_reported(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "valid.gd").write_text("extends Node\n")
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Script" path="res://valid.gd"]\n'
+                '[ext_resource type="Script" path="res://valid.gd" id=""]\n'
+                '[ext_resource type="Script" path="res://valid.gd" id="valid"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 2, errors)
+            self.assertTrue(any("sample.tscn:1: external resource missing id attribute" in e for e in errors), errors)
+            self.assertTrue(any("sample.tscn:2: external resource missing id attribute" in e for e in errors), errors)
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
