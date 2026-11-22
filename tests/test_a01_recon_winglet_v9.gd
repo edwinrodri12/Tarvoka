@@ -145,9 +145,13 @@ func _run()->void:
                             "enamel uses exactly this faction color")
                         colors[mat.albedo_color.to_html()]=true
                 if fairing!=null:
-                    check(absf(absf(fairing.position.x)-1.677)<0.002 and
-                        absf(fairing.position.y-1.082)<0.002,
+                    check(absf(absf(fairing.position.x)-1.676)<0.002 and
+                        absf(fairing.position.y-1.077)<0.002,
                         "root fairing intersects real wing and fin seam")
+                    check(fairing.scale.x<=0.120 and
+                        fairing.scale.y<=0.080 and fairing.scale.z<=0.240 and
+                        absf(fairing.position.x)+fairing.scale.x*0.5<=1.735,
+                        "winglet joint is streamlined, not an oversized bulb outside the wing")
             check(Damage.set_stage(model,4) and Damage.stage(model)==4,
                 "V9 skin survives D4 wreck stage")
             check(Damage.repair(model) and Damage.stage(model)==0 and
