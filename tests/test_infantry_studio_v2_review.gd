@@ -10,6 +10,7 @@ const ClosureV7=preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8=preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const FinishV9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10=preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
+const MechanicsV11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -146,6 +147,19 @@ func _run() -> void:
                 "the SAME Studio viewport loads V9 sealed helmet and physical rifle grips")
             must(AnatomyV10.has_model(final_soldier),
                 "same Studio loads V10 anatomic sleeves and 3D wrench fingers")
+            must(MechanicsV11.has_model(final_soldier),
+                "same Studio really includes V11 closed curved torso and shield pivots")
+            must(str(studio.call("_infantry_review_edition"))=="V11",
+                "same online Studio labels latest engineer V11, not stale V2")
+            var v11_belly: MeshInstance3D=final_soldier.find_child(
+                MechanicsV11.LOWER,true,false) as MeshInstance3D
+            var v11_hinge_axle: Node3D=final_soldier.find_child(
+                MechanicsV11.HINGE_MOVING+"_1",true,false) as Node3D
+            var v11_hinge_fixed: Node3D=final_soldier.find_child(
+                MechanicsV11.HINGE_FIXED+"_1",true,false) as Node3D
+            must(v11_belly!=null and v11_belly.mesh is ArrayMesh and
+                v11_hinge_axle!=null and v11_hinge_fixed!=null,
+                "V11 curved physical torso and two coaxial hinge segments render in original viewport")
             var helmet_v9: Node3D=final_soldier.find_child(
                 FinishV9.HELMET,true,false) as Node3D
             var glove_v9: Node3D=final_soldier.find_child(
@@ -227,6 +241,10 @@ func _run() -> void:
                 EngineerV6.RIG,true,false) as Node3D
             must(shield!=null and shield.rotation_degrees.x < -50.0,
                 "inspected barrier actually opens in 3D")
+            must(v11_hinge_fixed!=null and v11_hinge_axle!=null and
+                v11_hinge_fixed.position.distance_to(
+                    shield.transform*v11_hinge_axle.position)<0.00001,
+                "V11 two-piece mechanical hinge stays coaxial at fully open position")
             studio.call("_studio_run_animation","engineer_v6_pack")
             await create_timer(1.4).timeout
             must(shield!=null and is_zero_approx(shield.rotation_degrees.x),
