@@ -98,6 +98,17 @@ func _run()->void:
     check(DamageV6.stage(android)==3,
         "switch from LOD13 to Android LOD8 preserves critical D3 damage")
     var android_mesh_count:int=Models.inspect_meshes(android)
+    check(studio.get("camera")==original_camera and
+        studio.get("preview")==original_preview and
+        str(studio.get("_a01_review_focus"))=="superior",
+        "LOD switch uses SAME Studio viewport, existing camera and focus")
+    studio.call("_on_faction",6)
+    await process_frame
+    android=studio.get("model_root") as Node3D
+    check(android!=null and NoseV10.has_model(android) and
+        int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
+        DamageV6.stage(android)==3,
+        "faction change inside Android LOD8 preserves LOD and damage D3")
     check(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(
         "res://build/qa/a01-v1"))==OK,
         "QA visual folder for same-UI Android and HERO screenshots")
@@ -111,17 +122,6 @@ func _run()->void:
         check(actual_android_ui.save_png(
             "res://build/qa/a01-v1/a01-shared-lod8-d3.png")==OK,
             "save authentic same-viewer LOD8 screenshot with D3 damage")
-    check(studio.get("camera")==original_camera and
-        studio.get("preview")==original_preview and
-        str(studio.get("_a01_review_focus"))=="superior",
-        "LOD switch uses SAME Studio viewport, existing camera and focus")
-    studio.call("_on_faction",6)
-    await process_frame
-    android=studio.get("model_root") as Node3D
-    check(android!=null and NoseV10.has_model(android) and
-        int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
-        DamageV6.stage(android)==3,
-        "faction change inside Android LOD8 preserves LOD and damage D3")
     if hero_lod_button!=null:
         hero_lod_button.pressed.emit()
     check(int(studio.get("_a01_review_lod"))==13,
