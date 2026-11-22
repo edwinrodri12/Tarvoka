@@ -178,6 +178,18 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertIn("linked.tscn: scene escapes project root", errors[0])
             self.assertNotIn("missing.gd", errors[0])
 
+    def test_cyclic_scene_symlink_does_not_crash_audit(self):
+        # A malicious or accidental symlink loop must produce a diagnostic.
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            try:
+                (root / "cycle.tscn").symlink_to("cycle.tscn")
+            except (NotImplementedError, OSError):
+                self.skipTest("symlinks unavailable on this platform")
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("cycle.tscn: unresolvable scene symlink", errors[0])
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
