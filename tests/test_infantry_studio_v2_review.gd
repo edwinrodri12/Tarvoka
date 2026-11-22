@@ -38,6 +38,17 @@ func _run() -> void:
     studio.call("_studio_select_tab",1)
     # The actual TARVOKA rendering parent is a SubViewport, not Node3D.
     # A Node3D cast silently returned null and caused 26 false QA failures.
+    # Fixed web URL allowlist: one native viewer, no arbitrary role injection.
+    must(str(studio.call("_studio_role_from_link_key","ingeniero"))==
+        "infantry_engineer", "Spanish engineer deep link selects the approved unit")
+    must(str(studio.call("_studio_role_from_link_key","engineer"))==
+        "infantry_engineer", "English engineer deep link selects the same unit")
+    must(str(studio.call("_studio_role_from_link_key","infantry_engineer"))==
+        "infantry_engineer", "canonical engineer link uses same Godot role")
+    must(str(studio.call("_studio_role_from_link_key","g16"))==
+        "logistics_mobile", "existing G16 online quick-link still works")
+    must(str(studio.call("_studio_role_from_link_key","../../bad-scene"))==
+        "apc", "unrecognized link safely falls back to original default")
     var original_preview: SubViewport=studio.get("preview") as SubViewport
     var role_picker: OptionButton=studio.get("role_picker") as OptionButton
     var faction_picker: OptionButton=studio.get("faction_picker") as OptionButton
@@ -293,6 +304,29 @@ func _run() -> void:
         must(is_equal_approx(
             (studio.get("model_root") as Node3D).rotation_degrees.y,0.0),
             role+" rear view")
+    # Recreate the browser landing sequence via the SAME scene's public
+    # allowlist. A direct /?unidad=ingeniero entry must show the actual V12
+    # engineer in CAMERA tab from behind, never a second or static viewer.
+    var engineer_role: String=str(studio.call("_studio_role_from_link_key","ingeniero"))
+    var engineer_index: int=Models.ROLES.find(engineer_role)
+    must(engineer_index>=0,"engineer URL lookup resolves a real role-picker item")
+    role_picker.select(engineer_index)
+    studio.call("_display_role",engineer_role)
+    studio.call("_studio_select_tab",1)
+    studio.call("_infantry_review_look",0.0,"espalda")
+    await process_frame
+    var linked_engineer: Node3D=studio.get("model_root") as Node3D
+    must(str(studio.get("_role"))=="infantry_engineer" and
+        role_picker.get_selected_id()==engineer_index,
+        "engineer deep link selects actual existing native role-picker")
+    must(linked_engineer!=null and DorsalV12.is_visible(linked_engineer)
+        and linked_engineer.get_parent()==original_preview and
+        studio.get("preview")==original_preview,
+        "engineer web link displays V12.2 in the original shared SubViewport")
+    must(int(studio.get("studio_active_tab"))==1 and
+        camera_panel.is_visible_in_tree() and linked_engineer!=null and
+        is_zero_approx(linked_engineer.rotation_degrees.y),
+        "engineer deep link lands in working rear camera inspector")
     studio.call("_studio_jump_category",1)
     await process_frame
     must(camera_panel!=null and not camera_panel.is_visible_in_tree(),
