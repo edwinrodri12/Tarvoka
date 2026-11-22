@@ -26,10 +26,10 @@ class ResourcePathAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             (root / "sample.tscn").write_text(
-                '[gd_scene format=3]\\n'
-                '[node name="Root" type="Node"]\\n'
-                '[ext_resource type="Script" path="res://missing.gd" id="1"]\\n'
-                '[ext_resource type="Script" id="2"]\\n'
+                '[gd_scene format=3]\n'
+                '[node name="Root" type="Node"]\n'
+                '[ext_resource type="Script" path="res://missing.gd" id="1"]\n'
+                '[ext_resource type="Script" id="2"]\n'
             )
             errors = audit(root)
             self.assertEqual(len(errors), 2, errors)
