@@ -290,3 +290,8 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 2026-11-22: Resource audit CI run 45064805400 SUCCESS on commit 8557d265 (14 Python tests and repository audit). Follow-up regression: cyclic `ext_resource` target symlink now reports a missing resource instead of risking an uncaught resolution exception; 15th test added. New commit CI pending. Android physical: NO EJECUTADO EN DISPOSITIVO. Visual QA: PENDIENTE DE REVISIÓN VISUAL.
 
 2026-11-22 17:06 EST — PR #673: auditor de recursos tolera ValueError de rutas externas con NUL, registra diagnóstico y sigue inspeccionando recursos posteriores. Prueba de regresión test_nul_in_external_resource_path_is_diagnostic_not_crash añadida (16 pruebas definidas). Commits 740d21e5 y e6964943. CI posterior: NO EJECUTADO/pendiente de evidencia; Godot 4.3: NO EJECUTADO; Android físico: NO EJECUTADO EN DISPOSITIVO. Sin cambios de gameplay.
+
+### 2026-11-22 — Resource audit NUL regression repair
+- CI run [45075891954](https://github.com/edwinrodri12/Tarvoka/actions/runs/45075891954) failed **1/16** tests: the NUL fixture wrote literal `\\x00` and `\\n` sequences, so the auditor correctly rejected the backslash path and never saw a second declaration.
+- Commit `0eac705536d2ce517dec05604436d65e5d3e9e53` changes the fixture to write an actual NUL character and real line breaks. Expected diagnostics: two missing resources on separate source lines, without a crash.
+- **NO EJECUTADO** after this fix: full Python test suite and complete resource audit; wait for CI evidence before marking PASS. Android physical: **NO EJECUTADO EN DISPOSITIVO**. No gameplay or visual changes.
