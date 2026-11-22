@@ -46,7 +46,8 @@ for name in \
   hq_v24_android_emulator_report.json \
   hq_v24_android_01_home.png \
   hq_v24_android_02_near.png \
-  hq_v24_android_03_far.png
+  hq_v24_android_03_far.png \
+  hq_v24_android_04_fps_hud.png
 do
   adb exec-out run-as "$PKG" cat "files/$name" > "$OUT/$name"
   test -s "$OUT/$name"
