@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V8 Native Visual QA
+name: TARVOKA A01 Recon UAV V9 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v8-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v9-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -126,6 +126,23 @@ jobs:
           grep -F 'PASS A01 V8 WINGLETS:' /tmp/a01-v8-wings.log
           test "$(find build/qa/a01-v8 -maxdepth 1 -name 'a01-v8-*.png' | wc -l)" -eq 5
 
+      - name: Validate V9 conformal faction enamel, root fairings and 5 new renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 190s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_a01_recon_winglet_v9.gd \
+            2>&1 | tee /tmp/a01-v9-conformal.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a01-v9-conformal.log; then
+            echo "::error::A01 V9 conformal paint, joint geometry or Godot render failed"
+            exit 1
+          fi
+          grep -F 'PASS A01 V9 CONFORMAL FINISH:' /tmp/a01-v9-conformal.log
+          test "$(find build/qa/a01-v9 -maxdepth 1 -name 'a01-v9-*.png' | wc -l)" -eq 5
+
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
       # dependencies not contained in main; copying one scene here would
@@ -137,9 +154,10 @@ jobs:
           set -euo pipefail
           test -s tests/test_a01_recon_shared_studio.gd
           grep -Fq "test_a01_recon_shared_studio.gd" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "PASS A01 V8 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
-          grep -Fq "A01WingletV8.has_model" scripts/ui/BastionStudioAdapter.gd
+          grep -Fq "PASS A01 V9 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "A01WingletV9.has_model" scripts/ui/BastionStudioAdapter.gd
           grep -Fq "test_a01_recon_winglet_v8.gd" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "test_a01_recon_winglet_v9.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "test_a01_recon_damage_v6.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq 'faction_picker.select(_faction)' scripts/ui/BastionStudioAdapter.gd
 
@@ -147,11 +165,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v8-winglets-and-damage-evidence
+          name: tarvoka-a01-v9-winglet-finish-evidence
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
             build/qa/a01-v7/*.png
             build/qa/a01-v8/*.png
+            build/qa/a01-v9/*.png
           if-no-files-found: warn
           retention-days: 14
