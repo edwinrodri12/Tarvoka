@@ -66,3 +66,19 @@ Los cojinetes de las caderas están anclados al `CaderaRig` y los sellos femoral
 La barrera V6 conserva su articulación original y sus ocho colores. Para eliminar el aspecto de piezas que flotan, V11 usa un **casquillo fijo sobre `TorsoRig`** y un **eje giratorio separado en `V6_BarreraArticuladaRig`**. Ambos están situados exactamente sobre el eje de giro, de modo que permanecen coaxiales con la barrera plegada, abierta o en transición. Los pernos secundarios siguen el `V6_AlaIzquierdaRig` y el `V6_AlaDerechaRig` de forma independiente. No hay cambios en defensa, cobertura, construcción de campamentos o colisiones.
 
 **QA obligatoria antes de integrar:** ocho facciones × LOD8/LOD13, mallas ArrayMesh de torso y costados watertight, materiales totalmente opacos, geometría de color exactamente coincidente con la facción, soportes fijos y móviles en el rig correcto, desviación del eje menor que 0.00001 unidades en cuatro aperturas (0%,25%,50%,100%), insignia y animaciones V5-V10 intactas, seis nuevas fotografías auténticas de Godot hasta 34 totales, y prueba de las mismas piezas y etiquetas V11 dentro del Estudio 3D web unificado.
+
+
+## Ingeniero V12 — acabado dorsal y coraza exterior (en revisión)
+
+- Capa artística aditiva `InfantryEngineerDorsalV12.gd` sobre la geometría V11, sin cambiar unidades ni estadísticas, ataques, captura, campamentos, construcción, IA o guardado.
+- Dos estuches de herramientas **con volumen 3D redondeado**, sobre soportes anclados al `TorsoRig`; reemplazan visualmente las bolsas V9 cuadradas y pueden recuperarse con el comparador V11/V12.
+- Dos chapas octogonales **cerradas por todos los lados**, con relieve, franja PBR opaca del color exacto de las ocho facciones y nervaduras exteriores en el escudo V6 móvil. Remaches y costuras extra solo en LOD13; LOD8 conserva silueta y colores.
+- Dos botones nuevos para comparar V11/V12 en el **mismo** `BastionStudioAdapter` y `SubViewport`. Reusar los controles existentes de 360°, barrera, 8 facciones, daños D0–D4 y LOD8/13.
+- QA nativo dedicado `tests/test_infantry_engineer_v12_finish.gd`: 16 combinaciones de facción/LOD, mallas herméticas y opacas, rig correcto, comparación reversible, otras cinco tropas sin cambios y seis capturas reales Godot. CI nativa y publicador Pages ajustados para copiar la nueva dependencia.
+- **Estado**: revisión de arte y CI pendientes; mantener PR en borrador y no presentar el visor público, APK o integración en `main` como completados sin comprobar ejecuciones y renders auténticos.
+
+### Revisión visual V12.1 — 22 noviembre 2026
+
+Se analizaron las seis fotografías Godot originales de V12 frente a las seis capturas V11. La silueta dorsal conservaba un rectángulo demasiado evidente y los estuches laterales parecían óvalos superpuestos. Se sustituyó la envolvente por una placa central **octagonal biselada y hermética** sobre el mismo rig V6, y se formaron estuches con **cinco secciones geométricas 3D cerradas** y tapas metálicas; nuevos paneles laterales PBR grandes usan el color auténtico de cada facción. La comparación V11/V12 sigue siendo reversible, y los controles LOD8/LOD13, giro, animación, color, combate y campamentos no cambian.
+
+La prueba dedicada se amplió a **ocho capturas Godot**, incluyendo V11 y V12 desde la **misma cámara** y una facción adicional, además de verificar que las superficies nuevas no tienen bordes abiertos. Esta revisión no está aprobada para publicar hasta comprobar el nuevo CI y sus imágenes.
