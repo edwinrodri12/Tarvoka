@@ -34,13 +34,18 @@ static func _ring(side:float, station:Array)->Array[Vector3]:
     # Use the SAME actual V8 outer aerodynamic profile vertices. The paint
     # is never a rotated box hovering beside the tapered fin.
     var section:Array[Vector3]=V8._profile(side,station)
+    # V8's vertices 1/2 belong to the +X skin regardless of side.
+    # On the LEFT (-X) wingtip the visible outer face is vertices 5/4.
+    # A symmetric choice of 1/2 hid the left team color inside the fin.
+    var front:int=1 if side>0.0 else 5
+    var back:int=2 if side>0.0 else 4
     var inside:=Vector3(side*0.003,0,0)
     var outside:=Vector3(side*0.008,0,0)
     return [
-        section[1]+outside,
-        section[2]+outside,
-        section[2]+inside,
-        section[1]+inside
+        section[front]+outside,
+        section[back]+outside,
+        section[back]+inside,
+        section[front]+inside
     ]
 
 static func _skin(body:Node3D, name:String, side:float, hero:bool,
