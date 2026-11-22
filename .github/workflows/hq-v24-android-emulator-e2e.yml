@@ -1,0 +1,146 @@
+name: TARVOKA HQ V24 real Android emulator E2E
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/android_hq_v24_emulator.gd"
+      - "tests/android_hq_v24_emulator.tscn"
+      - "tools/qa/android_emulator_hq_v24.sh"
+      - ".github/workflows/hq-v24-android-emulator-e2e.yml"
+  push:
+    branches: [qa/hq-v24-android-emulator-end-to-end-20261121]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  launch-real-android-emulator:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 55
+    env:
+      ANDROID_API: "33"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Java 17 and Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Enable accelerated x86_64 Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "No KVM device: emulator may be slower; no physical phone FPS claims"
+          fi
+
+      - name: Install Android platform, tools and signing utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          test -f "${ANDROID_HOME}/platforms/android-34/android.jar"
+
+      - name: Install exact official Godot 4.3 and Android export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/4.3-stable"
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/tarvoka-android-godot.zip
+          unzip -oq /tmp/tarvoka-android-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          curl -fLsS --retry 3 "$BASE/Godot_v4.3-stable_export_templates.tpz" -o /tmp/tarvoka-templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable" /tmp/tarvoka-templates
+          unzip -oq /tmp/tarvoka-templates.tpz -d /tmp/tarvoka-templates
+          cp /tmp/tarvoka-templates/templates/android_debug.apk \
+            "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          printf '%s\n' '4.3.stable' > \
+            "$HOME/.local/share/godot/export_templates/4.3.stable/version.txt"
+
+      - name: Build exact playable game with CI-only emulator launch scene
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/tarvoka-qa-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          set -euo pipefail
+          # Disposable CI signing key; no user credentials or persistent keys.
+          keytool -genkeypair -keystore /tmp/tarvoka-qa-debug.keystore \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 90 \
+            -storepass android -keypass android \
+            -dname "CN=TARVOKA Android Emulator QA,O=TARVOKA,C=US" > /dev/null 2>&1
+
+          # This patch is in the throwaway GitHub runner only.
+          # Do NOT change main's original ARM64-only Android preset.
+          grep -Fq 'architectures/x86_64=false' export_presets.cfg
+          sed -i 's|architectures/x86_64=false|architectures/x86_64=true|' export_presets.cfg
+          grep -Fq 'architectures/arm64-v8a=true' export_presets.cfg
+          grep -Fq 'architectures/x86_64=true' export_presets.cfg
+          grep -Fq 'run/main_scene="res://scenes/Main.tscn"' project.godot
+          sed -i 's|run/main_scene="res://scenes/Main.tscn"|run/main_scene="res://tests/android_hq_v24_emulator.tscn"|' project.godot
+          grep -Fq 'res://tests/android_hq_v24_emulator.tscn' project.godot
+
+          timeout --signal=TERM --kill-after=10s 120s \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --script res://tools/export_unit_atlas.gd
+          test -s assets/generated/tarvoka_units_32x4.png
+          mkdir -p build
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit \
+            2>&1 | tee /tmp/tarvoka-android-emulator-import.log
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . \
+            --export-debug Android build/TARVOKA-hq-v24-emulator-qa.apk \
+            2>&1 | tee /tmp/tarvoka-android-emulator-export.log
+          test -s build/TARVOKA-hq-v24-emulator-qa.apk
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify \
+            build/TARVOKA-hq-v24-emulator-qa.apk
+          unzip -Z1 build/TARVOKA-hq-v24-emulator-qa.apk | grep -Eq \
+            '^lib/x86_64/[^/]+\.so$'
+
+      - name: Install, launch and render real HQ V24 on Android x86_64
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          profile: pixel_4
+          cores: 2
+          ram-size: 3072M
+          heap-size: 512M
+          disk-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: bash tools/qa/android_emulator_hq_v24.sh
+
+      - name: Upload inspectable Android boot/battle/zoom screenshots and FPS report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V24-Android-emulator-E2E
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/hq_v24_android_emulator/*.png
+            artifacts/hq_v24_android_emulator/*.json
+            artifacts/hq_v24_android_emulator/*.txt
+            /tmp/tarvoka-android-emulator-import.log
+            /tmp/tarvoka-android-emulator-export.log
+
+      - name: Erase disposable QA key
+        if: always()
+        shell: bash
+        run: rm -f /tmp/tarvoka-qa-debug.keystore
