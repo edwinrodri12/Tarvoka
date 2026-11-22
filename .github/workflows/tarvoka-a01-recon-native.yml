@@ -158,7 +158,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
-          test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 5
+          test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
 
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
