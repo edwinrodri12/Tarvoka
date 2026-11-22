@@ -10,6 +10,7 @@ const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const WingletV8=preload("res://scripts/ui/A01ReconWingletV8.gd")
 const WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
+const NoseV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -42,14 +43,14 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V9 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V10 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and WingletV9.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -98,7 +99,7 @@ func _run()->void:
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and WingletV9.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model),
         "changing faction rebuilds A01 V8 sealed PBR wingtip model")
     check(factions!=null and factions.visible and factions.selected==6,
         "A01 keeps the same visible faction selector after repainting")
@@ -124,6 +125,12 @@ func _run()->void:
         (v9_enamel.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
             Models.faction_paint_color(6)),
         "V9 conformal, nonfloating winglet enamel responds in the original shared Studio")
+    var v10_optics:=model.find_child(NoseV10.GIMBAL,true,false) as MeshInstance3D
+    check(v10_optics!=null and v10_optics.visible and v10_optics.mesh is ArrayMesh,
+        "V10 real sealed annular optic is shown in the SAME 3D viewer")
+    var v10_nose:=model.find_child(NoseV10.NOSE,true,false) as MeshInstance3D
+    check(v10_nose!=null and v10_nose.visible and v10_nose.mesh is ArrayMesh,
+        "V10 real sealed sculpted nose is shown in the original 3D viewer")
     # Visual damage stays inside the original 3D scene with the same model.
     check(model!=null and DamageV6.stage(model)==0,
         "shared Studio starts with undamaged reconnaissance UAV")
@@ -158,7 +165,7 @@ func _run()->void:
         await process_frame
         var active:=studio.get("model_root") as Node3D
         var faction_picker:=studio.get("faction_picker") as OptionButton
-        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and WingletV9.has_model(active),
+        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and NoseV10.has_model(active),
             "A01 V8 model stays native after changing to team %d" % team)
         check(faction_picker!=null and faction_picker.visible and
             faction_picker.selected==team,
@@ -195,5 +202,5 @@ func _run()->void:
         printerr("FAIL A01 V8 SHARED STUDIO: %d errors" % failures)
         quit(1)
     else:
-        print("PASS A01 V9 SHARED STUDIO: native A01, V8 swept fins, 8 colors, D0-D4/repair, unarmed gimbal, 360 cameras")
+        print("PASS A01 V10 SHARED STUDIO: native A01, V8 swept fins, 8 colors, D0-D4/repair, unarmed gimbal, 360 cameras")
         quit(0)
