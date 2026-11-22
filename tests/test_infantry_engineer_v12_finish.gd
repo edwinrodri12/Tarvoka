@@ -76,8 +76,13 @@ func _run() -> void:
             var central: MeshInstance3D=soldier.find_child(
                 V12.MAIN,true,false) as MeshInstance3D
             expect(central!=null and central.get_parent()==shield and
-                _watertight(central.mesh),
-                "V12 main chamfered shield shell sealed and on moving rig")
+                _watertight(central.mesh) and central.position.z>0.38,
+                "V12 main chamfered shield shell physically on EXTERIOR")
+            var frame: MeshInstance3D=soldier.find_child(
+                V12.FRAME,true,false) as MeshInstance3D
+            expect(frame!=null and frame.get_parent()==shield and
+                _watertight(frame.mesh),
+                "closed perimeter pressing is attached to the moving rig")
             for side in [-1,1]:
                 var outer: MeshInstance3D=soldier.find_child(
                     V12.OUTER+"_%d"%side,true,false) as MeshInstance3D
@@ -87,6 +92,13 @@ func _run() -> void:
                     V12.CASE+"_%d"%side,true,false) as MeshInstance3D
                 var side_mark: MeshInstance3D=soldier.find_child(
                     V12.POUCH_ID+"_%d"%side,true,false) as MeshInstance3D
+                var wing_skin: MeshInstance3D=soldier.find_child(
+                    V12.WING_SKIN+"_%d"%side,true,false) as MeshInstance3D
+                expect(wing_skin!=null and _watertight(wing_skin.mesh) and
+                    wing_skin.get_parent()==soldier.find_child(
+                    "V6_AlaIzquierdaRig" if side<0 else "V6_AlaDerechaRig",
+                    true,false),
+                    "V12 outer wings truly follow their own rotating pivots")
                 var rack: Node3D=soldier.find_child(
                     V12.RACK+"_%d"%side,true,false) as Node3D
                 expect(outer!=null and stripe!=null and pouch!=null and
@@ -120,10 +132,18 @@ func _run() -> void:
                 expect(is_equal_approx(shield.rotation_degrees.x,-54.0),
                     "real shield rotates including V12 exterior")
                 expect(V6.reset(soldier),"V6 folded pose resets")
+            var damage: Node3D=soldier.find_child(
+                "V6_RayonesD2",true,false) as Node3D
+            expect(damage!=null and damage.position.z>0.58,
+                "V6 D2 damage stays above sculpted V12 outer surface")
             expect(V12.show_finish(soldier,false) and not V12.is_visible(soldier),
                 "V11 native comparison genuinely removes V12 surfaces")
+            expect(damage!=null and is_equal_approx(damage.position.z,0.232),
+                "V11 original V6 damage depth restored")
             expect(V12.show_finish(soldier,true) and V12.is_visible(soldier),
                 "V12 real mesh returns without rebuild")
+            expect(damage!=null and damage.position.z>0.58,
+                "V12 visibility restores damage overlay without rebuilding")
             soldier.free()
     for other in ["line","infantry_sniper","infantry_logistic",
             "infantry_medic","infantry_commando"]:
@@ -209,6 +229,26 @@ func _run() -> void:
         faction_art.queue_free()
         await process_frame
     expect(pictures==8,"eight real Godot 3D PNGs")
+    # Same rear shot, same lighting, same camera: assert the new finish is
+    # actually visible, rather than merely present as occluded geometry.
+    var modern: Image=Image.load_from_file(
+        OUT+"/engineer_v12_exterior_enamel_close.png")
+    var legacy: Image=Image.load_from_file(
+        OUT+"/engineer_v11_same_camera_comparison.png")
+    expect(modern!=null and legacy!=null and
+        modern.get_size()==legacy.get_size(),
+        "V11/V12 screenshots have the exact same camera framing")
+    if modern!=null and legacy!=null and modern.get_size()==legacy.get_size():
+        var changed: int=0
+        for y in range(240,580,3):
+            for x in range(170,695,3):
+                var p: Color=modern.get_pixel(x,y)
+                var q: Color=legacy.get_pixel(x,y)
+                if absf(p.r-q.r)+absf(p.g-q.g)+absf(p.b-q.b)>0.35:
+                    changed+=1
+        print("Engineer V12.2 true same-camera visual pixels changed (3px samples): ",changed)
+        expect(changed>900,
+            "V12.2 visible sculpt must materially differ from V11 photo")
     if failures>0:
         push_error("FAIL ENGINEER V12: %d assertions"%failures)
         quit(1)
