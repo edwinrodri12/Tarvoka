@@ -27,8 +27,10 @@ func _run() -> void:
         int(profile.get("move_points",-1))==2 and
         int(profile.get("attack",-1))==2,
         "engineer retains the real existing G05 gameplay profile")
+    # The G11 real battle map guarantees this cell is flat, avoiding a
+    # foreground mountain blocking our actual physical V12.2 silhouette.
     var selected: Dictionary=Roles.make_unit(
-        "G05-H",0,Vector2i(4,6),"engineer")
+        "G05-H",0,Vector2i(4,4),"engineer")
     check(str(selected.get("role",""))=="engineer",
         "existing save role never renamed infantry_engineer")
     var state: Dictionary=Context.make_state(0,Biomes.TEMPERATE)
