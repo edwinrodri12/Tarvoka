@@ -160,8 +160,8 @@ func _run()->void:
                     "both nose sides have solid sculpted faction skins, not blue oval pods")
                 if paint!=null and paint.mesh is ArrayMesh:
                     check(_closed(paint.mesh as ArrayMesh,
-                        20 if lod==13 else 12),
-                        "nose enamel fully closed with outward winding and no missing sides")
+                        28 if lod==13 else 20),
+                        "nose enamel follows intermediate airframe stations with sealed outward facets")
                     check(paint.position.is_equal_approx(Vector3.ZERO),
                         "nose paint conforms to loft origin instead of a detached ellipsoid")
                     var actual_vertices:PackedVector3Array=paint.mesh.get_faces()
@@ -177,6 +177,33 @@ func _run()->void:
                             has_back=true
                     check(correct_side and has_front and has_back,
                         "nose physical paint follows selected exterior side from front to rear")
+                    var paint_sections:Array=[
+                        [-1.075,0.236,0.187],
+                        [-0.850,0.266,0.213],
+                        [-0.700,0.27993,0.21246]
+                    ]
+                    if lod==13:
+                        paint_sections.insert(1,[-0.940,0.254,0.2026])
+                    var conformal:bool=true
+                    var matched_sections:Dictionary={}
+                    for vertex in actual_vertices:
+                        var matched:bool=false
+                        for st in paint_sections:
+                            if absf(vertex.z-float(st[0]))<0.0001:
+                                var rx:float=float(st[1])
+                                var ry:float=float(st[2])
+                                var radial:float=sqrt(
+                                    pow(vertex.x/rx,2.0)+
+                                    pow((vertex.y-0.922)/ry,2.0))
+                                if radial<1.006 or radial>1.060:
+                                    conformal=false
+                                matched_sections[str(st[0])]=true
+                                matched=true
+                                break
+                        if not matched:
+                            conformal=false
+                    check(conformal and matched_sections.size()==paint_sections.size(),
+                        "nose pigment stays 3–8 mm outside EVERY actual fuselage station")
                 if paint!=null and paint.material_override is StandardMaterial3D:
                     var current:Color=(paint.material_override as StandardMaterial3D).albedo_color
                     check(current.is_equal_approx(expected),
