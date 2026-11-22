@@ -76,7 +76,8 @@ func _run() -> void:
         await get_tree().process_frame
     if not _check(_main.board!=null,"Playable board missing"):
         return
-    await _capture(get_viewport(),"hq_v24_android_01_home.png")
+    if not await _capture(get_viewport(),"hq_v24_android_01_home.png"):
+        return
 
     _stage="new-battle"
     var board:Control=_main.board
@@ -131,11 +132,20 @@ func _run() -> void:
             "HUD is not reporting HQ V24"):
         return
 
+    # Focus a REAL command building for the close-up instead of leaving
+    # the camera centered on an unrelated patch of map terrain.
+    var capital:Node3D=viewer._scene.find_child(
+        "Instalacion3D_city_2_1",true,false) as Node3D
+    if not _check(capital!=null,"Real capital not found at original map tile"):
+        return
     _stage="near-view"
+    viewer._look_at=capital.global_position+Vector3(0,0.35,0)
     viewer._camera_size=4.0
     viewer._refresh_camera()
     await _sample_frames(45)
     if not await _capture(viewer.preview,"hq_v24_android_02_near.png"):
+        return
+    if not await _capture(get_viewport(),"hq_v24_android_04_fps_hud.png"):
         return
     var near:Dictionary=probe.snapshot()
     if not _check(int(near["headquarters"])==2,
@@ -180,7 +190,8 @@ func _run() -> void:
         "economy_and_game_state_unchanged":true,
         "near_camera":4.0,"far_camera":70.0,
         "screenshots":["hq_v24_android_01_home.png",
-            "hq_v24_android_02_near.png","hq_v24_android_03_far.png"]
+            "hq_v24_android_02_near.png","hq_v24_android_03_far.png",
+            "hq_v24_android_04_fps_hud.png"]
     }
     _stage="passed"
     _write_report("PASS",metrics)
