@@ -126,6 +126,67 @@ static func _orb(root:Node3D,name:String,at:Vector3,dimensions:Vector3,
     part.scale=dimensions
     return part
 
+static func _conformal_nose_paint(body:Node3D,name:String,side:float,
+        hero:bool,enamel:Material)->MeshInstance3D:
+    # Godot screenshot QA: the prior ellipsoids looked like blue pods
+    # stuck to the airframe. Use polygon-matched closed enamel skins.
+    # Section rings share the SAME actual loft station coordinates.
+    var sections:Array=[
+        [-1.075,0.236,0.187]
+    ]
+    if hero:
+        sections.append([-0.850,0.266,0.213])
+    sections.append([-0.700,0.280,0.2125])
+    var count:int=12 if hero else 8
+    # V10 hero: upper side faces 30..60 and 120..150 degrees.
+    # V10 Android: lower-poly upper side faces 0..45 and 135..180.
+    var lo:int=1 if hero else 0
+    var hi:int=2 if hero else 1
+    var first:int=lo if side>0.0 else int(count/2)-hi
+    var second:int=hi if side>0.0 else int(count/2)-lo
+    var rings:Array=[]
+    for station in sections:
+        var z:float=float(station[0])
+        var width:float=float(station[1])
+        var height:float=float(station[2])
+        var front_angle:float=TAU*float(first)/float(count)
+        var back_angle:float=TAU*float(second)/float(count)
+        var outward_front:=Vector3(cos(front_angle),sin(front_angle),0.0)
+        var outward_back:=Vector3(cos(back_angle),sin(back_angle),0.0)
+        var front_base:=Vector3(outward_front.x*width,
+            0.922+outward_front.y*height,z)
+        var back_base:=Vector3(outward_back.x*width,
+            0.922+outward_back.y*height,z)
+        rings.append([
+            front_base+outward_front*0.008,
+            back_base+outward_back*0.008,
+            back_base+outward_back*0.003,
+            front_base+outward_front*0.003
+        ])
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for segment in range(rings.size()-1):
+        var low:Array=rings[segment]
+        var high:Array=rings[segment+1]
+        var center:=Vector3.ZERO
+        for vertex in low:
+            center+=vertex
+        center/=float(low.size())
+        for edge in range(4):
+            var next:int=(edge+1)%4
+            var outward:Vector3=0.5*(low[edge]+low[next])-center
+            outward.z=0.0
+            _face(t,low[edge],high[edge],high[next],outward)
+            _face(t,low[edge],high[next],low[next],outward)
+    var nose_cap:Array=rings[0]
+    var rear_cap:Array=rings[rings.size()-1]
+    _face(t,nose_cap[0],nose_cap[1],nose_cap[2],Vector3.FORWARD)
+    _face(t,nose_cap[0],nose_cap[2],nose_cap[3],Vector3.FORWARD)
+    _face(t,rear_cap[0],rear_cap[1],rear_cap[2],Vector3.BACK)
+    _face(t,rear_cap[0],rear_cap[2],rear_cap[3],Vector3.BACK)
+    t.generate_normals()
+    return _mesh(body,name,Vector3.ZERO,t.commit(),enamel)
+
 static func _box(root:Node3D,name:String,at:Vector3,dims:Vector3,
         material:Material)->MeshInstance3D:
     var mesh:=BoxMesh.new()
@@ -161,10 +222,8 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
     var ir:=_orb(pivot,THERMAL,Vector3(0.053,-0.048,-0.321),
         Vector3(0.055,0.055,0.013),thermal,hero)
     for side in [-1,1]:
-        var s:float=float(side)
-        _orb(body,PAINT_L if side<0 else PAINT_R,
-            Vector3(s*0.254,0.950,-0.920),Vector3(0.067,0.054,0.230),
-            enamel,hero)
+        _conformal_nose_paint(body,PAINT_L if side<0 else PAINT_R,
+            float(side),hero,enamel)
     # Three optional hero-only service details are solid and subtle.
     if hero:
         _box(body,HATCH,Vector3(0,1.138,-0.765),
