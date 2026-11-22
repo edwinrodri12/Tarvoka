@@ -92,3 +92,11 @@ La prueba dedicada se amplió a **ocho capturas Godot**, incluyendo V11 y V12 de
 - Los controles `Ingeniero V11` y `Ingeniero V12` conservan la comparación reversible sobre la misma unidad; `V12` corresponde al último acabado físico V12.2.
 - La publicación de una galería de ciudades V43 es un workflow diferente y su fallo no invalida el despliegue del visor principal.
 - **Sin cambios en jugabilidad:** no se alteraron estadísticas, reglas de campamentos, economía, IA, visibilidad de combate ni colisiones. No equivale por sí solo a una APK nueva ni demuestra una prueba manual en navegador Android.
+
+### G05 Ingeniero jugable — puente visual del combate 3D (PR independiente)
+
+Se comprobó un hueco entre el arte del Estudio y el mapa real: `ModernArsenal.gd` y `UnitRoles.gd` usan el identificador jugable **`engineer` (G05)**, mientras que el constructor 3D lo cataloga como **`infantry_engineer`**. Antes, `BattleTerrain3D.gd` no encontraba un modelo para G05 y lo representaba como disco genérico.
+
+El nuevo puente en `BattleTerrain3D.gd` asigna exclusivamente en la capa visual `engineer → infantry_engineer` y construye el mismo V12.2 con **LOD8**, aprovechando la identidad visual seleccionada entre las ocho facciones. La unidad sigue teniendo `role=engineer`, equipo y equipo táctico 0/1 intactos, sus estadísticas/costo/perfil/captura/niebla y guardado no se modifican. El mapa conserva su tope `MAX_DETAILED_UNITS=8`: no se generan soldados de alta geometría adicionales fuera del presupuesto.
+
+`tests/test_engineer_v12_live_battle.gd` comprueba la unidad G05 jugable dentro del terreno Godot auténtico, materiales/rig V12.2, su facción visible, visibilidad de enemigos, límites de rendimiento y que el estado de la partida no cambia; captura además un PNG 3D del G05 sobre el mapa. **Validación completada**: workflow Godot real `45003793179` SUCCESS, screenshot LOD8 inspeccionada y PR #677 fusionado en `main` (commit `50b85ce4`). No afirmar que se ha publicado una APK nueva.
