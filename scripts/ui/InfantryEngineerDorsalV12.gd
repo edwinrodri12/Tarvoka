@@ -188,6 +188,10 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
             else:
                 damage_mark.position.z=0.232 if label=="V6_RayonesD2" else 0.240
     model.set_meta(VISIBLE,enabled)
+    # A full V11/V12 switch must also restore the true V12.3 seal state.
+    # Otherwise the comparison label could disagree with visible geometry.
+    if has_seals(model):
+        model.set_meta("tarvoka_engineer_v123_seals_visible",enabled)
     return true
 
 static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
