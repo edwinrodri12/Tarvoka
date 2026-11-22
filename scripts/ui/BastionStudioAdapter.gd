@@ -212,6 +212,7 @@ var _g15_tween: Tween
 var _g16_tween: Tween
 var _a01_tween: Tween = null
 var a01_360_panel:VBoxContainer
+var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
 var _a01_review_focus:String="general"
 var _a01_review_lod:int=13
@@ -458,6 +459,17 @@ func _install_unified_studio_navigation() -> void:
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
     _title(a01_360_panel,"A01 V10 · NARIZ, SENSOR EO/IR Y DAÑO 3D",13)
+    # Keep quality controls ABOVE camera presets: 1152x648 landscape
+    # screenshots previously clipped both buttons below the visible fold.
+    _add_paired(a01_360_panel,"LOD13 · detalle",
+        func(): _a01_review_set_lod(13),
+        "LOD8 · Android",func(): _a01_review_set_lod(8))
+    a01_lod_readout=Label.new()
+    a01_lod_readout.name="A01_LodActivo"
+    a01_lod_readout.text="Calidad activa: LOD13 · detalle"
+    a01_lod_readout.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    a01_lod_readout.add_theme_font_size_override("font_size",12)
+    a01_360_panel.add_child(a01_lod_readout)
     _add_paired(a01_360_panel,
         "Frente",func(): _a01_review_look(180.0,"general"),
         "Trasera",func(): _a01_review_look(0.0,"general"))
@@ -469,9 +481,6 @@ func _install_unified_studio_navigation() -> void:
         "Hélice y cola",func(): _a01_review_look(0.0,"cola"))
     _add_paired(a01_360_panel,"Giro 360°",_a01_review_spin,
         "Vista completa",func(): _a01_review_look(35.0,"general"))
-    _add_paired(a01_360_panel,"LOD13 · detalle",
-        func(): _a01_review_set_lod(13),
-        "LOD8 · Android",func(): _a01_review_set_lod(8))
     a01_360_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
@@ -1349,6 +1358,10 @@ func _a01_review_set_lod(lod:int)->bool:
     model_root=candidate
     preview.add_child(model_root)
     _a01_review_lod=lod
+    if a01_lod_readout!=null:
+        a01_lod_readout.text=(
+            "Calidad activa: LOD13 · detalle" if lod==13 else
+            "Calidad activa: LOD8 · Android")
     model_root.rotation_degrees.y=_yaw
     if faction_picker!=null:
         faction_picker.visible=true
@@ -4395,6 +4408,10 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("uav_recon",_faction,true,_a01_review_lod)
+        if a01_lod_readout!=null:
+            a01_lod_readout.text=(
+                "Calidad activa: LOD13 · detalle" if _a01_review_lod==13 else
+                "Calidad activa: LOD8 · Android")
         if model_root==null or not A01NoseOpticsV10.has_model(model_root):
             push_error("A01 V10 nose/optics or conformal winglet paint missing in shared Studio")
             return
