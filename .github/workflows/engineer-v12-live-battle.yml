@@ -1,0 +1,81 @@
+name: TARVOKA G05 Engineer V12.2 live battle 3D QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/InfantryEngineerDorsalV12.gd'
+      - 'tests/test_engineer_v12_live_battle.gd'
+      - '.github/workflows/engineer-v12-live-battle.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/InfantryEngineerDorsalV12.gd'
+      - 'tests/test_engineer_v12_live_battle.gd'
+      - '.github/workflows/engineer-v12-live-battle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engineer-live-battle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3 and software 3D rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri unzip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Audit visual-only role mapping and immutable gameplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'role=="engineer"' scripts/ui/BattleTerrain3D.gd
+          grep -Fq 'Models.build("infantry_engineer",engineer_faction,true,8)' scripts/ui/BattleTerrain3D.gd
+          grep -Fq 'FactionIdentity.key_for(state,faction)' scripts/ui/BattleTerrain3D.gd
+          grep -Fq 'MAX_DETAILED_UNITS' scripts/ui/BattleTerrain3D.gd
+          test -s scripts/ui/InfantryEngineerDorsalV12.gd
+          test -s tests/test_engineer_v12_live_battle.gd
+          # This feature only maps gameplay G05 -> approved 3D art;
+          # it never alters combat stats, production, saves or progression.
+          git diff --exit-code HEAD -- scripts/core/ModernArsenal.gd scripts/core/UnitRoles.gd scripts/core/Combat.gd
+      - name: Import Godot project without publish-only Studio subclass
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/engineer-qa-studio
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/engineer-qa-studio/
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/engineer-live-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/engineer-live-import.log; then exit 1; fi
+      - name: Render G05 in actual battle; assert color, LOD8, fog and performance budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/engineer-live-battle
+          timeout --signal=TERM --kill-after=5s 220s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_engineer_v12_live_battle.gd 2>&1 | tee /tmp/engineer-live-battle.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/engineer-live-battle.log; then exit 1; fi
+          grep -Fq 'PASS ENGINEER V12.2 LIVE BATTLE:' /tmp/engineer-live-battle.log
+          test -s build/qa/engineer-live-battle/engineer_g05_v12_2_lod8.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-engineer-v12-2-actual-g05-battle
+          path: |
+            build/qa/engineer-live-battle/*.png
+            /tmp/engineer-live-battle.log
+          retention-days: 14
+          if-no-files-found: warn
