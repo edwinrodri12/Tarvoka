@@ -62,7 +62,10 @@ func _model(faction: int, lod: int, damage: int) -> Node3D:
             "Right roof wing removed only for severe damage")
     var meshes: Array[MeshInstance3D] = []
     _collect(camp, meshes)
-    check(meshes.size() >= 18, "Physical closed meshes exist")
+    # D3 correctly contains only a platform, scattered rubble and fragments;
+    # never require intact machinery inside a demolished camp.
+    check(meshes.size() >= (8 if damage == 3 else 18),
+        "Physical closed meshes exist even in destroyed state")
     var painted: int = 0
     for part in meshes:
         check(part.mesh is BoxMesh or part.mesh is CylinderMesh,
