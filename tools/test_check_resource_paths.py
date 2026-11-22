@@ -83,6 +83,18 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("assets/broken.png", errors[0])
 
+    def test_external_resources_reject_non_project_schemes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Script" path="user://scripts/unsafe.gd" id="1"]\n'
+                '[ext_resource type="Script" path="/tmp/unsafe.gd" id="2"]\n'
+                '[ext_resource type="Script" path="res:/scripts/typo.gd" id="3"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 3, errors)
+            self.assertTrue(all("invalid external resource path" in e for e in errors), errors)
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
