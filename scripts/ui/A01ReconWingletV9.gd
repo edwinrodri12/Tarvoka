@@ -103,8 +103,11 @@ static func _fairing(body:Node3D, name:String, side:float,
     surface.rings=6 if hero else 4
     fairing.mesh=surface
     fairing.material_override=composite
-    fairing.position=Vector3(side*1.677,1.082,-0.043)
-    fairing.scale=Vector3(0.20,0.105,0.29)
+    # V9.1 QA: the earlier 0.20-wide ball protruded like a round plug
+    # beyond the wingtips in real top-view Godot captures. Tuck a slim
+    # elliptical solid entirely against the wing/fin joint.
+    fairing.position=Vector3(side*1.676,1.077,-0.037)
+    fairing.scale=Vector3(0.110,0.072,0.226)
     body.add_child(fairing)
     return fairing
 
