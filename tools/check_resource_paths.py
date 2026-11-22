@@ -32,7 +32,9 @@ def audit(root: pathlib.Path) -> list[str]:
             location = f"{scene.relative_to(root)}:{source.count(chr(10), 0, declaration.start()) + 1}"
             attributes = declaration.group(1)
             resource_id = ID_ATTRIBUTE.search(attributes)
-            if resource_id is not None:
+            if resource_id is None or not resource_id.group(1):
+                errors.append(f"{location}: external resource missing id attribute")
+            else:
                 identifier = resource_id.group(1)
                 if identifier in seen_ids:
                     errors.append(f"{location}: duplicate external resource id {identifier}")
