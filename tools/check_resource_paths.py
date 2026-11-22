@@ -12,6 +12,7 @@ import sys
 # Godot does not require ext_resource attributes to appear in a fixed order.
 RESOURCE_LINE = re.compile(r'^\s*\[ext_resource\b([^\]\n]*)\]', re.MULTILINE)
 PATH_ATTRIBUTE = re.compile(r'(?:^|\s)path="([^"]*)"')
+ID_ATTRIBUTE = re.compile(r'(?:^|\s)id="([^"]*)"')
 
 
 def audit(root: pathlib.Path) -> list[str]:
