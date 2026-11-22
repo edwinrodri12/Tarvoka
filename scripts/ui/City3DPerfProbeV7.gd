@@ -4,6 +4,9 @@ class_name TarvokaCity3DPerfProbeV7
 # Opt-in REAL device readings while the ACTUAL playable 3D battle is open.
 # Never estimates Android frame rates from a desktop CI runner.
 # No game-state writes, telemetry upload, timers or external dependencies.
+# The same ORIGINAL capital cities already rendered by BattleTerrain3D
+# also get native HQ V24 meshes. Measure them inside the existing opt-in FPS
+# panel: nothing new is spawned, captured or added to the economy.
 const INTERVAL: float=0.50
 const MAX_SAMPLES: int=180
 var readout: Label
@@ -154,11 +157,46 @@ func _drone_stats() -> Dictionary:
             item.get_meta("render_surface_count",0))
     return output
 
+func _headquarters_stats() -> Dictionary:
+    var output:Dictionary={
+        "headquarters":0,"meshes":0,"surfaces":0,
+        "neutral":0,"ruins":0,"tier1":0,"tier2":0,"tier3":0
+    }
+    if scene_root==null or not is_instance_valid(scene_root):
+        return output
+    # Search only the actual live city site nodes, not synthetic stress
+    # models or hidden enemy HQs. This honors the renderer's fog-of-war.
+    for landmark in scene_root.find_children(
+            "Instalacion3D_city_*","Node3D",true,false):
+        if str(landmark.get_meta("site_kind",""))!="visual_headquarters":
+            continue
+        # HQ.build_site supplies the ROOT itself; BattleTerrain3D only
+        # renames that root to the original city-site identifier.
+        var visual:Node3D=landmark as Node3D
+        if visual==null or not bool(
+                visual.get_meta("hq_native_geometry",false)):
+            continue
+        output["headquarters"]=int(output["headquarters"])+1
+        output["meshes"]=int(output["meshes"])+visual.find_children(
+            "*","MeshInstance3D",true,false).size()
+        output["surfaces"]=int(output["surfaces"])+int(
+            visual.get_meta("hq_material_surfaces",0))
+        if int(visual.get_meta("visual_faction",-1))<0:
+            output["neutral"]=int(output["neutral"])+1
+        if int(visual.get_meta("visual_damage_stage",0))==4:
+            output["ruins"]=int(output["ruins"])+1
+        var tier:int=clampi(
+            int(visual.get_meta("visual_tier",1)),1,3)
+        var field:String="tier%d" % tier
+        output[field]=int(output[field])+1
+    return output
+
 func snapshot() -> Dictionary:
     var city: Dictionary=_city_stats()
     var workshop:Dictionary=_workshop_stats()
     var airbases:Dictionary=_airbase_stats()
     var drones:Dictionary=_drone_stats()
+    var headquarters:Dictionary=_headquarters_stats()
     var current_fps: float=_samples[-1] if not _samples.is_empty() else 0.0
     var samples: Array[float]=_samples.duplicate()
     samples.sort()
@@ -204,6 +242,14 @@ func snapshot() -> Dictionary:
         "drone_surfaces":drones["surfaces"],
         "drone_lod_changes":drones["changes"],
         "drone_peak_step_ms":drones["peak_step_ms"],
+        "headquarters":headquarters["headquarters"],
+        "headquarters_meshes":headquarters["meshes"],
+        "headquarters_surfaces":headquarters["surfaces"],
+        "headquarters_neutral":headquarters["neutral"],
+        "headquarters_ruins":headquarters["ruins"],
+        "headquarters_tier1":headquarters["tier1"],
+        "headquarters_tier2":headquarters["tier2"],
+        "headquarters_tier3":headquarters["tier3"],
         "device":OS.get_name(),
     }
 
@@ -219,6 +265,7 @@ func refresh_once() -> void:
     var workshop:Dictionary=_workshop_stats()
     var airbases:Dictionary=_airbase_stats()
     var drones:Dictionary=_drone_stats()
+    var headquarters:Dictionary=_headquarters_stats()
     _peak_meshes=maxi(_peak_meshes,int(stats["meshes"]))
     var count: int=_samples.size()
     var total: float=0.0
@@ -243,7 +290,12 @@ func refresh_once() -> void:
                 airbases["peak_step_ms"]]
             +"\nCentros drones %d · cerca/lejos %d/%d · pico %.1f ms" % [
                 drones["centers"],drones["close"],drones["far"],
-                drones["peak_step_ms"]])
+                drones["peak_step_ms"]]
+            +("\nCuarteles HQ V24 %d · mallas %d · superficies %d"
+              +" · neutros %d · ruinas %d") % [
+                headquarters["headquarters"],headquarters["meshes"],
+                headquarters["surfaces"],headquarters["neutral"],
+                headquarters["ruins"]])
 
 func _process(delta: float) -> void:
     if not visible:
