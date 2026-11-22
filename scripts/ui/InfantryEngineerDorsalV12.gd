@@ -14,6 +14,8 @@ const ACCENT := "V12_InsigniaFisicaBarrera"
 const STRUT := "V12_RefuerzoPerimetralEscudo"
 const RACK := "V12_SoporteEstucheFijo"
 const MAIN := "V12_EscudoCentralBiseladoCerrado"
+const FRAME := "V12_MarcoOctagonalExterior"
+const WING_SKIN := "V12_RevestimientoAlaArticulada"
 const POUCH_ID := "V12_InsigniaLateralEstuche"
 
 static func _mat(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
@@ -137,6 +139,15 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
             var item: Node3D=_find(model,old)
             if item!=null:
                 item.visible=not enabled
+    # D2/D3 marks stay on the visible physical cover, with the original
+    # position restored whenever the viewer switches back to V11.
+    for label in ["V6_RayonesD2","V6_FracturaD3"]:
+        var damage_mark: Node3D=_find(model,label)
+        if damage_mark!=null:
+            if enabled:
+                damage_mark.position.z=0.584 if label=="V6_RayonesD2" else 0.591
+            else:
+                damage_mark.position.z=0.232 if label=="V6_RayonesD2" else 0.240
     model.set_meta(VISIBLE,enabled)
     return true
 
@@ -163,23 +174,38 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
     # The original board still exists for reversible V11 comparison. The
     # new single closed, chamfered central shell covers its square silhouette
     # while preserving the whole V6 mechanical hinge and moving wings.
-    _pressed(shield,MAIN,Vector3(0,-0.010,0.217),
-        Vector2(1.065,0.602),ceramic,0.025,0.095)
+    # V12.1 sat behind the V6 fittings and looked almost unchanged in the
+    # native camera. V12.2 brings the sculpt to the actual exterior and
+    # preserves the old slab as a reversible interior structural layer.
+    _pressed(shield,FRAME,Vector3(0,-0.011,0.344),
+        Vector2(1.210,0.668),sidewall,0.016,0.139)
+    _pressed(shield,MAIN,Vector3(0,-0.010,0.403),
+        Vector2(1.155,0.606),ceramic,0.033,0.126)
     _pressed(shield,"V12_BandaFaccionSuperiorTallada",
-        Vector3(0,0.161,0.244),Vector2(0.690,0.112),
-        faction,0.009,0.030)
+        Vector3(0,0.177,0.464),Vector2(0.842,0.113),
+        faction,0.012,0.028)
+    _pressed(shield,"V12_CierreCentralMetal",
+        Vector3(0,-0.221,0.470),Vector2(0.222,0.102),
+        fastener,0.008,0.024)
     # Sculpted left/right plating and two vivid inset emblems.
     for side in [-1,1]:
         var x: float=float(side)
         _pressed(shield,OUTER+"_%d"%side,
-            Vector3(x*0.255,-0.113,0.264),
-            Vector2(0.390,0.274),ceramic,0.030)
+            Vector3(x*0.272,-0.120,0.475),
+            Vector2(0.420,0.273),ceramic,0.018,0.081)
         _pressed(shield,ACCENT+"_%d"%side,
-            Vector3(x*0.280,-0.119,0.312),
-            Vector2(0.162,0.090),faction,0.008)
+            Vector3(x*0.284,-0.123,0.530),
+            Vector2(0.247,0.098),faction,0.011,0.032)
         _pressed(shield,STRUT+"_%d"%side,
-            Vector3(x*0.483,-0.115,0.281),
-            Vector2(0.083,0.425),sidewall,0.016,0.021)
+            Vector3(x*0.515,-0.117,0.473),
+            Vector2(0.071,0.403),sidewall,0.010,0.020)
+        var wing: Node3D=left if side<0 else right
+        _pressed(wing,WING_SKIN+"_%d"%side,
+            Vector3(x*0.082,-0.008,0.172),
+            Vector2(0.154,0.557),ceramic,0.014,0.046)
+        _pressed(wing,"V12_BandaFaccionAlaMovil_%d"%side,
+            Vector3(x*0.082,0.121,0.220),
+            Vector2(0.091,0.170),faction,0.010,0.023)
         _ellipsoid(shield,"V12_AmortiguadorAla_%d"%side,
             Vector3(x*0.538,-0.262,0.206),
             Vector3(0.089,0.084,0.102),fabric,hero)
@@ -210,11 +236,11 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
             # exist only at hero LOD to keep the Android profile efficient.
             for i in range(2):
                 _ellipsoid(shield,"V12_RemacheExterior_%d_%d"%[side,i],
-                    Vector3(x*(0.135+float(i)*0.208),-0.244,0.303),
+                    Vector3(x*(0.135+float(i)*0.208),-0.244,0.550),
                     Vector3(0.041,0.041,0.031),fastener,hero)
             _tube(shield,"V12_CostillaExterior_%d"%side,
-                Vector3(x*0.146,-0.210,0.319),
-                Vector3(x*0.374,-0.210,0.319),
+                Vector3(x*0.146,-0.205,0.547),
+                Vector3(x*0.374,-0.205,0.547),
                 0.014,fastener,hero)
             _ellipsoid(torso,"V12_CierrePouchMetalico_%d"%side,
                 Vector3(x*0.480,-0.096,0.108),
