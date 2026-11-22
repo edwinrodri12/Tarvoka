@@ -703,6 +703,22 @@ static func _make_units(parent: Node3D,state: Dictionary,
             model = Models.build("mlrs",faction,false,8)
             if model!=null and bool(model.get_meta(G11Tactical.FLAG,false)):
                 g11_lod+=1
+        elif role=="engineer" and detailed < MAX_DETAILED_UNITS:
+            # The playable G05 role is `engineer`; its approved 3D identity
+            # in the shared art roster is `infantry_engineer`. The map
+            # previously drew an anonymous fallback disc because Models
+            # does not expose a logical "engineer" art role.
+            # Keep the same Android 8-detailed-unit budget and LOD8 meshes.
+            # Neither state nor combat profile nor capture rules change.
+            var engineer_faction: int = FactionIdentity.index_for(
+                FactionIdentity.key_for(state,faction))
+            if engineer_faction<0:
+                engineer_faction=faction
+            model=Models.build("infantry_engineer",engineer_faction,true,8)
+            if model!=null:
+                model.set_meta("tarvoka_engineer_game_role","engineer")
+                model.set_meta("tarvoka_engineer_visual_faction",engineer_faction)
+                detailed+=1
         elif detailed < MAX_DETAILED_UNITS and Models.supports(role):
             model = Models.build(role,faction,false,6)
             if model != null:
