@@ -5,10 +5,6 @@ on:
     branches:
       - automation/resource-path-audit-20261121
   pull_request:
-    paths:
-      - 'tools/check_resource_paths.py'
-      - 'tools/test_check_resource_paths.py'
-      - '.github/workflows/resource-path-audit.yml'
   workflow_dispatch:
 
 permissions:
