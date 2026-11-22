@@ -155,8 +155,28 @@ func _run()->void:
                 var paint:=m.find_child(V10.PAINT_L if side<0 else V10.PAINT_R,
                     true,false) as MeshInstance3D
                 check(paint!=null and paint.visible and
-                    paint.material_override is StandardMaterial3D,
-                    "both nose sides have solid faction accents")
+                    paint.material_override is StandardMaterial3D and
+                    paint.mesh is ArrayMesh,
+                    "both nose sides have solid sculpted faction skins, not blue oval pods")
+                if paint!=null and paint.mesh is ArrayMesh:
+                    check(_closed(paint.mesh as ArrayMesh,
+                        20 if lod==13 else 12),
+                        "nose enamel fully closed with outward winding and no missing sides")
+                    check(paint.position.is_equal_approx(Vector3.ZERO),
+                        "nose paint conforms to loft origin instead of a detached ellipsoid")
+                    var actual_vertices:PackedVector3Array=paint.mesh.get_faces()
+                    var correct_side:bool=true
+                    var has_front:bool=false
+                    var has_back:bool=false
+                    for vertex in actual_vertices:
+                        if float(side)*vertex.x < -0.0001:
+                            correct_side=false
+                        if absf(vertex.z+1.075)<0.0002:
+                            has_front=true
+                        if absf(vertex.z+0.700)<0.0002:
+                            has_back=true
+                    check(correct_side and has_front and has_back,
+                        "nose physical paint follows selected exterior side from front to rear")
                 if paint!=null and paint.material_override is StandardMaterial3D:
                     var current:Color=(paint.material_override as StandardMaterial3D).albedo_color
                     check(current.is_equal_approx(expected),
