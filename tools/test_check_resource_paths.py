@@ -163,6 +163,21 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertTrue(any("sample.tscn:1: external resource missing id attribute" in e for e in errors), errors)
             self.assertTrue(any("sample.tscn:2: external resource missing id attribute" in e for e in errors), errors)
 
+    def test_scene_symlink_outside_project_is_rejected(self):
+        # The auditor must not inspect scenes outside the checkout.
+        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as outside:
+            root = pathlib.Path(project)
+            external = pathlib.Path(outside) / "private.tscn"
+            external.write_text('[ext_resource path="res://missing.gd" id="1"]\n')
+            try:
+                (root / "linked.tscn").symlink_to(external)
+            except (NotImplementedError, OSError):
+                self.skipTest("symlinks unavailable on this platform")
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("linked.tscn: scene escapes project root", errors[0])
+            self.assertNotIn("missing.gd", errors[0])
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
