@@ -7,6 +7,7 @@ class_name TarvokaCampModels3DV1
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const SupplyFinishV2 = preload("res://scripts/ui/CampSupplyFinishV2.gd")
+const SupplyReadabilityV3 = preload("res://scripts/ui/CampSupplyReadabilityV3.gd")
 const CAMPS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const BUILDERS := {
     "suministros": "infantry_logistic",
@@ -283,10 +284,13 @@ static func build(kind: String, faction: int, lod: int = 13,
             "medico":
                 _medical(deployable, accent, lod, damage)
     _weather_damage(root, damage, lod)
-    if kind == "suministros" and not SupplyFinishV2.apply(
-            root, accent, lod, damage):
-        root.free()
-        return null
+    if kind == "suministros":
+        if not SupplyFinishV2.apply(root, accent, lod, damage):
+            root.free()
+            return null
+        if not SupplyReadabilityV3.apply(root, accent, lod, damage):
+            root.free()
+            return null
     return root
 
 static func pose_deploy(root: Node3D, progress: float) -> bool:
