@@ -28,6 +28,7 @@ def audit(root: pathlib.Path) -> list[str]:
         for declaration in RESOURCE_LINE.finditer(source):
             match = PATH_ATTRIBUTE.search(declaration.group(1))
             if match is None:
+                errors.append(f"{scene.relative_to(root)}: external resource missing path attribute")
                 continue
             if not match.group(1).startswith("res://"):
                 errors.append(f"{scene.relative_to(root)}: invalid external resource path {match.group(1)}")
