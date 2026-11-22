@@ -68,7 +68,7 @@ La barrera V6 conserva su articulación original y sus ocho colores. Para elimin
 **QA obligatoria antes de integrar:** ocho facciones × LOD8/LOD13, mallas ArrayMesh de torso y costados watertight, materiales totalmente opacos, geometría de color exactamente coincidente con la facción, soportes fijos y móviles en el rig correcto, desviación del eje menor que 0.00001 unidades en cuatro aperturas (0%,25%,50%,100%), insignia y animaciones V5-V10 intactas, seis nuevas fotografías auténticas de Godot hasta 34 totales, y prueba de las mismas piezas y etiquetas V11 dentro del Estudio 3D web unificado.
 
 
-## Ingeniero V12 — acabado dorsal y coraza exterior (en revisión)
+## Ingeniero V12–V12.2 — acabado dorsal y coraza exterior (integrado en main)
 
 - Capa artística aditiva `InfantryEngineerDorsalV12.gd` sobre la geometría V11, sin cambiar unidades ni estadísticas, ataques, captura, campamentos, construcción, IA o guardado.
 - Dos estuches de herramientas **con volumen 3D redondeado**, sobre soportes anclados al `TorsoRig`; reemplazan visualmente las bolsas V9 cuadradas y pueden recuperarse con el comparador V11/V12.
@@ -82,3 +82,13 @@ La barrera V6 conserva su articulación original y sus ocho colores. Para elimin
 Se analizaron las seis fotografías Godot originales de V12 frente a las seis capturas V11. La silueta dorsal conservaba un rectángulo demasiado evidente y los estuches laterales parecían óvalos superpuestos. Se sustituyó la envolvente por una placa central **octagonal biselada y hermética** sobre el mismo rig V6, y se formaron estuches con **cinco secciones geométricas 3D cerradas** y tapas metálicas; nuevos paneles laterales PBR grandes usan el color auténtico de cada facción. La comparación V11/V12 sigue siendo reversible, y los controles LOD8/LOD13, giro, animación, color, combate y campamentos no cambian.
 
 La prueba dedicada se amplió a **ocho capturas Godot**, incluyendo V11 y V12 desde la **misma cámara** y una facción adicional, además de verificar que las superficies nuevas no tienen bordes abiertos. Esta revisión no está aprobada para publicar hasta comprobar el nuevo CI y sus imágenes.
+
+### V12.2 · integración aprobada y acceso directo al visor web (22 noviembre 2026)
+
+- **Entregado en el código principal:** PR #670 (V11) y PR #672 (V12.2) fusionados en `main`, commit de integración `a6ac87eafe6e77149db3824247022622bd373c38`.
+- **Validación V12.2 antes de integrar:** 8 capturas reales de Godot, 8 facciones × LOD8/LOD13, escudo cerrado, estuches físicos, colores de facción, bisagras correctas, marcas de daño y comparación V11/V12.2 aprobadas. Godot nativo, UI quick smoke y exportación web aprobados.
+- **Validación del commit de integración:** GitHub Actions `44984933699` (compilación **y despliegue** de Pages) SUCCESS; UI quick smoke `44984933748` SUCCESS; Godot headless rules `44984933766` SUCCESS.
+- **Enlace de revisión sin segundo visor:** `https://edwinrodri12.github.io/Tarvoka/?unidad=ingeniero`. La navegación de este enlace selecciona automáticamente la infantería ingeniera en el **mismo** visor Godot que los demás modelos, abre la pestaña Cámara y orienta el escudo hacia la cámara. Esta función de acceso directo se entrega en su propia revisión posterior; no considerar el enlace activo hasta aprobar sus CI y publicar Pages.
+- Los controles `Ingeniero V11` y `Ingeniero V12` conservan la comparación reversible sobre la misma unidad; `V12` corresponde al último acabado físico V12.2.
+- La publicación de una galería de ciudades V43 es un workflow diferente y su fallo no invalida el despliegue del visor principal.
+- **Sin cambios en jugabilidad:** no se alteraron estadísticas, reglas de campamentos, economía, IA, visibilidad de combate ni colisiones. No equivale por sí solo a una APK nueva ni demuestra una prueba manual en navegador Android.
