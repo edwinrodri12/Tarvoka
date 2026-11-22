@@ -206,12 +206,12 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertIn("sample.tscn:1: missing resource res://assets/loop.png", errors[0])
 
     def test_nul_in_external_resource_path_is_diagnostic_not_crash(self):
-        # pathlib.resolve(strict=True) raises ValueError for embedded NUL.
+        # An actual NUL reaches pathlib and must not abort subsequent checks.
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             (root / "sample.tscn").write_text(
-                '[ext_resource type="Script" path="res://bad\\x00name.gd" id="1"]\\n'
-                '[ext_resource type="Script" path="res://missing.gd" id="2"]\\n'
+                '[ext_resource type="Script" path="res://bad\\x00name.gd" id="1"]\n'
+                '[ext_resource type="Script" path="res://missing.gd" id="2"]\n'
             )
             errors = audit(root)
             self.assertEqual(len(errors), 2, errors)
