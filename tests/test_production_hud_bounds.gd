@@ -114,6 +114,15 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
                 var required_button: BaseButton = immersive.get(required_name)
                 if required_button == null or not required_button.is_visible_in_tree():
                     failures.append("compact HUD missing visible primary action %s at %s" % [required_name, size])
+        # Both primary actions can be visible and in bounds yet overlap.
+        # Reject that layout because it makes one action hard to tap.
+        if immersive != null:
+            var menu: BaseButton = immersive.get("menu_button")
+            var end_turn: BaseButton = immersive.get("end_turn_button")
+            if menu != null and end_turn != null and menu.is_visible_in_tree() and end_turn.is_visible_in_tree():
+                var overlap := menu.get_global_rect().intersection(end_turn.get_global_rect())
+                if overlap.has_area():
+                    failures.append("compact primary actions overlap at %s: %s" % [size, overlap])
         if immersive_buttons_checked == 0:
             failures.append("compact HUD has no visible immersive production buttons at %s; legacy shortcuts cannot satisfy coverage" % size)
     if checked_visible == 0 or checked_buttons == 0:
