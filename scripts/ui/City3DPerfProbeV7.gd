@@ -7,7 +7,6 @@ class_name TarvokaCity3DPerfProbeV7
 # The same ORIGINAL capital cities already rendered by BattleTerrain3D
 # also get native HQ V24 meshes. Measure them inside the existing opt-in FPS
 # panel: nothing new is spawned, captured or added to the economy.
-const HQ=preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const INTERVAL: float=0.50
 const MAX_SAMPLES: int=180
 var readout: Label
@@ -171,7 +170,9 @@ func _headquarters_stats() -> Dictionary:
             "Instalacion3D_city_*","Node3D",true,false):
         if str(landmark.get_meta("site_kind",""))!="visual_headquarters":
             continue
-        var visual:Node3D=landmark.get_node_or_null(HQ.CHILD_NAME) as Node3D
+        # HQ.build_site supplies the ROOT itself; BattleTerrain3D only
+        # renames that root to the original city-site identifier.
+        var visual:Node3D=landmark as Node3D
         if visual==null or not bool(
                 visual.get_meta("hq_native_geometry",false)):
             continue
