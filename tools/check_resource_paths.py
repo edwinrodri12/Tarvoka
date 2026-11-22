@@ -24,7 +24,7 @@ def audit(root: pathlib.Path) -> list[str]:
         # Do not read source scenes symlinked outside the project root.
         # External files must never influence an offline repository audit.
         try:
-            resolved_scene = scene.resolve()
+            resolved_scene = scene.resolve(strict=True)
         except (OSError, RuntimeError):
             errors.append(f"{scene.relative_to(root)}: unresolvable scene symlink")
             continue
