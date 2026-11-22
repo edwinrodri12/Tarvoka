@@ -288,3 +288,5 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - **PENDIENTE DE NUEVA CI**: ejecutar las 14 pruebas y auditoría integral sobre el nuevo commit; no afirmar PASS hasta leer el run posterior. Godot/Android físicos NO EJECUTADO EN DISPOSITIVO; sin cambios de jugabilidad.
 
 2026-11-22: Resource audit CI run 45064805400 SUCCESS on commit 8557d265 (14 Python tests and repository audit). Follow-up regression: cyclic `ext_resource` target symlink now reports a missing resource instead of risking an uncaught resolution exception; 15th test added. New commit CI pending. Android physical: NO EJECUTADO EN DISPOSITIVO. Visual QA: PENDIENTE DE REVISIÓN VISUAL.
+
+2026-11-22 17:06 EST — PR #673: auditor de recursos tolera ValueError de rutas externas con NUL, registra diagnóstico y sigue inspeccionando recursos posteriores. Prueba de regresión test_nul_in_external_resource_path_is_diagnostic_not_crash añadida (16 pruebas definidas). Commits 740d21e5 y e6964943. CI posterior: NO EJECUTADO/pendiente de evidencia; Godot 4.3: NO EJECUTADO; Android físico: NO EJECUTADO EN DISPOSITIVO. Sin cambios de gameplay.
