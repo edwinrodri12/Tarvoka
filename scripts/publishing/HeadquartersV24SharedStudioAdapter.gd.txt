@@ -1,0 +1,132 @@
+extends "res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd"
+
+# V24 additive adapter at the END of the actual TARVOKA Pages Studio chain:
+# HQ, Airbase, Naval, Barracks, Civilian Cities, Power Plant (legacy) and
+# Armored Workshop all retain their native existing pickers and model meshes.
+# The very same HQ that BattleTerrain3D loads is built for inspection here.
+const HQPlayableV24 = preload("res://scripts/ui/HeadquartersBattle3D.gd")
+const HQOfficialStyle = preload("res://scripts/ui/VisualStyle.gd")
+
+var _hq24_options: VBoxContainer
+var _hq24_toggle: CheckButton
+var _hq24_neutral: CheckButton
+var _hq24_status: Label
+
+func _ready() -> void:
+    super._ready()
+    if building_controls == null or building_picker == null:
+        push_error("HQ V24: missing shared Godot EDIFICIOS catalog")
+        return
+    _hq24_options = VBoxContainer.new()
+    _hq24_options.name = "CuartelGeneralV24OpcionesEnEstudioUnificado"
+    _hq24_options.add_theme_constant_override("separation",6)
+    building_controls.add_child(_hq24_options)
+    building_controls.move_child(_hq24_options,2)
+    _title(_hq24_options,"CUARTEL GENERAL · BATALLA REAL V24",14)
+    _hq24_toggle = CheckButton.new()
+    _hq24_toggle.name = "CuartelGeneralV24MismaMallaDeLaBatalla"
+    _hq24_toggle.text = "Comparar con el HQ táctico real V24"
+    _hq24_toggle.button_pressed = false
+    _hq24_toggle.toggled.connect(_hq24_mode_changed)
+    _hq24_options.add_child(_hq24_toggle)
+    _hq24_neutral = CheckButton.new()
+    _hq24_neutral.name = "CuartelGeneralV24NeutralSinEscudo"
+    _hq24_neutral.text = "Facción neutral (sin insignia)"
+    _hq24_neutral.visible = false
+    _hq24_neutral.toggled.connect(_hq24_neutral_changed)
+    _hq24_options.add_child(_hq24_neutral)
+    _hq24_status = _title(_hq24_options,
+        "El original HERO se conserva. V24 usa las 3 mallas tácticas reales.",12)
+    building_picker.item_selected.connect(_hq24_building_selected)
+    _hq24_sync_visibility()
+
+func _hq24_building_selected(_index:int) -> void:
+    call_deferred("_hq24_sync_visibility")
+
+func _hq24_sync_visibility() -> void:
+    if _hq24_options == null:
+        return
+    var selected_hq:bool = category_picker != null and category_picker.selected == 1         and building_picker != null and building_picker.selected == 0
+    _hq24_options.visible = selected_hq
+    if _hq24_neutral != null:
+        _hq24_neutral.visible = selected_hq and _hq24_toggle.button_pressed
+
+func _hq24_mode_changed(_enabled:bool) -> void:
+    _hq24_sync_visibility()
+    if _role == "headquarters":
+        _display_headquarters()
+
+func _hq24_neutral_changed(_enabled:bool) -> void:
+    if _role == "headquarters" and _hq24_toggle.button_pressed:
+        _display_headquarters()
+
+func _switch_category(index:int) -> void:
+    super._switch_category(index)
+    _hq24_sync_visibility()
+
+func _display_headquarters() -> void:
+    if _hq24_toggle == null or not _hq24_toggle.button_pressed:
+        super._display_headquarters()
+        _hq24_sync_visibility()
+        return
+    if preview == null:
+        return
+    _stop_animation()
+    if model_root != null:
+        preview.remove_child(model_root)
+        model_root.queue_free()
+    _role = "headquarters"
+    var tier:int=clampi(level_picker.selected+1,1,3)
+    var damage:int=clampi(hq_damage_stage_picker.selected,0,4)
+    var faction:int=-1 if _hq24_neutral.button_pressed else _faction
+    model_root=HQPlayableV24.build(tier,faction,damage)
+    assert(model_root != null)
+    preview.add_child(model_root)
+    model_root.rotation_degrees.y=_yaw
+    camera.position=Vector3(-3.8,3.3,-4.2)
+    camera.look_at(Vector3(0,0.45,0),Vector3.UP)
+    _update_camera()
+    _hq24_sync_visibility()
+    # The other building controls are left in the existing catalog, but
+    # impossible HERO-only impact/weather effects must not target this LOD.
+    hq_bullet_test_button.disabled=true
+    hq_explosive_test_button.disabled=true
+    hq_map_lod_toggle.visible=false
+    hq_batch_toggle.visible=false
+    hq_v15_frame.visible=false
+    hq_damage_stage_picker.disabled=false
+    if hq_climate_stage != null:
+        hq_climate_stage.visible=false
+    _update_details()
+
+func _update_camera() -> void:
+    if _role == "headquarters" and _hq24_toggle != null         and _hq24_toggle.button_pressed and model_root != null         and model_root.get_meta("hq_native_geometry",false):
+        camera.size=3.4/_zoom
+        return
+    super._update_camera()
+
+func _reset_camera() -> void:
+    if _role == "headquarters" and _hq24_toggle != null         and _hq24_toggle.button_pressed:
+        _yaw=31.0
+        _zoom=1.0
+        if model_root != null:
+            model_root.rotation_degrees.y=_yaw
+        camera.position=Vector3(-3.8,3.3,-4.2)
+        camera.look_at(Vector3(0,0.45,0),Vector3.UP)
+        _update_camera()
+        return
+    super._reset_camera()
+
+func _update_details() -> void:
+    if _role == "headquarters" and model_root != null         and model_root.get_meta("hq_native_geometry",false):
+        var level:int=int(model_root.get_meta("visual_tier",1))
+        var damage:int=int(model_root.get_meta("visual_damage_stage",0))
+        var faction:int=int(model_root.get_meta("visual_faction",-1))
+        detail_label.text="Cuartel General V24 · malla 3D del juego · N%d D%d" % [
+            level,damage]
+        status_label.text=("NEUTRAL sin escudo" if faction<0 else             str(HQOfficialStyle.FACTIONS[faction]["name"]))             +" · 13 superficies / 3 mallas · reglas intactas"
+        if _hq24_status != null:
+            _hq24_status.text="Batalla real V24 · N%d D%d · %s" % [
+                level,damage,"neutral" if faction<0 else                 str(HQOfficialStyle.FACTIONS[faction]["name"])]
+        return
+    super._update_details()
