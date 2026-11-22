@@ -45,7 +45,7 @@ func _audit(kind: String, faction: int, lod: int, damage: int) -> Node3D:
     assert(Art.pose_deploy(model, 0.2))
     assert(is_equal_approx(float(model.get_meta("visual_deploy_progress")), 0.2))
     assert(Art.pose_deploy(model, 1.0))
-    assert(model.get_node("EquipamientoDesplegable").visible)
+    assert((model.get_node("EquipamientoDesplegable") as Node3D).visible)
     return model
 
 func _run() -> void:
