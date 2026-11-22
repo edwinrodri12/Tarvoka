@@ -81,3 +81,27 @@ campamento ni crear una escena paralela.
 los PNG auténticos. Aún sin integración comprobada en el visor web original,
 ni en la batalla Android. El diseño se entrega en PR, no se fusiona
 automáticamente.
+
+## Suministros V3 — lectura 360° y distribución de municiones (22-nov-2026)
+
+Revisión motivada por inspección de PNG nativos V2: el depósito se entendía,
+pero las cajas de munición quedaban detrás de la carpa y el interior parecía vacío.
+
+- Nuevo módulo `scripts/ui/CampSupplyReadabilityV3.gd`, instalado sobre
+  **el mismo** `SupplyV2_PremiumRig`, no en otra unidad, otro edificio o visor.
+- Reubica las **mismas** cajas y su palé V2 a una plataforma frontal izquierda
+  visible, dejando libre el pasillo central y el dispensador.
+- Añade rótulos físicos de munición, barandillas, taller interior,
+  consola opaca, depósitos con resguardos, señales industriales y colores de
+  facción más anchos en ambos laterales (no pegatinas planas).
+- Dos LOD conservan los volúmenes principales; LOD13 añade cerraduras,
+  indicadores y fijaciones de forma limitada.
+- El techo V2 y la manguera siguen articulados; D2 pierde una hoja,
+  D3 conserva únicamente base/escombros.
+- No altera valores tácticos, las seis identidades aprobadas, funciones de
+  reabastecimiento, coste de recursos, IA ni guardados.
+- QA propia `tests/test_camp_supply_v3.gd`: 64 ensamblajes (8 facciones ×
+  2 LOD × 4 daños), 18 capturas auténticas Godot desde las cuatro diagonales
+  y dos vistas de daño; verifica mallas sólidas y posición de las cajas.
+- **Estado:** V3 en revisión visual hasta que el CI dedicado y las capturas
+  reales se comprueben. Sin integración declarada en web/Android.
