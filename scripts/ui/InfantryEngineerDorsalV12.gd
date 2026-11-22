@@ -13,6 +13,8 @@ const OUTER := "V12_CorazaExteriorBarreraCerrada"
 const ACCENT := "V12_InsigniaFisicaBarrera"
 const STRUT := "V12_RefuerzoPerimetralEscudo"
 const RACK := "V12_SoporteEstucheFijo"
+const MAIN := "V12_EscudoCentralBiseladoCerrado"
+const POUCH_ID := "V12_InsigniaLateralEstuche"
 
 static func _mat(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -43,11 +45,47 @@ static func _ellipsoid(parent: Node3D, label: String, at: Vector3,
     node.scale=size
     return node
 
-static func _box(parent: Node3D, label: String, at: Vector3,
-        size: Vector3, paint: Material) -> MeshInstance3D:
-    var shape := BoxMesh.new()
-    shape.size=size
-    return _part(parent,label,shape,at,paint)
+# A five-ring sealed tool pouch with ergonomic tapered ends and sculpted
+# side walls. Unlike V9's stacked boxes and V12's first spheres, this forms
+# one continuous closed 3D shell that is easy to read in profile.
+static func _contoured_pouch(parent: Node3D, label: String, at: Vector3,
+        paint: Material, hero: bool) -> MeshInstance3D:
+    var rings: Array[Vector3]=[
+        Vector3(0.062,-0.174,0.074),
+        Vector3(0.099,-0.139,0.115),
+        Vector3(0.116,-0.032,0.127),
+        Vector3(0.106,0.107,0.115),
+        Vector3(0.066,0.174,0.078)
+    ]
+    var segments: int=12 if hero else 8
+    var mesh := SurfaceTool.new()
+    mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(rings.size()-1):
+        for n in range(segments):
+            var a: float=TAU*float(n)/float(segments)
+            var b: float=TAU*float(n+1)/float(segments)
+            var low: Vector3=rings[i]
+            var high: Vector3=rings[i+1]
+            var a0 := Vector3(cos(a)*low.x,low.y,sin(a)*low.z)
+            var b0 := Vector3(cos(b)*low.x,low.y,sin(b)*low.z)
+            var a1 := Vector3(cos(a)*high.x,high.y,sin(a)*high.z)
+            var b1 := Vector3(cos(b)*high.x,high.y,sin(b)*high.z)
+            for vertex in [a0,a1,b0,b0,a1,b1]:
+                mesh.add_vertex(vertex)
+    for n in range(segments):
+        var a: float=TAU*float(n)/float(segments)
+        var b: float=TAU*float(n+1)/float(segments)
+        var first: Vector3=rings[0]
+        var last: Vector3=rings[-1]
+        var low_a := Vector3(cos(a)*first.x,first.y,sin(a)*first.z)
+        var low_b := Vector3(cos(b)*first.x,first.y,sin(b)*first.z)
+        var high_a := Vector3(cos(a)*last.x,last.y,sin(a)*last.z)
+        var high_b := Vector3(cos(b)*last.x,last.y,sin(b)*last.z)
+        for vertex in [low_a,low_b,Vector3(0,first.y,0),
+                Vector3(0,last.y,0),high_b,high_a]:
+            mesh.add_vertex(vertex)
+    mesh.generate_normals()
+    return _part(parent,label,mesh.commit(),at,paint)
 
 static func _tube(parent: Node3D, label: String, start: Vector3,
         finish: Vector3, radius: float, paint: Material, hero: bool) -> MeshInstance3D:
@@ -62,12 +100,13 @@ static func _tube(parent: Node3D, label: String, start: Vector3,
     return node
 
 static func _pressed(parent: Node3D, label: String, at: Vector3,
-        size: Vector2, mat: Material, bulge: float=0.022) -> MeshInstance3D:
+        size: Vector2, mat: Material, bulge: float=0.022,
+        bevel: float=0.035) -> MeshInstance3D:
     # V11's native solid octagonal pressing closes front/back/all eight sides.
     # The exterior of the rear shield faces +Z; rotate the bulged face toward
     # the rear camera, never use a transparent or one-sided texture plane.
     var node: MeshInstance3D=MechanicsV11._pressed_plate(parent,label,at,
-        size.x,size.y,0.035,0.035,bulge,mat)
+        size.x,size.y,0.035,bevel,bulge,mat)
     node.rotation_degrees.y=180.0
     return node
 
@@ -121,8 +160,15 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
     var fastener := _mat(Color("#a8babc"),0.63,0.30)
     var faction := _mat(faction_color,0.17,0.37)
 
-    # Outer left/right armor volumes flank the existing central latch and
-    # leave the horizontal V6 faction identifier at the top unobstructed.
+    # The original board still exists for reversible V11 comparison. The
+    # new single closed, chamfered central shell covers its square silhouette
+    # while preserving the whole V6 mechanical hinge and moving wings.
+    _pressed(shield,MAIN,Vector3(0,-0.010,0.217),
+        Vector2(1.065,0.602),ceramic,0.025,0.095)
+    _pressed(shield,"V12_BandaFaccionSuperiorTallada",
+        Vector3(0,0.161,0.244),Vector2(0.690,0.112),
+        faction,0.009,0.030)
+    # Sculpted left/right plating and two vivid inset emblems.
     for side in [-1,1]:
         var x: float=float(side)
         _pressed(shield,OUTER+"_%d"%side,
@@ -131,9 +177,9 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
         _pressed(shield,ACCENT+"_%d"%side,
             Vector3(x*0.280,-0.119,0.312),
             Vector2(0.162,0.090),faction,0.008)
-        _ellipsoid(shield,STRUT+"_%d"%side,
-            Vector3(x*0.491,-0.120,0.255),
-            Vector3(0.056,0.465,0.087),sidewall,hero)
+        _pressed(shield,STRUT+"_%d"%side,
+            Vector3(x*0.483,-0.115,0.281),
+            Vector2(0.083,0.425),sidewall,0.016,0.021)
         _ellipsoid(shield,"V12_AmortiguadorAla_%d"%side,
             Vector3(x*0.538,-0.262,0.206),
             Vector3(0.089,0.084,0.102),fabric,hero)
@@ -143,15 +189,18 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
         _ellipsoid(torso,RACK+"_%d"%side,
             Vector3(x*0.408,-0.150,0.337),
             Vector3(0.175,0.455,0.160),sidewall,hero)
-        _ellipsoid(torso,CASE+"_%d"%side,
-            Vector3(x*0.482,-0.224,0.339),
-            Vector3(0.216,0.350,0.249),fabric,hero)
+        _contoured_pouch(torso,CASE+"_%d"%side,
+            Vector3(x*0.475,-0.224,0.339),fabric,hero)
         _pressed(torso,"V12_TapaEstucheBiselada_%d"%side,
             Vector3(x*0.476,-0.099,0.185),
             Vector2(0.170,0.110),ceramic,0.012)
         _ellipsoid(torso,"V12_IdentificadorEstuche_%d"%side,
             Vector3(x*0.478,-0.138,0.117),
             Vector3(0.122,0.040,0.029),faction,hero)
+        var side_plate: MeshInstance3D=_pressed(torso,POUCH_ID+"_%d"%side,
+            Vector3(x*0.601,-0.238,0.336),
+            Vector2(0.162,0.124),faction,0.010,0.028)
+        side_plate.rotation_degrees.y=90.0*x
         _tube(torso,"V12_CinchaCargaDorsal_%d"%side,
             Vector3(x*0.326,0.171,0.432),
             Vector3(x*0.467,-0.070,0.438),
