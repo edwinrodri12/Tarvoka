@@ -11,6 +11,7 @@ const PremiumV8=preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const FinishV9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10=preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const MechanicsV11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
+const DorsalV12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -149,8 +150,19 @@ func _run() -> void:
                 "same Studio loads V10 anatomic sleeves and 3D wrench fingers")
             must(MechanicsV11.has_model(final_soldier),
                 "same Studio really includes V11 closed curved torso and shield pivots")
-            must(str(studio.call("_infantry_review_edition"))=="V11",
-                "same online Studio labels latest engineer V11, not stale V2")
+            must(DorsalV12.has_model(final_soldier) and
+                DorsalV12.is_visible(final_soldier),
+                "V12 real sculpted dorsal cases and shield armor loaded in shared viewport")
+            must(str(studio.call("_infantry_review_edition"))=="V12",
+                "same online Studio labels latest engineer V12, not stale V11")
+            studio.call("_engineer_v12_compare",false)
+            must(not DorsalV12.is_visible(final_soldier) and
+                str(studio.call("_infantry_review_edition"))=="V11",
+                "V11 comparison hides only V12 physical details")
+            studio.call("_engineer_v12_compare",true)
+            must(DorsalV12.is_visible(final_soldier) and
+                str(studio.call("_infantry_review_edition"))=="V12",
+                "V12 comparison restores physical details on SAME model")
             var v11_belly: MeshInstance3D=final_soldier.find_child(
                 MechanicsV11.LOWER,true,false) as MeshInstance3D
             var v11_hinge_axle: Node3D=final_soldier.find_child(
