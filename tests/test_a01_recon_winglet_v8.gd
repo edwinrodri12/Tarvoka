@@ -182,9 +182,9 @@ func _run()->void:
                 var panel:=model.find_child(
                     Fins.PAINT_L if side<0 else Fins.PAINT_R,
                     true,false) as MeshInstance3D
-                check(panel!=null and panel.visible and
+                check(panel!=null and not panel.visible and
                     panel.material_override is StandardMaterial3D,
-                    "both wingtips carry physical official faction enamel")
+                    "legacy V8 enamel retained for fallback but hidden beneath conformal V9 enamel")
                 if panel!=null and panel.material_override is StandardMaterial3D:
                     var color:Color=(
                         panel.material_override as StandardMaterial3D).albedo_color
