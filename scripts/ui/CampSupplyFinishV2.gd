@@ -262,9 +262,13 @@ static func apply(root: Node3D, accent: Color, lod: int,
     for child in deployable.get_children():
         if child == core:
             continue
-        if child.name.begins_with("RefugioLogistico_TechoInclinado_"):
+        var old_name: String = str(child.name)
+        if old_name.begins_with("RefugioLogistico_TechoInclinado_") or \
+                old_name.begins_with("ContenedorMunicion_") or \
+                old_name.begins_with("BidonCombustible_") or \
+                old_name.begins_with("TapaBidon_"):
             child.visible = false
-        if child.name in ["DispensadorCombustible", "PantallaDispensador",
+        if old_name in ["DispensadorCombustible", "PantallaDispensador",
                 "MarcaCombustible", "MangueraSoporte"]:
             child.visible = false
     _roof(core, accent, lod, damage)
