@@ -104,3 +104,9 @@ La regresión `tests/test_production_hud_bounds.gd` ahora exige al menos un bot�
 - `tests/test_production_hud_bounds.gd` exige que `menu_button` y `end_turn_button` del HUD inmersivo sean visibles en las seis resoluciones compactas. Un botón contextual visible no puede sustituir las acciones primarias y hacer aprobar falsamente la cobertura.
 - Estado: código registrado; CI del nuevo commit pendiente de confirmación. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE DE REVISIÓN VISUAL**.
 - Si falla, inspeccionar visibilidad de los controles y sus ancestros en `Main.tscn` antes de cambiar el umbral; no relajar aserciones para conseguir verde.
+
+## 2026-11-21 — Separación de acciones primarias compactas
+
+El test de escena `tests/test_production_hud_bounds.gd` comprueba ahora que los rectángulos globales de Menú y Terminar turno no se superpongan en ninguna de las seis resoluciones compactas. Ambos botones podían estar visibles y dentro de pantalla, pero interceptar el mismo espacio táctil. Una intersección de área positiva falla con diagnóstico de resolución y rectángulo. No se modifica la UI de producción. El commit de prueba es `37234f7ad025ca7fc12cb13dcf2ca5dfe9fc7308`.
+
+CI previo (`977ea8b5`): cuatro workflows PASARON, incluido Android landscape. CI del nuevo commit: NO CONFIRMADO hasta consultar su ejecución. Android: NO EJECUTADO EN DISPOSITIVO; QA visual y táctil: PENDIENTE DE REVISIÓN VISUAL. Siguiente: comprobar CI y, si falla por superposición, corregir anclajes reales sin relajar la prueba.
