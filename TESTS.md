@@ -274,3 +274,8 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 2026-11-22 — Auditor de recursos, PR #673 (rama sin fusionar): `tools/check_resource_paths.py` ahora informa `ext_resource` con `id` ausente o vacío, incluyendo línea; `tools/test_check_resource_paths.py` añade regresión para ambos casos y un ID válido. Total esperado: 12 pruebas. PASÓ: commits de fuente publicados. NO EJECUTADO: batería Python completa, auditor sobre escenas reales, Godot/CI nuevo y Android físico; el entorno de ejecución no resuelve github.com para clonar. No convertir en gate ni fusionar sin comprobar resultados de Actions. No se cambió gameplay.
 
 2026-11-22 — PR #673: auditor rechaza escenas `.tscn`/`.tres` enlazadas simbólicamente fuera del árbol del proyecto antes de leer su contenido; regresión `test_scene_symlink_outside_project_is_rejected` añadida (13 casos declarados). PASÓ: commits publicados. NO EJECUTADO: batería Python, auditoría de recursos, Godot 4.3, Android físico. No interpretar código publicado como test verde.
+
+
+### 2026-11-22 — Auditor de recursos: cobertura de PR
+- Workflow `.github/workflows/resource-path-audit.yml` actualizado para ejecutar `pull_request` sin filtro `paths`: cambios exclusivos de escenas `.tscn`, recursos `.tres` o assets también deben disparar el auditor una vez que el workflow exista en la rama base. Antes, solo cambios de herramientas/workflow lo activaban, dejando pasar referencias rotas en PR de arte.
+- Commit de workflow `a87b3a723d267e4872e6d92e1bbd5b613f248427`. Publicación: PASÓ. GitHub Actions para ese commit: NO CONFIRMADO (consulta devolvió cero ejecuciones); suite Python y auditoría del checkout: NO EJECUTADO. Android: NO EJECUTADO EN DISPOSITIVO. No fusionar sin CI.
