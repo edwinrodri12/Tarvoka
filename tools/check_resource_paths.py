@@ -21,6 +21,11 @@ def audit(root: pathlib.Path) -> list[str]:
     for scene in sorted((*root.rglob("*.tscn"), *root.rglob("*.tres"))):
         if any(part in (".git", ".godot") for part in scene.relative_to(root).parts):
             continue
+        # Do not read source scenes symlinked outside the project root.
+        # External files must never influence an offline repository audit.
+        if not scene.resolve().is_relative_to(root):
+            errors.append(f"{scene.relative_to(root)}: scene escapes project root")
+            continue
         try:
             source = scene.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeError) as exc:
