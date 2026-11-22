@@ -178,9 +178,17 @@ func _run() -> void:
                         var gun_digit: Node3D=model.find_child(
                             "V9_DedosCerrados_%d_%d"%[side,finger],
                             true,false) as Node3D
-                        check(gun_digit!=null and gun_digit.visible==(
-                            not work_mode or side<0),
-                            "V10 hands have no duplicated rifle digits during tool animation")
+                        # Hero LOD13 has three physical gun fingers;
+                        # low-cost mobile LOD8 intentionally omits them.
+                        # Both must keep a single visible right hand on
+                        # wrench while working, never ghost rifle digits.
+                        if lod>=13:
+                            check(gun_digit!=null and gun_digit.visible==(
+                                not work_mode or side<0),
+                                "V10 hero gun fingers follow active hand only")
+                        else:
+                            check(gun_digit==null,
+                                "LOD8 omits hero-only individual rifle digits")
                 for side in [-1,1]:
                     var arm_p: Node3D=model.find_child(
                         "BrazoRig_%d"%side,true,false) as Node3D
