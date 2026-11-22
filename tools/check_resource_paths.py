@@ -9,7 +9,9 @@ import pathlib
 import re
 import sys
 
-RESOURCE = re.compile(r'^\s*\[ext_resource\b[^\]]*\bpath="(res://[^"]+)"', re.MULTILINE)
+# Godot does not require ext_resource attributes to appear in a fixed order.
+RESOURCE_LINE = re.compile(r'^\s*\[ext_resource\b([^\]\n]*)\]', re.MULTILINE)
+PATH_ATTRIBUTE = re.compile(r'(?:^|\s)path="(res://[^"]*)"')
 
 
 def audit(root: pathlib.Path) -> list[str]:
@@ -23,10 +25,15 @@ def audit(root: pathlib.Path) -> list[str]:
         except (OSError, UnicodeError) as exc:
             errors.append(f"{scene.relative_to(root)}: unreadable: {exc}")
             continue
-        for match in RESOURCE.finditer(source):
+        for declaration in RESOURCE_LINE.finditer(source):
+            match = PATH_ATTRIBUTE.search(declaration.group(1))
+            if match is None:
+                continue
             raw = match.group(1)[6:]
-            parts = pathlib.PurePosixPath(raw).parts
-            if not raw or any(part in ("..", ".") for part in parts) or "\\" in raw:
+            # Preserve raw segments: PurePosixPath normalizes "." and repeated
+            # separators before validation, hiding malformed declarations.
+            parts = raw.split("/")
+            if not raw or any(part in ("", ".", "..") for part in parts) or "\\" in raw:
                 errors.append(f"{scene.relative_to(root)}: invalid resource path {match.group(1)}")
                 continue
             target = root.joinpath(*parts)
