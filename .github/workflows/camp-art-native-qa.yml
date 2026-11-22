@@ -4,13 +4,17 @@ on:
   pull_request:
     paths:
       - "scripts/ui/CampModels3DV1.gd"
+      - "scripts/ui/CampSupplyFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
+      - "tests/test_camp_supply_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   push:
     branches: [main]
     paths:
       - "scripts/ui/CampModels3DV1.gd"
+      - "scripts/ui/CampSupplyFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
+      - "tests/test_camp_supply_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   workflow_dispatch:
 
@@ -60,13 +64,31 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-native.log; then
             exit 1
           fi
-          grep -F 'PASS CAMPS V1 NATIVE 3D: 128 audits, 20 PNGs' /tmp/camp-native.log
+          grep -F 'PASS CAMPS V1 NATIVE 3D: 256 audits, 20 PNGs' /tmp/camp-native.log
           test "$(find build/qa/camps-v1 -name '*.png' | wc -l)" -eq 20
+      - name: Validate sealed supply V2, hinged roof, hose and 25 genuine previews
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/supply-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_supply_v2.gd \
+            2>&1 | tee /tmp/camp-supply-v2-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-supply-v2-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS SUPPLY CAMP V2 NATIVE 3D: 64 audits, 25 PNGs' /tmp/camp-supply-v2-native.log
+          test "$(find build/qa/supply-camp-v2 -name '*.png' | wc -l)" -eq 25
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-four-camps-native-3d-v1
-          path: build/qa/camps-v1/*.png
+          path: |
+            build/qa/camps-v1/*.png
+            build/qa/supply-camp-v2/*.png
           if-no-files-found: warn
           retention-days: 14
