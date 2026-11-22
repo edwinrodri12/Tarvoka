@@ -111,7 +111,7 @@ func _run() -> void:
                         screenshots += 1
                         stage.remove_child(model)
                     model.free()
-    assert(audits == 128, "4 camps x 8 factions x 2 LODs x 4 damage stages")
+    assert(audits == 256, "4 camps x 8 factions x 2 LODs x 4 damage stages")
     assert(screenshots == 20, "16 intact views and 4 ruined previews")
     print("PASS CAMPS V1 NATIVE 3D: %d audits, %d PNGs" % [audits, screenshots])
     viewport.queue_free()
