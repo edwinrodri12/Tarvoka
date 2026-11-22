@@ -22,6 +22,20 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 1)
             self.assertIn("scripts/missing.gd", errors[0])
 
+    def test_errors_include_exact_declaration_lines(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "sample.tscn").write_text(
+                '[gd_scene format=3]\\n'
+                '[node name="Root" type="Node"]\\n'
+                '[ext_resource type="Script" path="res://missing.gd" id="1"]\\n'
+                '[ext_resource type="Script" id="2"]\\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 2, errors)
+            self.assertTrue(any("sample.tscn:3:" in e and "missing.gd" in e for e in errors), errors)
+            self.assertTrue(any("sample.tscn:4:" in e and "missing path" in e for e in errors), errors)
+
     def test_non_external_text_is_ignored(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
