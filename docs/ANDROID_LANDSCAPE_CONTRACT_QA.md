@@ -99,3 +99,8 @@ Commit `ebe6d6b3` extends `tests/test_production_hud_bounds.gd` beyond visibilit
 
 ## 2026-11-21 — cobertura inmersiva obligatoria en compacto
 La regresión `tests/test_production_hud_bounds.gd` ahora exige al menos un botón **realmente visible** del HUD inmersivo en cada una de las seis resoluciones del modo compacto. Los accesos antiguos/ocultos no pueden producir un falso positivo de cobertura. Las acciones contextuales pueden seguir ocultas; esta prueba no fuerza su aparición. Commit `56317e572f984850b00a3430714eb1f64ebc409a`. Godot CI del nuevo commit: pendiente; Android físico: NO EJECUTADO EN DISPOSITIVO; inspección visual: PENDIENTE DE REVISIÓN VISUAL.
+
+## 2026-11-21 — Regresión de acciones principales del HUD compacto
+- `tests/test_production_hud_bounds.gd` exige que `menu_button` y `end_turn_button` del HUD inmersivo sean visibles en las seis resoluciones compactas. Un botón contextual visible no puede sustituir las acciones primarias y hacer aprobar falsamente la cobertura.
+- Estado: código registrado; CI del nuevo commit pendiente de confirmación. Android físico: **NO EJECUTADO EN DISPOSITIVO**. Revisión visual: **PENDIENTE DE REVISIÓN VISUAL**.
+- Si falla, inspeccionar visibilidad de los controles y sus ancestros en `Main.tscn` antes de cambiar el umbral; no relajar aserciones para conseguir verde.
