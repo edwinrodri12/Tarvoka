@@ -54,6 +54,7 @@ func _run() -> void:
     var viewport := SubViewport.new()
     viewport.name = "CampNativeRender"
     viewport.size = Vector2i(640, 480)
+    viewport.own_world_3d = true
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     get_root().add_child(viewport)
     var stage := Node3D.new()
@@ -71,6 +72,8 @@ func _run() -> void:
     key.light_energy = 1.55
     stage.add_child(key)
     var camera := Camera3D.new()
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = 10.5
     camera.position = Vector3(10.8, 9.4, 12.5)
     stage.add_child(camera)
     camera.look_at(Vector3(0, 0.9, 0))
@@ -87,7 +90,8 @@ func _run() -> void:
                     if faction in [0, 1] and damage == 0:
                         stage.add_child(model)
                         await process_frame
-                        await RenderingServer.frame_post_draw
+                        await process_frame
+                        await process_frame
                         var image: Image = viewport.get_texture().get_image()
                         assert(image != null and not image.is_empty())
                         var filename: String = "%s/%s_f%02d_lod%d.png" % [
@@ -98,7 +102,8 @@ func _run() -> void:
                     elif faction == 0 and lod == 13 and damage == 3:
                         stage.add_child(model)
                         await process_frame
-                        await RenderingServer.frame_post_draw
+                        await process_frame
+                        await process_frame
                         var image: Image = viewport.get_texture().get_image()
                         assert(image != null and not image.is_empty())
                         var filename: String = "%s/%s_ruinas.png" % [OUT, kind]
