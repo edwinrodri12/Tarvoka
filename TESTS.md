@@ -281,3 +281,8 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - Commit de workflow `a87b3a723d267e4872e6d92e1bbd5b613f248427`. Publicación: PASÓ. GitHub Actions para ese commit: NO CONFIRMADO (consulta devolvió cero ejecuciones); suite Python y auditoría del checkout: NO EJECUTADO. Android: NO EJECUTADO EN DISPOSITIVO. No fusionar sin CI.
 
 2026-11-22 — Resource path auditor (PR #673): added cyclic `.tscn` symlink handling (report `unresolvable scene symlink` rather than raising `RuntimeError`/`OSError`) and regression `test_cyclic_scene_symlink_does_not_crash_audit` (14 defined tests). Commits 5a181d25 and 8395b9bb. Source publication PASÓ; Python unittest, repository-wide audit and CI on new head NO EJECUTADO at documentation time. Android físico NO EJECUTADO EN DISPOSITIVO; no gameplay or visual change. Do not merge until executable checks pass.
+
+## 2026-11-22 — CI real auditor #673: symlink circular
+- GitHub Actions run `45058684405` (merge ref `78c3f53`): 14 pruebas ejecutadas; **13 PASARON, 1 FALLÓ** (`test_cyclic_scene_symlink_does_not_crash_audit`). El fallo real devolvía `unreadable: [Errno 40] Too many levels of symbolic links` en vez del diagnóstico esperado `unresolvable scene symlink`.
+- Corrección en `tools/check_resource_paths.py`: `scene.resolve(strict=True)` para que el bucle de symlinks genere `OSError` en la resolución y sea capturado por la ruta de diagnóstico ya probada. Commit `c2ec97e9`.
+- **PENDIENTE DE NUEVA CI**: ejecutar las 14 pruebas y auditoría integral sobre el nuevo commit; no afirmar PASS hasta leer el run posterior. Godot/Android físicos NO EJECUTADO EN DISPOSITIVO; sin cambios de jugabilidad.
