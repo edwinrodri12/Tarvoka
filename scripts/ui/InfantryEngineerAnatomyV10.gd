@@ -51,9 +51,10 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
             model.get_meta("tarvoka_engineer_helmet_grips_backpack_v9",false)):
         return false
     var chest: Node3D=_find(model,"TorsoRig")
+    var gun: Node3D=_find(model,"ArmamentoRig")
     var tool: Node3D=_find(model,"V6_HerramientaArticuladaRig")
     var tool_glove: Node3D=_find(model,"V9_GuanteTrabajoFijadoHerramienta")
-    if chest==null or tool==null or tool_glove==null:
+    if chest==null or gun==null or tool==null or tool_glove==null:
         return false
     for side in [-1,1]:
         if (_find(model,LINK+"_%d"%side)==null or
@@ -91,11 +92,17 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
         _ball(arm,"V10_CubiertaCodo_%d"%side,
             Vector3(0,-0.515,-0.173),Vector3(0.190,0.165,0.065),
             armor,hero)
-        # Wrist gasket is a CHILD of the rifle glove, and therefore moves
-        # with it and is hidden with it during right-hand work.
-        _ball(glove,"V10_MunecaContactoFusil_%d"%side,
-            Vector3(0,0.065,0.028),Vector3(0.14,0.15,0.16),
-            rubber,hero)
+        # Parent to the same real gun rig, not the already SCALED palm mesh:
+        # otherwise a 14cm cuff inherits the 0.165 glove scale and shrinks
+        # into an invisible two-centimeter rivet. V9.sync handles visibility.
+        var grip_position: Vector3=(
+            Vector3(-0.04,-0.225,-0.052) if side>0
+            else Vector3(0.44,-0.155,-0.065))
+        var rifle_cuff: MeshInstance3D=_ball(
+            gun,"V10_MunecaContactoFusil_%d"%side,
+            grip_position+Vector3(0,0.065,0.028),
+            Vector3(0.140,0.145,0.150),rubber,hero)
+        rifle_cuff.visible=true
         # Closed curved side profile lowers the cuboid tactical silhouette,
         # without removing the approved blue construction harness.
         _ball(chest,SIDE_PLATE+"_%d"%side,
@@ -117,9 +124,13 @@ static func apply(model: Node3D, faction: Color, hero: bool) -> bool:
             Vector3((float(i)-1.0)*0.046,-0.082,-0.105),
             Vector3(0.045,0.123,0.057),fabric,hero)
         finger.visible=false
-    _ball(tool_glove,"V10_MunecaContactoHerramienta",
-        Vector3(0,0.068,0.032),Vector3(0.14,0.14,0.15),
+    # Tool cuff lives directly on the animated wrench pivot for correct
+    # physical proportions; it is never scaled down by its palm mesh.
+    var work_cuff: MeshInstance3D=_ball(
+        tool,"V10_MunecaContactoHerramienta",
+        Vector3(0,0.013,-0.020),Vector3(0.140,0.145,0.150),
         rubber,hero)
+    work_cuff.visible=false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_engineer_v10_art_only",true)
     model.set_meta("tarvoka_engineer_v10_hero",hero)
