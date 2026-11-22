@@ -64,7 +64,14 @@ def audit(root: pathlib.Path) -> list[str]:
                 errors.append(f"{location}: invalid resource path {match.group(1)}")
                 continue
             target = root.joinpath(*parts)
-            if not target.is_file() or not target.resolve().is_relative_to(root):
+            # Broken, circular or escaping resource symlinks are invalid; never
+            # let a single malformed link abort the remaining scene audit.
+            try:
+                resolved_target = target.resolve(strict=True)
+                valid_target = resolved_target.is_relative_to(root) and resolved_target.is_file()
+            except (OSError, RuntimeError):
+                valid_target = False
+            if not valid_target:
                 errors.append(f"{location}: missing resource {match.group(1)}")
     return errors
 
