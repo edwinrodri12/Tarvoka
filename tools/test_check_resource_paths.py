@@ -64,6 +64,25 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("missing resource", errors[0])
 
+    def test_internal_symlink_is_valid_but_broken_symlink_fails(self):
+        # An in-project alias is legal; a dangling alias is not.
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "assets").mkdir()
+            (root / "assets" / "original.png").write_bytes(b"image")
+            try:
+                (root / "assets" / "alias.png").symlink_to("original.png")
+                (root / "assets" / "broken.png").symlink_to("absent.png")
+            except (NotImplementedError, OSError):
+                self.skipTest("symlinks unavailable on this platform")
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Texture2D" path="res://assets/alias.png" id="1"]\\n'
+                '[ext_resource type="Texture2D" path="res://assets/broken.png" id="2"]\\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("assets/broken.png", errors[0])
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
