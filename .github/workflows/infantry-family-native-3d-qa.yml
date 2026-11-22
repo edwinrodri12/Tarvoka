@@ -11,6 +11,7 @@ on:
       - 'scripts/ui/InfantryEngineerCompletenessV7.gd'
       - 'scripts/ui/InfantryEngineerPremiumV8.gd'
       - 'scripts/ui/InfantryEngineerFinishV9.gd'
+      - 'scripts/ui/InfantryEngineerAnatomyV10.gd'
       - 'scripts/ui/InfantryCampRosterV1.gd'
       - 'tests/test_infantry_camp_roster.gd'
       - 'scripts/ui/UnitModels3D.gd'
@@ -51,6 +52,7 @@ jobs:
           test -s scripts/ui/InfantryEngineerCompletenessV7.gd
           test -s scripts/ui/InfantryEngineerPremiumV8.gd
           test -s scripts/ui/InfantryEngineerFinishV9.gd
+          test -s scripts/ui/InfantryEngineerAnatomyV10.gd
           test -s tests/test_infantry_engineer_v6_360.gd
           test -s scripts/ui/InfantryCampRosterV1.gd
           test -s tests/test_infantry_family_v2.gd
@@ -62,6 +64,7 @@ jobs:
           grep -Fq 'InfantryEngineerV8.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV9.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV9.sync' scripts/ui/UnitModels3D.gd
+          grep -Fq 'InfantryEngineerV10.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV6.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryFamily.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryV1.supports' scripts/ui/BastionStudioAdapter.gd
@@ -108,7 +111,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v2-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V2 NATIVE 3D:' /tmp/infantry-v2-native.log
           test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 38
-      - name: Verify Engineer V6-V9 closed helmet, real rifle/tool hand contact and 26 native QA images
+      - name: Verify Engineer V6-V10 slim arm geometry, no duplicate fingers and 28 Godot QA images
         shell: bash
         run: |
           set -euo pipefail
@@ -118,7 +121,7 @@ jobs:
             --script res://tests/test_infantry_engineer_v6_360.gd 2>&1 | tee /tmp/infantry-v6-360.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v6-360.log; then exit 1; fi
           grep -Fq 'PASS ENGINEER V6 360:' /tmp/infantry-v6-360.log
-          test "$(find build/qa/infantry-v6 -name '*.png' | wc -l)" -eq 26
+          test "$(find build/qa/infantry-v6 -name '*.png' | wc -l)" -eq 28
       - uses: actions/upload-artifact@v4
         if: always()
         with:
