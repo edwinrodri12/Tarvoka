@@ -83,9 +83,13 @@ func _run()->void:
     var hero_before:Node3D=studio.get("model_root") as Node3D
     var original_camera:Camera3D=studio.get("camera") as Camera3D
     var original_preview:Node3D=studio.get("preview") as Node3D
+    check(str(studio.get("_a01_review_focus"))=="superior",
+        "A01 overhead focus is active just before D3 visual damage")
     studio.call("_studio_run_animation","damage_3")
     check(DamageV6.stage(hero_before)==3,
         "LOD change starts from actual D3 damage button state")
+    check(str(studio.get("_a01_review_focus"))=="superior",
+        "D3 visual damage does not reset the overhead camera preset")
     if android_lod_button!=null:
         android_lod_button.pressed.emit()
     check(int(studio.get("_a01_review_lod"))==8,
@@ -98,10 +102,12 @@ func _run()->void:
     check(DamageV6.stage(android)==3,
         "switch from LOD13 to Android LOD8 preserves critical D3 damage")
     var android_mesh_count:int=Models.inspect_meshes(android)
-    check(studio.get("camera")==original_camera and
-        studio.get("preview")==original_preview and
-        str(studio.get("_a01_review_focus"))=="superior",
-        "LOD switch uses SAME Studio viewport, existing camera and focus")
+    check(studio.get("camera")==original_camera,
+        "LOD switch retains SAME Camera3D, no second viewer camera")
+    check(studio.get("preview")==original_preview,
+        "LOD switch retains original preview Node3D in SAME SubViewport")
+    check(str(studio.get("_a01_review_focus"))=="superior",
+        "LOD switch preserves overhead camera focus after rebuilding mesh")
     studio.call("_on_faction",6)
     await process_frame
     android=studio.get("model_root") as Node3D
@@ -109,6 +115,8 @@ func _run()->void:
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
+    check(str(studio.get("_a01_review_focus"))=="superior",
+        "changing team color retains user-selected A01 overhead focus")
     check(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(
         "res://build/qa/a01-v1"))==OK,
         "QA visual folder for same-UI Android and HERO screenshots")
@@ -168,6 +176,8 @@ func _run()->void:
         action_names.has("damage_3") and action_names.has("damage_4") and
         not action_names.has("attack"),
         "visible A01 actions use real gimbal/propeller, not combat weapons")
+    # LOD switches free the original model: never pose the old Node3D.
+    model=studio.get("model_root") as Node3D
     if model!=null:
         studio.call("_studio_run_animation","a01_scan")
         studio.call("_a01_tick",0.25,model,"scan")
