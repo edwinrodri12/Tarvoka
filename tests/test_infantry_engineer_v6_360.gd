@@ -7,6 +7,7 @@ const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const FinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
+const AnatomyV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -96,6 +97,21 @@ func _run() -> void:
             check(PremiumV8.has_model(model),"V8 real PBR finish installed F%d LOD%d"%[faction,lod])
             check(FinishV9.has_model(model),
                 "V9 joined helmet, weapon grip and dorsal harness F%d LOD%d"%[faction,lod])
+            check(AnatomyV10.has_model(model),
+                "V10 realistic forearms, rib fairings and tool fingers F%d LOD%d"%[faction,lod])
+            for side in [-1,1]:
+                var sleeve: MeshInstance3D=model.find_child(
+                    FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
+                var anatomy: MeshInstance3D=model.find_child(
+                    AnatomyV10.SIDE_PLATE+"_%d"%side,true,false) as MeshInstance3D
+                var tube: CylinderMesh=(
+                    sleeve.mesh as CylinderMesh if sleeve!=null else null)
+                check(tube!=null and tube.top_radius<=0.055 and
+                    tube.bottom_radius<=0.075 and tube.top_radius>0.0,
+                    "V10 slimmer physical wrist-to-elbow connector replaces thick V9 pipe")
+                check(anatomy!=null and anatomy.mesh is SphereMesh and
+                    anatomy.get_parent().name=="TorsoRig",
+                    "V10 anatomical rib fairings have solid native PBR geometry")
             var new_helmet: MeshInstance3D=model.find_child(
                 FinishV9.HELMET,true,false) as MeshInstance3D
             var prototype_helmet: Node3D=model.find_child(
@@ -136,6 +152,43 @@ func _run() -> void:
                 check(str(model.get_meta(
                     "tarvoka_v9_hand_contact_pose",""))==anim,
                     "V9 hand connection syncs AFTER native animation "+anim)
+                var work_mode: bool=anim=="work"
+                var work_cuff: MeshInstance3D=model.find_child(
+                    "V10_MunecaContactoHerramienta",true,false) as MeshInstance3D
+                check(work_cuff!=null and
+                    work_cuff.get_parent().name==Engineer.TOOL and
+                    work_cuff.scale.x>=0.13 and
+                    work_cuff.visible==work_mode,
+                    "V10 full-size tool wrist exists only during work animation")
+                for side in [-1,1]:
+                    var wrist: MeshInstance3D=model.find_child(
+                        "V10_MunecaContactoFusil_%d"%side,true,false) as MeshInstance3D
+                    check(wrist!=null and
+                        wrist.get_parent().name=="ArmamentoRig" and
+                        wrist.scale.x>=0.13 and
+                        wrist.visible==(not work_mode or side<0),
+                        "V10 full-size rifle wrist follows active corresponding hand")
+                for finger in range(3):
+                    var wrench_digit: Node3D=model.find_child(
+                        AnatomyV10.TOOL_FINGER+str(finger),true,false) as Node3D
+                    check(wrench_digit!=null and wrench_digit.visible==work_mode and
+                        wrench_digit.get_parent().name==Engineer.TOOL,
+                        "V10 physical wrench fingers appear ONLY while using tool")
+                    for side in [-1,1]:
+                        var gun_digit: Node3D=model.find_child(
+                            "V9_DedosCerrados_%d_%d"%[side,finger],
+                            true,false) as Node3D
+                        # Hero LOD13 has three physical gun fingers;
+                        # low-cost mobile LOD8 intentionally omits them.
+                        # Both must keep a single visible right hand on
+                        # wrench while working, never ghost rifle digits.
+                        if lod>=13:
+                            check(gun_digit!=null and gun_digit.visible==(
+                                not work_mode or side<0),
+                                "V10 hero gun fingers follow active hand only")
+                        else:
+                            check(gun_digit==null,
+                                "LOD8 omits hero-only individual rifle digits")
                 for side in [-1,1]:
                     var arm_p: Node3D=model.find_child(
                         "BrazoRig_%d"%side,true,false) as Node3D
@@ -409,6 +462,17 @@ func _run() -> void:
         camera.position=positions["front"]
         camera.look_at(Vector3(0,1.35,0),Vector3.UP)
         await _frame(view,"engineer_v9_tool_contact_work")
+        # The work-hand illusion was exposed at native closeup: V9 right
+        # gun digits stayed on the rifle while glove travelled to the wrench.
+        camera.size=2.1
+        Models.pose_model("infantry_engineer",art,"aim",0.35)
+        camera.position=positions["front"]
+        camera.look_at(Vector3(0,1.23,0),Vector3.UP)
+        await _frame(view,"engineer_v10_slim_forearms_rifle_close")
+        Models.pose_model("infantry_engineer",art,"work",0.40)
+        camera.position=positions["right"]
+        camera.look_at(Vector3(0,1.19,0),Vector3.UP)
+        await _frame(view,"engineer_v10_unique_work_fingers_right")
         camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
@@ -423,10 +487,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==26,"twenty-six authentic Godot V6-V9 360 inspection PNGs")
+    check(shots==28,"twenty-eight authentic Godot V6-V10 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 26 real PNGs; V9 sealed helmet, hands touching gun/tool and fixed dorsal gear")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 28 real PNGs; V10 slim forearms, no duplicate wrench fingers and sealed visor")
         quit(0)

@@ -48,3 +48,11 @@ Las dos manos tienen mallas **realmente unidas a los puntos de empuñadura del A
 El arnés y bolsas de herramientas están anclados al `TorsoRig`, separados de `V6_BarreraArticuladaRig`. El panel sigue abriendo, plegando y girando sin arrastrar el equipo fijo.
 
 **Contrato QA**: ocho facciones, LOD8/13, malla del casco cerrada, visera V5 visible, ambas manos tocando sus grips y articulaciones verificables durante `idle/move/aim/attack/work`, comprobación de mano en herramienta, equipo dorsal fijo, pintura de facción, no regresión de V6-V8, 26 imágenes reales de Godot con primeros planos V9 (casco frente/espalda, agarres frente/perfil, mochila y herramienta). En el Estudio 3D web debe aparecer el mismo modelo y sincronizarse durante las animaciones.
+
+## Ingeniero V10 · continuidad anatómica y dedos de herramienta (revisión nativa)
+
+En las 26 capturas Godot de V9 se detectó un problema real: el guante derecho pasaba al `V6_HerramientaArticuladaRig` durante `work`, pero sus tres dedos secundarios continuaban visibles en el fusil. V10 corrige **los cuatro elementos como conjunto**: el guante y sus tres dedos desaparecen del arma y reaparecen en la herramienta; al volver a `idle/aim/attack`, regresan al arma. El lado izquierdo conserva su apoyo en el guardamanos. Esto no altera armas, daño, munición ni mecánicas.
+
+Se adelgazan geométricamente los conectores en ambos antebrazos (radio del cilindro afilado de 0.050 a 0.071 frente a 0.086–0.113), se reducen ligeramente hombreras y se añaden codos cerrados, muñequeras y carenados orgánicos del costado. Todo permanece conectado a los `BrazoRig`, al `ArmamentoRig`, al `TorsoRig` y al `V6_HerramientaArticuladaRig`, respectivamente, tanto en LOD8 como LOD13.
+
+**Criterios QA:** 8 facciones × LOD8/13, tubos realmente afilados (no solo texturas), contornos y codos sin superficies transparentes, secuencias `idle, move, aim, attack, work` sin dedos duplicados, restauración correcta, integridad de V6–V9, 28 capturas reales de Godot y prueba del mismo Estudio Web. Se mantiene como revisión hasta verificar resultados y material visual, no se da por terminado automáticamente.
