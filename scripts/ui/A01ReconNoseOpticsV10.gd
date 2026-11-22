@@ -134,9 +134,14 @@ static func _conformal_nose_paint(body:Node3D,name:String,side:float,
     var sections:Array=[
         [-1.075,0.236,0.187]
     ]
+    # Follow the real underlying nose station in BOTH LODs.
+    # Without the -0.850 ring, the Android color chord can sink through
+    # the curved fuselage between its two endpoints.
     if hero:
-        sections.append([-0.850,0.266,0.213])
-    sections.append([-0.700,0.280,0.2125])
+        sections.append([-0.940,0.254,0.2026])
+    sections.append([-0.850,0.266,0.213])
+    # Finish on the actual interpolated section of the V10 closed nose.
+    sections.append([-0.700,0.27993,0.21246])
     var count:int=12 if hero else 8
     # V10 hero: upper side faces 30..60 and 120..150 degrees.
     # V10 Android: lower-poly upper side faces 0..45 and 135..180.
